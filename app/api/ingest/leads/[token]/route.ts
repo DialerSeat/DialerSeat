@@ -87,7 +87,7 @@ export async function POST(
 
     if (!campaign.ingest_enabled) {
       await record(false, { received: 0, accepted: 0, duplicates: 0, rejected: 0 },
-        'Rejected — lead drip is switched off for this campaign')
+        'Rejected, lead drip is switched off for this campaign')
       return NextResponse.json(
         { ok: false, error: 'Lead drip is switched off for this campaign' },
         { status: 403 }
@@ -97,7 +97,7 @@ export async function POST(
     const body = await req.json().catch(() => null)
     if (body === null) {
       await record(false, { received: 0, accepted: 0, duplicates: 0, rejected: 0 },
-        'Rejected — body was not valid JSON')
+        'Rejected, body was not valid JSON')
       return NextResponse.json(
         { ok: false, error: 'Body must be valid JSON. Set Content-Type: application/json.' },
         { status: 400 }
@@ -107,7 +107,7 @@ export async function POST(
     const raw = extractLeads(body)
     if (raw.length === 0) {
       await record(false, { received: 0, accepted: 0, duplicates: 0, rejected: 0 },
-        'Rejected — no leads found in payload')
+        'Rejected, no leads found in payload')
       return NextResponse.json(
         {
           ok: false,
@@ -118,7 +118,7 @@ export async function POST(
     }
     if (raw.length > MAX_BATCH) {
       await record(false, { received: raw.length, accepted: 0, duplicates: 0, rejected: raw.length },
-        `Rejected — ${raw.length} leads in one request, limit is ${MAX_BATCH}`)
+        `Rejected, ${raw.length} leads in one request, limit is ${MAX_BATCH}`)
       return NextResponse.json(
         { ok: false, error: `Too many leads in one request. Send at most ${MAX_BATCH}.` },
         { status: 413 }
@@ -138,7 +138,7 @@ export async function POST(
 
     if (normalised.length === 0) {
       await record(false, { received: raw.length, accepted: 0, duplicates: 0, rejected: raw.length },
-        'Rejected — no usable phone numbers')
+        'Rejected, no usable phone numbers')
       return NextResponse.json(
         {
           ok: false,
@@ -177,7 +177,7 @@ export async function POST(
     if (toInsert.length === 0) {
       await record(true, {
         received: raw.length, accepted: 0, duplicates, rejected: rejected.length,
-      }, 'Accepted — every lead was already on this campaign')
+      }, 'Accepted, every lead was already on this campaign')
       return NextResponse.json({
         ok: true,
         accepted: 0,
@@ -255,13 +255,13 @@ export async function POST(
       // Said explicitly, because a sender testing their integration wants to
       // know the lead is live and not merely stored.
       note: campaign.status === 'active'
-        ? 'Live — agents on this campaign will reach these without restarting.'
+        ? 'Live, agents on this campaign will reach these without restarting.'
         : 'Stored. This campaign is paused, so nothing will be dialed until it is active.',
     })
   } catch (error: any) {
     console.error('[ingest/leads] failed', error)
     await record(false, { received: 0, accepted: 0, duplicates: 0, rejected: 0 },
-      `Failed — ${error?.message || 'unknown error'}`)
+      `Failed, ${error?.message || 'unknown error'}`)
     return NextResponse.json(
       { ok: false, error: 'Could not accept those leads. Try again.' },
       { status: 500 }

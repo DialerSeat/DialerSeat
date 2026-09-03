@@ -74,7 +74,7 @@ export default function CampaignsFaqView() {
           <section className="faq-section">
             <h2>▸ THE ACTUAL SETTINGS ON A CAMPAIGN</h2>
             <p>
-              This is the complete list — nothing hidden behind a
+              This is the complete list, nothing hidden behind a
               &ldquo;advanced&rdquo; tab you have to go find:
             </p>
 
@@ -85,7 +85,7 @@ export default function CampaignsFaqView() {
               </div>
               <div className="cmp-settings-row">
                 <div className="cmp-settings-cell name">Name</div>
-                <div className="cmp-settings-cell">Whatever you want. Leave it blank and it becomes &ldquo;Untitled,&rdquo; &ldquo;Untitled (1),&rdquo; and so on — never a blank or duplicate name.</div>
+                <div className="cmp-settings-cell">Whatever you want. Leave it blank and it becomes &ldquo;Untitled,&rdquo; &ldquo;Untitled (1),&rdquo; and so on, never a blank or duplicate name.</div>
               </div>
               <div className="cmp-settings-row">
                 <div className="cmp-settings-cell name">Dialer mode</div>
@@ -93,7 +93,7 @@ export default function CampaignsFaqView() {
               </div>
               <div className="cmp-settings-row">
                 <div className="cmp-settings-cell name">AMD toggle</div>
-                <div className="cmp-settings-cell">On or off, your choice, on every mode. Defaults on for progressive and predictive, off for power and preview — a starting point, not a restriction. See <Link href="/faq/how-does-amd-work">how AMD works</Link>.</div>
+                <div className="cmp-settings-cell">On or off, your choice, on every mode. Defaults on for progressive and predictive, off for power and preview: a starting point, not a restriction. See <Link href="/faq/how-does-amd-work">how AMD works</Link>.</div>
               </div>
               <div className="cmp-settings-row">
                 <div className="cmp-settings-cell name">Lines per agent</div>
@@ -101,7 +101,7 @@ export default function CampaignsFaqView() {
               </div>
               <div className="cmp-settings-row">
                 <div className="cmp-settings-cell name">Status</div>
-                <div className="cmp-settings-cell"><code>active</code> or <code>inactive</code>. New campaigns start active — there&apos;s no draft state you have to publish out of.</div>
+                <div className="cmp-settings-cell"><code>active</code> or <code>inactive</code>. New campaigns start active, there&apos;s no draft state you have to publish out of.</div>
               </div>
             </div>
           </section>
@@ -110,7 +110,7 @@ export default function CampaignsFaqView() {
           <section className="faq-section">
             <h2>▸ THE AMD DEFAULT, MODE BY MODE</h2>
             <p>
-              AMD is a toggle available on every dialer mode — it&apos;s
+              AMD is a toggle available on every dialer mode, it&apos;s
               never locked on or locked off. What changes by mode is only
               the starting position when you first create a campaign:
             </p>
@@ -135,7 +135,7 @@ export default function CampaignsFaqView() {
             </div>
 
             <p className="muted" style={{ marginTop: 16 }}>
-              Flip it either direction on any campaign, any time — the
+              Flip it either direction on any campaign, any time, the
               defaults exist so a fresh campaign starts in a sensible state,
               not because a mode requires a specific setting.
             </p>
@@ -155,13 +155,13 @@ export default function CampaignsFaqView() {
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
                   <h4>2. UPLOAD LEADS</h4>
-                  <p>Drop in a spreadsheet — see <Link href="/faq/leads">uploading &amp; managing leads</Link> for the full field reference.</p>
+                  <p>Drop in a spreadsheet, see <Link href="/faq/leads">uploading &amp; managing leads</Link> for the full field reference.</p>
                 </div>
               </div>
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
                   <h4>3. ATTACH A SCRIPT (OPTIONAL)</h4>
-                  <p>Toggle on any script you or your team already wrote — see <Link href="/faq/scripts">call scripts</Link>. Skip this step entirely if you don&apos;t use scripts.</p>
+                  <p>Toggle on any script you or your team already wrote, see <Link href="/faq/scripts">call scripts</Link>. Skip this step entirely if you don&apos;t use scripts.</p>
                 </div>
               </div>
               <div className="faq-flow-step">
@@ -182,10 +182,10 @@ export default function CampaignsFaqView() {
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>One thing worth knowing —</strong> every setting on
+              <strong>One thing worth knowing, </strong> every setting on
               this page is editable after the fact, including dialer mode.
               Switching a live campaign from power to predictive mid-run
-              doesn&apos;t require pausing it or re-uploading leads — the
+              doesn&apos;t require pausing it or re-uploading leads, the
               leads already in the queue just start getting dialed under
               the new mode&apos;s pacing rules.
             </p>
@@ -208,7 +208,7 @@ export default function CampaignsFaqView() {
             <div className="faq-cta-eyebrow">▸ CREATE YOUR FIRST CAMPAIGN</div>
             <h3 className="faq-cta-h">$35/week. No setup wizard, no required fields.</h3>
             <p>
-              Name it or don&apos;t — you&apos;ll be dialing in under a
+              Name it or don&apos;t, you&apos;ll be dialing in under a
               minute either way.
             </p>
             <a href={isSignedIn ? '/dashboard/campaigns' : '/sign-up'} className="faq-cta-btn">

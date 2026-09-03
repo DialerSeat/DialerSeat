@@ -10,12 +10,12 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'Preview Dialer — How It Works, Where It Came From, When To Use It | DialerSeat',
+  title: 'Preview Dialer: How It Works, Where It Came From, When To Use It | DialerSeat',
   description:
     'A deep look at the preview dialer: the original semi-automated outbound mode, dating back to 1970s telemarketing. Mechanism, history, use cases, and how it works on DialerSeat.',
   alternates: { canonical: 'https://dialerseat.com/dialing-modes/preview' },
   openGraph: {
-    title: 'The Preview Dialer — Origins and Mechanics',
+    title: 'The Preview Dialer: Origins and Mechanics',
     description:
       'The original semi-automated outbound mode. One lead at a time, agent reviews first, agent clicks dial. Used since the 1970s in B2B, debt collection, and insurance.',
     url: 'https://dialerseat.com/dialing-modes/preview',
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'The Preview Dialer — Origins and Mechanics',
+    title: 'The Preview Dialer: Origins and Mechanics',
     description: 'The original semi-automated outbound mode. One lead at a time, agent reviews first, agent clicks dial. Used since the 1970s in B2B, debt collection, and insurance.',
   },
 }
@@ -323,7 +323,7 @@ export default function PreviewDialerPage() {
             <h1>The original outbound mode.</h1>
             <p className="dm-lead">
               One lead at a time. The agent reads first, then clicks dial.
-              Slow by design — and that&apos;s exactly the point. It&apos;s
+              Slow by design, and that&apos;s exactly the point. It&apos;s
               the mode that built modern outbound sales, and it&apos;s still
               the right answer for a surprising number of campaigns.
             </p>
@@ -340,7 +340,7 @@ export default function PreviewDialerPage() {
             charge of every dial.
           </p>
           <ol className="dm-steps">
-            <li><div>The system pulls the next lead from your campaign queue and displays it on your screen — name, phone number, location, any custom fields you uploaded with the list.</div></li>
+            <li><div>The system pulls the next lead from your campaign queue and displays it on your screen: name, phone number, location, any custom fields you uploaded with the list.</div></li>
             <li><div>You read it. Maybe glance at the LinkedIn, maybe re-read your last note, maybe pull up their account history. Take as long as you need.</div></li>
             <li><div>You click <em>Dial This Lead</em>. The outbound call goes out. You hear the ring.</div></li>
             <li><div>If a human answers: the call connects and you talk. If it&apos;s voicemail or no-answer, you hang up and disposition.</div></li>
@@ -372,7 +372,7 @@ export default function PreviewDialerPage() {
               wait for the agent, place the call, log the disposition</em>.
               The phone system was now picking up the dialing, but the
               human was still the trigger. This was &quot;agent-controlled
-              dialing&quot; — the textbook term you&apos;ll find in old AT&amp;T
+              dialing&quot; the textbook term you&apos;ll find in old AT&amp;T
               and Aspect Communications documentation.
             </p>
             <p>
@@ -382,7 +382,7 @@ export default function PreviewDialerPage() {
               account histories before opening their mouths. Insurance
               agents had to confirm policy details. B2B sellers had to
               actually research the prospect. The slow mode never went away
-              — it just got pushed up-market.
+ it just got pushed up-market.
             </p>
             <p>
               Today preview is the default in collections, complex B2B, and
@@ -408,7 +408,7 @@ export default function PreviewDialerPage() {
             </div>
             <div className="dm-shines-card">
               <h4>DEBT COLLECTION</h4>
-              <p>Account history, last contact date, payment plan status — you need all of it open before the conversation starts.</p>
+              <p>Account history, last contact date, payment plan status, you need all of it open before the conversation starts.</p>
             </div>
             <div className="dm-shines-card">
               <h4>INSURANCE RENEWALS</h4>
@@ -436,7 +436,7 @@ export default function PreviewDialerPage() {
             <p>
               Throughput. Preview agents do somewhere between 5 and 15 dials
               per hour depending on call length and review time. Power
-              dialers in the same hour will do 30–60. Predictive can push
+              dialers in the same hour will do 30, 60. Predictive can push
               that into triple digits. If your campaign is volume-bound
               instead of context-bound, preview is the wrong tool.
             </p>
@@ -456,17 +456,17 @@ export default function PreviewDialerPage() {
             <h2>Preview on DialerSeat</h2>
             <p>
               Preview is available on every account, every campaign, every
-              tier. There&apos;s no extra setting to enable it — just pick
+              tier. There&apos;s no extra setting to enable it, just pick
               <em> PREVIEW</em> from the mode selector on the campaign or in
               the dialer terminal.
             </p>
             <ul className="dm-bullets">
-              <li>Lead profile shows every custom field you uploaded with the list — not just name and phone.</li>
+              <li>Lead profile shows every custom field you uploaded with the list, not just name and phone.</li>
               <li>If the campaign has a script, it sits beside the profile so you can read both before dialing.</li>
-              <li><em>Skip This Lead</em> dispositions cleanly and pulls the next one — no penalty for passing.</li>
+              <li><em>Skip This Lead</em> dispositions cleanly and pulls the next one, no penalty for passing.</li>
               <li>Auto-pull next lead after disposition (toggle on/off in your settings).</li>
-              <li>TCPA window check still runs — leads outside their local 8 AM–9 PM window are skipped automatically.</li>
-              <li>Leads you have marked Do Not Call are never served again — that much the agent does not have to remember. Scrubbing against the National Registry is still yours to do before upload; see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link>.</li>
+              <li>TCPA window check still runs, leads outside their local 8 AM, 9 PM window are skipped automatically.</li>
+              <li>Leads you have marked Do Not Call are never served again, that much the agent does not have to remember. Scrubbing against the National Registry is still yours to do before upload; see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link>.</li>
             </ul>
           </div>
         </section>
@@ -479,7 +479,7 @@ export default function PreviewDialerPage() {
               <Link href="/dialing-modes/power" className="dm-other-card power">
                 <span className="pill">POWER</span>
                 <h3>Auto-dial, one line per agent</h3>
-                <p>Click once, system handles the queue. Same compliance profile as preview, 2–3× the volume.</p>
+                <p>Click once, system handles the queue. Same compliance profile as preview, 2, 3× the volume.</p>
               </Link>
               <Link href="/dialing-modes/progressive" className="dm-other-card progressive">
                 <span className="pill">PROGRESSIVE</span>
@@ -489,7 +489,7 @@ export default function PreviewDialerPage() {
               <Link href="/dialing-modes/predictive" className="dm-other-card predictive">
                 <span className="pill">PREDICTIVE</span>
                 <h3>Multiple lines, agent prediction</h3>
-                <p>1.5–3× lines per agent, routed by algorithm. Highest throughput, tightest compliance.</p>
+                <p>1.5: 3× lines per agent, routed by algorithm. Highest throughput, tightest compliance.</p>
               </Link>
             </div>
           </div>

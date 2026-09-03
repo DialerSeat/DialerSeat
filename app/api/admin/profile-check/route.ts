@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     clerkError,
     differs,
     verdict: clerkError
-      ? 'Could not reach Clerk — that error is why the syncs are silent.'
+      ? 'Could not reach Clerk, that error is why the syncs are silent.'
       : differs && Object.values(differs).some(Boolean)
         ? 'They differ, so a sync path is failing rather than missing.'
         : 'Identical. Clerk holds the same name we do, so nothing changed it there.',

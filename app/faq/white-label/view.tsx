@@ -46,7 +46,7 @@ export default function View() {
       }}>
         <FaqTheme />
         <style>{`
-/* Price card up top — sets context immediately */
+/* Price card up top, sets context immediately */
           .wl-price {
             margin: 0 0 56px 0;
             padding: 28px 32px;
@@ -179,7 +179,7 @@ export default function View() {
               </div>
             </div>
             <div className="wl-price-text">
-              <strong>Replaces your $35/week Pro subscription</strong> — not on
+              <strong>Replaces your $35/week Pro subscription</strong>, not on
               top of it. Includes everything in Pro plus full re-branding.
               No setup fees. No contracts. Cancel anytime.
             </div>
@@ -190,8 +190,8 @@ export default function View() {
             <h2>WHY YOU&apos;D WANT THIS</h2>
 
             <p>
-              If you&apos;re reselling DialerSeat to your agents — through
-              manager mode, with seat codes, with your own pricing on top —
+              If you&apos;re reselling DialerSeat to your agents, through
+              manager mode, with seat codes, with your own pricing on top 
               there&apos;s a moment when your agents look at the URL bar and
               see &quot;dialerseat.com&quot; and the friction starts. They
               wonder why they&apos;re paying you instead of going direct.
@@ -205,7 +205,7 @@ export default function View() {
               top-left. Your color scheme on every button, every gradient,
               every accent. Your support email on the contact page. Your
               company name in the browser tab. Your agents sign up, get their
-              recordings emailed, see disposition reports — and every piece of
+              recordings emailed, see disposition reports, and every piece of
               it carries your brand, not mine.
             </p>
 
@@ -226,10 +226,10 @@ export default function View() {
             </p>
 
             <div className="wl-math">
-              <div className="wl-math-title">OPTION 1 — BUILD YOUR OWN DIALER</div>
+              <div className="wl-math-title">OPTION 1, BUILD YOUR OWN DIALER</div>
               <div className="wl-math-row">
-                <span className="wl-math-label">Engineering (1 senior, 6–12 mo)</span>
-                <span className="wl-math-val">$150,000–$300,000</span>
+                <span className="wl-math-label">Engineering (1 senior, 6, 12 mo)</span>
+                <span className="wl-math-val">$150,000: $300,000</span>
               </div>
               <div className="wl-math-row">
                 <span className="wl-math-label">Telnyx / Twilio infrastructure</span>
@@ -246,18 +246,18 @@ export default function View() {
             </div>
 
             <div className="wl-math">
-              <div className="wl-math-title">OPTION 2 — LICENSE A WHITE-LABEL DIALER FROM ELSEWHERE</div>
+              <div className="wl-math-title">OPTION 2, LICENSE A WHITE-LABEL DIALER FROM ELSEWHERE</div>
               <div className="wl-math-row">
                 <span className="wl-math-label">Typical platform license</span>
-                <span className="wl-math-val">$500–$2,000/mo</span>
+                <span className="wl-math-val">$500: $2,000/mo</span>
               </div>
               <div className="wl-math-row">
                 <span className="wl-math-label">+ per-seat fees on top</span>
-                <span className="wl-math-val">$50–$150/seat/mo</span>
+                <span className="wl-math-val">$50, $150/seat/mo</span>
               </div>
               <div className="wl-math-row">
                 <span className="wl-math-label">+ setup / onboarding fees</span>
-                <span className="wl-math-val">$1,000–$5,000 upfront</span>
+                <span className="wl-math-val">$1,000: $5,000 upfront</span>
               </div>
               <div className="wl-math-row total">
                 <span>Year-one total (10 seats)</span>
@@ -266,7 +266,7 @@ export default function View() {
             </div>
 
             <div className="wl-math">
-              <div className="wl-math-title">OPTION 3 — DIALERSEAT WHITE-LABEL</div>
+              <div className="wl-math-title">OPTION 3, DIALERSEAT WHITE-LABEL</div>
               <div className="wl-math-row">
                 <span className="wl-math-label">Your platform subscription</span>
                 <span className="wl-math-val">$75/wk = $3,900/yr</span>
@@ -287,7 +287,7 @@ export default function View() {
 
             <p className="muted">
               And every dollar an agent pays you above the $35/seat passthrough
-              is yours. Same margin math as standard manager mode — just with
+              is yours. Same margin math as standard manager mode, just with
               your brand on top.
             </p>
           </section>
@@ -314,16 +314,16 @@ export default function View() {
                   <li>Your company name in browser tab, page titles, meta tags</li>
                   <li>Branded transactional emails (recordings ready, receipts, alerts)</li>
                   <li>Custom support email displayed throughout</li>
-                  <li>Hidden &quot;Powered by DialerSeat&quot; — your agents never see us</li>
-                  <li>Full mobile branding via installable PWA — home-screen icon, theme, and login screen all carry your brand. See <Link href="/faq/white-label-mobile">how it works on mobile</Link></li>
+                  <li>Hidden &quot;Powered by DialerSeat&quot; your agents never see us</li>
+                  <li>Full mobile branding via installable PWA: home-screen icon, theme, and login screen all carry your brand. See <Link href="/faq/white-label-mobile">how it works on mobile</Link></li>
                   <li>Everything in standard Pro + manager mode</li>
                 </ul>
               </div>
               <div className="wl-included-col no">
                 <h4>▸ NOT YET</h4>
                 <ul>
-                  <li>Custom Stripe Connect — agents still pay DialerSeat directly for their $35 seat (we&apos;re building this)</li>
-                  <li>Custom Telnyx trunks — outbound calls go through our infrastructure</li>
+                  <li>Custom Stripe Connect, agents still pay DialerSeat directly for their $35 seat (we&apos;re building this)</li>
+                  <li>Custom Telnyx trunks, outbound calls go through our infrastructure</li>
                   <li>Per-region custom domain SSL (we handle SSL automatically; advanced cert pinning isn&apos;t available)</li>
                 </ul>
               </div>
@@ -344,8 +344,8 @@ export default function View() {
             <p>
               Your theme doesn&apos;t stop at the browser tab. Agents install
               DialerSeat straight to their phone&apos;s home screen as a
-              Progressive Web App — no App Store listing, no separate native
-              build — and the branding carries all the way through: your
+              Progressive Web App: no App Store listing, no separate native
+              build, and the branding carries all the way through: your
               logo, your colors, your login screen.
             </p>
             <p>
@@ -368,9 +368,9 @@ export default function View() {
             </p>
 
             <p>
-              You upload your logo (we&apos;ll auto-generate variants — light
+              You upload your logo (we&apos;ll auto-generate variants, light
               mode, dark mode, favicon, social-share). You pick your two
-              colors. You set your custom domain — we generate a CNAME record
+              colors. You set your custom domain, we generate a CNAME record
               you point at us, and SSL provisioning happens automatically in
               ~10 minutes.
             </p>
@@ -386,7 +386,7 @@ export default function View() {
             <p>
               You can still log into your manager view exactly the same way.
               You see your team, your codes, your campaigns, your agents&apos;
-              metrics. Everything works identically — it just looks like your
+              metrics. Everything works identically, it just looks like your
               brand now.
             </p>
           </section>
@@ -394,7 +394,7 @@ export default function View() {
           {/* ── HONEST CALLOUT ─────────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>One honest thing</strong> — even with white-label,
+              <strong>One honest thing</strong>: even with white-label,
               DialerSeat still processes the $35/seat charges directly with
               your agents. They pay us for their seat; you charge them
               separately for whatever your bundle costs above that. The
@@ -403,7 +403,7 @@ export default function View() {
               the queue but not live yet. Some of our white-label customers
               handle this by simply telling agents up front: &quot;the seat
               charge appears as DialerSeat because that&apos;s our compliance
-              and call-routing partner — everything else routes through us.&quot;
+              and call-routing partner, everything else routes through us.&quot;
             </p>
           </div>
 
@@ -411,8 +411,8 @@ export default function View() {
           <div className="wl-promo">
             <p style={{ margin: 0 }}>
               <strong>ONE MORE THING.</strong> &nbsp;If you&apos;re operating
-              at real scale — meaningful seat counts, established brand,
-              volume that meaningfully expands the platform — the door&apos;s
+              at real scale: meaningful seat counts, established brand,
+              volume that meaningfully expands the platform, the door&apos;s
               open to talk about discounted white-label pricing, co-marketing
               arrangements, and other terms that reflect what you&apos;re
               bringing to the table. Email me. Those conversations happen one
@@ -438,7 +438,7 @@ export default function View() {
             </Link>
             <div>
               <a
-                href="mailto:hello@dialerseat.com?subject=White-label — let's talk"
+                href="mailto:hello@dialerseat.com?subject=White-label, let's talk"
                 className="wl-cta-secondary"
               >
                 OR EMAIL ME FIRST →

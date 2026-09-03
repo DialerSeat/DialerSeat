@@ -432,7 +432,7 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
           <input className="wl-input" value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="Acme Dialer" />
         </div>
         <div>
-          <label className="wl-label">Owner Clerk ID <span style={{ color: C.muted }}>(user_... — must already exist in users)</span></label>
+          <label className="wl-label">Owner Clerk ID <span style={{ color: C.muted }}>(user_... must already exist in users)</span></label>
           <input className="wl-input" value={ownerClerkId} onChange={(e) => setOwnerClerkId(e.target.value)} placeholder="user_..." style={{ fontFamily: 'monospace' }} />
         </div>
         <div>
@@ -440,7 +440,7 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
           <input className="wl-input" type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} placeholder="support@acme.com" />
         </div>
         <div>
-          <label className="wl-label">Primary Color <span style={{ color: C.muted }}>(buttons + accents; the other 3 tokens start at defaults — edit in Branding)</span></label>
+          <label className="wl-label">Primary Color <span style={{ color: C.muted }}>(buttons + accents; the other 3 tokens start at defaults, edit in Branding)</span></label>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} style={{ width: 40, height: 26, border: `1px solid ${C.borderStrong}`, padding: 0, cursor: 'pointer' }} />
             <input className="wl-input" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} style={{ flex: 1, fontFamily: 'monospace' }} />
@@ -755,14 +755,14 @@ function BrandingSubTab() {
               <label className="wl-label" style={{ fontWeight: 'bold' }}>
                 Theme Tokens
                 <span style={{ color: C.muted, fontWeight: 'normal', marginLeft: 6 }}>
-                  — the 4 colors the tenant dashboard actually renders
+ the 4 colors the tenant dashboard actually renders
                 </span>
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <ColorField label="PRIMARY — buttons, links, accents" value={draft.primary_color}    onChange={(v) => setDraft({ ...draft, primary_color: v })} />
-                <ColorField label="SIDEBAR — left nav background"     value={draft.sidebar_color}    onChange={(v) => setDraft({ ...draft, sidebar_color: v })} />
-                <ColorField label="HEADER — top bar background"       value={draft.header_bg_color}  onChange={(v) => setDraft({ ...draft, header_bg_color: v })} />
-                <ColorField label="PAGE BG — content background"      value={draft.page_bg_color}    onChange={(v) => setDraft({ ...draft, page_bg_color: v })} />
+                <ColorField label="PRIMARY: buttons, links, accents" value={draft.primary_color}    onChange={(v) => setDraft({ ...draft, primary_color: v })} />
+                <ColorField label="SIDEBAR, left nav background"     value={draft.sidebar_color}    onChange={(v) => setDraft({ ...draft, sidebar_color: v })} />
+                <ColorField label="HEADER, top bar background"       value={draft.header_bg_color}  onChange={(v) => setDraft({ ...draft, header_bg_color: v })} />
+                <ColorField label="PAGE BG, content background"      value={draft.page_bg_color}    onChange={(v) => setDraft({ ...draft, page_bg_color: v })} />
               </div>
               <div style={{ fontSize: 10, color: C.muted, marginTop: 6, lineHeight: 1.5 }}>
                 The legacy <code>accent_color</code> is mirrored from SIDEBAR automatically on save.
@@ -870,9 +870,9 @@ function DemoViewSubTab() {
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 13, fontWeight: 'bold' }}>Demo View</div>
         <div style={{ fontSize: 11, color: C.muted, marginTop: 2, lineHeight: 1.5 }}>
-          Opens the selected team&apos;s site in a new tab — the tenant subdomain for white-label teams,
+          Opens the selected team&apos;s site in a new tab: the tenant subdomain for white-label teams,
           the main dashboard otherwise. This shows the tenant&apos;s public experience; it does not sign
-          you in as the team&apos;s users (true impersonation needs Clerk actor tokens — separate build).
+          you in as the team&apos;s users (true impersonation needs Clerk actor tokens, separate build).
           Branded subdomain rendering also depends on the wildcard-subdomain infrastructure, which is
           still pending.
         </div>
@@ -1088,10 +1088,10 @@ function BillingSubTab() {
                       <span style={{ color: C.muted, fontSize: 10 }}>no subscription</span>
                     )}
                   </td>
-                  <td style={{ fontSize: 10 }}>{t.is_demo ? '—' : (b?.planNickname ?? (b ? `every ${intervalLabel(b)}` : '—'))}</td>
-                  <td style={{ fontFamily: 'monospace' }}>{t.is_demo ? '—' : (b ? `${money(b.amountCents, b.currency)}/${intervalLabel(b)}` : '—')}</td>
-                  <td style={{ fontFamily: 'monospace', color: !t.is_demo && b && b.mrrCents > 0 ? C.green : C.muted }}>{t.is_demo ? '—' : (b ? money(b.mrrCents, b.currency) : '—')}</td>
-                  <td style={{ fontSize: 10, color: C.muted }}>{t.is_demo ? '—' : (b?.currentPeriodEnd ? new Date(b.currentPeriodEnd).toLocaleDateString() : '—')}</td>
+                  <td style={{ fontSize: 10 }}>{t.is_demo ? ', ' : (b?.planNickname ?? (b ? `every ${intervalLabel(b)}` : ', '))}</td>
+                  <td style={{ fontFamily: 'monospace' }}>{t.is_demo ? ', ' : (b ? `${money(b.amountCents, b.currency)}/${intervalLabel(b)}` : ', ')}</td>
+                  <td style={{ fontFamily: 'monospace', color: !t.is_demo && b && b.mrrCents > 0 ? C.green : C.muted }}>{t.is_demo ? ', ' : (b ? money(b.mrrCents, b.currency) : ', ')}</td>
+                  <td style={{ fontSize: 10, color: C.muted }}>{t.is_demo ? ', ' : (b?.currentPeriodEnd ? new Date(b.currentPeriodEnd).toLocaleDateString() : ', ')}</td>
                 </tr>
               )
             })}
@@ -1155,7 +1155,7 @@ function BillingDetailModal({ tenantId, onClose }: { tenantId: string; onClose: 
         <div style={{ display: 'grid', gap: 10 }}>
           {detail.is_demo && (
             <div style={{ background: '#fff8ea', border: `1px solid ${C.amber}`, padding: 8, fontSize: 11, color: C.amber, fontWeight: 'bold' }}>
-              ★ DEMO TENANT — excluded from portfolio totals. Any Stripe data below is real if present, but this account is not a paying customer.
+              ★ DEMO TENANT, excluded from portfolio totals. Any Stripe data below is real if present, but this account is not a paying customer.
             </div>
           )}
           {detail.billingError && (
@@ -1169,7 +1169,7 @@ function BillingDetailModal({ tenantId, onClose }: { tenantId: string; onClose: 
               <Field label="Plan" value={detail.billing.planNickname ?? `every ${intervalLabel(detail.billing)}`} />
               <Field label="Amount" value={`${money(detail.billing.amountCents, detail.billing.currency)} / ${intervalLabel(detail.billing)}`} />
               <Field label="Monthly (MRR)" value={money(detail.billing.mrrCents, detail.billing.currency)} />
-              <Field label="Next Charge" value={detail.billing.currentPeriodEnd ? new Date(detail.billing.currentPeriodEnd).toLocaleString() : '—'} />
+              <Field label="Next Charge" value={detail.billing.currentPeriodEnd ? new Date(detail.billing.currentPeriodEnd).toLocaleString() : ', '} />
             </>
           )}
           <Field label="Stripe Customer" value={detail.stripe_customer_id ?? '(none)'} mono />
@@ -1188,7 +1188,7 @@ function BillingDetailModal({ tenantId, onClose }: { tenantId: string; onClose: 
                       <td style={{ fontSize: 10 }}>{new Date(inv.created).toLocaleDateString()}</td>
                       <td style={{ fontFamily: 'monospace' }}>{money(inv.amountCents, inv.currency)}</td>
                       <td style={{ fontSize: 10, color: inv.status === 'paid' ? C.green : inv.status === 'open' ? C.amber : C.muted }}>
-                        {inv.status ?? '—'}
+                        {inv.status ?? ', '}
                       </td>
                       <td style={{ fontSize: 10, color: C.muted }}>{(inv.reason ?? '').replace(/_/g, ' ')}</td>
                       <td>
@@ -1298,7 +1298,7 @@ function SettingsSubTab() {
         {selected && (
           <div style={{ display: 'grid', gap: 16, maxWidth: 460 }}>
             <div style={{ fontSize: 12, fontWeight: 'bold' }}>
-              {selected.brand_name} — Settings
+              {selected.brand_name}, Settings
             </div>
 
             {rowMsg && (
@@ -1342,7 +1342,7 @@ function SettingsSubTab() {
                 <span style={{ fontSize: 11, color: C.muted, whiteSpace: 'nowrap' }}>.dialerseat.com</span>
               </div>
               <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>
-                Changing the slug breaks the old subdomain URL immediately. Validated server-side (1–40 chars, a–z 0–9 hyphens, not reserved).
+                Changing the slug breaks the old subdomain URL immediately. Validated server-side (1: 40 chars, a: z 0: 9 hyphens, not reserved).
               </div>
               <button className="wl-btn primary" style={{ marginTop: 8 }} disabled={saving || !slugDirty || !slug}
                 onClick={() => patch({ slug }, `Slug changed to "${slug}"`)}>
@@ -1355,7 +1355,7 @@ function SettingsSubTab() {
               <label className="wl-label" style={{ fontWeight: 'bold' }}>Custom Domain</label>
               <input className="wl-input" value={customDomain} onChange={e => setCustomDomain(e.target.value.trim())} placeholder="dialer.acme.com" style={{ fontFamily: 'monospace' }} />
               <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>
-                Stored here for reference. DNS/SSL provisioning for custom domains is separate infrastructure and still on the backlog — setting this does not yet make the domain resolve.
+                Stored here for reference. DNS/SSL provisioning for custom domains is separate infrastructure and still on the backlog, setting this does not yet make the domain resolve.
               </div>
               <button className="wl-btn primary" style={{ marginTop: 8 }} disabled={saving || !domainDirty}
                 onClick={() => patch({ custom_domain: customDomain || null }, customDomain ? `Custom domain set to ${customDomain}` : 'Custom domain cleared')}>
@@ -1364,7 +1364,7 @@ function SettingsSubTab() {
             </div>
 
             <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, fontSize: 10, color: C.muted, lineHeight: 1.5 }}>
-              Feature flags and per-tenant rate limits will live here too — they need a new column/table, so they aren&apos;t wired yet. Branding lives in the Branding sub-tab; billing in Billing.
+              Feature flags and per-tenant rate limits will live here too: they need a new column/table, so they aren&apos;t wired yet. Branding lives in the Branding sub-tab; billing in Billing.
             </div>
           </div>
         )}

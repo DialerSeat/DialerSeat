@@ -65,7 +65,7 @@ const PRESETS: Preset[] = [
     key: 'preset-3',
     label: 'Preset 3',
     description:
-      'Slate teal — deep blue-gray chrome with a bright teal accent, monochrome page wash.',
+      'Slate teal: deep blue-gray chrome with a bright teal accent, monochrome page wash.',
     primary: '#1ABC9C',
     sidebar: '#2C3E50',
     headerBg: '#2C3E50',
@@ -115,7 +115,7 @@ const PRESETS: Preset[] = [
     key: 'preset-default',
     label: 'Default',
     description:
-      'The standard DialerSeat look — use this to run as the default DialerSeat tenant.',
+      'The standard DialerSeat look, use this to run as the default DialerSeat tenant.',
     primary: '#4a9eff',
     sidebar: '#111118',
     headerBg: '#1a1a2e',
@@ -548,7 +548,7 @@ export default function WhitelabelOnboardingPage() {
       loginLinkUrl.trim().length > 0 ||
       loginLinkLabel.trim().length > 0
     if (wantsLink && (!loginLinkText.trim() || !loginLinkUrl.trim())) {
-      setError('Your login link needs both clickable text and a URL — or clear the link fields.')
+      setError('Your login link needs both clickable text and a URL, or clear the link fields.')
       return
     }
 
@@ -687,7 +687,7 @@ export default function WhitelabelOnboardingPage() {
           </div>
           <div style={subtitleStyle}>
             {editMode
-              ? 'Your tenant is live. Make changes anytime — they propagate within 60 seconds.'
+              ? 'Your tenant is live. Make changes anytime, they propagate within 60 seconds.'
               : 'Pick your brand, your subdomain, your colors. Your customers see your dialer, not ours.'}
           </div>
         </div>
@@ -733,7 +733,7 @@ export default function WhitelabelOnboardingPage() {
             <label style={sectionLabelStyle}>▸ LOGO</label>
             <div style={hintStyle}>
               PNG, SVG, GIF, JPEG, or WEBP. Recommended 512×148 px, under
-              200KB — but any dimensions work; mobile auto-scales to fit.
+              200KB, but any dimensions work; mobile auto-scales to fit.
               Transparent backgrounds blend best.
             </div>
             <input
@@ -831,7 +831,7 @@ export default function WhitelabelOnboardingPage() {
                 />
                 <ColorRow
                   label="Header"
-                  description="Header strip background — the bar across the top of every dashboard page"
+                  description="Header strip background, the bar across the top of every dashboard page"
                   value={headerBg}
                   onChange={v => updateColor('headerBg', v)}
                 />
@@ -843,7 +843,7 @@ export default function WhitelabelOnboardingPage() {
                 />
                 <ColorRow
                   label="Page background"
-                  description="The main background of every dashboard page — body text auto-contrasts against it"
+                  description="The main background of every dashboard page, body text auto-contrasts against it"
                   value={pageBg}
                   onChange={v => updateColor('pageBg', v)}
                 />
@@ -864,7 +864,7 @@ export default function WhitelabelOnboardingPage() {
               </span>
               {savedThemes.length === 0 && (
                 <span style={savedThemesToggleHintStyle}>
-                  none yet — save your current look below
+                  none yet, save your current look below
                 </span>
               )}
             </button>
@@ -937,7 +937,7 @@ export default function WhitelabelOnboardingPage() {
             />
           </div>
 
-          {/* ── LOGIN PAGE LINK (v9, optional) — closed dropdown, placed under
+          {/* ── LOGIN PAGE LINK (v9, optional): closed dropdown, placed under
                EXACT PREVIEW per JC ── */}
           <div style={sectionStyle}>
             <LoginLinkSection
@@ -1068,7 +1068,7 @@ export default function WhitelabelOnboardingPage() {
                   <div style={saveAsNewHintStyle}>
                     Saves the current colors and logo as a named theme.
                     Doesn&apos;t change what your dashboard currently looks
-                    like — use SAVE CHANGES above to apply.
+                    like, use SAVE CHANGES above to apply.
                   </div>
                 </div>
               )}
@@ -1085,7 +1085,7 @@ export default function WhitelabelOnboardingPage() {
             </div>
           )}
 
-          {/* ── CANCEL — v8: moved to absolute bottom of form ── */}
+          {/* ── CANCEL, v8: moved to absolute bottom of form ── */}
           <button
             type="button"
             onClick={handleCancel}

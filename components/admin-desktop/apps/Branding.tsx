@@ -151,7 +151,7 @@ export default function BrandingApp() {
     }}>
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
         <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: T.muted, marginBottom: 4 }}>
-          ▸ BRANDING — {form.slug}.dialerseat.com
+          ▸ BRANDING, {form.slug}.dialerseat.com
         </div>
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 20 }}>Your brand</div>
 
@@ -202,7 +202,7 @@ export default function BrandingApp() {
             {form.slug}.dialerseat.com
           </div>
           <div style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>
-            Changing your subdomain affects every link your agents already have — reach out if you need this changed.
+            Changing your subdomain affects every link your agents already have, reach out if you need this changed.
           </div>
         </Section>
 

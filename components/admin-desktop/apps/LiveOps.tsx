@@ -99,7 +99,7 @@ function Panel({ title, note, children }: {
 
 /** A dash, never a plausible-looking number. */
 const pct = (v: number | null | undefined, digits = 1) =>
-  v === null || v === undefined || Number.isNaN(v) ? '—' : `${v.toFixed(digits)}%`
+  v === null || v === undefined || Number.isNaN(v) ? ', ' : `${v.toFixed(digits)}%`
 
 export default function LiveOps() {
   const [data, setData] = useState<OpsData | null>(null)
@@ -164,7 +164,7 @@ export default function LiveOps() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 13, fontWeight: 'bold', letterSpacing: 2 }}>LIVE OPS</div>
         <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace' }}>
-          {data ? `UPDATED ${new Date(data.generatedAt).toLocaleTimeString()}` : '—'}
+          {data ? `UPDATED ${new Date(data.generatedAt).toLocaleTimeString()}` : ', '}
         </div>
         <div style={{ flex: 1 }} />
         <button
@@ -196,11 +196,11 @@ export default function LiveOps() {
           {/* ── CONCURRENCY ─────────────────────────────────────────────── */}
           <Panel
             title="CARRIER CONCURRENCY"
-            note="Live legs on the Telnyx connection, straight from the carrier. A user dial uses two — agent leg plus lead leg."
+            note="Live legs on the Telnyx connection, straight from the carrier. A user dial uses two, agent leg plus lead leg."
           >
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
               <span style={{ fontSize: 34, fontWeight: 'bold', color: gaugeColor, lineHeight: 1 }}>
-                {c!.inFlightLegs === null ? '—' : c!.inFlightLegs}
+                {c!.inFlightLegs === null ? ', ' : c!.inFlightLegs}
               </span>
               <span style={{ fontSize: 15, color: T.muted }}>/ {c!.budget} legs</span>
             </div>
@@ -214,14 +214,14 @@ export default function LiveOps() {
             </div>
             <div style={{ fontSize: 11, color: T.muted, marginTop: 10, lineHeight: 1.65 }}>
               {c!.authoritative
-                ? 'Reported by Telnyx. Nothing in DialerSeat blocks a dial at this number — the carrier enforces its own ceiling.'
+                ? 'Reported by Telnyx. Nothing in DialerSeat blocks a dial at this number, the carrier enforces its own ceiling.'
                 : 'Carrier unreachable, so no live figure. The gauge shows a dash rather than a guess.'}
             </div>
           </Panel>
 
           {/* ── IN FLIGHT ───────────────────────────────────────────────── */}
           <Panel
-            title={`IN FLIGHT — ${data.inFlightCount}`}
+            title={`IN FLIGHT, ${data.inFlightCount}`}
             note="Calls the system believes are live. Anything old here is a stuck call or a failed abort."
           >
             {data.inFlight.length === 0 ? (
@@ -234,7 +234,7 @@ export default function LiveOps() {
                     padding: '5px 0', borderBottom: `1px solid ${T.surface}`, fontSize: 11.5,
                   }}>
                     <span style={{ fontFamily: 'monospace', flex: 1, minWidth: 0 }}>
-                      {f.phone || '—'}
+                      {f.phone || ', '}
                     </span>
                     <span style={{ color: T.muted, fontSize: 10 }}>{f.source}</span>
                     <span style={{
@@ -262,7 +262,7 @@ export default function LiveOps() {
 
           {/* ── SOURCE MIX ──────────────────────────────────────────────── */}
           <Panel
-            title="DIAL SOURCE — 24H"
+            title="DIAL SOURCE, 24H"
             note="If a mode you expect to be running shows zero dials, it is not running."
           >
             {data.sourceMix.length === 0 ? (
@@ -287,7 +287,7 @@ export default function LiveOps() {
 
           {/* ── AMD ─────────────────────────────────────────────────────── */}
           <Panel
-            title="AMD OUTCOMES — 7D"
+            title="AMD OUTCOMES, 7D"
             note="A machine-to-human ratio far above the real world means the detector is hanging up on people."
           >
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
@@ -297,7 +297,7 @@ export default function LiveOps() {
                 // deserves a second look rather than a silent pass.
                 color: amdRatio !== null && amdRatio >= 3 ? T.red : T.text,
               }}>
-                {amdRatio === null ? '—' : `${amdRatio.toFixed(1)}:1`}
+                {amdRatio === null ? ', ' : `${amdRatio.toFixed(1)}:1`}
               </span>
               <span style={{ fontSize: 12, color: T.muted }}>machine : human</span>
             </div>
@@ -320,7 +320,7 @@ export default function LiveOps() {
 
           {/* ── RECORDINGS ──────────────────────────────────────────────── */}
           <Panel
-            title="RECORDING CAPTURE — 7D"
+            title="RECORDING CAPTURE, 7D"
             note="Share of answered calls that stored a playable recording id. This sat near zero while every recording played 0:00."
           >
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -337,13 +337,13 @@ export default function LiveOps() {
               {data.recordings.withRecordingId.toLocaleString()} of{' '}
               {data.recordings.answered.toLocaleString()} answered calls have a recording id.<br />
               <span style={{ fontSize: 10.5 }}>
-                Recording is per-campaign, so less than 100% is expected — a sudden drop is not.
+                Recording is per-campaign, so less than 100% is expected, a sudden drop is not.
               </span>
             </div>
           </Panel>
 
           {/* ── AGENTS ──────────────────────────────────────────────────── */}
-          <Panel title={`AGENTS ONLINE — ${data.agents.length}`} note="Heartbeat within the last 60 seconds.">
+          <Panel title={`AGENTS ONLINE, ${data.agents.length}`} note="Heartbeat within the last 60 seconds.">
             {data.agents.length === 0 ? (
               <div style={{ fontSize: 12, color: T.muted }}>Nobody is dialing.</div>
             ) : (
@@ -366,17 +366,17 @@ export default function LiveOps() {
                       style={{ color: T.muted, fontSize: 10 }}
                       title={a.device ? `Dialing from ${a.device}` : 'Device not recorded for this session'}
                     >
-                      {a.device === 'mobile' ? '📱' : a.device === 'tablet' ? '▭' : a.device === 'desktop' ? '🖥' : '—'}
+                      {a.device === 'mobile' ? '📱' : a.device === 'tablet' ? '▭' : a.device === 'desktop' ? '🖥' : ', '}
                       {a.device ? ` ${a.device}` : ''}
                     </span>
-                    <span style={{ color: T.muted, fontSize: 10 }}>{a.mode || '—'}</span>
+                    <span style={{ color: T.muted, fontSize: 10 }}>{a.mode || ', '}</span>
                     <span style={{
                       fontSize: 9, fontWeight: 'bold', letterSpacing: 0.5, padding: '2px 5px',
                       borderRadius: 2,
                       background: a.state === 'available' ? '#dcfce7' : T.surface,
                       color: a.state === 'available' ? '#166534' : T.muted,
                     }}>
-                      {a.state?.toUpperCase() || '—'}
+                      {a.state?.toUpperCase() || ', '}
                     </span>
                   </div>
                 ))}

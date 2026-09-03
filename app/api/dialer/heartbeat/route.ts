@@ -525,12 +525,12 @@ export async function POST(req: NextRequest) {
       // that describes the client rather than the data.
       if (!predictiveArmed) {
         controllerSkippedReason =
-          'engine not armed — the dialer has not told the server the sequence is running'
+          'engine not armed, the dialer has not told the server the sequence is running'
       } else if (!campaignId && (!leadIdAllowlist || leadIdAllowlist.length === 0)) {
         controllerSkippedReason =
-          'no campaign selected and the queue panel is empty — nothing to fan out across'
+          'no campaign selected and the queue panel is empty, nothing to fan out across'
       } else if (shouldYield) {
-        controllerSkippedReason = 'abandon rate at or above the FTC threshold — throttling'
+        controllerSkippedReason = 'abandon rate at or above the FTC threshold, throttling'
       } else if (!CONTROLLER_TRIGGER_STATES.has(state)) {
         controllerSkippedReason = `agent state "${state}" is not a dialing state`
       }

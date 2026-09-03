@@ -160,7 +160,7 @@ export async function GET(req: Request) {
       await sendAdminPush(
         'pool_capacity',
         `Pool-wide answer rate is ${(poolMedian * 100).toFixed(1)}% across ${judgeable.length} numbers ` +
-        `over ${WINDOW_DAYS}d. That's too low to be a per-number issue — check webhook delivery ` +
+        `over ${WINDOW_DAYS}d. That's too low to be a per-number issue, check webhook delivery ` +
         `(answered_at not being written looks identical to nobody answering) or list quality. ` +
         `No numbers were rested.`
       )
@@ -180,7 +180,7 @@ export async function GET(req: Request) {
         'pool_capacity',
         `${suspect.length} of ${active.length} pool numbers are answering below ${(threshold * 100).toFixed(1)}% ` +
         `(pool median ${(poolMedian * 100).toFixed(1)}%). That's more than ${Math.round(MAX_REST_FRACTION * 100)}% of the pool, ` +
-        `so nothing was rested automatically — this pattern usually means a platform problem, not ${suspect.length} bad numbers.`
+        `so nothing was rested automatically: this pattern usually means a platform problem, not ${suspect.length} bad numbers.`
       )
       return NextResponse.json({
         success: true, action: 'refused_bulk_rest',

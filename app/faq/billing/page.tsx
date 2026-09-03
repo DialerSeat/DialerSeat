@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'Billing & Cancellation — How Weekly Billing Actually Works | DialerSeat',
+  title: 'Billing & Cancellation: How Weekly Billing Actually Works | DialerSeat',
   description:
     'What actually happens when you cancel, when a payment fails, when you add or remove a seat mid-week, and how weekly billing through Stripe works in practice \u2014 not just the marketing line.',
   alternates: {
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'Billing & Cancellation — DialerSeat',
+    title: 'Billing & Cancellation: DialerSeat',
     description:
       'The most you can be out is one week, $35. Cancel and keep dialing through what you already paid for. What a failed payment actually does.',
     url: 'https://dialerseat.com/faq/billing',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Billing & Cancellation — DialerSeat',
+    title: 'Billing & Cancellation: DialerSeat',
     description:
       'The most you can be out is one week, $35. What cancel actually does, what a failed card does, and how refunds work.',
   },

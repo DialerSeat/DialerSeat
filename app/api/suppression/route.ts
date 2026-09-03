@@ -79,7 +79,7 @@ export async function POST(req: Request) {
       }
       if (phones.length > MAX_UPLOAD) {
         return NextResponse.json(
-          { success: false, error: `Too many at once — split into batches of ${MAX_UPLOAD.toLocaleString()}` },
+          { success: false, error: `Too many at once, split into batches of ${MAX_UPLOAD.toLocaleString()}` },
           { status: 413 }
         )
       }

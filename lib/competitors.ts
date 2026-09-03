@@ -86,13 +86,13 @@ export interface Competitor {
 export const DIALERSEAT = {
   name: 'DialerSeat',
   pricing: '$35 per seat per week on Pro. $75 per week on Manager+, which adds team ownership and white-labeling.',
-  contract: 'Billed weekly from day one — no trial, no contract, no setup fee, cancel any week. Lead data is preserved if a subscription lapses.',
-  dialing: 'Preview, power, progressive, and predictive — all four included at the base price, selectable per campaign.',
+  contract: 'Billed weekly from day one: no trial, no contract, no setup fee, cancel any week. Lead data is preserved if a subscription lapses.',
+  dialing: 'Preview, power, progressive, and predictive: all four included at the base price, selectable per campaign.',
   wins: [
     'Every dialer mode included at one price, with no tier to climb',
     'Weekly billing with no annual commitment and no implementation fee',
-    'Self-serve signup — no demo, no sales call, no quote to see pricing',
-    'Self-serve signup — no demo required to see pricing or start dialing',
+    'Self-serve signup: no demo, no sales call, no quote to see pricing',
+    'Self-serve signup: no demo required to see pricing or start dialing',
     'Server-side TCPA calling-window enforcement per lead state',
     'FTC Telemarketing Sales Rule 3% abandon-rate cap enforced in predictive',
     'Unlimited numbers with STIR/SHAKEN A-attestation and CNAM registration',
@@ -102,14 +102,14 @@ export const DIALERSEAT = {
   friction: [
     'Newer product with a smaller review footprint than the incumbents',
     'National DNC scrubbing and consent records remain the customer’s responsibility',
-    'No built-in lead marketplace — bring your own list',
+    'No built-in lead marketplace: bring your own list',
   ],
   bestFor:
     'Solo agents through mid-size floors who dial daily, want every mode included, and refuse an annual contract.',
   team: {
     minimum: 'One seat',
     addingASeat: 'Send a join code. The seat is live the moment they accept, and the owner chooses who pays.',
-    fiveSeats: '$175/week in seats plus $75/week for the Manager+ owner — all four dialer modes included, no contract. Seats bill from the day they open.',
+    fiveSeats: '$175/week in seats plus $75/week for the Manager+ owner: all four dialer modes included, no contract. Seats bill from the day they open.',
   },
 }
 
@@ -119,7 +119,7 @@ export const COMPETITORS: Competitor[] = [
     name: 'ReadyMode',
     summary:
       'A long-established predictive dialer for call centers, sold with an onboarding process and a setup fee.',
-    pricing: 'Per-seat pricing quoted on contact, commonly with a $500–$2,000 setup fee.',
+    pricing: 'Per-seat pricing quoted on contact, commonly with a $500: $2,000 setup fee.',
     contract: 'Annual contract is typical.',
     dialing: 'Predictive dialing is the core product.',
     wins: [
@@ -136,7 +136,7 @@ export const COMPETITORS: Competitor[] = [
     team: {
       minimum: 'Quoted per deployment',
       addingASeat: 'Contact the vendor; setup fee applies before the first call',
-      fiveSeats: 'Quoted, plus a $500–$2,000 setup fee',
+      fiveSeats: 'Quoted, plus a $500: $2,000 setup fee',
     },
     crossShopped: true,
     segment: 'call_center',
@@ -147,7 +147,7 @@ export const COMPETITORS: Competitor[] = [
     summary:
       'The default dialer in residential real estate, known for triple-line dialing and bundled lead data.',
     pricing:
-      'Roughly $10/month per Agent Access licence plus a dialer plan, with lead-data add-ons commonly $25–$49/month.',
+      'Roughly $10/month per Agent Access licence plus a dialer plan, with lead-data add-ons commonly $25, $49/month.',
     contract: 'Month to month.',
     dialing: 'Up to triple-line power dialing.',
     wins: [
@@ -175,7 +175,7 @@ export const COMPETITORS: Competitor[] = [
     summary: 'A polished single-line power dialer with a strong reputation for call quality and deliverability.',
     pricing: 'Per-seat monthly pricing, with some capability behind higher tiers.',
     contract: 'Monthly, with annual discounting.',
-    dialing: 'Single-line power dialing only — no multi-line predictive.',
+    dialing: 'Single-line power dialing only, no multi-line predictive.',
     wins: [
       'Excellent call quality and no connection delay on answer',
       'Very well regarded on review sites',
@@ -203,7 +203,7 @@ export const COMPETITORS: Competitor[] = [
     contract: 'Multi-year commitments and implementation fees are typical.',
     dialing: 'Full predictive and blended contact-center dialing.',
     wins: [
-      'Genuine enterprise depth — WFM, QA, omnichannel, reporting',
+      'Genuine enterprise depth: WFM, QA, omnichannel, reporting',
       'Established compliance and security posture for regulated buyers',
       'Support and implementation resources a large floor needs',
     ],
@@ -212,7 +212,7 @@ export const COMPETITORS: Competitor[] = [
       'Implementation fees on top of seat cost',
       'Overbuilt for teams under roughly fifty seats',
     ],
-    bestFor: 'Contact centers of 50–500+ seats with procurement and a dedicated ops function.',
+    bestFor: 'Contact centers of 50, 500+ seats with procurement and a dedicated ops function.',
     team: {
       minimum: 'Enterprise-scale',
       addingASeat: 'A sales conversation and a revised contract',
@@ -251,7 +251,7 @@ export const COMPETITORS: Competitor[] = [
     slug: 'batchdialer',
     name: 'BatchDialer',
     summary: 'A multi-line dialer aimed at real-estate investors, with a headline rate tied to annual prepay.',
-    pricing: 'Advertised around $95/seat on annual prepay; month to month is roughly $119–$249.',
+    pricing: 'Advertised around $95/seat on annual prepay; month to month is roughly $119, $249.',
     contract: 'The headline price requires annual prepay.',
     dialing: 'Multi-line dialing, with number cycling on higher plans.',
     wins: [
@@ -268,7 +268,7 @@ export const COMPETITORS: Competitor[] = [
     team: {
       minimum: 'One seat',
       addingASeat: 'Add a seat at the prepay or month-to-month rate',
-      fiveSeats: '~$475 on annual prepay, or roughly $595–$1,245 month to month',
+      fiveSeats: '~$475 on annual prepay, or roughly $595: $1,245 month to month',
     },
     crossShopped: true,
     segment: 'real_estate',
@@ -282,7 +282,7 @@ export const COMPETITORS: Competitor[] = [
     dialing: 'Predictive requires the $149/month Multi Line plan.',
     wins: [
       'Embeds directly into CRMs teams already use',
-      'No migration required — the CRM stays the system of record',
+      'No migration required: the CRM stays the system of record',
       'Reasonable entry price for single-line use',
     ],
     friction: [
@@ -381,7 +381,7 @@ export const COMPETITORS: Competitor[] = [
     team: {
       minimum: 'One seat',
       addingASeat: 'Add a seat, plus the dialer add-on per seat',
-      fiveSeats: '$95 in seats plus $75–$195 in dialer add-ons',
+      fiveSeats: '$95 in seats plus $75: $195 in dialer add-ons',
     },
     crossShopped: true,
     segment: 'phone_system',
@@ -408,7 +408,7 @@ export const COMPETITORS: Competitor[] = [
     slug: 'dialpad',
     name: 'Dialpad',
     summary: 'A unified communications platform where the dialer lives in a separate product.',
-    pricing: 'Dialpad Connect is $15–$35/user/month; the dialer is in Dialpad Sell, from around $39/user/month.',
+    pricing: 'Dialpad Connect is $15: $35/user/month; the dialer is in Dialpad Sell, from around $39/user/month.',
     contract: 'Monthly or annual.',
     dialing: 'No power dialer in Connect at any tier; dialing requires Sell.',
     wins: ['Excellent voice AI and transcription', 'Strong UCaaS feature set', 'Good meetings and messaging'],
@@ -428,20 +428,20 @@ export const COMPETITORS: Competitor[] = [
     summary:
       'The open-source predictive dialer that runs a large share of the world’s call-centre floors. Free software, paid everything else.',
     pricing:
-      'The software is free under the AGPL. Official VICIhost managed hosting is about $400/month per server after a $1,000 setup — roughly $16 per user at 25 agents. Third-party hosts charge $100–$149 per agent per month.',
+      'The software is free under the AGPL. Official VICIhost managed hosting is about $400/month per server after a $1,000 setup, roughly $16 per user at 25 agents. Third-party hosts charge $100, $149 per agent per month.',
     contract:
       'None for the software itself. Hosting and SIP trunking are separate contracts with separate vendors.',
     dialing:
-      'Predictive, power, preview and manual, all included. Ratio, drop rate and hopper depth are directly configurable — more control than most commercial products expose.',
+      'Predictive, power, preview and manual, all included. Ratio, drop rate and hopper depth are directly configurable, more control than most commercial products expose.',
     wins: [
       'Genuinely free software with no per-seat licence, ever',
-      'The deepest configurability in outbound dialing — nearly every pacing parameter is exposed',
+      'The deepest configurability in outbound dialing: nearly every pacing parameter is exposed',
       'Enormous install base, so almost any problem has already been solved on a forum',
       'Cheapest per-agent cost in the industry once you are past roughly 100 agents',
       'No vendor can raise your price, deprecate your setup, or lock your data in',
     ],
     friction: [
-      'Free software is not a free system — published TCO lands at $130–$400+ per agent per month once servers, SIP trunking and administration are counted',
+      'Free software is not a free system: published TCO lands at $130: $400+ per agent per month once servers, SIP trunking and administration are counted',
       'A dedicated VICIdial administrator is a real hire; industry salary data puts the median near $97,000 a year',
       'Below about 30 agents the operational overhead eats the savings entirely',
       'Compliance is yours to build: calling windows, DNC scrubbing and abandon-rate control are configuration, not guarantees',
@@ -452,9 +452,9 @@ export const COMPETITORS: Competitor[] = [
     team: {
       minimum: 'One server, however many agents it holds',
       addingASeat:
-        'Free in licence terms — add a user in the admin panel. The real limit is server capacity and trunk concurrency, which you plan and pay for yourself.',
+        'Free in licence terms, add a user in the admin panel. The real limit is server capacity and trunk concurrency, which you plan and pay for yourself.',
       fiveSeats:
-        'No licence cost. In practice a server, SIP trunking and someone who can run it — which is why published TCO starts around $130/agent/month.',
+        'No licence cost. In practice a server, SIP trunking and someone who can run it, which is why published TCO starts around $130/agent/month.',
     },
     crossShopped: true,
     segment: 'call_center',
@@ -474,8 +474,8 @@ export const COMPETITORS: Competitor[] = [
       'Month-to-month is genuinely available, not just annual',
     ],
     friction: [
-      'Setup fees are commonly $500–$1,500 before the first call',
-      'Complex CRM integrations are quoted separately, reportedly $2,000–$5,000',
+      'Setup fees are commonly $500: $1,500 before the first call',
+      'Complex CRM integrations are quoted separately, reportedly $2,000: $5,000',
       'Pricing is quote-based, so the real number requires a sales conversation',
       'SMS is billed separately per message',
     ],
@@ -483,7 +483,7 @@ export const COMPETITORS: Competitor[] = [
     team: {
       minimum: 'Quoted per deployment',
       addingASeat: 'Contact the vendor to add a licence',
-      fiveSeats: 'Roughly $510–$600/month in seats at published rates, before setup and integration fees',
+      fiveSeats: 'Roughly $510: $600/month in seats at published rates, before setup and integration fees',
     },
     crossShopped: true,
     segment: 'call_center',
@@ -502,7 +502,7 @@ export const COMPETITORS: Competitor[] = [
       'Long operating history under the ChaseData name',
     ],
     friction: [
-      'The entry price is the entry tier — the outbound features most teams want sit higher up',
+      'The entry price is the entry tier: the outbound features most teams want sit higher up',
       'Feature availability by tier is not obvious until you are in a sales conversation',
       'Interface is functional rather than modern',
     ],
@@ -524,7 +524,7 @@ export const COMPETITORS: Competitor[] = [
       'Core is about $20 per user per month billed annually, or $30 monthly; Advanced $25 and Ultra $35 annually. The RingCX contact-centre product, which is where the dialer lives, starts around $65 per user per month.',
     contract: 'Annual billing is materially cheaper than monthly. Contract terms apply.',
     dialing:
-      'Not in the core phone plans — even Ultra requires an add-on. Predictive and progressive dialing come with RingCX, the contact-centre tier.',
+      'Not in the core phone plans, even Ultra requires an add-on. Predictive and progressive dialing come with RingCX, the contact-centre tier.',
     wins: [
       'Enormous, stable company with global carrier infrastructure',
       'Excellent as a business phone system, which is what it actually is',
@@ -532,7 +532,7 @@ export const COMPETITORS: Competitor[] = [
       'Genuinely useful if you need a full UCaaS platform alongside outbound',
     ],
     friction: [
-      'The dialer is not in the plans people quote — reaching it means the contact-centre product at roughly triple the price',
+      'The dialer is not in the plans people quote: reaching it means the contact-centre product at roughly triple the price',
       'Outbound dialer minutes can be metered separately on top of the seat',
       'Sold and priced for organisations with a procurement process',
       'Substantial platform for a team that only wants to dial leads',
@@ -561,7 +561,7 @@ export const COMPETITORS: Competitor[] = [
       'Well understood by the wholesaling community',
     ],
     friction: [
-      'Three separate charges stack — subscription, dialer seat, then per-minute credits',
+      'Three separate charges stack: subscription, dialer seat, then per-minute credits',
       'Multi-line power dialing is not predictive; there is no pacing engine',
       'Usage-based billing makes a heavy dialing day cost more than a light one',
       'Strongest fit is real-estate investing specifically',
@@ -570,7 +570,7 @@ export const COMPETITORS: Competitor[] = [
     team: {
       minimum: 'One subscription plus one dialer seat',
       addingASeat: 'Add a smrtDialer seat to the subscription, then fund credits for their call time',
-      fiveSeats: 'Subscription plus roughly $210–$375/month in dialer seats, before per-minute credits',
+      fiveSeats: 'Subscription plus roughly $210: $375/month in dialer seats, before per-minute credits',
     },
     crossShopped: true,
     segment: 'real_estate',
@@ -591,7 +591,7 @@ export const COMPETITORS: Competitor[] = [
     ],
     friction: [
       'Ad-hoc charges sit outside the seat price and are documented separately by the vendor',
-      'Dialing capability is tiered — the entry plan is not the outbound plan',
+      'Dialing capability is tiered: the entry plan is not the outbound plan',
       'Built around CRM workflows rather than high-volume list dialing',
     ],
     bestFor: 'Sales teams living inside HubSpot or Pipedrive who want calling and texting attached to it.',
@@ -619,7 +619,7 @@ export const COMPETITORS: Competitor[] = [
     ],
     friction: [
       'Platform fee sits on top of per-seat pricing, so small teams pay a disproportionate share',
-      'Positioned for larger operations — the economics do not favour a handful of agents',
+      'Positioned for larger operations: the economics do not favour a handful of agents',
       'More platform than a team that just wants to dial a list needs',
     ],
     bestFor: 'Larger operations that want a dialer and communications APIs from the same vendor.',
@@ -637,10 +637,10 @@ export const COMPETITORS: Competitor[] = [
     summary: 'A business PBX licensed by simultaneous call capacity, not a sales dialer.',
     pricing: 'Licensed by simultaneous call capacity rather than per seat.',
     contract: 'Annual licensing.',
-    dialing: 'Not an outbound sales dialer — no lead lists, dispositions, or AMD.',
+    dialing: 'Not an outbound sales dialer: no lead lists, dispositions, or AMD.',
     wins: ['Very cost-effective as a PBX', 'Self-hostable', 'Mature telephony feature set'],
     friction: [
-      'Solves a different problem — it is a phone system, not a dialer',
+      'Solves a different problem: it is a phone system, not a dialer',
       'No lead management, dispositions, or answering-machine detection',
       'Capacity planning required',
     ],
@@ -648,7 +648,7 @@ export const COMPETITORS: Competitor[] = [
     team: {
       minimum: 'Licensed by call capacity',
       addingASeat: 'Increase the simultaneous-call licence tier',
-      fiveSeats: 'Capacity licence — not priced per agent',
+      fiveSeats: 'Capacity licence: not priced per agent',
     },
     crossShopped: false,
     segment: 'phone_system',

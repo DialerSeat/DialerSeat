@@ -19,14 +19,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'How Does AMD Work?',
     description:
-      'Answering Machine Detection — what it is, how accurate it is, and how DialerSeat handles it.',
+      'Answering Machine Detection: what it is, how accurate it is, and how DialerSeat handles it.',
     url: 'https://dialerseat.com/faq/how-does-amd-work',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'How Does AMD Work?',
-    description: 'Answering Machine Detection — what it is, how accurate it is, and how DialerSeat handles it.',
+    description: 'Answering Machine Detection: what it is, how accurate it is, and how DialerSeat handles it.',
   },
 }
 
@@ -62,14 +62,14 @@ export default function Page() {
           <p>
             When an outbound call connects, AMD does <em>not</em> connect
             you to the line immediately. Instead, the system holds the
-            audio for roughly 1–2 seconds and analyzes what comes through.
-            Humans tend to answer with a quick &quot;hello?&quot; — usually
+            audio for roughly 1, 2 seconds and analyzes what comes through.
+            Humans tend to answer with a quick &quot;hello?&quot; usually
             under 1.5 seconds of audio, with a clear pause afterward
             waiting for a response.
           </p>
           <p>
             Voicemail greetings sound different. They&apos;re longer,
-            usually 4–15 seconds, run as a continuous monologue, and end
+            usually 4: 15 seconds, run as a continuous monologue, and end
             with a beep. AMD looks at the duration of the initial speech,
             the pauses, the frequency profile, and (in modern systems)
             machine-learned signatures of common voicemail-greeting
@@ -88,8 +88,8 @@ export default function Page() {
                 <summary>How accurate is AMD?</summary>
                 <div className="answer">
                   <p>
-                    Modern AMD on a clean carrier path is around 90–95%
-                    accurate. The remaining 5–10% splits between two kinds
+                    Modern AMD on a clean carrier path is around 90, 95%
+                    accurate. The remaining 5, 10% splits between two kinds
                     of error: <strong>false positives</strong> (AMD thinks
                     a human is a voicemail and drops the call you wanted)
                     and <strong>false negatives</strong> (AMD thinks a
@@ -97,7 +97,7 @@ export default function Page() {
                     greeting).
                   </p>
                   <p>
-                    False positives are the painful ones — you just missed
+                    False positives are the painful ones, you just missed
                     a connect. False negatives are mildly annoying but
                     survivable; you hang up and the queue advances.
                   </p>
@@ -110,7 +110,7 @@ export default function Page() {
                   <p>
                     Yes, sometimes. There&apos;s a noticeable beat between
                     when the human says &quot;hello&quot; and when the
-                    agent comes on the line — that&apos;s AMD doing its
+                    agent comes on the line, that&apos;s AMD doing its
                     work. On lower-quality carrier paths it can be 2+
                     seconds, which is enough to make people hang up.
                   </p>
@@ -134,14 +134,14 @@ export default function Page() {
                     <code>human</code>, <code>machine</code>, or{' '}
                     <code>not_sure</code>. Anything classified as
                     <code> machine</code> drops server-side, silently and
-                    instantly, before your screen ever lights up — no
+                    instantly, before your screen ever lights up, no
                     disposition prompt, the dialer just moves on to the
                     next lead. A <code>not_sure</code> result is treated
                     the same as a human pickup, so a call never gets stuck
                     waiting on an ambiguous read.
                   </p>
                   <p>
-                    Every AMD result is stored on the call record — so you
+                    Every AMD result is stored on the call record, so you
                     can audit AMD accuracy on your own campaigns later by
                     pulling the analytics.
                   </p>
@@ -153,7 +153,7 @@ export default function Page() {
                 <div className="answer">
                   <p>
                     By default: progressive and predictive modes get AMD
-                    on automatically. Power and preview don&apos;t — in
+                    on automatically. Power and preview don&apos;t, in
                     those modes you&apos;re expected to deal with
                     voicemails yourself (and many agents prefer that
                     because they want to leave a voicemail).
@@ -172,12 +172,12 @@ export default function Page() {
                   <p>
                     They get logged with a disposition of <code>NO_ANSWER_AMD</code>
                     and the queue advances to the next lead automatically.
-                    Your agent never sees them — that&apos;s the whole
+                    Your agent never sees them, that&apos;s the whole
                     point.
                   </p>
                   <p>
                     The lead doesn&apos;t get permanently removed from
-                    your list — AMD-dropped calls are typically retried
+                    your list, AMD-dropped calls are typically retried
                     later based on your campaign&apos;s retry rules.
                   </p>
                 </div>
@@ -203,7 +203,7 @@ export default function Page() {
                     voicemails. Voicemail drops <em>play a pre-recorded
                     message into</em> one once detected.
                     DialerSeat does not do voicemail drops today. When AMD
-                    calls a machine, the call ends and the queue advances —
+                    calls a machine, the call ends and the queue advances 
                     nothing is left behind.
                     It is on the list rather than shipped, and we would rather
                     say that than have you plan a campaign around it.

@@ -30,7 +30,7 @@ const btn: React.CSSProperties = {
 }
 
 function dur(seconds: number | null | undefined): string {
-  if (!seconds) return '—'
+  if (!seconds) return ', '
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
   const s = seconds % 60
@@ -222,7 +222,7 @@ export default function AgentDetail({
             background: live.onCall ? GREEN : ACCENT, flexShrink: 0,
           }} />
           <span style={{ fontSize: 13, color: TEXT }}>
-            {live.onCall ? 'On a call now' : `Dialing now — ${live.state || 'ready'}`}
+            {live.onCall ? 'On a call now' : `Dialing now, ${live.state || 'ready'}`}
             {live.campaign && <span style={{ color: DIM }}> · {live.campaign}</span>}
             {live.mode && <span style={{ color: DIM }}> · {live.mode}</span>}
           </span>
@@ -233,22 +233,22 @@ export default function AgentDetail({
         display: 'grid', gap: 12,
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
       }}>
-        <Stat label="Calls" value={st.calls ? st.calls.toLocaleString() : '—'} sub={`last ${ago(st.lastCallAt)}`} />
+        <Stat label="Calls" value={st.calls ? st.calls.toLocaleString() : ', '} sub={`last ${ago(st.lastCallAt)}`} />
         <Stat
           label="Contact rate"
-          value={st.contactRate === null ? '—' : `${st.contactRate}%`}
+          value={st.contactRate === null ? ', ' : `${st.contactRate}%`}
           sub="reached a person"
         />
         <Stat
           label="Conversions"
-          value={st.conversions ? String(st.conversions) : '—'}
+          value={st.conversions ? String(st.conversions) : ', '}
           sub={st.conversionRate === null ? undefined : `${st.conversionRate}% of calls`}
           accent={st.conversions > 0 ? GREEN : undefined}
         />
         <Stat
           label="Talk time"
           value={dur(st.talkSeconds)}
-          sub={st.avgTalkSeconds ? `avg ${dur(st.avgTalkSeconds)} /call` : 'avg — /call'}
+          sub={st.avgTalkSeconds ? `avg ${dur(st.avgTalkSeconds)} /call` : 'avg, /call'}
         />
       </div>
 
@@ -287,15 +287,15 @@ export default function AgentDetail({
                   {m.status === 'pending'
                     ? 'Waiting on your approval'
                     : m.suspended
-                    ? `Seat paused${m.suspendReason ? ` — ${m.suspendReason}` : ''}`
+                    ? `Seat paused${m.suspendReason ? `, ${m.suspendReason}` : ''}`
                     // Before every other case. Somebody funding their own
                     // DialerSeat is not on a seat this owner bought at all,
                     // and calling that "Seat active" invited the reasonable
                     // conclusion that it was on the bill.
                     : data.selfFunded || m.billingOverride === 'agent'
-                    ? 'Paying for themselves — costs you nothing'
+                    ? 'Paying for themselves, costs you nothing'
                     : m.seatCoveredBy
-                    ? `No charge — covered by their seat on ${m.coveredByTeam || 'another of your teams'}`
+                    ? `No charge, covered by their seat on ${m.coveredByTeam || 'another of your teams'}`
                     : m.pickedUp
                     ? 'You picked this seat up automatically'
                     : m.billingOverride === 'owner'
@@ -318,7 +318,7 @@ export default function AgentDetail({
         {data.campaigns.length === 0 ? (
           <div style={{ fontSize: 13, color: DIM, lineHeight: 1.7 }}>
             They are on your team but not on any campaign yet. Adding them costs
-            nothing — their seat is already paid for.
+            nothing, their seat is already paid for.
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 6 }}>
@@ -339,7 +339,7 @@ export default function AgentDetail({
                 </div>
                 <div style={{ textAlign: 'right', fontSize: 11.5, color: DIM }}>
                   <div style={{ color: TEXT, fontSize: 13 }}>
-                    {c.calls ? c.calls.toLocaleString() : '—'}
+                    {c.calls ? c.calls.toLocaleString() : ', '}
                   </div>
                   <div>{c.conversions > 0 ? `${c.conversions} converted` : 'no conversions'}</div>
                 </div>
@@ -371,8 +371,8 @@ export default function AgentDetail({
                   <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.teamName}</div>
                   <div style={{ fontSize: 11.5, color: m.suspended ? AMBER : DIM, marginTop: 2 }}>
                     {m.suspended
-                      ? 'Deactivated — not billed, and they cannot dial'
-                      : 'Active — billed weekly'}
+                      ? 'Deactivated: not billed, and they cannot dial'
+                      : 'Active, billed weekly'}
                   </div>
                 </div>
                 <button

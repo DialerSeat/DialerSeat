@@ -14,7 +14,7 @@ export const runtime = 'nodejs'
 export const metadata: Metadata = {
   title: 'How We Keep Compliance | DialerSeat',
   description:
-    'The exact mechanisms DialerSeat uses to enforce TCPA and FTC TSR rules in software — calling-time windows, abandon-rate monitoring, auto-degrade, AMD, STIR/SHAKEN, and record retention.',
+    'The exact mechanisms DialerSeat uses to enforce TCPA and FTC TSR rules in software: calling-time windows, abandon-rate monitoring, auto-degrade, AMD, STIR/SHAKEN, and record retention.',
   alternates: { canonical: 'https://dialerseat.com/faq/how-we-keep-compliance' },
   openGraph: {
     title: 'How We Keep Compliance',
@@ -60,7 +60,7 @@ export default function Page() {
           <h2>Compliance is the floor, not a feature.</h2>
           <p>
             Most dialers treat compliance settings the way airlines treat
-            seat selection — technically available, but inconveniently
+            seat selection: technically available, but inconveniently
             buried, and you can opt out for any reason. We took the
             opposite approach. Every rule on this page is enforced at the
             <em> architecture</em> level, which means it&apos;s not a
@@ -69,9 +69,9 @@ export default function Page() {
           </p>
           <p>
             That principle is the whole point. If you&apos;d like the
-            broader context — why these rules exist, who wrote them, and
+            broader context: why these rules exist, who wrote them, and
             why so many incumbents treat the fines as a cost of doing
-            business — read <Link href="/faq/why-is-compliance-important">
+            business, read <Link href="/faq/why-is-compliance-important">
             why is compliance important?</Link> first.
           </p>
           <div className="exp-pullquote">
@@ -101,7 +101,7 @@ export default function Page() {
               dial doesn&apos;t fire. The lead gets a <code>TCPA_BLOCKED</code>
               disposition with the timestamp, and the campaign engine
               advances to the next eligible lead automatically. The agent
-              doesn&apos;t have to think about it — and there&apos;s no
+              doesn&apos;t have to think about it, and there&apos;s no
               setting to disable this.
             </p>
 
@@ -114,7 +114,7 @@ export default function Page() {
             </p>
             <p>
               Our pacing controller computes the rolling 30-day abandon
-              rate continuously — recomputed every 5 seconds while a
+              rate continuously, recomputed every 5 seconds while a
               campaign is active. The live rate is displayed on the agent
               terminal so nobody has to log into an admin panel to see
               where they stand.
@@ -132,8 +132,8 @@ export default function Page() {
             </p>
             <p>
               That 0.5% buffer is deliberate. It means a sudden answer-
-              rate spike — caused by a bad list, a great script, or a
-              statistical fluke — gets caught at 2.5% rather than at 3.1%.
+              rate spike: caused by a bad list, a great script, or a
+              statistical fluke, gets caught at 2.5% rather than at 3.1%.
               You should never see your campaign cross the legal threshold
               even under abnormal conditions.
             </p>
@@ -163,7 +163,7 @@ export default function Page() {
               predictive call by default, via Telnyx&apos;s native call
               detection.
               Machine-detected calls drop server-side and never reach an
-              agent — which means the abandon-rate math isn&apos;t
+              agent, which means the abandon-rate math isn&apos;t
               polluted by phantom &quot;answered&quot; calls that are just
               voicemail greetings.
             </p>
@@ -183,8 +183,8 @@ export default function Page() {
 
             <h3>7. Recorded notice on abandoned calls</h3>
             <p>
-              When an abandoned call <em>does</em> occur — meaning a human
-              answered and no agent was available within 2 seconds — the
+              When an abandoned call <em>does</em> occur, meaning a human
+              answered and no agent was available within 2 seconds, the
               TSR safe harbor requires a brief recorded notice identifying
               the seller and the call&apos;s purpose, per § 310.4(b)(4)(iii).
               Every DialerSeat campaign has this configured by default with
@@ -200,7 +200,7 @@ export default function Page() {
               carriers use to decide whether to label your call as spam,
               &quot;Likely Scam,&quot; etc. A-level attestation doesn&apos;t
               eliminate spam-labeling risk, and attestation level can vary
-              by number, route, or downstream carrier — it&apos;s the
+              by number, route, or downstream carrier, it&apos;s the
               strongest level available, not a guarantee for every call.
             </p>
 
@@ -208,7 +208,7 @@ export default function Page() {
             <p>
               Every dial attempt, AMD result, agent assignment, disposition,
               abandon event, and calling-window skip is stored and retained
-              for at least 24 months — the TSR&apos;s record-keeping floor.
+              for at least 24 months, the TSR&apos;s record-keeping floor.
               Records are exportable from your dashboard for compliance
               audits, internal QA, or any other reason you need them.
             </p>
@@ -217,7 +217,7 @@ export default function Page() {
               retained for 30 days, then automatically deleted (see our{' '}
               <Link href="/privacy#data-retention">Privacy Policy</Link>). Download
               recordings before the 30-day window closes if you need to keep them
-              longer — the surrounding call record (disposition, duration, AMD
+              longer: the surrounding call record (disposition, duration, AMD
               result, timestamps) stays in your dashboard for the full 24 months
               regardless.
             </p>
@@ -229,7 +229,7 @@ export default function Page() {
           <h2>What we don&apos;t do for you.</h2>
           <p>
             Compliance is a layered problem. The list above covers the
-            dialer-side layers — the parts that have to happen during the
+            dialer-side layers, the parts that have to happen during the
             call itself, on the platform that places the call. There are
             other compliance layers that fall on you, the campaign owner,
             and which no dialer software can fully automate:
@@ -249,7 +249,7 @@ export default function Page() {
             </div>
             <div className="exp-card">
               <h3>STATE-SPECIFIC RULES</h3>
-              <p>The 8 AM–9 PM window is federal. Several states impose stricter rules (call frequency caps, holiday restrictions, registration requirements). Those are on you.</p>
+              <p>The 8 AM, 9 PM window is federal. Several states impose stricter rules (call frequency caps, holiday restrictions, registration requirements). Those are on you.</p>
             </div>
           </div>
           <p style={{ marginTop: 24 }}>
@@ -269,7 +269,7 @@ export default function Page() {
             <p>
               Your list contains 5,000 leads across all four U.S. time zones.
               When dialing starts, the system filters in real-time: leads
-              currently in their local 8 AM–9 PM window are eligible, leads
+              currently in their local 8 AM: 9 PM window are eligible, leads
               outside it are skipped with <code>TCPA_BLOCKED</code> and re-
               queued for when they enter their window. By 2 PM Pacific
               you&apos;ll have called a different mix than you did at 11 AM
@@ -280,7 +280,7 @@ export default function Page() {
             <p>
               You&apos;re running predictive at 2.0× with 6 agents. A
               campaign on a Tuesday afternoon hits an unusually high
-              answer rate — maybe a fresh batch of warm leads dropped in —
+              answer rate, maybe a fresh batch of warm leads dropped in 
               and your in-flight calls outpace agents being free. The
               30-day rolling abandon rate ticks up to 2.51%. Within 5
               seconds, the controller cuts you back to 1.0× lines. You
@@ -312,7 +312,7 @@ export default function Page() {
             before every dial. It should just be how the platform behaves.
           </p>
           <p>
-            We obviously can&apos;t guarantee your compliance — that
+            We obviously can&apos;t guarantee your compliance, that
             depends on what you actually do with the platform, what
             consent you have, what state you&apos;re calling into. But we
             can guarantee that the dialer itself won&apos;t be the reason
@@ -325,7 +325,7 @@ export default function Page() {
 
         <DialingModeCTA
           headline="Compliance you don't have to babysit."
-          description="The 3% cap, the 8 AM–9 PM window, AMD, STIR/SHAKEN, 24-month records — enforced in software, not in policy docs. $35/week per seat, every mode included."
+          description="The 3% cap, the 8 AM: 9 PM window, AMD, STIR/SHAKEN, 24-month records: enforced in software, not in policy docs. $35/week per seat, every mode included."
         />
       </main>
       <SiteFooter />

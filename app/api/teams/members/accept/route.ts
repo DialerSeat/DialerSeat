@@ -94,8 +94,8 @@ export async function POST(req: Request) {
           error: 'This card needs attention before the seat can open.',
           detail: outcome.actionUrl
             ? 'Open the link below. If your bank wants the payment approved, ' +
-              'approve it there; if it was declined — no balance, a limit, or ' +
-              'a block — it will say so, and the fix is a different card. ' +
+              'approve it there; if it was declined: no balance, a limit, or ' +
+              'a block: it will say so, and the fix is a different card. ' +
               'Retrying here alone will keep failing either way.'
             : 'Open the pending payment in your Stripe billing history. ' +
               'Approve it if your bank is asking, or use a different card if ' +
@@ -116,7 +116,7 @@ export async function POST(req: Request) {
         detail: noCardOnFile
           ? 'Add or update your card in Billing, then accept them again. They stay ' +
             'in Requests until you do, and their invite is not lost.'
-          : 'Try accepting again — this is often temporary. They stay in Requests ' +
+          : 'Try accepting again, this is often temporary. They stay in Requests ' +
             'either way, and their invite is not lost.',
         // The raw Stripe message, for the owner who wants to know exactly what
         // their bank said rather than a paraphrase of it.

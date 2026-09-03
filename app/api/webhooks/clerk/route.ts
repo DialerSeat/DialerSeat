@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       console.warn(
         `[webhooks/clerk] user.deleted for clerk_id=${clerkId}: ` +
         (existing ? 'Supabase users row exists but has no name/email on file' : 'no matching Supabase users row at all') +
-        ' — using generic label.'
+        ', using generic label.'
       )
     }
 

@@ -110,7 +110,7 @@ export async function POST(req: Request) {
       const missingColMatch = /Could not find the '([^']+)' column/.exec(error.message || '')
       const missingCol = missingColMatch?.[1]
       if (!missingCol || !(missingCol in payloadForRetry)) break
-      console.error(`[campaigns/create] '${missingCol}' column missing — retrying insert without it. Run the matching migration in db/migrations to fix permanently.`)
+      console.error(`[campaigns/create] '${missingCol}' column missing, retrying insert without it. Run the matching migration in db/migrations to fix permanently.`)
       const { [missingCol]: _omit, ...fallbackPayload } = payloadForRetry
       payloadForRetry = fallbackPayload
       const retry = await supabaseAdmin

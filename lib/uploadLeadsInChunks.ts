@@ -179,7 +179,7 @@ export async function uploadLeadsInChunks(
           ? `Saved ${result.saved.toLocaleString()} leads, then the connection dropped.`
           : 'Could not reach DialerSeat to upload these leads.',
         detail: result.saved > 0
-          ? 'Upload the same file again — leads already saved are skipped as duplicates.'
+          ? 'Upload the same file again, leads already saved are skipped as duplicates.'
           : 'Check your connection and try again. Nothing was uploaded.',
       }
       return finish()
@@ -217,7 +217,7 @@ export async function uploadLeadsInChunks(
           ? `Saved ${result.saved.toLocaleString()} of ${leads.length.toLocaleString()} leads, then the server stopped responding.`
           : 'The server did not respond to this upload.',
         detail: result.saved > 0
-          ? 'Upload the same file again — leads already saved are skipped as duplicates.'
+          ? 'Upload the same file again, leads already saved are skipped as duplicates.'
           : 'Try again in a moment.',
       }
       return finish()

@@ -684,7 +684,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       if (secondsSinceAnswer > maxSeconds) {
         console.warn(
           `[calls/events] AMD said '${result}' ${secondsSinceAnswer.toFixed(1)}s ` +
-          `after answer (window ${maxSeconds}s) — too late to be about the greeting. ` +
+          `after answer (window ${maxSeconds}s), too late to be about the greeting. ` +
           `A conversation is likely underway. Leaving the call up.`
         )
         return
@@ -694,7 +694,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     if (agentAlreadyBridged && !hangupWhenBridged) {
       console.warn(
         `[calls/events] AMD said '${result}' for ${callControlId}, but the agent ` +
-        `is already bridged in — NOT hanging up. Leaving the call to the human.`
+        `is already bridged in, NOT hanging up. Leaving the call to the human.`
       )
       return
     }
@@ -883,12 +883,12 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
         console.log(
           `[calls/events] holding ${callControlId} a further ${Math.round(remainingMs)}ms ` +
           `(floor ${holdSeconds}s +0-${HOLD_SPREAD_SECONDS}s, elapsed ${Math.round(elapsedMs)}ms, ` +
-          `answered_at ${answeredAt === null ? 'MISSING — estimated' : 'known'})`
+          `answered_at ${answeredAt === null ? 'MISSING, estimated' : 'known'})`
         )
         await new Promise(resolve => setTimeout(resolve, remainingMs))
       } else {
         console.log(
-          `[calls/events] no hold for ${callControlId} — already ${Math.round(elapsedMs)}ms ` +
+          `[calls/events] no hold for ${callControlId}, already ${Math.round(elapsedMs)}ms ` +
           `past answer, over the ${holdSeconds}s target`
         )
       }
@@ -998,7 +998,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
         // leave the prospect holding a line with nobody on it.
         console.error(
           `[calls/events] AMD said '${result}' but bridging the agent onto ` +
-          `${callControlId} FAILED — hanging up rather than leaving the lead on a dead line.`
+          `${callControlId} FAILED, hanging up rather than leaving the lead on a dead line.`
         )
         await hangupCallControlId(callControlId)
       }
@@ -1262,10 +1262,10 @@ async function handleHangup(
     // turns a multi-round debugging exercise into one log line.
     if (!callRow && hangupCause === 'user_busy') {
       console.error(
-        `[calls/events] AGENT LEG REFUSED — Telnyx hung up agent leg ${callControlId} with ` +
+        `[calls/events] AGENT LEG REFUSED, Telnyx hung up agent leg ${callControlId} with ` +
         `'user_busy' (SIP 486) without delivering an INVITE to the browser. This call has NO ` +
         `AGENT AUDIO. Cause is almost always SIP URI calling disabled on the agent credential ` +
-        `connection — see ensureAgentConnectionIsDialable in lib/agentSipCredentials.ts, which ` +
+        `connection, see ensureAgentConnectionIsDialable in lib/agentSipCredentials.ts, which ` +
         `sets it automatically, or set "Receive SIP URI calls" to "Only from my Connections" in ` +
         `Telnyx Mission Control.`
       )
@@ -1391,7 +1391,7 @@ async function handleRecordingSaved(
 
   if (!recordingId) {
     console.warn(
-      `[calls/events] call.recording.saved for ${callControlId} had no recording_id — ` +
+      `[calls/events] call.recording.saved for ${callControlId} had no recording_id, ` +
       `playback will have to look it up by call_control_id on first play`
     )
   }
@@ -1442,7 +1442,7 @@ async function handleRecordingSaved(
   // explicitly started.
   if (!manuallyRequested && ownerRow?.amd_result && ROBOT_RESULTS.has(ownerRow.amd_result)) {
     console.log(
-      `[calls/events] discarding recording for ${callControlId} — AMD verdict ` +
+      `[calls/events] discarding recording for ${callControlId}, AMD verdict ` +
       `'${ownerRow.amd_result}'. This is an answering machine greeting, not a conversation.`
     )
     await deleteTelnyxRecordingForCall(callControlId)
@@ -1461,7 +1461,7 @@ async function handleRecordingSaved(
         `[calls/events] REFUSING a recording for campaign ${ownerRow.campaign_id}, which has ` +
         `recording DISABLED. This app never asked for it, so it was started by Telnyx account-level ` +
         `recording (Mission Control -> Outbound Voice Profiles / number settings -> call recording). ` +
-        `Turn that off — until then every call is being recorded and billed regardless of the ` +
+        `Turn that off, until then every call is being recorded and billed regardless of the ` +
         `campaign toggle. Deleting this recording and not storing it.`
       )
       await deleteTelnyxRecordingForCall(callControlId)
@@ -1716,7 +1716,7 @@ async function dialAndBridgeAgentForFanout(
         (await resolveCredentialConnectionId(env).catch(() => null)) ||
         env.connectionId
       console.warn(
-        `[calls/events] fanout agent leg rejected — SIP URI calling appears disabled on ` +
+        `[calls/events] fanout agent leg rejected, SIP URI calling appears disabled on ` +
         `connection ${targetConnection}. Enabling and retrying once.`
       )
       const outcome = await ensureSipUriCallingEnabled(targetConnection, env.apiKey)

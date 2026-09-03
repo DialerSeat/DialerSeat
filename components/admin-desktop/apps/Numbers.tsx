@@ -364,7 +364,7 @@ export default function NumbersApp() {
     setAnalyticsError(null)
     try {
       const res = await fetch('/api/admin/pool/analytics')
-      if (res.status === 403) throw new Error('Forbidden — admin only')
+      if (res.status === 403) throw new Error('Forbidden, admin only')
       if (res.status === 401) throw new Error('Not signed in')
       const d = await res.json()
       if (d.success) setAnalytics(d)
@@ -388,7 +388,7 @@ export default function NumbersApp() {
     setCycleError(null)
     try {
       const res = await fetch('/api/admin/pool/cycle-log', { cache: 'no-store' })
-      if (res.status === 403) throw new Error('Forbidden — admin only')
+      if (res.status === 403) throw new Error('Forbidden, admin only')
       if (res.status === 401) throw new Error('Not signed in')
       const d = await res.json()
       if (d.success) setCycleData(d)
@@ -420,7 +420,7 @@ export default function NumbersApp() {
     setError(null)
     try {
       const res = await fetch('/api/admin/pool/list')
-      if (res.status === 403) throw new Error('Forbidden — admin only')
+      if (res.status === 403) throw new Error('Forbidden, admin only')
       if (res.status === 401) throw new Error('Not signed in')
       const d = await res.json()
       if (d.success) setData(d)
@@ -1123,7 +1123,7 @@ export default function NumbersApp() {
             className="pool-btn"
             title={unregisteredCount > 0
               ? `Download the ${unregisteredCount} number(s) not yet filed with all three engines, for upload to freecallerregistry.com`
-              : 'Everything is filed — downloads the whole pool, for a re-submission'}
+              : 'Everything is filed: downloads the whole pool, for a re-submission'}
             onClick={() => {
               const scope = unregisteredCount > 0 ? 'pending' : 'all'
               const a = document.createElement('a')
@@ -1239,12 +1239,12 @@ export default function NumbersApp() {
             <div style={{ flex: 1, minWidth: 200 }}>
               <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 4 }}>
                 {poolEmpty
-                  ? 'Pool is empty — no utilization data yet'
+                  ? 'Pool is empty, no utilization data yet'
                   : triggerHit
-                  ? `▲ AT TRIGGER — auto-buy will fire next cron run (top of hour)`
+                  ? `▲ AT TRIGGER, auto-buy will fire next cron run (top of hour)`
                   : willTriggerSoon
-                  ? `▲ ${utilizationDelta}% under trigger — auto-buy approaching`
-                  : `${utilizationDelta}% under trigger — pool comfortable`}
+                  ? `▲ ${utilizationDelta}% under trigger, auto-buy approaching`
+                  : `${utilizationDelta}% under trigger, pool comfortable`}
               </div>
               <div style={{ position: 'relative', height: 24 }}>
                 <div className="pool-meter-bg" style={{ height: 24, position: 'relative' }}>
@@ -1385,7 +1385,7 @@ export default function NumbersApp() {
                     }}>
                       <span>ANSWER RATE</span>
                       <span style={{ color, fontWeight: 'bold', fontSize: 11 }}>
-                        {enough ? `${(rate! * 100).toFixed(1)}%` : '—'}
+                        {enough ? `${(rate! * 100).toFixed(1)}%` : ', '}
                         <span style={{ color: T.muted, fontWeight: 'normal', fontSize: 9 }}>
                           {' '}({calls.toLocaleString()} calls)
                         </span>
@@ -1487,7 +1487,7 @@ export default function NumbersApp() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <div>
               <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: T.text }}>
-                LEAD DEMAND vs POOL SUPPLY — BY STATE
+                LEAD DEMAND vs POOL SUPPLY, BY STATE
               </div>
               <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginTop: 3 }}>
                 All leads sitewide, every user. GAP = lead share − capacity share. Positive gap means buy there.
@@ -1552,7 +1552,7 @@ export default function NumbersApp() {
                 <div className="pool-stat-card" style={{ borderTopColor: T.red }}>
                   <div className="pool-stat-label">TOP SHORTAGE</div>
                   <div className="pool-stat-value" style={{ color: T.red, fontSize: 22 }}>
-                    {analytics.states[0]?.code ?? '—'}
+                    {analytics.states[0]?.code ?? ', '}
                   </div>
                   <div className="pool-stat-sub">
                     {analytics.states[0]
@@ -1610,7 +1610,7 @@ export default function NumbersApp() {
                             <td style={{ color: s.activeNumbers === 0 && s.leads > 0 ? '#c01a1a' : T.text }}>
                               {s.activeNumbers}
                             </td>
-                            <td>{s.leadsPerNumber !== null ? s.leadsPerNumber : '—'}</td>
+                            <td>{s.leadsPerNumber !== null ? s.leadsPerNumber : ', '}</td>
                             <td style={{ color: T.muted }}>{s.capacityPct}%</td>
                             <td style={{
                               color: s.gap > 0 ? T.red : s.gap < 0 ? T.green : T.muted,
@@ -1651,7 +1651,7 @@ export default function NumbersApp() {
                 fontSize: 9, color: T.muted, letterSpacing: 1, lineHeight: 1.7,
                 fontFamily: 'monospace',
               }}>
-                VERDICTS — NEED: leads but zero active numbers · NEED MORE: gap ≥ +2pp ·
+                VERDICTS, NEED: leads but zero active numbers · NEED MORE: gap ≥ +2pp ·
                 STRETCHED: gap &gt; 0 · BALANCED: within ±2pp · SURPLUS: capacity outweighs demand.
                 Lead states normalized server-side (&quot;FLORIDA&quot;→FL, area-code fallback).
                 BUY → pre-fills the buy modal with that state selected.
@@ -1682,7 +1682,7 @@ export default function NumbersApp() {
                 <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, lineHeight: 1.6 }}>
                   Pool trues up to active-subscriber count once per month, on the 1st.
                   {cycleData.config?.ratio_cycling_enabled === false && (
-                    <span style={{ color: '#c0392b', fontWeight: 'bold' }}> — CURRENTLY DISABLED</span>
+                    <span style={{ color: '#c0392b', fontWeight: 'bold' }}>, CURRENTLY DISABLED</span>
                   )}
                 </div>
               </div>
@@ -1697,12 +1697,12 @@ export default function NumbersApp() {
                   <div className="pool-stat-label">POOL ACTIVE</div>
                 </div>
                 <div className="pool-stat-card">
-                  <div className="pool-stat-value">{cycleData.config?.numbers_per_user ?? '—'}</div>
+                  <div className="pool-stat-value">{cycleData.config?.numbers_per_user ?? ', '}</div>
                   <div className="pool-stat-label">PER USER</div>
                 </div>
                 <div className="pool-stat-card">
                   <div className="pool-stat-value">
-                    {cycleData.config ? Math.min(Math.max(cycleData.activeSubs * (cycleData.config.numbers_per_user ?? 0), cycleData.config.pool_floor ?? 0), 999999) : '—'}
+                    {cycleData.config ? Math.min(Math.max(cycleData.activeSubs * (cycleData.config.numbers_per_user ?? 0), cycleData.config.pool_floor ?? 0), 999999) : ', '}
                   </div>
                   <div className="pool-stat-label">NEXT TARGET</div>
                 </div>
@@ -1712,14 +1712,14 @@ export default function NumbersApp() {
                 fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 12,
                 fontFamily: 'monospace', lineHeight: 1.7,
               }}>
-                FLOOR: {cycleData.config?.pool_floor ?? '—'} · COOLDOWN: {cycleData.config?.release_cooldown_days ?? '—'}d ·
+                FLOOR: {cycleData.config?.pool_floor ?? ', '} · COOLDOWN: {cycleData.config?.release_cooldown_days ?? ', '}d ·
                 LAST RUN: {cycleData.config?.last_reconcile_month ?? 'never'}
                 {cycleData.config?.last_ratio_reconcile_at ? ` (${new Date(cycleData.config.last_ratio_reconcile_at).toLocaleString()})` : ''}
               </div>
 
               {(!cycleData.entries || cycleData.entries.length === 0) ? (
                 <div style={{ padding: 40, textAlign: 'center', fontSize: 11, letterSpacing: 3, color: T.muted }}>
-                  NO CYCLING EVENTS YET — FIRST RECEIPT POSTS ON THE 1ST
+                  NO CYCLING EVENTS YET, FIRST RECEIPT POSTS ON THE 1ST
                 </div>
               ) : (
                 <div className="pool-section" style={{ padding: 0, overflow: 'hidden' }}>
@@ -1982,7 +1982,7 @@ export default function NumbersApp() {
                 TNS &rarr; Verizon
               </div>
               Free Caller Registry submits to all three at once, for free. That
-              is the whole reason to use it — one form instead of three, and
+              is the whole reason to use it: one form instead of three, and
               Verizon has no free API at all, so there is no way to automate
               past it.
 
@@ -1992,14 +1992,14 @@ export default function NumbersApp() {
               <div style={{ paddingLeft: 2 }}>
                 <strong>1.</strong> Hit <strong>&#8595; FCR CSV</strong> above. You get the numbers
                 not yet filed with all three engines. Released numbers are left
-                out — you no longer hold them, and the registry asks you to
+                out: you no longer hold them, and the registry asks you to
                 attest that you do.
                 <br /><br />
                 <strong>2.</strong> Go to <strong>freecallerregistry.com</strong> and fill in your
                 business details. Use the <strong>same legal entity every time</strong>.
                 <br /><br />
                 <strong>3.</strong> Numbers: the form takes up to 20 inline. Above that use
-                its <strong>Upload Additional Numbers</strong> option — Text or Excel,
+                its <strong>Upload Additional Numbers</strong> option: Text or Excel,
                 under 100KB. A 500-number export is roughly 30KB, so size will
                 not be your problem.
                 <br /><br />
@@ -2011,8 +2011,8 @@ export default function NumbersApp() {
                 WHY THE EXPORT SKIPS NUMBERS ALREADY FILED
               </div>
               Not because uploading twice breaks anything. The registry keeps a
-              record you revisit and edit — change an outbound number and you
-              update or remove the old one — so re-submitting the same list
+              record you revisit and edit, change an outbound number and you
+              update or remove the old one, so re-submitting the same list
               under the same business updates that record rather than
               duplicating it. Their guidance calls repeat registration
               pointless, not harmful.
@@ -2038,8 +2038,8 @@ export default function NumbersApp() {
                 • Registration <strong>reduces</strong> the risk of being labelled. It
                 guarantees nothing.<br />
                 • It is not what keeps your answer rate up. Labelling follows
-                behaviour — calls per number, short-call ratio, complaints. The
-                9–12s hold and number-health rotation move that needle harder
+                behaviour: calls per number, short-call ratio, complaints. The
+                9, 12s hold and number-health rotation move that needle harder
                 than any filing does.
               </div>
             </div>
@@ -2062,12 +2062,12 @@ export default function NumbersApp() {
               Flip all <strong>{unregisteredCount}</strong> currently-unregistered number
               {unregisteredCount === 1 ? '' : 's'} to registered.
               <br /><br />
-              This records a filing — it does NOT submit anything. Nothing here reaches Free
+              This records a filing, it does NOT submit anything. Nothing here reaches Free
               Caller Registry, A2P 10DLC, or any carrier system; that upload happens on their
               site, by you. Use this afterwards, so the pool knows which numbers are covered.
               <br /><br />
               Each number is marked <strong>submitted</strong> against all three engines, because one
-              FCR upload reaches all three. It is never marked confirmed — they send no
+              FCR upload reaches all three. It is never marked confirmed, they send no
               acknowledgement back, so there is nothing to confirm it with.
             </div>
             {registerAllMessage && (
@@ -2117,7 +2117,7 @@ export default function NumbersApp() {
               <br /><br />
               Cost: ~<strong>$10 one-time Telnyx charge</strong> + ~$10/mo recurring.
               <br /><br />
-              Idempotent — running twice won&apos;t double-buy.
+              Idempotent, running twice won&apos;t double-buy.
             </div>
             {seedMessage && (
               <div style={{

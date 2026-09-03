@@ -7,9 +7,9 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'Manager+ — DialerSeat\u2019s Team & White-Label Tier | DialerSeat',
+  title: 'Manager+: DialerSeat\u2019s Team & White-Label Tier | DialerSeat',
   description:
-    'What Manager+ actually is: $75/week, replaces Pro, unlocks team ownership and full white-labeling. How seats stack, owner-pays vs. agent-pays, real examples for lead vendors and agency owners, advanced analytics, and priority support — with real product screenshots.',
+    'What Manager+ actually is: $75/week, replaces Pro, unlocks team ownership and full white-labeling. How seats stack, owner-pays vs. agent-pays, real examples for lead vendors and agency owners, advanced analytics, and priority support, with real product screenshots.',
   alternates: {
     canonical: 'https://dialerseat.com/faq/manager-plus',
   },
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'Manager+ — The Tier Above Pro',
+    title: 'Manager+: The Tier Above Pro',
     description:
       '$75/week. Team ownership, full white-labeling, advanced analytics, and priority support. See it running on desktop and as a mobile PWA.',
     url: 'https://dialerseat.com/faq/manager-plus',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Manager+ — The Tier Above Pro',
+    title: 'Manager+: The Tier Above Pro',
     description: '$75/week. Team ownership, full white-labeling, advanced analytics, and priority support. See it running on desktop and as a mobile PWA.',
   },
 }

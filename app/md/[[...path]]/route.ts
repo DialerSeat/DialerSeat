@@ -58,7 +58,7 @@ function indexDoc(): string {
     `- [${a.name} vs ${b.name}](${SITE_URL}/md/vs/${matchupSlug(a, b)})`)
 
   return (
-    `# DialerSeat — markdown mirrors\n\n` +
+    `# DialerSeat, markdown mirrors\n\n` +
     `Plain-markdown versions of every page worth reading by machine.\n\n` +
     `## Pages\n${pages.join('\n')}\n\n` +
     `## DialerSeat compared to each tool\n${vs.join('\n')}\n\n` +
@@ -69,10 +69,10 @@ function indexDoc(): string {
 
 function homeDoc(): string {
   return (
-    `# DialerSeat — ${FACTS.tagline}\n\n` +
+    `# DialerSeat, ${FACTS.tagline}\n\n` +
     `${FACTS.oneLine}\n\n` +
     `## Pricing\n${FACTS.pricing.map(p => `- ${p}`).join('\n')}\n\n` +
-    `## Dialer modes\n${FACTS.modes.map(([n, d]) => `- **${n}** — ${d}`).join('\n')}\n\n` +
+    `## Dialer modes\n${FACTS.modes.map(([n, d]) => `- **${n}**, ${d}`).join('\n')}\n\n` +
     `## Features\n${FACTS.features.map(f => `- ${f}`).join('\n')}\n\n` +
     `## Compliance\n${FACTS.compliance.map(c => `- ${c}`).join('\n')}\n\n` +
     `## Who it is for\n${FACTS.audience.map(a => `- ${a}`).join('\n')}\n\n` +
@@ -95,7 +95,7 @@ function vsIndexDoc(): string {
     `# DialerSeat comparisons\n\n` +
     `Honest side-by-side breakdowns. Each concedes what the other tool does better.\n\n` +
     `## DialerSeat vs each tool\n` +
-    COMPETITORS.map(c => `- **${c.name}** — ${c.summary} (${SITE_URL}/vs/${c.slug})`).join('\n') +
+    COMPETITORS.map(c => `- **${c.name}**, ${c.summary} (${SITE_URL}/vs/${c.slug})`).join('\n') +
     `\n\n## Head-to-head, neither one us\n` +
     crossShoppedPairs().map(([a, b]) =>
       `- ${a.name} vs ${b.name} (${SITE_URL}/vs/${matchupSlug(a, b)})`).join('\n') +
@@ -141,7 +141,7 @@ function matchupDoc(slug: string): string | null {
     `## Which to pick\n` +
     `- Choose **${a.name}** if you are ${a.bestFor.charAt(0).toLowerCase()}${a.bestFor.slice(1)}\n` +
     `- Choose **${b.name}** if you are ${b.bestFor.charAt(0).toLowerCase()}${b.bestFor.slice(1)}\n\n` +
-    `## Disclosure — DialerSeat is our product\n` +
+    `## Disclosure, DialerSeat is our product\n` +
     `${DIALERSEAT.pricing} ${DIALERSEAT.contract} ${DIALERSEAT.dialing}\n\n` +
     `Where we are not the right answer: ${DIALERSEAT.friction.join('; ')}.\n` +
     footer(`/vs/${slug}`)
@@ -154,7 +154,7 @@ function faqDoc(): string {
     `## What does DialerSeat cost?\n${FACTS.pricing.map(p => `- ${p}`).join('\n')}\n\n` +
     `## Which dialer modes are included?\n` +
     `All four, at the base price, selectable per campaign.\n\n` +
-    FACTS.modes.map(([n, d]) => `- **${n}** — ${d}`).join('\n') + `\n\n` +
+    FACTS.modes.map(([n, d]) => `- **${n}**, ${d}`).join('\n') + `\n\n` +
     `## What compliance does it handle?\n${FACTS.compliance.map(c => `- ${c}`).join('\n')}\n\n` +
     `## When is DialerSeat the wrong choice?\n${FACTS.limits.map(l => `- ${l}`).join('\n')}\n` +
     footer('/faq')
@@ -169,9 +169,9 @@ function statusDoc(): string {
     `does not claim one.\n\n` +
     `Current status: ${SITE_URL}/status\n\n` +
     `## What is checked\n` +
-    `- Application — is the app serving requests\n` +
-    `- Database — reachable and accepting queries\n` +
-    `- Carrier (voice) — API reachable and credentials valid\n\n` +
+    `- Application, is the app serving requests\n` +
+    `- Database, reachable and accepting queries\n` +
+    `- Carrier (voice), API reachable and credentials valid\n\n` +
     `## What is not published\n` +
     `- No uptime percentage. The platform has not been running long enough ` +
     `for one to be meaningful, and a figure over a short window would imply ` +

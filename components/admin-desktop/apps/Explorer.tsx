@@ -92,7 +92,7 @@ interface Lead {
 }
 
 function relativeTime(iso: string | null | undefined): string {
-  if (!iso) return '—'
+  if (!iso) return ', '
   const then = new Date(iso).getTime()
   const diff = Math.max(0, Date.now() - then)
   const sec = Math.floor(diff / 1000)
@@ -112,7 +112,7 @@ function relativeTime(iso: string | null | undefined): string {
 }
 
 function fmtDate(iso: string | null | undefined): string {
-  if (!iso) return '—'
+  if (!iso) return ', '
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
@@ -571,12 +571,12 @@ export default function ExplorerApp() {
                     <td style={tdStyle}>
                       {u.recording_count > 0
                         ? u.recording_count.toLocaleString()
-                        : <span style={{ color: T.muted }}>—</span>}
+                        : <span style={{ color: T.muted }}>, </span>}
                     </td>
                     <td style={tdStyle}>
                       {(() => {
                         const seats = u.seats || []
-                        if (seats.length === 0) return <span style={{ color: T.muted }}>—</span>
+                        if (seats.length === 0) return <span style={{ color: T.muted }}>, </span>
                         const first = seats[0]
                         return (
                           <div style={{ lineHeight: 1.35 }}>
@@ -723,18 +723,18 @@ export default function ExplorerApp() {
                   <tr key={l.id} style={{ borderBottom: `1px solid ${T.border}` }} className="dx-row">
                     <td style={{ ...tdStyle, color: T.muted }}>{i + 1}</td>
                     <td style={{ ...tdStyle, fontWeight: 'bold' }}>
-                      {[l.first_name, l.last_name].filter(Boolean).join(' ') || '—'}
+                      {[l.first_name, l.last_name].filter(Boolean).join(' ') || ', '}
                     </td>
-                    <td style={tdStyle}>{l.phone || '—'}</td>
-                    <td style={{ ...tdStyle, color: T.muted }}>{l.email || '—'}</td>
+                    <td style={tdStyle}>{l.phone || ', '}</td>
+                    <td style={{ ...tdStyle, color: T.muted }}>{l.email || ', '}</td>
                     <td style={{ ...tdStyle, color: T.muted }}>
-                      {[l.city, l.state].filter(Boolean).join(', ') || '—'}
+                      {[l.city, l.state].filter(Boolean).join(', ') || ', '}
                     </td>
                     <td style={tdStyle}>
                       {l.disposition ? (
                         <span style={badgeStyle}>{l.disposition.toUpperCase()}</span>
                       ) : (
-                        <span style={{ color: T.muted }}>—</span>
+                        <span style={{ color: T.muted }}>, </span>
                       )}
                     </td>
                     <td style={tdStyle}>{l.dial_attempts ?? 0}</td>
@@ -743,14 +743,14 @@ export default function ExplorerApp() {
                       {l.consent_date ? (
                         <span style={{ color: T.green }}>✓ {fmtDate(l.consent_date)}</span>
                       ) : (
-                        <span style={{ color: T.amber }}>— NONE</span>
+                        <span style={{ color: T.amber }}>, NONE</span>
                       )}
                     </td>
                     <td
                       style={{ ...tdStyle, color: T.muted, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                       title={l.notes || ''}
                     >
-                      {l.notes || '—'}
+                      {l.notes || ', '}
                     </td>
                     <td style={tdStyle}>
                       <button
@@ -793,17 +793,17 @@ export default function ExplorerApp() {
                     return (
                       <tr key={r.id} style={{ borderBottom: `1px solid ${T.border}` }} className="dx-row">
                         <td style={{ ...tdStyle, color: T.muted }}>{fmtDate(r.created_at)}</td>
-                        <td style={tdStyle}>{r.campaigns?.name || '—'}</td>
-                        <td style={{ ...tdStyle, fontWeight: 'bold' }}>{leadName || '—'}</td>
-                        <td style={{ ...tdStyle, color: T.muted }}>{r.phone_number || '—'}</td>
+                        <td style={tdStyle}>{r.campaigns?.name || ', '}</td>
+                        <td style={{ ...tdStyle, fontWeight: 'bold' }}>{leadName || ', '}</td>
+                        <td style={{ ...tdStyle, color: T.muted }}>{r.phone_number || ', '}</td>
                         <td style={tdStyle}>
-                          {r.disposition ? <span style={badgeStyle}>{r.disposition.toUpperCase()}</span> : <span style={{ color: T.muted }}>—</span>}
+                          {r.disposition ? <span style={badgeStyle}>{r.disposition.toUpperCase()}</span> : <span style={{ color: T.muted }}>, </span>}
                         </td>
                         <td style={{ ...tdStyle, color: T.muted }}>
                           {r.amd_result === 'human' ? <span style={{ color: T.green }}>PERSON</span>
                             : r.amd_result === 'machine_start' || r.amd_result === 'machine_end_beep' ? 'MACHINE'
                             : r.amd_result === 'unknown' ? 'UNCLEAR'
-                            : '—'}
+                            : ', '}
                         </td>
                         <td style={{ ...tdStyle, color: T.muted }}>{mins}:{secs.toString().padStart(2, '0')}</td>
                         <td style={{ ...tdStyle, minWidth: 220 }}>
@@ -1035,7 +1035,7 @@ function LeadPreviewThumb({ leads }: { leads: PreviewLead[] }) {
           {leads.slice(0, 6).map(l => (
             <tr key={l.id} style={{ borderBottom: `1px solid ${T.border}` }}>
               <td style={{ padding: '2px 6px', color: '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {[l.first_name, l.last_name].filter(Boolean).join(' ') || '—'}
+                {[l.first_name, l.last_name].filter(Boolean).join(' ') || ', '}
               </td>
               <td style={{ padding: '2px 6px', color: '#666', whiteSpace: 'nowrap' }}>{l.phone}</td>
             </tr>

@@ -10,9 +10,9 @@ import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { STATE_TIMEZONES } from '@/lib/timezones'
 
 export const metadata: Metadata = {
-  title: 'Telemarketing Calling Hours by State — What DialerSeat Enforces | DialerSeat',
+  title: 'Telemarketing Calling Hours by State: What DialerSeat Enforces | DialerSeat',
   description:
-    'The federal TCPA window is 8am–9pm in the lead’s local time, not yours. DialerSeat enforces 9am–9pm per lead, server-side, using the timezone of the number being called. Which states are stricter, and what that means for your list.',
+    'The federal TCPA window is 8am: 9pm in the lead’s local time, not yours. DialerSeat enforces 9am: 9pm per lead, server-side, using the timezone of the number being called. Which states are stricter, and what that means for your list.',
   alternates: { canonical: 'https://dialerseat.com/faq/calling-hours' },
   openGraph: {
     title: 'Telemarketing Calling Hours by State',
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Telemarketing Calling Hours by State',
     description:
-      'The federal window is 8am–9pm in the LEAD’s local time. DialerSeat enforces 9am–9pm per lead, server-side.',
+      'The federal window is 8am, 9pm in the LEAD’s local time. DialerSeat enforces 9am: 9pm per lead, server-side.',
   },
 }
 
@@ -33,7 +33,7 @@ const FAQS = [
   {
     question: 'What are the legal calling hours for telemarketing?',
     answer:
-      'The federal TCPA rule is 8:00am to 9:00pm in the time zone of the person being called — not the time zone of the caller. That distinction is the one most teams get wrong: an agent dialing at 6:30am Pacific is calling 9:30am Eastern, which is fine, but an agent dialing at 6:30pm Pacific is calling 9:30pm Eastern, which is not.',
+      'The federal TCPA rule is 8:00am to 9:00pm in the time zone of the person being called, not the time zone of the caller. That distinction is the one most teams get wrong: an agent dialing at 6:30am Pacific is calling 9:30am Eastern, which is fine, but an agent dialing at 6:30pm Pacific is calling 9:30pm Eastern, which is not.',
   },
   {
     question: 'What hours does DialerSeat enforce?',
@@ -43,12 +43,12 @@ const FAQS = [
   {
     question: 'How does DialerSeat know what time zone a lead is in?',
     answer:
-      'From the state column on the lead if there is one, and from the area code if there is not. If neither can establish a location, the lead is not dialed — the check fails closed rather than guessing. That is why a lead with an unrecognised area code and no state sits in the queue: it is not a bug, it is the calling-window check refusing to approve a call it cannot verify.',
+      'From the state column on the lead if there is one, and from the area code if there is not. If neither can establish a location, the lead is not dialed, the check fails closed rather than guessing. That is why a lead with an unrecognised area code and no state sits in the queue: it is not a bug, it is the calling-window check refusing to approve a call it cannot verify.',
   },
   {
     question: 'Do some states have stricter calling hours than the federal rule?',
     answer:
-      'Yes. Florida and Maryland are commonly cited at 8am–8pm, Louisiana and Alabama restrict Sunday solicitation, Wisconsin bans Sunday telemarketing under its no-call statute, and Texas applies a narrower Sunday window. Several states have passed “mini-TCPA” laws since 2021 with their own hours, holiday and consent rules. DialerSeat does not currently enforce these state-specific variations automatically — it enforces the 9am–9pm baseline. Meeting stricter state law is your responsibility.',
+      'Yes. Florida and Maryland are commonly cited at 8am: 8pm, Louisiana and Alabama restrict Sunday solicitation, Wisconsin bans Sunday telemarketing under its no-call statute, and Texas applies a narrower Sunday window. Several states have passed “mini-TCPA” laws since 2021 with their own hours, holiday and consent rules. DialerSeat does not currently enforce these state-specific variations automatically, it enforces the 9am, 9pm baseline. Meeting stricter state law is your responsibility.',
   },
   {
     question: 'Can I turn the calling window off?',
@@ -85,12 +85,12 @@ const ZONE_LABELS: Record<string, string> = {
 }
 
 const STRICTER = [
-  { state: 'Florida', rule: 'Commonly cited at 8:00am–8:00pm' },
-  { state: 'Maryland', rule: 'Stop the Spam Calls Act — 8:00am–8:00pm' },
+  { state: 'Florida', rule: 'Commonly cited at 8:00am: 8:00pm' },
+  { state: 'Maryland', rule: 'Stop the Spam Calls Act: 8:00am: 8:00pm' },
   { state: 'Alabama', rule: 'Sunday solicitation prohibited' },
   { state: 'Louisiana', rule: 'Sunday solicitation prohibited' },
   { state: 'Wisconsin', rule: 'Sunday telemarketing banned under the state no-call statute' },
-  { state: 'Texas', rule: 'Narrower Sunday window, commonly reported as noon–9:00pm' },
+  { state: 'Texas', rule: 'Narrower Sunday window, commonly reported as noon: 9:00pm' },
 ]
 
 export default function Page() {
@@ -125,14 +125,14 @@ export default function Page() {
           <div className="exp-section-label">▸ THE FEDERAL RULE</div>
           <h2>8:00am to 9:00pm, in the lead&apos;s time zone.</h2>
           <p>
-            The TCPA sets the outer boundary at 8:00am–9:00pm <em>local to the
+            The TCPA sets the outer boundary at 8:00am, 9:00pm <em>local to the
             called party</em>. Not local to the agent, not local to the company,
             not local to wherever the server is.
           </p>
           <p>
             The practical consequence catches teams out in both directions. An
             agent in California starting at 6:00am is calling 9:00am on the East
-            Coast — legal, and often the best hour of their day. The same agent
+            Coast: legal, and often the best hour of their day. The same agent
             finishing at 6:15pm Pacific is calling 9:15pm Eastern, which is a
             violation, on a call that felt like the middle of the afternoon.
           </p>
@@ -161,7 +161,7 @@ export default function Page() {
           <p>
             The time zone comes from the lead&apos;s state column when it has one,
             and from the area code when it does not. When neither resolves, the
-            check <strong>fails closed</strong> — the lead is held rather than
+            check <strong>fails closed</strong>, the lead is held rather than
             dialed. A system that guesses a time zone in order to place a call is
             not enforcing anything.
           </p>
@@ -195,7 +195,7 @@ export default function Page() {
                       {states.sort().join(', ')}
                     </td>
                     <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', whiteSpace: 'nowrap', color: '#4ade80' }}>
-                      9am–9pm local
+                      9am, 9pm local
                     </td>
                   </tr>
                 ))}
@@ -234,9 +234,9 @@ export default function Page() {
             color: '#c4c8d8',
           }}>
             <strong>Read this part carefully.</strong> DialerSeat enforces the
-            9am–9pm baseline. It does <em>not</em> currently apply these
+            9am, 9pm baseline. It does <em>not</em> currently apply these
             state-specific variations automatically, and this page is a starting
-            point rather than legal advice — state statutes change, and the
+            point rather than legal advice: state statutes change, and the
             summaries above are drawn from secondary sources. If your list is
             concentrated in a stricter state, confirm the current rule with
             counsel and schedule around it. We would rather tell you that plainly
@@ -260,7 +260,7 @@ export default function Page() {
           <h2>Compliance, in practice.</h2>
           <p>
             <Link href="/faq/how-we-keep-compliance">How DialerSeat keeps you compliant</Link>{' '}
-            covers the rest of the enforcement surface — abandon-rate caps, DNC
+            covers the rest of the enforcement surface: abandon-rate caps, DNC
             suppression and consent records.{' '}
             <Link href="/faq/dialer-for-offshore-agents">Dialing US leads from offshore</Link>{' '}
             covers the case where the agent&apos;s own clock is the furthest thing

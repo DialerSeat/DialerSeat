@@ -199,7 +199,7 @@ function Ring({ pct, size = 56, stroke = 6, color = T.blue }: {
         alignItems: 'center', justifyContent: 'center',
       }}>
         <span style={{ fontSize: size > 48 ? 14 : 11, fontWeight: 800, color: T.text, fontFamily: FUTURA }}>
-          {pct !== null ? `${Math.round(pct)}%` : '—'}
+          {pct !== null ? `${Math.round(pct)}%` : ', '}
         </span>
       </div>
     </div>
@@ -651,27 +651,27 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                           </div>
                           <div className="ta-lb-metrics">
                             <div className="ta-lb-metric">
-                              <div className="ta-lb-metric-val">{m.calls > 0 ? m.calls.toLocaleString() : '—'}</div>
+                              <div className="ta-lb-metric-val">{m.calls > 0 ? m.calls.toLocaleString() : ', '}</div>
                               <div className="ta-lb-metric-key">CALLS</div>
                             </div>
                             <div className="ta-lb-metric">
-                              <div className="ta-lb-metric-val">{m.calls > 0 ? `${Math.round(cr!)}%` : '—'}</div>
+                              <div className="ta-lb-metric-val">{m.calls > 0 ? `${Math.round(cr!)}%` : ', '}</div>
                               <div className="ta-lb-metric-key">CONNECT</div>
                             </div>
                             <div className="ta-lb-metric">
                               <div className="ta-lb-metric-val" style={{ color: m.conversions > 0 ? T.green : T.text }}>
-                                {m.conversions > 0 ? m.conversions.toLocaleString() : '—'}
+                                {m.conversions > 0 ? m.conversions.toLocaleString() : ', '}
                               </div>
                               <div className="ta-lb-metric-key">CONV</div>
                             </div>
                             <div className="ta-lb-metric">
-                              <div className="ta-lb-metric-val">{m.talkSeconds > 0 ? fmtTime(m.talkSeconds) : '—'}</div>
+                              <div className="ta-lb-metric-val">{m.talkSeconds > 0 ? fmtTime(m.talkSeconds) : ', '}</div>
                               <div className="ta-lb-metric-key">TALK</div>
                             </div>
                             {typeof m.spentCents === 'number' && (
                               <div className="ta-lb-metric">
                                 <div className="ta-lb-metric-val" style={{ color: m.spentCents > 0 ? T.amber : T.text }}>
-                                  {m.spentCents > 0 ? fmtMoney(m.spentCents) : '—'}
+                                  {m.spentCents > 0 ? fmtMoney(m.spentCents) : ', '}
                                 </div>
                                 <div className="ta-lb-metric-key">SEAT SPEND</div>
                               </div>
@@ -760,21 +760,21 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                         </div>
                         <div className="ta-lb-metrics">
                           <div className="ta-lb-metric">
-                            <div className="ta-lb-metric-val">{c.calls > 0 ? c.calls.toLocaleString() : '—'}</div>
+                            <div className="ta-lb-metric-val">{c.calls > 0 ? c.calls.toLocaleString() : ', '}</div>
                             <div className="ta-lb-metric-key">CALLS</div>
                           </div>
                           <div className="ta-lb-metric">
-                            <div className="ta-lb-metric-val">{c.calls > 0 ? `${Math.round(cr!)}%` : '—'}</div>
+                            <div className="ta-lb-metric-val">{c.calls > 0 ? `${Math.round(cr!)}%` : ', '}</div>
                             <div className="ta-lb-metric-key">CONNECT</div>
                           </div>
                           <div className="ta-lb-metric">
                             <div className="ta-lb-metric-val" style={{ color: c.conversions > 0 ? T.green : T.text }}>
-                              {c.conversions > 0 ? c.conversions.toLocaleString() : '—'}
+                              {c.conversions > 0 ? c.conversions.toLocaleString() : ', '}
                             </div>
                             <div className="ta-lb-metric-key">CONV</div>
                           </div>
                           <div className="ta-lb-metric">
-                            <div className="ta-lb-metric-val">{c.talkSeconds > 0 ? fmtTime(c.talkSeconds) : '—'}</div>
+                            <div className="ta-lb-metric-val">{c.talkSeconds > 0 ? fmtTime(c.talkSeconds) : ', '}</div>
                             <div className="ta-lb-metric-key">TALK</div>
                           </div>
                         </div>
@@ -840,7 +840,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                             {c.disposition}
                           </span>
                         ) : (
-                          <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>—</span>
+                          <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>, </span>
                         )}
                         <div className="ta-call-right">
                           <div className="ta-call-time">{relTime(c.createdAt)}</div>

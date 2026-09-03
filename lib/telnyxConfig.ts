@@ -192,7 +192,7 @@ export function resolveTelnyxConfig(): TelnyxConfigResult {
     embeddedDomain = parsed.embeddedDomain
     if (sipUsername !== rawSipUsername) {
       warnings.push(
-        `TELNYX_SIP_USERNAME was normalized — it should be the bare SIP username ` +
+        `TELNYX_SIP_USERNAME was normalized, it should be the bare SIP username ` +
         `(e.g. "genericuser1234"), not a full SIP URI. Using "${sipUsername}".`
       )
     }
@@ -213,7 +213,7 @@ export function resolveTelnyxConfig(): TelnyxConfigResult {
       // misleading about phone numbers.
       errors.push(
         `TELNYX_SIP_USERNAME ("${sipUsername}") starts with a digit. Telnyx rejects SIP URIs whose ` +
-        `user part begins with a number — it parses sip:${sipUsername}@... as a phone number, which ` +
+        `user part begins with a number, it parses sip:${sipUsername}@... as a phone number, which ` +
         `is why the dial fails with "must be in +E164 format". Use a SIP username starting with a ` +
         `letter (Telnyx-generated telephony credentials always do).`
       )
@@ -232,7 +232,7 @@ export function resolveTelnyxConfig(): TelnyxConfigResult {
     if (normalized !== rawSipDomain) {
       warnings.push(
         `TELNYX_SIP_DOMAIN was normalized from "${rawSipDomain}" to "${normalized}" ` +
-        `— it should be a bare hostname, with no sip: scheme, no username@, and no :port.`
+        `: it should be a bare hostname, with no sip: scheme, no username@, and no :port.`
       )
     }
     if (normalized.includes('.')) {
@@ -247,7 +247,7 @@ export function resolveTelnyxConfig(): TelnyxConfigResult {
     } else {
       sipDomain = embeddedDomain || DEFAULT_SIP_DOMAIN
       warnings.push(
-        `TELNYX_SIP_DOMAIN ("${normalized}") has no dot in it, so it cannot be a domain — ` +
+        `TELNYX_SIP_DOMAIN ("${normalized}") has no dot in it, so it cannot be a domain, ` +
         `it looks like a connection name or a placeholder. Ignoring it and using ` +
         `"${sipDomain}" instead. Fix the env var: for a US account the correct value is ` +
         `"${DEFAULT_SIP_DOMAIN}", or unset it entirely to use that default.`
@@ -269,7 +269,7 @@ export function resolveTelnyxConfig(): TelnyxConfigResult {
     }
     if (/localhost|127\.0\.0\.1/.test(appUrl)) {
       warnings.push(
-        `NEXT_PUBLIC_APP_URL points at localhost, which Telnyx cannot reach — ` +
+        `NEXT_PUBLIC_APP_URL points at localhost, which Telnyx cannot reach, ` +
         `call.answered / call.hangup / AMD webhooks will never arrive, so calls will ` +
         `connect but never resolve in the UI. Use a public https URL (or a tunnel).`
       )
@@ -303,7 +303,7 @@ export function resolveTelnyxConfig(): TelnyxConfigResult {
 export function resolveTelnyxConfigOrLog(context: string): TelnyxConfig | null {
   const result = resolveTelnyxConfig()
   if (!result.ok) {
-    console.error(`[telnyxConfig:${context}] Telnyx is not configured — ${result.errors.join('; ')}`)
+    console.error(`[telnyxConfig:${context}] Telnyx is not configured, ${result.errors.join('; ')}`)
     return null
   }
   for (const w of result.config.warnings) {

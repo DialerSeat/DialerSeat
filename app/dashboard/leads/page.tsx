@@ -497,10 +497,10 @@ export default function LeadsPage() {
   }
 
   const campaignName = (id: string) =>
-    campaigns.find(c => c.id === id)?.name || '—'
+    campaigns.find(c => c.id === id)?.name || ', '
 
   const formatDate = (iso: string | null | undefined) => {
-    if (!iso) return '—'
+    if (!iso) return ', '
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
@@ -928,7 +928,7 @@ export default function LeadsPage() {
                 <div className="lead-cell lead-cell-name">
                   <div className="lead-name">{lead.first_name} {lead.last_name}</div>
                   <div className="lead-meta-mobile">
-                    <span>{lead.state || '—'}</span>
+                    <span>{lead.state || ', '}</span>
                     <span>{campaignName(lead.campaign_id)}</span>
                   </div>
                 </div>
@@ -938,7 +938,7 @@ export default function LeadsPage() {
                 <div className="lead-cell lead-cell-state" style={{
                   fontSize: 11, color: T.muted, fontFamily: 'monospace',
                 }}>
-                  {lead.state || '—'}
+                  {lead.state || ', '}
                 </div>
                 <div className="lead-cell lead-cell-campaign" style={{
                   fontSize: 10, color: T.muted, fontFamily: 'monospace',
@@ -1014,7 +1014,7 @@ export default function LeadsPage() {
                     <div className="lead-extra-row">
                       <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>LAST CALLED</span>
                       <span style={{ fontFamily: 'monospace', color: T.text, fontWeight: 'bold' }}>
-                        {lead.last_called_at ? new Date(lead.last_called_at).toLocaleString() : '—'}
+                        {lead.last_called_at ? new Date(lead.last_called_at).toLocaleString() : ', '}
                       </span>
                     </div>
                   </div>
@@ -1052,7 +1052,7 @@ export default function LeadsPage() {
                           textAlign: 'center',
                           textDecoration: 'none',
                           fontFamily: FUTURA,
-                        }}>{hasLapsedPlan ? 'RESUBSCRIBE' : 'SUBSCRIBE'} — $35/WEEK</Link>
+                        }}>{hasLapsedPlan ? 'RESUBSCRIBE' : 'SUBSCRIBE'}, $35/WEEK</Link>
                       </div>
                     ) : (
                       <>
@@ -1219,7 +1219,7 @@ export default function LeadsPage() {
                   onChange={e => setNewLead(l => ({ ...l, campaign_id: e.target.value }))}
                   disabled={adding}
                 >
-                  <option value="">— Select a campaign —</option>
+                  <option value="">, Select a campaign, </option>
                   {campaigns.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}

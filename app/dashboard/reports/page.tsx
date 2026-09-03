@@ -13,13 +13,13 @@ const ACCENT = '#2563eb'
 
 function quarterLabel(period: string): string {
   const [y, q] = period.split('-Q')
-  const names = ['Jan – Mar', 'Apr – Jun', 'Jul – Sep', 'Oct – Dec']
+  const names = ['Jan: Mar', 'Apr: Jun', 'Jul: Sep', 'Oct, Dec']
   return `Q${q} ${y} · ${names[Number(q) - 1]}`
 }
 
 function halfLabel(period: string): string {
   const [y, h] = period.split('-H')
-  return h === '1' ? `First half ${y} · Jan – Jun` : `Second half ${y} · Jul – Dec`
+  return h === '1' ? `First half ${y} · Jan, Jun` : `Second half ${y} · Jul, Dec`
 }
 
 function monthLabel(period: string): string {
@@ -105,14 +105,14 @@ export default function ReportsPage() {
           <div style={{ fontSize: 13, color: DIM, lineHeight: 1.8 }}>
             <p style={{ margin: '0 0 11px' }}>
               Every seat you pay for is a business expense. You are buying software
-              so that somebody can work — the same as a desk, a headset, or a phone
-              line — and in most cases that is deductible against what your business
+              so that somebody can work: the same as a desk, a headset, or a phone
+              line, and in most cases that is deductible against what your business
               earns. What it needs is a record: who was billed, for what, when, and
               proof the money actually moved.
             </p>
             <p style={{ margin: '0 0 11px' }}>
-              That is what these are. Each statement names both parties — your
-              business and DialerSeat — lists every seat charge with the agent it
+              That is what these are. Each statement names both parties, your
+              business and DialerSeat, lists every seat charge with the agent it
               covered and the period it paid for, and totals{' '}
               <strong style={{ color: MUTED }}>only what actually settled</strong>. A
               charge that failed is shown but never counted, because money that did
@@ -123,21 +123,21 @@ export default function ReportsPage() {
               Where we can, we re-check each figure against the payment processor
               before printing it. Where we cannot, the statement says so on the line
               itself rather than presenting an unverified number with the same
-              confidence as a verified one. Discounts are shown as discounts — list
-              price, what you actually paid, and the difference — so anyone reading
+              confidence as a verified one. Discounts are shown as discounts, list
+              price, what you actually paid, and the difference, so anyone reading
               it can check the arithmetic instead of taking it on trust.
             </p>
             <p style={{ margin: '0 0 11px' }}>
               <strong style={{ color: MUTED }}>We would rather be accurate than
               flattering.</strong> It would be easy to print a bigger number, or to
               quietly include pending charges, or to round in your favour. We do not,
-              because a statement that overstates an expense is not a favour — it is
+              because a statement that overstates an expense is not a favour, it is
               a problem handed to you with our logo on it, and it would arrive years
               later when it is expensive to fix.
             </p>
             <p style={{ margin: 0 }}>
               Statements are records, not advice. Whether an amount is deductible and
-              how it should be treated depends on your entity and where you operate —
+              how it should be treated depends on your entity and where you operate 
               that is a question for your accountant, and these documents exist to
               give them something solid to work from. If a figure looks wrong, tell
               us and we will correct it and reissue. Never edit one yourself:
@@ -157,7 +157,7 @@ export default function ReportsPage() {
               key={y}
               href={`/dashboard/reports/${y}`}
               title={y}
-              sub="Full calendar year — every seat charge, with growth against the year before"
+              sub="Full calendar year: every seat charge, with growth against the year before"
             />
           ))}
         </div>
@@ -211,7 +211,7 @@ export default function ReportsPage() {
           // was not trading invites them to file paper that means nothing.
           <div style={{ fontSize: 13, color: DIM, lineHeight: 1.8 }}>
             No monthly statements yet. One appears here for each month in which a
-            seat was billed — the first will show up once your first seat charge
+            seat was billed, the first will show up once your first seat charge
             settles.
           </div>
         ) : (

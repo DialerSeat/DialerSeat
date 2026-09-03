@@ -153,7 +153,7 @@ export async function POST(req: Request) {
       const missingColMatch = /Could not find the '([^']+)' column/.exec(error.message || '')
       const missingCol = missingColMatch?.[1]
       if (!missingCol || !(missingCol in updatesForRetry)) break
-      console.error(`[campaigns/update] '${missingCol}' column missing — retrying update without it. Run the matching migration in db/migrations to fix permanently.`)
+      console.error(`[campaigns/update] '${missingCol}' column missing, retrying update without it. Run the matching migration in db/migrations to fix permanently.`)
       const { [missingCol]: _omit, ...fallbackUpdates } = updatesForRetry
       updatesForRetry = fallbackUpdates
       if (Object.keys(updatesForRetry).length === 0) break

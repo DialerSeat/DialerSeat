@@ -77,7 +77,7 @@ export async function generateMetadata(
   const m = resolveMatchup(matchup)
   if (!m) return {}
 
-  const title = `${m.a.name} vs ${m.b.name} — Pricing, Dialing Modes, and Who Each One Suits`
+  const title = `${m.a.name} vs ${m.b.name}: Pricing, Dialing Modes, and Who Each One Suits`
   const description =
     `An honest side-by-side of ${m.a.name} and ${m.b.name}: what each costs, which dialing modes ` +
     `you actually get, where each one is genuinely stronger, and which buyer each suits.`
@@ -181,7 +181,7 @@ export default async function MatchupPage(
       question: `Is ${a.name} or ${b.name} cheaper?`,
       answer:
         `${a.name}: ${a.pricing} ${a.contract} ${b.name}: ${b.pricing} ${b.contract} ` +
-        `Compare the total including add-ons and minimums rather than the headline rate — for several ` +
+        `Compare the total including add-ons and minimums rather than the headline rate, for several ` +
         `tools in this category the advertised number excludes the dialer itself.`,
     },
     {
@@ -226,7 +226,7 @@ export default async function MatchupPage(
           <p style={{ fontSize: 16, lineHeight: 1.8, color: MUTED, maxWidth: 760, marginTop: 18 }}>
             Both are real options and each is the right answer for someone. Below is what each one
             costs, which dialing modes you actually get for that money, and the buyer each genuinely
-            suits — followed by a note on where our own product fits, clearly marked as ours.
+            suits: followed by a note on where our own product fits, clearly marked as ours.
           </p>
 
           <div style={{
@@ -262,7 +262,7 @@ export default async function MatchupPage(
             borderLeft: `4px solid ${ACCENT}`, borderRadius: 8, padding: 28,
           }}>
             <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: ACCENT }}>
-              DISCLOSURE — THIS IS OUR PRODUCT
+              DISCLOSURE, THIS IS OUR PRODUCT
             </div>
             <h2 style={{ fontSize: 20, fontWeight: 'bold', margin: '10px 0 0' }}>
               Where DialerSeat fits
@@ -320,7 +320,7 @@ export default async function MatchupPage(
           <p style={{ fontSize: 12, lineHeight: 1.8, color: MUTED, marginTop: 40, maxWidth: 760 }}>
             Pricing and packaging for other vendors change without notice and are summarised here from
             their public materials. Verify current terms with the vendor before buying. Corrections are
-            welcome — we would rather be accurate than flattering. Competitors listed:{' '}
+            welcome, we would rather be accurate than flattering. Competitors listed:{' '}
             {COMPETITORS.filter(c => c.crossShopped).map(c => c.name).join(', ')}.
           </p>
         </div>

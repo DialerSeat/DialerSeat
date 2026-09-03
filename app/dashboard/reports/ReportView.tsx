@@ -21,12 +21,12 @@ const RULE = '#d8dce3'
 const BRAND = '#2a6eff'
 
 function money(cents: number | null | undefined): string {
-  if (cents === null || cents === undefined) return '—'
+  if (cents === null || cents === undefined) return ', '
   return (cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
 
 function shortDate(iso: string | null | undefined): string {
-  if (!iso) return '—'
+  if (!iso) return ', '
   return new Date(iso).toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC',
   })
@@ -165,7 +165,7 @@ export default function ReportView({ period }: { period: string }) {
         .idf:focus { outline: none; border-color: ${BRAND}; }
 
         /* ── MOBILE ────────────────────────────────────────────────────────
-           A statement gets opened on a phone more often than anywhere else —
+           A statement gets opened on a phone more often than anywhere else 
            somebody forwarding it to their accountant from the car. The charge
            table is the only thing here that cannot simply reflow, so it scrolls
            inside its own box rather than pushing the whole page sideways: a
@@ -214,7 +214,7 @@ export default function ReportView({ period }: { period: string }) {
           </div>
           <div style={{ fontSize: 12, color: SOFT, marginBottom: 12, lineHeight: 1.6 }}>
             If the seats were bought by a company, put the company&apos;s legal name
-            here — a deduction belongs to the entity that incurred the expense.
+            here, a deduction belongs to the entity that incurred the expense.
             Saved once and used on every statement.
           </div>
           <div style={{ display: 'grid', gap: 8 }}>
@@ -328,7 +328,7 @@ export default function ReportView({ period }: { period: string }) {
           <Row label="Total paid" value={money(b.paidCents)} strong />
           {b.unpaidCount > 0 && (
             <Row
-              label={`Not settled (${b.unpaidCount}) — excluded from the total`}
+              label={`Not settled (${b.unpaidCount}), excluded from the total`}
               value={money(b.unpaidCents)}
             />
           )}
@@ -388,7 +388,7 @@ export default function ReportView({ period }: { period: string }) {
                     <td>{shortDate(li.date)}</td>
                     <td>{li.agentName}</td>
                     <td>{li.teamName}</td>
-                    <td>{shortDate(li.serviceStart)} – {shortDate(li.serviceEnd)}</td>
+                    <td>{shortDate(li.serviceStart)}, {shortDate(li.serviceEnd)}</td>
                     <td style={{ textTransform: 'capitalize' }}>
                       {li.status}
                       {!li.reconciled && li.status === 'paid' && (
@@ -437,7 +437,7 @@ export default function ReportView({ period }: { period: string }) {
 
         <H>Account structure</H>
         <div style={{ fontSize: 11.5, color: SOFT, marginBottom: 8, lineHeight: 1.6 }}>
-          A snapshot as at {shortDate(data.generatedAt)} — not a reconstruction of
+          A snapshot as at {shortDate(data.generatedAt)}, not a reconstruction of
           how the account was configured during the period.
         </div>
         {data.structure.teams.length === 0 ? (
@@ -493,7 +493,7 @@ export default function ReportView({ period }: { period: string }) {
             them:
           </p>
           <div style={{ marginBottom: 12 }}>
-            <Row label="Payee" value={`${data.supplier.name} — ${data.supplier.site}`} />
+            <Row label="Payee" value={`${data.supplier.name}, ${data.supplier.site}`} />
             <Row label="Amount paid" value={money(b.paidCents)} />
             <Row
               label="Proof of payment"
@@ -509,20 +509,20 @@ export default function ReportView({ period }: { period: string }) {
           <p style={{ margin: '0 0 10px' }}>
             Only settled charges are included in the total. Charges that failed or
             are still pending are listed separately and excluded, because money that
-            did not leave the account is not an expense — and an overstated
+            did not leave the account is not an expense, and an overstated
             deduction is a worse outcome than a missing one.
           </p>
           <p style={{ margin: '0 0 10px' }}>
             <strong style={{ color: INK }}>Keep this.</strong> The IRS period of
             limitations for most returns is three years from filing, and longer in
-            some circumstances — six years where more than 25% of gross income was
+            some circumstances, six years where more than 25% of gross income was
             omitted, and no limit where no return was filed. Retention is measured
             from the date the return was filed, not from the date of this document.
           </p>
           <p style={{ margin: '0 0 10px' }}>
             This is a billing record, not tax advice. Whether these amounts are
             deductible, and how they should be treated, depends on your entity and
-            jurisdiction — that is a question for a qualified tax professional. Your
+            jurisdiction, that is a question for a qualified tax professional. Your
             card or bank statement remains the authoritative record of payment.
           </p>
           <p style={{ margin: 0 }}>
@@ -530,7 +530,7 @@ export default function ReportView({ period }: { period: string }) {
             Under 26 U.S.C. § 7206, willfully making or using a document known to be
             false as to any material matter, in connection with a matter arising
             under the internal revenue laws, is a federal criminal offense. If a
-            figure here is wrong, ask us to correct it at {data.supplier.contact} —
+            figure here is wrong, ask us to correct it at {data.supplier.contact} 
             a corrected statement is reissued under the same reference, and it takes
             minutes.
           </p>

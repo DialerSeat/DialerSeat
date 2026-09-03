@@ -20,12 +20,12 @@ const RANGES = [
 ]
 
 function n(v: number | null | undefined): string {
-  if (v === null || v === undefined) return '—'
+  if (v === null || v === undefined) return ', '
   return v.toLocaleString()
 }
 
 function ms(v: number | null | undefined): string {
-  if (!v) return '—'
+  if (!v) return ', '
   const sec = Math.round(v / 1000)
   if (sec < 60) return `${sec}s`
   const m = Math.floor(sec / 60)
@@ -51,7 +51,7 @@ function Histogram({ rows, highlight }: {
       {rows.map(r => (
         <div
           key={r.label}
-          title={`${r.label} — ${r.views.toLocaleString()} views`}
+          title={`${r.label}, ${r.views.toLocaleString()} views`}
           style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, minWidth: 0 }}
         >
           <div style={{
@@ -342,7 +342,7 @@ export default function Visibility() {
         }
         /* The bar lives BEHIND the path rather than beside it. A separate bar
            column costs width that a long URL needs, and magnitude at a glance
-           is exactly what a bar is for — so it becomes the row's background
+           is exactly what a bar is for, so it becomes the row's background
            and the path keeps the whole cell. */
         .vz-path {
           font-family: monospace; white-space: nowrap;
@@ -417,7 +417,7 @@ export default function Visibility() {
             {audience === 'all' ? (
               <Tile
                 label="Signed in"
-                value={t.views > 0 ? `${Math.round((t.authedViews / t.views) * 100)}%` : '—'}
+                value={t.views > 0 ? `${Math.round((t.authedViews / t.views) * 100)}%` : ', '}
                 sub={`${n(t.anonViews)} anonymous`}
               />
             ) : (
@@ -429,7 +429,7 @@ export default function Visibility() {
             )}
             <Tile
               label="Pages per visit"
-              value={t.pagesPerVisit === null || t.pagesPerVisit === undefined ? '—' : String(t.pagesPerVisit)}
+              value={t.pagesPerVisit === null || t.pagesPerVisit === undefined ? ', ' : String(t.pagesPerVisit)}
               sub={
                 t.singlePageRate === null || t.singlePageRate === undefined
                   ? undefined
@@ -452,7 +452,7 @@ export default function Visibility() {
               label="vs previous"
               value={
                 t.changePct === null || t.changePct === undefined
-                  ? '—'
+                  ? ', '
                   : `${t.changePct >= 0 ? '+' : ''}${t.changePct}%`
               }
               sub={`${n(t.previousViews)} before`}
@@ -463,7 +463,7 @@ export default function Visibility() {
             // Said out loud rather than shown as a smaller number pretending to
             // be the whole picture.
             <div style={{ fontSize: 11, color: '#fbbf24', marginBottom: 10 }}>
-              More views than this window can read — the figures below are a floor,
+              More views than this window can read: the figures below are a floor,
               not a total.
             </div>
           )}
@@ -510,7 +510,7 @@ export default function Visibility() {
               }}>Where they came from</div>
               {referrers.length === 0 ? (
                 <div style={{ color: DIM, fontSize: 12, lineHeight: 1.7 }}>
-                  No external referrers yet — everything so far arrived directly or
+                  No external referrers yet, everything so far arrived directly or
                   with the referrer stripped.
                 </div>
               ) : (
@@ -628,7 +628,7 @@ export default function Visibility() {
             {(data.individuals || []).length === 0 ? (
               <div style={{ color: DIM, fontSize: 12, lineHeight: 1.7 }}>
                 Nobody yet. Visits are grouped by an id issued on first visit,
-                so this fills from now on — earlier views cannot be grouped
+                so this fills from now on, earlier views cannot be grouped
                 into people after the fact.
               </div>
             ) : (
@@ -660,12 +660,12 @@ export default function Visibility() {
                           {p.source || 'direct'}
                         </td>
                         <td className="vz-path" title={p.landedOn || ''}>
-                          {p.landedOn || '—'}
+                          {p.landedOn || ', '}
                         </td>
                         <td className="num">{n(p.views)}</td>
                         <td className="num" style={{ color: DIM }}>{n(p.activeDays)}</td>
                         <td className="num" style={{ color: DIM }}>
-                          {p.lastSeen ? new Date(p.lastSeen).toLocaleDateString() : '—'}
+                          {p.lastSeen ? new Date(p.lastSeen).toLocaleDateString() : ', '}
                         </td>
                       </tr>
                     ))}
@@ -718,7 +718,7 @@ export default function Visibility() {
               }}>Countries</div>
               {(data.countries || []).length === 0 ? (
                 <div style={{ color: DIM, fontSize: 12, lineHeight: 1.7 }}>
-                  No country data. This appears on deployed traffic — local
+                  No country data. This appears on deployed traffic, local
                   requests carry no location.
                 </div>
               ) : (
@@ -779,7 +779,7 @@ export default function Visibility() {
           <div style={{ fontSize: 10.5, color: DIM, marginTop: 14, lineHeight: 1.7 }}>
             Counted without storing IP addresses, user agents or user ids. A
             visitor is identified by a hash that rotates daily, so uniques are
-            per-day and cannot be linked across days — including by us. Location
+            per-day and cannot be linked across days, including by us. Location
             is country and region only; campaign tags are read by name rather
             than by keeping the query string, which can carry search terms and
             tokens.

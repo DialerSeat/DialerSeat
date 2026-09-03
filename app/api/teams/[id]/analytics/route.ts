@@ -305,7 +305,7 @@ export async function GET(
         const memberName = u
           ? [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || c.user_id.slice(0, 12)
           : c.user_id.slice(0, 12)
-        const leadName = [lead.first_name, lead.last_name].filter(Boolean).join(' ').trim() || lead.phone || '—'
+        const leadName = [lead.first_name, lead.last_name].filter(Boolean).join(' ').trim() || lead.phone || ', '
         return {
           id: c.id,
           memberName,

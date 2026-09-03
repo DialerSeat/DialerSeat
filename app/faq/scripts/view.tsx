@@ -62,7 +62,7 @@ export default function ScriptsFaqView() {
 
           <p className="faq-deck">
             Scripts live inside the dialer itself, right next to the lead
-            profile — not in a separate doc you keep switching to mid-call.
+            profile, not in a separate doc you keep switching to mid-call.
             Write as many as you want, attach them to whichever campaigns
             need them, and control which one shows first.
           </p>
@@ -80,8 +80,8 @@ export default function ScriptsFaqView() {
             <p>
               The active script for a campaign shows up in the lead profile
               panel, right there during the call. If a campaign has more
-              than one script attached — say, different angles for
-              different lead types — they show as tabs an agent can flip
+              than one script attached: say, different angles for
+              different lead types, they show as tabs an agent can flip
               between without breaking their flow.
             </p>
 
@@ -99,7 +99,7 @@ export default function ScriptsFaqView() {
                   <span className="scr-mockup-tab">SOLAR</span>
                 </div>
                 <div className="scr-mockup-text">
-                  &quot;Hi (client), this is (your name) — I saw you were
+                  &quot;Hi (client), this is (your name), I saw you were
                   curious what your home might be worth.
                   <br /><br />
                   I can get you a real number today, and if you ever decide
@@ -108,7 +108,7 @@ export default function ScriptsFaqView() {
               </div>
             </div>
             <p className="muted" style={{ marginTop: 12 }}>
-              This is a real script layout, not a mockup — tabbed by
+              This is a real script layout, not a mockup, tabbed by
               vertical, plain text, no formatting to fight with.
             </p>
           </section>
@@ -118,18 +118,18 @@ export default function ScriptsFaqView() {
             <h2>▸ PERSONAL SCRIPTS VS. TEAM SCRIPTS</h2>
             <p>
               Every script belongs to either you personally or to a team you
-              own — there&apos;s no separate &ldquo;company library&rdquo;
+              own, there&apos;s no separate &ldquo;company library&rdquo;
               concept beyond that.
             </p>
 
             <div className="scr-owner-grid">
               <div className="scr-owner-card">
                 <h4>PERSONAL SCRIPT</h4>
-                <p>Belongs to your account. Only you can attach it to your own campaigns. Anyone can write these — Pro or Manager+.</p>
+                <p>Belongs to your account. Only you can attach it to your own campaigns. Anyone can write these, Pro or Manager+.</p>
               </div>
               <div className="scr-owner-card">
                 <h4>TEAM SCRIPT</h4>
-                <p>Belongs to a team you own (Manager+ required to own a team). Every agent on that team can see and use it on campaigns it&apos;s attached to — write it once, the whole floor is on the same script.</p>
+                <p>Belongs to a team you own (Manager+ required to own a team). Every agent on that team can see and use it on campaigns it&apos;s attached to: write it once, the whole floor is on the same script.</p>
               </div>
             </div>
 
@@ -147,7 +147,7 @@ export default function ScriptsFaqView() {
             <p>
               A script and a campaign are two separate things until you
               link them. One script can be attached to several campaigns at
-              once, and one campaign can have several scripts attached — it&apos;s
+              once, and one campaign can have several scripts attached, it&apos;s
               a many-to-many relationship, not a strict one-to-one.
             </p>
 
@@ -167,7 +167,7 @@ export default function ScriptsFaqView() {
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
                   <h4>3. REORDER IF MORE THAN ONE IS ATTACHED</h4>
-                  <p>Whichever script sits first in the order is what agents see by default on that campaign — drag to reorder any time.</p>
+                  <p>Whichever script sits first in the order is what agents see by default on that campaign, drag to reorder any time.</p>
                 </div>
               </div>
             </div>
@@ -175,7 +175,7 @@ export default function ScriptsFaqView() {
             <p className="muted" style={{ marginTop: 20 }}>
               Only a campaign&apos;s owner can attach or detach scripts on
               it, and you can only attach a script you actually have access
-              to — your own, or one shared by a team you&apos;re an active
+              to: your own, or one shared by a team you&apos;re an active
               member of.
             </p>
           </section>
@@ -183,13 +183,13 @@ export default function ScriptsFaqView() {
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>Keep it simple —</strong> scripts are plain text, on
+              <strong>Keep it simple: </strong> scripts are plain text, on
               purpose. No rich formatting, no branching logic, no
               conditional paths based on lead answers. If your process needs
               that level of complexity, most teams keep the DialerSeat
               script as the opening hook and lean on the{' '}
-              <Link href="/faq/leads">lead record</Link> itself — name,
-              state, custom fields from your upload — for the rest of the
+              <Link href="/faq/leads">lead record</Link> itself: name,
+              state, custom fields from your upload, for the rest of the
               call.
             </p>
           </div>

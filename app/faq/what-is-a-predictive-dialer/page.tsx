@@ -11,12 +11,12 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'Predictive Dialer — The 1980s Algorithm That Built Modern Call Centers | DialerSeat',
+  title: 'Predictive Dialer: The 1980s Algorithm That Built Modern Call Centers | DialerSeat',
   description:
     'The predictive dialer: an algorithm that pre-dials multiple lines per agent and routes humans in real time. From its 1980s origin through the FTC TSR era to today.',
   alternates: { canonical: 'https://dialerseat.com/dialing-modes/predictive' },
   openGraph: {
-    title: 'The Predictive Dialer — A Brief History',
+    title: 'The Predictive Dialer: A Brief History',
     description:
       'Invented in the early 1980s, regulated in 2003, still the highest-throughput outbound mode in existence. Mechanism, history, math, and how DialerSeat implements it.',
     url: 'https://dialerseat.com/dialing-modes/predictive',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'The Predictive Dialer — A Brief History',
+    title: 'The Predictive Dialer: A Brief History',
     description: 'Invented in the early 1980s, regulated in 2003, still the highest-throughput outbound mode in existence. Mechanism, history, math, and how DialerSeat implements it.',
   },
 }
@@ -331,8 +331,8 @@ export default function PredictiveDialerPage() {
             <h1>An algorithm dressed as a dialer.</h1>
             <p className="dm-lead">
               The predictive dialer doesn&apos;t ring one phone at a time. It
-              fires a fan of outbound calls — 1.5, 2, sometimes 3 lines per
-              ready agent — and routes whichever one a human picks up first.
+              fires a fan of outbound calls, 1.5, 2, sometimes 3 lines per
+              ready agent, and routes whichever one a human picks up first.
               Invented in the early 1980s, regulated since 2003, and still
               the highest-throughput outbound mode in existence.
             </p>
@@ -346,10 +346,10 @@ export default function PredictiveDialerPage() {
             Every dialing mode before this one was reactive. An agent
             triggers a call, the system places it, the agent waits. The
             queue is a pipeline of size one. Predictive breaks that. Instead
-            of one line per agent, predictive runs a controller — a small
+            of one line per agent, predictive runs a controller, a small
             algorithm that looks at how many agents are ready, how many
             calls are already in flight, and how many people typically
-            answer — and fires <em>more</em> outbound calls than it has
+            answer, and fires <em>more</em> outbound calls than it has
             agents to handle.
           </p>
           <ol className="dm-steps">
@@ -358,7 +358,7 @@ export default function PredictiveDialerPage() {
             <li><div>Based on that math (below), it fires N new outbound lines. Multiple lines per agent. The agents don&apos;t see anything happen yet.</div></li>
             <li><div>Each line goes through AMD on pickup. Machines, faxes, and unknowns get dropped silently.</div></li>
             <li><div>The first line where AMD says <em>human</em>, the system grabs the next ready agent and routes the call. That agent&apos;s screen pops with the lead profile mid-greeting.</div></li>
-            <li><div>The other lines that connected to humans — if any — get the abandon treatment: ring then drop. Those count against the abandon-rate ceiling.</div></li>
+            <li><div>The other lines that connected to humans, if any, get the abandon treatment: ring then drop. Those count against the abandon-rate ceiling.</div></li>
             <li><div>The controller runs again. Refills the lines. The agent finishes the call, dispositions, returns to the ready pool. The engine pulls them into the next routed human within seconds.</div></li>
           </ol>
           <h3>The math</h3>
@@ -371,14 +371,14 @@ in_flight = calls_currently_dialing
 should_dial = max(0, desired_calls - in_flight)`}</div>
           <p>
             That&apos;s the entire core algorithm. The intelligence lives in
-            picking the multiplier — too low and you&apos;re basically running
+            picking the multiplier, too low and you&apos;re basically running
             progressive; too high and you blow the abandon-rate cap and the
             FTC eventually notices.
           </p>
           <div className="dm-pullquote">
             The defining property of predictive is <strong>multiple lines per
-            agent</strong>. Everything else — the prediction math, the AMD,
-            the abandon-rate monitoring — exists in service of making that
+            agent</strong>. Everything else: the prediction math, the AMD,
+            the abandon-rate monitoring, exists in service of making that
             structurally aggressive choice survive contact with the real
             world and the law.
           </div>
@@ -390,9 +390,9 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
             <h2>Where it came from</h2>
             <p>
               The predictive dialer is older than most people think. One
-              foundational US patent — Crockett et al.&apos;s
+              foundational US patent, Crockett et al.&apos;s
               &quot;Method for Predictive Dialing&quot; (US patent 4,829,563,
-              granted May 1989) — formalized a prediction algorithm that
+              granted May 1989), formalized a prediction algorithm that
               much of the industry built on. Around the same time, Douglas
               A. Samuelson of InfoLogix independently developed a
               queuing-and-simulation approach to predictive dialing (his
@@ -400,7 +400,7 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
               publishing the work in a 1999 <em>Interfaces</em> paper.
               Between them, these are the two names historians of the
               category point to. The mechanism itself predates both
-              patents — mid-1980s call centers at large banks, retailers,
+              patents: mid-1980s call centers at large banks, retailers,
               and collection agencies were already running early predictive
               systems built on minicomputers and custom hardware.
             </p>
@@ -449,8 +449,8 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
             <p>
               The market itself consolidated through the 2000s. EIS folded
               into SER, SER into other vendors. Aspect, Avaya, Genesys
-              became the enterprise players. A second tier — Five9,
-              Noble Systems, CallTools, ReadyMode, Convoso — grew up to
+              became the enterprise players. A second tier: Five9,
+              Noble Systems, CallTools, ReadyMode, Convoso, grew up to
               serve the mid-market. By the 2010s, predictive had moved off
               the on-prem boxes and onto cloud platforms, but the
               underlying idea is still the same pacing math Crockett and
@@ -474,7 +474,7 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
             </div>
             <div className="dm-shines-card">
               <h4>TEAMS OF 8+</h4>
-              <p>DialerSeat&apos;s predictive controller engages true multi-line dialing at 8+ concurrent agents on a campaign — below that threshold it runs as progressive-equivalent so a small surprise in pickups can&apos;t spike your abandon rate.</p>
+              <p>DialerSeat&apos;s predictive controller engages true multi-line dialing at 8+ concurrent agents on a campaign, below that threshold it runs as progressive-equivalent so a small surprise in pickups can&apos;t spike your abandon rate.</p>
             </div>
             <div className="dm-shines-card">
               <h4>ESTABLISHED CAMPAIGNS</h4>
@@ -482,7 +482,7 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
             </div>
             <div className="dm-shines-card">
               <h4>THIN-MARGIN OUTBOUND</h4>
-              <p>Lead-gen at scale, debt buying, opt-in B2C — anywhere unit economics demand 35+ talk-minutes per agent-hour.</p>
+              <p>Lead-gen at scale, debt buying, opt-in B2C, anywhere unit economics demand 35+ talk-minutes per agent-hour.</p>
             </div>
             <div className="dm-shines-card">
               <h4>FRESH LISTS</h4>
@@ -503,15 +503,15 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
               Calm. Predictive is by design an over-dialing system. It&apos;s
               firing more calls than it has agents to answer, and trusting
               that probability and AMD will sort it out. The system feels
-              busy. When the math tips even slightly wrong — a busy spell of
-              high-pickup minutes, a slow disposition cycle on a hard call —
+              busy. When the math tips even slightly wrong, a busy spell of
+              high-pickup minutes, a slow disposition cycle on a hard call 
               you can hear it in the abandon-rate counter ticking up.
             </p>
             <p>
               You also give up a clean conscience about the dropped calls.
               Even a perfectly-tuned predictive campaign is going to abandon
               some calls. The legal cap is 3%, the practical target is
-              1–2%, and that means out of every 100 humans who pick up, one
+              1: 2%, and that means out of every 100 humans who pick up, one
               or two of them hear silence and a click. That&apos;s the
               tradeoff that bought you the throughput, and there&apos;s no
               way around it.
@@ -539,15 +539,15 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
               notice a problem.
             </p>
             <ul className="dm-bullets">
-              <li>Per-campaign lines-per-agent setting (1–5). Default 1.5–3 depending on campaign maturity.</li>
+              <li>Per-campaign lines-per-agent setting (1, 5). Default 1.5, 3 depending on campaign maturity.</li>
               <li>Per-agent lines override. If you want to run 1.5 while the rest of the team runs 2.0, you can.</li>
               <li>Server-side controller fires lines on a 5-second heartbeat. Predictable cadence, no client-side guesswork.</li>
               <li>30-day rolling abandon-rate calculation per campaign, recomputed every controller tick.</li>
-              <li>Auto-degrade at 2.5% — the engine drops to 1× lines (progressive-equivalent) before you hit the 3% legal cap.</li>
-              <li>Recovery threshold at 2.0% — stays degraded with a 0.5% safety buffer until the rate clearly drops.</li>
+              <li>Auto-degrade at 2.5%, the engine drops to 1× lines (progressive-equivalent) before you hit the 3% legal cap.</li>
+              <li>Recovery threshold at 2.0%, stays degraded with a 0.5% safety buffer until the rate clearly drops.</li>
               <li>Live abandon-rate display in the agent terminal so you always know where the campaign is sitting.</li>
               <li>AMD pre-screen so machine pickups never count as abandons against your number.</li>
-              <li>TCPA window check on every dial. CNAM-aware caller-ID routing. National DNC scrubbing is still on you — see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link> for the full split.</li>
+              <li>TCPA window check on every dial. CNAM-aware caller-ID routing. National DNC scrubbing is still on you, see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link> for the full split.</li>
             </ul>
           </div>
         </section>
@@ -560,7 +560,7 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
               <Link href="/dialing-modes/preview" className="dm-other-card preview">
                 <span className="pill">PREVIEW</span>
                 <h3>Agent reviews, then dials</h3>
-                <p>The original outbound mode. Slow by design — right for high-touch, high-value calls.</p>
+                <p>The original outbound mode. Slow by design: right for high-touch, high-value calls.</p>
               </Link>
               <Link href="/dialing-modes/power" className="dm-other-card power">
                 <span className="pill">POWER</span>

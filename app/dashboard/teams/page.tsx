@@ -185,18 +185,18 @@ function StatTile({ label, value, sub, accent }: {
 /** A dash, not a zero, when there is nothing to report. They are different
  *  facts and a reader who cannot tell them apart will trust the wrong one. */
 function fmtNum(n: number | null | undefined): string {
-  if (n === null || n === undefined) return '—'
+  if (n === null || n === undefined) return ', '
   return n.toLocaleString()
 }
 
 function fmtPct(n: number | null | undefined): string {
-  if (n === null || n === undefined) return '—'
+  if (n === null || n === undefined) return ', '
   return `${n}%`
 }
 
 /** Hours only once there are hours. "0h 4m" reads as a rounding error. */
 function fmtDuration(seconds: number | null | undefined): string {
-  if (!seconds) return '—'
+  if (!seconds) return ', '
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
   const sec = seconds % 60
@@ -320,14 +320,14 @@ function HelpModal({ onClose }: { onClose: () => void }) {
         <P>
           Teams is for running a floor. Whether you have sold twenty-five seats to
           an agency, staffed one room yourself, or you are a vendor handing lists
-          to closers you do not employ — this is where you decide who dials what,
+          to closers you do not employ: this is where you decide who dials what,
           and who pays for the privilege.
         </P>
 
         <H>Sharing or selling your campaigns</H>
         <P>
           Your leads stay yours. Putting a campaign on a team does not give it
-          away — it lets people you choose dial it, and you can pull that back at
+          away: it lets people you choose dial it, and you can pull that back at
           any time.
         </P>
         <P>
@@ -339,13 +339,13 @@ function HelpModal({ onClose }: { onClose: () => void }) {
         </P>
         <P>
           Every code says who pays for the seat: <B>you</B>, or <B>them</B>. That is
-          how you sell a seat — hand out a code set to &quot;they pay&quot;, and
+          how you sell a seat: hand out a code set to &quot;they pay&quot;, and
           their own checkout covers it. Set it to &quot;you pay&quot; when the seat
           is part of what you are providing.
         </P>
         <P>
           Once somebody has a seat, adding them to more of your campaigns is{' '}
-          <B>free</B> — to you and to them. The seat is what gets billed, not the
+          <B>free</B>, to you and to them. The seat is what gets billed, not the
           list. Select people under All Users and use Add to campaign; forty agents
           onto a new list is one click, not forty seats.
         </P>
@@ -355,7 +355,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
           If an agent who was paying for their own seat cancels, <B>you pick it up
           automatically</B> and they keep dialing. Your floor does not lose a chair
           mid-shift because somebody&apos;s card expired. We tell you it happened,
-          and you decide when to stop — pause or remove them, and the billing stops
+          and you decide when to stop: pause or remove them, and the billing stops
           with it.
         </P>
         <P>
@@ -366,11 +366,11 @@ function HelpModal({ onClose }: { onClose: () => void }) {
         <H>What you earn at volume</H>
         <P>
           Seats bill weekly and cancel anytime. Ten seats <B>you pay for</B> earns
-          5% off your weekly seat cost, twenty-five earns 10% — counted across
+          5% off your weekly seat cost, twenty-five earns 10%, counted across
           every team you own, not per team.
         </P>
         <P>
-          It only counts seats you fund, because it is a reduction of your bill —
+          It only counts seats you fund, because it is a reduction of your bill 
           a seat an agent pays for themselves costs you nothing to begin with.
         </P>
         <P>
@@ -1289,14 +1289,14 @@ export default function TeamsPage() {
            This was height: 100vh. On iOS that is the height of the screen
            WITHOUT the browser chrome, so the shell was taller than what you
            can actually see and the last stretch of the scrolling panel sat
-           underneath the address bar — reachable by nothing. The drawer had
+           underneath the address bar, reachable by nothing. The drawer had
            already been fixed for this; the page itself had not.
 
            Both declarations on purpose: a browser that does not understand
            dvh keeps the vh value rather than falling back to auto, which
            would collapse the flex column entirely. */
         /* min-height lives here rather than inline. It used to be an inline
-           minHeight: 0, which beats any stylesheet rule — including the
+           minHeight: 0, which beats any stylesheet rule, including the
            min-height: 100dvh the mobile block below sets. So on a phone the
            shell was height: auto with min-height: 0, i.e. exactly as tall as
            its content: on a short panel like All Users or Requests the page
@@ -1309,13 +1309,13 @@ export default function TeamsPage() {
            pattern: it needs the shell to BE the viewport. On mobile it is
            not. This shell sits below the dashboard's own topbar, so
            100dvh puts its last stretch a topbar's height past the bottom of
-           the screen — reachable by nothing, no matter which viewport unit
+           the screen: reachable by nothing, no matter which viewport unit
            is used. Chasing that with calc() means hardcoding the height of
            another component and re-breaking it every time that changes.
 
            So the fixed height comes off below 900px and the document scrolls
            the way the browser already knows how to. Address bars collapsing,
-           safe areas, momentum, scroll-to-top on the status bar — all of it
+           safe areas, momentum, scroll-to-top on the status bar, all of it
            works because nothing is being overridden. */
         @media (max-width: 900px) {
           .ts-shell { height: auto; min-height: 100dvh; }
@@ -1351,7 +1351,7 @@ export default function TeamsPage() {
             /* ── FIT THE ACTUAL VIEWPORT ─────────────────────────────────
                100vh on iOS is the height of the screen WITHOUT the browser
                chrome, so a drawer sized to it runs underneath the address bar
-               and the home indicator — which is why the join-code field at the
+               and the home indicator, which is why the join-code field at the
                bottom was half off the screen. 100dvh is the space actually
                visible right now.
 
@@ -1369,7 +1369,7 @@ export default function TeamsPage() {
                The colour lives on the sidebar INSIDE this element, which
                means it starts after the insets above. So the strip behind
                the status bar and the strip behind the home indicator were
-               bare — and with a dimmed page underneath, they read as the
+               bare: and with a dimmed page underneath, they read as the
                drawer being translucent at both ends.
 
                Same variable and same fallback the sidebar itself uses, so
@@ -1392,7 +1392,7 @@ export default function TeamsPage() {
              top-left: two identical controls, inches apart, opening different
              things. The dialer already solved this with an arrow tab on the
              right edge, and a right-hand drawer should be opened by a control
-             attached to the right-hand edge — the gesture and the result point
+             attached to the right-hand edge, the gesture and the result point
              the same way.
 
              Geometry copied from .dialer-right-toggle so the two pages feel
@@ -1417,7 +1417,7 @@ export default function TeamsPage() {
              moves with the drawer instead of being stranded behind it. */
           .ts-drawer-checkbox:checked ~ .ts-fab { opacity: 0; pointer-events: none; }
 
-          /* The panel keeps the full width — the drawer floats over it rather
+          /* The panel keeps the full width, the drawer floats over it rather
              than squeezing it, so nothing reflows when it opens. */
           .ts-main { padding-right: 0 !important; }
         }
@@ -1632,9 +1632,9 @@ export default function TeamsPage() {
                     }}
                   >Clear</button>
                   <span style={{ fontSize: 11, color: DIM, width: '100%' }}>
-                    Adding to a campaign costs nothing — those seats are already paid for.
+                    Adding to a campaign costs nothing, those seats are already paid for.
                     Adding to a team opens a new seat and bills you weekly, unless they
-                    already hold a seat with you or pay for DialerSeat themselves — you
+                    already hold a seat with you or pay for DialerSeat themselves, you
                     are never charged twice for the same person.
                   </span>
                 </div>
@@ -1769,7 +1769,7 @@ export default function TeamsPage() {
                                 rather than silently summed — it is money. */}
                             {billable.length > 1 && (
                               <span style={{ display: 'block', color: '#fbbf24' }}>
-                                billed {billable.length}× — duplicate seats
+                                billed {billable.length}×, duplicate seats
                               </span>
                             )}
                           </span>
@@ -1784,9 +1784,9 @@ export default function TeamsPage() {
                         )
                       }
                       if (parked.length > 0) {
-                        return <span style={{ fontSize: 12, color: '#fbbf24' }}>Parked — not billed</span>
+                        return <span style={{ fontSize: 12, color: '#fbbf24' }}>Parked, not billed</span>
                       }
-                      return <span style={{ fontSize: 12, color: DIM }}>—</span>
+                      return <span style={{ fontSize: 12, color: DIM }}>, </span>
                     },
                   },
                   {
@@ -1794,7 +1794,7 @@ export default function TeamsPage() {
                     header: 'Campaigns',
                     numeric: true,
                     width: 110,
-                    render: (r: any) => r.campaignCount || '—',
+                    render: (r: any) => r.campaignCount || ': ',
                   },
                   {
                     key: 'manage',
@@ -2122,33 +2122,33 @@ export default function TeamsPage() {
                     not fetch. Every value below is counted from call rows. */}
                 <StatTile
                   label="Total Calls"
-                  value={statsLoading ? '—' : fmtNum(stats?.tiles?.totalCalls)}
+                  value={statsLoading ? ', ' : fmtNum(stats?.tiles?.totalCalls)}
                   sub={RANGES.find(r => r.key === range)?.label || ''}
                   accent="#2563eb"
                 />
                 <StatTile
                   label="Contact Rate"
-                  value={statsLoading ? '—' : fmtPct(stats?.tiles?.contactRate)}
+                  value={statsLoading ? ', ' : fmtPct(stats?.tiles?.contactRate)}
                   sub="reached a person"
                   accent="#2563eb"
                 />
                 <StatTile
                   label="Conversions"
-                  value={statsLoading ? '—' : fmtNum(stats?.tiles?.conversions)}
+                  value={statsLoading ? ', ' : fmtNum(stats?.tiles?.conversions)}
                   sub={fmtPct(stats?.tiles?.conversionRate) + ' of calls'}
                   accent="#16a34a"
                 />
                 <StatTile
                   label="Talk Time"
-                  value={statsLoading ? '—' : fmtDuration(stats?.tiles?.talkSecondsTotal)}
+                  value={statsLoading ? ', ' : fmtDuration(stats?.tiles?.talkSecondsTotal)}
                   sub={stats?.tiles?.avgTalkSeconds
                     ? `avg ${fmtDuration(stats.tiles.avgTalkSeconds)} /call`
-                    : 'avg — /call'}
+                    : 'avg, /call'}
                   accent="#2563eb"
                 />
                 <StatTile
                   label="Best Campaign"
-                  value={statsLoading ? '—' : (stats?.tiles?.bestCampaign?.name || '—')}
+                  value={statsLoading ? ', ' : (stats?.tiles?.bestCampaign?.name || ', ')}
                   sub={stats?.tiles?.bestCampaign
                     ? `${stats.tiles.bestCampaign.rate}% of ${stats.tiles.bestCampaign.calls} calls`
                     : `need ${stats?.tiles?.minCallsToRank ?? 5}+ calls`}
@@ -2372,7 +2372,7 @@ export default function TeamsPage() {
                 text: isPending
                   ? `Request sent to ${teamName}. You get access once the owner approves.`
                   : grants > 0
-                    ? `Joined ${teamName} — ${grants} campaign${grants === 1 ? '' : 's'} unlocked.`
+                    ? `Joined ${teamName}, ${grants} campaign${grants === 1 ? '' : 's'} unlocked.`
                     : `Joined ${teamName}.`,
               })
             } catch {

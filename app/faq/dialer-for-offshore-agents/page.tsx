@@ -26,7 +26,7 @@ export const runtime = 'nodejs'
 const SITE = 'https://dialerseat.com'
 
 export const metadata: Metadata = {
-  title: 'Dialer for Offshore & Remote Agents — VAs, Philippines Teams | DialerSeat',
+  title: 'Dialer for Offshore & Remote Agents: VAs, Philippines Teams | DialerSeat',
   description:
     'Running an outbound dialer with agents overseas: what it costs per seat, how calling windows follow the lead rather than the agent, what to test before you hire, and where the real constraints are.',
   alternates: {
@@ -58,22 +58,22 @@ const FAQS = [
   {
     question: 'Can I use DialerSeat with agents in the Philippines or elsewhere overseas?',
     answer:
-      'Yes. An agent needs a browser and an internet connection. There is no per-country restriction and no separate international seat price — a seat is $35 per week whether the agent is in Ohio or Manila. The account, the phone numbers, and the leads remain US.',
+      'Yes. An agent needs a browser and an internet connection. There is no per-country restriction and no separate international seat price, a seat is $35 per week whether the agent is in Ohio or Manila. The account, the phone numbers, and the leads remain US.',
   },
   {
     question: 'Does an offshore agent cost more per seat?',
     answer:
-      'No. This is the difference that makes an offshore floor viable at all: at $95–$250 per seat per month on other platforms, the software costs more than the wage, so the model does not work. At $35 per week it does.',
+      'No. This is the difference that makes an offshore floor viable at all: at $95: $250 per seat per month on other platforms, the software costs more than the wage, so the model does not work. At $35 per week it does.',
   },
   {
     question: 'How do calling hours work when the agent is in a different timezone?',
     answer:
-      'Calling windows are enforced against the lead’s own state, not the agent’s location or the account’s timezone. An agent working a Manila afternoon cannot dial a Florida lead outside that lead’s legal window — the server refuses the call rather than relying on the agent to know.',
+      'Calling windows are enforced against the lead’s own state, not the agent’s location or the account’s timezone. An agent working a Manila afternoon cannot dial a Florida lead outside that lead’s legal window, the server refuses the call rather than relying on the agent to know.',
   },
   {
     question: 'Will call quality be acceptable from overseas?',
     answer:
-      'Usually, but test it before you staff. Audio crosses the same distance regardless of platform, and the variable is the agent’s own connection — a wired office line behaves very differently from residential wifi. Run one agent on real calls for a day before hiring five.',
+      'Usually, but test it before you staff. Audio crosses the same distance regardless of platform, and the variable is the agent’s own connection, a wired office line behaves very differently from residential wifi. Run one agent on real calls for a day before hiring five.',
   },
   {
     question: 'Does using offshore agents change my compliance obligations?',
@@ -157,7 +157,7 @@ export default function OffshoreAgentsPage() {
             </p>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: MUTED, marginTop: 10, maxWidth: 790 }}>
               Put one agent on real calls for a day before hiring five. It is a cheap test and it is
-              the only one that tells you anything — a speed test will not.
+              the only one that tells you anything, a speed test will not.
             </p>
           </section>
 
@@ -171,7 +171,7 @@ export default function OffshoreAgentsPage() {
             <p style={{ fontSize: 14.5, lineHeight: 1.8, marginTop: 10, maxWidth: 790 }}>
               TCPA and DNC obligations attach to the business placing the calls, not to where the
               person dialling sits. DialerSeat enforces calling windows per lead state and exports a
-              per-call compliance record for any date range — but national DNC scrubbing and consent
+              per-call compliance record for any date range, but national DNC scrubbing and consent
               records stay your responsibility, exactly as they would with a domestic floor.
             </p>
           </section>

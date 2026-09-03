@@ -13,7 +13,7 @@ import {
 const SLUG = 'aircall'
 
 export const metadata: Metadata = {
-  title: 'DialerSeat vs Aircall — The Power Dialer Isn\u2019t on the Basic Plan',
+  title: 'DialerSeat vs Aircall: The Power Dialer Isn\u2019t on the Basic Plan',
   description:
     'Aircall\u2019s advertised $30/seat Essentials plan doesn\u2019t include the Power Dialer, Salesforce integration, or call monitoring \u2014 all three require the $50/seat Professional tier, plus a 3-license minimum. DialerSeat includes every dialer mode at $35/seat/week.',
   alternates: {

@@ -13,9 +13,9 @@ import {
 const SLUG = 'batchdialer'
 
 export const metadata: Metadata = {
-  title: 'DialerSeat vs BatchDialer — Their Annual Rate Without the Annual Contract',
+  title: 'DialerSeat vs BatchDialer: Their Annual Rate Without the Annual Contract',
   description:
-    "BatchDialer's advertised $95/seat is the annual prepay rate; month to month it is $119–$249. DialerSeat is $35/week billed weekly with all four dialer modes, automatic number cycling on every plan, multiple scripts per campaign, and whitelabel at $75/mo flat.",
+    "BatchDialer's advertised $95/seat is the annual prepay rate; month to month it is $119, $249. DialerSeat is $35/week billed weekly with all four dialer modes, automatic number cycling on every plan, multiple scripts per campaign, and whitelabel at $75/mo flat.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/batchdialer',
   },
@@ -40,7 +40,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to BatchDialer on price?',
     answer:
-      "BatchDialer publishes $95, $151 and $199 per agent per month, but those are annual prepay rates — their own pricing reaches $95 by billing Starter at roughly $1,142 per agent per year. Month to month the same tiers are $119, $189 and $249. DialerSeat is $35 per seat per week, billed weekly, with no commitment and nothing prepaid — you can cancel any week rather than committing to a year to reach a headline rate.",
+      "BatchDialer publishes $95, $151 and $199 per agent per month, but those are annual prepay rates: their own pricing reaches $95 by billing Starter at roughly $1,142 per agent per year. Month to month the same tiers are $119, $189 and $249. DialerSeat is $35 per seat per week, billed weekly, with no commitment and nothing prepaid, you can cancel any week rather than committing to a year to reach a headline rate.",
   },
   {
     question: 'Does BatchDialer include automatic number replacement?',
@@ -50,22 +50,22 @@ const FAQS = [
   {
     question: 'How many simultaneous lines does each dialer support?',
     answer:
-      'BatchDialer allows 3 simultaneous lines on Starter and 5 on Pro and Enterprise. DialerSeat paces predictive dialing against real agent availability rather than selling line count as a tier upgrade, and supports four modes — Preview, Power, Progressive and Predictive — configurable per campaign at one price.',
+      'BatchDialer allows 3 simultaneous lines on Starter and 5 on Pro and Enterprise. DialerSeat paces predictive dialing against real agent availability rather than selling line count as a tier upgrade, and supports four modes: Preview, Power, Progressive and Predictive, configurable per campaign at one price.',
   },
   {
     question: 'Is DialerSeat only for real estate?',
     answer:
-      'No. DialerSeat is industry-agnostic — insurance, financial services, mortgage, solar, recruiting, B2B and agency floors. BatchDialer is built around the BatchLeads and PropStream ecosystem for real estate investors and wholesalers. If your workflow starts with skip-traced property lists, that integration is a genuine advantage of theirs; if it does not, you are paying for an ecosystem you will not open.',
+      'No. DialerSeat is industry-agnostic: insurance, financial services, mortgage, solar, recruiting, B2B and agency floors. BatchDialer is built around the BatchLeads and PropStream ecosystem for real estate investors and wholesalers. If your workflow starts with skip-traced property lists, that integration is a genuine advantage of theirs; if it does not, you are paying for an ecosystem you will not open.',
   },
   {
     question: 'Does either product offer whitelabel?',
     answer:
-      'DialerSeat does, through Manager+ at $75 per month flat — your brand and your subdomain, at any team size. BatchDialer does not publish a whitelabel tier, so an agency reselling seats on BatchDialer is always reselling a branded third-party product.',
+      'DialerSeat does, through Manager+ at $75 per month flat: your brand and your subdomain, at any team size. BatchDialer does not publish a whitelabel tier, so an agency reselling seats on BatchDialer is always reselling a branded third-party product.',
   },
   {
     question: 'When is BatchDialer the better choice?',
     answer:
-      'Two cases. If you work inside BatchLeads or PropStream and want property data and dialing from one vendor, that consolidation has real value. And BatchDialer bundles DNC and litigator scrubbing on every tier — DialerSeat honors DNC and enforces calling windows per lead in the lead’s own timezone, but if you want litigator screening built into the dialer itself, that is a point in their favor.',
+      'Two cases. If you work inside BatchLeads or PropStream and want property data and dialing from one vendor, that consolidation has real value. And BatchDialer bundles DNC and litigator scrubbing on every tier: DialerSeat honors DNC and enforces calling windows per lead in the lead’s own timezone, but if you want litigator screening built into the dialer itself, that is a point in their favor.',
   },
 ]
 

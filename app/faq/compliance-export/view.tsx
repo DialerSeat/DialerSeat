@@ -68,7 +68,7 @@ export default function ComplianceExportFaqView() {
 
           <p className="faq-deck">
             Every campaign can generate a real, downloadable compliance
-            record for any date range — AMD results, abandon flags,
+            record for any date range: AMD results, abandon flags,
             dispositions, call duration, and a link to the recording, one
             row per call. This is the actual tool behind everything the{' '}
             <Link href="/faq/how-we-keep-compliance">compliance pages</Link>{' '}
@@ -87,7 +87,7 @@ export default function ComplianceExportFaqView() {
             <h2>▸ WHAT&apos;S ACTUALLY IN THE FILE</h2>
             <p>
               Pick a campaign and a date range, and DialerSeat generates a
-              CSV — nine columns, one row per call. Here&apos;s a real
+              CSV: nine columns, one row per call. Here&apos;s a real
               excerpt of the format:
             </p>
 
@@ -141,11 +141,11 @@ export default function ComplianceExportFaqView() {
               </div>
               <div className="cex-field-row">
                 <div className="cex-field-cell name">amd_result</div>
-                <div className="cex-field-cell">Whether the call was answered by a human or a machine — the actual AMD verdict, per call, not a summary stat.</div>
+                <div className="cex-field-cell">Whether the call was answered by a human or a machine: the actual AMD verdict, per call, not a summary stat.</div>
               </div>
               <div className="cex-field-row">
                 <div className="cex-field-cell name">was_abandoned</div>
-                <div className="cex-field-cell">True/false flag for whether this specific call counted toward the abandon-rate calculation — the exact number regulators care about.</div>
+                <div className="cex-field-cell">True/false flag for whether this specific call counted toward the abandon-rate calculation, the exact number regulators care about.</div>
               </div>
               <div className="cex-field-row">
                 <div className="cex-field-cell name">disposition</div>
@@ -153,7 +153,7 @@ export default function ComplianceExportFaqView() {
               </div>
               <div className="cex-field-row">
                 <div className="cex-field-cell name">recording_url</div>
-                <div className="cex-field-cell">Direct link to the call recording, when one exists — see <Link href="/faq/data-and-recordings">recordings &amp; your data</Link> for retention windows.</div>
+                <div className="cex-field-cell">Direct link to the call recording, when one exists, see <Link href="/faq/data-and-recordings">recordings &amp; your data</Link> for retention windows.</div>
               </div>
             </div>
           </section>
@@ -163,10 +163,10 @@ export default function ComplianceExportFaqView() {
             <h2>▸ PHONE NUMBERS ARE MASKED BY DEFAULT</h2>
             <p>
               Every export redacts the lead&apos;s phone number automatically
-              — area code visible, the rest masked (<code>+1713XXXXXXX</code>).
+ area code visible, the rest masked (<code>+1713XXXXXXX</code>).
               This is the default specifically because a compliance export is
-              often handed to someone outside your organization — a client,
-              an auditor, a lead vendor — and there&apos;s rarely a reason
+              often handed to someone outside your organization: a client,
+              an auditor, a lead vendor, and there&apos;s rarely a reason
               that third party needs the full number to verify your calling
               behavior. Full, unmasked numbers can still be pulled when
               genuinely needed; masking is the default, not a hard limit.
@@ -178,7 +178,7 @@ export default function ComplianceExportFaqView() {
             <h2>▸ WHO CAN GENERATE ONE</h2>
             <p>
               Only a campaign&apos;s owner can export its compliance
-              record — the same permission boundary as every other
+              record, the same permission boundary as every other
               campaign-level action. On a Manager+ team, that means the
               owner can pull a record for any campaign they created; it&apos;s
               not something an individual agent generates for a campaign
@@ -192,7 +192,7 @@ export default function ComplianceExportFaqView() {
             <ul>
               <li><strong>A lead vendor asking for proof.</strong> If you&apos;re buying leads under a contract that requires demonstrating TCPA-compliant handling, this is the receipt.</li>
               <li><strong>An internal audit before a busy quarter.</strong> Pull the last 30 days on a predictive campaign and check the abandon-rate column directly instead of trusting the dashboard summary alone.</li>
-              <li><strong>A regulatory inquiry.</strong> If a complaint ever traces back to a specific call, the export gets you to the exact record — timestamp, disposition, and recording link — in minutes, not a support ticket.</li>
+              <li><strong>A regulatory inquiry.</strong> If a complaint ever traces back to a specific call, the export gets you to the exact record: timestamp, disposition, and recording link: in minutes, not a support ticket.</li>
               <li><strong>Handing off to a client.</strong> Agencies running campaigns on behalf of a client can share a redacted record without exposing their client&apos;s full lead list.</li>
             </ul>
           </section>
@@ -200,12 +200,12 @@ export default function ComplianceExportFaqView() {
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>What this isn&apos;t —</strong> the export shows you
+              <strong>What this isn&apos;t, </strong> the export shows you
               exactly what happened on every call. It doesn&apos;t retroactively
               fix a list that was never scrubbed against the National DNC
               Registry, and it doesn&apos;t generate consent that was never
               obtained. It&apos;s a record of behavior, not a compliance
-              guarantee — see <Link href="/faq/how-we-keep-compliance">how
+              guarantee, see <Link href="/faq/how-we-keep-compliance">how
               we keep compliance</Link> for the full split of what&apos;s
               automated versus what&apos;s still the seller&apos;s
               responsibility.

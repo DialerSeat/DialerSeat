@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'System Status — DialerSeat',
+  title: 'System Status: DialerSeat',
   description:
     'Live status of the DialerSeat platform: application, database, and carrier connectivity. Every indicator is checked at page load, not published from a static file.',
   alternates: {
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     types: { 'text/markdown': 'https://dialerseat.com/md/status' },
   },
   openGraph: {
-    title: 'System Status — DialerSeat',
+    title: 'System Status: DialerSeat',
     description:
       'Live status of the DialerSeat platform. Every indicator is checked at page load rather than published from a static file.',
     url: 'https://dialerseat.com/status',
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'System Status — DialerSeat',
+    title: 'System Status: DialerSeat',
     description:
       'Live status of the DialerSeat platform. Every indicator is checked at page load rather than published from a static file.',
   },
@@ -207,7 +207,7 @@ export default async function StatusPage() {
                 </div>
                 <div style={{ fontSize: 12, color: MUTED, fontFamily: 'monospace', minWidth: 64, textAlign: 'right' }}>
                   {/* A dash, never a plausible-looking number. */}
-                  {c.ms === null ? '—' : `${c.ms} ms`}
+                  {c.ms === null ? ', ' : `${c.ms} ms`}
                 </div>
                 <span style={{
                   fontSize: 10, fontWeight: 'bold', letterSpacing: 1.5,

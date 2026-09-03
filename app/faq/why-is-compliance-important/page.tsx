@@ -19,14 +19,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Why Is Compliance Important?',
     description:
-      'A light-hearted look at why telemarketing compliance matters — and why so many dialers can\'t be bothered.',
+      'A light-hearted look at why telemarketing compliance matters, and why so many dialers can\'t be bothered.',
     url: 'https://dialerseat.com/faq/why-is-compliance-important',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Why Is Compliance Important?',
-    description: 'A light-hearted look at why telemarketing compliance matters — and why so many dialers can\'t be bothered.',
+    description: 'A light-hearted look at why telemarketing compliance matters, and why so many dialers can\'t be bothered.',
   },
 }
 
@@ -68,7 +68,7 @@ export default function Page() {
             things).
           </p>
           <p>
-            Break them, and the penalties are not small. TCPA: $500–$1,500
+            Break them, and the penalties are not small. TCPA: $500: $1,500
             <em> per call</em>. TSR: up to $53,088 per violation, the
             FTC&apos;s current inflation-adjusted maximum as of January
             2025. When the FTC settles with a serial offender, the numbers
@@ -94,7 +94,7 @@ export default function Page() {
                 <p>If you&apos;re running predictive, you cannot abandon more than 3% of answered calls over any 30-day rolling window. FTC rule. Not negotiable.</p>
               </div>
               <div className="exp-card">
-                <h3>8 AM – 9 PM LOCAL</h3>
+                <h3>8 AM, 9 PM LOCAL</h3>
                 <p>No outbound calls outside that window in the called party&apos;s time zone. Some states are stricter. We enforce this automatically.</p>
               </div>
               <div className="exp-card">
@@ -103,7 +103,7 @@ export default function Page() {
               </div>
               <div className="exp-card">
                 <h3>PRIOR EXPRESS WRITTEN CONSENT</h3>
-                <p>Consent has to be in writing, signed, and clearly disclosed. (A stricter &quot;one-to-one&quot; rule almost took effect in January 2025 but was struck down by the courts days before it started — worth watching in case the FCC tries again.)</p>
+                <p>Consent has to be in writing, signed, and clearly disclosed. (A stricter &quot;one-to-one&quot; rule almost took effect in January 2025 but was struck down by the courts days before it started, worth watching in case the FCC tries again.)</p>
               </div>
               <div className="exp-card">
                 <h3>STIR/SHAKEN</h3>
@@ -125,7 +125,7 @@ export default function Page() {
             loud: a lot of the big-name legacy dialers <em>can</em> run
             non-compliant configurations. Some of them ship by default
             with abandon rates well above 3%. Some don&apos;t enforce the
-            calling-time window in software — they leave it up to the
+            calling-time window in software, they leave it up to the
             campaign owner to remember. Some make AMD an optional add-on.
           </p>
           <p>
@@ -136,7 +136,7 @@ export default function Page() {
             a line item.
           </p>
           <p>
-            That&apos;s not a moral failing — it&apos;s a business decision
+            That&apos;s not a moral failing, it&apos;s a business decision
             with measurable trade-offs. But the trade-off works for
             <em> them</em>, not necessarily for <em>you</em>. If a class-
             action TCPA suit lands on your campaign, &quot;my dialer let me
@@ -161,7 +161,7 @@ export default function Page() {
             </p>
             <div className="exp-cards">
               <div className="exp-card">
-                <h3>HARD 8 AM – 9 PM ENFORCEMENT</h3>
+                <h3>HARD 8 AM, 9 PM ENFORCEMENT</h3>
                 <p>Every outbound call checks the lead&apos;s local time zone before it fires. Outside the window? Skipped, with a TCPA_BLOCKED disposition. You don&apos;t have to remember.</p>
               </div>
               <div className="exp-card">
@@ -174,7 +174,7 @@ export default function Page() {
               </div>
               <div className="exp-card">
                 <h3>FULL RECORDS, 24 MONTHS</h3>
-                <p>Every dial, every AMD result, every disposition, every abandon — stored and exportable. The TSR&apos;s 24-month record-keeping requirement is handled.</p>
+                <p>Every dial, every AMD result, every disposition, every abandon, stored and exportable. The TSR&apos;s 24-month record-keeping requirement is handled.</p>
               </div>
             </div>
             <p style={{ marginTop: 24 }}>
@@ -195,7 +195,7 @@ export default function Page() {
             Compliance isn&apos;t a feature you should be excited about.
             It&apos;s the cost of being allowed to do outbound at all. The
             dialers that treat it like an afterthought are betting that
-            the bill won&apos;t come — and that if it does, it&apos;ll land
+            the bill won&apos;t come: and that if it does, it&apos;ll land
             on you, not them.
           </p>
           <p>

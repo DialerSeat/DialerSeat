@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     success: true,
     dryRun: result.dryRun,
     message: result.dryRun
-      ? 'Dry run — nothing was deleted. POST { confirm: "DELETE" } to proceed.'
+      ? 'Dry run, nothing was deleted. POST { confirm: "DELETE" } to proceed.'
       : 'Account data deleted.',
     counts: result.counts,
   })

@@ -119,7 +119,7 @@ export default function Compliance() {
 
       <style>{`
         /* The month is stamped into the printed copy because a saved report
-           with no period on it is worthless six weeks later — and these are
+           with no period on it is worthless six weeks later, and these are
            kept precisely to show what a given month looked like. */
         @media print {
           .cmp-noprint { display: none !important; }
@@ -131,7 +131,7 @@ export default function Compliance() {
             padding: 0; overflow: visible; height: auto;
             background: #fff; color: #111;
           }
-          /* Never split a check across a page break — a threshold on one page
+          /* Never split a check across a page break, a threshold on one page
              and its value on the next is worse than a shorter page. */
           .cmp-check { break-inside: avoid; page-break-inside: avoid; }
         }
@@ -139,7 +139,7 @@ export default function Compliance() {
       `}</style>
 
       <div className="cmp-print-only" style={{ fontSize: 11, marginTop: 6 }}>
-        DialerSeat — Telnyx compliance report · {period.label} · generated{' '}
+        DialerSeat, Telnyx compliance report · {period.label} · generated{' '}
         {new Date().toLocaleString('en-US')}
       </div>
 
@@ -159,7 +159,7 @@ export default function Compliance() {
               fontSize: 40, fontWeight: 600, lineHeight: 1,
               color: headline.passing === false ? RED : GREEN,
             }}>
-              {headline.value === null ? '—' : `${headline.value.toFixed(1)}%`}
+              {headline.value === null ? ', ' : `${headline.value.toFixed(1)}%`}
             </span>
             <span style={{ fontSize: 12, color: 'var(--brand-muted-text)' }}>
               Telnyx allows {headline.threshold}%
@@ -210,7 +210,7 @@ export default function Compliance() {
               const h = Math.max(2, Math.min(100, (pct / 40) * 100))
               const over = pct > 15
               return (
-                <div key={d.day} title={`${d.day} · ${pct.toFixed(1)}% short of ${d.measured} · avg ${d.avgBilled?.toFixed(1) ?? '—'}s`}
+                <div key={d.day} title={`${d.day} · ${pct.toFixed(1)}% short of ${d.measured} · avg ${d.avgBilled?.toFixed(1) ?? ', '}s`}
                      style={{ flex: '1 0 10px', display: 'flex', flexDirection: 'column',
                               justifyContent: 'flex-end', height: '100%', minWidth: 10 }}>
                   <div style={{
@@ -245,7 +245,7 @@ export default function Compliance() {
                 fontSize: 18, fontWeight: 600,
                 color: c.passing === false ? RED : c.passing === true ? GREEN : AMBER,
               }}>
-                {c.value === null ? '—' : `${c.unit === 's' ? c.value.toFixed(1) : c.value.toFixed(c.unit === '%' ? 1 : 0)}${c.unit}`}
+                {c.value === null ? ', ' : `${c.unit === 's' ? c.value.toFixed(1) : c.value.toFixed(c.unit === '%' ? 1 : 0)}${c.unit}`}
               </span>
             </div>
             <div style={{ fontSize: 11, color: 'var(--brand-muted-text)', marginTop: 4 }}>
@@ -266,7 +266,7 @@ export default function Compliance() {
       <div style={{
         marginTop: 18, fontSize: 10.5, color: 'var(--brand-muted-text)', lineHeight: 1.7,
       }}>
-        Talk time is measured from answer to hangup — ring time is excluded, which is
+        Talk time is measured from answer to hangup: ring time is excluded, which is
         how Telnyx bills. Calls placed before answer tracking existed are left out
         rather than counted as zero: unknown talk time is not the same as a short call.
         Disposition rows carrying no Telnyx call are excluded from every figure here.

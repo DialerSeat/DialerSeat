@@ -16,7 +16,7 @@ const DESKTOP_SLIDES: Slide[] = [
     src: '/faq-images/manager-plus/desktop-analytics.png',
     alt: 'DialerSeat Manager+ analytics overview, white-labeled, showing total calls, hours dialed, conversions, closed deals, talk time, and best campaign',
     caption:
-      'ANALYTICS OVERVIEW — every number a manager actually checks each morning, in one screen. This account is running white-labeled, so the branding is entirely the operator\u2019s own.',
+      'ANALYTICS OVERVIEW: every number a manager actually checks each morning, in one screen. This account is running white-labeled, so the branding is entirely the operator\u2019s own.',
   },
   {
     src: '/faq-images/manager-plus/desktop-dialer.png',
@@ -238,7 +238,7 @@ export default function ManagerPlusFaqView() {
 
           <div className="faq-badge-row">
             <span className="faq-badge price">$75 / WEEK</span>
-            <span className="faq-badge">REPLACES PRO — NOT STACKED ON TOP</span>
+            <span className="faq-badge">REPLACES PRO, NOT STACKED ON TOP</span>
             <span className="faq-badge">NO CONTRACT</span>
             <span className="faq-badge">CANCEL ANYTIME</span>
           </div>
@@ -259,7 +259,7 @@ export default function ManagerPlusFaqView() {
                 <div className="mp-tier-price">$35<span> / week</span></div>
                 <div className="mp-tier-sub">Per seat. What every dialing agent runs on.</div>
                 <ul>
-                  <li>All four dialer modes — preview, power, progressive, predictive</li>
+                  <li>All four dialer modes: preview, power, progressive, predictive</li>
                   <li>Genuine AMD (answering-machine detection)</li>
                   <li>Unlimited outbound numbers and unlimited minutes</li>
                   <li>Inbound reception included</li>
@@ -274,11 +274,11 @@ export default function ManagerPlusFaqView() {
                 <div className="mp-tier-price">$75<span> / week</span></div>
                 <div className="mp-tier-sub">Per team owner. Everything in Pro, plus:</div>
                 <ul>
-                  <li><strong>Create and own teams</strong> — unlimited teams, unlimited seat codes</li>
-                  <li><strong>Full white-labeling</strong> — your logo, colors, domain, agents never see &ldquo;DialerSeat&rdquo;</li>
-                  <li><strong>Advanced analytics</strong> — team-wide rollups, per-agent and per-campaign breakdowns, live floor monitoring</li>
+                  <li><strong>Create and own teams</strong>: unlimited teams, unlimited seat codes</li>
+                  <li><strong>Full white-labeling</strong>: your logo, colors, domain, agents never see &ldquo;DialerSeat&rdquo;</li>
+                  <li><strong>Advanced analytics</strong>: team-wide rollups, per-agent and per-campaign breakdowns, live floor monitoring</li>
                   <li><strong>Owner-pays or agent-pays</strong> billing, configured per seat code</li>
-                  <li><strong>Priority support</strong> — see below for what that actually means</li>
+                  <li><strong>Priority support</strong>, see below for what that actually means</li>
                   <li>Individual agent seats inside the team are still $35/week each, billed separately</li>
                 </ul>
               </div>
@@ -288,7 +288,7 @@ export default function ManagerPlusFaqView() {
               One clarification worth stating plainly: Manager+ is what the
               team <em>owner</em> pays to unlock team creation, white-labeling,
               and the advanced analytics view. It doesn&apos;t change what an
-              individual agent pays to dial — that&apos;s still $35/week per
+              individual agent pays to dial, that&apos;s still $35/week per
               seat, whether the owner absorbs it or the agent covers their
               own.
             </p>
@@ -304,21 +304,21 @@ export default function ManagerPlusFaqView() {
             </p>
 
             <div className="mp-scenario">
-              <div className="mp-scenario-eyebrow">EXAMPLE 1 — LEAD GENERATOR SELLING CAMPAIGN ACCESS</div>
+              <div className="mp-scenario-eyebrow">EXAMPLE 1, LEAD GENERATOR SELLING CAMPAIGN ACCESS</div>
               <h4>&ldquo;I generate leads. I want to sell dialer access to them instead of selling raw CSVs.&rdquo;</h4>
               <p>
                 You run a website that generates solar leads. Right now you
-                sell exports — spreadsheets that go stale, get resold twice,
+                sell exports: spreadsheets that go stale, get resold twice,
                 and give you zero visibility into what happens after the sale.
                 With Manager+, you upload the leads into a DialerSeat campaign
                 instead, generate a seat code, and list it on your site as a
-                <strong> seat</strong>, not a file: &ldquo;$100/week — live
+                <strong> seat</strong>, not a file: &ldquo;$100/week, live
                 dialer access to our exclusive solar campaign, no CSV, no
                 resale.&rdquo;
               </p>
               <p>
                 A buyer clicks your link, redeems the code, and is dialing
-                your leads inside DialerSeat within minutes — on an
+                your leads inside DialerSeat within minutes, on an
                 agent-pays code, so they cover their own $35/week seat on top
                 of what they pay you. You watch every dial, every disposition,
                 every conversion from your Manager+ analytics view. If a buyer
@@ -328,26 +328,26 @@ export default function ManagerPlusFaqView() {
               <p>
                 Ten buyers at $100/week is $1,000/week in bundling revenue on
                 top of whatever you already charge for the leads themselves,
-                against a fixed $75/week Manager+ cost — margin that gets
+                against a fixed $75/week Manager+ cost, margin that gets
                 better, not worse, as you add more buyers, since the platform
                 fee never changes.
               </p>
             </div>
 
             <div className="mp-scenario">
-              <div className="mp-scenario-eyebrow">EXAMPLE 2 — AGENCY OWNER RUNNING THEIR OWN FLOOR</div>
+              <div className="mp-scenario-eyebrow">EXAMPLE 2, AGENCY OWNER RUNNING THEIR OWN FLOOR</div>
               <h4>&ldquo;I run a sales floor. I want my own branded dialer, not a tool with someone else&apos;s name on it.&rdquo;</h4>
               <p>
                 You manage 8 insurance agents. They currently dial on a
                 generic third-party tool that looks the same for every agency
-                using it — no brand recognition, no trust-building for your
+                using it: no brand recognition, no trust-building for your
                 company name. You sign up for Manager+, white-label it under
                 your own domain (say, dial.youragency.com), and generate seat
                 codes scoped to your live campaigns.
               </p>
               <p>
                 Your agents get an email invite, sign in, and see{' '}
-                <em>your</em> logo and colors from the login screen onward —
+                <em>your</em> logo and colors from the login screen onward 
                 they never see the word &ldquo;DialerSeat&rdquo; anywhere in
                 the product. You watch the whole floor live from the
                 analytics overview: who&apos;s connected, who&apos;s closing,
@@ -356,7 +356,7 @@ export default function ManagerPlusFaqView() {
               <p>
                 You choose owner-pays for your 8 core reps ($75 Manager+ + 8 ×
                 $35 seats = $355/week total DialerSeat cost) and keep an
-                agent-pays code in reserve for contractors who come and go —
+                agent-pays code in reserve for contractors who come and go 
                 they cover their own seat, you still see everything they do
                 on your campaigns.
               </p>
@@ -409,7 +409,7 @@ export default function ManagerPlusFaqView() {
             </div>
 
             <p className="muted">
-              Set this per seat code, not per account — a single team can mix
+              Set this per seat code, not per account, a single team can mix
               owner-pays codes for your core reps and agent-pays codes for
               contractors or probationary hires, side by side. For the full
               mechanics of how seat codes, recruit codes, and shared campaigns
@@ -426,7 +426,7 @@ export default function ManagerPlusFaqView() {
               operation-wide view: every team, every agent, every campaign,
               rolled up into one dashboard you can slice by day, week, month,
               or a custom range. Below is the actual analytics overview
-              running on a live white-labeled account — not a mockup.
+              running on a live white-labeled account, not a mockup.
             </p>
 
             <DesktopCarousel />
@@ -437,7 +437,7 @@ export default function ManagerPlusFaqView() {
               teams: <strong>call volume over time</strong>,{' '}
               <strong>conversion rate over time</strong>,{' '}
               <strong>disposition breakdown</strong>, and{' '}
-              <strong>campaign performance</strong> — each one filterable to
+              <strong>campaign performance</strong>, each one filterable to
               today, this week, this month, all time, or a custom window.
             </p>
             <p>
@@ -450,7 +450,7 @@ export default function ManagerPlusFaqView() {
             </p>
             <p className="muted">
               We ship analytics features on a rolling basis, not a yearly
-              roadmap cycle — if managers ask for a specific breakdown enough
+              roadmap cycle, if managers ask for a specific breakdown enough
               times, it tends to show up in the dashboard within weeks, not
               quarters.
             </p>
@@ -468,11 +468,11 @@ export default function ManagerPlusFaqView() {
             <div className="mp-priority-grid">
               <div className="mp-priority-item">
                 <h5>FASTER RESPONSE QUEUE</h5>
-                <p>Manager+ support requests are triaged ahead of standard Pro tickets — you&apos;re running a floor of other people&apos;s money and time, so a stuck dialer costs you more than it costs a solo user.</p>
+                <p>Manager+ support requests are triaged ahead of standard Pro tickets: you&apos;re running a floor of other people&apos;s money and time, so a stuck dialer costs you more than it costs a solo user.</p>
               </div>
               <div className="mp-priority-item">
                 <h5>DIRECT LINE ON WHITE-LABEL ISSUES</h5>
-                <p>Domain, DNS, and branding setup questions get handled directly rather than routed through a generic help queue — this is a technical setup step most support tiers elsewhere don&apos;t touch at all.</p>
+                <p>Domain, DNS, and branding setup questions get handled directly rather than routed through a generic help queue, this is a technical setup step most support tiers elsewhere don&apos;t touch at all.</p>
               </div>
               <div className="mp-priority-item">
                 <h5>FEATURE REQUEST WEIGHT</h5>
@@ -480,7 +480,7 @@ export default function ManagerPlusFaqView() {
               </div>
               <div className="mp-priority-item">
                 <h5>VOLUME CONVERSATIONS</h5>
-                <p>Proven agency owners or lead generators with real volume can talk directly about promo codes, referral arrangements, and seat pricing that reflects what they&apos;re bringing to the platform — see the note at the bottom of the <Link href="/faq/managers">managers page</Link>.</p>
+                <p>Proven agency owners or lead generators with real volume can talk directly about promo codes, referral arrangements, and seat pricing that reflects what they&apos;re bringing to the platform, see the note at the bottom of the <Link href="/faq/managers">managers page</Link>.</p>
               </div>
             </div>
           </section>
@@ -488,10 +488,10 @@ export default function ManagerPlusFaqView() {
           {/* ── HONEST CALLOUT ─────────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>One honest thing —</strong> DialerSeat doesn&apos;t
+              <strong>One honest thing, </strong> DialerSeat doesn&apos;t
               process your resell payments for you. If you charge a buyer or
               agent more than the $35 seat cost, that markup is collected by
-              you directly — Stripe, Venmo, invoicing, whatever you already
+              you directly: Stripe, Venmo, invoicing, whatever you already
               use. We don&apos;t take a cut of it and we don&apos;t see the
               number. Payment routing for managers is on the roadmap; today
               the buyer-to-you transaction is yours to handle.
@@ -502,7 +502,7 @@ export default function ManagerPlusFaqView() {
           <div className="faq-related">
             <div className="faq-related-label">▸ RELATED READING</div>
             <div className="faq-related-links">
-              <Link href="/faq/managers">For managers — agency owners &amp; lead vendors</Link>
+              <Link href="/faq/managers">For managers, agency owners &amp; lead vendors</Link>
               <Link href="/faq/white-label">White-label your dialer</Link>
               <Link href="/faq/white-label-mobile">White-label on mobile</Link>
               <Link href="/faq/mobile">DialerSeat on mobile</Link>

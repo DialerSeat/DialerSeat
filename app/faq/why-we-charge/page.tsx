@@ -19,14 +19,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Why we charge what we charge.',
     description:
-      'The breakdown on $35/week per seat — what\'s included, what competitors charge extra for, and why we can keep it flat.',
+      'The breakdown on $35/week per seat: what\'s included, what competitors charge extra for, and why we can keep it flat.',
     url: 'https://dialerseat.com/faq/why-we-charge',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Why we charge what we charge.',
-    description: 'The breakdown on $35/week per seat — what\'s included, what competitors charge extra for, and why we can keep it flat.',
+    description: 'The breakdown on $35/week per seat: what\'s included, what competitors charge extra for, and why we can keep it flat.',
   },
 }
 
@@ -51,7 +51,7 @@ export default function Page() {
               $35 a week, per seat. Unlimited dial-out
               numbers, multiple inbound numbers, every dialer mode, no
               per-minute charges.
-              Manager+ — our white-label tier — is $75/week and adds
+              Manager+, our white-label tier, is $75/week and adds
               teams, shared campaigns, and your own branding. Here&apos;s
               why we can price this way.
             </p>
@@ -64,10 +64,10 @@ export default function Page() {
           <p>
             Most outbound dialers price like a software subscription and
             then charge you separately for everything that makes a dialer
-            actually work — phone numbers, minutes used, voicemail
+            actually work: phone numbers, minutes used, voicemail
             detection, recording storage, additional agents. By the time
             you finish stacking add-ons, a &ldquo;$99 / month&rdquo; plan
-            often runs $300–$600 a month per agent.
+            often runs $300, $600 a month per agent.
           </p>
           <p>
             DialerSeat bundles all of that into one weekly price. Every
@@ -76,13 +76,13 @@ export default function Page() {
             outbound minutes, voicemail detection, recording, all four
             dialer modes, and analytics. No metered minutes. No
             per-number fees. No tiered feature gates. One seat, one
-            number, one price — or as many of each as you need, all
+            number, one price: or as many of each as you need, all
             included.
           </p>
           <p>
             Two tiers, that&apos;s it. <strong>Pro</strong> at $35/week
             is the full dialer for one person. <strong>Manager+</strong>
-            at $75/week is the white-label tier — adds team rosters,
+            at $75/week is the white-label tier: adds team rosters,
             shared campaigns, owner-paid or agent-paid seat billing, and
             your own branded subdomain.
           </p>
@@ -99,14 +99,14 @@ export default function Page() {
                 <div className="answer">
                   <p>The full dialer feature set. Same on every account:</p>
                   <p>
-                    <strong>All four dialer modes</strong> — preview,
+                    <strong>All four dialer modes</strong>: preview,
                     power, progressive, predictive. No mode gated behind
                     a higher tier.
                   </p>
                   <p>
                     <strong>Unlimited dial-out numbers.</strong> Any area
                     code. Rotate them automatically. Burn one if it gets
-                    flagged and spin up a fresh one — no charge, no
+                    flagged and spin up a fresh one: no charge, no
                     quota.
                   </p>
                   <p>
@@ -131,7 +131,7 @@ export default function Page() {
                     custom fields, dispositions, notes.
                   </p>
                   <p>
-                    <strong>Analytics</strong> — contact rate, talk time,
+                    <strong>Analytics</strong>: contact rate, talk time,
                     best-time-to-call, per-campaign / per-agent / per-number.
                   </p>
                   <p>
@@ -153,14 +153,14 @@ export default function Page() {
                     (e.g. <code>yourbrand.dialerseat.com</code>), your
                     logo, your colors, your favicon. The dashboard your
                     team and your customers see is your brand, not ours.
-                    Sign-in page, dialer, analytics — all themed to your
+                    Sign-in page, dialer, analytics, all themed to your
                     palette.
                   </p>
                   <p>
                     <strong>Teams.</strong> Roster your agents, share
                     campaigns across the team, route inbound calls.
                     Team-mode predictive routes humans across the entire
-                    team — when an agent disconnects, the routed human
+                    team: when an agent disconnects, the routed human
                     reroutes to another available agent on the same
                     campaign rather than dropping. Full breakdown on the
                     <Link href="/faq/dialerseat-teams"> Teams FAQ</Link>.
@@ -169,7 +169,7 @@ export default function Page() {
                     <strong>Flexible seat billing.</strong> Pay for your
                     agents&apos; seats yourself (owner-paid), let them
                     pay their own (agent-paid), or run a free internal
-                    mode where neither pays per-seat — agents just need
+                    mode where neither pays per-seat, agents just need
                     their own personal Pro subscription to dial.
                   </p>
                   <p>
@@ -200,11 +200,11 @@ export default function Page() {
                     Total: <strong>~$254/month per agent.</strong>
                   </p>
                   <p>
-                    DialerSeat Pro is <strong>$35/week</strong> — and that
+                    DialerSeat Pro is <strong>$35/week</strong>, and that
                     includes <em>unlimited</em> numbers, <em>unlimited</em>
                     minutes, every dialer mode, and every feature. No tier
                     gates. No per-line surcharges. No monthly contract to
-                    sign either way — you&apos;re never locked into a
+                    sign either way, you&apos;re never locked into a
                     billing cycle longer than the week you&apos;re actually
                     dialing in.
                   </p>
@@ -212,7 +212,7 @@ export default function Page() {
                     Manager+ is <strong>$75/week</strong> for the team
                     owner. Most competitors charge a comparable amount just
                     for &ldquo;team admin&rdquo; on top of their per-agent
-                    base — and white-label is usually a separate enterprise
+                    base, and white-label is usually a separate enterprise
                     quote on top of that, often billed monthly with a
                     minimum term attached.
                   </p>
@@ -223,11 +223,11 @@ export default function Page() {
                 <summary>Why is &ldquo;multiple numbers&rdquo; such a big deal?</summary>
                 <div className="answer">
                   <p>
-                    Most dialers charge $1–$5 per phone number per month.
+                    Most dialers charge $1, $5 per phone number per month.
                     They cap how many you can have. They charge extra if
                     you want a number in a specific area code. If you
-                    want to spoof local presence — display a local number
-                    when calling that area — you&apos;re paying for
+                    want to spoof local presence, display a local number
+                    when calling that area, you&apos;re paying for
                     dozens of numbers across dozens of area codes, every
                     month, forever.
                   </p>
@@ -235,7 +235,7 @@ export default function Page() {
                     On DialerSeat you can add a number for every area
                     code you call, rotate them automatically, and burn
                     one the instant it gets flagged. The same goes for
-                    inbound — multiple ring-in lines per seat let you
+                    inbound, multiple ring-in lines per seat let you
                     track which lead source, campaign, or market actually
                     rings, all in one analytics view.
                   </p>
@@ -254,9 +254,9 @@ export default function Page() {
                     Outbound dialing is a weekly rhythm. Most operators
                     dial Monday through Friday, evaluate Friday
                     afternoon, plan the next week. A weekly bill matches
-                    that rhythm. If a week is slow — you&apos;re
+                    that rhythm. If a week is slow, you&apos;re
                     traveling, you took on a different project, a
-                    campaign dried up — you pause for that week. You
+                    campaign dried up, you pause for that week. You
                     don&apos;t owe us 30 days&apos; notice.
                   </p>
                   <p>
@@ -278,7 +278,7 @@ export default function Page() {
                     marketing budget that funds &ldquo;feature parity&rdquo;
                     pages and steakhouse dinners. That overhead is what
                     you&apos;re really paying for at the legacy dialer
-                    companies — it just shows up on your invoice as
+                    companies, it just shows up on your invoice as
                     &ldquo;extra phone numbers.&rdquo;
                   </p>
                   <p>
@@ -307,7 +307,7 @@ export default function Page() {
                 <div className="answer">
                   <p>
                     Yes. Cancel from your settings page in two clicks.
-                    Pro cancels at the end of the current weekly cycle —
+                    Pro cancels at the end of the current weekly cycle 
                     you keep dialing through what you&apos;ve paid for,
                     then billing stops. Same for Manager+: cancel the
                     Manager+ tier and your white-label tenant stays

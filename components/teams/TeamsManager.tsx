@@ -1086,7 +1086,7 @@ export default function TeamsManager() {
               ▸ AS AN OWNER
             </div>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: T.text, margin: 0 }}>
-              You generate your own leads and want to give other agents access to them — usually because you charge them above-cost as a lead vendor or agency. Build teams, attach your campaigns, generate codes for your agents. You decide per code: do you pay the $35 weekly seat for them, or do they pay it themselves?
+              You generate your own leads and want to give other agents access to them, usually because you charge them above-cost as a lead vendor or agency. Build teams, attach your campaigns, generate codes for your agents. You decide per code: do you pay the $35 weekly seat for them, or do they pay it themselves?
             </p>
           </div>
 
@@ -1124,7 +1124,7 @@ export default function TeamsManager() {
               border: `1px solid #ffaa3e`, borderRadius: 4, color: '#ffaa3e',
               fontSize: 12, fontWeight: 'bold', letterSpacing: 4, textDecoration: 'none', marginBottom: 10,
               fontFamily: FUTURA,
-            }}>SUBSCRIBE — $35/WEEK</Link>
+            }}>SUBSCRIBE, $35/WEEK</Link>
             <button onClick={() => setShowSubGate(false)} style={{
               background: 'transparent', border: 'none', color: 'var(--brand-on-sidebar-muted)',
               fontSize: 11, letterSpacing: 2, cursor: 'pointer',
@@ -1275,7 +1275,7 @@ export default function TeamsManager() {
                     { v: 'owner_pays', t: 'OWNER PAYS', d: 'You pay $35/wk per agent who joins. Agents dial without paying.' },
                     { v: 'agent_pays', t: 'AGENT PAYS', d: 'Agents must have their own $35/wk sub to access.' },
                     { v: 'public', t: 'PUBLIC', d: 'Any active subscriber can access without a code.' },
-                    { v: 'free', t: 'FREE', d: 'No per-seat fee for owner or agents. Members still need their own $35/wk DialerSeat sub to dial — free here means free campaign access, not free platform access.' },
+                    { v: 'free', t: 'FREE', d: 'No per-seat fee for owner or agents. Members still need their own $35/wk DialerSeat sub to dial: free here means free campaign access, not free platform access.' },
                   ] as const).map(opt => (
                     <label key={opt.v} style={{
                       display: 'flex', gap: 10, padding: '10px 12px',
@@ -1352,7 +1352,7 @@ export default function TeamsManager() {
                     {remaining.map(tc => (
                       <option key={tc.campaignId} value={tc.campaignId}>
                         {tc.campaign?.name || tc.campaignId}
-                        {tc.accessMode === 'free' ? ' — FREE' : ''}
+                        {tc.accessMode === 'free' ? ', FREE' : ''}
                       </option>
                     ))}
                   </select>
@@ -1364,7 +1364,7 @@ export default function TeamsManager() {
                       border: `1px solid ${T.accent}`, borderRadius: 3,
                       fontSize: 11, color: T.accent, lineHeight: 1.5,
                     }}>
-                      ▸ FREE campaign — no per-seat charge to you or the agent. Agent still needs their own $35/wk DialerSeat sub to dial.
+                      ▸ FREE campaign, no per-seat charge to you or the agent. Agent still needs their own $35/wk DialerSeat sub to dial.
                     </div>
                   ) : (
                     <>

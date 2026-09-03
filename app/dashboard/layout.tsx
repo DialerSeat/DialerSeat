@@ -737,7 +737,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             fontSize: 13, lineHeight: 1.5,
           }}>
             {seatLapsed.map(t => t.teamName).join(', ')} is no longer paying for your seat.
-            {' '}Your account and all your data are still here — subscribe on your own plan
+            {' '}Your account and all your data are still here, subscribe on your own plan
             to keep dialing.
             <Link
               href="/billing"
@@ -768,13 +768,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             fontSize: 13, lineHeight: 1.5,
           }}>
             Waiting on {awaitingApproval.map(t => t.teamName).join(', ')} to approve you.
-            {' '}You will be able to dial their campaigns as soon as they do — nothing
+            {' '}You will be able to dial their campaigns as soon as they do, nothing
             to pay, the seat is on them.
             {/* The only person who can resolve this is whoever sent the code,
                 and DialerSeat cannot chase them. Saying so turns an open-ended
                 wait into a next step the person can actually take. */}
             <span style={{ display: 'block', marginTop: 4, color: '#a1731a', fontSize: 12 }}>
-              If access does not arrive, contact whoever sent you the invite code —
+              If access does not arrive, contact whoever sent you the invite code 
               only they can approve it.
             </span>
           </div>

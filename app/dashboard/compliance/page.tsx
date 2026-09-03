@@ -288,8 +288,8 @@ export default function CompliancePage() {
             ▸ LEGAL THRESHOLDS · FTC TSR § 310.4(b)(4)
           </div>
           <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
-            <span><strong style={{ color: T.green }}>0.0% – 1.9%</strong> · Safe</span>
-            <span><strong style={{ color: T.amber }}>2.0% – 2.4%</strong> · Caution (auto-throttle pending)</span>
+            <span><strong style={{ color: T.green }}>0.0%, 1.9%</strong> · Safe</span>
+            <span><strong style={{ color: T.amber }}>2.0%, 2.4%</strong> · Caution (auto-throttle pending)</span>
             <span><strong style={{ color: T.red }}>2.5% +</strong> · Auto-degraded to 1× lines</span>
             <span><strong style={{ color: '#ff6464' }}>3.0% +</strong> · Legal violation</span>
           </div>

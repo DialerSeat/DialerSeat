@@ -234,7 +234,7 @@ export async function assembleAndSaveDisputeEvidence(
 
     const evidence: Stripe.DisputeUpdateParams.Evidence = {
       product_description:
-        'DialerSeat — cloud predictive/progressive dialer. One agent seat, billed weekly in advance.',
+        'DialerSeat, cloud predictive/progressive dialer. One agent seat, billed weekly in advance.',
       refund_policy_disclosure: REFUND_POLICY_TEXT,
       uncategorized_text: narrative,
     }

@@ -28,7 +28,7 @@ export const CORE_TASKS: CoreTask[] = [
   {
     key: 'core2',
     label: 'Take time for yourself',
-    detail: 'Brush your teeth and do something healthy — regardless what is going on.',
+    detail: 'Brush your teeth and do something healthy, regardless what is going on.',
   },
   {
     key: 'core3',

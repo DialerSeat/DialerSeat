@@ -70,7 +70,7 @@ function isChecklistNote(n: Note): boolean {
 function checklistPreview(items: ChecklistItem[]): string {
   const done = items.filter((i) => i.done).length
   const names = items.map((i) => i.text).filter(Boolean).slice(0, 4).join(', ')
-  return `${done} / ${items.length} done${names ? ' — ' + names : ''}`
+  return `${done} / ${items.length} done${names ? ', ' + names : ''}`
 }
 
 // Apple-Notes-style relative timestamp for when a note's *content* (title
@@ -644,7 +644,7 @@ export default function NotesApp() {
             <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 14, WebkitOverflowScrolling: 'touch' }}>
               {selectedChecklist.length === 0 && (
                 <div style={{ color: '#888', fontSize: 13, marginBottom: 12 }}>
-                  Empty checklist. Add items below — separate multiple with commas.
+                  Empty checklist. Add items below, separate multiple with commas.
                 </div>
               )}
               {selectedChecklist.map((item, idx) => (
@@ -723,7 +723,7 @@ export default function NotesApp() {
                   value={checklistAddInput}
                   onChange={(e) => setChecklistAddInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') addChecklistItems() }}
-                  placeholder="Add item(s) — comma-separated"
+                  placeholder="Add item(s), comma-separated"
                   style={{
                     flex: 1,
                     padding: '8px 10px',

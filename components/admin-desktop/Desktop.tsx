@@ -636,7 +636,7 @@ function DesktopWindowed({ role = 'admin' }: { role?: AppRole } = {}) {
     appId: AppId,
     hint?: PositionHint,
     // Open a SECOND window of an app that's already running instead of
-    // focusing the existing one. Wanted for genuinely comparative work —
+    // focusing the existing one. Wanted for genuinely comparative work 
     // two User Trackers side by side on different people, two Teams windows
     // on different teams. Off by default: clicking an icon should still
     // raise what you already have open rather than pile up duplicates.
@@ -988,7 +988,7 @@ function DesktopWindowed({ role = 'admin' }: { role?: AppRole } = {}) {
       const base = isBaseApp(appId, role)
       return [
         { label: 'Open', icon: '▶', onClick: () => openApp(appId) },
-        // Only offered once something is already open — "open another" on a
+        // Only offered once something is already open, "open another" on a
         // closed app is just "open", and two entries that do the same thing
         // is worse than one.
         ...(alreadyOpen
@@ -1020,7 +1020,7 @@ function DesktopWindowed({ role = 'admin' }: { role?: AppRole } = {}) {
         ? [
             { label: app?.name || 'Windows', disabled: true },
             // Windows labels these with each window's own title; ours don't
-            // have one, so they're numbered here — inside the list, where the
+            // have one, so they're numbered here: inside the list, where the
             // numbers disambiguate, not on the button, where they'd be noise.
             ...group.map((w, i) => ({
               label: `Window ${i + 1}${w.minimized ? ' (minimized)' : ''}`,
@@ -1412,7 +1412,7 @@ function PersonalizePopup({
               fontSize: 9, letterSpacing: 1, color: '#8888aa',
               marginTop: 10, lineHeight: 1.5,
             }}>
-              TIP — drag and drop any image onto the desktop to set it as your wallpaper.
+              TIP, drag and drop any image onto the desktop to set it as your wallpaper.
             </div>
           </div>
 

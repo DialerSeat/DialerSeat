@@ -55,7 +55,7 @@ const ANSWERS: HubItem[] = [
   {
     href: '/faq/dialer-modes',
     label: 'Dialer modes (TL;DR)',
-    note: 'Preview, power, progressive, predictive — in one page',
+    note: 'Preview, power, progressive, predictive: in one page',
     added: '2026-06-25',
     keywords: 'modes comparison summary',
   },
@@ -460,7 +460,7 @@ export default function FaqView() {
                 </p>
                 <p>
                   Every seat includes unlimited dial-out numbers, multiple inbound numbers,
-                  all four dialer modes, call recording, voicemail detection, and analytics —
+                  all four dialer modes, call recording, voicemail detection, and analytics 
                   no metered minutes, no per-number fees. See{' '}
                   <Link href="/faq/why-we-charge">why we charge what we charge</Link> for
                   the full breakdown vs. competitors who stack add-ons.
@@ -468,7 +468,7 @@ export default function FaqView() {
                 <p>
                   Want to own a team, resell seats, or white-label the whole platform?
                   That&apos;s <strong>Manager+</strong> at $75/week instead of the standard
-                  $35 — see <Link href="/faq/manager-plus">what Manager+ adds</Link> for
+                  $35, see <Link href="/faq/manager-plus">what Manager+ adds</Link> for
                   the full breakdown.
                 </p>
               </div>
@@ -490,7 +490,7 @@ export default function FaqView() {
               <div className="faqx-answer">
                 <p>
                   Yes. Cancel from your billing page in two clicks. Your subscription ends
-                  at the close of the current weekly cycle — you keep access through what
+                  at the close of the current weekly cycle, you keep access through what
                   you&apos;ve paid for, then it stops billing. Your leads, recordings, and
                   campaigns remain accessible if you want to come back.
                 </p>
@@ -506,7 +506,7 @@ export default function FaqView() {
               <div className="faqx-answer">
                 <p>
                   All four: preview, power, progressive, and predictive. Each is available
-                  on every account at every tier — we don&apos;t gate dialing modes behind
+                  on every account at every tier, we don&apos;t gate dialing modes behind
                   upgrades. Full breakdown on the{' '}
                   <Link href="/dialing-modes">dialing modes page</Link>.
                 </p>
@@ -517,7 +517,7 @@ export default function FaqView() {
               <summary>How do I upload leads?</summary>
               <div className="faqx-answer">
                 <p>
-                  Drop in a spreadsheet — there&apos;s no template to match or import wizard
+                  Drop in a spreadsheet, there&apos;s no template to match or import wizard
                   to click through. Column headers like <code>phone</code>,{' '}
                   <code>first_name</code>, <code>email</code>, and <code>state</code> get
                   auto-detected regardless of exact capitalization, and the only hard
@@ -536,7 +536,7 @@ export default function FaqView() {
               <summary>Can I write my own call scripts?</summary>
               <div className="faqx-answer">
                 <p>
-                  Yes — write as many as you want, attach them to whichever campaigns need
+                  Yes: write as many as you want, attach them to whichever campaigns need
                   them, and reorder which one shows first if a campaign has several. Personal
                   scripts are yours alone; a Manager+ team owner can also publish a script
                   the whole team sees.
@@ -553,7 +553,7 @@ export default function FaqView() {
               <div className="faqx-answer">
                 <p>
                   Create it, name it or don&apos;t, pick a dialer mode (defaults to power),
-                  and it&apos;s active immediately — no setup wizard, no required fields
+                  and it&apos;s active immediately: no setup wizard, no required fields
                   beyond that. AMD and predictive pacing are both optional settings with
                   sane defaults.
                 </p>
@@ -568,15 +568,15 @@ export default function FaqView() {
               <summary>How does DialerSeat handle TCPA compliance?</summary>
               <div className="faqx-answer">
                 <p>
-                  The dialer enforces the federal calling-time window (8 AM–9 PM in the
+                  The dialer enforces the federal calling-time window (8 AM, 9 PM in the
                   lead&apos;s local time zone) on every outbound call. Predictive mode
-                  applies the FTC TSR safe-harbor conditions in software — 3% abandon-rate
+                  applies the FTC TSR safe-harbor conditions in software, 3% abandon-rate
                   cap, auto-degrade at 2.5% to leave a safety buffer, AMD pre-screen,
                   ring-duration handling.
                 </p>
                 <p>
                   National DNC list scrubbing and consent records remain the seller&apos;s
-                  responsibility — we don&apos;t scrub your list against the registry for
+                  responsibility, we don&apos;t scrub your list against the registry for
                   you today. We&apos;re transparent about which compliance layers we own and
                   which fall on the campaign owner on the{' '}
                   <Link href="/faq/how-we-keep-compliance">how we keep compliance page</Link>.
@@ -590,13 +590,13 @@ export default function FaqView() {
                 <p>
                   Every outbound number carries STIR/SHAKEN A-attestation, is registered
                   for CNAM and the Free Caller Registry, and dials with local presence by
-                  default — the carrier-level protections that most dialers sell as separate
+                  default, the carrier-level protections that most dialers sell as separate
                   add-ons are just the default here. The number pool also rotates and cools
                   down instead of hammering one number until it burns.
                 </p>
                 <p>
                   See <Link href="/faq/numbers">phone numbers &amp; caller ID</Link> for the
-                  full breakdown — including what&apos;s still on you (list quality, abandon
+                  full breakdown: including what&apos;s still on you (list quality, abandon
                   rate, DNC scrubbing) since no infrastructure makes a number permanently
                   immune to flagging.
                 </p>
@@ -607,7 +607,7 @@ export default function FaqView() {
               <summary>Can I export a compliance record for a campaign?</summary>
               <div className="faqx-answer">
                 <p>
-                  Yes — any campaign owner can pull a downloadable CSV for any date range:
+                  Yes, any campaign owner can pull a downloadable CSV for any date range:
                   AMD result, abandon flag, disposition, and duration, one row per call,
                   with the lead&apos;s phone number masked by default. It&apos;s the actual
                   receipt behind the compliance claims, not just a dashboard summary.
@@ -625,7 +625,7 @@ export default function FaqView() {
                 <p>
                   Yes. Recordings are captured server-side, stored encrypted, and accessible
                   from your dashboard for 30 days. Pull them down for review, training, or
-                  your own long-term archive during that window — call metadata (dial
+                  your own long-term archive during that window, call metadata (dial
                   timestamps, dispositions, AMD results) is kept separately for 24 months to
                   meet the TSR&apos;s record-keeping floor, but the audio itself follows the
                   30-day retention window.
@@ -637,7 +637,7 @@ export default function FaqView() {
               <summary>Do you have a team plan?</summary>
               <div className="faqx-answer">
                 <p>
-                  Yes — <strong>Manager+</strong>, at $75/week. It&apos;s what the team
+                  Yes: <strong>Manager+</strong>, at $75/week. It&apos;s what the team
                   owner pays to create and own a team; each individual seat inside the team
                   still runs $35/week, regardless of team size. You can configure it so the
                   owner pays for the whole team&apos;s seats, or so individual agents pay
@@ -657,7 +657,7 @@ export default function FaqView() {
                 <p>
                   Yes. Team owners can grant campaign access to team members. In team-mode
                   predictive dialing, the system routes connected humans across all agents
-                  working the same campaign — when an agent disconnects, the routed human
+                  working the same campaign: when an agent disconnects, the routed human
                   reroutes to another available agent on the same campaign rather than
                   dropping.
                 </p>
@@ -668,14 +668,14 @@ export default function FaqView() {
               <summary>Do you offer a white-label option?</summary>
               <div className="faqx-answer">
                 <p>
-                  Yes — it&apos;s bundled into <strong>Manager+</strong> at $75/week,
+                  Yes: it&apos;s bundled into <strong>Manager+</strong> at $75/week,
                   replacing your $35/week Pro subscription rather than stacking on top of
                   it. Includes a custom subdomain, your branding (logo, colors, favicon),
                   and the ability to onboard your own users under your brand. The underlying
                   dialer is the same one we run. See{' '}
                   <Link href="/faq/white-label">white-label</Link> for the branding details,
                   or <Link href="/faq/manager-plus">the Manager+ breakdown</Link> for the
-                  full tier — team ownership, advanced analytics, and priority support
+                  full tier: team ownership, advanced analytics, and priority support
                   included.
                 </p>
               </div>
@@ -685,7 +685,7 @@ export default function FaqView() {
               <summary>Is there a mobile app?</summary>
               <div className="faqx-answer">
                 <p>
-                  Yes — DialerSeat installs to your phone&apos;s home screen as a
+                  Yes, DialerSeat installs to your phone&apos;s home screen as a
                   Progressive Web App (PWA): the same dialer terminal, analytics, and teams
                   tools as desktop, full-screen, with no App Store download required. We
                   strongly recommend installing it rather than dialing from a regular browser
@@ -703,7 +703,7 @@ export default function FaqView() {
               <div className="faqx-answer">
                 <p>
                   Application data sits on Supabase (US region). Recordings are stored
-                  encrypted. Payments are handled by Stripe — DialerSeat never sees or
+                  encrypted. Payments are handled by Stripe, DialerSeat never sees or
                   stores credit card numbers. Telephony runs through Telnyx with full
                   STIR/SHAKEN attestation.
                 </p>

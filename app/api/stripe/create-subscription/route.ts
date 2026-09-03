@@ -178,7 +178,7 @@ export async function POST(req: Request) {
           .update({ stripe_customer_id: null })
           .eq('clerk_id', userId)
         return NextResponse.json(
-          { error: 'Account sync issue — please try again.' },
+          { error: 'Account sync issue, please try again.' },
           { status: 500 }
         )
       }
@@ -390,7 +390,7 @@ export async function POST(req: Request) {
         }
       } catch {}
       return NextResponse.json(
-        { error: 'Account out of sync — please try again.' },
+        { error: 'Account out of sync, please try again.' },
         { status: 500 }
       )
     }

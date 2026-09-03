@@ -64,7 +64,7 @@ export async function GET() {
       {
         success: false,
         error: 'SIP credentials not configured on server',
-        detail: `${error || 'unknown'} — see GET /api/calls/diagnostics for the full checklist.`,
+        detail: `${error || 'unknown'}, see GET /api/calls/diagnostics for the full checklist.`,
       },
       { status: 500 }
     )

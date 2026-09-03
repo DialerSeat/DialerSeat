@@ -111,7 +111,7 @@ export async function deleteAccount(
       console.warn(
         `[deleteAccount] no usable name/email in Supabase users for clerk_id=${clerkUserId}` +
         (existing ? ' (row exists but first_name/last_name/email all empty)' : ' (no matching row at all)') +
-        ' — falling back to Clerk.'
+        ', falling back to Clerk.'
       )
       try {
         const { clerkClient } = await import('@clerk/nextjs/server')
@@ -123,7 +123,7 @@ export async function deleteAccount(
           deletedUserName = clerkName || clerkEmail!.split('@')[0]
           deletedUserEmail = clerkEmail
         } else {
-          console.warn(`[deleteAccount] Clerk also had no name/email for clerk_id=${clerkUserId} — using generic label.`)
+          console.warn(`[deleteAccount] Clerk also had no name/email for clerk_id=${clerkUserId}, using generic label.`)
         }
       } catch (err) {
         console.error(`[deleteAccount] Clerk fallback lookup failed for clerk_id=${clerkUserId}:`, err)
@@ -188,7 +188,7 @@ export async function deleteAccount(
         if (missingTable) {
           console.error(
             `[deleteAccount] DELETE_ORDER lists '${table}', which does not exist. ` +
-            `Skipping it and continuing — remove it from the list.`
+            `Skipping it and continuing, remove it from the list.`
           )
           counts[table] = 0
           continue

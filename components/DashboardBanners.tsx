@@ -123,8 +123,8 @@ export default function DashboardBanners() {
   // WHICH one they are still waiting on.
   const awaitingText =
     awaiting.length === 1
-      ? `AWAITING APPROVAL — ${awaiting[0]} has not accepted you yet. You'll get access to their campaigns as soon as they do.`
-      : `AWAITING APPROVAL — ${awaiting.slice(0, -1).join(', ')} and ${awaiting[awaiting.length - 1]} have not accepted you yet. You'll get access to their campaigns as soon as they do.`
+      ? `AWAITING APPROVAL, ${awaiting[0]} has not accepted you yet. You'll get access to their campaigns as soon as they do.`
+      : `AWAITING APPROVAL, ${awaiting.slice(0, -1).join(', ')} and ${awaiting[awaiting.length - 1]} have not accepted you yet. You'll get access to their campaigns as soon as they do.`
 
   return (
     <div>
@@ -135,7 +135,7 @@ export default function DashboardBanners() {
         <Ticker text={awaitingText} bg="#FF9F0A" color="#1A1A1A" />
       )}
       {showDialerDown && (
-        <Ticker text={`⚠ DIALER DOWN — ${dialerDown!.message}  ⚠`} bg="#FF453A" color="#FFFFFF" />
+        <Ticker text={`⚠ DIALER DOWN, ${dialerDown!.message}  ⚠`} bg="#FF453A" color="#FFFFFF" />
       )}
     </div>
   )

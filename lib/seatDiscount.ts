@@ -492,7 +492,7 @@ export async function syncOwnerSeatDiscounts(ownerId: string): Promise<DiscountS
 
   if (result.updated > 0) {
     console.log(
-      `[seatDiscount] owner ${ownerId} on ${percentOff}% (${ownerPaidSeats} funded seats) — ` +
+      `[seatDiscount] owner ${ownerId} on ${percentOff}% (${ownerPaidSeats} funded seats), ` +
       `${result.updated} subscription(s) updated`
     )
   }

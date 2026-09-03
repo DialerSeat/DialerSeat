@@ -502,11 +502,11 @@ export default function CampaignDetail({
         }}>
           {/* A dash, never a zero invented to fill the box: no calls yet is a
               different statement from nothing recorded. */}
-          {stat('Calls', myStats ? myStats.calls.toLocaleString() : '—')}
-          {stat('Talk time', myStats ? `${mins}m` : '—')}
-          {stat('Call Backs', myStats ? myStats.appointments : '—')}
-          {stat('Closed', myStats ? myStats.closed : '—')}
-          {stat('Not interested', myStats ? myStats.notInterested : '—')}
+          {stat('Calls', myStats ? myStats.calls.toLocaleString() : ', ')}
+          {stat('Talk time', myStats ? `${mins}m` : ', ')}
+          {stat('Call Backs', myStats ? myStats.appointments : ', ')}
+          {stat('Closed', myStats ? myStats.closed : ', ')}
+          {stat('Not interested', myStats ? myStats.notInterested : ', ')}
         </div>
 
         {/* ── THE WEEK, THEIR OWN ─────────────────────────────────────
@@ -711,7 +711,7 @@ export default function CampaignDetail({
               padding: 14, fontSize: 12.5, color: DIM, lineHeight: 1.7,
             }}>
               Nothing here yet. Keep your own opener, a rebuttal that keeps
-              working, or a note about this list — whatever you want in front of
+              working, or a note about this list, whatever you want in front of
               you when the call connects.
             </div>
           ) : (
@@ -803,7 +803,7 @@ export default function CampaignDetail({
                     }}
                   >▶ Recording</a>
                 ) : (
-                  <span style={{ fontSize: 11, color: DIM, flexShrink: 0 }}>—</span>
+                  <span style={{ fontSize: 11, color: DIM, flexShrink: 0 }}>, </span>
                 )}
               </div>
             ))}
@@ -860,8 +860,8 @@ export default function CampaignDetail({
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
       }}>
         <Stat label="Agents" value={String(agents.length)} />
-        <Stat label="Total Leads" value={data.totalLeads ? data.totalLeads.toLocaleString() : '—'} />
-        <Stat label="Dialed" value={data.calledLeads ? data.calledLeads.toLocaleString() : '—'} />
+        <Stat label="Total Leads" value={data.totalLeads ? data.totalLeads.toLocaleString() : ', '} />
+        <Stat label="Dialed" value={data.calledLeads ? data.calledLeads.toLocaleString() : ', '} />
         {/* No "Remaining" box. It was total minus dialed, sitting beside both
             of them, and the same number is stated twice more below — in the
             progress bar's percentage and in the Leads section's "N left to
@@ -878,7 +878,7 @@ export default function CampaignDetail({
           </div>
           <div style={{ fontSize: 11, color: DIM, marginTop: 5 }}>
             {pct}% dialed
-            {data.remainingLeads === 0 && ' — this list is finished. Add leads or pause it.'}
+            {data.remainingLeads === 0 && ', this list is finished. Add leads or pause it.'}
           </div>
         </div>
       )}
@@ -976,7 +976,7 @@ export default function CampaignDetail({
 
           <Toggle
             label="Record calls"
-            hint="Stores audio for every connected call on this campaign. Check your own obligations before turning this on — consent rules vary by state."
+            hint="Stores audio for every connected call on this campaign. Check your own obligations before turning this on, consent rules vary by state."
             on={data.recordingEnabled}
             busy={busy}
             onChange={v => patch({ recording_enabled: v })}
@@ -1013,7 +1013,7 @@ export default function CampaignDetail({
         {!data.ingestEnabled ? (
           <div>
             <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.75, marginBottom: 10 }}>
-              Give your lead source a URL and leads land here as they come in —
+              Give your lead source a URL and leads land here as they come in 
               including in the middle of a live session. Agents already dialing
               this campaign will reach them without restarting anything.
               <br />
@@ -1062,7 +1062,7 @@ export default function CampaignDetail({
                     </button>
                   </div>
                   <div style={{ fontSize: 11, color: DIM, marginTop: 9, lineHeight: 1.7 }}>
-                    Treat this URL as a password — anyone holding it can add leads
+                    Treat this URL as a password, anyone holding it can add leads
                     to this campaign. <strong style={{ color: MUTED }}>New URL</strong>{' '}
                     stops the old one working immediately, which is how you cut off
                     a source you have finished with.
@@ -1099,11 +1099,11 @@ export default function CampaignDetail({
                     theirs exactly, and give up on the second rejection. */}
                 <div style={{ marginTop: 8 }}>
                   Only the phone number is required. Field names are matched
-                  loosely — <code>Phone Number</code>, <code>mobile</code> and{' '}
+                  loosely: <code>Phone Number</code>, <code>mobile</code> and{' '}
                   <code>cell</code> all work, as do <code>firstName</code> and{' '}
                   <code>First Name</code>. Anything we do not recognise is kept
                   on the lead rather than dropped. Send one lead, an array, or{' '}
-                  <code>{'{"leads":[...]}'}</code> — up to 500 at a time.
+                  <code>{'{"leads":[...]}'}</code>, up to 500 at a time.
                 </div>
                 <div style={{ marginTop: 6 }}>
                   Repeat numbers already on this campaign are ignored, so a source
@@ -1179,7 +1179,7 @@ export default function CampaignDetail({
       >
         {agents.length === 0 ? (
           <div style={{ color: DIM, fontSize: 13, lineHeight: 1.7 }}>
-            Nobody yet. Select people under All Users and use Add to campaign — it
+            Nobody yet. Select people under All Users and use Add to campaign, it
             costs nothing extra, their seats are already paid for.
           </div>
         ) : (
@@ -1217,11 +1217,11 @@ export default function CampaignDetail({
                   )}
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
                     {a.suspended
-                      ? 'Seat paused — cannot dial'
+                      ? 'Seat paused, cannot dial'
                       : a.payer === 'owner'
                       ? 'You pay this seat'
                       : a.payer === 'agent'
-                      ? 'Paying for themselves — costs you nothing'
+                      ? 'Paying for themselves, costs you nothing'
                       : 'Added at no extra cost'}
                   </div>
                 </div>
@@ -1278,7 +1278,7 @@ export default function CampaignDetail({
           >
             <div style={{ fontSize: 17, fontWeight: 600, color: TEXT }}>Add people</div>
             <div style={{ fontSize: 12, color: DIM, marginTop: 3, marginBottom: 14 }}>
-              Adding somebody costs nothing — their seat is already paid for.
+              Adding somebody costs nothing, their seat is already paid for.
             </div>
 
             {/* The standing rule sits above the name list, because if it is what
@@ -1300,7 +1300,7 @@ export default function CampaignDetail({
                   Anyone who joins {team.name} can use it
                 </span>
                 <span style={{ display: 'block', fontSize: 11.5, color: DIM, marginTop: 3, lineHeight: 1.6 }}>
-                  A standing rule, not a one-off — people who join later get it
+                  A standing rule, not a one-off, people who join later get it
                   automatically. Ticking every name below only covers the people
                   who are here today.
                 </span>

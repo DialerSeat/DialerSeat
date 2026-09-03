@@ -59,7 +59,7 @@ async function resolvePriceInfo(priceId: string | null): Promise<PriceInfo> {
     info = { weeklyDollars: weekly, plan: classifyByWeekly(weekly) }
     if (info.plan === 'unknown' && weekly > 0) {
       console.warn(
-        `[admin/analytics] price ${priceId} resolves to $${weekly}/wk — ` +
+        `[admin/analytics] price ${priceId} resolves to $${weekly}/wk, ` +
         `not $${PRO_WEEKLY} (Pro) or $${WL_WEEKLY} (Manager+). Counting at actual amount. ` +
         `Check STRIPE_PRICE_ID / STRIPE_PRICE_WL_BASE env vars.`
       )

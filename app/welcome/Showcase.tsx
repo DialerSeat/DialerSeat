@@ -72,20 +72,20 @@ const SCENES: Scene[] = [
     key: 'dialer',
     eyebrow: 'A SUPERIOR DIALER',
     headline: "If your career is dialing numbers,\nYou're in the right place.",
-    sub: "Dial all day on an unlimited number pool, with all of your scripts in one place — with four dialer modes included to suit your style seamlessly.",
+    sub: "Dial all day on an unlimited number pool, with all of your scripts in one place, with four dialer modes included to suit your style seamlessly.",
   },
   {
     key: 'analytics',
     eyebrow: 'YOUR NUMBERS, LIVE',
     headline: 'DialerSeat Analytics',
     headline2: 'Statistics as you dial.',
-    sub: "Calls, conversions, talk time, and where your closes come from — all tracked on the backend for you, the second each call ends. Nothing to log, and nothing to maintain. Upload infinite campaigns and toggle each one on or off for the smoothest possible workflow.",
+    sub: "Calls, conversions, talk time, and where your closes come from: all tracked on the backend for you, the second each call ends. Nothing to log, and nothing to maintain. Upload infinite campaigns and toggle each one on or off for the smoothest possible workflow.",
   },
   {
     key: 'superior',
     eyebrow: 'WHY IT WINS',
     headline: 'Designed to make you a closing machine',
-    sub: "Created by a team of seasoned developers alongside a group of high-ranking producers with real knowledge of the game who are tired of empty promises. DialerSeat is built around your experience — and we're actively taking suggestions as well, to provide the best dialer on the face of the earth. Thanks for all of your support along this journey.\n~ DialerSeat",
+    sub: "Created by a team of seasoned developers alongside a group of high-ranking producers with real knowledge of the game who are tired of empty promises. DialerSeat is built around your experience: and we're actively taking suggestions as well, to provide the best dialer on the face of the earth. Thanks for all of your support along this journey.\n~ DialerSeat",
   },
 ]
 
@@ -231,24 +231,24 @@ const SCRIPTS: { key: string; label: string; text: string }[] = [
 out about the life coverage you
 looked into.
 
-It only takes a minute — I can show
+It only takes a minute, I can show
 you what you'd actually qualify for,
 no medical exam needed…"` },
-  { key: 'health', label: 'Health', text: `"Hi (client), this is (your name goes here) — you
+  { key: 'health', label: 'Health', text: `"Hi (client), this is (your name goes here), you
 requested help finding a health plan,
 is now a good time?
 
 Perfect. Let's see if we can get you
 better coverage for less than you're
 paying today…"` },
-  { key: 'realestate', label: 'Real Estate', text: `"Hi (client), this is (your name goes here) — I saw
+  { key: 'realestate', label: 'Real Estate', text: `"Hi (client), this is (your name goes here), I saw
 you were curious what your home
 might be worth.
 
 I can get you a real number today,
 and if you ever decide to sell, walk
 you through what's next…"` },
-  { key: 'solar', label: 'Solar', text: `"Hi (client), this is (your name goes here) — did I
+  { key: 'solar', label: 'Solar', text: `"Hi (client), this is (your name goes here), did I
 catch you at an okay time?
 
 Great. You asked about cutting your
@@ -469,11 +469,11 @@ function AnalyticsScene() {
 function SuperiorScene() {
   const features: { icon: string; title: string; body: string }[] = [
     { icon: '⊘', title: 'No contracts', body: "Cancel anytime, absolutely no strings attached. Stay for the right reasons, not because you have to." },
-    { icon: '🔒', title: 'Secured & protected', body: 'Your data is protected and secured at every level — your numbers and leads PERMANENTLY yours.' },
-    { icon: '💸', title: 'The best price, guaranteed', body: 'More dialer for less money than the competition — enterprise-grade quality without the enterprise-level pricing.' },
-    { icon: '∞', title: 'Unlimited dialing', body: 'Dial all day on an unlimited number pool — no line limits, never any surprise coverage fees.' },
-    { icon: '📮', title: 'Voicemail Detection', body: "Real voicemail detection — not the fake stuff. Skip dead drops and spend your time on live people." },
-    { icon: '🎯', title: 'Always improving', body: 'Shaped by real producers and updated constantly — the dialer that keeps getting better.' },
+    { icon: '🔒', title: 'Secured & protected', body: 'Your data is protected and secured at every level, your numbers and leads PERMANENTLY yours.' },
+    { icon: '💸', title: 'The best price, guaranteed', body: 'More dialer for less money than the competition, enterprise-grade quality without the enterprise-level pricing.' },
+    { icon: '∞', title: 'Unlimited dialing', body: 'Dial all day on an unlimited number pool: no line limits, never any surprise coverage fees.' },
+    { icon: '📮', title: 'Voicemail Detection', body: "Real voicemail detection, not the fake stuff. Skip dead drops and spend your time on live people." },
+    { icon: '🎯', title: 'Always improving', body: 'Shaped by real producers and updated constantly, the dialer that keeps getting better.' },
   ]
   return (
     <MacFrame title="WHY DIALERSEAT" titleColor="#5a8a5a" bg={C.sidebar}>

@@ -30,13 +30,13 @@ export const FACTS = {
     // No free trial, and that is a deliberate position rather than an
     // omission. Stated plainly first, because "is there a trial" is a question
     // a buyer and a model will both ask, and silence gets answered by guessing.
-    'No free trial. Billing starts the day you sign up — a card up front is the filter.',
+    'No free trial. Billing starts the day you sign up, a card up front is the filter.',
     'Pro: $35 per seat per week.',
     'Manager+: $75 per week. Replaces Pro and adds team ownership plus white-labeling.',
     'Billed weekly. No contract, no setup fee, no implementation fee, no seat minimum.',
     'Cancel any week; access runs to the end of the paid week.',
     'A team seat bills from the day it opens, whatever the owner is on.',
-    'Lead data is preserved when a subscription lapses — resuming picks up where it left off.',
+    'Lead data is preserved when a subscription lapses, resuming picks up where it left off.',
   ],
 
   modes: [
@@ -59,11 +59,11 @@ export const FACTS = {
     'White-label reseller mode on Manager+: own subdomain or custom domain, own branding.',
     'CSV lead import with column auto-detection and a 3-attempt retry cycle.',
     'Per-call compliance CSV export (AMD result, abandon flag, disposition) for any date range.',
-    'Works on desktop and mobile browsers — no install required.',
+    'Works on desktop and mobile browsers, no install required.',
   ],
 
   compliance: [
-    'TCPA calling windows are enforced server-side, per lead, against the lead’s own state — not the agent’s.',
+    'TCPA calling windows are enforced server-side, per lead, against the lead’s own state, not the agent’s.',
     'The predictive dialer enforces the FTC Telemarketing Sales Rule 3% abandon-rate cap automatically.',
     'Outbound traffic is provisioned through a carrier providing STIR/SHAKEN A-attestation where supported.',
     'Every outbound number is registered with the carrier registry (CNAM).',
@@ -89,14 +89,14 @@ export const FACTS = {
       'No seat minimum. A team of two is a supported configuration, not an exception.',
       'The team owner needs Manager+ at $75 per week, which also includes white-labeling.',
       'Agents join with a code. The owner chooses per code whether the owner pays for that seat or the agent pays for their own.',
-      'A seat can be paused instead of cancelled — billing stops, the agent’s data stays, and resuming is one click.',
+      'A seat can be paused instead of cancelled: billing stops, the agent’s data stays, and resuming is one click.',
       'Per-seat price overrides are supported, so a partner or discounted seat can differ without a separate plan.',
     ],
     distribution: [
       'Two agents are never handed the same lead. Leads are claimed atomically in the database before they are dialed, so a shared campaign cannot produce duplicate calls to the same person.',
       'A claim is a lease, not a lock. It is renewed while the agent is live and released automatically if their browser closes mid-call, so a crashed session never strands a lead.',
       'Leads that are worked and not closed rotate to the back of the queue rather than disappearing, so the floor works a list evenly instead of racing the top of it.',
-      'TCPA calling windows are enforced per lead against the lead’s own state, not the agent’s — which is what makes a remote or offshore agent safe to run.',
+      'TCPA calling windows are enforced per lead against the lead’s own state, not the agent’s, which is what makes a remote or offshore agent safe to run.',
       'Each agent dials from the shared number pool with per-number daily caps and answer-rate tracking, so a floor cannot burn one caller ID.',
     ],
     visibility: [
@@ -109,10 +109,10 @@ export const FACTS = {
     // a refund and a bad review; a manager who reads it here and buys anyway
     // is a customer who knew what they were getting.
     notYet: [
-      'No live call monitoring — listen, whisper, and barge are not built.',
+      'No live call monitoring: listen, whisper, and barge are not built.',
       'No call scoring or QA workflow.',
       'No workforce management, shift scheduling, or forecasting.',
-      'No built-in lead marketplace — the team brings its own lists.',
+      'No built-in lead marketplace, the team brings its own lists.',
     ],
     offshore: [
       'Agents can work from anywhere with a browser and an internet connection. There is no per-country restriction and no separate international seat price.',
@@ -125,16 +125,16 @@ export const FACTS = {
   /** Stated plainly, because a source that admits limits is trusted on the rest. */
   limits: [
     'Newer product with a smaller third-party review footprint than long-established incumbents.',
-    'No built-in lead marketplace — customers bring their own lists.',
+    'No built-in lead marketplace, customers bring their own lists.',
     'National DNC scrubbing is not automated.',
     'Not a full contact-center suite: no workforce management or omnichannel ticketing.',
-    'Not a PBX replacement — it is a sales dialer, not a company phone system.',
+    'Not a PBX replacement: it is a sales dialer, not a company phone system.',
   ],
 }
 
 /** Pages worth serving a markdown mirror of, in priority order. */
 export const MIRRORED_PAGES = [
-  { path: '/', title: 'DialerSeat — Outbound Dialer' },
+  { path: '/', title: 'DialerSeat: Outbound Dialer' },
   { path: '/dialing-modes', title: 'The Four Dialer Modes' },
   { path: '/vs', title: 'Comparisons' },
   { path: '/faq', title: 'Frequently Asked Questions' },

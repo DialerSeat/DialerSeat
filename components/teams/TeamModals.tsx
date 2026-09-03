@@ -353,7 +353,7 @@ export function CreateCampaignModal({
           )}
           <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
             Its leads and history come with it. Adding it to a team does not move
-            it — it stays on your Campaigns page.
+            it, it stays on your Campaigns page.
           </p>
         </div>
       )}
@@ -365,10 +365,10 @@ export function CreateCampaignModal({
         <label style={label}>Dialer Mode</label>
         <select style={field} value={dialerMode} onChange={e => setDialerMode(e.target.value)}>
           <option value="agent_choice">Agent chooses their own mode</option>
-          <option value="preview">Force Preview — see the lead, then dial</option>
-          <option value="progressive">Force Progressive — one at a time, automatic</option>
-          <option value="power">Force Power — continuous single line</option>
-          <option value="predictive">Force Predictive — multiple lines (beta)</option>
+          <option value="preview">Force Preview: see the lead, then dial</option>
+          <option value="progressive">Force Progressive: one at a time, automatic</option>
+          <option value="power">Force Power, continuous single line</option>
+          <option value="predictive">Force Predictive, multiple lines (beta)</option>
         </select>
       </div>
 
@@ -378,10 +378,10 @@ export function CreateCampaignModal({
       <div>
         <label style={label}>Access &amp; Seats</label>
         <select style={field} value={accessMode} onChange={e => setAccessMode(e.target.value)}>
-          <option value="free">Free to the whole team — no seat charged</option>
-          <option value="owner_pays">Whitelisted agents — you pay their seats</option>
-          <option value="agent_pays">Whitelisted agents — they pay their own</option>
-          <option value="public">Public — anyone in the team, seat still required</option>
+          <option value="free">Free to the whole team, no seat charged</option>
+          <option value="owner_pays">Whitelisted agents, you pay their seats</option>
+          <option value="agent_pays">Whitelisted agents, they pay their own</option>
+          <option value="public">Public: anyone in the team, seat still required</option>
         </select>
         <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
           {accessMode === 'free'
@@ -402,7 +402,7 @@ export function CreateCampaignModal({
           fontSize: 11.5, color: MUTED, lineHeight: 1.6,
         }}>
           Access without a seat offers no campaign usage. An agent can only dial
-          once their seat is paid — by you or by them.
+          once their seat is paid, by you or by them.
         </p>
       </div>
     </Shell>
@@ -476,8 +476,8 @@ export function CreateCodeModal({
           value={codeType}
           onChange={e => setCodeType(e.target.value as 'recruit' | 'seat')}
         >
-          <option value="recruit">Team only — add them to campaigns yourself</option>
-          <option value="seat">A campaign — joins the team and that campaign at once</option>
+          <option value="recruit">Team only, add them to campaigns yourself</option>
+          <option value="seat">A campaign, joins the team and that campaign at once</option>
         </select>
         <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
           {codeType === 'recruit'

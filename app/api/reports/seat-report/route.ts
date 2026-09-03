@@ -57,7 +57,7 @@ function monthBounds(period: string): { start: Date; end: Date; label: string } 
     return {
       start: new Date(Date.UTC(y, startMonth, 1)),
       end: new Date(Date.UTC(y, startMonth + 6, 1)),
-      label: half === 1 ? `January – June ${y}` : `July – December ${y}`,
+      label: half === 1 ? `January: June ${y}` : `July: December ${y}`,
     }
   }
 
@@ -73,7 +73,7 @@ function monthBounds(period: string): { start: Date; end: Date; label: string } 
     return {
       start: startD,
       end: endD,
-      label: `Q${quarter} ${y} · ${fmt(startD)} – ${fmt(lastMonth)}`,
+      label: `Q${quarter} ${y} · ${fmt(startD)}: ${fmt(lastMonth)}`,
     }
   }
 
@@ -417,7 +417,7 @@ export async function GET(req: NextRequest) {
         id: r.id,
         date: r.created_at,
         agentName: agentName[r.agent_id] || r.agent_id,
-        teamName: r.team_id ? (teamName[r.team_id] || 'Team') : '—',
+        teamName: r.team_id ? (teamName[r.team_id] || 'Team') : ': ',
         serviceStart: r.period_start,
         serviceEnd: r.period_end,
         // Listed rate, then what was actually taken, then the difference.
@@ -487,7 +487,7 @@ export async function GET(req: NextRequest) {
       // businesses — which is the whole point of keeping it.
       supplier: {
         name: 'DialerSeat',
-        service: 'Cloud outbound dialing platform — per-seat software subscription',
+        service: 'Cloud outbound dialing platform: per-seat software subscription',
         contact: 'support@dialerseat.com',
         site: 'dialerseat.com',
       },

@@ -115,7 +115,7 @@ export default function BillingSuccessPage() {
               Your Manager+ subscription is live.<br />
               You&apos;ll be charged <strong style={{ color: '#e0e2ea' }}>{price}/week</strong> weekly from today.
               <br /><br />
-              Next: set up your tenant — subdomain, logo, and brand colors.
+              Next: set up your tenant: subdomain, logo, and brand colors.
             </>
           ) : (
             <>

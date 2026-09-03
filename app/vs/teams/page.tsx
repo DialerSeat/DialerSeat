@@ -25,9 +25,9 @@ export const runtime = 'nodejs'
 const SITE = 'https://dialerseat.com'
 
 export const metadata: Metadata = {
-  title: 'Dialer Pricing for Teams — What 5 Agents Actually Cost | DialerSeat',
+  title: 'Dialer Pricing for Teams: What 5 Agents Actually Cost | DialerSeat',
   description:
-    'Seat minimums, contract terms, and what it really takes to add one more agent — compared across every major outbound dialer. Plus how leads are distributed across a floor without two agents calling the same person.',
+    'Seat minimums, contract terms, and what it really takes to add one more agent, compared across every major outbound dialer. Plus how leads are distributed across a floor without two agents calling the same person.',
   alternates: {
     canonical: `${SITE}/vs/teams`,
     types: { 'text/markdown': `${SITE}/md/vs/teams` },
@@ -69,7 +69,7 @@ const FAQS = [
   {
     question: 'Is there a seat minimum?',
     answer:
-      'No. A team of two is a supported configuration. Several alternatives have minimums — Orum requires three seats, Aircall three licences, JustCall two.',
+      'No. A team of two is a supported configuration. Several alternatives have minimums: Orum requires three seats, Aircall three licences, JustCall two.',
   },
   {
     question: 'Who pays for each agent’s seat?',
@@ -135,7 +135,7 @@ export default function TeamsComparisonPage() {
           </h1>
           <p style={{ fontSize: 16, lineHeight: 1.8, color: MUTED, maxWidth: 760, marginTop: 18 }}>
             Every vendor publishes a per-seat rate. Almost none publish the seat minimum, the contract
-            term, or what it takes to add the sixth agent — which is the part that decides whether a
+            term, or what it takes to add the sixth agent, which is the part that decides whether a
             growing floor is an afternoon decision or a procurement event.
           </p>
 
@@ -175,7 +175,7 @@ export default function TeamsComparisonPage() {
 
           <p style={{ fontSize: 12, lineHeight: 1.8, color: MUTED, marginTop: 14, maxWidth: 820 }}>
             Other vendors&apos; pricing is summarised from their public materials and changes without
-            notice — verify current terms before buying. Where a vendor does not publish pricing, that
+            notice, verify current terms before buying. Where a vendor does not publish pricing, that
             is stated rather than guessed. Corrections welcome; we would rather be accurate than
             flattering.
           </p>
@@ -238,7 +238,7 @@ export default function TeamsComparisonPage() {
               Remote and offshore agents
             </h2>
             <p style={{ fontSize: 15, lineHeight: 1.8, color: MUTED, marginTop: 12, maxWidth: 780 }}>
-              At $95–$250 per seat per month, an offshore floor costs more in software than in wages,
+              At $95: $250 per seat per month, an offshore floor costs more in software than in wages,
               which is why most teams never build one. At $35 per week the arithmetic changes.
             </p>
             <ul style={{ margin: '16px 0 0', paddingLeft: 17, fontSize: 14.5, lineHeight: 1.85, maxWidth: 800 }}>

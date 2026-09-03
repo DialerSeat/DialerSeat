@@ -134,7 +134,7 @@ export async function placeOutboundCall(
     return {
       success: false,
       error: 'Telnyx is not configured',
-      detail: 'Server is missing required Telnyx env vars — see server logs, or GET /api/calls/diagnostics for the full checklist.',
+      detail: 'Server is missing required Telnyx env vars: see server logs, or GET /api/calls/diagnostics for the full checklist.',
       httpStatus: 500,
     }
   }
@@ -143,7 +143,7 @@ export async function placeOutboundCall(
   if (!toFormatted) {
     return {
       success: false,
-      error: 'Invalid phone number — skipped',
+      error: 'Invalid phone number: skipped',
       detail: `"${to}" is not a dialable number`,
       httpStatus: 422,
     }
@@ -161,7 +161,7 @@ export async function placeOutboundCall(
   const suppressed = await checkSuppression(toFormatted, userId)
   if (suppressed) {
     console.warn(
-      `[placeOutboundCall:${source}] BLOCKED — ${toFormatted} is on the ` +
+      `[placeOutboundCall:${source}] BLOCKED, ${toFormatted} is on the ` +
       `${suppressed.scope} suppression list (source: ${suppressed.source})`
     )
     return {
@@ -521,7 +521,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         // "Agent connection" prefix so this is unmistakably distinct from a
         // lead-leg failure in the queue row / console — same underlying
         // Telnyx error title can otherwise read identically for either leg.
-        error: `Agent connection failed — ${agentData.errors?.[0]?.title || 'unknown error'}`,
+        error: `Agent connection failed, ${agentData.errors?.[0]?.title || 'unknown error'}`,
         // Telnyx's own error text for this leg is close to useless on its
         // own (a malformed SIP URI comes back as "must be in +E164 format",
         // pointing at phone numbers when the problem is SIP config), so
@@ -538,14 +538,14 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
           // permission) or the cause is the second one.
           isSipUriRejection(agentData.errors)
             ? 'Telnyx did not accept this as a SIP endpoint. Either SIP URI calling is ' +
-              'disabled on the connection (auto-fix was attempted and did not succeed — ' +
+              'disabled on the connection (auto-fix was attempted and did not succeed, ' +
               'check TELNYX_API_KEY has account permissions), or the SIP username begins ' +
               'with a digit, which Telnyx parses as a phone number.'
             : agentData.errors?.[0]?.detail,
           'GET /api/calls/diagnostics (as an admin) reports which.',
         ]
           .filter(Boolean)
-          .join(' — '),
+          .join(': '),
         httpStatus: 500,
       }
     }
@@ -890,7 +890,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // lib/telnyxNumberSync.ts.
   if (!leadRes.ok && isUnverifiedOriginationError(leadData.errors)) {
     console.warn(
-      `[placeOutboundCall:${p.source}] caller ID ${p.fromNumber} is not a Telnyx number — ` +
+      `[placeOutboundCall:${p.source}] caller ID ${p.fromNumber} is not a Telnyx number, ` +
       `reconciling the number pool with Telnyx and retrying`
     )
     const sync = await syncNumberPoolOnce(p.env.apiKey)
@@ -961,15 +961,15 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         detail:
           `Telnyx refused to place a call from ${p.fromNumber} because that number isn't owned by ` +
           `this Telnyx account (their D51). The number pool was reconciled with Telnyx automatically ` +
-          `and no usable replacement was available. Buy at least one number on Telnyx — admin → ` +
-          `numbers, or Telnyx Mission Control → Numbers — and dial again.`,
+          `and no usable replacement was available. Buy at least one number on Telnyx, admin → ` +
+          `numbers, or Telnyx Mission Control → Numbers, and dial again.`,
         httpStatus: 500,
       }
     }
 
     return {
       success: false,
-      error: `Lead call failed — ${leadData.errors?.[0]?.title || 'unknown error'}`,
+      error: `Lead call failed, ${leadData.errors?.[0]?.title || 'unknown error'}`,
       detail: leadData.errors?.[0]?.detail,
       httpStatus: 500,
     }
@@ -1068,7 +1068,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     })
     if (insertErr) {
       console.error(
-        `[placeOutboundCall:${p.source}] calls row insert FAILED for ${leadCallControlId} — ` +
+        `[placeOutboundCall:${p.source}] calls row insert FAILED for ${leadCallControlId}, ` +
         `this call is live and untracked; abort will still reach it via client_state:`,
         insertErr
       )

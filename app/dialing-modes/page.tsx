@@ -10,14 +10,14 @@ import {
 import DialingModesView from './view'
 
 export const metadata: Metadata = {
-  title: 'Dialing Modes — Preview, Power, Progressive, Predictive | DialerSeat',
+  title: 'Dialing Modes: Preview, Power, Progressive, Predictive | DialerSeat',
   description:
-    'How DialerSeat dials — and how we stay compliant doing it. Plain-English explanation of preview, power, progressive, and predictive dialing modes, the TCPA and FTC TSR safe harbor, and what our software enforces in code.',
+    'How DialerSeat dials, and how we stay compliant doing it. Plain-English explanation of preview, power, progressive, and predictive dialing modes, the TCPA and FTC TSR safe harbor, and what our software enforces in code.',
   alternates: {
     canonical: 'https://dialerseat.com/dialing-modes',
   },
   openGraph: {
-    title: 'Dialing Modes — Preview, Power, Progressive, Predictive',
+    title: 'Dialing Modes: Preview, Power, Progressive, Predictive',
     description:
       'Four dialing modes explained, with the TCPA and FTC TSR rules each one operates under. What DialerSeat enforces in software vs. what falls on the campaign owner.',
     url: 'https://dialerseat.com/dialing-modes',
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Dialing Modes — Preview, Power, Progressive, Predictive',
+    title: 'Dialing Modes: Preview, Power, Progressive, Predictive',
     description: 'Four dialing modes explained, with the TCPA and FTC TSR rules each one operates under. What DialerSeat enforces in software vs. what falls on the campaign owner.',
   },
 }

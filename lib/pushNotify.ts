@@ -145,7 +145,7 @@ async function getPrefs(): Promise<AdminNotificationPrefs> {
     // to everything ON instead, matching the table's own column defaults
     // (see the CREATE TABLE — every boolean defaults to true), and let
     // the admin explicitly turn things off if they actually want that.
-    console.warn('[pushNotify] admin_notification_prefs has no row with id=1 — defaulting to all notifications ON.')
+    console.warn('[pushNotify] admin_notification_prefs has no row with id=1, defaulting to all notifications ON.')
     return { master_enabled: true, signup: true, account_deleted: true, new_sub: true, resub: true, renewal: true, cancel: true, sub_paused: true, sub_resumed: true, agent_online: true, payment_failed: true, team_join: true, agent_leg_refused: true, pool_capacity: true, webhook_silence: true }
   }
   return data as AdminNotificationPrefs
@@ -255,7 +255,7 @@ export async function sendAdminPush(
       if (already === BURST_THRESHOLD) {
         burstBody =
           `${already} of these in the last ${BURST_WINDOW_MINUTES} minutes. ` +
-          `Muting this one for a bit — open Notifications to see them all.`
+          `Muting this one for a bit, open Notifications to see them all.`
       }
     }
 

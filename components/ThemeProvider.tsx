@@ -160,29 +160,29 @@ export function ThemeProvider({
       : DEFAULT_MUTED_TEXT
 
     return `:root {
-  /* Tier 1 — user-picked (4) */
+  /* Tier 1, user-picked (4) */
   --brand-primary: ${primary};
   --brand-sidebar-bg: ${sidebar};
   --brand-header-bg: ${headerBg};
   --brand-page-bg: ${pageBg};
 
-  /* Tier 2 — primary family */
+  /* Tier 2, primary family */
   --brand-on-primary: ${onPrimary};
   --brand-primary-hover: color-mix(in srgb, ${primary} 88%, black);
   --brand-primary-soft: color-mix(in srgb, ${primary} 12%, transparent);
 
-  /* Tier 2 — sidebar family */
+  /* Tier 2, sidebar family */
   --brand-on-sidebar: ${onSidebar};
   --brand-on-sidebar-muted: ${onSidebarMutedExpr};
   --brand-sidebar-active-bg: ${sidebarActiveBgExpr};
   --brand-sidebar-hover-bg: ${sidebarHoverBgExpr};
 
-  /* Tier 2 — header family */
+  /* Tier 2, header family */
   --brand-on-header: ${onHeader};
   --brand-on-header-muted: ${onHeaderMutedExpr};
   --brand-header-top-accent: ${primary};
 
-  /* Tier 2 — page-bg family */
+  /* Tier 2, page-bg family */
   --brand-on-page-bg: ${onPageBg};
   --brand-card-surface: ${cardSurfaceExpr};
   --brand-card-border: ${cardBorderExpr};

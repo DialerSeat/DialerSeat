@@ -59,13 +59,13 @@ const NOTIF_ROWS: NotifRow[] = [
   { key: 'cancel', label: 'Cancellations', description: 'A customer cancels their subscription' },
   // A pause is the churn signal you can still act on — unlike a cancel, they
   // haven't left yet and their data is intact.
-  { key: 'sub_paused', label: 'Subscriptions Paused', description: 'A customer pauses billing instead of cancelling — reach out before they decide' },
+  { key: 'sub_paused', label: 'Subscriptions Paused', description: 'A customer pauses billing instead of cancelling: reach out before they decide' },
   { key: 'sub_resumed', label: 'Subscriptions Resumed', description: 'A paused customer starts paying again' },
   // The only revenue event you can still fix on the day it happens. This was
   // silent: a card declined, the subscription sat past due while the customer
   // kept dialing, and the first anyone knew was a cancellation weeks later or
   // an email asking why they had been cut off.
-  { key: 'payment_failed', label: 'Payment Failed', description: 'A card was declined — the subscription is past due and still recoverable' },
+  { key: 'payment_failed', label: 'Payment Failed', description: 'A card was declined: the subscription is past due and still recoverable' },
   // Not an alert. With few enough customers to care about each one, knowing
   // somebody is actually dialing right now is the most useful thing you can
   // be told.
@@ -75,9 +75,9 @@ const NOTIF_ROWS: NotifRow[] = [
   // Everything above is revenue. These are "the product is broken", and each
   // one exists because that exact failure already happened silently and was
   // caught by a human noticing something felt off rather than by any alert.
-  { key: 'agent_leg_refused', label: 'Calls With No Audio', description: 'Telnyx refused the agent leg — those calls connected with no audio at all' },
-  { key: 'pool_capacity', label: 'Number Pool Filling Up', description: 'Caller-ID pool nearing its daily cap — at 100% every user gets "no numbers available"' },
-  { key: 'webhook_silence', label: 'Call Webhooks Silent', description: 'Calls placed but no webhook events arriving — talk time, AMD and recordings all stop working' },
+  { key: 'agent_leg_refused', label: 'Calls With No Audio', description: 'Telnyx refused the agent leg: those calls connected with no audio at all' },
+  { key: 'pool_capacity', label: 'Number Pool Filling Up', description: 'Caller-ID pool nearing its daily cap: at 100% every user gets "no numbers available"' },
+  { key: 'webhook_silence', label: 'Call Webhooks Silent', description: 'Calls placed but no webhook events arriving: talk time, AMD and recordings all stop working' },
 ]
 
 interface PrefsResponse {
@@ -761,7 +761,7 @@ function TeamsPane({ onBack }: { onBack: () => void }) {
               subtitle={
                 `A failed charge is retried once a day for ${config.seat_retry_days} ` +
                 `${config.seat_retry_days === 1 ? 'day' : 'days'}. The seat suspends the ` +
-                `moment it fails and comes back the moment it pays — nobody dials unpaid.`
+                `moment it fails and comes back the moment it pays, nobody dials unpaid.`
               }
               isLast
               right={
@@ -789,7 +789,7 @@ function TeamsPane({ onBack }: { onBack: () => void }) {
             margin: '6px 16px 0', fontSize: 12, color: LABEL_SECONDARY, lineHeight: 1.5,
           }}>
             This used to be a grace period, which left the seat working while the
-            card was chased — so a failed card bought a week of dialing nobody
+            card was chased, so a failed card bought a week of dialing nobody
             paid for, and a recovered charge started a fresh period rather than
             backdating. Access now stops with the money, which is why the window
             can be long: it costs nothing and recovers more customers.
@@ -801,8 +801,8 @@ function TeamsPane({ onBack }: { onBack: () => void }) {
               title="Owner picks up the seat"
               subtitle={
                 config.seat_takeover_enabled
-                  ? 'On — the agent keeps dialing and the owner starts being billed. The owner is told, and can pause or remove the seat.'
-                  : 'Off — the seat lapses and the agent stops dialing until the owner opens a new one.'
+                  ? 'On, the agent keeps dialing and the owner starts being billed. The owner is told, and can pause or remove the seat.'
+                  : 'Off, the seat lapses and the agent stops dialing until the owner opens a new one.'
               }
               isLast
               right={
@@ -819,7 +819,7 @@ function TeamsPane({ onBack }: { onBack: () => void }) {
             margin: '10px 16px 20px', fontSize: 12, color: LABEL_SECONDARY, lineHeight: 1.5,
           }}>
             Per-owner seat rates live in the Incentives app. The published volume
-            tiers — 5% at ten seats, 10% at twenty-five, negotiated above fifty —
+            tiers: 5% at ten seats, 10% at twenty-five, negotiated above fifty 
             are in the code rather than here, because they are printed to
             customers and changing them is a pricing decision, not a setting.
           </div>
@@ -969,7 +969,7 @@ function OverviewPane({ pane, onBack }: { pane: string; onBack: () => void }) {
           </GroupedCard>
           <NotBuilt>
             Logos, colours and domains are edited per tenant in the{' '}
-            <strong style={{ color: LABEL_PRIMARY }}>White Label</strong> app — this
+            <strong style={{ color: LABEL_PRIMARY }}>White Label</strong> app, this
             pane deliberately does not duplicate those controls, because two
             screens editing one row is how they end up disagreeing.
           </NotBuilt>
@@ -1003,7 +1003,7 @@ function OverviewPane({ pane, onBack }: { pane: string; onBack: () => void }) {
             <strong style={{ color: LABEL_PRIMARY }}>Numbers</strong> app; the global
             buying freeze is under Dialer &amp; Calling.{' '}
             <strong style={{ color: LABEL_PRIMARY }}>STIR/SHAKEN attestation is not
-            implemented</strong> — Telnyx signs on its own account rating, and nothing
+            implemented</strong>: Telnyx signs on its own account rating, and nothing
             in this codebase reads or reports it.
           </NotBuilt>
         </>
@@ -1065,7 +1065,7 @@ function OverviewPane({ pane, onBack }: { pane: string; onBack: () => void }) {
             <FactRow label="Last Stripe event" value={ago(data.integrations.lastStripeEvent)} isLast />
           </GroupedCard>
           <NotBuilt>
-            Presence only — never a value. A screen that prints a key puts it in
+            Presence only, never a value. A screen that prints a key puts it in
             a browser history, a screenshot and a screen-share. Silence on the
             Telnyx row is the one to watch: talk time, AMD and recordings all
             stop together and nothing else on screen says so.
@@ -1092,7 +1092,7 @@ function OverviewPane({ pane, onBack }: { pane: string; onBack: () => void }) {
             <FactRow label="Lead data on lapse" value="Kept, never deleted" tone={IOS_GREEN} isLast />
           </GroupedCard>
           <NotBuilt>
-            Sessions and passwords are Clerk's, not ours — revoking a session is
+            Sessions and passwords are Clerk's, not ours, revoking a session is
             done in the Clerk dashboard, and this app deliberately holds no
             copy of that state.{' '}
             <strong style={{ color: LABEL_PRIMARY }}>There is no admin audit log.</strong>{' '}
@@ -1128,7 +1128,7 @@ function OverviewPane({ pane, onBack }: { pane: string; onBack: () => void }) {
             <FactRow label="Node" value={data.about.node} isLast />
           </GroupedCard>
           <NotBuilt>
-            Every job runs once a day because that is the Vercel Hobby ceiling —
+            Every job runs once a day because that is the Vercel Hobby ceiling 
             a sub-daily schedule fails the deploy outright. On Pro they can run
             per minute, which is what <code>vercel-upgrade.md</code> changes.
             Live call diagnostics are at <code>/api/calls/diagnostics</code>.
@@ -1162,7 +1162,7 @@ function OverviewPane({ pane, onBack }: { pane: string; onBack: () => void }) {
             DialerSeat is US-only: numbers are US, the calling-window rules are
             US state law, phone normalisation assumes ten digits, and the tax
             statements reference the IRS. That is a deliberate current scope
-            rather than an oversight — see BREAKDOWN.md.
+            rather than an oversight, see BREAKDOWN.md.
           </NotBuilt>
         </>
       )}
@@ -1176,7 +1176,7 @@ function DialerPane({ onBack }: { onBack: () => void }) {
   const [saving, setSaving] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   // Ratio cycling lives in pool_config, not platform_config, so it needs its
-  // own read and its own write. null means "not loaded yet" — distinct from
+  // own read and its own write. null means "not loaded yet", distinct from
   // false, because showing a pause switch in the wrong position is worse than
   // showing no switch at all.
   const [cycling, setCycling] = useState<boolean | null>(null)
@@ -1305,7 +1305,7 @@ function DialerPane({ onBack }: { onBack: () => void }) {
               subtitle={
                 config.amd_enabled_global
                   ? 'Campaigns decide. Billed per call, not per minute.'
-                  : 'OFF everywhere — campaign settings ignored'
+                  : 'OFF everywhere, campaign settings ignored'
               }
               right={
                 <IOSSwitch
@@ -1320,7 +1320,7 @@ function DialerPane({ onBack }: { onBack: () => void }) {
               subtitle={
                 config.recording_enabled_global
                   ? 'Campaigns decide. Off by default on new campaigns.'
-                  : 'OFF everywhere — nothing records, any campaign setting'
+                  : 'OFF everywhere: nothing records, any campaign setting'
               }
               right={
                 <IOSSwitch
@@ -1334,7 +1334,7 @@ function DialerPane({ onBack }: { onBack: () => void }) {
               title="Freeze number buying"
               subtitle={
                 config.number_buying_frozen
-                  ? 'FROZEN — automation and manual buys both refuse'
+                  ? 'FROZEN, automation and manual buys both refuse'
                   : 'Automation and manual buys allowed'
               }
               isLast={cycling === null}
@@ -1349,15 +1349,15 @@ function DialerPane({ onBack }: { onBack: () => void }) {
             {/* Freezing buying only stops the pool GROWING. The monthly
                 reconcile also RELEASES numbers when the pool sits above
                 active_subs x numbers_per_user, and a released number is gone
-                for good — along with any caller-ID registration filed against
+                for good, along with any caller-ID registration filed against
                 it. This is the switch that stops that half. */}
             {cycling !== null && (
               <SettingsRow
                 title="Pause number cycling"
                 subtitle={
                   cycling
-                    ? 'Pool trues up to subscriber count on the 1st — buying AND releasing'
-                    : 'PAUSED — the monthly reconcile will not buy or release'
+                    ? 'Pool trues up to subscriber count on the 1st, buying AND releasing'
+                    : 'PAUSED, the monthly reconcile will not buy or release'
                 }
                 isLast
                 right={
@@ -1498,12 +1498,12 @@ function DialerDownSection(props: DialerDownSectionProps) {
 
   return (
     <>
-      <GroupLabel>Dialer Down — Emergency Banner</GroupLabel>
+      <GroupLabel>Dialer Down, Emergency Banner</GroupLabel>
       <GroupedCard>
         <div style={{ padding: '14px 16px 16px' }}>
           <div style={{ fontSize: 12.5, color: LABEL_SECONDARY, lineHeight: 1.5, marginBottom: 14 }}>
             A sitewide warning banner shown only to signed-in Pro and Manager+ users,
-            only inside dashboard apps — never on the landing page, never to signed-out
+            only inside dashboard apps: never on the landing page, never to signed-out
             visitors. Use it for real technical difficulty notices only: outages,
             planned maintenance, or similar. It requires the publish/remove password
             below every time, and is completely invisible to everyone until you turn it on here.
@@ -1553,7 +1553,7 @@ function DialerDownSection(props: DialerDownSectionProps) {
                   overflow: 'hidden',
                 }}
               >
-                <TickerText text={`⚠ DIALER DOWN — ${draftMessage.trim()}  ⚠`} />
+                <TickerText text={`⚠ DIALER DOWN, ${draftMessage.trim()}  ⚠`} />
               </div>
             </div>
           )}
@@ -1570,7 +1570,7 @@ function DialerDownSection(props: DialerDownSectionProps) {
             />
           </div>
 
-          {/* Password field — required for publish/remove */}
+          {/* Password field, required for publish/remove */}
           <div style={{ marginBottom: 14 }}>
             <div style={labelStyle}>Publish / Remove Password</div>
             <input
@@ -1627,7 +1627,7 @@ function DialerDownSection(props: DialerDownSectionProps) {
         </div>
       </GroupedCard>
 
-      {/* Password setup / change — separate card, tucked below */}
+      {/* Password setup / change: separate card, tucked below */}
       <GroupLabel>&nbsp;</GroupLabel>
       <GroupedCard>
         <button
@@ -1754,7 +1754,7 @@ function PromoBannerSection(props: PromoBannerSectionProps) {
       <GroupedCard>
         <div style={{ padding: '14px 16px 16px' }}>
           <div style={{ fontSize: 12.5, color: LABEL_SECONDARY, lineHeight: 1.5, marginBottom: 14 }}>
-            A customizable announcement banner — holiday promos, discount codes,
+            A customizable announcement banner: holiday promos, discount codes,
             product news, anything you like. Same audience as Dialer Down: only
             signed-in Pro and Manager+ users, only inside dashboard apps, never
             the landing page. No password required, so you can publish and edit
@@ -1816,7 +1816,7 @@ function PromoBannerSection(props: PromoBannerSectionProps) {
             <textarea
               value={draftMessage}
               onChange={e => setDraftMessage(e.target.value)}
-              placeholder="e.g. 🎉 Holiday Sale — 20% off all plans with code HOLIDAY20, now through Jan 5!"
+              placeholder="e.g. 🎉 Holiday Sale: 20% off all plans with code HOLIDAY20, now through Jan 5!"
               rows={3}
               style={{ ...inputStyle, resize: 'vertical', minHeight: 64, lineHeight: 1.4 }}
             />
@@ -2349,7 +2349,7 @@ export default function SettingsApp() {
       setDiagSendResults(data.sendResults ?? null)
     } catch (err) {
       console.error('[Settings] runDiagnostic failed:', err)
-      setDiagResults([{ step: 'Run diagnostic', ok: false, detail: 'Failed to reach the diagnostic endpoint itself — check your network connection.' }])
+      setDiagResults([{ step: 'Run diagnostic', ok: false, detail: 'Failed to reach the diagnostic endpoint itself, check your network connection.' }])
     } finally {
       setDiagBusy(false)
     }
@@ -2695,8 +2695,8 @@ export default function SettingsApp() {
           <GroupedCard>
             <div style={{ padding: '12px 16px' }}>
               <div style={{ fontSize: 13, color: LABEL_SECONDARY, marginBottom: 10, lineHeight: 1.4 }}>
-                Checks every step notifications depend on — VAPID configuration, saved
-                preferences, and which devices are subscribed — then optionally sends
+                Checks every step notifications depend on: VAPID configuration, saved
+                preferences, and which devices are subscribed, then optionally sends
                 one real test push to confirm delivery end to end.
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -2854,7 +2854,7 @@ export default function SettingsApp() {
               title="Name"
               right={
                 <span style={{ color: LABEL_SECONDARY, fontSize: 14.5 }}>
-                  {userLoaded ? displayName : '—'}
+                  {userLoaded ? displayName : ', '}
                 </span>
               }
             />
@@ -2863,7 +2863,7 @@ export default function SettingsApp() {
               isLast
               right={
                 <span style={{ color: LABEL_SECONDARY, fontSize: 14.5 }}>
-                  {userLoaded ? (displayEmail || '—') : '—'}
+                  {userLoaded ? (displayEmail || ', ') : ', '}
                 </span>
               }
             />

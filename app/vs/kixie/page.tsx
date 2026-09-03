@@ -13,7 +13,7 @@ import {
 const SLUG = 'kixie'
 
 export const metadata: Metadata = {
-  title: 'DialerSeat vs Kixie — Every Dialer Mode, One Price',
+  title: 'DialerSeat vs Kixie: Every Dialer Mode, One Price',
   description:
     'Kixie PowerCall is well-reviewed but tiers dialing power by price \u2014 multi-line dialing runs $95+/seat/month. DialerSeat includes predictive, power, progressive, and preview dialing at $35/seat/week, billed weekly, no tier to climb.',
   alternates: {

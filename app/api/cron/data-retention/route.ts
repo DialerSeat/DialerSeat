@@ -55,7 +55,7 @@ export async function GET(req: Request) {
       if (error) throw error
       rolledUp = data ?? 0
     } catch (e: any) {
-      console.error('[data-retention] rollup failed — nothing pruned', e?.message || e)
+      console.error('[data-retention] rollup failed: nothing pruned', e?.message || e)
       return NextResponse.json({
         success: false,
         error: 'Rollup failed. Nothing was deleted.',

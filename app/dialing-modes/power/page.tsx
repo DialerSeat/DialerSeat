@@ -10,21 +10,21 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'Power Dialer — History, Mechanics, and the Click-to-Dial Era | DialerSeat',
+  title: 'Power Dialer: History, Mechanics, and the Click-to-Dial Era | DialerSeat',
   description:
     'The power dialer: one line per agent, auto-advance, and the workhorse of inside sales since the mid-1990s. How it works, where it came from, when to use it.',
   alternates: { canonical: 'https://dialerseat.com/dialing-modes/power' },
   openGraph: {
-    title: 'The Power Dialer — Origins and Mechanics',
+    title: 'The Power Dialer: Origins and Mechanics',
     description:
-      'One line per agent, queue-driven, auto-advancing. The mode that defined inside sales from 1995 onward. Mojo, PhoneBurner, Aspect — they all started here.',
+      'One line per agent, queue-driven, auto-advancing. The mode that defined inside sales from 1995 onward. Mojo, PhoneBurner, Aspect, they all started here.',
     url: 'https://dialerseat.com/dialing-modes/power',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'The Power Dialer — Origins and Mechanics',
-    description: 'One line per agent, queue-driven, auto-advancing. The mode that defined inside sales from 1995 onward. Mojo, PhoneBurner, Aspect — they all started here.',
+    title: 'The Power Dialer: Origins and Mechanics',
+    description: 'One line per agent, queue-driven, auto-advancing. The mode that defined inside sales from 1995 onward. Mojo, PhoneBurner, Aspect, they all started here.',
   },
 }
 
@@ -327,7 +327,7 @@ export default function PowerDialerPage() {
           <p>
             Power is preview&apos;s faster sibling. The agent still triggers
             the run, but once started the system stops asking permission
-            between calls. You click once, it dials forever — or until you
+            between calls. You click once, it dials forever, or until you
             stop it.
           </p>
           <ol className="dm-steps">
@@ -352,8 +352,8 @@ export default function PowerDialerPage() {
             <p>
               The power dialer is a 1990s invention. Through the 1980s, big
               call centers had been running predictive systems (more on those
-              later), but predictive required serious hardware — Aspect
-              CallCenter, Rockwell Spectrum, EIS dialers — and serious
+              later), but predictive required serious hardware, Aspect
+              CallCenter, Rockwell Spectrum, EIS dialers, and serious
               compliance discipline. Smaller shops couldn&apos;t afford either.
             </p>
             <p>
@@ -363,7 +363,7 @@ export default function PowerDialerPage() {
               the CRM, the modem dials the number, the agent picks up the
               handset. That was the seed. It got formalized as
               &quot;click-to-dial&quot; by Avaya and similar vendors and
-              quickly evolved into queue-driven workflows — the system
+              quickly evolved into queue-driven workflows, the system
               wouldn&apos;t just dial when clicked, it would auto-pull from a
               list.
             </p>
@@ -405,7 +405,7 @@ export default function PowerDialerPage() {
             </div>
             <div className="dm-shines-card">
               <h4>B2B COLD CALLING</h4>
-              <p>Calling businesses with mid-quality lists. You want speed without dropping calls — power handles that.</p>
+              <p>Calling businesses with mid-quality lists. You want speed without dropping calls, power handles that.</p>
             </div>
             <div className="dm-shines-card">
               <h4>WARM B2C FOLLOW-UPS</h4>
@@ -417,7 +417,7 @@ export default function PowerDialerPage() {
             </div>
             <div className="dm-shines-card">
               <h4>COMPLIANCE-SENSITIVE LISTS</h4>
-              <p>Zero abandonment risk by design — one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.</p>
+              <p>Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.</p>
             </div>
           </div>
         </section>
@@ -431,10 +431,10 @@ export default function PowerDialerPage() {
               waiting on each ring. On a list with a 25% pickup rate, three
               out of four dials are time you&apos;ll never get back. Add a
               few seconds per disposition, and your effective talk time
-              floats around 15–20 minutes per hour.
+              floats around 15, 20 minutes per hour.
             </p>
             <p>
-              The other thing power gives up is voicemail filtering — by
+              The other thing power gives up is voicemail filtering, by
               default. If you&apos;re hitting answering machines on every
               third dial and you don&apos;t have AMD running, you&apos;re
               going to hear the same robotic &quot;Hi, you&apos;ve reached
@@ -450,14 +450,14 @@ export default function PowerDialerPage() {
             <h2>Power on DialerSeat</h2>
             <p>
               Power is the default mode for new campaigns. Pick it and you&apos;re
-              dialing — no per-campaign tuning required.
+              dialing, no per-campaign tuning required.
             </p>
             <ul className="dm-bullets">
               <li>AMD on by default. Voicemails get detected and dropped; the queue advances automatically.</li>
-              <li>Auto-advance after disposition — no clicking between calls once you&apos;re going.</li>
+              <li>Auto-advance after disposition, no clicking between calls once you&apos;re going.</li>
               <li>One outbound line per agent. Zero abandonment possible. No FTC exposure.</li>
               <li>TCPA window enforcement per lead&apos;s local time zone. No 6 AM Pacific dials to East Coast leads.</li>
-              <li>National DNC scrubbing is on you — scrub your list against the registry before you upload it. State lists too. See <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link>.</li>
+              <li>National DNC scrubbing is on you, scrub your list against the registry before you upload it. State lists too. See <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link>.</li>
               <li>Keyboard shortcuts for disposition so you keep your hands on the keys, not the mouse.</li>
               <li>Live duration timer, connected-rate counter, and per-session metrics in the right sidebar.</li>
             </ul>
@@ -472,7 +472,7 @@ export default function PowerDialerPage() {
               <Link href="/dialing-modes/preview" className="dm-other-card preview">
                 <span className="pill">PREVIEW</span>
                 <h3>Agent reviews, then dials</h3>
-                <p>The original outbound mode. Slow by design — right for high-touch, high-value calls.</p>
+                <p>The original outbound mode. Slow by design: right for high-touch, high-value calls.</p>
               </Link>
               <Link href="/dialing-modes/progressive" className="dm-other-card progressive">
                 <span className="pill">PROGRESSIVE</span>
@@ -482,7 +482,7 @@ export default function PowerDialerPage() {
               <Link href="/dialing-modes/predictive" className="dm-other-card predictive">
                 <span className="pill">PREDICTIVE</span>
                 <h3>Multiple lines, agent prediction</h3>
-                <p>1.5–3× lines per agent. Highest throughput, tightest compliance, needs a team.</p>
+                <p>1.5, 3× lines per agent. Highest throughput, tightest compliance, needs a team.</p>
               </Link>
             </div>
           </div>

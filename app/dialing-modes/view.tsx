@@ -158,7 +158,7 @@ export default function DialingModesView() {
             label="POWER"
             slug="power"
             color={T.accent}
-            body="Click once, dial one lead, handle whatever answers — human, voicemail, or nothing — then dispose and dial again. One call per agent means abandoned calls are structurally impossible."
+            body="Click once, dial one lead, handle whatever answers: human, voicemail, or nothing, then dispose and dial again. One call per agent means abandoned calls are structurally impossible."
             bestFor="Solo agents who want predictable dialing with no algorithm in the loop."
           />
           <ModeCard
@@ -172,7 +172,7 @@ export default function DialingModesView() {
             label="PREDICTIVE"
             slug="predictive"
             color={T.red}
-            body="Dials multiple lines per agent using a pacing algorithm. Fastest mode, and the only one where abandoned calls are possible — so DialerSeat auto-throttles back to one line per agent when the rolling 30-day abandon rate hits 2.5%, keeping a buffer under the 3% legal cap. Runs single-line until a campaign has 8+ concurrent agents, the threshold where multi-line pacing is statistically safe."
+            body="Dials multiple lines per agent using a pacing algorithm. Fastest mode, and the only one where abandoned calls are possible, so DialerSeat auto-throttles back to one line per agent when the rolling 30-day abandon rate hits 2.5%, keeping a buffer under the 3% legal cap. Runs single-line until a campaign has 8+ concurrent agents, the threshold where multi-line pacing is statistically safe."
             bestFor="Teams with 8+ agents dialing the same campaign at once."
           />
         </section>
@@ -184,18 +184,18 @@ export default function DialingModesView() {
           <div style={cardStyle(T.accent)}>
             <h3 style={h3}>Enforced in software</h3>
             <ul style={ul}>
-              <li style={li}><strong>3% abandon cap</strong> (FTC safe harbor) — predictive auto-throttles at 2.5%, resumes below 2.0%.</li>
+              <li style={li}><strong>3% abandon cap</strong> (FTC safe harbor), predictive auto-throttles at 2.5%, resumes below 2.0%.</li>
               <li style={li}><strong>15-second minimum ring</strong> before a call is treated as unanswered.</li>
               <li style={li}><strong>Recorded notice on abandons</strong> identifying the seller, per 16 CFR 310.4(b)(4)(iii).</li>
-              <li style={li}><strong>Calling windows</strong> — leads outside 8 AM–9 PM local time are skipped automatically.</li>
-              <li style={li}><strong>Full call records</strong> — every attempt, AMD result, and abandonment logged and exportable.</li>
+              <li style={li}><strong>Calling windows</strong>, leads outside 8 AM, 9 PM local time are skipped automatically.</li>
+              <li style={li}><strong>Full call records</strong>: every attempt, AMD result, and abandonment logged and exportable.</li>
             </ul>
           </div>
 
           <div style={cardStyle(T.red)}>
             <h3 style={h3}>Your responsibility as the seller</h3>
             <ul style={ul}>
-              <li style={li}><strong>Consent.</strong> TCPA requires prior express written consent for autodialed marketing calls to wireless numbers, specific to your business under the one-to-one consent rule. We store consent metadata per lead — you supply it.</li>
+              <li style={li}><strong>Consent.</strong> TCPA requires prior express written consent for autodialed marketing calls to wireless numbers, specific to your business under the one-to-one consent rule. We store consent metadata per lead, you supply it.</li>
               <li style={li}><strong>DNC scrubbing.</strong> Scrub your lists against the National Do Not Call Registry before upload.</li>
               <li style={li}><strong>Litigator scrubbing.</strong> Best practice at high volume; we don&apos;t currently integrate a scrub service.</li>
             </ul>

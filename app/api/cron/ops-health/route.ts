@@ -223,7 +223,7 @@ async function checkWebhookSilence(silenceMinutes: number): Promise<AlertResult>
     key,
     'webhook_silence',
     `${callCount} call(s) placed in the last ${silenceMinutes}m but ZERO webhook events received. ` +
-    `Telnyx delivery or signature verification is likely broken — talk time, AMD and recordings ` +
+    `Telnyx delivery or signature verification is likely broken: talk time, AMD and recordings ` +
     `will all be missing.`
   )
   return { key, fired, reason: `${callCount} calls, 0 events` }
@@ -260,7 +260,7 @@ async function checkSecurityInvariants(): Promise<AlertResult> {
   const fired = await fireOnce(
     'security_invariants',
     'webhook_silence',
-    `${critical.length} security invariant(s) broken — data may be reachable with the ` +
+    `${critical.length} security invariant(s) broken, data may be reachable with the ` +
     `public anon key. ${critical[0].detail}`
   )
   return {
@@ -310,7 +310,7 @@ async function checkDatabaseCapacity(): Promise<AlertResult> {
     'webhook_silence',
     urgent
       ? `Database is ${pct}% of the 500MB Free Plan limit (${mb}MB). At 100% Supabase ` +
-        `switches the project to READ-ONLY — uploads, calls and dispositions all stop. ` +
+        `switches the project to READ-ONLY: uploads, calls and dispositions all stop. ` +
         `Upgrade to Pro before that happens.`
       : `Database is ${pct}% of the 500MB Free Plan limit (${mb}MB). Read-only mode ` +
         `starts at 100%. Plan the Pro upgrade now rather than mid-shift.`
@@ -319,7 +319,7 @@ async function checkDatabaseCapacity(): Promise<AlertResult> {
   return {
     key: 'db_capacity',
     fired,
-    reason: `${mb}MB used (${pct}%)${urgent ? ' — URGENT' : ''}`,
+    reason: `${mb}MB used (${pct}%)${urgent ? ': URGENT' : ''}`,
   }
 }
 

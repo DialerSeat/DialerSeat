@@ -335,7 +335,7 @@ export function WhitelabelLivePreview({
                   fontFamily: 'monospace',
                 }}
               >
-                —
+ 
               </div>
             </div>
           </div>

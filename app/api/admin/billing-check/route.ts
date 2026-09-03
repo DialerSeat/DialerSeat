@@ -192,12 +192,12 @@ export async function GET(req: NextRequest) {
 
   const rate = decision
     ? `Seats bill at ${decision.effectivePercentOff}% off` +
-      (decision.compSource ? ` (from ${decision.compSource})` : ' — no discount')
+      (decision.compSource ? ` (from ${decision.compSource})` : ', no discount')
     : 'Seat rate could not be computed'
 
   const verdict = decision?.reason === 'exempt'
     ? `${rate}. This account is flagged seat_billing_exempt, so its seats always invoice ` +
-      `$0.00 — the full flow runs, no card is needed and no money moves. Testing only; ` +
+      `$0.00: the full flow runs, no card is needed and no money moves. Testing only; ` +
       `clear the flag on users.seat_billing_exempt to bill it like any other account.`
     : comped
     ? `${rate}. Seats invoice $0.00, so no card is needed to open one.`
@@ -205,7 +205,7 @@ export async function GET(req: NextRequest) {
       ? `${rate}. A card is on file, so seats can be billed.`
       : deadDiscount
         ? `${rate}. No card. There is a ${deadDiscount.discount?.percentOff}% coupon on a ` +
-          `${deadDiscount.status} subscription (${deadDiscount.id}) — a discount that has ended ` +
+          `${deadDiscount.status} subscription (${deadDiscount.id}), a discount that has ended ` +
           `counts for nothing. Re-apply it to the live plan or to the customer, or add a card.`
         : `${rate}. No card and nothing discounting the seat, so seats cannot be billed yet.`
 

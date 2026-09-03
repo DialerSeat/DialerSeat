@@ -87,7 +87,7 @@ export default function FaqTheme() {
       /* ── BARE ELEMENTS, WHICH IS HOW THESE PAGES ARE ACTUALLY WRITTEN ──
          The FAQ pages use <h2>, <p>, <li>, <code> directly and almost never
          a className. Styling only .faq-h2 / .faq-p would have left every
-         heading and paragraph on all thirteen pages unstyled — the rules that
+         heading and paragraph on all thirteen pages unstyled, the rules that
          used to do this job lived in each page's private stylesheet.
          For prose this is the right shape anyway: an author writing an answer
          should not have to class every paragraph. */
@@ -131,7 +131,7 @@ export default function FaqTheme() {
          Pages write <p className="muted"> and put bare <p> inside flow steps
          and CTAs. Those rules lived in each page's private stylesheet and
          died with it, which left the paragraphs inheriting body colour and
-         silently losing their hierarchy — the kind of regression that does
+         silently losing their hierarchy, the kind of regression that does
          not error, it just reads slightly wrong on thirteen pages. */
       .faq-root p.muted, .faq-section p.muted, .faq-root .muted {
         color: ${T.muted}; font-size: 15px;
@@ -158,7 +158,7 @@ export default function FaqTheme() {
       .faq-list li strong { color: ${T.text}; }
 
       /* ── CARDS ───────────────────────────────────────────────────────
-         White on the page ground, with the landing page's 3px top edge —
+         White on the page ground, with the landing page's 3px top edge 
          the same treatment its buttons and pricing cards use. */
       .faq-card {
         background: ${T.surface}; border: 1px solid ${T.border};
@@ -205,7 +205,7 @@ export default function FaqTheme() {
 
       /* ── FIELD TABLE ────────────────────────────────────────────────
          A grid rather than a <table>, because these are label/value pairs
-         that must collapse to stacked rows on a phone — which a real table
+         that must collapse to stacked rows on a phone, which a real table
          cell cannot do without a fight. */
       .faq-fieldtable {
         margin: 22px 0 10px; border: 1px solid ${T.border}; border-radius: 6px;
@@ -283,7 +283,7 @@ export default function FaqTheme() {
       }
 
       /* ── CLOSING CTA ─────────────────────────────────────────────────
-         A dark panel inside a light page — the same exception the landing
+         A dark panel inside a light page, the same exception the landing
          page makes for its stat bar, and the reason the light ground reads
          as chosen rather than default. */
       .faq-cta {

@@ -72,7 +72,7 @@ export async function POST(req: Request) {
       const n = Number(seatPriceOverrideCents)
       if (!Number.isFinite(n) || n < 0 || n > 1_000_000) {
         return NextResponse.json(
-          { success: false, error: 'seatPriceOverrideCents must be 0–1000000' },
+          { success: false, error: 'seatPriceOverrideCents must be 0: 1000000' },
           { status: 400 }
         )
       }
@@ -119,7 +119,7 @@ export async function POST(req: Request) {
 
       if (!tc) {
         return NextResponse.json(
-          { success: false, error: 'Campaign is not attached to this team — attach it first' },
+          { success: false, error: 'Campaign is not attached to this team: attach it first' },
           { status: 400 }
         )
       }
@@ -147,7 +147,7 @@ export async function POST(req: Request) {
       code = rawCode.trim().toUpperCase().replace(/\s+/g, '')
       if (!CODE_PATTERN.test(code)) {
         return NextResponse.json(
-          { success: false, error: 'Code must be 4–32 chars, letters/numbers/dash/underscore only' },
+          { success: false, error: 'Code must be 4: 32 chars, letters/numbers/dash/underscore only' },
           { status: 400 }
         )
       }
@@ -197,7 +197,7 @@ export async function POST(req: Request) {
     if (error) {
       if (error.code === '23505') {
         return NextResponse.json(
-          { success: false, error: `Code "${code}" is already taken — pick another` },
+          { success: false, error: `Code "${code}" is already taken: pick another` },
           { status: 409 }
         )
       }

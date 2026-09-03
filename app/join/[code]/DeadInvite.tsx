@@ -47,7 +47,7 @@ export default function DeadInvite({ code }: { code: string }) {
         </p>
 
         <p style={{ fontSize: 15, lineHeight: 1.6, opacity: 0.75, margin: '0 0 28px' }}>
-          Ask whoever invited you for a new link — it takes them a few seconds.
+          Ask whoever invited you for a new link, it takes them a few seconds.
           Nothing has been created on your side, so there is nothing to undo.
         </p>
 

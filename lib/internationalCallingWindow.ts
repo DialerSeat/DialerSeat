@@ -111,7 +111,7 @@ export const INTERNATIONAL_RULES: Record<InternationalRegion, InternationalCalli
     region: 'AU',
     timezone: 'Australia/Sydney', // Most populous AU timezone; see per-state note below
     legalBasis: 'statute',
-    citation: 'Telecommunications (Telemarketing and Research Calls) Industry Standard 2017, under the Do Not Call Register Act 2006 (ACMA) — donotcall.gov.au',
+    citation: 'Telecommunications (Telemarketing and Research Calls) Industry Standard 2017, under the Do Not Call Register Act 2006 (ACMA), donotcall.gov.au',
     windows: {
       mon: [{ startHour: 9, endHour: 20 }],
       tue: [{ startHour: 9, endHour: 20 }],
@@ -149,7 +149,7 @@ const FALLBACK_INTERNATIONAL_RULE: InternationalCallingRule = {
   region: 'UK', // placeholder tag only — see legalBasis/citation, this is NOT UK-specific
   timezone: 'UTC',
   legalBasis: 'industry_guidance',
-  citation: 'UNRESEARCHED REGION — conservative fallback window, not a verified rule for this specific country. Verify local law before relying on this for a real campaign.',
+  citation: 'UNRESEARCHED REGION: conservative fallback window, not a verified rule for this specific country. Verify local law before relying on this for a real campaign.',
   windows: {
     mon: [{ startHour: 9, endHour: 20 }],
     tue: [{ startHour: 9, endHour: 20 }],
@@ -236,8 +236,8 @@ export function isCallableNowInternational(phone: string, region: InternationalR
     return {
       allowed: false,
       reason: region === 'OTHER_INTL'
-        ? `No verified calling-hours rule for this number's region — conservative default blocks ${partMap.weekday} calls entirely. Confirm local law before overriding.`
-        : `${region} — no calls permitted on ${partMap.weekday} (${rule.citation})`,
+        ? `No verified calling-hours rule for this number's region, conservative default blocks ${partMap.weekday} calls entirely. Confirm local law before overriding.`
+        : `${region}, no calls permitted on ${partMap.weekday} (${rule.citation})`,
       region,
       localTime,
     }
@@ -251,8 +251,8 @@ export function isCallableNowInternational(phone: string, region: InternationalR
     return {
       allowed: false,
       reason: region === 'OTHER_INTL'
-        ? `Outside conservative default window (${windowsDesc} local) — no verified rule for this specific region, confirm local law.`
-        : `${region} — outside permitted window (${windowsDesc} local, ${rule.citation})`,
+        ? `Outside conservative default window (${windowsDesc} local): no verified rule for this specific region, confirm local law.`
+        : `${region}: outside permitted window (${windowsDesc} local, ${rule.citation})`,
       region,
       localTime,
     }

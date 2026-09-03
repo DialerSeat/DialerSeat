@@ -71,7 +71,7 @@ export async function GET(req: Request) {
             await recordBuy()
             summary.actions.push(`Replaced with new ${num.area_code}: ${replacement.phone_number}`)
           } else {
-            summary.actions.push(`Could not replace ${num.area_code} — no inventory`)
+            summary.actions.push(`Could not replace ${num.area_code}, no inventory`)
           }
         }
       } catch (err: any) {
@@ -112,7 +112,7 @@ export async function GET(req: Request) {
                 await recordBuy()
                 summary.actions.push(`Auto-bought ${ac}: ${result.phone_number}`)
               } else {
-                summary.actions.push(`Auto-buy failed for ${ac} — no inventory`)
+                summary.actions.push(`Auto-buy failed for ${ac}, no inventory`)
               }
 
               await new Promise((r) => setTimeout(r, 250))
@@ -122,13 +122,13 @@ export async function GET(req: Request) {
           }
           summary.bought = bought
         } else {
-          summary.actions.push(`Pool at max size (${poolCount}/${config.max_pool_size}) — admin must raise cap`)
+          summary.actions.push(`Pool at max size (${poolCount}/${config.max_pool_size}), admin must raise cap`)
         }
       } else {
         summary.actions.push(`Daily buy cap reached (${config.buys_today}/${config.daily_buy_cap})`)
       }
     } else {
-      summary.actions.push(`Utilization ${utilizationPct}% under trigger ${config.utilization_trigger_pct}% — no buy`)
+      summary.actions.push(`Utilization ${utilizationPct}% under trigger ${config.utilization_trigger_pct}%, no buy`)
     }
 
     console.log('[cron/pool-maintenance]', JSON.stringify(summary, null, 2))

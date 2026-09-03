@@ -257,7 +257,7 @@ export async function addNumberByAreaCode(areaCode: string): Promise<PoolNumber 
   const { number_buying_frozen } = await getPlatformConfig()
   if (number_buying_frozen) {
     console.warn(
-      `[numberPool] Purchase of an ${areaCode} number BLOCKED — number buying is frozen ` +
+      `[numberPool] Purchase of an ${areaCode} number BLOCKED, number buying is frozen ` +
       `in platform_config. Unfreeze in admin settings to resume.`
     )
     return null

@@ -204,13 +204,13 @@ export async function POST(req: Request) {
         failed.length === 0
           ? `${added.length} added to ${team.name}.`
           : needsAuth
-            ? `${added.length} added. ${failed.length} need the payment approving — ` +
+            ? `${added.length} added. ${failed.length} need the payment approving, ` +
               `your bank asked the cardholder to authenticate, which cannot happen ` +
               `in the background. Approve it once and add them again.`
           : noCard
-            ? `${added.length} added. ${failed.length} could not be billed — there is no working ` +
+            ? `${added.length} added. ${failed.length} could not be billed, there is no working ` +
               `payment method on your account, so those seats stay pending until you add one.`
-            : `${added.length} added. ${failed.length} could not be billed and stay pending — ` +
+            : `${added.length} added. ${failed.length} could not be billed and stay pending, ` +
               `try again, and check the card on file if it keeps failing.`,
     })
   } catch (error: any) {

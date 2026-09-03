@@ -147,7 +147,7 @@ export function isCallableNow(lead: LeadInput, opts?: CallabilityOptions): Calla
   // the reason the lead would have been blocked survives into the log line
   // below. A short-circuit would throw both away.
   console.warn(
-    `[callingWindow] OVERRIDE — dialing outside the window for a named account. ` +
+    `[callingWindow] OVERRIDE, dialing outside the window for a named account. ` +
     `Would have been blocked: ${result.reason ?? 'unknown reason'}`
   )
   return {
@@ -194,7 +194,7 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
       allowed: false,
       code: 'impossible_number',
       reason:
-        `${lead.phone} is not a dialable US number — no carrier can route it ` +
+        `${lead.phone} is not a dialable US number, no carrier can route it ` +
         `(area code ${d.length === 11 ? d.slice(1, 4) : d.slice(0, 3)} / exchange ` +
         `${d.length === 11 ? d.slice(4, 7) : d.slice(3, 6)} is not a valid combination).`,
     }
@@ -234,7 +234,7 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
         allowed: false,
         code: 'invalid_number',
         reason:
-          `Invalid phone number — ${digits.length} digit${digits.length === 1 ? '' : 's'} ` +
+          `Invalid phone number, ${digits.length} digit${digits.length === 1 ? '' : 's'} ` +
           `(a US number needs 10)`,
       }
     }
@@ -253,7 +253,7 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
         allowed: false,
         code: 'toll_free',
         reason:
-          `${areaCodeStr} is a toll-free number, not a personal line — there is ` +
+          `${areaCodeStr} is a toll-free number, not a personal line, there is ` +
           `nobody at a fixed location to call, and no state will change that.`,
       }
     }
@@ -290,7 +290,7 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
       allowed: false,
       code: 'unknown_area',
       reason:
-        `Unrecognised area code ${areaCodeStr} — cannot confirm the lead's state, ` +
+        `Unrecognised area code ${areaCodeStr}: cannot confirm the lead's state, ` +
         `so the calling window cannot be checked. Add a state to this lead to dial it.`,
     }
   }

@@ -36,7 +36,7 @@ export default function LeadsFaqView() {
             There&apos;s no template to download, no exact header names to
             match, and no import wizard to click through. Upload a
             campaign&apos;s worth of leads and the columns get detected
-            automatically — here&apos;s exactly how, what&apos;s required,
+            automatically: here&apos;s exactly how, what&apos;s required,
             and what happens to a lead once it&apos;s in the queue.
           </p>
 
@@ -54,11 +54,11 @@ export default function LeadsFaqView() {
               One field is required: a value with at least 10 digits once
               everything except numbers is stripped out. That&apos;s it.
               Any row without something matching that gets skipped on
-              upload rather than silently corrupting your campaign — you&apos;ll
+              upload rather than silently corrupting your campaign, you&apos;ll
               get a count of exactly how many rows made it in.
             </p>
             <p>
-              Everything else — name, email, state, custom fields — is
+              Everything else: name, email, state, custom fields, is
               optional and additive. A file with nothing but a column of
               phone numbers is a valid upload.
             </p>
@@ -70,7 +70,7 @@ export default function LeadsFaqView() {
             <p>
               The importer checks a list of common header spellings for
               each field, case-insensitive. If your file uses one of these,
-              it gets mapped automatically — no manual field-matching step:
+              it gets mapped automatically, no manual field-matching step:
             </p>
 
             <div className="faq-fieldtable">
@@ -80,7 +80,7 @@ export default function LeadsFaqView() {
               </div>
               <div className="faq-fieldrow">
                 <div className="faq-fieldcell name">Phone <span className="req">REQUIRED</span></div>
-                <div className="faq-fieldcell"><code>phone</code>, <code>Phone</code>, <code>phone_number</code>, <code>Phone Number</code>, <code>mobile</code>, <code>cell</code> — or, if none of those match, the first column with at least 10 digits in it.</div>
+                <div className="faq-fieldcell"><code>phone</code>, <code>Phone</code>, <code>phone_number</code>, <code>Phone Number</code>, <code>mobile</code>, <code>cell</code>: or, if none of those match, the first column with at least 10 digits in it.</div>
               </div>
               <div className="faq-fieldrow">
                 <div className="faq-fieldcell name">First name</div>
@@ -118,7 +118,7 @@ export default function LeadsFaqView() {
 
             <p className="muted" style={{ marginTop: 16 }}>
               Anything in your file that doesn&apos;t match a recognized
-              header isn&apos;t discarded — it&apos;s kept on the lead
+              header isn&apos;t discarded, it&apos;s kept on the lead
               record as extra data, so custom columns specific to your
               business (policy type, property value, whatever you track)
               survive the import even without a dedicated field.
@@ -129,9 +129,9 @@ export default function LeadsFaqView() {
           <section className="faq-section">
             <h2>▸ THE CONSENT COLUMNS ARE OPTIONAL BUT WORTH USING</h2>
             <p>
-              If your leads come with documented consent — a web form
+              If your leads come with documented consent, a web form
               opt-in, a signed agreement, a call recording where consent
-              was given — the four consent columns above let you attach
+              was given, the four consent columns above let you attach
               that proof directly to each lead at upload time: when consent
               was given, where it came from, what it said, and a link to
               supporting documentation.
@@ -139,8 +139,8 @@ export default function LeadsFaqView() {
             <p>
               None of this is required to dial a lead. But if a consent
               dispute ever comes up, having the record attached to the lead
-              itself — rather than buried in a separate spreadsheet
-              somewhere — is the difference between answering the question
+              itself, rather than buried in a separate spreadsheet
+              somewhere, is the difference between answering the question
               in thirty seconds and not being able to answer it at all. See{' '}
               <Link href="/faq/how-we-keep-compliance">how we keep
               compliance</Link> for the fuller picture of what DialerSeat
@@ -168,13 +168,13 @@ export default function LeadsFaqView() {
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
                   <h4>NO ANSWER / SKIPPED</h4>
-                  <p>Dialed but not connected, or manually skipped by the agent. Goes back into the queue automatically — up to 3 total attempts.</p>
+                  <p>Dialed but not connected, or manually skipped by the agent. Goes back into the queue automatically, up to 3 total attempts.</p>
                 </div>
               </div>
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
                   <h4>MAXED</h4>
-                  <p>Hit 3 attempts without a connection. Removed from the active dial queue so agents stop wasting time on it, but the record and history stay intact — nothing is deleted.</p>
+                  <p>Hit 3 attempts without a connection. Removed from the active dial queue so agents stop wasting time on it, but the record and history stay intact, nothing is deleted.</p>
                 </div>
               </div>
               <div className="faq-flow-step">
@@ -188,7 +188,7 @@ export default function LeadsFaqView() {
             <p className="muted" style={{ marginTop: 20 }}>
               Every attempt is timestamped and logged against the lead, so
               a manager reviewing a campaign can see exactly how many times
-              a given number was tried and what happened each time — not
+              a given number was tried and what happened each time, not
               just the final outcome.
             </p>
           </section>
@@ -197,19 +197,19 @@ export default function LeadsFaqView() {
           <section className="faq-section">
             <h2>▸ A FEW PRACTICAL NOTES</h2>
             <ul>
-              <li><strong>Duplicate phone numbers aren&apos;t rejected at upload</strong> — if your source data has the same number twice, both rows come in. Clean lists in are clean lists dialed; the importer won&apos;t catch what your source data doesn&apos;t already handle.</li>
-              <li><strong>Every upload is scoped to one campaign.</strong> There&apos;s no &ldquo;global&rdquo; lead pool shared across campaigns — leads live where you put them.</li>
+              <li><strong>Duplicate phone numbers aren&apos;t rejected at upload</strong>: if your source data has the same number twice, both rows come in. Clean lists in are clean lists dialed; the importer won&apos;t catch what your source data doesn&apos;t already handle.</li>
+              <li><strong>Every upload is scoped to one campaign.</strong> There&apos;s no &ldquo;global&rdquo; lead pool shared across campaigns, leads live where you put them.</li>
               <li><strong>Uploads are additive, not a replace.</strong> Running a second upload into a campaign that already has leads adds to the existing list rather than overwriting it.</li>
-              <li><strong>DNC scrubbing against the national registry is still on you before upload</strong> — the importer accepts what you give it. See <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link> for the full split of what&apos;s enforced automatically versus what&apos;s the seller&apos;s responsibility.</li>
+              <li><strong>DNC scrubbing against the national registry is still on you before upload</strong>, the importer accepts what you give it. See <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link> for the full split of what&apos;s enforced automatically versus what&apos;s the seller&apos;s responsibility.</li>
             </ul>
           </section>
 
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>One practical tip —</strong> if a file has a column
-              named something unexpected — say <code>Telephone</code>{' '}
-              instead of <code>Phone</code> — the fallback detection (first
+              <strong>One practical tip, </strong> if a file has a column
+              named something unexpected, say <code>Telephone</code>{' '}
+              instead of <code>Phone</code>, the fallback detection (first
               column with 10+ digits) usually catches it anyway, but the
               safest move is renaming your phone column to one of the
               recognized headers above before uploading, especially on
@@ -235,7 +235,7 @@ export default function LeadsFaqView() {
             <div className="faq-cta-eyebrow">▸ UPLOAD YOUR FIRST CAMPAIGN</div>
             <h3 className="faq-cta-h">$35/week. Unlimited leads uploaded, no per-record fee.</h3>
             <p>
-              Sign up, create a campaign, and drop in a spreadsheet — no
+              Sign up, create a campaign, and drop in a spreadsheet, no
               template, no import wizard.
             </p>
             <a href={isSignedIn ? '/dashboard/campaigns' : '/sign-up'} className="faq-cta-btn">

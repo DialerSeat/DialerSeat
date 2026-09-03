@@ -42,8 +42,8 @@ function campaignNameFor(refs: TeamCampaignRef[], campaignId: string | null): st
 }
 
 function usageLabel(code: TeamCode): string {
-  if (code.max_uses === 1) return code.use_count > 0 ? 'Used' : 'Unused — single use'
-  if (code.max_uses === null) return `${code.use_count} joined — unlimited`
+  if (code.max_uses === 1) return code.use_count > 0 ? 'Used' : 'Unused, single use'
+  if (code.max_uses === null) return `${code.use_count} joined, unlimited`
   return `${code.use_count} / ${code.max_uses} used`
 }
 
@@ -147,7 +147,7 @@ export default function SeatLinksPanel({
           padding: 20, marginBottom: 20,
         }}>
           <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: T.green, marginBottom: 10 }}>
-            ✓ SEAT LINK CREATED — SHARE THIS
+            ✓ SEAT LINK CREATED, SHARE THIS
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
@@ -164,7 +164,7 @@ export default function SeatLinksPanel({
             </button>
           </div>
           <div style={{ marginTop: 10, fontSize: 12, color: T.muted }}>
-            Whoever opens this link will be asked to confirm before joining — nothing happens
+            Whoever opens this link will be asked to confirm before joining, nothing happens
             until they accept.
           </div>
           <button onClick={() => setJustCreated(null)} style={dismissLinkStyle}>Dismiss</button>
@@ -217,20 +217,20 @@ export default function SeatLinksPanel({
             value={payer}
             onChange={v => setPayer(v as 'owner' | 'agent')}
             options={[
-              { value: 'owner', label: 'You pay — instant access' },
+              { value: 'owner', label: 'You pay: instant access' },
               { value: 'agent', label: 'They pay their own way' },
             ]}
           />
 
           {payer === 'owner' && (
             <div style={{ marginTop: 10, fontSize: 12, color: T.muted, lineHeight: 1.5 }}>
-              Charged to your card the moment someone redeems a single-use link — they're set up
+              Charged to your card the moment someone redeems a single-use link, they're set up
               and dialing without ever entering payment info.
             </div>
           )}
           {payer === 'agent' && (
             <div style={{ marginTop: 10, fontSize: 12, color: T.muted, lineHeight: 1.5 }}>
-              They complete their own checkout before access turns on — nothing is billed to you.
+              They complete their own checkout before access turns on, nothing is billed to you.
             </div>
           )}
 
@@ -254,7 +254,7 @@ export default function SeatLinksPanel({
             onChange={v => setSingleUse(v === 'single')}
             options={[
               { value: 'single', label: 'One person, one link' },
-              { value: 'multi', label: 'Reusable — anyone with the link' },
+              { value: 'multi', label: 'Reusable: anyone with the link' },
             ]}
           />
           {!singleUse && payer === 'owner' && (
@@ -319,7 +319,7 @@ export default function SeatLinksPanel({
             <div style={{ fontSize: 13, fontWeight: 'bold', color: T.red, marginBottom: 10 }}>DELETE THIS SEAT LINK?</div>
             <p style={{ fontSize: 13, lineHeight: 1.5, color: T.muted, marginBottom: 20 }}>
               This link stops working immediately. Anyone who already joined through it keeps
-              their access — this only affects future use of the link itself.
+              their access, this only affects future use of the link itself.
             </p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => setDeleteTarget(null)} disabled={deleting} style={subtleBtnStyle}>CANCEL</button>

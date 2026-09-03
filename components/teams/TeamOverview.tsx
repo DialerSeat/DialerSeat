@@ -164,7 +164,7 @@ export default function TeamOverview({
       <div className="tov-grid">
         <Tile
           label="LIVE NOW"
-          value={live ? String(live.online) : '—'}
+          value={live ? String(live.online) : ', '}
           suffix={live && live.online === 1 ? 'agent' : 'agents'}
           accent={isLive ? T.green : undefined}
           blink={isLive}
@@ -176,7 +176,7 @@ export default function TeamOverview({
         />
         <Tile
           label="THIS WEEK"
-          value={data ? money(data.spend.weeklyCents) : '—'}
+          value={data ? money(data.spend.weeklyCents) : ', '}
           detail={
             data
               ? data.spend.seatCount > 0
@@ -187,7 +187,7 @@ export default function TeamOverview({
         />
         <Tile
           label="ROSTER"
-          value={data ? String(data.seats.active) : '—'}
+          value={data ? String(data.seats.active) : ', '}
           suffix={data && data.seats.active === 1 ? 'agent' : 'agents'}
           detail={
             data && data.seats.pending > 0
@@ -202,7 +202,7 @@ export default function TeamOverview({
           // read as a broken dialer rather than an idle one.
           value={data?.calls.connectRatePct !== null && data?.calls.connectRatePct !== undefined
             ? `${data.calls.connectRatePct}%`
-            : '—'}
+            : ', '}
           detail={
             data && data.calls.total > 0
               ? `${data.calls.answered.toLocaleString()} of ${data.calls.total.toLocaleString()} answered`
@@ -225,17 +225,17 @@ export default function TeamOverview({
           disabled={generating !== null}
           onClick={() => quickLink('owner')}
         >
-          {generating === 'owner' ? 'CREATING…' : 'MY BILLING — COPY LINK'}
+          {generating === 'owner' ? 'CREATING…' : 'MY BILLING, COPY LINK'}
         </button>
         <button
           className="tov-btn"
           disabled={generating !== null}
           onClick={() => quickLink('agent')}
         >
-          {generating === 'agent' ? 'CREATING…' : 'THEY PAY — COPY LINK'}
+          {generating === 'agent' ? 'CREATING…' : 'THEY PAY, COPY LINK'}
         </button>
         <span style={{ fontSize: 10.5, color: T.muted }}>
-          Reusable. Send it to anyone — they land on a join page and they&apos;re in.
+          Reusable. Send it to anyone, they land on a join page and they&apos;re in.
         </span>
 
         {copied && (
@@ -243,7 +243,7 @@ export default function TeamOverview({
             flexBasis: '100%', marginTop: 4, fontSize: 11, color: T.green,
             wordBreak: 'break-all',
           }}>
-            ✓ Copied — {copied}
+            ✓ Copied, {copied}
           </div>
         )}
         {genError && (

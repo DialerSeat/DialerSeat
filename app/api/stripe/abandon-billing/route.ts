@@ -33,7 +33,7 @@ export async function POST() {
     const customerId = userRow?.stripe_customer_id
 
     if (!customerId) {
-      step('no stripe customer — nothing to clean')
+      step('no stripe customer, nothing to clean')
       return NextResponse.json({
         success: true,
         action: 'noop_no_customer',
@@ -60,7 +60,7 @@ export async function POST() {
     )
 
     if (hasProtected) {
-      step('protected sub exists — no-op (paying customer)')
+      step('protected sub exists, no-op (paying customer)')
       return NextResponse.json({
         success: true,
         action: 'noop_protected',

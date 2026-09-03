@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'Uploading & Managing Leads — CSV Format, Fields, Retries | DialerSeat',
+  title: 'Uploading & Managing Leads: CSV Format, Fields, Retries | DialerSeat',
   description:
     'How to get leads into a DialerSeat campaign: accepted file formats, which column headers get auto-detected, optional consent fields, what happens to bad rows, and how the 3-attempt retry cycle actually works.',
   alternates: {
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'Uploading & Managing Leads — DialerSeat',
+    title: 'Uploading & Managing Leads: DialerSeat',
     description:
       'Column auto-detection, consent fields, retry logic, and what happens to leads that fail to import \u2014 the real mechanics of getting a list into a campaign.',
     url: 'https://dialerseat.com/faq/leads',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Uploading & Managing Leads — DialerSeat',
+    title: 'Uploading & Managing Leads: DialerSeat',
     description: 'Column auto-detection, consent fields, retry logic, and what happens to leads that fail to import \u2014 the real mechanics of getting a list into a campaign.',
   },
 }

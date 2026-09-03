@@ -57,7 +57,7 @@ export default function DataRecordingsFaqView() {
           <p className="faq-deck">
             Two separate things live on this page: how call recordings work
             day to day, and the account-level tools for getting everything
-            out or deleting it for good. Both are self-serve — no support
+            out or deleting it for good. Both are self-serve, no support
             ticket required for either.
           </p>
 
@@ -71,13 +71,13 @@ export default function DataRecordingsFaqView() {
           <section className="faq-section">
             <h2>▸ HOW RECORDINGS ACTUALLY WORK</h2>
             <p>
-              Every call is recorded server-side automatically — there&apos;s
+              Every call is recorded server-side automatically, there&apos;s
               no per-call toggle to remember to turn on. Recordings show up
               in your dashboard shortly after the call ends, playable
               directly in the browser or downloadable as a file.
             </p>
             <ul>
-              <li><strong>Retention is 30 days.</strong> After that, a recording ages out automatically. Call metadata — timestamp, disposition, AMD result — is kept separately for longer; see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link> for the full retention split.</li>
+              <li><strong>Retention is 30 days.</strong> After that, a recording ages out automatically. Call metadata: timestamp, disposition, AMD result, is kept separately for longer; see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link> for the full retention split.</li>
               <li><strong>You can delete one early, any time.</strong> Deleting a recording clears it from your dashboard immediately and is no longer playable through DialerSeat. We also attempt to delete it from the carrier's storage at the same time; that provider-side step is best-effort depending on how the recording was stored.</li>
               <li><strong>Only the account that made the call can access its recording.</strong> On a Manager+ team, that means the owner sees recordings for calls made under campaigns they own; an individual agent&apos;s own dials are theirs.</li>
             </ul>
@@ -89,7 +89,7 @@ export default function DataRecordingsFaqView() {
             <p>
               Beyond individual recordings, there&apos;s a single export
               that pulls literally everything tied to your account into one
-              JSON file — not a marketing &ldquo;contact us for your
+              JSON file, not a marketing &ldquo;contact us for your
               data&rdquo; process, an actual button that returns a file
               immediately.
             </p>
@@ -111,7 +111,7 @@ export default function DataRecordingsFaqView() {
 
             <p className="muted" style={{ marginTop: 16 }}>
               It&apos;s everything, including the smaller stuff most exports
-              skip — your desktop app icon layout and window preferences are
+              skip, your desktop app icon layout and window preferences are
               in there too. Downloaded as a single dated file, ready to
               archive or hand to another system.
             </p>
@@ -121,7 +121,7 @@ export default function DataRecordingsFaqView() {
           <section className="faq-section">
             <h2>▸ DELETING YOUR ACCOUNT FOR REAL</h2>
             <p>
-              This is a genuine, permanent delete — not a deactivation that
+              This is a genuine, permanent delete, not a deactivation that
               quietly keeps your data around. It&apos;s built with enough
               friction that it&apos;s hard to trigger by accident, but no
               harder than that.
@@ -131,19 +131,19 @@ export default function DataRecordingsFaqView() {
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
                   <h4>1. DRY RUN BY DEFAULT</h4>
-                  <p>Requesting deletion without explicit confirmation runs a dry run — it tells you exactly what would be deleted and how many records, without touching anything.</p>
+                  <p>Requesting deletion without explicit confirmation runs a dry run: it tells you exactly what would be deleted and how many records, without touching anything.</p>
                 </div>
               </div>
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
                   <h4>2. TYPE &ldquo;DELETE&rdquo; TO CONFIRM</h4>
-                  <p>The actual deletion only runs when the confirmation matches exactly — no single-click accidental deletes.</p>
+                  <p>The actual deletion only runs when the confirmation matches exactly, no single-click accidental deletes.</p>
                 </div>
               </div>
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
                   <h4>3. BLOCKED WHILE A SUBSCRIPTION IS ACTIVE</h4>
-                  <p>You can&apos;t delete an account with an active subscription without explicitly overriding that check first — cancel or downgrade, then delete, is the intended path.</p>
+                  <p>You can&apos;t delete an account with an active subscription without explicitly overriding that check first: cancel or downgrade, then delete, is the intended path.</p>
                 </div>
               </div>
             </div>
@@ -153,7 +153,7 @@ export default function DataRecordingsFaqView() {
           <div className="drc-warn">
             <div className="drc-warn-title">THIS IS NOT REVERSIBLE</div>
             <p>
-              Once confirmed, deletion is permanent — campaigns, leads, call
+              Once confirmed, deletion is permanent: campaigns, leads, call
               history, scripts, everything on the export list above. If
               there&apos;s any chance you&apos;ll want the data later, run
               the full export first and keep the file somewhere safe before
@@ -164,10 +164,10 @@ export default function DataRecordingsFaqView() {
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>Worth knowing —</strong> the export and delete tools
+              <strong>Worth knowing, </strong> the export and delete tools
               work on your own account&apos;s data. On a Manager+ team, an
               owner deleting their account doesn&apos;t silently wipe their
-              agents&apos; individual accounts — each agent&apos;s own data
+              agents&apos; individual accounts, each agent&apos;s own data
               and login are separate from the owner&apos;s.
             </p>
           </div>

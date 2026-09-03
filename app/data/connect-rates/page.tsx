@@ -27,7 +27,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'Outbound Connect Rates by State and Hour — Live Platform Data | DialerSeat',
+  title: 'Outbound Connect Rates by State and Hour: Live Platform Data | DialerSeat',
   description:
     'Real connect-rate data measured on the DialerSeat platform: which hours and which states actually answer. Computed from anonymized call records, updated continuously, with sample sizes shown.',
   alternates: {
@@ -144,7 +144,7 @@ function Row({ label, b }: { label: string; b: Bucket }) {
         padding: '9px 12px', borderTop: `1px solid ${BORDER}`, textAlign: 'right',
         fontFamily: 'monospace', color: r === null ? MUTED : INK,
       }}>
-        {r === null ? '—' : `${r.toFixed(1)}%`}
+        {r === null ? ', ' : `${r.toFixed(1)}%`}
       </td>
     </tr>
   )
@@ -198,7 +198,7 @@ export default async function ConnectRatesPage() {
                   : 'Platform data is not available in this environment. '}
                 Nothing is published below {MIN_SAMPLE.toLocaleString()} calls in a bucket, because a rate
                 computed from a smaller sample moves several points on ordinary variance. The tables below
-                will fill in on their own as volume accumulates — no number here is ever estimated,
+                will fill in on their own as volume accumulates: no number here is ever estimated,
                 smoothed, or carried over from a previous period.
               </p>
             </div>

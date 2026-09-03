@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'Why DialerSeat? — The Thesis, The Team, The Comparison | DialerSeat',
+  title: 'Why DialerSeat? The Thesis, The Team, The Comparison | DialerSeat',
   description:
     'Why we built DialerSeat, who builds it, how we ship, and why we don\'t really see other dialers as competition. Plus the honest takedowns of ReadyMode, Mojo, and PhoneBurner.',
   alternates: {
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'Why DialerSeat? — The Thesis',
+    title: 'Why DialerSeat? The Thesis',
     description:
       'Why we built it, who builds it, how we work, what makes us different from the entrenched names, and where we\'re going next.',
     url: 'https://dialerseat.com/faq/why-dialerseat',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Why DialerSeat? — The Thesis',
+    title: 'Why DialerSeat? The Thesis',
     description: 'Why we built it, who builds it, how we work, what makes us different from the entrenched names, and where we\'re going next.',
   },
 }

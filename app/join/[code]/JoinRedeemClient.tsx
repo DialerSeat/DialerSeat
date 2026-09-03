@@ -224,11 +224,11 @@ export default function JoinRedeemClient({ code }: { code: string }) {
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
                 {preview.requiresPayment ? (
                   <span>
-                    <strong>Cost:</strong> ${((preview.seatCents ?? 3500) / 100).toFixed(2)}/week, billed to you —
+                    <strong>Cost:</strong> ${((preview.seatCents ?? 3500) / 100).toFixed(2)}/week, billed to you 
                     you&apos;ll set up billing after joining.
                   </span>
                 ) : (
-                  <span><strong>Cost to you:</strong> $0 — the team owner covers this seat.</span>
+                  <span><strong>Cost to you:</strong> $0, the team owner covers this seat.</span>
                 )}
               </div>
 
@@ -263,7 +263,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
               THIS IS YOUR OWN INVITE
             </div>
             <div style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, marginBottom: 20 }}>
-              This invite link is for {preview?.team?.name} — a team you own. Share it with the agent
+              This invite link is for {preview?.team?.name}, a team you own. Share it with the agent
               you want to add instead.
             </div>
             <button onClick={() => router.push('/dashboard/teams')} style={goToTeamsBtn(C)}>GO TO TEAMS</button>
@@ -278,7 +278,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
             <div style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, marginBottom: 20 }}>
               {preview?.memberStatus === 'active'
                 ? `You're already an active member of ${preview?.team?.name}.`
-                : `You've already requested to join ${preview?.team?.name} — waiting on the owner's approval.`}
+                : `You've already requested to join ${preview?.team?.name}, waiting on the owner's approval.`}
             </div>
             <button
               onClick={() => router.push(preview?.memberStatus === 'active' ? '/dashboard/dialer' : '/dashboard/teams')}
@@ -293,7 +293,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
               JOINING…
             </div>
             <div style={{ fontSize: 13, lineHeight: 1.6, color: C.muted }}>
-              {message || 'Setting up your seat — one moment.'}
+              {message || 'Setting up your seat, one moment.'}
             </div>
           </>
         )}

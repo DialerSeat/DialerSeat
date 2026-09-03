@@ -304,7 +304,7 @@ const EMPTY_DISPOSITIONS = [
 ]
 
 const EMPTY_CAMPAIGNS = [
-  { name: '—', total: 0, contacted: 0, converted: 0 },
+  { name: ': ', total: 0, contacted: 0, converted: 0 },
 ]
 
 /**
@@ -519,7 +519,7 @@ export default function AnalyticsPage({
         .analytics-root * { box-sizing: border-box; }
 
         /* ── DESKTOP HEADER (default) ──────────────────────────────────── */
-        /* Flex row — title, range tabs, spacer pushing the LANDING button  */
+        /* Flex row: title, range tabs, spacer pushing the LANDING button  */
         /* to the far right. Original behavior preserved.                   */
         .analytics-header {
           background: var(--brand-header-bg);
@@ -810,7 +810,7 @@ export default function AnalyticsPage({
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.amber }}>
               <div className="stat-label">BEST CAMPAIGN</div>
               <div className="stat-value" style={{ fontSize: s.bestCampaign ? 13 : 22, color: T.amber }}>
-                {s.bestCampaign || '—'}
+                {s.bestCampaign || ', '}
               </div>
               <div className="stat-sub">{s.bestCampaign ? `${s.bestCampaignRate}% conv` : 'need 5+ calls'}</div>
             </div>

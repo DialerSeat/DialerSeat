@@ -42,7 +42,7 @@ async function runChecks(): Promise<{ results: DiagnosticResult[]; subs: any[] |
       step: 'VAPID keys configured',
       ok: false,
       detail: 'VAPID_PUBLIC_KEY and/or VAPID_PRIVATE_KEY are not set on the server. ' +
-        'This is very likely THE cause if nothing is arriving — every send fails at this exact ' +
+        'This is very likely THE cause if nothing is arriving, every send fails at this exact ' +
         'check before it ever reaches the push service, and (by design, so a bad key never breaks ' +
         'a live Stripe webhook) that failure is only ever logged server-side, never surfaced to you. ' +
         'Run `npx web-push generate-vapid-keys` and set both, plus NEXT_PUBLIC_VAPID_PUBLIC_KEY (same public key).',
@@ -56,7 +56,7 @@ async function runChecks(): Promise<{ results: DiagnosticResult[]; subs: any[] |
       step: 'VAPID public key matches client key',
       ok: false,
       detail: 'VAPID_PUBLIC_KEY and NEXT_PUBLIC_VAPID_PUBLIC_KEY are both set but DIFFERENT. ' +
-        'They must be the exact same value — one is used server-side to sign, the other ' +
+        'They must be the exact same value: one is used server-side to sign, the other ' +
         'client-side to build the subscription. A mismatch here means devices subscribe with a ' +
         'public key the server\u2019s private key doesn\u2019t actually correspond to, and every send ' +
         'will fail with an authentication error from the push service.',
@@ -67,7 +67,7 @@ async function runChecks(): Promise<{ results: DiagnosticResult[]; subs: any[] |
     results.push({
       step: 'VAPID public key matches client key',
       ok: false,
-      detail: 'NEXT_PUBLIC_VAPID_PUBLIC_KEY is not set. Devices can\u2019t subscribe without it — ' +
+      detail: 'NEXT_PUBLIC_VAPID_PUBLIC_KEY is not set. Devices can\u2019t subscribe without it, ' +
         'the "Enable" button in Settings > Notifications will fail with a configuration error.',
     })
   }
@@ -91,7 +91,7 @@ async function runChecks(): Promise<{ results: DiagnosticResult[]; subs: any[] |
       step: 'Notification preferences readable',
       ok: false,
       detail: 'admin_notification_prefs has no row with id=1. The seed row from the original migration ' +
-        'never ran (or was deleted). This is now self-healing — sendAdminPush() will default to ' +
+        'never ran (or was deleted). This is now self-healing, sendAdminPush() will default to ' +
         'everything ON rather than silently sending nothing, and the row gets created automatically ' +
         'the next time any toggle is saved in Settings. Still worth running the seed migration ' +
         'properly so this doesn\u2019t rely on the fallback.',
@@ -130,7 +130,7 @@ async function runChecks(): Promise<{ results: DiagnosticResult[]; subs: any[] |
       step: 'Saved device subscriptions',
       ok: false,
       detail: 'No devices are subscribed at all (push_subscriptions is empty). Open Settings > ' +
-        'Notifications > This Device and tap Enable — this is expected right after that GET result ' +
+        'Notifications > This Device and tap Enable, this is expected right after that GET result ' +
         'shows \'stale\' or \'not_subscribed\', or if a previous send ever got a 404/410 and the ' +
         'subscription was cleaned up automatically.',
     })
@@ -201,9 +201,9 @@ export async function POST() {
         let detail = err?.message || String(err)
         if (statusCode === 404 || statusCode === 410) {
           detail = 'Push service rejected this subscription as expired/revoked (404/410). ' +
-            'It would normally be auto-deleted by a real send — re-enable push on that device.'
+            'It would normally be auto-deleted by a real send, re-enable push on that device.'
         } else if (statusCode === 401 || statusCode === 403) {
-          detail = 'Push service rejected the request as unauthorized — almost certainly a VAPID ' +
+          detail = 'Push service rejected the request as unauthorized, almost certainly a VAPID ' +
             'key mismatch (see "VAPID public key matches client key" check above).'
         }
         return { subscriptionId: sub.id, ok: false, statusCode, detail }

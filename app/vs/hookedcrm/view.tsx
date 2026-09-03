@@ -29,8 +29,8 @@ const features = [
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: false },
   { feature: 'Weekly billing option', dialerseat: true, competitor: false },
   { feature: 'No annual contract required', dialerseat: true, competitor: true },
-  { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$129–$169/mo' },
-  { feature: 'AI add-on stacks on top of seat price', dialerseat: false, competitor: '+$59–$79/seat' },
+  { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$129: $169/mo' },
+  { feature: 'AI add-on stacks on top of seat price', dialerseat: false, competitor: '+$59: $79/seat' },
   { feature: 'Setup fee', dialerseat: '$0', competitor: 'Not published' },
   { feature: 'Named dialer modes (power/predictive/etc.)', dialerseat: 'Preview, Power, Progressive, Predictive', competitor: 'Not specified anywhere on their site' },
   { feature: 'Predictive dialer (multi-line)', dialerseat: true, competitor: 'Not specified' },
@@ -256,7 +256,7 @@ export default function VsHookedCrmView() {
             </h1>
             <p className="vs-subhead">
               Hooked CRM markets itself as "The All-in-One Dialer & CRM," but their own product
-              pages never name a single dialer mode — no power, predictive, or progressive dialing
+              pages never name a single dialer mode: no power, predictive, or progressive dialing
               anywhere in their documentation. DialerSeat™ gives you all four, configurable per
               campaign, at <strong>$35 per seat per week</strong> with weekly billing and zero
               contract.
@@ -274,7 +274,7 @@ export default function VsHookedCrmView() {
             Hooked CRM's calling workspace, CRM platform, and Tacklebox AI product pages are
             genuinely strong on inbound call handling, automatic lead creation, AI-assisted notes,
             and supervisor tools like monitor, whisper, and barge. What none of their public pages
-            describe is a named outbound dialing mode — no predictive, power, or progressive dialer
+            describe is a named outbound dialing mode: no predictive, power, or progressive dialer
             terminology anywhere on their site, unlike every other dialer in this category.
             DialerSeat™ is built specifically for outbound: four dialer modes, lead lists, and
             dispositions, all included.
@@ -283,7 +283,7 @@ export default function VsHookedCrmView() {
           <div className="verdict-card">
             <div className="verdict-title">▸ BOTTOM LINE</div>
             <p className="verdict-text">
-              <strong>Switch to DialerSeat™</strong> if outbound cold-calling volume is the job —
+              <strong>Switch to DialerSeat™</strong> if outbound cold-calling volume is the job 
               you want a specific, named dialer mode for a specific campaign, not a generalized
               calling workspace. Stay on Hooked CRM if your priority is inbound lead handling, an
               AI-assisted CRM layer, and supervisor coaching tools, and outbound dialing mode is a
@@ -294,15 +294,15 @@ export default function VsHookedCrmView() {
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">PRICING</div>
-          <h2 className="vs-section-h2">$35 a week, flat, versus $129–$169 a month plus add-ons.</h2>
+          <h2 className="vs-section-h2">$35 a week, flat, versus $129, $169 a month plus add-ons.</h2>
           <p className="vs-section-lede">
-            Hooked CRM's published pricing is genuinely more transparent than most legacy dialers —
+            Hooked CRM's published pricing is genuinely more transparent than most legacy dialers 
             real numbers, no demo required to see them. Their per-seat price actually drops as your
-            team grows: $169/seat at 1–20 seats, $149/seat at 21–49, $129/seat at 50–99, custom
+            team grows: $169/seat at 1: 20 seats, $149/seat at 21: 49, $129/seat at 50: 99, custom
             above that. The catch is what's not in the base price: Tacklebox AI (their AI coaching
-            and reporting layer) is a separate $59–$79/seat add-on, and calls, phone numbers, API
+            and reporting layer) is a separate $59: $79/seat add-on, and calls, phone numbers, API
             requests, and recording storage are all billed on top by usage. DialerSeat™ is $35/week,
-            flat, cancel anytime — every dialer mode, AI or not, included at that one price.
+            flat, cancel anytime: every dialer mode, AI or not, included at that one price.
           </p>
 
           <div className="price-grid">
@@ -313,7 +313,7 @@ export default function VsHookedCrmView() {
                 <span className="price-card-big">$35</span>
                 <span className="price-card-suffix">/seat/week</span>
               </div>
-              <div className="price-card-monthly">Cancel anytime — no monthly lock-in</div>
+              <div className="price-card-monthly">Cancel anytime, no monthly lock-in</div>
               <ul className="price-card-list">
                 <li><span className="check">✓</span> Public pricing on website</li>
                 <li><span className="check">✓</span> $0 setup fee</li>
@@ -333,7 +333,7 @@ export default function VsHookedCrmView() {
                 <span className="price-card-big">$129+</span>
                 <span className="price-card-suffix">/seat/month</span>
               </div>
-              <div className="price-card-monthly">Starter tier is $169/seat. Tacklebox AI is $59–$79/seat extra.</div>
+              <div className="price-card-monthly">Starter tier is $169/seat. Tacklebox AI is $59, $79/seat extra.</div>
               <ul className="price-card-list">
                 <li className="bad"><span className="cross">✕</span> AI features cost extra, per seat</li>
                 <li className="bad"><span className="cross">✕</span> Per-minute call charges from $0.042/min</li>
@@ -355,7 +355,7 @@ export default function VsHookedCrmView() {
             Honest side-by-side, checked directly against Hooked CRM's own product pages. Green
             ✓ = confirmed support, red ✕ = not available or not found, amber = present but
             structured as an add-on, or a claim we couldn't independently confirm. Hooked CRM's
-            CRM automation and AI notes are real strengths — their outbound dialer specifics
+            CRM automation and AI notes are real strengths, their outbound dialer specifics
             are the gap.
           </p>
 
@@ -391,14 +391,14 @@ export default function VsHookedCrmView() {
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">SCALING A TEAM</div>
-          <h2 className="vs-section-h2">Credit where it's due — growing your team doesn't cost you more per seat.</h2>
+          <h2 className="vs-section-h2">Credit where it's due, growing your team doesn't cost you more per seat.</h2>
           <p className="vs-section-lede">
             Unlike ReadyMode or Five9, Hooked CRM's per-seat price goes down as headcount grows,
-            not up — $169 at 1–20 seats, down to $129 at 50–99. That's a genuinely fair structure
+            not up: $169 at 1: 20 seats, down to $129 at 50, 99. That's a genuinely fair structure
             for a growing team. What it doesn't include is whitelabel: we found no whitelabel or
             reseller program anywhere on their site. DialerSeat™ Manager+ is a flat $75/month
             add-on with full whitelabel included, on top of a price that never changes with seats
-            either way — no bulk discount to chase, but no per-seat penalty to hit.
+            either way: no bulk discount to chase, but no per-seat penalty to hit.
           </p>
 
           <div className="price-grid">
@@ -409,10 +409,10 @@ export default function VsHookedCrmView() {
                 <span className="price-card-big">$75</span>
                 <span className="price-card-suffix">/month flat</span>
               </div>
-              <div className="price-card-monthly">Plus $35/week per seat — same rate at any team size</div>
+              <div className="price-card-monthly">Plus $35/week per seat, same rate at any team size</div>
               <ul className="price-card-list">
-                <li><span className="check">✓</span> Full whitelabel — your brand, your domain</li>
-                <li><span className="check">✓</span> No per-seat AI upsell — included at every tier</li>
+                <li><span className="check">✓</span> Full whitelabel: your brand, your domain</li>
+                <li><span className="check">✓</span> No per-seat AI upsell, included at every tier</li>
                 <li><span className="check">✓</span> Team performance + campaign oversight</li>
                 <li><span className="check">✓</span> No usage-based call/number charges</li>
               </ul>
@@ -443,7 +443,7 @@ export default function VsHookedCrmView() {
             <div className="win-card">
               <div className="win-card-title">1. Named, configurable dialer modes</div>
               <p className="win-card-body">
-                Preview, Power, Progressive, Predictive — pick per campaign. Hooked CRM's own
+                Preview, Power, Progressive, Predictive, pick per campaign. Hooked CRM's own
                 product pages describe call handling and monitoring but never name a specific
                 outbound dialing mode.
               </p>
@@ -465,7 +465,7 @@ export default function VsHookedCrmView() {
             <div className="win-card">
               <div className="win-card-title">4. AI features included, not upsold</div>
               <p className="win-card-body">
-                No separate AI tier to unlock. Hooked CRM's Tacklebox AI is a $59–$79/seat add-on
+                No separate AI tier to unlock. Hooked CRM's Tacklebox AI is a $59, $79/seat add-on
                 stacked on top of every plan, including their top published tier.
               </p>
             </div>
@@ -491,7 +491,7 @@ export default function VsHookedCrmView() {
             <h2 className="vs-final-cta-h2">Actually see the dialer modes before you buy.</h2>
             <p className="vs-final-cta-p">
               $35 a week per seat. Preview, Power, Progressive, and Predictive dialing, named and
-              included — not a mystery you find out about on a sales call. Self-serve signup means
+              included, not a mystery you find out about on a sales call. Self-serve signup means
               first dial in under 10 minutes.
             </p>
             <div className="vs-cta-row">

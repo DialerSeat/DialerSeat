@@ -36,12 +36,12 @@ const FAQS = [
   {
     question: 'Why not just use one number for everything?',
     answer:
-      'Because volume on a single caller ID is the fastest way to get it labelled. Carrier analytics watch call volume, call duration, and how often people decline or report a number. A number placing several hundred short unanswered calls a day looks exactly like a robocall to that scoring, because statistically it is behaving like one. Once the label attaches, the number is finished — and if it is your only number, so is your answer rate.',
+      'Because volume on a single caller ID is the fastest way to get it labelled. Carrier analytics watch call volume, call duration, and how often people decline or report a number. A number placing several hundred short unanswered calls a day looks exactly like a robocall to that scoring, because statistically it is behaving like one. Once the label attaches, the number is finished: and if it is your only number, so is your answer rate.',
   },
   {
     question: 'What is a sensible daily cap per number?',
     answer:
-      'There is no universal correct figure, and anyone who quotes you one with confidence is guessing — carrier scoring is opaque and it changes. DialerSeat sets and enforces the cap for you, tuned against live answer-rate data rather than a number picked once and forgotten. What matters on your side is that the volume is spread across a pool instead of concentrated on one caller ID.',
+      'There is no universal correct figure, and anyone who quotes you one with confidence is guessing, carrier scoring is opaque and it changes. DialerSeat sets and enforces the cap for you, tuned against live answer-rate data rather than a number picked once and forgotten. What matters on your side is that the volume is spread across a pool instead of concentrated on one caller ID.',
   },
   {
     question: 'Do more numbers mean better answer rates?',
@@ -49,7 +49,7 @@ const FAQS = [
       'Up to a point, and then no. Enough numbers to keep each one under its cap protects your answer rate. Far more numbers than you need does not improve it further, and each one still costs money every month. The goal is coverage with headroom, not accumulation.',
   },
   {
-    question: 'What about local presence — do I need a number in every area code?',
+    question: 'What about local presence, do I need a number in every area code?',
     answer:
       'No, and chasing that is how a pool becomes expensive. DialerSeat prefers a caller ID matching the lead’s area code when one is available, falls back to the same state, then to any healthy number. A pool covering the regions your list actually concentrates in gets most of the benefit. Buying a number for every area code in the country gets very little more for a great deal more cost.',
   },
@@ -89,7 +89,7 @@ export default function Page() {
           <div className="exp-section-label">▸ HOW TO THINK ABOUT IT</div>
           <h2>Enough that no one number carries the day.</h2>
           <p>
-            The instinct is to work out an exact figure in advance. Resist it —
+            The instinct is to work out an exact figure in advance. Resist it 
             the honest answer is that the right number depends on your call
             volume, how long your calls run, and how carriers are scoring
             traffic that month, and only the first of those is knowable up
@@ -121,7 +121,7 @@ export default function Page() {
           </p>
           <p>
             Once a number picks up a Spam Likely label it is effectively finished
-            — and if it was carrying your entire operation, your answer rate goes
+ and if it was carrying your entire operation, your answer rate goes
             with it. Spreading the same volume across a pool keeps every number
             below the threshold where that pattern forms.
           </p>
@@ -156,7 +156,7 @@ export default function Page() {
             DialerSeat tracks answer rate per number across a rolling window. When
             one falls materially behind the rest of the pool, that is the signal it
             has been labelled somewhere upstream, and the right response is to stop
-            using it — not to keep dialing and hope.
+            using it, not to keep dialing and hope.
           </p>
           <p>
             Retiring a number only works if you can afford to lose it. A pool

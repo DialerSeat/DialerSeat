@@ -364,7 +364,7 @@ export default function TeamsSidebar({
         .ts-agent-row:hover { color: ${TEXT}; }
 
         /* Icon buttons in the header stay invisible until the header is
-           hovered — Discord's trick for keeping a dense list calm. */
+           hovered, Discord's trick for keeping a dense list calm. */
         .ts-head-actions { display: flex; align-items: center; gap: 2px; opacity: 0.55; transition: opacity 0.12s ease; }
         .ts-sidebar:hover .ts-head-actions { opacity: 1; }
         .ts-icon-btn {
@@ -404,14 +404,14 @@ export default function TeamsSidebar({
         /* ── A ROW IS TEXT UNTIL IT IS CHOSEN ───────────────────────────────
            No hover fill and no accent rail. The rail marked the same thing the
            background already marked, and a fill on hover meant every row the
-           cursor crossed looked momentarily chosen — in a tree this dense that
+           cursor crossed looked momentarily chosen, in a tree this dense that
            is most of them. Hovering now only brightens the text, which is
            enough to show what is targetable.
            A row looks like a button only once it IS the selection. */
         .ts-row-wrap.is-selected { background: ${SURFACE_RAISED}; }
         .ts-row-wrap .ts-row { background: transparent; }
         /* Hover styles only for real pointers. On a touch screen :hover latches
-           after a tap and does not clear until you tap elsewhere — which is
+           after a tap and does not clear until you tap elsewhere, which is
            exactly the "row stays highlighted after I hit the arrow" symptom.
            A finger has no hover state, so it should not get hover styling. */
         @media (hover: hover) and (pointer: fine) {
@@ -427,8 +427,8 @@ export default function TeamsSidebar({
         .ts-row:focus-visible { outline: 1px solid ${TEXT_DIM}; outline-offset: -2px; }
         .ts-indent-1 { padding-left: 16px; }
         .ts-indent-2 { padding-left: 38px; }
-        /* Levels below the team no longer need their own text indent — the
-           wrapper supplies it — or the two would compound. */
+        /* Levels below the team no longer need their own text indent, the
+           wrapper supplies it, or the two would compound. */
         .ts-campaign-row, .ts-agent-row { padding-left: 4px; }
 
         .ts-caret-btn {
@@ -515,15 +515,15 @@ export default function TeamsSidebar({
         /* ── THESE ARE BUTTONS, AND THEY LOOK LIKE BUTTONS ──────────────────
            They were rows in the same visual language as the tree above, which
            made them read as two more branches rather than as two actions that
-           replace the whole panel. Given a face — raised surface, border,
-           centred label — they stop competing with the tree and start
+           replace the whole panel. Given a face: raised surface, border,
+           centred label, they stop competing with the tree and start
            announcing what they do. Pressed state is inset rather than merely
            tinted, so an active view is legible without the button looking
            permanently stuck on. */
         /* ── PLAIN BUTTONS, NO SELECTED STATE ────────────────────────────────
            These open a view; they are not a mode you are in. Marking one as
            selected meant All Users sat lit up permanently, because it is the
-           default scope — so the highlight said nothing and just added noise.
+           default scope, so the highlight said nothing and just added noise.
            Stacked full width as they were, with a button's face so they read
            as actions rather than as two more branches of the tree above. */
         /* Bottom padding, not zero: the join-code field is the last thing in
@@ -544,7 +544,7 @@ export default function TeamsSidebar({
           transition: background 0.1s ease, color 0.1s ease, box-shadow 0.1s ease;
         }
         .ts-foot-btn:hover { background: var(--teams-sidebar-btn-hover, #3a3c42); color: ${TEXT}; }
-        /* Press moves the shadow, never the element — a button that shifts
+        /* Press moves the shadow, never the element, a button that shifts
            under the cursor loses the click. */
         .ts-foot-btn:active { box-shadow: inset 0 2px 4px rgba(0,0,0,0.45); }
 
@@ -1001,7 +1001,7 @@ export default function TeamsSidebar({
                   'was paying for you ends. Nothing on the team is deleted. You would need ' +
                   'a new code to come back.'
                 : agentMode && removeMode === 'campaign'
-                ? 'They stay on the team and keep their seat — this only takes away this ' +
+                ? 'They stay on the team and keep their seat, this only takes away this ' +
                   'one campaign. Add them back any time from Add People.'
                 : agentMode
                 ? 'They come off the team entirely: every campaign, and the seat you were ' +

@@ -95,7 +95,7 @@ export default function DialerSeatTeamsFaqView() {
             color: ${SITE.text};
           }
 
-          /* AGED LEADS CALLOUT — subdued, signals "bonus feature" */
+          /* AGED LEADS CALLOUT: subdued, signals "bonus feature" */
           .tfaq-aged-callout {
             margin-top: 36px;
             padding: 24px 26px;
@@ -391,7 +391,7 @@ export default function DialerSeatTeamsFaqView() {
               <h1>Premium leads, agency floors, shared pools.</h1>
               <p className="tfaq-lead">
                 DialerSeat Teams is the overlay that lets you sell seat-based
-                dialer access to your premium lead campaigns — with full
+                dialer access to your premium lead campaigns, with full
                 attribution back to you. Built for lead vendors monetizing
                 their premium files, agencies running multiple producers,
                 and any operation where more than one person dials the same
@@ -415,7 +415,7 @@ export default function DialerSeatTeamsFaqView() {
             <p>
               It is not a separate product. It does not replace your account.
               It does not bypass platform billing. It is a structured way to
-              rent dialing access to premium campaigns you own — with the
+              rent dialing access to premium campaigns you own, with the
               audit trail, attribution, and analytics your business actually
               needs.
             </p>
@@ -438,13 +438,13 @@ export default function DialerSeatTeamsFaqView() {
                     You generate premium leads. Instead of selling raw CSVs
                     and losing the relationship, you keep the file and rent
                     seat-based dialer access on your campaigns to buyer
-                    agents — turning a one-shot sale into recurring revenue.
+                    agents, turning a one-shot sale into recurring revenue.
                   </p>
                 </div>
                 <div className="tfaq-audience-card">
                   <h3>AGENCY OWNERS</h3>
                   <p>
-                    You run a producer floor — insurance, B2B, lead-gen,
+                    You run a producer floor: insurance, B2B, lead-gen,
                     debt, anywhere outbound matters. You need per-rep
                     attribution, recording audit, and live floor visibility
                     without enterprise prices or annual contracts.
@@ -470,7 +470,7 @@ export default function DialerSeatTeamsFaqView() {
             <p>
               You spend real marketing dollars generating premium leads.
               Those leads have value. The old way of monetizing them caps
-              you at the first sale — ship the CSV, take the check, lose
+              you at the first sale: ship the CSV, take the check, lose
               the relationship. The buyer ghosts you, works the file out
               their way, and you start over with the next buyer the next
               month.
@@ -481,12 +481,12 @@ export default function DialerSeatTeamsFaqView() {
               your buyer agents. They dial inside your campaign on their
               own DialerSeat account. You see every dial, every disposition,
               every timestamp. Every call is recorded on your side. Attempt
-              counts update globally — no double-dialing across the buyer
+              counts update globally, no double-dialing across the buyer
               pool, no TCPA risk from one buyer overworking the file.
             </p>
             <div className="tfaq-pullquote">
               The pitch isn&apos;t &quot;come buy my list.&quot; The pitch
-              is &quot;come dial my premium file on my platform — I keep
+              is &quot;come dial my premium file on my platform, I keep
               the data, you keep the appointments, we both stay
               accountable.&quot; That&apos;s a recurring product. CSVs
               aren&apos;t.
@@ -512,12 +512,12 @@ export default function DialerSeatTeamsFaqView() {
               <li style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.65 }}>
                 <strong>Flat membership, free dialing.</strong> Set the
                 campaign to FREE mode. Nobody pays per-seat. You charge a
-                recurring membership fee outside DialerSeat — best margins
+                recurring membership fee outside DialerSeat, best margins
                 if your buyers dial heavily.
               </li>
               <li style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.65 }}>
                 <strong>Pay-per-result.</strong> Bill on the back end using
-                the disposition feed — count CLOSED or APPOINTMENT marks
+                the disposition feed, count CLOSED or APPOINTMENT marks
                 and charge per outcome.
               </li>
             </ol>
@@ -531,20 +531,20 @@ export default function DialerSeatTeamsFaqView() {
 
             {/* AGED LEADS — tracked secondary capability */}
             <div className="tfaq-aged-callout">
-              <div className="label">▸ BONUS — AGED LEADS, TRACKED AUTOMATICALLY</div>
+              <div className="label">▸ BONUS: AGED LEADS, TRACKED AUTOMATICALLY</div>
               <h4>The platform knows which premium leads went un-worked.</h4>
               <p>
                 Premium leads that sit untouched for 30, 60, or 90 days
                 become aged. DialerSeat tracks every dial against every
-                lead — attempts, last-called timestamps, disposition
-                history — so at any point you know exactly which leads
+                lead: attempts, last-called timestamps, disposition
+                history, so at any point you know exactly which leads
                 from a premium batch were never worked.
               </p>
               <p>
                 Build a second team around those aged leads, rent seats to
                 a different buyer pool, and run the same playbook on the
                 untouched remainder. No manual list management, no separate
-                upload, no risk of stepping on the first buyer pool —
+                upload, no risk of stepping on the first buyer pool 
                 the platform handles the bookkeeping. Aged-lead resale is
                 a side effect of running premium properly, not a separate
                 product.
@@ -558,9 +558,9 @@ export default function DialerSeatTeamsFaqView() {
               <div className="tfaq-label">▸ AGENCY OWNERS</div>
               <h2>Your producers, your floor, your numbers.</h2>
               <p>
-                You run a floor — five reps, fifty reps, doesn&apos;t matter.
+                You run a floor: five reps, fifty reps, doesn&apos;t matter.
                 Without Teams you&apos;d be either sharing a login (terrible
-                — no per-rep attribution), buying an enterprise dialer
+ no per-rep attribution), buying an enterprise dialer
                 (expensive, contract-heavy), or stitching together exports
                 manually.
               </p>
@@ -579,14 +579,14 @@ export default function DialerSeatTeamsFaqView() {
                 where to spend your next ad dollar. Per-rep × per-campaign
                 hybrid: which rep crushes which source, so you assign
                 correctly. Recording audit on every call. TCPA timestamps
-                on every lead. Live floor visibility — see who&apos;s active
+                on every lead. Live floor visibility, see who&apos;s active
                 right now and what state they&apos;re in (ready, dialing,
                 on call, wrapping).
               </p>
               <div className="tfaq-pullquote">
                 Coach off real numbers, not hunches. The whole point of
                 running a floor instead of being a sole producer is the
-                economy of scale on data — Teams gives you the data.
+                economy of scale on data, Teams gives you the data.
               </div>
               <p>
                 Multiple teams per owner account is supported. Common
@@ -613,16 +613,16 @@ export default function DialerSeatTeamsFaqView() {
               <code style={{ background: '#e8eef8', padding: '2px 6px', borderRadius: 3, fontSize: 14 }}>last_called_at</code>
               {' '}and{' '}
               <code style={{ background: '#e8eef8', padding: '2px 6px', borderRadius: 3, fontSize: 14 }}>dial_attempts</code>
-              {' '}increment globally — once anyone on the team dials a lead,
+              {' '}increment globally: once anyone on the team dials a lead,
               every other agent sees the updated state. No double-dialing
               within the platform&apos;s 24-hour cooldown unless the owner
-              explicitly allows it. TCPA window enforcement (8am–9pm local
+              explicitly allows it. TCPA window enforcement (8am, 9pm local
               to the lead) applies team-wide, not per-agent.
             </p>
             <p>
               Run the pool wide open and everyone gets the next available
-              lead. Or partition by attribute — state, source field, lead
-              score, vertical — so each agent works the slice that matches
+              lead. Or partition by attribute: state, source field, lead
+              score, vertical, so each agent works the slice that matches
               their license, skill set, or assignment.
             </p>
           </section>
@@ -642,7 +642,7 @@ export default function DialerSeatTeamsFaqView() {
               <div className="tfaq-mode-grid">
                 <div className="tfaq-mode-card">
                   <h3>OWNER PAYS</h3>
-                  <div className="sub">$35/WK per active agent — owner billed</div>
+                  <div className="sub">$35/WK per active agent, owner billed</div>
                   <p>
                     Owner&apos;s card is charged for one seat per dialing
                     agent. Agents dial free of any per-campaign charge.
@@ -652,7 +652,7 @@ export default function DialerSeatTeamsFaqView() {
                 </div>
                 <div className="tfaq-mode-card">
                   <h3>AGENT PAYS</h3>
-                  <div className="sub">$35/WK per agent — agents billed</div>
+                  <div className="sub">$35/WK per agent, agents billed</div>
                   <p>
                     Each agent pays their own seat fee directly to
                     DialerSeat. Owner pays nothing per-seat. Best for
@@ -665,7 +665,7 @@ export default function DialerSeatTeamsFaqView() {
                   <div className="sub">No code required</div>
                   <p>
                     Any active DialerSeat subscriber can access the
-                    campaign without a team code. Rarely used — mostly
+                    campaign without a team code. Rarely used, mostly
                     for free-promo or community-list scenarios.
                   </p>
                 </div>
@@ -685,13 +685,13 @@ export default function DialerSeatTeamsFaqView() {
               <div className="tfaq-platform-notice">
                 <div className="label">PLATFORM SUB IS ALWAYS REQUIRED</div>
                 <p>
-                  Every team member — owner and agents both — needs an
+                  Every team member, owner and agents both, needs an
                   active personal DialerSeat subscription to actually dial:
                   <strong> PRO ($35/wk)</strong> to dial as a member, or
                   <strong> MANAGER+ ($75/wk)</strong> to own a team. The
                   access mode only controls the optional per-campaign seat
                   fee that sits on top of the platform sub. FREE mode means
-                  no per-seat fee — it does NOT mean free platform access.
+                  no per-seat fee, it does NOT mean free platform access.
                 </p>
               </div>
             </div>
@@ -712,9 +712,9 @@ export default function DialerSeatTeamsFaqView() {
                   <ol>
                     <li>Sign up for DialerSeat MANAGER+ ($75/wk).</li>
                     <li>Upload your premium lead file to a campaign in your account.</li>
-                    <li>Create a team named after the offer — e.g. &quot;Q4 Refi Premium — Tier 1.&quot;</li>
+                    <li>Create a team named after the offer, e.g. &quot;Q4 Refi Premium, Tier 1.&quot;</li>
                     <li>Attach the campaign to the team.</li>
-                    <li>Pick the access mode that matches your pricing — AGENT PAYS, FREE, or OWNER PAYS.</li>
+                    <li>Pick the access mode that matches your pricing: AGENT PAYS, FREE, or OWNER PAYS.</li>
                     <li>Generate a team code. Send to your buyer agents.</li>
                     <li>Buyers create their own DialerSeat accounts (or use existing ones), redeem the code, start dialing.</li>
                     <li>Watch analytics roll in. Pull QA on recordings. Kick non-performers or rule-breakers instantly.</li>
@@ -723,7 +723,7 @@ export default function DialerSeatTeamsFaqView() {
                     Your premium file never leaves your account. Buyers
                     see one lead at a time. When access is revoked, their
                     visibility ends within seconds. Aged leads from the
-                    same file are tracked automatically — see the lead
+                    same file are tracked automatically, see the lead
                     vendor section above.
                   </p>
                 </div>
@@ -738,14 +738,14 @@ export default function DialerSeatTeamsFaqView() {
                   <ol>
                     <li>Sign up for DialerSeat MANAGER+ ($75/wk).</li>
                     <li>Upload your campaigns and leads to your account.</li>
-                    <li>Create a team — e.g. &quot;[Your Agency] Floor.&quot;</li>
+                    <li>Create a team, e.g. &quot;[Your Agency] Floor.&quot;</li>
                     <li>Attach the campaigns you want your reps dialing.</li>
-                    <li>Pick access mode — OWNER PAYS for clean line-item expense, or FREE if reps are on corporate-comped PRO subs.</li>
+                    <li>Pick access mode: OWNER PAYS for clean line-item expense, or FREE if reps are on corporate-comped PRO subs.</li>
                     <li>Email-invite each producer. They sign up for PRO ($35/wk) or accept your comped invite.</li>
                     <li>Open team analytics every morning. Coach off real numbers.</li>
                   </ol>
                   <p>
-                    Multiple teams per account is supported — use it to
+                    Multiple teams per account is supported, use it to
                     structure your floor, trainees, and closer tiers
                     separately.
                   </p>
@@ -820,7 +820,7 @@ export default function DialerSeatTeamsFaqView() {
                   <p>
                     Your team data is preserved. Members lose dialing access
                     until you resubscribe. Once you&apos;re active again,
-                    everything resumes — no data is lost.
+                    everything resumes, no data is lost.
                   </p>
                 </div>
                 <div className="tfaq-qa-card">
@@ -834,10 +834,10 @@ export default function DialerSeatTeamsFaqView() {
                 <div className="tfaq-qa-card">
                   <h4>How does TCPA enforcement work across a team?</h4>
                   <p>
-                    Platform-wide. The 8am–9pm local-to-the-lead window
+                    Platform-wide. The 8am, 9pm local-to-the-lead window
                     applies to every dial regardless of which agent placed
                     it. Cooldowns and attempt caps are calculated across
-                    the whole team — no agent can re-dial early to game
+                    the whole team, no agent can re-dial early to game
                     the cap.
                   </p>
                 </div>
@@ -864,7 +864,7 @@ export default function DialerSeatTeamsFaqView() {
                     Yes. Owner can flip a campaign between OWNER PAYS,
                     AGENT PAYS, PUBLIC, and FREE anytime from team settings.
                     Switching to AGENT PAYS or FREE revokes any
-                    owner-paid access on that campaign — agents can be
+                    owner-paid access on that campaign, agents can be
                     re-granted under the new mode.
                   </p>
                 </div>

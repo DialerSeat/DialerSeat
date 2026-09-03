@@ -15,23 +15,23 @@ const MOBILE_SLIDES: Slide[] = [
   {
     src: '/faq-images/regular-mobile/landing-page.jpg',
     alt: 'DialerSeat marketing landing page on mobile, before signing in',
-    caption: 'The landing page on mobile — this is what a new visitor sees before ever signing up. Fully responsive, no separate mobile site.',
+    caption: 'The landing page on mobile, this is what a new visitor sees before ever signing up. Fully responsive, no separate mobile site.',
     isJpg: true,
   },
   {
     src: '/faq-images/regular-mobile/sidebar-nav.png',
     alt: 'DialerSeat mobile sidebar navigation, standard Pro plan account',
-    caption: 'The sidebar on a standard Pro account — Analytics, Dialer, Campaigns, Recordings, Leads, Teams, Settings. Same navigation as desktop, same permissions.',
+    caption: 'The sidebar on a standard Pro account: Analytics, Dialer, Campaigns, Recordings, Leads, Teams, Settings. Same navigation as desktop, same permissions.',
   },
   {
     src: '/faq-images/regular-mobile/dialer-progressive.png',
     alt: 'DialerSeat mobile dialer terminal running in progressive mode',
-    caption: 'The dialer terminal, running progressive mode with a live campaign selected. Full status, duration, connected rate, and mode readouts — nothing trimmed down for the smaller screen.',
+    caption: 'The dialer terminal, running progressive mode with a live campaign selected. Full status, duration, connected rate, and mode readouts, nothing trimmed down for the smaller screen.',
   },
   {
     src: '/faq-images/regular-mobile/analytics-overview.png',
     alt: 'DialerSeat mobile analytics overview showing real call data',
-    caption: 'The analytics overview with real dialing history — total calls, hours dialed, conversions, and the call-volume chart, all on a phone screen.',
+    caption: 'The analytics overview with real dialing history: total calls, hours dialed, conversions, and the call-volume chart, all on a phone screen.',
   },
 ]
 
@@ -186,7 +186,7 @@ export default function MobileFaqView() {
 
           <p className="faq-deck">
             DialerSeat runs as a complete Progressive Web App (PWA) on
-            mobile — the same terminal, the same analytics, the same teams
+            mobile: the same terminal, the same analytics, the same teams
             tools you get on desktop, installed to your phone in under a
             minute. No App Store, no separate download, no stripped-down
             &ldquo;mobile version.&rdquo;
@@ -211,7 +211,7 @@ export default function MobileFaqView() {
               you to navigate back to the site, and keeps your session
               persistent instead of getting reloaded every time your browser
               app gets backgrounded by iOS or Android. If you&apos;re going
-              to run a shift from your phone, install it first — it takes
+              to run a shift from your phone, install it first, it takes
               under a minute and the instructions are right below.
             </p>
           </div>
@@ -220,7 +220,7 @@ export default function MobileFaqView() {
           <section className="faq-section">
             <h2>▸ SEE IT RUNNING</h2>
             <p>
-              Real screenshots, standard Pro plan, no white-labeling — this
+              Real screenshots, standard Pro plan, no white-labeling, this
               is exactly what every DialerSeat account gets on mobile.
             </p>
 
@@ -232,7 +232,7 @@ export default function MobileFaqView() {
             <h2>▸ HOW TO INSTALL IT</h2>
             <p>
               &ldquo;Installing&rdquo; a PWA doesn&apos;t mean an app store
-              download — it means telling your phone&apos;s browser to save
+              download, it means telling your phone&apos;s browser to save
               a home-screen shortcut that opens full-screen, with no address
               bar. Here&apos;s exactly how, on both platforms.
             </p>
@@ -244,12 +244,12 @@ export default function MobileFaqView() {
                   <span className="name">iPHONE (SAFARI)</span>
                 </div>
                 <ol>
-                  <li>Open <code>dialerseat.com</code> in <strong>Safari</strong> (this only works in Safari, not Chrome, on iOS — that&apos;s an Apple restriction, not ours).</li>
+                  <li>Open <code>dialerseat.com</code> in <strong>Safari</strong> (this only works in Safari, not Chrome, on iOS: that&apos;s an Apple restriction, not ours).</li>
                   <li>Sign in to your account.</li>
                   <li>Tap the <strong>Share</strong> icon in the bottom toolbar (the square with an arrow pointing up).</li>
                   <li>Scroll down and tap <strong>&ldquo;Add to Home Screen.&rdquo;</strong></li>
                   <li>Tap <strong>&ldquo;Add&rdquo;</strong> in the top-right corner.</li>
-                  <li>The DialerSeat icon now sits on your home screen — tap it any time to launch full-screen, already signed in.</li>
+                  <li>The DialerSeat icon now sits on your home screen: tap it any time to launch full-screen, already signed in.</li>
                 </ol>
               </div>
 
@@ -271,7 +271,7 @@ export default function MobileFaqView() {
 
             <p className="muted">
               Once installed, updates happen automatically in the background
-              — the same way the website updates. There&apos;s nothing to
+ the same way the website updates. There&apos;s nothing to
               manually update and no separate release you&apos;re waiting
               on.
             </p>
@@ -286,15 +286,15 @@ export default function MobileFaqView() {
               functional on mobile:
             </p>
             <ul>
-              <li><strong>Full dialer terminal</strong> — all four dialer modes, manual dial pad, live campaign selection, lead profile view</li>
-              <li><strong>Analytics overview</strong> — the same call volume, conversion rate, disposition breakdown, and campaign performance panels as desktop</li>
-              <li><strong>Campaigns, Recordings, and Leads</strong> — browse, manage, and review from your phone exactly like you would at a desk</li>
-              <li><strong>Teams</strong> — for Manager+ accounts, the same team management tools carry over too; see <Link href="/faq/white-label-mobile">white-label on mobile</Link> if you&apos;re running a branded account</li>
-              <li><strong>Settings</strong> — account and campaign configuration, unchanged from desktop</li>
+              <li><strong>Full dialer terminal</strong>: all four dialer modes, manual dial pad, live campaign selection, lead profile view</li>
+              <li><strong>Analytics overview</strong>: the same call volume, conversion rate, disposition breakdown, and campaign performance panels as desktop</li>
+              <li><strong>Campaigns, Recordings, and Leads</strong>: browse, manage, and review from your phone exactly like you would at a desk</li>
+              <li><strong>Teams</strong>: for Manager+ accounts, the same team management tools carry over too; see <Link href="/faq/white-label-mobile">white-label on mobile</Link> if you&apos;re running a branded account</li>
+              <li><strong>Settings</strong>: account and campaign configuration, unchanged from desktop</li>
             </ul>
             <p className="muted">
               The one place mobile intentionally trades convenience for
-              practicality is dense side-by-side views — the desktop app&apos;s
+              practicality is dense side-by-side views, the desktop app&apos;s
               multi-window layout (analytics and teams open next to each
               other) doesn&apos;t translate to a phone screen, so those stay
               single-view on mobile and swap via the sidebar instead.
@@ -304,11 +304,11 @@ export default function MobileFaqView() {
           {/* ── HONEST LIMITATION ──────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>One honest note —</strong> like any PWA, this
+              <strong>One honest note: </strong> like any PWA, this
               isn&apos;t a listing in the App Store or Play Store, so there&apos;s
               no storefront search visibility and iOS in particular restricts
               installation to Safari specifically (Chrome and other iOS
-              browsers can&apos;t trigger the install prompt — that&apos;s
+              browsers can&apos;t trigger the install prompt, that&apos;s
               an Apple platform rule, not a DialerSeat limitation). For
               actually running your dialer day to day, none of that changes
               the experience once it&apos;s installed.

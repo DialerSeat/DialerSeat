@@ -54,7 +54,7 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
         <style>{`
           .vs-root * { box-sizing: border-box; }
           /* Light, like the landing page. This was a dark gradient with a
-             blue glow behind it, against a homepage that is #f0f1f4 — the
+             blue glow behind it, against a homepage that is #f0f1f4, the
              inverse of the site it belongs to. */
           .vs-hero {
             background: transparent;

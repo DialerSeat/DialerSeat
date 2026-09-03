@@ -130,7 +130,7 @@ export default async function Home({ searchParams }: PageProps) {
 
         /* Built-for-volume section: demo left, claim right on desktop.
            On narrow screens it stacks with the HEADLINE FIRST and the panel
-           beneath it — a phone visitor needs to be told what they're looking
+           beneath it, a phone visitor needs to be told what they're looking
            at before they see it, where a desktop visitor takes in both at
            once. The DOM order is demo-then-copy for the desktop layout, so
            the mobile order is set with the order property rather than by reordering the
@@ -164,7 +164,7 @@ export default async function Home({ searchParams }: PageProps) {
                971px  before the headline gets a single pixel
 
            The headline column is minmax(0, 1fr), so it absorbs whatever is
-           left — including nothing. At 1000px that left it 29px wide, and at
+           left, including nothing. At 1000px that left it 29px wide, and at
            1024px (an iPad held vertically, the common case) 47px, against a
            longest word needing 238px at 48px type. The words overflowed the
            column and overflow-x: hidden on <main> sliced them off mid-letter.
@@ -176,17 +176,24 @@ export default async function Home({ searchParams }: PageProps) {
            and needs no changes.
 
            IF YOU CHANGE THE INSETS, THE DEMO WIDTH OR THE GAP, REDO THIS SUM
-           AND MOVE THIS BREAKPOINT WITH IT. 1240px is not a device width — it
+           AND MOVE THIS BREAKPOINT WITH IT. 1240px is not a device width, it
            is 971px of fixed cost plus ~270px of headline. */
         @media (min-width: 1240px) {
           /* Tight to the section divider. The default 90px top padding pushed
              the whole block ~67px lower than the mockup, which is what dragged
              "BUILT FOR VOLUME" and the headline down with it. */
           .ds-section.ds-volume-section {
-            /* Left inset is deliberately much larger than the right: the panel
-               sits inboard of the page edge while the headline still runs out
-               to the same 80px margin as every other section. */
-            padding-left: 192px; padding-right: 80px; padding-top: 24px;
+            /* ── ANCHORED TO THE CONTENT COLUMN, NOT THE VIEWPORT EDGE ──────
+               This used to be padding-left: 192px against max-width: none, so
+               the panel was positioned relative to the WINDOW while every
+               other section on the page centres inside 1280px. Zoom out and
+               the viewport grows, the 192px does not, and the panel slides
+               away from the content it is supposed to sit beside, it looked
+               unglued because it was measured against a different thing.
+
+               The inset now lives on the centred grid below, so the panel
+               keeps its offset from the content column at any width. */
+            padding-left: 60px; padding-right: 60px; padding-top: 24px;
             /* Tight to the feature cards. The demo and its caption are this
                section's payoff; 90px of trough under them made the cards read
                as an unrelated block rather than the continuation they are. */
@@ -195,6 +202,14 @@ export default async function Home({ searchParams }: PageProps) {
         }
         @media (min-width: 1240px) {
           .ds-volume-grid {
+            /* Same centred container as the hero, so the two sections agree
+               about where the page actually is. */
+            max-width: 1280px;
+            margin-left: auto;
+            margin-right: auto;
+            /* The mockup's inboard offset, now relative to the content column
+               rather than the window. */
+            padding-left: 132px;
             /* Demo holds a fixed readable width on the left; the headline takes
                everything else. A generous gap is what keeps the two halves from
                reading as one crowded row. */
@@ -207,7 +222,7 @@ export default async function Home({ searchParams }: PageProps) {
             text-align: left;
             /* Top-aligned, not centred. In the mockup the eyebrow sits a fixed
                distance below the panel's top edge rather than floating at its
-               vertical middle — centring made the text drift down as the panel
+               vertical middle, centring made the text drift down as the panel
                grew, which is what put "BUILT FOR VOLUME" too low. */
             align-items: start;
           }
@@ -218,7 +233,7 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-volume-copy { padding-top: 69px; }
           .ds-volume-demo { margin: 0; max-width: none; order: 1; }
           .ds-volume-copy { order: 2; }
-          /* The headline is CENTRED in its column — that's what puts "LEADS."
+          /* The headline is CENTRED in its column, that's what puts "LEADS."
              on its own centred line rather than ragged-left. */
           .ds-volume-copy { text-align: center; }
         }
@@ -227,7 +242,7 @@ export default async function Home({ searchParams }: PageProps) {
            The full link row is shown from 769px up, but it is spaced for a
            desktop: 60px of side padding and 40px between five links needs
            829px on an 820px iPad, so "GET STARTED" hung off the right edge.
-           Only the spacing is reduced here — no link is hidden, because the
+           Only the spacing is reduced here: no link is hidden, because the
            links are the navigation and a tablet is not a phone. Above 1200px
            nothing changes. */
         @media (min-width: 769px) and (max-width: 1199px) {
@@ -479,7 +494,7 @@ export default async function Home({ searchParams }: PageProps) {
               color: 'var(--brand-muted-text, #5a5e6a)',
               maxWidth: '520px',
             }}>
-              The professional outbound dialer built for <u>ANYONE</u> who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting — for a fraction of what everyone else charges.
+              The professional outbound dialer built for <u>ANYONE</u> who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting, for a fraction of what everyone else charges.
             </p>
           </div>
 
@@ -593,10 +608,10 @@ export default async function Home({ searchParams }: PageProps) {
             { icon: '📋', title: 'MULTIPLE CAMPAIGNS', desc: 'Run unlimited campaigns simultaneously. Upload a CSV, name it, and you are dialing in seconds.' },
             { icon: '🎯', title: 'MEMORY OF MARKED LEADS', desc: 'Every disposition, callback, and note remembers itself. Your work is never lost between sessions or seats.' },
             { icon: '📞', title: 'MANUAL DIALER', desc: 'When you want to control every call yourself, we have you. Click-to-dial individual numbers any time.' },
-            { icon: '🏢', title: 'TEAM WORKFLOW', desc: 'Buy seats for your whole crew. Each agent gets their own login, campaigns, and call data — all under one roof.' },
+            { icon: '🏢', title: 'TEAM WORKFLOW', desc: 'Buy seats for your whole crew. Each agent gets their own login, campaigns, and call data, all under one roof.' },
             { icon: '🌎', title: 'WORKS GLOBALLY', desc: 'Dial US based leads from any country in the world. No increased price jumps for dialing while abroad.' },
             { icon: '✨', title: 'CLEAN, PLUG-AND-PLAY UI', desc: 'No bloat, no setup wizard, no learning curve. Sign in, upload, dial. Works on desktop and mobile.' },
-            { icon: '🔒', title: 'YOUR DATA, ALWAYS YOURS', desc: 'Your leads stay saved even if your subscription lapses. Pick up right where you left off — no questions asked.' },
+            { icon: '🔒', title: 'YOUR DATA, ALWAYS YOURS', desc: 'Your leads stay saved even if your subscription lapses. Pick up right where you left off, no questions asked.' },
           ].map((f, i) => (
             <div key={i} className="ds-feature-card" style={{
               padding: '36px',

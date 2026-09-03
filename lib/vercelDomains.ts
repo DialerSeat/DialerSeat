@@ -55,7 +55,7 @@ function config(): { token: string; projectId: string } | null {
 export async function addProjectDomain(slug: string): Promise<DomainOpResult> {
   const cfg = config()
   if (!cfg) {
-    console.warn('[vercelDomains] add skipped — VERCEL_API_TOKEN/PROJECT_ID not set')
+    console.warn('[vercelDomains] add skipped, VERCEL_API_TOKEN/PROJECT_ID not set')
     return { ok: false, skipped: true, error: 'vercel_not_configured' }
   }
 
@@ -100,7 +100,7 @@ export async function addProjectDomain(slug: string): Promise<DomainOpResult> {
 export async function removeProjectDomain(slug: string): Promise<DomainOpResult> {
   const cfg = config()
   if (!cfg) {
-    console.warn('[vercelDomains] remove skipped — VERCEL_API_TOKEN/PROJECT_ID not set')
+    console.warn('[vercelDomains] remove skipped, VERCEL_API_TOKEN/PROJECT_ID not set')
     return { ok: false, skipped: true, error: 'vercel_not_configured' }
   }
 

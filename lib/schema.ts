@@ -85,7 +85,7 @@ export function softwareApplicationSchema() {
       'Calendar-aligned analytics (Sunday + 1st-of-month resets)',
       'Lapsed-user data preservation',
       'Installable as Progressive Web App on phones, tablets, and desktops',
-      'A flat $35/week per seat — no annual contract, no setup fee',
+      'A flat $35/week per seat: no annual contract, no setup fee',
     ],
     publisher: {
       '@id': `${SITE_URL}/#organization`,
@@ -136,7 +136,7 @@ export const DIALING_MODES_FAQS = [
   {
     question: 'What is power dialing?',
     answer:
-      'Power dialing is click-to-dial — one call at a time, with the system automatically advancing to the next lead after disposition. Faster than manual dialing. The agent still handles every voicemail.',
+      'Power dialing is click-to-dial: one call at a time, with the system automatically advancing to the next lead after disposition. Faster than manual dialing. The agent still handles every voicemail.',
   },
   {
     question: 'What is progressive dialing?',
@@ -156,7 +156,7 @@ export const DIALING_MODES_FAQS = [
   {
     question: 'Is predictive dialing legal?',
     answer:
-      'Yes — predictive dialing is legal under TCPA when the abandon rate stays under 3% over a 30-day period and proper disclosure is provided. DialerSeat enforces this cap automatically and includes server-side TCPA window enforcement, and outbound calls carry carrier-level STIR/SHAKEN A-attestation where supported.',
+      'Yes, predictive dialing is legal under TCPA when the abandon rate stays under 3% over a 30-day period and proper disclosure is provided. DialerSeat enforces this cap automatically and includes server-side TCPA window enforcement, and outbound calls carry carrier-level STIR/SHAKEN A-attestation where supported.',
   },
   {
     question: 'What is AMD (Answering Machine Detection)?',

@@ -11,21 +11,21 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'Dialer Modes (TL;DR) — Preview, Power, Progressive, Predictive | DialerSeat',
+  title: 'Dialer Modes (TL;DR): Preview, Power, Progressive, Predictive | DialerSeat',
   description:
-    'The four DialerSeat dialing modes in plain English. Preview, power, progressive, and predictive — what each one does and when to use it, summarized simply.',
+    'The four DialerSeat dialing modes in plain English. Preview, power, progressive, and predictive: what each one does and when to use it, summarized simply.',
   alternates: { canonical: 'https://dialerseat.com/faq/dialer-modes' },
   openGraph: {
-    title: 'Dialer Modes — The Simple Version',
+    title: 'Dialer Modes: The Simple Version',
     description:
-      'Preview, power, progressive, predictive — all four dialing modes summarized in plain terms.',
+      'Preview, power, progressive, predictive, all four dialing modes summarized in plain terms.',
     url: 'https://dialerseat.com/faq/dialer-modes',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Dialer Modes — The Simple Version',
-    description: 'Preview, power, progressive, predictive — all four dialing modes summarized in plain terms.',
+    title: 'Dialer Modes: The Simple Version',
+    description: 'Preview, power, progressive, predictive, all four dialing modes summarized in plain terms.',
   },
 }
 
@@ -46,7 +46,7 @@ const MODES = [
     color: '${SITE.deep}',
     tagline: 'Auto-dials the next lead the moment you hang up.',
     body:
-      'One line per agent. The instant you finish a call, it dials the next lead automatically — no clicking between calls. You control the pace by toggling available / unavailable.',
+      'One line per agent. The instant you finish a call, it dials the next lead automatically, no clicking between calls. You control the pace by toggling available / unavailable.',
     best: 'Best for clean lists when you want steady, hands-free volume.',
     href: '/faq/what-is-a-power-dialer',
   },
@@ -56,7 +56,7 @@ const MODES = [
     color: '#1a6a1a',
     tagline: 'Power, but it skips the voicemails for you.',
     body:
-      'Same auto-dialing as power, except it listens to each pickup with answering-machine detection and quietly drops voicemails and dead air — only connecting you to real people.',
+      'Same auto-dialing as power, except it listens to each pickup with answering-machine detection and quietly drops voicemails and dead air, only connecting you to real people.',
     best: 'Best when you want power-style volume without wasting time on machines.',
     href: '/faq/what-is-a-progressive-dialer',
   },
@@ -232,7 +232,7 @@ export default function DialerModesTldrPage() {
         </div>
 
         <div className="dmt-note">
-          Not sure which to choose? Power is the safe default — clean, steady, and
+          Not sure which to choose? Power is the safe default: clean, steady, and
           compliant out of the box. Switch to progressive to skip voicemails, or
           predictive once you have a team and want maximum volume.
         </div>

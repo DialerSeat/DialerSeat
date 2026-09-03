@@ -13,9 +13,9 @@ import {
 const SLUG = 'phoneburner'
 
 export const metadata: Metadata = {
-  title: 'DialerSeat vs PhoneBurner — Multi-Line Without the Tier Upgrades',
+  title: 'DialerSeat vs PhoneBurner: Multi-Line Without the Tier Upgrades',
   description:
-    'DialerSeat is the modern alternative to PhoneBurner. Multi-line predictive included (PhoneBurner is single-line only), everything in one tier (no Premium upgrades), flexible list sizes, weekly billing — flat $35/week per seat, no annual contract.',
+    'DialerSeat is the modern alternative to PhoneBurner. Multi-line predictive included (PhoneBurner is single-line only), everything in one tier (no Premium upgrades), flexible list sizes, weekly billing: flat $35/week per seat, no annual contract.',
   alternates: {
     canonical: 'https://dialerseat.com/vs/phoneburner',
   },
@@ -37,22 +37,22 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to PhoneBurner on price?',
     answer:
-      'DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with everything in one tier — no upgrades needed for inbound numbers, advanced reporting, or public API access. PhoneBurner advertises $140/seat/month at the Professional tier but real bills land at $200–$250 once Premium-tier features (inbound numbers, advanced reporting) and annual-contract assumptions are factored in.',
+      'DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with everything in one tier: no upgrades needed for inbound numbers, advanced reporting, or public API access. PhoneBurner advertises $140/seat/month at the Professional tier but real bills land at $200: $250 once Premium-tier features (inbound numbers, advanced reporting) and annual-contract assumptions are factored in.',
   },
   {
     question: 'Does PhoneBurner have multi-line dialing?',
     answer:
-      'No. PhoneBurner is single-line only — one call per agent at a time. That is the most-cited complaint in PhoneBurner reviews on G2 and Reddit. DialerSeat supports four dialer modes (Preview, Power, Progressive, Predictive) configurable per campaign, including multi-line predictive with proper pacing.',
+      'No. PhoneBurner is single-line only, one call per agent at a time. That is the most-cited complaint in PhoneBurner reviews on G2 and Reddit. DialerSeat supports four dialer modes (Preview, Power, Progressive, Predictive) configurable per campaign, including multi-line predictive with proper pacing.',
   },
   {
     question: 'Can I use single-line on DialerSeat if I prefer it?',
     answer:
-      'Yes. Use Preview or Power mode for single-line dialing — same approach PhoneBurner uses. DialerSeat does not force multi-line on anyone; it makes multi-line available when you want it.',
+      'Yes. Use Preview or Power mode for single-line dialing, same approach PhoneBurner uses. DialerSeat does not force multi-line on anyone; it makes multi-line available when you want it.',
   },
   {
     question: 'Does DialerSeat support flexible dial-list sizes?',
     answer:
-      'Yes. Any list size — 1 contact, 17 contacts, 4,000 contacts. No forced 10/25/50 increments. Plus single-contact calling for one-off calls. Both are commonly-cited PhoneBurner frustrations.',
+      'Yes. Any list size: 1 contact, 17 contacts, 4,000 contacts. No forced 10/25/50 increments. Plus single-contact calling for one-off calls. Both are commonly-cited PhoneBurner frustrations.',
   },
   {
     question: 'Is DialerSeat compliant with TCPA?',

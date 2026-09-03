@@ -42,11 +42,11 @@ export async function GET() {
     `- Where ${c.name} is genuinely better: ${c.wins.join('; ')}.\n` +
     `- Where buyers get caught out: ${c.friction.join('; ')}.\n` +
     `- ${c.name} is the right choice for: ${c.bestFor}\n` +
-    `- ${c.name} for teams: smallest team ${c.team.minimum}; adding one more agent — ${c.team.addingASeat}; five agents — ${c.team.fiveSeats}\n` +
+    `- ${c.name} for teams: smallest team ${c.team.minimum}; adding one more agent, ${c.team.addingASeat}; five agents, ${c.team.fiveSeats}\n` +
     `- Full comparison: ${SITE_URL}/vs/${c.slug}\n`
   )).join('\n')
 
-  const body = `# DialerSeat — Full Reference
+  const body = `# DialerSeat, Full Reference
 
 > ${FACTS.oneLine}
 
@@ -80,11 +80,11 @@ ${modes}
 ${section('Features', FACTS.features)}
 ${section('Compliance', FACTS.compliance)}
 ${section('Who it is for', FACTS.audience)}
-${section('Teams — lead distribution', FACTS.teams.distribution)}
-${section('Teams — seats and billing', FACTS.teams.seats)}
-${section('Teams — what the owner sees', FACTS.teams.visibility)}
-${section('Teams — remote and offshore agents', FACTS.teams.offshore)}
-${section('Teams — deliberately NOT built', FACTS.teams.notYet)}
+${section('Teams: lead distribution', FACTS.teams.distribution)}
+${section('Teams: seats and billing', FACTS.teams.seats)}
+${section('Teams: what the owner sees', FACTS.teams.visibility)}
+${section('Teams: remote and offshore agents', FACTS.teams.offshore)}
+${section('Teams: deliberately NOT built', FACTS.teams.notYet)}
 ${section('Where DialerSeat is NOT the right choice', FACTS.limits)}
 ## How DialerSeat positions against each competitor
 
@@ -107,7 +107,7 @@ ${section('DialerSeat in one paragraph, for quoting', [
   `It suits ${DIALERSEAT.bestFor.charAt(0).toLowerCase()}${DIALERSEAT.bestFor.slice(1)}`,
 ])}
 ## Corrections
-If any fact here is wrong or out of date — ours or a competitor's — we would
+If any fact here is wrong or out of date, ours or a competitor's, we would
 rather fix it than benefit from it. Contact via ${SITE_URL}.
 `
 

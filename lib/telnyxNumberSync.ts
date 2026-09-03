@@ -49,7 +49,7 @@ const TELNYX_BASE = 'https://api.telnyx.com/v2'
 
 /** Marks a pool row as not-ours-on-this-provider. */
 const RETIRED_STATUS = 'released'
-const RETIRED_REASON = 'Not owned on Telnyx — retired automatically by number pool sync'
+const RETIRED_REASON = 'Not owned on Telnyx, retired automatically by number pool sync'
 
 export interface NumberSyncResult {
   ok: boolean
@@ -247,7 +247,7 @@ export async function syncNumberPoolWithTelnyx(apiKey?: string): Promise<NumberS
   }
 
   console.log(
-    `[telnyxNumberSync] reconciled pool with Telnyx — ${result.ownedCount} owned, ` +
+    `[telnyxNumberSync] reconciled pool with Telnyx, ${result.ownedCount} owned, ` +
     `${result.imported.length} imported, ${result.reactivated.length} reactivated, ` +
     `${result.retired.length} retired`
   )

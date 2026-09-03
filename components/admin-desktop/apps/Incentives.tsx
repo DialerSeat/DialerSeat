@@ -135,7 +135,7 @@ export default function Incentives() {
       </div>
       <p style={{ margin: '0 0 16px', color: T.muted, fontSize: 12, lineHeight: 1.7, maxWidth: 720 }}>
         A rate you agreed by hand, per owner, applied to every seat they pay for.
-        It competes with the volume tier rather than replacing it — <strong style={{ color: T.text }}>the
+        It competes with the volume tier rather than replacing it, <strong style={{ color: T.text }}>the
         best rate always wins</strong>, so setting a low number can never make somebody
         worse off than what they earned. Saving pushes it to Stripe immediately.
       </p>
@@ -187,7 +187,7 @@ export default function Incentives() {
 
               {o.exempt && (
                 <div style={{ color: T.amber, fontSize: 11.5 }}>
-                  Billing exempt — every seat this owner opens invoices $0.00 regardless
+                  Billing exempt, every seat this owner opens invoices $0.00 regardless
                   of anything set here.
                 </div>
               )}
@@ -196,7 +196,7 @@ export default function Incentives() {
                 <input
                   value={draft}
                   onChange={e => setDrafts(d => ({ ...d, [o.clerkId]: e.target.value }))}
-                  placeholder="—"
+                  placeholder=", "
                   inputMode="numeric"
                   style={{
                     width: 72, background: T.raised, color: T.text,
@@ -242,7 +242,7 @@ export default function Incentives() {
                 <input
                   value={notes[o.clerkId] ?? (o.note || '')}
                   onChange={e => setNotes(n => ({ ...n, [o.clerkId]: e.target.value }))}
-                  placeholder="Why — who agreed it"
+                  placeholder="Why, who agreed it"
                   style={{
                     flex: '1 1 220px', minWidth: 160, background: T.raised, color: T.text,
                     border: `1px solid ${T.line}`, borderRadius: 3,
@@ -280,7 +280,7 @@ export default function Incentives() {
                 <div style={{ color: T.dim, fontSize: 11 }}>
                   Set {new Date(o.setAt).toLocaleString()}
                   {o.setBy ? ` by ${o.setBy}` : ''}
-                  {o.note ? ` — ${o.note}` : ''}
+                  {o.note ? `, ${o.note}` : ''}
                 </div>
               )}
             </div>

@@ -227,7 +227,7 @@ function ManagerPerformanceView() {
     }
     fetch(`/api/manager/analytics?${params}`)
       .then(async r => {
-        if (r.status === 403) throw new Error('Forbidden — Manager+ owners only')
+        if (r.status === 403) throw new Error('Forbidden, Manager+ owners only')
         if (r.status === 401) throw new Error('Not signed in')
         return r.json()
       })
@@ -323,7 +323,7 @@ function ManagerPerformanceView() {
                           <td className="an-td" style={{ fontFamily: 'monospace' }}>{c.callsInRange}</td>
                           <td className="an-td" style={{ fontFamily: 'monospace', color: c.connectRate >= 20 ? T.green : T.text }}>{c.connectRate}%</td>
                           <td className="an-td" style={{ fontFamily: 'monospace', fontSize: 10, color: T.muted }}>
-                            {c.topDispositions.length ? c.topDispositions.map(d => `${d.disposition} (${d.count})`).join(', ') : '—'}
+                            {c.topDispositions.length ? c.topDispositions.map(d => `${d.disposition} (${d.count})`).join(', ') : ', '}
                           </td>
                         </tr>
                       ))}
@@ -383,7 +383,7 @@ function ManagerPerformanceView() {
                           <td className="an-td"><Badge color={u.status === 'active' ? T.green : T.amber}>{u.status.toUpperCase()}</Badge></td>
                           <td className="an-td" style={{ fontFamily: 'monospace' }}>{u.callsInRange}</td>
                           <td className="an-td" style={{ fontFamily: 'monospace', fontSize: 10, color: T.muted }}>
-                            {u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleDateString() : '—'}
+                            {u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleDateString() : ', '}
                           </td>
                         </tr>
                       ))}
@@ -439,7 +439,7 @@ function AdminRevenueView() {
     }
     fetch(`/api/admin/analytics?${params}`)
       .then(async r => {
-        if (r.status === 403) throw new Error('Forbidden — admin only')
+        if (r.status === 403) throw new Error('Forbidden, admin only')
         if (r.status === 401) throw new Error('Not signed in')
         return r.json()
       })
@@ -457,7 +457,7 @@ function AdminRevenueView() {
         <>
           {data.summary.unknownPriceSubs > 0 && (
             <div style={{ padding: '10px 16px', fontSize: 11, letterSpacing: 1, color: T.amber, background: '#f5efdc', border: `1px solid ${T.amber}`, borderRadius: 4, fontFamily: 'monospace' }}>
-              {data.summary.unknownPriceSubs} ACTIVE SUB{data.summary.unknownPriceSubs === 1 ? '' : 'S'} ON A PRICE THAT IS NEITHER $35 NOR $75/WK — counted at the Stripe-reported amount. Check STRIPE_PRICE_ID / STRIPE_PRICE_WL_BASE and the server logs.
+              {data.summary.unknownPriceSubs} ACTIVE SUB{data.summary.unknownPriceSubs === 1 ? '' : 'S'} ON A PRICE THAT IS NEITHER $35 NOR $75/WK, counted at the Stripe-reported amount. Check STRIPE_PRICE_ID / STRIPE_PRICE_WL_BASE and the server logs.
             </div>
           )}
           <div className="an-grid-4">

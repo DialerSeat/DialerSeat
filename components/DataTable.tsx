@@ -168,7 +168,7 @@ export default function DataTable<T>({
         flexWrap: 'wrap', fontSize: 12, color: T_.dim,
       }}>
         <span>
-          {total === 0 ? 'No rows' : `${from.toLocaleString()}–${to.toLocaleString()} of ${total.toLocaleString()}`}
+          {total === 0 ? 'No rows' : `${from.toLocaleString()}, ${to.toLocaleString()} of ${total.toLocaleString()}`}
         </span>
         <div style={{ flex: 1 }} />
         {onPage && pages > 1 && (

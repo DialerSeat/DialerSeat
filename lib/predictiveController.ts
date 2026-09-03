@@ -324,7 +324,7 @@ async function runPredictiveControllerInner(
 
   if (campaignIds.length === 0) {
     return zeroResult(
-      'no campaign selected and the queue panel sent no leads — nothing to dial',
+      'no campaign selected and the queue panel sent no leads: nothing to dial',
       released
     )
   }
@@ -553,7 +553,7 @@ async function runPredictiveControllerInner(
       console.error('[controller] orphan claim release failed', orphanErr)
     } else {
       console.warn(
-        `[controller] released ${orphanIds.length} orphaned claim(s) — held by this ` +
+        `[controller] released ${orphanIds.length} orphaned claim(s), held by this ` +
         `session with no live call behind them`
       )
       released += orphanIds.length
@@ -908,7 +908,7 @@ async function runPredictiveControllerInner(
       // Written to call_events with no call_control_id (there is no call — that
       // is the point), so the reason is queryable next to every other event.
       const reason = result.status === 'fulfilled'
-        ? `${result.value.error}${result.value.detail ? ` — ${result.value.detail}` : ''}`
+        ? `${result.value.error}${result.value.detail ? `, ${result.value.detail}` : ''}`
         : `threw: ${String(result.reason)}`
 
       if (result.status === 'fulfilled') {

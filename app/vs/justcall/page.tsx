@@ -13,7 +13,7 @@ import {
 const SLUG = 'justcall'
 
 export const metadata: Metadata = {
-  title: 'DialerSeat vs JustCall — The Dialer Isn\u2019t a Pro-Tier Upsell',
+  title: 'DialerSeat vs JustCall: The Dialer Isn\u2019t a Pro-Tier Upsell',
   description:
     'JustCall advertises $29/user/month, but the power and predictive dialer sit behind the $49+/month Pro tier, with a 2-seat minimum on every standard plan. DialerSeat includes every dialer mode at $35/seat/week, billed weekly, one seat minimum.',
   alternates: {

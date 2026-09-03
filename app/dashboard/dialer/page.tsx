@@ -1174,10 +1174,10 @@ function DialerPageInner() {
           setStatus('preview_ready')
           setNoLeads(false)
         } else {
-          setAmdActivity(prev => [`DIAL LEAD FAILED — lead not found or not yours`, ...prev].slice(0, 5))
+          setAmdActivity(prev => [`DIAL LEAD FAILED: lead not found or not yours`, ...prev].slice(0, 5))
         }
       } catch {
-        setAmdActivity(prev => [`DIAL LEAD FAILED — network error`, ...prev].slice(0, 5))
+        setAmdActivity(prev => [`DIAL LEAD FAILED: network error`, ...prev].slice(0, 5))
       }
     })()
   }, [user, searchParams, status])
@@ -1383,12 +1383,12 @@ function DialerPageInner() {
           )
           probe.close()
           rtcpMuxPolicy = 'negotiate'
-          console.log('[sip] rtcpMuxPolicy=negotiate supported — will accept non-muxed SDP from Telnyx')
+          console.log('[sip] rtcpMuxPolicy=negotiate supported, will accept non-muxed SDP from Telnyx')
         } catch {
           console.warn(
             '[sip] this browser no longer supports rtcpMuxPolicy "negotiate". If calls fail with ' +
             '"RTCP-MUX is not enabled when it is required", Telnyx must be configured to offer ' +
-            'rtcp-mux for WebRTC endpoints — it cannot be worked around from the browser.'
+            'rtcp-mux for WebRTC endpoints, it cannot be worked around from the browser.'
           )
         }
 
@@ -1514,14 +1514,14 @@ function DialerPageInner() {
               const micBlocked =
                 err instanceof Error &&
                 ['NotAllowedError', 'NotFoundError', 'NotReadableError', 'SecurityError'].includes(err.name)
-              console.error(`[sip #${sipInstanceId}] FAILED to accept agent leg — ${msg}`)
+              console.error(`[sip #${sipInstanceId}] FAILED to accept agent leg, ${msg}`)
               // Surfaced for EVERY accept failure, not only the ones we can
               // name. An unrecognised cause is still a call with no audio, and
               // saying "could not answer" beats showing nothing.
               setAgentLegError(
                 micBlocked
-                  ? 'MICROPHONE BLOCKED — allow mic access for this site, then reload. Calls cannot connect until then.'
-                  : `COULD NOT ANSWER THIS CALL — ${msg}`
+                  ? 'MICROPHONE BLOCKED: allow mic access for this site, then reload. Calls cannot connect until then.'
+                  : `COULD NOT ANSWER THIS CALL, ${msg}`
               )
               if (micBlocked) {
                 console.error(
@@ -1530,7 +1530,7 @@ function DialerPageInner() {
                   'audio. Allow the microphone for this site and reload.'
                 )
                 setAmdActivity(prev =>
-                  ['⚠ MICROPHONE BLOCKED — allow mic access, no audio until then', ...prev].slice(0, 5)
+                  ['⚠ MICROPHONE BLOCKED: allow mic access, no audio until then', ...prev].slice(0, 5)
                 )
               }
             }
@@ -1674,7 +1674,7 @@ function DialerPageInner() {
             const state = pc.iceConnectionState
             if (state === 'failed' || state === 'disconnected') {
               console.error(
-                `[sip] ICE ${state} — no media path to Telnyx, so this call has no audio. ` +
+                `[sip] ICE ${state}: no media path to Telnyx, so this call has no audio. ` +
                 `STUN alone did not work from this network; a TURN server is needed ` +
                 `(TELNYX_TURN_URLS / TELNYX_TURN_USERNAME / TELNYX_TURN_CREDENTIAL).`
               )
@@ -1950,7 +1950,7 @@ function DialerPageInner() {
               startHangupPolling(ac.call_control_id)
             }
             setAmdActivity(prev => {
-              const line = 'LINE CONNECTED — AWAITING AMD VERDICT'
+              const line = 'LINE CONNECTED, AWAITING AMD VERDICT'
               return prev[0] === line ? prev : [line, ...prev].slice(0, 5)
             })
           } else if (!ac?.call_id && statusRef.current === 'connected' && !showDisposition) {
@@ -1985,7 +1985,7 @@ function DialerPageInner() {
         // indefinitely without placing a call. Deduped against the last line
         // so a persistent condition doesn't flood the feed every 5 seconds.
         if (data.controller_skipped_reason) {
-          const line = `PREDICTIVE IDLE — ${String(data.controller_skipped_reason).toUpperCase()}`
+          const line = `PREDICTIVE IDLE, ${String(data.controller_skipped_reason).toUpperCase()}`
           setAmdActivity(prev => (prev[0] === line ? prev : [line, ...prev].slice(0, 5)))
         }
 
@@ -2055,13 +2055,13 @@ function DialerPageInner() {
               : []
             setAmdActivity(prev => [
               numbers.length > 0
-                ? `DIALING ${numbers.length} LINE${numbers.length === 1 ? '' : 'S'} — ${numbers.join(', ')}`
+                ? `DIALING ${numbers.length} LINE${numbers.length === 1 ? '' : 'S'}, ${numbers.join(', ')}`
                 : `CONTROLLER FIRED ${summary.fired} LINE${summary.fired === 1 ? '' : 'S'} (${summary.effectiveLines}x target)`,
               ...prev,
             ].slice(0, 5))
           } else if (summary.degraded) {
             setAmdActivity(prev => [
-              `⚠ AUTO-DEGRADED — abandon rate trigger`,
+              `⚠ AUTO-DEGRADED: abandon rate trigger`,
               ...prev,
             ].slice(0, 5))
           }
@@ -2159,7 +2159,7 @@ function DialerPageInner() {
         armDialing() // a human is being routed to us right now — allow the bridge
 
         setAmdActivity(prev => [
-          `HUMAN ROUTED — ${data.lead?.first_name || ''} ${data.lead?.last_name || ''}`.trim(),
+          `HUMAN ROUTED, ${data.lead?.first_name || ''} ${data.lead?.last_name || ''}`.trim(),
           ...prev,
         ].slice(0, 5))
 
@@ -2885,7 +2885,7 @@ function DialerPageInner() {
           }
         } catch {
           console.error(
-            `[queue] pagination failed for campaign ${campaignId} after ${all.length} leads — ` +
+            `[queue] pagination failed for campaign ${campaignId} after ${all.length} leads, ` +
             `the panel is SHORT of the full list`
           )
           break // return what we have rather than lose everything
@@ -3300,8 +3300,8 @@ function DialerPageInner() {
     // "Dialing" without needing to remove it from the list.
 
     setAmdActivity(prev => [
-      `DIALING ${lead.first_name || ''} ${lead.last_name || ''} — ${lead.phone}`.trim(),
-      `AMD ENABLED — analyzing pickup`,
+      `DIALING ${lead.first_name || ''} ${lead.last_name || ''}, ${lead.phone}`.trim(),
+      `AMD ENABLED: analyzing pickup`,
       ...prev,
     ].slice(0, 5))
 
@@ -3351,7 +3351,7 @@ function DialerPageInner() {
             source: 'tcpa_block',
           })
           setAmdActivity(prev => [
-            `TCPA SKIP — ${data.leadState || '?'}: ${data.detail}`,
+            `TCPA SKIP, ${data.leadState || '?'}: ${data.detail}`,
             ...prev,
           ].slice(0, 5))
           // The server's own reason, not a generic one — "Invalid phone
@@ -3373,7 +3373,7 @@ function DialerPageInner() {
         showQueueOutcome(
           lead.id,
           data?.error
-            ? `Call failed — ${data.error}${data?.detail ? ` (${data.detail})` : ''}`
+            ? `Call failed, ${data.error}${data?.detail ? ` (${data.detail})` : ''}`
             : 'Call failed…'
         )
         await disposeLead({
@@ -3505,7 +3505,7 @@ function DialerPageInner() {
           // what makes TERMINATE on a live call capture an outcome.
           if (isNotHuman(d.amd_result)) {
             setAmdActivity(prev =>
-              [`VOICEMAIL FILTERED LATE — ${d.amd_result}`, ...prev].slice(0, 5)
+              [`VOICEMAIL FILTERED LATE, ${d.amd_result}`, ...prev].slice(0, 5)
             )
             setStatus('idle')
             setCurrentLead(null)
@@ -3575,11 +3575,11 @@ function DialerPageInner() {
             if (ld && attemptsSoFar < effectiveMax) {
               leadAttemptCountRef.current = attemptsSoFar + 1
               setAmdActivity(prev =>
-                [`VOICEMAIL — REDIALING (${attemptsSoFar + 1} of ${effectiveMax})`, ...prev].slice(0, 5)
+                [`VOICEMAIL: REDIALING (${attemptsSoFar + 1} of ${effectiveMax})`, ...prev].slice(0, 5)
               )
               showQueueOutcome(
                 ld.id,
-                `Voicemail — redialing (attempt ${attemptsSoFar + 1} of ${effectiveMax})…`
+                `Voicemail, redialing (attempt ${attemptsSoFar + 1} of ${effectiveMax})…`
               )
               setActiveCallSid(null)
               disarmDialing()
@@ -3596,7 +3596,7 @@ function DialerPageInner() {
             }
 
             setAmdActivity(prev =>
-              [`VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
+              [`VOICEMAIL FILTERED, ${statusData.amd_result}`, ...prev].slice(0, 5)
             )
             showQueueOutcome(ld?.id, 'Voicemail detected…')
             // AMD skip writes NO disposition, so it never reaches
@@ -3615,7 +3615,7 @@ function DialerPageInner() {
 
           if (isUndecided(statusData.amd_result)) {
             setAmdActivity(prev =>
-              ['⚠ AMD COULD NOT TELL — LISTEN AND SKIP IF IT IS A MACHINE', ...prev].slice(0, 5)
+              ['⚠ AMD COULD NOT TELL: LISTEN AND SKIP IF IT IS A MACHINE', ...prev].slice(0, 5)
             )
           }
 
@@ -3638,7 +3638,7 @@ function DialerPageInner() {
 
           if (isNotHuman(statusData.amd_result)) {
             setAmdActivity(prev =>
-              [`VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
+              [`VOICEMAIL FILTERED, ${statusData.amd_result}`, ...prev].slice(0, 5)
             )
           }
 
@@ -3679,7 +3679,7 @@ function DialerPageInner() {
                   : 'No answer'
               showQueueOutcome(
                 ld.id,
-                `${outcomeReason} — redialing (attempt ${attemptsSoFar + 1} of ${effectiveMax})…`
+                `${outcomeReason}, redialing (attempt ${attemptsSoFar + 1} of ${effectiveMax})…`
               )
               setActiveCallSid(null)
               disarmDialing()
@@ -3978,7 +3978,7 @@ function DialerPageInner() {
     setSeconds(0)
     setActiveCallSid(null)
     activeCallSidRef.current = null
-    setAmdActivity(prev => ['■ DIALING ABORTED — idle, still live', ...prev].slice(0, 5))
+    setAmdActivity(prev => ['■ DIALING ABORTED: idle, still live', ...prev].slice(0, 5))
   }
 
   /**
@@ -4150,7 +4150,7 @@ function DialerPageInner() {
       const live = await handleSetAvailable()
       if (!live) {
         setAgentLegError(
-          'MICROPHONE BLOCKED — allow mic access for this site, then reload. ' +
+          'MICROPHONE BLOCKED: allow mic access for this site, then reload. ' +
           'Nothing was dialed.'
         )
         return
@@ -4189,7 +4189,7 @@ function DialerPageInner() {
           return
         }
         console.error('Manual dial failed:', res.status, data)
-        alert(`Call failed${data?.error ? ` — ${data.error}` : ''}${data?.detail ? `\n\n${data.detail}` : ''}`)
+        alert(`Call failed${data?.error ? `, ${data.error}` : ''}${data?.detail ? `\n\n${data.detail}` : ''}`)
         setStatus('idle')
       }
     } catch {
@@ -4247,7 +4247,7 @@ function DialerPageInner() {
     if (!data.success) {
       console.error('[dialer] mode change rejected:', data.error)
       setAmdActivity(prev => [
-        `MODE CHANGE FAILED — STILL ${dialerMode.toUpperCase()}${data.error ? ` (${String(data.error).toUpperCase()})` : ''}`,
+        `MODE CHANGE FAILED, STILL ${dialerMode.toUpperCase()}${data.error ? ` (${String(data.error).toUpperCase()})` : ''}`,
         ...prev,
       ].slice(0, 5))
       return false
@@ -4288,7 +4288,7 @@ function DialerPageInner() {
               // they are not looking at would be its own kind of confusing.
               setSelectedCampaign(only.id)
               setAmdActivity(prev => [
-                `PREDICTIVE ON "${only.name.toUpperCase()}" — SWITCHED FROM ALL ACTIVE`,
+                `PREDICTIVE ON "${only.name.toUpperCase()}": SWITCHED FROM ALL ACTIVE`,
                 ...prev,
               ].slice(0, 5))
             }
@@ -4304,8 +4304,8 @@ function DialerPageInner() {
         setModeDropdownOpen(false)
         setAmdActivity(prev => [
           activeCampaigns.length === 0
-            ? 'PREDICTIVE NEEDS AN ACTIVE CAMPAIGN — NONE ARE ACTIVE'
-            : `PREDICTIVE NEEDS ONE CAMPAIGN — PICK ONE OF ${activeCampaigns.length} ABOVE`,
+            ? 'PREDICTIVE NEEDS AN ACTIVE CAMPAIGN, NONE ARE ACTIVE'
+            : `PREDICTIVE NEEDS ONE CAMPAIGN, PICK ONE OF ${activeCampaigns.length} ABOVE`,
           ...prev,
         ].slice(0, 5))
         return
@@ -4352,7 +4352,7 @@ function DialerPageInner() {
       if (!agentMayPickMode) {
         setModeDropdownOpen(false)
         setAmdActivity(prev => [
-          `MODE IS SET BY THE CAMPAIGN OWNER — STILL ${dialerMode.toUpperCase()}`,
+          `MODE IS SET BY THE CAMPAIGN OWNER, STILL ${dialerMode.toUpperCase()}`,
           ...prev,
         ].slice(0, 5))
         return
@@ -4375,7 +4375,7 @@ function DialerPageInner() {
     } catch (err) {
       console.error('Mode change failed:', err)
       setAmdActivity(prev => [
-        `MODE CHANGE FAILED — STILL ${dialerMode.toUpperCase()}`,
+        `MODE CHANGE FAILED, STILL ${dialerMode.toUpperCase()}`,
         ...prev,
       ].slice(0, 5))
     } finally {
@@ -4562,7 +4562,7 @@ function DialerPageInner() {
 
   const connectedRate = sessionStats.calls > 0
     ? ((sessionStats.connected / sessionStats.calls) * 100).toFixed(0) + '%'
-    : '—'
+    : ', '
 
   if (tierLoaded && !isActive) {
     return (
@@ -4600,7 +4600,7 @@ function DialerPageInner() {
           </div>
           <div style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1, marginBottom: 28 }}>
             {awaitingTeams.length > 0
-              ? `${awaitingTeams.map(t => t.teamName).join(', ')} has not accepted your seat yet. Dialing opens as soon as they do — there is nothing for you to pay.`
+              ? `${awaitingTeams.map(t => t.teamName).join(', ')} has not accepted your seat yet. Dialing opens as soon as they do, there is nothing for you to pay.`
               : tier === 'lapsed'
               ? 'Your subscription has lapsed. Resubscribe to restore dialing access.'
               : 'An active subscription is required to make outbound calls.'}
@@ -4617,7 +4617,7 @@ function DialerPageInner() {
                 fontSize: 13, fontWeight: 700, letterSpacing: 4,
                 textDecoration: 'none', boxShadow: '0 0 20px color-mix(in srgb, var(--brand-primary) 30%, transparent)',
                 marginBottom: 16, fontFamily: FUTURA,
-              }}>{tier === 'lapsed' ? 'RESUBSCRIBE' : 'SUBSCRIBE'} — $35/WEEK</Link>
+              }}>{tier === 'lapsed' ? 'RESUBSCRIBE' : 'SUBSCRIBE'}, $35/WEEK</Link>
               <div style={{ fontSize: 9, letterSpacing: 3, color: 'var(--brand-on-sidebar-muted)', marginBottom: 24 }}>
                 NO CONTRACTS · CANCEL ANYTIME
               </div>
@@ -4925,7 +4925,7 @@ function DialerPageInner() {
             color: pacingInfo && pacingInfo.abandonRate >= 0.025 ? terminalRed
               : pacingInfo && pacingInfo.abandonRate >= 0.020 ? terminalAmber : terminalGreen,
           }}>
-            {pacingInfo ? `${(pacingInfo.abandonRate * 100).toFixed(2)}%` : '—'}
+            {pacingInfo ? `${(pacingInfo.abandonRate * 100).toFixed(2)}%` : ', '}
           </div>
         </div>
       </div>
@@ -5197,7 +5197,7 @@ function DialerPageInner() {
                   <button
                     className="dialer-queue-btn"
                     onClick={() => setQueueShuffleSeed(Math.floor(Math.random() * 2147483647) || 1)}
-                    title="Randomize the order of the currently visible rows — also changes dialing priority: leads earlier in the shuffled order are dialed first"
+                    title="Randomize the order of the currently visible rows, also changes dialing priority: leads earlier in the shuffled order are dialed first"
                     style={{
                       border: `1px solid ${queueShuffleSeed !== 0 ? terminalAccent : terminalBorder}`,
                       color: queueShuffleSeed !== 0 ? terminalAccent : terminalText,
@@ -5256,7 +5256,7 @@ function DialerPageInner() {
             letterSpacing: '0.2px',
             flexShrink: 0,
           }}>
-            ⚠ Predictive's background dialer pulls from the full active queue and does not currently respect this filter — the filter only restricts what's shown here and what Power/Progressive/Preview will dial.
+            ⚠ Predictive's background dialer pulls from the full active queue and does not currently respect this filter, the filter only restricts what's shown here and what Power/Progressive/Preview will dial.
           </div>
         )}
 
@@ -5293,8 +5293,8 @@ function DialerPageInner() {
               <div>
                 {hasPermanent ? '⚠' : '⏱'}{' '}
                 {queueDiagnosis?.summary
-                  || (tcpaBlockedReason ? `${tcpaBlockedReason} — queue shown for review.` : null)
-                  || 'Outside the calling window — queue shown for review, dialing will resume automatically once the window opens.'}
+                  || (tcpaBlockedReason ? `${tcpaBlockedReason}, queue shown for review.` : null)
+                  || 'Outside the calling window: queue shown for review, dialing will resume automatically once the window opens.'}
               </div>
 
               {/* Per-reason lines with a real example, so the user can go and
@@ -5303,7 +5303,7 @@ function DialerPageInner() {
                 <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2, opacity: 0.85 }}>
                   {queueDiagnosis.reasons.map(r => (
                     <div key={r.code} style={{ fontSize: 10 }}>
-                      · {r.count.toLocaleString()} — {QUEUE_REASON_LABELS[r.code] ?? r.code}
+                      · {r.count.toLocaleString()}, {QUEUE_REASON_LABELS[r.code] ?? r.code}
                       {r.example ? ` (e.g. ${r.example})` : ''}
                     </div>
                   ))}
@@ -5375,13 +5375,13 @@ function DialerPageInner() {
                       alignItems: 'center', fontFamily: FUTURA, fontSize: 13,
                     }}>
                       <span className="dq-cell-name" style={{ gridArea: 'name', color: terminalText, fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {(lead.first_name || lead.last_name) ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim() : '—'}
+                        {(lead.first_name || lead.last_name) ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim() : ', '}
                       </span>
                       <span className="dq-cell-phone" style={{ gridArea: 'phone', color: terminalAccent, fontWeight: 'bold', fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>
                         {lead.phone}
                       </span>
                       <span className="dq-cell-state" style={{ gridArea: 'state', color: terminalMuted, fontSize: 12 }}>
-                        {lead.state || '—'}
+                        {lead.state || ', '}
                       </span>
                       <span className="dq-cell-badge" style={{ gridArea: 'badge', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 'bold', color: attempts > 0 ? terminalAccent : terminalMuted }}>
@@ -5528,7 +5528,7 @@ function DialerPageInner() {
           color: ${terminalText}; cursor: pointer; padding: 2px 4px;
         }
 
-        /* Full-screen lead-profile toggle is mobile-only — hidden on desktop,
+        /* Full-screen lead-profile toggle is mobile-only: hidden on desktop,
            shown inside the mobile media query below. */
         .dialer-profile-fs-btn { display: none; }
         /* Manual dial's own full-screen toggle, hidden on desktop for the same
@@ -5728,7 +5728,7 @@ function DialerPageInner() {
           textAlign: 'center',
           fontWeight: 'bold',
         }}>
-          ⚠ AUTO-DEGRADED TO PROGRESSIVE — abandon rate {(pacingInfo.abandonRate * 100).toFixed(2)}% (legal cap 3%)
+          ⚠ AUTO-DEGRADED TO PROGRESSIVE, abandon rate {(pacingInfo.abandonRate * 100).toFixed(2)}% (legal cap 3%)
         </div>
       )}
 
@@ -5743,7 +5743,7 @@ function DialerPageInner() {
           textAlign: 'center',
           fontWeight: 'bold',
         }}>
-          ⚠ YIELDING — abandon rate approaching FTC 3% cap. Dialing paused briefly.
+          ⚠ YIELDING, abandon rate approaching FTC 3% cap. Dialing paused briefly.
         </div>
       )}
 
@@ -5889,7 +5889,7 @@ function DialerPageInner() {
                     </span>
                   </div>
                 ) : (
-                  <div style={{ fontSize: 14, fontFamily: 'monospace', color: terminalMuted }}>—</div>
+                  <div style={{ fontSize: 14, fontFamily: 'monospace', color: terminalMuted }}>, </div>
                 )}
               </div>
               <div>
@@ -5919,13 +5919,13 @@ function DialerPageInner() {
               fontSize: '12px', outline: 'none',
               fontFamily: FUTURA, cursor: 'pointer',
             }}>
-              <option value="">— SELECT A CAMPAIGN —</option>
+              <option value="">, SELECT A CAMPAIGN, </option>
               {activeCampaignsCount > 0 && (
                 <option value={ALL_ACTIVE}>ALL ACTIVE CAMPAIGNS ({activeCampaignsCount})</option>
               )}
               {activeScopeCampaigns.map(c => (
                 <option key={c.id} value={c.id}>
-                  {c.name}{c.teamName ? ` (${c.teamName})` : ''} — {c.total_leads} leads
+                  {c.name}{c.teamName ? ` (${c.teamName})` : ''}, {c.total_leads} leads
                 </option>
               ))}
             </select>
@@ -5937,7 +5937,7 @@ function DialerPageInner() {
               }}>
                 ⚠ {scopeCampaigns.length === 0
                     ? (isPersonalScope ? 'NO CAMPAIGNS FOUND' : 'NO CAMPAIGNS ACCESSIBLE FROM THIS TEAM')
-                    : 'NO ACTIVE CAMPAIGNS — ACTIVATE A CAMPAIGN TO START DIALING'}
+                    : 'NO ACTIVE CAMPAIGNS, ACTIVATE A CAMPAIGN TO START DIALING'}
               </div>
             )}
             {showSelectCampaignMsg && (
@@ -5986,7 +5986,7 @@ function DialerPageInner() {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
               }}>
                 <span style={{ fontSize: '10px', letterSpacing: '3px', color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold' }}>
-                  {previewLead ? 'LEAD PREVIEW — REVIEW BEFORE DIALING' : 'LEAD PROFILE'}
+                  {previewLead ? 'LEAD PREVIEW, REVIEW BEFORE DIALING' : 'LEAD PROFILE'}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   {displayLead && (status === 'connected' || status === 'preview_ready') && (
@@ -6018,7 +6018,7 @@ function DialerPageInner() {
                           Power/Progressive/Preview: one number, the exact one
                           being dialed right now. Predictive: every line
                           currently in flight this tick, shown together and
-                          highlighted as a group — the count matches however
+                          highlighted as a group, the count matches however
                           many lines the campaign/dialer is actually set to
                           dial at once (effectiveLines from the controller),
                           not a hardcoded number. */}
@@ -6060,7 +6060,7 @@ function DialerPageInner() {
                             NOW DIALING
                           </div>
                           <div className="dialer-live-now-dialing-number" style={{ fontFamily: FUTURA, fontSize: 17, fontWeight: 'bold', color: terminalText, letterSpacing: '1px', overflowWrap: 'anywhere' }}>
-                            {previewLead?.phone || activeDialingNumbers[0] || '—'}
+                            {previewLead?.phone || activeDialingNumbers[0] || ', '}
                           </div>
                           {(previewLead?.first_name || previewLead?.last_name) && (
                             <div style={{ fontFamily: FUTURA, fontSize: 12, color: terminalMuted, marginTop: 2, overflowWrap: 'anywhere' }}>
@@ -6070,7 +6070,7 @@ function DialerPageInner() {
                         </div>
                       )}
 
-                      {/* ── FULL SCROLLING LOG — everything happening, in order ── */}
+                      {/* ── FULL SCROLLING LOG: everything happening, in order ── */}
                       <div className="dialer-live-activity-log" style={{
                         display: 'flex', flexDirection: 'column', gap: 3,
                         maxHeight: 180, overflowY: 'auto',
@@ -6112,11 +6112,11 @@ function DialerPageInner() {
                           padding: '0 20px',
                           lineHeight: 1.6,
                         }}>
-                          {/* Real reason from the server when we have one — e.g.
+                          {/* Real reason from the server when we have one, e.g.
                               "Too early in TX (6:30 local, window starts 8:00)",
-                              "Unknown state — cannot determine calling window",
+                              "Unknown state: cannot determine calling window",
                               "Not a member of this team", "No leads match the
-                              current filter" — instead of collapsing every
+                              current filter", instead of collapsing every
                               non-success response into one hardcoded 8am-9pm
                               message regardless of the actual cause. Falls back
                               to the old generic messages only if the server
@@ -6124,10 +6124,10 @@ function DialerPageInner() {
                           {noLeadsReason
                             ? noLeadsReason.toUpperCase()
                             : tcpaBlockedAll
-                              ? 'ALL LEADS OUTSIDE CALLING WINDOW — TRY LATER'
+                              ? 'ALL LEADS OUTSIDE CALLING WINDOW, TRY LATER'
                               : isPersonalScope
                                 ? 'UPLOAD MORE LEADS TO CONTINUE'
-                                : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
+                                : 'NO MORE TEAM LEADS, TRY ANOTHER CAMPAIGN OR SCOPE'}
                         </p>
                       )}
                     </div>
@@ -6148,11 +6148,11 @@ function DialerPageInner() {
                             <div style={{ fontSize: '15px', fontFamily: 'monospace', color: terminalAccent, fontWeight: 'bold', letterSpacing: '2px' }}>
                               {displayLead.phone}
                             </div>
-                            {/* Location · live timer — matches /welcome page 1 layout */}
+                            {/* Location · live timer, matches /welcome page 1 layout */}
                             <div style={{ fontSize: '10px', fontFamily: 'monospace', color: terminalMuted, letterSpacing: '1px', marginTop: '4px' }}>
                               {(() => {
                                 const st = displayState(displayLead)
-                                const loc = [displayLead.city, st.text === '—' ? null : st.text]
+                                const loc = [displayLead.city, st.text === ', ' ? null : st.text]
                                   .filter(Boolean).join(', ')
                                 return st.inferred
                                   ? <span style={{ opacity: 0.75, fontStyle: 'italic' }}>{loc}</span>
@@ -6228,7 +6228,7 @@ function DialerPageInner() {
                           <div className="dialer-script-body" style={{
                             fontSize: '11px', lineHeight: '1.7', color: activeScript ? terminalText : terminalMuted,
                             fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
-                          }}>{activeScript || 'This script is empty — add content from Manage Scripts.'}</div>
+                          }}>{activeScript || 'This script is empty, add content from Manage Scripts.'}</div>
                         </div>
                       </div>
                     )}
@@ -6297,13 +6297,13 @@ function DialerPageInner() {
             </div>
           )}
 
-          {/* BUTTONS — predictive 4-state + non-predictive 3-state flows */}
+          {/* BUTTONS, predictive 4-state + non-predictive 3-state flows */}
 
           {isPredictive ? (
             <>
               {/* Predictive can start on ALL ACTIVE as well as on one campaign.
                   It used to require a single selected campaign, which left the
-                  All Active view showing nothing but the dead placard below —
+                  All Active view showing nothing but the dead placard below 
                   there was no way to even arm the engine. The controller now
                   resolves its campaign set from the queue panel's own rows, so
                   the only real requirement is having something to dial, which
@@ -6366,10 +6366,10 @@ function DialerPageInner() {
 
               {/* CONTINUE is deliberately NOT in these live-call controls. It
                   redials the current lead, which is meaningless while that call
-                  is still up — you are already talking to them. It belongs on
+                  is still up, you are already talking to them. It belongs on
                   the after-call controls, not the live ones. */}
-              {/* SKIP and TERMINATE stay distinct — they mean different things
-                  to the LEAD (give up on it vs end this call) — but both now
+              {/* SKIP and TERMINATE stay distinct, they mean different things
+                  to the LEAD (give up on it vs end this call), but both now
                   leave the same way: the agent moves on at once, and the lead's
                   line is parked in the background until it clears the
                   threshold. Neither makes the agent wait. */}
@@ -6450,7 +6450,7 @@ function DialerPageInner() {
               )}
               {status === 'connected' && (
                 <>
-                  {/* CONTINUE removed here too — same reason as the grid
+                  {/* CONTINUE removed here too, same reason as the grid
                       layout above: redialing the lead you are currently
                       speaking to is not an action anyone wants mid-call. */}
                   <button onClick={handleSkip} style={{
@@ -6495,7 +6495,7 @@ function DialerPageInner() {
           {/* ── SIX TILES, THREE ROWS, NOT SIX STACKED BARS ──────────────────
               These were full-width rows with 18-20px numerals, and together
               they ate enough of a phone screen that DIAL was clipped and the
-              system log was pushed off it entirely — the two things an agent
+              system log was pushed off it entirely, the two things an agent
               actually needs while dialing, lost to counters that are mostly
               zero.
               Two columns costs nothing in legibility: every value is a small
@@ -6563,17 +6563,17 @@ function DialerPageInner() {
           <div style={{ padding: '5px 12px', background: '#1a1c24', height: '88px', overflowY: 'auto', flexShrink: 0 }}>
             {[
               ...amdActivity.map(a => `> ${a}`),
-              status === 'connected' && `> CONNECTED — ${currentLead?.first_name} ${currentLead?.last_name}`,
+              status === 'connected' && `> CONNECTED, ${currentLead?.first_name} ${currentLead?.last_name}`,
               status === 'calling' && '> DIALING IN QUEUE...',
-              status === 'preview_ready' && `> PREVIEW LOADED — ${previewLead?.first_name} ${previewLead?.last_name}`,
+              status === 'preview_ready' && `> PREVIEW LOADED, ${previewLead?.first_name} ${previewLead?.last_name}`,
               isSpecificCampaign && currentCampaign && `> CAMPAIGN MODE: ${dialerMode.toUpperCase()} + AMD`,
               isAllActive && `> ALL ACTIVE · SESSION MODE: ${dialerMode.toUpperCase()}`,
               isPredictive && pacingInfo && `> AGENTS: ${pacingInfo.activeAgents} (READY:${pacingInfo.readyAgents}/DIALING:${pacingInfo.dialingAgents}/ONCALL:${pacingInfo.onCallAgents})`,
               isPredictive && pacingInfo && `> ABANDON: ${(pacingInfo.abandonRate * 100).toFixed(2)}%`,
               isPredictive && lastControllerSummary && `> CTRL: fired=${lastControllerSummary.fired} desired=${lastControllerSummary.desired} inflight=${lastControllerSummary.inFlight}`,
               isPredictive && lastControllerSummary && lastControllerSummary.reason && `> CTRL: ${lastControllerSummary.reason}`,
-              isPredictive && shouldYield && `> SERVER ASKED TO YIELD — abandon rate near cap`,
-              isPredictive && pacingInfo?.isPredictiveTeam && `> TEAM PREDICTIVE — reroute on disconnect enabled`,
+              isPredictive && shouldYield && `> SERVER ASKED TO YIELD: abandon rate near cap`,
+              isPredictive && pacingInfo?.isPredictiveTeam && `> TEAM PREDICTIVE: reroute on disconnect enabled`,
               currentSessionId && '> SESSION ACTIVE',
               !isPersonalScope && currentScope && `> SCOPE: ${currentScope.name.toUpperCase()}`,
               swReady && '> AUDIO READY',
@@ -6649,7 +6649,7 @@ function resolveAudioContextCtor(): typeof AudioContext | undefined {
  * the agent sees "no state", the system quietly times the call as North
  * Carolina, and nothing on screen explains why a lead is being held until 9am.
  *
- * "Maybe: NC" says both things at once — here is the state we are using, and
+ * "Maybe: NC" says both things at once: here is the state we are using, and
  * here is the fact that we inferred it. An agent who knows the lead is really
  * in California can then correct the record instead of wondering.
  *
@@ -6657,7 +6657,7 @@ function resolveAudioContextCtor(): typeof AudioContext | undefined {
  * renders exactly as before, with no hedge on data the customer supplied.
  *
  * Used ONLY on the live-call profile, not in the queue list. In a dense list of
- * rows a per-row "Maybe:" is noise — the agent is scanning, not deciding. On
+ * rows a per-row "Maybe:" is noise: the agent is scanning, not deciding. On
  * the profile of the person currently ringing it is the opposite: that is the
  * moment the distinction between known and guessed can actually change what
  * the agent says.
@@ -6672,7 +6672,7 @@ function displayState(lead: { state?: string | null; phone?: string | null }): {
   const guessed = phoneToState(lead.phone)
   if (guessed) return { text: `Maybe: ${guessed}`, inferred: true }
 
-  return { text: '—', inferred: false }
+  return { text: ': ', inferred: false }
 }
 
 const QUEUE_REASON_LABELS: Record<string, string> = {

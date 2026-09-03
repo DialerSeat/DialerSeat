@@ -13,9 +13,9 @@ import {
 const SLUG = '3cx'
 
 export const metadata: Metadata = {
-  title: 'DialerSeat vs 3CX — Sales Dialer vs Business Phone System',
+  title: 'DialerSeat vs 3CX: Sales Dialer vs Business Phone System',
   description:
-    'DialerSeat and 3CX solve different problems. 3CX is a business PBX licensed by simultaneous call capacity; DialerSeat is a purpose-built outbound sales dialer at $35/seat/week — lead lists, dispositions, AMD, and TCPA compliance included, no capacity planning required.',
+    'DialerSeat and 3CX solve different problems. 3CX is a business PBX licensed by simultaneous call capacity; DialerSeat is a purpose-built outbound sales dialer at $35/seat/week: lead lists, dispositions, AMD, and TCPA compliance included, no capacity planning required.',
   alternates: {
     canonical: 'https://dialerseat.com/vs/3cx',
   },

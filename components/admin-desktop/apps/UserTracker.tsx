@@ -544,7 +544,7 @@ export default function UserTrackerApp() {
               )}
               <span style={{ fontSize: 11, color: C.faint, marginLeft: 'auto' }}>
                 {applied
-                  ? `Showing ${fmtDate(applied.from)} – ${fmtDate(applied.to)}, inclusive`
+                  ? `Showing ${fmtDate(applied.from)}, ${fmtDate(applied.to)}, inclusive`
                   : 'Pick two dates. Both days are included.'}
               </span>
             </div>
@@ -586,7 +586,7 @@ export default function UserTrackerApp() {
 
               <div className="ut-chart-card">
                 <div className="ut-chart-head">
-                  <div className="ut-chart-title">Platform activity — last 30 days</div>
+                  <div className="ut-chart-title">Platform activity, last 30 days</div>
                   <div className="ut-chart-note">Overview average across all DialerSeat usage</div>
                 </div>
                 <ResponsiveContainer width="100%" height={180}>
@@ -695,7 +695,7 @@ export default function UserTrackerApp() {
                       <div className="ut-metric">{fmtDuration(r.b.connectedSeconds)}</div>
                       <div className="ut-metric-sub">{r.b.connectedCalls} calls</div>
                     </div>
-                    <div className="ut-metric">{r.avgCall > 0 ? fmtDuration(r.avgCall) : '—'}</div>
+                    <div className="ut-metric">{r.avgCall > 0 ? fmtDuration(r.avgCall) : ', '}</div>
                   </div>
                 ))}
               </div>

@@ -25,7 +25,7 @@ const PLAN_INFO = {
     title: 'Start your subscription',
     subtitle: 'Pay $35 today and start dialing immediately.',
     weeklyBlurb: '$35.00 USD',
-    description: 'DialerSeat Pro — one agent seat, all features, billed weekly.',
+    description: 'DialerSeat Pro: one agent seat, all features, billed weekly.',
     switchLabel: 'Switch to Manager+ ($75/wk)',
   },
   wl: {
@@ -35,7 +35,7 @@ const PLAN_INFO = {
     subtitle: 'Pay $75 today to provision your branded dialer.',
     weeklyBlurb: '$75.00 USD',
     description:
-      'Manager+ unlocks white-label DialerSeat — your subdomain, your branding, full team control. After payment, you\u2019ll pick your subdomain, upload your logo, and set your brand colors.',
+      'Manager+ unlocks white-label DialerSeat: your subdomain, your branding, full team control. After payment, you\u2019ll pick your subdomain, upload your logo, and set your brand colors.',
     switchLabel: 'Switch to Pro ($35/wk)',
   },
 } as const
@@ -464,7 +464,7 @@ export default function BillingPage() {
         setCodeError(
           pvData?.error ||
           `We could not reach the invite service to check that code (error ${pv.status}). ` +
-          `The code itself may be fine — this is on our end. Try again in a moment.`
+          `The code itself may be fine, this is on our end. Try again in a moment.`
         )
         setPromoAction(null)
         return
@@ -580,7 +580,7 @@ export default function BillingPage() {
             <div style={{ ...statusTitleStyle, color: '#32ff7e' }}>$0.00 owed</div>
             <div style={mutedTextStyle}>
               Your seat on <strong style={{ color: '#e0e2ea' }}>{seatCovered.teamName}</strong> is
-              covered by the team owner — there&apos;s nothing to pay here.{' '}
+              covered by the team owner, there&apos;s nothing to pay here.{' '}
               {seatCovered.pending
                 ? 'Taking you in now. The owner still needs to approve you before their campaigns open up.'
                 : 'Taking you in now.'}
@@ -662,7 +662,7 @@ export default function BillingPage() {
             </div>
             {billing.hasDiscount ? (
               <div style={priceCaptionStyle} className="billing-price-caption">
-                <span style={{ color: '#32ff7e' }}>{promoApplied?.toUpperCase()}</span> applied — then {billing.recurringLabel}
+                <span style={{ color: '#32ff7e' }}>{promoApplied?.toUpperCase()}</span> applied, then {billing.recurringLabel}
               </div>
             ) : (
               <div style={priceCaptionStyle} className="billing-price-caption">
@@ -716,11 +716,11 @@ export default function BillingPage() {
               </li>
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
-                <span>Cancel anytime in Settings — service continues until period end</span>
+                <span>Cancel anytime in Settings, service continues until period end</span>
               </li>
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
-                <span>Refunds are only considered within 24 hours of being charged — contact support@dialerseat.com</span>
+                <span>Refunds are only considered within 24 hours of being charged, contact support@dialerseat.com</span>
               </li>
               {plan === 'wl' && (
                 <li style={termItemStyle}>
@@ -745,7 +745,7 @@ export default function BillingPage() {
               {teamCodes.map(c => (
                 <div key={c.code} style={{ ...promoAppliedStyle, marginBottom: 6 }}>
                   <span>
-                    ✓ <strong style={{ color: '#32ff7e' }}>{c.code}</strong> — joined{' '}
+                    ✓ <strong style={{ color: '#32ff7e' }}>{c.code}</strong>, joined{' '}
                     {c.teamName.toUpperCase()}
                   </span>
                   <span style={{ fontSize: 10, letterSpacing: '0.08em', color: c.payer === 'owner' ? '#32ff7e' : '#8a8f9e' }}>
@@ -856,7 +856,7 @@ export default function BillingPage() {
 
         /* Mobile only (mirrors the 860px boundary above exactly, so this
            block and the desktop block above can never both apply at once).
-           Desktop spacing/type is untouched — this only tightens the
+           Desktop spacing/type is untouched, this only tightens the
            stacked single-column phone view to fit a real device viewport
            instead of running noticeably taller than the page. */
         @media (max-width: 859px) {
@@ -866,7 +866,7 @@ export default function BillingPage() {
           .billing-page {
             /* Explicit longhand (not shorthand padding) so only the top
                edge accounts for the notch / dynamic island via
-               env(safe-area-inset-top) — left/right/bottom stay plain
+               env(safe-area-inset-top), left/right/bottom stay plain
                values. The 5px fallback (used when the env() var isn't
                supported) matches what this rule used before; on real
                notched devices the safe-area inset takes over and adds

@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'Call Scripts — Write, Attach, Reorder | DialerSeat',
+  title: 'Call Scripts: Write, Attach, Reorder | DialerSeat',
   description:
     'How call scripts work in DialerSeat: personal and team-shared scripts, attaching multiple scripts to one campaign, reordering which one shows first, and what agents actually see mid-call.',
   alternates: {
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'Call Scripts — DialerSeat',
+    title: 'Call Scripts: DialerSeat',
     description:
       'Write once, attach to any campaign, reorder any time. The script an agent sees mid-call, without leaving the dialer.',
     url: 'https://dialerseat.com/faq/scripts',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Call Scripts — DialerSeat',
+    title: 'Call Scripts: DialerSeat',
     description: 'Write once, attach to any campaign, reorder any time. The script an agent sees mid-call, without leaving the dialer.',
   },
 }

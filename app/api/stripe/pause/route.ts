@@ -98,7 +98,7 @@ export async function POST(req: Request) {
         // stop being billed. Undo the pause rather than leave that standing.
         console.error('[stripe/pause] marker write failed, reverting Stripe pause:', error.message)
         await stripe.subscriptions.update(sub.stripe_subscription_id, { pause_collection: null })
-        return NextResponse.json({ error: 'Could not pause — nothing was changed' }, { status: 500 })
+        return NextResponse.json({ error: 'Could not pause: nothing was changed' }, { status: 500 })
       }
 
       // Named, because "a customer paused" isn't actionable and "Marcus
@@ -164,7 +164,7 @@ export async function POST(req: Request) {
       // wrong reflex since money is now moving again.
       console.error('[stripe/pause] CRITICAL: resumed in Stripe but marker still set:', error.message)
       return NextResponse.json(
-        { error: 'Billing resumed but access did not. Contact support — do not retry.' },
+        { error: 'Billing resumed but access did not. Contact support, do not retry.' },
         { status: 500 }
       )
     }

@@ -107,7 +107,7 @@ async function resolveAgentSessionId(clerkId: string): Promise<string> {
     if (session?.id) return session.id
   }
 
-  console.warn(`[leads/next] no agent_session for ${clerkId} — claim will not be renewable`)
+  console.warn(`[leads/next] no agent_session for ${clerkId}, claim will not be renewable`)
   return crypto.randomUUID()
 }
 

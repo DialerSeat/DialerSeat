@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: false,
         error: 'You do not have a payment method on file yet.',
-        detail: 'Start a subscription first — the card you use becomes the one you can manage here.',
+        detail: 'Start a subscription first, the card you use becomes the one you can manage here.',
         noCustomer: true,
       }, { status: 400 })
     }

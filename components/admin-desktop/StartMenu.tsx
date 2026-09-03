@@ -201,7 +201,7 @@ export default function StartMenu({
         ))}
         {listToShow.length === 0 && (
           <div style={{ padding: '4px 12px 8px', fontSize: 11, color: '#6a7080' }}>
-            No apps installed — visit the App Store below
+            No apps installed, visit the App Store below
           </div>
         )}
 

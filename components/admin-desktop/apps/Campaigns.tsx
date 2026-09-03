@@ -291,7 +291,7 @@ export default function CampaignsApp() {
             { key: 'newest', label: 'Newest' },
             { key: 'leads', label: 'Leads' },
             { key: 'teams', label: 'Teams' },
-            { key: 'name', label: 'A–Z' },
+            { key: 'name', label: 'A: Z' },
           ] as const).map(o => (
             <button
               key={o.key}
@@ -444,8 +444,8 @@ function CampaignCard({
         <div style={S.cardBody}>
           <div style={S.metaRow}>
             <MetaItem label="Created" value={fmtDate(campaign.createdAt)} />
-            <MetaItem label="Owner email" value={campaign.owner.email || '—'} />
-            <MetaItem label="Dialer mode" value={campaign.dialerMode || '—'} />
+            <MetaItem label="Owner email" value={campaign.owner.email || ', '} />
+            <MetaItem label="Dialer mode" value={campaign.dialerMode || ', '} />
             <MetaItem label="Progress" value={`${campaign.calledLeads.toLocaleString()} / ${campaign.totalLeads.toLocaleString()} called`} />
           </div>
 

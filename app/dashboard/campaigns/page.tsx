@@ -107,7 +107,7 @@ const AMD_DEFAULT_BY_MODE: Record<DialerMode, boolean> = {
 }
 
 function relativeTime(iso: string | null | undefined): string {
-  if (!iso) return '—'
+  if (!iso) return ', '
   const then = new Date(iso).getTime()
   const now = Date.now()
   const diff = Math.max(0, now - then)
@@ -866,10 +866,10 @@ export default function CampaignsPage() {
                 const imported = uploadData.count?.toLocaleString?.() ?? uploadData.count
                 csvFailed = {
                   error: rejected > 0
-                    ? `Campaign created. Imported ${imported} leads — ` +
+                    ? `Campaign created. Imported ${imported} leads, ` +
                       `${rejected.toLocaleString()} rows could not be used` +
                       (warnedTotal > 0 ? `, and ${warnedTotal.toLocaleString()} more need attention.` : '.')
-                    : `Campaign created. Imported ${imported} leads — ` +
+                    : `Campaign created. Imported ${imported} leads, ` +
                       `${warnedTotal.toLocaleString()} of them need attention before they will dial.`,
                   rejected,
                   rejections: Array.isArray(uploadData?.rejections) && uploadData.rejections.length > 0
@@ -882,7 +882,7 @@ export default function CampaignsPage() {
           }
         } catch {
           csvFailed = {
-            error: 'The leads file could not be uploaded — the request failed. The campaign was created without it.',
+            error: 'The leads file could not be uploaded, the request failed. The campaign was created without it.',
           }
         }
       }
@@ -1043,9 +1043,9 @@ export default function CampaignsPage() {
         // like one — the leads are in, some just need attention.
         failure = {
           error: rejected > 0
-            ? `Imported ${imported} leads — ${rejected.toLocaleString()} rows could not be used` +
+            ? `Imported ${imported} leads, ${rejected.toLocaleString()} rows could not be used` +
               (warnedTotal > 0 ? `, and ${warnedTotal.toLocaleString()} more need attention.` : '.')
-            : `Imported ${imported} leads — ${warnedTotal.toLocaleString()} of them need attention before they will dial.`,
+            : `Imported ${imported} leads, ${warnedTotal.toLocaleString()} of them need attention before they will dial.`,
           rejected,
           rejections: Array.isArray(data?.rejections) && data.rejections.length > 0
             ? data.rejections
@@ -1850,7 +1850,7 @@ export default function CampaignsPage() {
       <style>{`
         .cmp-root * { box-sizing: border-box; }
 
-        /* ── HEADER — page header strip, bound to header-bg (C4) ──────── */
+        /* ── HEADER: page header strip, bound to header-bg (C4) ──────── */
         .cmp-header {
           background: var(--brand-header-bg);
           padding: 12px 20px;
@@ -2217,7 +2217,7 @@ export default function CampaignsPage() {
         .lead-preview-wrap:hover .open-editor-hint { opacity: 1; }
         .lead-preview-wrap:hover > div { border-color: ${T.blue} !important; }
 
-        /* ── SCRIPT TABS — with drag-reorder visuals ──────────────────── */
+        /* ── SCRIPT TABS, with drag-reorder visuals ──────────────────── */
         .script-tabs {
           display: flex;
           gap: 4px;
@@ -2908,7 +2908,7 @@ export default function CampaignsPage() {
 
           /* Push the header down below the notch / dynamic island / status bar
              (time, battery). env(safe-area-inset-top) is 0 unless the page's
-             <meta name="viewport"> includes viewport-fit=cover — see note below. */
+             <meta name="viewport"> includes viewport-fit=cover, see note below. */
           .settings-head {
             padding-top: calc(12px + env(safe-area-inset-top, 0px));
           }
@@ -3038,7 +3038,7 @@ export default function CampaignsPage() {
               </button>
             ) : (
               <Link href="/billing" className="cmp-new-btn amber">
-                ↻ {hasLapsedPlan ? 'RESUBSCRIBE' : 'SUBSCRIBE'} — $35/WEEK
+                ↻ {hasLapsedPlan ? 'RESUBSCRIBE' : 'SUBSCRIBE'}, $35/WEEK
               </Link>
             )}
           </div>
@@ -3234,7 +3234,7 @@ export default function CampaignsPage() {
                 {/* ── THE ONE THAT READS THE CALL, NOT THE AGENT ──────────
                     The two above filter what an agent decided about a lead.
                     This filters how the lead's last call ENDED, which is a
-                    different fact and lives in a different column — a
+                    different fact and lives in a different column, a
                     voicemail is never written to the lead's disposition,
                     because that would imply somebody judged it and would pull
                     it out of rotation.
@@ -3248,7 +3248,7 @@ export default function CampaignsPage() {
                     <small>
                       When ON, a virtual "{campaignName.trim() || 'Campaign'} Reached Voicemail"
                       campaign appears, holding every lead whose last call hit an
-                      answering machine. They stay dialable in the main campaign too —
+                      answering machine. They stay dialable in the main campaign too 
                       this is a way to work them deliberately, not a separate list.
                     </small>
                   </div>
@@ -3318,7 +3318,7 @@ export default function CampaignsPage() {
                   )}
                 </div>
                 <div className="cmp-blank-sheet-row">
-                  <span className="cmp-blank-sheet-or">— or —</span>
+                  <span className="cmp-blank-sheet-or">, or, </span>
                   <button
                     type="button"
                     className="cmp-blank-sheet-btn"
@@ -3600,7 +3600,7 @@ export default function CampaignsPage() {
                 {/* ── ONE PLACE SETS THE MODE ──────────────────────────────
                     Gone entirely once the campaign is on a team, rather than
                     shown read-only. A greyed-out control still reads as a
-                    control — people click it, nothing happens, and they conclude
+                    control: people click it, nothing happens, and they conclude
                     the page is broken rather than that the setting lives
                     somewhere else. The row above already says where it lives.
 
@@ -3698,7 +3698,7 @@ export default function CampaignsPage() {
                     <small>
                       When ON, "{settingsCampaign.name} Call Backs" shows up in
                       the dialer's campaign selector. Auto-filtered to leads
-                      dispositioned as a call back. No data duplication —
+                      dispositioned as a call back. No data duplication 
                       it's a live filtered view of this campaign.
                     </small>
                   </div>
@@ -3733,7 +3733,7 @@ export default function CampaignsPage() {
                       When ON, "{settingsCampaign.name} Reached Voicemail" appears
                       in the dialer, holding every lead whose last call hit an
                       answering machine. They stay dialable in the main campaign
-                      too — this is a way to work them deliberately.
+                      too, this is a way to work them deliberately.
                     </small>
                   </div>
                   <div
@@ -3820,7 +3820,7 @@ export default function CampaignsPage() {
                       </p>
                     </div>
                     <div className="cmp-blank-sheet-row">
-                      <span className="cmp-blank-sheet-or">— or —</span>
+                      <span className="cmp-blank-sheet-or">, or, </span>
                       <button
                         type="button"
                         className="cmp-blank-sheet-btn"
@@ -4029,7 +4029,7 @@ export default function CampaignsPage() {
                 color: 'white', padding: '6px 10px', fontFamily: FUTURA,
               }}>
                 {(csvUploadError.rejected ?? 0) === 0 && csvUploadError.warnings?.length
-                  ? 'IMPORTED — NEEDS ATTENTION'
+                  ? 'IMPORTED, NEEDS ATTENTION'
                   : (csvUploadError.rejections && (csvUploadError.rejected ?? 0) > 0 && !csvUploadError.detail)
                     ? 'SOME ROWS SKIPPED'
                     : 'UPLOAD PROBLEM'}
@@ -4057,7 +4057,7 @@ export default function CampaignsPage() {
                         fontSize: 11, fontWeight: 'bold', letterSpacing: 0.4,
                         color: T.text, fontFamily: FUTURA,
                       }}>
-                        {r.label} — {r.count.toLocaleString()} row{r.count === 1 ? '' : 's'}
+                        {r.label}, {r.count.toLocaleString()} row{r.count === 1 ? '' : 's'}
                       </div>
                       {r.examples.length > 0 && (
                         <div style={{
@@ -4096,7 +4096,7 @@ export default function CampaignsPage() {
                         fontSize: 11, fontWeight: 'bold', letterSpacing: 0.4,
                         color: T.text, fontFamily: FUTURA,
                       }}>
-                        {w.label} — {w.count.toLocaleString()} lead{w.count === 1 ? '' : 's'}
+                        {w.label}, {w.count.toLocaleString()} lead{w.count === 1 ? '' : 's'}
                       </div>
                       {w.examples.length > 0 && (
                         <div style={{
@@ -4246,7 +4246,7 @@ export default function CampaignsPage() {
         <div className="editor-fullscreen">
           <div className="editor-toolbar">
             <h2 className="editor-toolbar-title">
-              {settingsCampaign.name.toUpperCase()} — LEAD EDITOR
+              {settingsCampaign.name.toUpperCase()}, LEAD EDITOR
             </h2>
             {hasEditorChanges && (
               <span className="editor-tb-changes">

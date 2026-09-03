@@ -10,7 +10,7 @@ import PageViewTracker from '@/components/PageViewTracker'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://dialerseat.com'),
-  title: "DialerSeat — Dial Smarter. Close Faster.",
+  title: "DialerSeat, Dial Smarter. Close Faster.",
   description:
     "The professional outbound dialer built for solo agents up through larger teams. $35/week per seat. No contracts. Cancel anytime. Four dialer modes, automatic voicemail detection, inbound reception, unlimited numbers.",
   applicationName: 'DialerSeat',
@@ -71,20 +71,20 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: 'DialerSeat — Dial Smarter. Close Faster.',
+    title: 'DialerSeat, Dial Smarter. Close Faster.',
     description:
       'The professional outbound dialer for solo agents up through larger teams. $35/week per seat. No contracts.',
     url: 'https://dialerseat.com',
     siteName: 'DialerSeat',
     images: [
-      { url: '/icons/og-image.png', width: 1200, height: 630, alt: 'DialerSeat — Dial Smarter. Close Faster.' },
+      { url: '/icons/og-image.png', width: 1200, height: 630, alt: 'DialerSeat, Dial Smarter. Close Faster.' },
     ],
     locale: 'en_US',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'DialerSeat — Dial Smarter. Close Faster.',
+    title: 'DialerSeat, Dial Smarter. Close Faster.',
     description: 'The professional outbound dialer. $35/week per seat. No contracts. Cancel anytime.',
     images: ['/icons/twitter-image.png'],
   },

@@ -161,7 +161,7 @@ export async function POST(req: Request) {
         success: true,
         access: { ...granted, payer: 'free' },
         stripeChargeCreated: false,
-        note: 'Added to an existing seat — no additional charge.',
+        note: 'Added to an existing seat, no additional charge.',
       })
     }
 

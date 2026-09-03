@@ -13,7 +13,7 @@ import {
 const SLUG = 'cloudtalk'
 
 export const metadata: Metadata = {
-  title: 'DialerSeat vs CloudTalk — The Dialer Isn\u2019t a Paid Add-On',
+  title: 'DialerSeat vs CloudTalk: The Dialer Isn\u2019t a Paid Add-On',
   description:
     'CloudTalk\u2019s $19/seat headline doesn\u2019t include a dialer \u2014 Power Dialer is +$15/seat/month, Parallel Dialer is +$39/seat/month. DialerSeat includes every dialer mode at $35/seat/week, billed weekly, no add-on required.',
   alternates: {

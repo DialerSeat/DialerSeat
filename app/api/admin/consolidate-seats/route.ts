@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
             .from('team_seat_charges')
             .update({
               status: 'voided',
-              void_reason: 'Collapsed — one seat per person per owner',
+              void_reason: 'Collapsed: one seat per person per owner',
             })
             .eq('id', dup.chargeId)
 

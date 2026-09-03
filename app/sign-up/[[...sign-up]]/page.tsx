@@ -68,7 +68,7 @@ export default function SignUpPage() {
       <div style={{ marginBottom: '40px', textAlign: 'center' }}>
         <Link
           href="/"
-          aria-label={`${brandName} — return to home`}
+          aria-label={`${brandName}, return to home`}
           className="auth-logo-link"
           style={{
             display: 'inline-flex',

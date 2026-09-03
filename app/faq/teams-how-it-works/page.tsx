@@ -25,7 +25,7 @@ export const runtime = 'nodejs'
 const SITE = 'https://dialerseat.com'
 
 export const metadata: Metadata = {
-  title: 'How DialerSeat Teams Work — Seats, Lead Distribution, Billing | DialerSeat',
+  title: 'How DialerSeat Teams Work: Seats, Lead Distribution, Billing | DialerSeat',
   description:
     'The mechanics of running a dialer floor: how leads are distributed so two agents never call the same person, how seats and billing work, who pays, what the owner can see, and what is deliberately not built.',
   alternates: {
@@ -35,14 +35,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'How DialerSeat Teams Work',
     description:
-      'Lead distribution, seats, billing, and manager visibility — the mechanics of running a floor, stated plainly.',
+      'Lead distribution, seats, billing, and manager visibility: the mechanics of running a floor, stated plainly.',
     url: `${SITE}/faq/teams-how-it-works`,
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'How DialerSeat Teams Work',
-    description: 'Lead distribution, seats, billing, and manager visibility — the mechanics of running a floor, stated plainly.',
+    description: 'Lead distribution, seats, billing, and manager visibility: the mechanics of running a floor, stated plainly.',
   },
   robots: { index: true, follow: true },
 }
@@ -68,7 +68,7 @@ const FAQS = [
   {
     question: 'How much is a team seat?',
     answer:
-      '$35 per week per agent, the same as a solo seat — there is no team tier and no per-seat markup. The team owner needs Manager+ at $75 per week, which also includes white-labeling. There is no seat minimum.',
+      '$35 per week per agent, the same as a solo seat, there is no team tier and no per-seat markup. The team owner needs Manager+ at $75 per week, which also includes white-labeling. There is no seat minimum.',
   },
   {
     question: 'Who pays for each agent’s seat?',
@@ -78,7 +78,7 @@ const FAQS = [
   {
     question: 'Can I pause a seat instead of cancelling it?',
     answer:
-      'Yes. Pausing stops billing for that seat while keeping the agent’s campaigns, leads, dispositions, and history intact. Resuming is one click and picks up where it left off — which matters for seasonal floors and for agents who step away.',
+      'Yes. Pausing stops billing for that seat while keeping the agent’s campaigns, leads, dispositions, and history intact. Resuming is one click and picks up where it left off, which matters for seasonal floors and for agents who step away.',
   },
   {
     question: 'What can the team owner see?',
@@ -137,7 +137,7 @@ export default function TeamsHowItWorksPage() {
             How DialerSeat teams actually work.
           </h1>
           <p style={{ fontSize: 16.5, lineHeight: 1.8, color: MUTED, maxWidth: 780, marginTop: 18 }}>
-            The price is the easy part and it is on every other page. This one is about the mechanics —
+            The price is the easy part and it is on every other page. This one is about the mechanics 
             what happens when five people share a lead list, who gets billed, what breaks when an agent
             disappears mid-call, and what we have deliberately not built.
           </p>
@@ -162,7 +162,7 @@ export default function TeamsHowItWorksPage() {
 
           <Section
             title="Remote and offshore agents"
-            lead="At $95–$250 per seat per month an offshore floor costs more in software than in wages, which is why most teams never build one. At $35 per week the arithmetic changes."
+            lead="At $95: $250 per seat per month an offshore floor costs more in software than in wages, which is why most teams never build one. At $35 per week the arithmetic changes."
             items={FACTS.teams.offshore}
           />
 
@@ -175,7 +175,7 @@ export default function TeamsHowItWorksPage() {
             </div>
             <p style={{ fontSize: 14.5, lineHeight: 1.8, color: MUTED, marginTop: 10, maxWidth: 780 }}>
               Named here rather than discovered after you pay. If one of these is a requirement, an
-              enterprise contact-centre platform is genuinely the better buy — see the{' '}
+              enterprise contact-centre platform is genuinely the better buy, see the{' '}
               <Link href="/vs/five9" style={{ color: ACCENT }}>Five9</Link> and{' '}
               <Link href="/vs/convoso" style={{ color: ACCENT }}>Convoso</Link> comparisons.
             </p>

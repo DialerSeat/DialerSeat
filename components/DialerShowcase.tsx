@@ -43,14 +43,14 @@ const SCRIPTS: { key: string; label: string; text: string }[] = [
 out about the life coverage you
 looked into.
 
-It only takes a minute — I can show
+It only takes a minute, I can show
 you what you'd actually qualify for,
 no medical exam needed…"`,
   },
   {
     key: 'health',
     label: 'Health',
-    text: `"Hi (client), this is (your name goes here) — you
+    text: `"Hi (client), this is (your name goes here), you
 requested help finding a health plan,
 is now a good time?
 
@@ -61,7 +61,7 @@ paying today…"`,
   {
     key: 'realestate',
     label: 'Real Estate',
-    text: `"Hi (client), this is (your name goes here) — I saw
+    text: `"Hi (client), this is (your name goes here), I saw
 you were curious what your home
 might be worth.
 
@@ -72,7 +72,7 @@ you through what's next…"`,
   {
     key: 'solar',
     label: 'Solar',
-    text: `"Hi (client), this is (your name goes here) — did I
+    text: `"Hi (client), this is (your name goes here), did I
 catch you at an okay time?
 
 Great. You asked about cutting your

@@ -76,4 +76,4 @@ export const COST_ASSUMPTIONS_NOTE =
   `Assumes $${COST_PER_MINUTE_USD.toFixed(3)}/min outbound, ` +
   `$${COST_PER_AMD_LEG_USD.toFixed(3)} per standard AMD leg, ` +
   `$${COST_PER_RECORDED_MINUTE_USD.toFixed(4)}/min recorded. ` +
-  `Carrier list rates — does not include number rental or platform costs.`
+  `Carrier list rates, does not include number rental or platform costs.`

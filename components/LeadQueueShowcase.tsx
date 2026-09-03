@@ -360,7 +360,7 @@ export default function LeadQueueShowcase() {
         }
         @keyframes lq-blink { 0%, 100% { opacity: 1 } 50% { opacity: 0.25 } }
         /* The dark title strip. The real header is
-           background: var(--brand-header-bg) with a 2px accent underline —
+           background: var(--brand-header-bg) with a 2px accent underline 
            the one dark element on an otherwise light screen. */
         .lq-bar {
           display: flex; align-items: center; gap: 10px;
@@ -409,7 +409,7 @@ export default function LeadQueueShowcase() {
           border-color: ${D.accent}; color: ${D.accent};
           background: rgba(42, 74, 138, 0.12);
         }
-        /* Inert control — looks like the real one, doesn't pretend to be
+        /* Inert control: looks like the real one, doesn't pretend to be
            clickable. */
         .lq-chip.is-static { cursor: default; user-select: none; }
 
@@ -419,7 +419,7 @@ export default function LeadQueueShowcase() {
         }
 
         /* Narrow viewports. This panel is fluid rather than zoom-scaled, so the
-           job here is to shed what stops fitting — the type stays at full size.
+           job here is to shed what stops fitting, the type stays at full size.
            The STATE column goes rather than the phone number: the area code
            already tells you the state (336 NC, 713 TX, 404 GA...), so dropping
            the number would lose the only thing on the row that isn't derivable
@@ -427,7 +427,7 @@ export default function LeadQueueShowcase() {
 
            The filter goes entirely on mobile. It's a demo control, not the
            product, and a row of tap targets competing with the queue is worse
-           than not having it — the animation is what a phone visitor is here
+           than not having it, the animation is what a phone visitor is here
            for. Its state is reset when it's hidden (see the effect above) so
            the queue can't be left silently narrowed by a resize. */
         @media (max-width: 560px) {

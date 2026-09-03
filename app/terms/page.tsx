@@ -12,13 +12,13 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — DialerSeat',
+  title: 'Terms of Service: DialerSeat',
   description: 'The agreement between DialerSeat and users. Covers acceptable use, subscription terms, refunds, TCPA compliance, and liability.',
   alternates: {
     canonical: 'https://dialerseat.com/terms',
   },
   openGraph: {
-    title: 'Terms of Service — DialerSeat',
+    title: 'Terms of Service: DialerSeat',
     description:
       'The agreement between DialerSeat and its users: acceptable use, subscription terms, refunds, TCPA compliance, and liability.',
     url: 'https://dialerseat.com/terms',
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Terms of Service — DialerSeat',
+    title: 'Terms of Service: DialerSeat',
     description:
       'The agreement between DialerSeat and its users: acceptable use, subscription terms, refunds, TCPA compliance, and liability.',
   },
@@ -259,7 +259,7 @@ export default function TermsPage() {
               We also offer <strong>Manager+</strong>, a white-label tier priced at{' '}
               <strong>$75 per week</strong>, which provisions your own branded subdomain, logo,
               and brand colors in addition to the standard features. Manager+ is billed under
-              the same weekly, no-contract terms described in this section — the higher price
+              the same weekly, no-contract terms described in this section, the higher price
               reflects the added white-label provisioning, not different cancellation, refund,
               or liability terms.
             </p>
@@ -274,7 +274,7 @@ export default function TermsPage() {
             <h3>Cancellation</h3>
             <p>
               You can cancel at any time from your billing dashboard. Cancellation takes effect at
-              the end of your current billing period — you keep access until then. No refund is
+              the end of your current billing period, you keep access until then. No refund is
               issued for the unused portion of the current week.
             </p>
             <p>
@@ -285,7 +285,7 @@ export default function TermsPage() {
             <h3>Refunds</h3>
             <p>
               Refunds are only considered within 24 hours of the charge going through. Once that
-              24-hour window has passed, the charge is final — canceling afterward stops future
+              24-hour window has passed, the charge is final, canceling afterward stops future
               billing (see Cancellation, above) but does not refund the period you're already in.
               Contact <a href="mailto:support@dialerseat.com">support@dialerseat.com</a> with refund requests.
             </p>
@@ -316,7 +316,7 @@ export default function TermsPage() {
             </ul>
 
             <div className="warning-row">
-              <strong>⚠ This is serious.</strong> TCPA violations carry statutory damages of $500–$1,500 per call.
+              <strong>⚠ This is serious.</strong> TCPA violations carry statutory damages of $500: $1,500 per call.
               We reserve the right to suspend or terminate accounts that we reasonably believe are
               engaged in unlawful telemarketing, even before formal legal proceedings. We will cooperate
               with law enforcement investigations and respond to lawful subpoenas.
@@ -327,7 +327,7 @@ export default function TermsPage() {
               DialerSeat enforces certain TCPA-related guardrails automatically:
             </p>
             <ul>
-              <li>Calling-window restrictions per lead's local time (typically 8AM–9PM)</li>
+              <li>Calling-window restrictions per lead's local time (typically 8AM, 9PM)</li>
               <li>State-specific calling rule enforcement (Sunday bans where applicable)</li>
               <li>Automated abandon-rate protections in predictive mode (FTC TSR 3% rule)</li>
               <li>STIR/SHAKEN A-attestation on outbound calls where supported</li>

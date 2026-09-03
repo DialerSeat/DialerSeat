@@ -168,12 +168,12 @@ export default function CampaignsAccessPanel({
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, fontSize: 11 }}>
                   {pool ? (
                     <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <span style={{ color: T.green, fontWeight: 'bold' }}>● LIVE — {pool.total} dialing now</span>
+                      <span style={{ color: T.green, fontWeight: 'bold' }}>● LIVE, {pool.total} dialing now</span>
                       <span style={{ color: T.muted }}>{pool.ready} ready</span>
                       <span style={{ color: T.muted }}>{pool.dialing} dialing out</span>
                       <span style={{ color: T.muted }}>{pool.onCall} on a call</span>
                       {pool.total >= 2 && (
-                        <span style={{ color: T.primary }}>predictive pool active — surplus calls route to any ready agent</span>
+                        <span style={{ color: T.primary }}>predictive pool active, surplus calls route to any ready agent</span>
                       )}
                     </div>
                   ) : (

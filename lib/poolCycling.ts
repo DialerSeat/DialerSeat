@@ -124,7 +124,7 @@ async function releaseReconcileLock(): Promise<void> {
 async function runGuarded(trigger: string, monthlyOnly: boolean): Promise<ReconcileResult> {
   const got = await claimReconcileLock()
   if (!got) {
-    console.warn(`[poolCycling] reconcile already running elsewhere — skipping "${trigger}"`)
+    console.warn(`[poolCycling] reconcile already running elsewhere, skipping "${trigger}"`)
     return {
       ran: false,
       reason: 'already_running',
@@ -285,7 +285,7 @@ async function doReconcile(trigger: string, monthlyOnly: boolean): Promise<Recon
             // 0, which is the truth.
             actions.push(`Added ${ac}: ${result.phone_number}`)
           } else {
-            actions.push(`Add failed for ${ac} — no inventory`)
+            actions.push(`Add failed for ${ac}, no inventory`)
           }
           await new Promise((r) => setTimeout(r, 250))
         } catch (err: any) {

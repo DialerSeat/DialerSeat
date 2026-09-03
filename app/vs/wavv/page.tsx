@@ -13,23 +13,23 @@ import {
 const SLUG = 'wavv'
 
 export const metadata: Metadata = {
-  title: 'DialerSeat vs WAVV — Every Dialer Mode, One Flat Price',
+  title: 'DialerSeat vs WAVV: Every Dialer Mode, One Flat Price',
   description:
-    'DialerSeat is $35 a week per seat — preview, power, and multi-line predictive dialing all included, no tier to unlock. WAVV starts at $59/month and requires its $149/month Multi Line plan for predictive dialing, plus $1/month per phone number.',
+    'DialerSeat is $35 a week per seat: preview, power, and multi-line predictive dialing all included, no tier to unlock. WAVV starts at $59/month and requires its $149/month Multi Line plan for predictive dialing, plus $1/month per phone number.',
   alternates: {
     canonical: 'https://dialerseat.com/vs/wavv',
   },
   openGraph: {
     title: 'DialerSeat vs WAVV',
     description:
-      'WAVV charges more the harder you dial — $59 to $149/month depending on the mode. DialerSeat is $35 a week, flat, every mode included. Weekly billing, cancel any time.',
+      'WAVV charges more the harder you dial, $59 to $149/month depending on the mode. DialerSeat is $35 a week, flat, every mode included. Weekly billing, cancel any time.',
     url: 'https://dialerseat.com/vs/wavv',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DialerSeat vs WAVV',
-    description: 'WAVV charges more the harder you dial — $59 to $149/month depending on the mode. DialerSeat is $35 a week, flat, every mode included. Weekly billing, cancel any time.',
+    description: 'WAVV charges more the harder you dial, $59 to $149/month depending on the mode. DialerSeat is $35 a week, flat, every mode included. Weekly billing, cancel any time.',
   },
 }
 
@@ -37,7 +37,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to WAVV on price?',
     answer:
-      'DialerSeat is $35 per seat per week, billed weekly, cancel any time, with preview, power, and multi-line predictive dialing all included at that one price. WAVV publishes three separate tiers — $59/month for manual preview dialing, $99/month for single-line auto-dial, and $149/month for multi-line predictive dialing across up to three lines — plus a $1/month fee per phone number on top of whichever plan you choose.',
+      'DialerSeat is $35 per seat per week, billed weekly, cancel any time, with preview, power, and multi-line predictive dialing all included at that one price. WAVV publishes three separate tiers: $59/month for manual preview dialing, $99/month for single-line auto-dial, and $149/month for multi-line predictive dialing across up to three lines, plus a $1/month fee per phone number on top of whichever plan you choose.',
   },
   {
     question: 'Does DialerSeat include predictive dialing at every price point?',
@@ -52,12 +52,12 @@ const FAQS = [
   {
     question: 'Can I switch dialer modes per campaign in DialerSeat?',
     answer:
-      'Yes. DialerSeat lets you set the dialer mode — preview, power, progressive, or predictive — per campaign, so a cold list can run predictive while hot follow-ups run preview, all in the same account at the same price. WAVV\u2019s dialer speed is tied to which priced tier the account is on.',
+      'Yes. DialerSeat lets you set the dialer mode: preview, power, progressive, or predictive: per campaign, so a cold list can run predictive while hot follow-ups run preview, all in the same account at the same price. WAVV\u2019s dialer speed is tied to which priced tier the account is on.',
   },
   {
     question: 'Does DialerSeat offer a free trial like WAVV?',
     answer:
-      'No. WAVV offers a 7-day trial and DialerSeat does not — that one is theirs. DialerSeat bills from day one at $35 per seat per week, weekly with no annual contract, so the most you can be out is a single week. The card up front is deliberate: it is the cheapest way to filter out signups that were never going to dial.',
+      'No. WAVV offers a 7-day trial and DialerSeat does not, that one is theirs. DialerSeat bills from day one at $35 per seat per week, weekly with no annual contract, so the most you can be out is a single week. The card up front is deliberate: it is the cheapest way to filter out signups that were never going to dial.',
   },
 ]
 

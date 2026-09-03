@@ -367,13 +367,13 @@ export async function POST(req: Request) {
 
     const WARN_LABELS: Record<WarnReason, string> = {
       undialable_no_state:
-        'Area code not recognised and no state given — these will never be dialed until a state is added',
+        'Area code not recognised and no state given: these will never be dialed until a state is added',
       impossible_number:
-        'Not routable US numbers — the right number of digits, but an area code or exchange no carrier can route',
+        'Not routable US numbers: the right number of digits, but an area code or exchange no carrier can route',
       sunday_state:
-        'In states that prohibit Sunday calls — these are skipped on Sundays only',
+        'In states that prohibit Sunday calls: these are skipped on Sundays only',
       international:
-        'Not US numbers — dialed under their own country\'s rules',
+        'Not US numbers: dialed under their own country\'s rules',
     }
 
     const warns: Record<WarnReason, { count: number; examples: string[] }> = {
@@ -436,7 +436,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: false,
         error: rejectSummary.length === 1
-          ? `No leads could be imported — every row was rejected: ${rejectSummary[0].label.toLowerCase()}.`
+          ? `No leads could be imported, every row was rejected: ${rejectSummary[0].label.toLowerCase()}.`
           : `No leads could be imported. All ${rejectedTotal} rows were rejected.`,
         detail: detail || 'The file contained no readable rows.',
         rejected: rejectedTotal,
@@ -502,7 +502,7 @@ export async function POST(req: Request) {
           `Saved ${inserted.toLocaleString()} of ${leadsToInsert.length.toLocaleString()} leads, ` +
           `then the upload stopped.`,
         detail:
-          'Upload the same file again — the leads already saved will be detected as ' +
+          'Upload the same file again, the leads already saved will be detected as ' +
           'duplicates and skipped, so nothing will be added twice.',
         count: inserted,
         attempted: leadsToInsert.length,

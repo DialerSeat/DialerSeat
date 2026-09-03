@@ -1,7 +1,7 @@
 import ReportView from '../ReportView'
 
 export const metadata = {
-  title: 'Billing Statement — DialerSeat',
+  title: 'Billing Statement: DialerSeat',
 }
 
 // Opened in its own tab, deliberately outside the dashboard chrome. A statement

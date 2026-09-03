@@ -119,7 +119,7 @@ export default function AdminNumbersPage() {
     setError(null)
     try {
       const res = await fetch('/api/admin/pool/list')
-      if (res.status === 403) throw new Error('Forbidden — admin only')
+      if (res.status === 403) throw new Error('Forbidden, admin only')
       if (res.status === 401) throw new Error('Not signed in')
       const d = await res.json()
       if (d.success) setData(d)
@@ -450,10 +450,10 @@ export default function AdminNumbersPage() {
             <div style={{ flex: 1, minWidth: 200 }}>
               <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 4 }}>
                 {triggerHit
-                  ? `▲ AT TRIGGER — auto-buy will fire next cron run (top of hour)`
+                  ? `▲ AT TRIGGER, auto-buy will fire next cron run (top of hour)`
                   : willTriggerSoon
-                  ? `▲ ${utilizationDelta}% under trigger — auto-buy approaching`
-                  : `${utilizationDelta}% under trigger — pool comfortable`}
+                  ? `▲ ${utilizationDelta}% under trigger, auto-buy approaching`
+                  : `${utilizationDelta}% under trigger, pool comfortable`}
               </div>
               <div style={{ position: 'relative', height: 24 }}>
                 <div className="pool-meter-bg" style={{ height: 24, position: 'relative' }}>
@@ -614,7 +614,7 @@ export default function AdminNumbersPage() {
             padding: 60, textAlign: 'center', color: T.muted,
             fontSize: 11, letterSpacing: 3,
           }}>
-            {poolCount === 0 ? 'POOL EMPTY — RUN /api/admin/pool/seed TO POPULATE' : 'NO MATCHES'}
+            {poolCount === 0 ? 'POOL EMPTY, RUN /api/admin/pool/seed TO POPULATE' : 'NO MATCHES'}
           </div>
         )}
       </div>

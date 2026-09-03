@@ -39,12 +39,12 @@ interface FeatureRow {
 }
 
 const features: FeatureRow[] = [
-  { feature: 'Per-seat price', ds: '$35/wk, cancel anytime', rm: '$199–$249/mo', mo: '$149/mo + add-ons', pb: '$165–$215/mo', f9: '$175+/mo', cv: '$90+/mo, custom quote' },
+  { feature: 'Per-seat price', ds: '$35/wk, cancel anytime', rm: '$199: $249/mo', mo: '$149/mo + add-ons', pb: '$165: $215/mo', f9: '$175+/mo', cv: '$90+/mo, custom quote' },
   { feature: 'Weekly billing option', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
   { feature: 'Annual contract required', ds: false, rm: 'Typical', mo: false, pb: 'For best price', f9: 'Typical', cv: 'Typical' },
   { feature: 'Public pricing on website', ds: true, rm: false, mo: true, pb: true, f9: false, cv: false },
   { feature: 'Self-serve signup (no demo)', ds: true, rm: false, mo: true, pb: true, f9: false, cv: false },
-  { feature: 'Setup fee', ds: '$0', rm: '$500–$2K', mo: '$0', pb: '$0', f9: 'Variable', cv: 'Variable' },
+  { feature: 'Setup fee', ds: '$0', rm: '$500: $2K', mo: '$0', pb: '$0', f9: 'Variable', cv: 'Variable' },
   { feature: 'Power dialer', ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
   { feature: 'Preview dialer', ds: true, rm: true, mo: true, pb: false, f9: true, cv: true },
   { feature: 'Progressive dialer', ds: true, rm: true, mo: 'Partial', pb: false, f9: true, cv: true },
@@ -77,12 +77,12 @@ const INDUSTRY_FAILURES = [
   {
     num: '03',
     title: 'ADD-ON STACKING',
-    body: 'The headline $149–$199 advertised price becomes $200–$300 effective once you add data feeds (Mojo $25–$49 per dataset), tier upgrades for basic features, or industry-specific add-ons. Our $35/week, cancel anytime, is the bill — nothing stacks on top, and it never becomes a monthly premium.',
+    body: 'The headline $149: $199 advertised price becomes $200: $300 effective once you add data feeds (Mojo $25: $49 per dataset), tier upgrades for basic features, or industry-specific add-ons. Our $35/week, cancel anytime, is the bill: nothing stacks on top, and it never becomes a monthly premium.',
   },
   {
     num: '04',
     title: 'DESKTOP-ONLY SOFTWARE',
-    body: 'Most legacy dialers were built before tablets existed and never modernized. ReadyMode and PhoneBurner have no mobile app at all. Five9 publishes one, but it\'s for supervisors to monitor calls, not for agents to dial from. Field agents and solo reps need to be at their desk. We work on phone, tablet, and desktop, with the full dialer — install to home screen and it behaves like a native app.',
+    body: 'Most legacy dialers were built before tablets existed and never modernized. ReadyMode and PhoneBurner have no mobile app at all. Five9 publishes one, but it\'s for supervisors to monitor calls, not for agents to dial from. Field agents and solo reps need to be at their desk. We work on phone, tablet, and desktop, with the full dialer, install to home screen and it behaves like a native app.',
   },
   {
     num: '05',
@@ -92,27 +92,27 @@ const INDUSTRY_FAILURES = [
   {
     num: '06',
     title: 'DATED INTERFACES',
-    body: 'ReadyMode reviewers describe the UI as "Windows 8" or "dated." Mojo, PhoneBurner, and most enterprise tools accumulated UI debt over a decade. Rep retention suffers when the software feels old. DialerSeat ships with a modern design system — clean, fast, and built for the way teams actually work.',
+    body: 'ReadyMode reviewers describe the UI as "Windows 8" or "dated." Mojo, PhoneBurner, and most enterprise tools accumulated UI debt over a decade. Rep retention suffers when the software feels old. DialerSeat ships with a modern design system: clean, fast, and built for the way teams actually work.',
   },
 ]
 
 const SWITCHING_FROM = [
-  { name: 'READYMODE', href: '/vs/readymode', summary: 'Same multi-line predictive at $35/week, cancel anytime, instead of $199–$249/month locked into a contract. No $500–$2,000 setup fee.' },
-  { name: 'BATCHDIALER', href: '/vs/batchdialer', summary: "Their $95/seat headline is the annual prepay rate — month to month it's $119–$249. Automatic number replacement on every DialerSeat plan, not gated behind Pro." },
-  { name: 'MOJO DIALER', href: '/vs/mojo', summary: 'Same triple-line speed across every industry — not just real estate. No mandatory $10/mo Agent Access fee stacked on top.' },
+  { name: 'READYMODE', href: '/vs/readymode', summary: 'Same multi-line predictive at $35/week, cancel anytime, instead of $199, $249/month locked into a contract. No $500: $2,000 setup fee.' },
+  { name: 'BATCHDIALER', href: '/vs/batchdialer', summary: "Their $95/seat headline is the annual prepay rate, month to month it's $119, $249. Automatic number replacement on every DialerSeat plan, not gated behind Pro." },
+  { name: 'MOJO DIALER', href: '/vs/mojo', summary: 'Same triple-line speed across every industry, not just real estate. No mandatory $10/mo Agent Access fee stacked on top.' },
   { name: 'PHONEBURNER', href: '/vs/phoneburner', summary: 'Multi-line predictive included (PhoneBurner is single-line only). Weekly billing, no annual contract.' },
   { name: 'FIVE9', href: '/vs/five9', summary: 'Same compliance posture without the enterprise sales cycle. Self-serve setup in minutes, not weeks.' },
   { name: 'CONVOSO', href: '/vs/convoso', summary: 'Same high-volume outbound dialing for insurance, solar, and lead-heavy verticals. One flat weekly price, no seat minimum.' },
   { name: 'KIXIE', href: '/vs/kixie', summary: 'Same predictive and multi-line dialing without paying Kixie\'s $95+/seat/month multi-line tier.' },
-  { name: 'JUSTCALL', href: '/vs/justcall', summary: 'Same power and predictive dialing without the Pro-tier upgrade — JustCall\'s $29/month plan doesn\'t include a dialer.' },
-  { name: 'AIRCALL', href: '/vs/aircall', summary: 'Same self-serve outbound dialing without the Professional-tier upsell — Aircall gates its dialer behind a $50/seat/month tier.' },
+  { name: 'JUSTCALL', href: '/vs/justcall', summary: 'Same power and predictive dialing without the Pro-tier upgrade, JustCall\'s $29/month plan doesn\'t include a dialer.' },
+  { name: 'AIRCALL', href: '/vs/aircall', summary: 'Same self-serve outbound dialing without the Professional-tier upsell, Aircall gates its dialer behind a $50/seat/month tier.' },
 ]
 
 const teamScaling: FeatureRow[] = [
   { feature: 'Whitelabel available', ds: 'Manager+, $75/mo flat', rm: false, mo: false, pb: false, f9: false, cv: false },
   { feature: 'Manager/supervisor seat', ds: 'Included in Manager+', rm: 'Admin seat can\u2019t dial', mo: false, pb: 'Requires Professional tier', f9: 'Requires 50-seat Optimum quote', cv: 'Custom quote' },
   { feature: 'Live call monitoring / coaching', ds: true, rm: 'iQ tier only', mo: false, pb: 'Professional tier ($195+/seat)', f9: 'Optimum tier, custom quote', cv: true },
-  { feature: 'Price change as team grows', ds: 'None — flat $35/wk per seat', rm: '+$50/seat at 5th license', mo: 'None — but no team plan exists', pb: '+$30–$50/seat per tier', f9: '50-seat minimum on every plan', cv: '~20-seat minimum before you can meaningfully start' },
+  { feature: 'Price change as team grows', ds: 'None: flat $35/wk per seat', rm: '+$50/seat at 5th license', mo: 'None: but no team plan exists', pb: '+$30: $50/seat per tier', f9: '50-seat minimum on every plan', cv: '~20-seat minimum before you can meaningfully start' },
 ]
 
 function StatusCell({ value }: { value: Cell }) {
@@ -392,7 +392,7 @@ export default function VsEveryoneView() {
               We took the core predictive and power dialing technology that enterprise tools charge
               hundreds for, stripped away the sales-demo bloat, and packaged it into a modern
               interface that works on any device. Then we priced it at $35/week with no contract.
-              It&apos;s not a &quot;budget&quot; alternative — it&apos;s a more capable tool built for a modern workflow.
+              It&apos;s not a &quot;budget&quot; alternative, it&apos;s a more capable tool built for a modern workflow.
             </p>
           </div>
 
@@ -401,7 +401,7 @@ export default function VsEveryoneView() {
               <div className="vs-section-eyebrow">▸ ONE WEEK OF DIALING</div>
               <h3>Nobody else sells a week.</h3>
               <p>
-                Say you want to dial for one week — a push before a deadline, a trial run on a new
+                Say you want to dial for one week: a push before a deadline, a trial run on a new
                 list, a single busy stretch. Everywhere else, the smallest thing you can buy is a
                 month, so a week of dialing costs you a month&apos;s subscription. Month to month,
                 on the dialers that actually run multi-line predictive, that&apos;s roughly $120 to
@@ -415,7 +415,7 @@ export default function VsEveryoneView() {
             </div>
             <div className="week-tiles">
               <div className="week-tile">
-                <div className="week-tile-num">$120–$250</div>
+                <div className="week-tile-num">$120, $250</div>
                 <div className="week-tile-label">EVERYWHERE ELSE</div>
                 <div className="week-tile-sub">
                   One month, because a month is the smallest unit sold. Setup fees extra.

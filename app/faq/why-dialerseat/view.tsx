@@ -301,7 +301,7 @@ export default function WhyDialerSeatView() {
               <p className="why-lead">
                 DialerSeat exists because we got tired of paying enterprise
                 prices for tools that hadn&apos;t shipped a real feature in
-                years. We built it the way we&apos;d want to use it — and
+                years. We built it the way we&apos;d want to use it, and
                 then we kept building. This is the page where we tell you
                 the rest.
               </p>
@@ -328,7 +328,7 @@ export default function WhyDialerSeatView() {
               building.
             </p>
             <div className="why-pullquote">
-              The thing we got from the competition wasn&apos;t inspiration —
+              The thing we got from the competition wasn&apos;t inspiration 
               it was motivation. Every clunky UI, every missing feature,
               every two-year contract somebody got trapped in is the reason
               this product exists.
@@ -346,7 +346,7 @@ export default function WhyDialerSeatView() {
                 ship UI that demos well on a slide and breaks during a
                 Tuesday-afternoon shift. We ship things we&apos;d be willing
                 to use ourselves at the top of an hour with a dialing list
-                in front of us — because that&apos;s exactly where this
+                in front of us, because that&apos;s exactly where this
                 product gets used.
               </p>
               <div className="why-cards">
@@ -354,7 +354,7 @@ export default function WhyDialerSeatView() {
                   <h3>BUILT BY OPERATORS</h3>
                   <p>
                     The product is informed by people who&apos;ve spent
-                    real years on dialing floors — insurance, B2B, lead-gen,
+                    real years on dialing floors: insurance, B2B, lead-gen,
                     collections. The features we prioritize come from
                     real-world friction, not market research decks.
                   </p>
@@ -397,7 +397,7 @@ export default function WhyDialerSeatView() {
             <h2>Feedback isn&apos;t a roadmap item. It&apos;s the roadmap.</h2>
             <p>
               We&apos;ve shipped feature requests in the same week they
-              came in. That&apos;s not marketing — it&apos;s the actual
+              came in. That&apos;s not marketing, it&apos;s the actual
               git history. The product evolves at the pace of real
               customer use, not at the pace of a quarterly planning cycle
               held in a conference room three states away from where
@@ -407,13 +407,13 @@ export default function WhyDialerSeatView() {
               When something&apos;s broken, we fix it. When something&apos;s
               missing, we build it. When something&apos;s working, we make
               it better. The product you&apos;re using a month from now
-              is meaningfully better than the one you signed up on — not
+              is meaningfully better than the one you signed up on, not
               because we cycle through marketing campaigns, but because
               we put the work in.
             </p>
             <div className="why-pullquote">
               We put our money where our mouth is on development. The
-              development budget isn&apos;t a line item we try to minimize —
+              development budget isn&apos;t a line item we try to minimize 
               it&apos;s the entire point of the company. Every dollar that
               comes in goes back into making the product better for the
               people paying.
@@ -428,7 +428,7 @@ export default function WhyDialerSeatView() {
               <p>
                 We don&apos;t really see the other dialers as competition.
                 We see them as the reason we exist. ReadyMode, Mojo,
-                PhoneBurner, CallTools, Convoso, Kixie, JustCall — they all
+                PhoneBurner, CallTools, Convoso, Kixie, JustCall, they all
                 do parts of what we do, often at three or four times the
                 price, often locked behind annual contracts, often with
                 feature sets that haven&apos;t materially changed in a
@@ -437,7 +437,7 @@ export default function WhyDialerSeatView() {
               <p>
                 When you build a dialer in 2026 with modern telephony,
                 modern AMD, browser-native calling, an honest abandon-rate
-                controller, and a team that ships weekly — you don&apos;t
+                controller, and a team that ships weekly, you don&apos;t
                 end up looking like a 2014 product. You don&apos;t need to.
               </p>
 
@@ -471,7 +471,7 @@ export default function WhyDialerSeatView() {
               <p style={{ marginTop: 28 }}>
                 There is, in our honest view, no real comparison. But you&apos;ll
                 want to see for yourself, and we respect that. We&apos;ve
-                written the full side-by-sides — they&apos;re linked below.
+                written the full side-by-sides, they&apos;re linked below.
                 If you read them and disagree, send us an email; we&apos;ll
                 ship the missing thing.
               </p>
@@ -526,7 +526,7 @@ export default function WhyDialerSeatView() {
                 <div className="body">
                   <h3>Your data stays yours.</h3>
                   <p>Leads you uploaded, recordings you made, campaigns you
-                  configured — all of it remains accessible. Cancellation
+                  configured, all of it remains accessible. Cancellation
                   doesn&apos;t mean we lock the door behind you.</p>
                 </div>
               </div>
@@ -535,7 +535,7 @@ export default function WhyDialerSeatView() {
                 <div className="body">
                   <h3>The product gets better every week, not every quarter.</h3>
                   <p>Real-feature releases on a continuous cadence. We don&apos;t
-                  batch fixes into &quot;maintenance windows&quot; — we ship
+                  batch fixes into &quot;maintenance windows&quot; we ship
                   what&apos;s ready when it&apos;s ready.</p>
                 </div>
               </div>
@@ -559,7 +559,7 @@ export default function WhyDialerSeatView() {
               <p>
                 We&apos;re deeply grateful to the operators who took a chance
                 on a new tool in a category dominated by entrenched names.
-                Every paying customer has shaped this product — the codebase
+                Every paying customer has shaped this product, the codebase
                 has the receipts. The features you&apos;re using today
                 exist because someone asked for them in an email and we
                 shipped them the same week.
@@ -605,7 +605,7 @@ export default function WhyDialerSeatView() {
                   <h2>Try us for a week.</h2>
                   <p>
                     $35. No contract. Cancel any time. The dialer is the
-                    one we use ourselves — if you don&apos;t like it,
+                    one we use ourselves: if you don&apos;t like it,
                     leave, and your data stays yours.
                   </p>
                   <div className="why-cta-row">

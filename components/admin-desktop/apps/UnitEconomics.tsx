@@ -74,7 +74,7 @@ const usd = (v: number) =>
   `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 /** A dash, never a plausible-looking number. */
-const pct = (v: number | null) => (v === null || Number.isNaN(v) ? '—' : `${v.toFixed(0)}%`)
+const pct = (v: number | null) => (v === null || Number.isNaN(v) ? ', ' : `${v.toFixed(0)}%`)
 
 export default function UnitEconomics() {
   const [data, setData] = useState<Payload | null>(null)
@@ -247,7 +247,7 @@ export default function UnitEconomics() {
 
           <div style={{ fontSize: 10.5, color: T.muted, marginTop: 12, lineHeight: 1.65, maxWidth: 780 }}>
             {data.rates.note} Revenue is the seat rate over the same window, so cost and revenue are
-            comparable. Sorted worst margin first — the row worth looking at is never at the top of an
+            comparable. Sorted worst margin first, the row worth looking at is never at the top of an
             alphabetical list.
           </div>
         </>

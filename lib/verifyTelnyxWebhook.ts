@@ -80,7 +80,7 @@ function alarmUnverified() {
       sendAdminPush(
         'webhook_silence',
         'TELNYX_PUBLIC_KEY is not set. In production every call webhook is ' +
-        'being REJECTED (503) — calls will connect but talk time, AMD and ' +
+        'being REJECTED (503): calls will connect but talk time, AMD and ' +
         'recordings will all read zero. Set it in Vercel, then redeploy.',
         { title: 'Call webhooks unverified' }
       ).catch(() => {})
@@ -123,7 +123,7 @@ export function verifyTelnyxWebhook(req: Request, rawBody: string): NextResponse
     if (FAIL_OPEN_WHEN_UNSET) {
       alarmUnverified()
       console.warn(
-        '[verifyTelnyxWebhook] TELNYX_PUBLIC_KEY is not set — allowing webhook ' +
+        '[verifyTelnyxWebhook] TELNYX_PUBLIC_KEY is not set, allowing webhook ' +
         'WITHOUT verification. Set the env var to enable enforcement.'
       )
       return null
@@ -149,7 +149,7 @@ export function verifyTelnyxWebhook(req: Request, rawBody: string): NextResponse
 
   const nowSeconds = Math.floor(Date.now() / 1000)
   if (Math.abs(nowSeconds - timestamp) > MAX_TIMESTAMP_SKEW_SECONDS) {
-    console.warn(`[verifyTelnyxWebhook] rejected webhook — timestamp skew ${Math.abs(nowSeconds - timestamp)}s exceeds ${MAX_TIMESTAMP_SKEW_SECONDS}s (possible replay)`)
+    console.warn(`[verifyTelnyxWebhook] rejected webhook, timestamp skew ${Math.abs(nowSeconds - timestamp)}s exceeds ${MAX_TIMESTAMP_SKEW_SECONDS}s (possible replay)`)
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -161,7 +161,7 @@ export function verifyTelnyxWebhook(req: Request, rawBody: string): NextResponse
 
     const valid = nacl.sign.detached.verify(messageBytes, signatureBytes, publicKeyBytes)
     if (!valid) {
-      console.warn('[verifyTelnyxWebhook] rejected webhook — signature verification failed')
+      console.warn('[verifyTelnyxWebhook] rejected webhook, signature verification failed')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
   } catch (err) {

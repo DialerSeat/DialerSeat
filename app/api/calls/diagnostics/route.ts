@@ -297,7 +297,7 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
         id: 'connection-type',
         label: 'TELNYX_CONNECTION_ID is a Call Control Application',
         status: 'pass',
-        detail: `"${app?.application_name || config.connectionId}" — correct resource type for POST /v2/calls.`,
+        detail: `"${app?.application_name || config.connectionId}", correct resource type for POST /v2/calls.`,
       })
     } else if (texmlApp.ok) {
       checks.push({
@@ -323,7 +323,7 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
           `it is not what places calls.`,
         fix:
           'Telnyx Mission Control → Voice → Call Control → your Call Control Application → copy its ID ' +
-          'into TELNYX_CONNECTION_ID. Keep the SIP connection separate — it backs TELNYX_SIP_USERNAME.',
+          'into TELNYX_CONNECTION_ID. Keep the SIP connection separate, it backs TELNYX_SIP_USERNAME.',
       })
     } else {
       checks.push({
@@ -383,7 +383,7 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
         id: 'sip-username',
         label: 'TELNYX_SIP_USERNAME exists on this account',
         status: 'warn',
-        detail: `Could not list telephony credentials (${telnyxErrorSummary(creds)}). If your SIP user is defined directly on a Credential Connection rather than as a telephony credential, that is expected — the ring test below is the authoritative check.`,
+        detail: `Could not list telephony credentials (${telnyxErrorSummary(creds)}). If your SIP user is defined directly on a Credential Connection rather than as a telephony credential, that is expected, the ring test below is the authoritative check.`,
       })
     } else {
       checks.push({
@@ -437,7 +437,7 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
         status: (provisionedCount ?? 0) > 0 ? 'pass' : 'warn',
         detail:
           `Parent SIP connection ${credentialConnectionId}. ` +
-          `${provisionedCount ?? 0} agent(s) provisioned — each is created automatically the first ` +
+          `${provisionedCount ?? 0} agent(s) provisioned, each is created automatically the first ` +
           `time that agent's browser registers, so this grows on its own as people use the dialer.`,
         fix:
           (provisionedCount ?? 0) > 0
@@ -490,10 +490,10 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
           label: 'Provisioned agent SIP usernames are dialable',
           status: 'fail',
           detail:
-            `SIP username(s) starting with a digit — ${parts.join('; ')}. Telnyx parses these as ` +
+            `SIP username(s) starting with a digit, ${parts.join('; ')}. Telnyx parses these as ` +
             `phone numbers rather than SIP endpoints, so every dial for the affected agent fails ` +
             `with 10016 "Phone number must be in +E164 format".`,
-          fix: 'SIP usernames must begin with a letter. Telnyx-generated telephony credentials always do — a digit-leading one was set by hand and needs replacing.',
+          fix: 'SIP usernames must begin with a letter. Telnyx-generated telephony credentials always do, a digit-leading one was set by hand and needs replacing.',
         })
       } else {
         checks.push({
@@ -554,7 +554,7 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
         detail:
           `Connection ${sipUriPrefTarget} has sip_uri_calling_preference = "disabled" (Telnyx's default). ` +
           `This blocks every call to ${config.agentSipUri}, and Telnyx reports it as ` +
-          `10016 "Phone number must be in +E164 format" rather than as a blocked SIP URI — ` +
+          `10016 "Phone number must be in +E164 format" rather than as a blocked SIP URI, ` +
           `which is almost certainly the error you are seeing on every dial.`,
         fix: 'POST to this endpoint to set it to "internal" automatically, or set it in Telnyx Mission Control → SIP Connections → Authentication and routing → "Receive SIP URI calls" → "Only from my Connections".',
       })
@@ -592,7 +592,7 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
       status: sipPassword ? 'pass' : 'fail',
       detail: sipPassword
         ? `Present (length ${sipPassword.length}). Served only to signed-in users via /api/calls/sip-credentials.`
-        : 'Not set — the agent\'s browser cannot register, so there will be no call audio in either direction.',
+        : 'Not set: the agent\'s browser cannot register, so there will be no call audio in either direction.',
       fix: sipPassword ? undefined : 'Copy the password from your Telnyx credential connection into TELNYX_SIP_PASSWORD.',
     })
 
@@ -626,7 +626,7 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
         id: 'outbound-profile',
         label: 'Outbound Voice Profile exists',
         status: 'pass',
-        detail: `${ovpList.length} profile(s). Whitelisted destinations — ${destinations}. A destination missing here is what produces Telnyx's D13 "not included in whitelisted countries" rejection.`,
+        detail: `${ovpList.length} profile(s). Whitelisted destinations, ${destinations}. A destination missing here is what produces Telnyx's D13 "not included in whitelisted countries" rejection.`,
       })
     }
 
@@ -675,7 +675,7 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
       status: publicKey ? 'pass' : 'warn',
       detail: publicKey
         ? `Set (length ${publicKey.length}); webhooks are verified.`
-        : 'Not set — lib/verifyTelnyxWebhook.ts fails OPEN, so anyone who knows the webhook URL can post fake call events.',
+        : 'Not set, lib/verifyTelnyxWebhook.ts fails OPEN, so anyone who knows the webhook URL can post fake call events.',
       fix: publicKey ? undefined : 'Telnyx Mission Control → Account → Keys & Credentials → copy the public key into TELNYX_PUBLIC_KEY.',
     })
 
@@ -697,7 +697,7 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
           id: 'ring-test',
           label: 'Live agent-leg ring test',
           status: 'skip',
-          detail: 'Skipped — no caller-ID number available to dial from.',
+          detail: 'Skipped, no caller-ID number available to dial from.',
         })
       } else {
         const res = await fetch(`${TELNYX_BASE}/calls`, {
@@ -743,7 +743,7 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
             id: 'ring-test',
             label: 'Live agent-leg ring test',
             status: 'pass',
-            detail: `Telnyx accepted a call to ${config.agentSipUri} (call_control_id ${callControlId}); it was hung up immediately. The agent SIP endpoint is dialable. Note this proves Telnyx will ROUTE to the URI — whether the browser softphone is registered and answers is a separate step, visible in the dialer's console as a SIP INVITE.`,
+            detail: `Telnyx accepted a call to ${config.agentSipUri} (call_control_id ${callControlId}); it was hung up immediately. The agent SIP endpoint is dialable. Note this proves Telnyx will ROUTE to the URI: whether the browser softphone is registered and answers is a separate step, visible in the dialer's console as a SIP INVITE.`,
           })
         } else {
           const errs: TelnyxApiError[] = Array.isArray(body?.errors) ? body.errors : []
@@ -755,7 +755,7 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
             detail: `Telnyx rejected a call to ${config.agentSipUri} (HTTP ${res.status}): ${formatErrors(errs) || 'no error detail'}.`,
             fix: isE164Complaint
               ? `Error 10016 on a SIP URI means Telnyx did not recognize "${config.agentSipUri}" as a SIP endpoint at all and fell back to validating it as a phone number. The domain must be a Telnyx SIP domain (${DEFAULT_SIP_DOMAIN} for US) and the username must belong to a credential connection on this account.`
-              : 'See the Telnyx error above — it applies to the agent SIP endpoint, not to any lead phone number.',
+              : 'See the Telnyx error above: it applies to the agent SIP endpoint, not to any lead phone number.',
           })
         }
       }

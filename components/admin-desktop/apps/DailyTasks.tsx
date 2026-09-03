@@ -223,7 +223,7 @@ export default function DailyTasksApp() {
             color: (data?.streak ?? 0) > 0 ? GREEN : 'var(--brand-muted-text)',
             fontVariantNumeric: 'tabular-nums',
           }}>
-            {data?.streak ?? '—'}
+            {data?.streak ?? ', '}
           </div>
           <div style={{ fontSize: 9, letterSpacing: 2, color: 'var(--brand-muted-text)', marginTop: 3 }}>
             DAY STREAK
@@ -286,7 +286,7 @@ export default function DailyTasksApp() {
             fontSize: 10, letterSpacing: 1.4, color: 'var(--brand-muted-text)', marginBottom: 16,
           }}>
             {isFuture
-              ? 'A day ahead — add what you already know about it. The four cannot be ticked before they arrive.'
+              ? 'A day ahead, add what you already know about it. The four cannot be ticked before they arrive.'
               : `${coreDone} of ${coreTotal} core ${allCoreDone ? '· done' : 'done'}${isPast ? ' · past day' : ''}`}
           </div>
 
@@ -435,7 +435,7 @@ export default function DailyTasksApp() {
             fontSize: 10.5, color: 'var(--brand-muted-text)',
             marginTop: 16, lineHeight: 1.65, maxWidth: 460,
           }}>
-            Pick any day to open its list — including one that has not arrived,
+            Pick any day to open its list: including one that has not arrived,
             so a trip or an appointment can be written down when it is booked
             rather than remembered on the morning.
           </div>

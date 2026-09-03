@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Leave out EINs and SSNs — DialerSeat does not store tax identifiers, and your statement does not need one to be valid.',
+          error: 'Leave out EINs and SSNs: DialerSeat does not store tax identifiers, and your statement does not need one to be valid.',
         },
         { status: 400 }
       )

@@ -13,7 +13,7 @@ import {
 const SLUG = 'convoso'
 
 export const metadata: Metadata = {
-  title: 'DialerSeat vs Convoso — Same Dialer Modes, No Seat Minimum',
+  title: 'DialerSeat vs Convoso: Same Dialer Modes, No Seat Minimum',
   description:
     'Convoso is a strong predictive dialer built for 20+ seat operations with custom, usage-billed quotes. DialerSeat matches predictive, power, progressive, and preview dialing at $35/seat/week, billed weekly, no seat minimum, no demo required.',
   alternates: {
@@ -22,14 +22,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'DialerSeat vs Convoso',
     description:
-      'The same four dialer modes at a published $35/week per seat — no 20-seat minimum, no custom quote, no carrier fees billed separately.',
+      'The same four dialer modes at a published $35/week per seat: no 20-seat minimum, no custom quote, no carrier fees billed separately.',
     url: 'https://dialerseat.com/vs/convoso',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DialerSeat vs Convoso',
-    description: 'The same four dialer modes at a published $35/week per seat — no 20-seat minimum, no custom quote, no carrier fees billed separately.',
+    description: 'The same four dialer modes at a published $35/week per seat: no 20-seat minimum, no custom quote, no carrier fees billed separately.',
   },
 }
 

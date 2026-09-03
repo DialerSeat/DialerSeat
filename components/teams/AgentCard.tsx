@@ -87,7 +87,7 @@ export default function AgentCard({
     <>
       <style>{`
         /* The card is its own container. Everything below sizes against the
-           CARD, not the viewport — which is what lets one component serve the
+           CARD, not the viewport, which is what lets one component serve the
            wide floor and the narrow inspector with no prop telling it which. */
         .agent-card {
           container-type: inline-size;
@@ -169,7 +169,7 @@ export default function AgentCard({
           <Fig label="CALLS" value={String(member.callsToday)} />
           <Fig
             label="CONNECT"
-            value={member.connectRatePct === null ? '—' : `${member.connectRatePct}%`}
+            value={member.connectRatePct === null ? ', ' : `${member.connectRatePct}%`}
           />
           <Fig label="TALK" value={mmss(member.talkSecondsToday)} />
         </div>

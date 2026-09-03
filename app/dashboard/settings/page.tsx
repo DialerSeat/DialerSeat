@@ -488,7 +488,7 @@ export default function SettingsPage() {
           body: JSON.stringify({
             type: 'exit',
             subject: exitRating > 0 ? `Exit rating: ${exitRating}/5` : 'Account deletion feedback',
-            body: exitFeedback.trim() || '(no written feedback — rating only)',
+            body: exitFeedback.trim() || '(no written feedback: rating only)',
             disposition: exitRating > 0 ? `${exitRating}/5` : null,
           }),
         })
@@ -525,7 +525,7 @@ export default function SettingsPage() {
       setDeleteAccSubmitting(false)
       setTimeout(() => { window.location.href = '/' }, 2200)
     } catch (err: any) {
-      setDeleteAccError(err?.message || 'Network error — please try again.')
+      setDeleteAccError(err?.message || 'Network error, please try again.')
       setDeleteAccSubmitting(false)
     }
   }
@@ -730,7 +730,7 @@ export default function SettingsPage() {
                   <span style={seatBadgeStyle('#ffaa3e')}>AGENT PAID</span>
                 </div>
                 <div style={seatDetailStyle}>
-                  Campaign: <strong style={{ color: CHROME.text }}>{seat.campaignName || '—'}</strong>
+                  Campaign: <strong style={{ color: CHROME.text }}>{seat.campaignName || ', '}</strong>
                 </div>
                 <div style={seatDetailStyle}>
                   Owner: {seat.ownerName} · $35.00 / WEEK
@@ -783,7 +783,7 @@ export default function SettingsPage() {
             >{portalBusy ? 'Opening Stripe…' : 'Manage payment methods & invoices'}</button>
             <div style={{ fontSize: 11.5, color: '#80848e', marginTop: 6, lineHeight: 1.6 }}>
               Add or replace a card, keep more than one on file, and download past invoices.
-              Opens in a new tab. Handled by Stripe — card details never reach DialerSeat.
+              Opens in a new tab. Handled by Stripe, card details never reach DialerSeat.
             </div>
             {portalError && (
               <div style={{ fontSize: 12, color: '#ff6464', marginTop: 8, lineHeight: 1.6 }}>
@@ -809,7 +809,7 @@ export default function SettingsPage() {
             <button onClick={handleResubscribe} disabled={resuming} style={{ ...resubscribeButtonStyle, opacity: resuming ? 0.6 : 1, cursor: resuming ? 'not-allowed' : 'pointer' }}>
               {resuming
                 ? 'RESUMING...'
-                : sub?.tier === 'lapsed' ? 'RESUBSCRIBE — $35/WEEK' : 'RESUME SUBSCRIPTION'}
+                : sub?.tier === 'lapsed' ? 'RESUBSCRIBE, $35/WEEK' : 'RESUME SUBSCRIPTION'}
             </button>
           </div>
         )}
@@ -832,7 +832,7 @@ export default function SettingsPage() {
             <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
               {paused ? (
                 <>
-                  Billing is paused. You can resume weekly billing at any time —
+                  Billing is paused. You can resume weekly billing at any time 
                   one click, no re-signup, and everything is exactly where you
                   left it.
                   {sub.currentPeriodEnd && (
@@ -1045,7 +1045,7 @@ export default function SettingsPage() {
                 </div>
                 <p style={{ fontSize: 13, lineHeight: 1.6, margin: '0 0 16px 0', color: CHROME.text }}>
                   How was your experience with DialerSeat? Your feedback goes straight to the
-                  team — it genuinely helps us improve.
+                  team, it genuinely helps us improve.
                 </p>
 
                 <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
@@ -1070,7 +1070,7 @@ export default function SettingsPage() {
                 <textarea
                   value={exitFeedback}
                   onChange={e => setExitFeedback(e.target.value)}
-                  placeholder="What worked, what didn't, what we should fix — anything at all."
+                  placeholder="What worked, what didn't, what we should fix, anything at all."
                   maxLength={8000}
                   rows={5}
                   style={{
@@ -1110,7 +1110,7 @@ export default function SettingsPage() {
                   sign-in. This cannot be undone.
                 </p>
                 <p style={{ fontSize: 12, lineHeight: 1.6, margin: '0 0 16px 0', color: CHROME.muted }}>
-                  If you have an active subscription, cancel it first — active accounts can&apos;t
+                  If you have an active subscription, cancel it first, active accounts can&apos;t
                   be deleted until billing stops.
                 </p>
 
@@ -1154,7 +1154,7 @@ export default function SettingsPage() {
                   ACCOUNT DELETED
                 </div>
                 <p style={{ fontSize: 13, lineHeight: 1.6, color: CHROME.text }}>
-                  Your data has been removed. Taking you home now — thanks for using
+                  Your data has been removed. Taking you home now, thanks for using
                   DialerSeat.
                 </p>
               </>
@@ -1182,10 +1182,10 @@ function planLabelFor(plan: SubStatus['plan']): string {
 }
 
 function tierStatusLabel(sub: SubStatus | null, wlActive: boolean): string {
-  if (!sub) return wlActive ? 'ACTIVE' : '—'
+  if (!sub) return wlActive ? 'ACTIVE' : ', '
   if (sub.tier === 'lapsed' && !wlActive) return 'UNSUBSCRIBED'
   if (sub.cancelAtPeriodEnd) return `${sub.status?.toUpperCase()} (CANCELING)`
-  return sub.status?.toUpperCase() || (wlActive ? 'ACTIVE' : '—')
+  return sub.status?.toUpperCase() || (wlActive ? 'ACTIVE' : ', ')
 }
 
 function tierStatusColor(sub: SubStatus | null): string {

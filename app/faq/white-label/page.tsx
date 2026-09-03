@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import View from './view'
 
 export const metadata: Metadata = {
-  title: 'White-Label Your Dialer — Your Brand, Your Domain | DialerSeat',
+  title: 'White-Label Your Dialer: Your Brand, Your Domain | DialerSeat',
   description:
     'Run DialerSeat as your own product. Your logo, your colors, your custom domain. Your agents never see DialerSeat. $75/week, all-inclusive.',
   alternates: { canonical: 'https://dialerseat.com/faq/white-label' },

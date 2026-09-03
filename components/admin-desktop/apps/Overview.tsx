@@ -198,7 +198,7 @@ export default function OverviewApp() {
       if (showLoader) setLoading(true)
       fetch('/api/admin/users', { cache: 'no-store' })
         .then(async r => {
-          if (r.status === 403) throw new Error('Forbidden — admin only')
+          if (r.status === 403) throw new Error('Forbidden, admin only')
           if (r.status === 401) throw new Error('Not signed in')
           return r.json()
         })
@@ -429,7 +429,7 @@ export default function OverviewApp() {
         .ovr-email {
           font-size: 11px;
           /* Was T.muted, which on this light panel is a mid grey against a
-             near-white background — the one line somebody actually needs to
+             near-white background, the one line somebody actually needs to
              read to identify a person, rendered as the faintest thing in the
              row. */
           color: ${T.text};
@@ -763,7 +763,7 @@ export default function OverviewApp() {
           <option value="joined_new">Newest joined</option>
           <option value="joined_old">Oldest joined</option>
           <option value="active_first">Most active first</option>
-          <option value="name">Name A–Z</option>
+          <option value="name">Name A, Z</option>
         </select>
       </div>
 

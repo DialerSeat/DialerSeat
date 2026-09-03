@@ -94,7 +94,7 @@ export class QueueDiagnosisBuilder {
       // which leads to go and fix.
       const allClock = reasons.every(r => CLOCK_CODES.has(r.code))
       if (allClock) {
-        summary = 'All leads are outside their local calling hours (9am–9pm).'
+        summary = 'All leads are outside their local calling hours (9am, 9pm).'
       } else {
         const parts = reasons.map(r => `${r.count.toLocaleString()} ${LABELS[r.code]}`)
         const head = parts[0]
@@ -102,7 +102,7 @@ export class QueueDiagnosisBuilder {
         // The examined total is dropped here too. It only ever equalled the sum
         // of the parts below it, so it was restating them in advance.
         summary =
-          `Nothing is dialable right now — ${head}` +
+          `Nothing is dialable right now, ${head}` +
           (tail.length > 0 ? `; ${tail.join('; ')}` : '') + '.'
       }
 

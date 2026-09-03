@@ -224,7 +224,7 @@ export default function Notifications() {
                       delivery that silently failed. */}
                   {!n.pushed && (
                     <span style={{ fontSize: 9, color: T.muted, letterSpacing: 0.5 }}
-                          title="Logged but not sent — this event type or the master switch is off in Settings.">
+                          title="Logged but not sent, this event type or the master switch is off in Settings.">
                       MUTED
                     </span>
                   )}

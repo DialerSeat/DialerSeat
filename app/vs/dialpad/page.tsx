@@ -13,7 +13,7 @@ import {
 const SLUG = 'dialpad'
 
 export const metadata: Metadata = {
-  title: 'DialerSeat vs Dialpad — The Power Dialer Is a Separate Product',
+  title: 'DialerSeat vs Dialpad: The Power Dialer Is a Separate Product',
   description:
     'Dialpad Connect, the $15\u2013$35/user/month phone system, has no power dialer at any tier \u2014 the dialer lives in a separate product, Dialpad Sell, starting around $39/user/month. DialerSeat includes every dialer mode at $35/seat/week, one product.',
   alternates: {

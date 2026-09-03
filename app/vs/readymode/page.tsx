@@ -13,23 +13,23 @@ import {
 const SLUG = 'readymode'
 
 export const metadata: Metadata = {
-  title: 'DialerSeat vs ReadyMode — Modern Dialer Without the $2K Setup Fee',
+  title: 'DialerSeat vs ReadyMode: Modern Dialer Without the $2K Setup Fee',
   description:
-    'DialerSeat is the modern alternative to ReadyMode. Multi-line predictive dialing, per-campaign mode, multiple scripts per campaign, server-side TCPA — at flat $35/week per seat. No $500–$2,000 setup fee, no annual contract, works on every device.',
+    'DialerSeat is the modern alternative to ReadyMode. Multi-line predictive dialing, per-campaign mode, multiple scripts per campaign, server-side TCPA, at flat $35/week per seat. No $500: $2,000 setup fee, no annual contract, works on every device.',
   alternates: {
     canonical: 'https://dialerseat.com/vs/readymode',
   },
   openGraph: {
     title: 'DialerSeat vs ReadyMode',
     description:
-      'Same multi-line predictive at $35/week instead of $165–$249/month. No $2K setup fee. Modern UI built this year. Works on phones and tablets.',
+      'Same multi-line predictive at $35/week instead of $165, $249/month. No $2K setup fee. Modern UI built this year. Works on phones and tablets.',
     url: 'https://dialerseat.com/vs/readymode',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DialerSeat vs ReadyMode',
-    description: 'Same multi-line predictive at $35/week instead of $165–$249/month. No $2K setup fee. Modern UI built this year. Works on phones and tablets.',
+    description: 'Same multi-line predictive at $35/week instead of $165, $249/month. No $2K setup fee. Modern UI built this year. Works on phones and tablets.',
   },
 }
 
@@ -37,7 +37,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to ReadyMode on price?',
     answer:
-      'DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with no setup fee and no annual contract. ReadyMode publishes a $165 starting price that lands at $200–$249 in practice once implementation fees, tier upgrades, and custom reports are added. ReadyMode also typically charges a $500–$2,000 setup fee. DialerSeat charges $0 for setup.',
+      'DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with no setup fee and no annual contract. ReadyMode publishes a $165 starting price that lands at $200: $249 in practice once implementation fees, tier upgrades, and custom reports are added. ReadyMode also typically charges a $500: $2,000 setup fee. DialerSeat charges $0 for setup.',
   },
   {
     question: 'What does DialerSeat have that ReadyMode does not?',

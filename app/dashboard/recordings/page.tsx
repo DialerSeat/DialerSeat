@@ -697,7 +697,7 @@ export default function RecordingsPage() {
           border-color: ${T.red};
           color: ${T.red};
         }
-        /* .rec-btn-active stays on T.dark — button chrome, not page header */
+        /* .rec-btn-active stays on T.dark: button chrome, not page header */
         .rec-btn-active {
           background: ${T.dark};
           color: ${T.blue};
@@ -1019,8 +1019,8 @@ export default function RecordingsPage() {
           const leadName = hasLead
             ? `${r.leads!.first_name || ''} ${r.leads!.last_name || ''}`.trim() || 'Unnamed Lead'
             : 'Manual Dial'
-          const phone = r.leads?.phone || r.phone_number || '—'
-          const campName = r.campaigns?.name || (hasLead ? '—' : 'Direct')
+          const phone = r.leads?.phone || r.phone_number || ', '
+          const campName = r.campaigns?.name || (hasLead ? ', ' : 'Direct')
           const { date, time } = formatDateClean(r.created_at)
           const dur = formatDuration(r.recording_duration || r.duration)
           const notes = r.leads?.notes || (r as any).notes || ''
@@ -1193,7 +1193,7 @@ export default function RecordingsPage() {
                     <div className="rec-expand-row">
                       <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>DISPOSITION</span>
                       <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: dispColor(r.disposition) }}>
-                        {r.disposition || '—'}
+                        {r.disposition || ', '}
                       </span>
                     </div>
                     <div className="rec-expand-row">
@@ -1229,7 +1229,7 @@ export default function RecordingsPage() {
                   {hasLead && (
                     <div>
                       <div className="rec-expand-section-label">
-                        EDIT DISPOSITION — SYNCED WITH LEADS PAGE
+                        EDIT DISPOSITION, SYNCED WITH LEADS PAGE
                       </div>
                       <div className="disp-grid">
                         {EDIT_DISPOSITIONS
@@ -1314,7 +1314,7 @@ export default function RecordingsPage() {
                       marginTop: 6, fontSize: 10, letterSpacing: 1,
                       color: T.red, fontFamily: 'monospace',
                     }}>
-                      THIS RECORDING COULD NOT BE LOADED — IT MAY HAVE PASSED THE CARRIER&apos;S RETENTION WINDOW
+                      THIS RECORDING COULD NOT BE LOADED, IT MAY HAVE PASSED THE CARRIER&apos;S RETENTION WINDOW
                     </div>
                   )}
                   {expDays !== null && (

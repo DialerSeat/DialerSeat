@@ -131,7 +131,7 @@ export default function LoginLinkSection({
             </span>
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, letterSpacing: 0.3 }}>
-            Add one link under your sign-in mark — your site, agent portal, or lead packages.
+            Add one link under your sign-in mark: your site, agent portal, or lead packages.
           </div>
         </div>
         <span

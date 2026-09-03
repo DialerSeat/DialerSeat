@@ -42,7 +42,7 @@ const COMPARISONS: HubItem[] = [
   {
     href: '/vs/everyone',
     label: 'VS Every Legacy Dialer',
-    note: 'The six failures the whole category shares — start here',
+    note: 'The six failures the whole category shares: start here',
     added: '2026-05-17',
     keywords: 'industry all legacy overview start here',
   },
@@ -257,10 +257,12 @@ export default function VsHubView() {
             margin: 0 auto;
             padding: 0 32px 88px;
           }
+          /* No accent top rule. None of the directory cards above this panel
+             carry one, and the blue bar made the Manager+ section read as a
+             different component bolted onto the bottom of the page. */
           .vshub-panel {
             background: ${SITE.surface};
             border: 1px solid ${SITE.border};
-            border-top: 3px solid #2a6eff;
             border-radius: 12px;
             padding: 34px 38px;
             margin-bottom: 18px;
@@ -368,7 +370,7 @@ export default function VsHubView() {
             <h2>Manager+ adds whitelabel for $75/week, flat.</h2>
             <p>
               Running more than one seat, or managing dialing for other people&apos;s teams?
-              Manager+ is a flat $75/week upgrade that puts your brand on the platform — same
+              Manager+ is a flat $75/week upgrade that puts your brand on the platform, same
               rate whether you&apos;re managing 2 seats or 200. None of the dialers on this page
               offer true whitelabel; the closest most get is a referral or reseller program that
               keeps their name on the product.

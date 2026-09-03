@@ -31,7 +31,7 @@ const RED = '#ff5c5c'
 const VIOLET = '#a98cff'
 
 const MODES = [
-  { id: 'visitors', label: 'VISITORS', hint: 'Unique visitors — strangers, not accounts' },
+  { id: 'visitors', label: 'VISITORS', hint: 'Unique visitors: strangers, not accounts' },
   { id: 'online', label: 'ONLINE NOW', hint: 'Dialing in the last 90 seconds' },
   { id: 'subscribed', label: 'ACTIVE SUB', hint: 'Active paid subscriptions' },
   { id: 'all', label: 'ALL SIGNUPS', hint: 'Every account we can place' },
@@ -194,7 +194,7 @@ const hhmmss = (iso: string) => {
   return d.toLocaleTimeString('en-GB', { hour12: false })
 }
 const prettyPhone = (p: string | null) => {
-  if (!p) return '—'
+  if (!p) return ', '
   const d = p.replace(/\D/g, '')
   const t = d.length === 11 && d.startsWith('1') ? d.slice(1) : d
   return t.length === 10 ? `${t.slice(0, 3)}.${t.slice(3, 6)}.${t.slice(6)}` : p
@@ -824,7 +824,7 @@ export default function OpsMap() {
           border-color:${EDGE_HOT}; color:${CYAN}; background:rgba(18,80,138,0.28);
           box-shadow:0 0 7px rgba(47,143,216,0.25);
         }
-        /* position:relative is load-bearing — the magnitude bar inside each row
+        /* position:relative is load-bearing, the magnitude bar inside each row
            is absolutely positioned, and without it every bar escapes to the
            app container and stacks in one corner. */
         .om-subbar {
@@ -870,7 +870,7 @@ export default function OpsMap() {
         .om-dock-row { display:flex; gap:8px; align-items:flex-end; min-height:0; }
         /* The dock itself is transparent to the pointer; only its PANELS
            take events. Without this the whole strip along the bottom of the
-           map was dead to dragging — the gap between panels, and the margin
+           map was dead to dragging: the gap between panels, and the margin
            around them, all belonged to a container nobody could see. */
         .om-dock { pointer-events:none; }
         .om-panel, .om-corner, .om-pulse-wrap { pointer-events:auto; }
@@ -882,7 +882,7 @@ export default function OpsMap() {
         @media (max-width: 900px) { .om-corner { width:auto; max-width:none; flex:1 1 0; } }
         /* Height belongs to the OPEN panel only. Setting it unconditionally
            kept the box its full size with nothing in it, which is what stopped
-           these collapsing — the caret flipped and the panel did not move. */
+           these collapsing, the caret flipped and the panel did not move. */
         .om-feed-wrap { flex:1 1 auto; min-width:0; }
         .om-rank-wrap { width:258px; flex:0 0 auto; }
         .om-feed-wrap[data-open="true"],
@@ -984,7 +984,7 @@ export default function OpsMap() {
               {/* Native title: hover answers the small question without a
                   click, and it reaches keyboard and screen readers, which a
                   hand-built floating div would not. */}
-              <title>{`${t.label} — ${t.calls} dialed, ${t.answered} answered`}</title>
+              <title>{`${t.label}, ${t.calls} dialed, ${t.answered} answered`}</title>
             </g>
           )
         })}
@@ -1016,7 +1016,7 @@ export default function OpsMap() {
               <circle cx={x} cy={y} r={r + (on ? 3.4 : 1.6) * k} fill="none"
                       stroke={c} strokeOpacity={on ? 1 : 0.55} strokeWidth={(on ? 1.6 : 0.8) * k} />
               <title>
-                {`${p.label} — ${p.users} ${isVisitors ? 'visitor' : 'person'}${p.users === 1 ? '' : 's'}` +
+                {`${p.label}, ${p.users} ${isVisitors ? 'visitor' : 'person'}${p.users === 1 ? '' : 's'}` +
                  (p.online ? `, ${p.online} dialing now` : '')}
               </title>
               {/* Sooner on a phone: there is less room, so the label is the
@@ -1090,7 +1090,7 @@ export default function OpsMap() {
               sometimes you want all of it — and remembers nothing, so the
               panels come back exactly as they were. */}
           <button className="om-chip" title={dockHidden ? 'Restore panels' : 'Minimise panels'}
-                  onClick={() => setDockHidden(v => !v)}>{dockHidden ? '▣' : '—'}</button>
+                  onClick={() => setDockHidden(v => !v)}>{dockHidden ? '▣' : ', '}</button>
           <button className="om-chip" title={isFull ? 'Exit fullscreen (Esc)' : 'Fullscreen'}
                   onClick={toggleFull}>{isFull ? '❐' : '⛶'}</button>
         </div>
@@ -1128,7 +1128,7 @@ export default function OpsMap() {
                 <Row k="CALLS PLACED" v={String(selTarget.calls)} c={AMBER} />
                 <Row k="ANSWERED" v={String(selTarget.answered)} c={GREEN} />
                 <Row k="CONNECTED" v={String(selTarget.connected)} c={CYAN} />
-                <Row k="ANSWER RATE" v={selTarget.calls ? `${Math.round((selTarget.answered / selTarget.calls) * 100)}%` : '—'} />
+                <Row k="ANSWER RATE" v={selTarget.calls ? `${Math.round((selTarget.answered / selTarget.calls) * 100)}%` : ', '} />
                 <Row k="AREA CODES" v={selTarget.codes.join(', ')} />
               </>
             )}
@@ -1251,7 +1251,7 @@ export default function OpsMap() {
                 <Row k="ANSWERED"
                      v={person.calls
                         ? `${person.answered} · ${Math.round((person.answered / person.calls) * 100)}%`
-                        : '—'} />
+                        : ', '} />
                 <Row k="CAMPAIGNS" v={String(person.campaigns)} />
                 <Row k="LEADS" v={String(person.leads)} />
                 <Row k="LAST CALL"
@@ -1466,13 +1466,13 @@ export default function OpsMap() {
                     against, together — a ratio with no threshold beside it is
                     not actionable. */}
                 <Row k={`SHORT CALLS (<=6s)`}
-                     v={comp.shortPct === null ? '—' : `${comp.shortPct.toFixed(1)}% of ${comp.measured}`}
+                     v={comp.shortPct === null ? ', ' : `${comp.shortPct.toFixed(1)}% of ${comp.measured}`}
                      c={comp.shortPct !== null && comp.shortPct > compMeta.threshold ? RED : GREEN} />
                 <Row k="THEIR LIMIT" v={`${compMeta.threshold}%`} />
                 <Row k="ANSWER RATE"
-                     v={comp.answerPct === null ? '—' : `${comp.answerPct.toFixed(1)}%`} />
+                     v={comp.answerPct === null ? ', ' : `${comp.answerPct.toFixed(1)}%`} />
                 <Row k="AVG BILLED"
-                     v={comp.avgBilled === null ? '—' : `${comp.avgBilled.toFixed(1)}s`} />
+                     v={comp.avgBilled === null ? ', ' : `${comp.avgBilled.toFixed(1)}s`} />
                 <Row k="PLACED / CONNECTED" v={`${comp.placed} / ${comp.connected}`} />
                 {/* Stated because the ratio is a MONTH's ratio: a bad week
                     early on keeps it high until the month turns, and knowing
@@ -1484,7 +1484,7 @@ export default function OpsMap() {
                        c={compMeta.resetsInDays <= 3 ? CYAN : undefined} />
                 )}
                 <div style={{ fontSize: 9, color: DIM, marginTop: 5, lineHeight: 1.5 }}>
-                  Billed time is answer to hangup, ring excluded — the span
+                  Billed time is answer to hangup, ring excluded, the span
                   Telnyx charge for. They assess per calendar month.
                 </div>
               </div>
@@ -1611,14 +1611,14 @@ export default function OpsMap() {
                           <tr key={f.id} data-fresh={freshIds.has(f.id) ? '1' : undefined}>
                             <td style={{ color: CYAN }}>{hhmmss(f.at)}</td>
                             <td style={{ color: GREEN }}>{f.agent}</td>
-                            <td className="om-hide-sm" style={{ color: MUTED }}>{f.agentPlace || '—'}</td>
+                            <td className="om-hide-sm" style={{ color: MUTED }}>{f.agentPlace || ', '}</td>
                             <td style={{ color: AMBER }}>{prettyPhone(f.phone)}</td>
                             <td className="om-hide-sm" style={{ color: MUTED }}>{f.targetPlace || 'unknown'}</td>
                             {/* Nine seconds is the compliance floor, so a short
                                 call is worth seeing without reading the number. */}
                             <td className="om-hide-sm" style={{ color: f.duration >= 9 ? INK : RED }}>{f.duration}s</td>
                             <td className="om-hide-sm" style={{ color: f.talkSeconds ? INK : DIM }}>
-                              {f.talkSeconds ? f.talkSeconds + 's' : '—'}
+                              {f.talkSeconds ? f.talkSeconds + 's' : ', '}
                             </td>
                             <td style={{ color: f.disposition ? dispColour(f.disposition) : (f.answered ? INK : DIM) }}>
                               {f.disposition || (f.answered ? 'answered' : 'no answer')}
@@ -1629,7 +1629,7 @@ export default function OpsMap() {
                             <td className="om-hide-sm" style={{ color: DIM }}>{f.campaign || 'manual'}</td>
                             <td className="om-hide-sm"
                                 style={{ color: f.recording === 'completed' ? VIOLET : DIM }}>
-                              {f.recording === 'completed' ? 'rec' : '—'}
+                              {f.recording === 'completed' ? 'rec' : ', '}
                             </td>
                           </tr>
                         ))}
@@ -1671,12 +1671,12 @@ export default function OpsMap() {
                             {/* The display label falls back to username, so
                                 without its own column the handle disappears the
                                 moment somebody sets a real name. */}
-                            <td className="om-hide-sm" style={{ color: CYAN }}>{pr.username || '—'}</td>
-                            <td className="om-hide-sm" style={{ color: MUTED }}>{pr.email || '—'}</td>
+                            <td className="om-hide-sm" style={{ color: CYAN }}>{pr.username || ', '}</td>
+                            <td className="om-hide-sm" style={{ color: MUTED }}>{pr.email || ', '}</td>
                             <td style={{ color: statusColour(pr) }}>{statusLabel(pr)}</td>
                             <td className="om-hide-sm" style={{ color: MUTED }}>{pr.place || 'unplaced'}</td>
                             <td className="om-hide-sm" style={{ color: DIM }}>
-                              {pr.device || '—'}{pr.dialerMode ? ' · ' + pr.dialerMode : ''}
+                              {pr.device || ', '}{pr.dialerMode ? ' · ' + pr.dialerMode : ''}
                             </td>
                             <td style={{ color: pr.calls ? INK : DIM }}>
                               {pr.calls}{pr.calls ? ' · ' + pr.answered + 'a' : ''}
@@ -1684,7 +1684,7 @@ export default function OpsMap() {
                             <td className="om-hide-sm" style={{ color: DIM }}>{pr.campaigns}</td>
                             <td className="om-hide-sm" style={{ color: DIM }}>{pr.leads}</td>
                             <td className="om-hide-sm" style={{ color: DIM }}>
-                              {pr.lastCall ? new Date(pr.lastCall).toLocaleDateString() : '—'}
+                              {pr.lastCall ? new Date(pr.lastCall).toLocaleDateString() : ', '}
                             </td>
                             <td className="om-hide-sm" style={{ color: DIM }}>
                               {new Date(pr.joined).toLocaleDateString()}
@@ -1913,7 +1913,7 @@ function Pulse({ buckets }: { buckets: PulseBucket[] }) {
             <rect key={i} x={i * bw + bw * 0.14} y={H - h}
                   width={bw * 0.72} height={h}
                   fill={CYAN} fillOpacity={b.calls ? 0.4 : 0}>
-              <title>{`${label(b.at)} — ${b.calls} placed, ${b.answered} answered`}</title>
+              <title>{`${label(b.at)}, ${b.calls} placed, ${b.answered} answered`}</title>
             </rect>
           )
         })}

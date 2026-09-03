@@ -15,37 +15,37 @@ const MOBILE_SLIDES: Slide[] = [
   {
     src: '/faq-images/manager-plus/pwa-login-chrome.png',
     alt: 'White-labeled DialerSeat mobile login screen, light theme',
-    caption: 'Login screen, light theme. Custom instagram link, custom copy, fully re-themed colors — installed straight to the home screen.',
+    caption: 'Login screen, light theme. Custom instagram link, custom copy, fully re-themed colors, installed straight to the home screen.',
     theme: 'CHROME THEME',
   },
   {
     src: '/faq-images/manager-plus/pwa-login-neon.png',
     alt: 'White-labeled DialerSeat mobile login screen, dark neon-green theme',
-    caption: 'Same exact login flow, same codebase, completely different theme — dark background, neon-green accent, glowing logo treatment.',
+    caption: 'Same exact login flow, same codebase, completely different theme: dark background, neon-green accent, glowing logo treatment.',
     theme: 'NEON THEME',
   },
   {
     src: '/faq-images/manager-plus/pwa-sidebar-chrome.png',
     alt: 'White-labeled DialerSeat mobile sidebar navigation, light theme',
-    caption: 'Sidebar navigation, light theme. Analytics, Dialer, Campaigns, Recordings, Leads, Teams, Settings — the manager\u2019s MANAGER+ badge shown bottom-left.',
+    caption: 'Sidebar navigation, light theme. Analytics, Dialer, Campaigns, Recordings, Leads, Teams, Settings, the manager\u2019s MANAGER+ badge shown bottom-left.',
     theme: 'CHROME THEME',
   },
   {
     src: '/faq-images/manager-plus/pwa-sidebar-neon.png',
     alt: 'White-labeled DialerSeat mobile sidebar navigation, dark neon-green theme',
-    caption: 'Identical navigation structure, neon theme. Every link, every label, every permission — unchanged. Only the skin is different.',
+    caption: 'Identical navigation structure, neon theme. Every link, every label, every permission, unchanged. Only the skin is different.',
     theme: 'NEON THEME',
   },
   {
     src: '/faq-images/manager-plus/pwa-dialer-chrome.png',
     alt: 'White-labeled DialerSeat mobile dialer terminal, light theme',
-    caption: 'The full dialer terminal on mobile — status, duration, connected rate, mode, campaign selector, lead profile. Not a stripped-down view; the same terminal that runs on desktop.',
+    caption: 'The full dialer terminal on mobile: status, duration, connected rate, mode, campaign selector, lead profile. Not a stripped-down view; the same terminal that runs on desktop.',
     theme: 'CHROME THEME',
   },
   {
     src: '/faq-images/manager-plus/pwa-analytics-chrome.png',
     alt: 'White-labeled DialerSeat mobile analytics overview, light theme',
-    caption: 'The analytics overview on mobile — same six metric cards and call-volume chart as the desktop version, just reflowed for a phone screen.',
+    caption: 'The analytics overview on mobile: same six metric cards and call-volume chart as the desktop version, just reflowed for a phone screen.',
     theme: 'CHROME THEME',
   },
 ]
@@ -235,7 +235,7 @@ export default function WhiteLabelMobileFaqView() {
 
           <p className="faq-deck">
             White-labeling on desktop is table stakes for most resellers.
-            Mobile is where it usually falls apart — either there&apos;s no
+            Mobile is where it usually falls apart, either there&apos;s no
             real mobile experience at all, or the &ldquo;mobile app&rdquo;
             quietly drops your branding and shows the vendor&apos;s name the
             moment it opens. DialerSeat&apos;s white-label carries all the
@@ -255,7 +255,7 @@ export default function WhiteLabelMobileFaqView() {
             <h2>▸ HOW IT ACTUALLY WORKS</h2>
             <p>
               DialerSeat&apos;s mobile experience is a <strong>Progressive
-              Web App (PWA)</strong> — not a native iOS or Android app
+              Web App (PWA)</strong>, not a native iOS or Android app
               downloaded from an app store, but a web app that installs to
               the home screen, runs full-screen with no browser chrome, and
               behaves like a native app in every way that matters: an icon
@@ -263,22 +263,22 @@ export default function WhiteLabelMobileFaqView() {
               caching, and no address bar in sight once it&apos;s open.
             </p>
             <p>
-              When you white-label your DialerSeat account, that branding —
-              your logo, your color palette, your custom domain — carries
+              When you white-label your DialerSeat account, that branding 
+              your logo, your color palette, your custom domain, carries
               straight through to the PWA. Your agents visit your domain on
               their phone, tap &ldquo;Add to Home Screen,&rdquo; and from
               that point on they&apos;re opening <em>your</em> app icon,
               with <em>your</em> theme, every time.
             </p>
             <p className="muted">
-              The install steps themselves — Safari&apos;s Share menu on
-              iPhone, Chrome&apos;s install prompt on Android — are the same
+              The install steps themselves, Safari&apos;s Share menu on
+              iPhone, Chrome&apos;s install prompt on Android, are the same
               whether an account is white-labeled or not. See{' '}
               <Link href="/faq/mobile">DialerSeat on mobile</Link> for the
               exact step-by-step if you need it spelled out.
             </p>
 
-            <p style={{ marginTop: 8 }}>Swipe through a real white-labeled account below — same account, same features, two completely different themes.</p>
+            <p style={{ marginTop: 8 }}>Swipe through a real white-labeled account below: same account, same features, two completely different themes.</p>
 
             <MobileCarousel />
           </section>
@@ -290,14 +290,14 @@ export default function WhiteLabelMobileFaqView() {
               The two screenshots below are the exact same navigation menu,
               on the exact same account type (Manager+), running the exact
               same code. The only thing that changed is the white-label
-              theme configuration — colors, background treatment, and logo
+              theme configuration: colors, background treatment, and logo
               styling.
             </p>
 
             <ThemeCompare />
 
             <p className="muted" style={{ textAlign: 'center', marginTop: 8 }}>
-              Light and airy, or dark with a neon glow — the layout, the
+              Light and airy, or dark with a neon glow: the layout, the
               links, and the permissions underneath never change. Only the
               skin does.
             </p>
@@ -307,14 +307,14 @@ export default function WhiteLabelMobileFaqView() {
           <section className="faq-section">
             <h2>▸ WHY MOST WHITE-LABEL DIALERS DON&apos;T DO THIS ON MOBILE</h2>
             <p>
-              This isn&apos;t a shot at the competition for the sake of it —
+              This isn&apos;t a shot at the competition for the sake of it 
               it&apos;s a real, well-documented constraint. Apple and Google
               both restrict publishing multiple near-identical
               &ldquo;boilerplate&rdquo; native apps from the same underlying
               codebase under different names and branding. A dialer vendor
               that wants to give every reseller their own branded native app
               in the App Store and Play Store runs straight into that
-              policy — it&apos;s the reason so few white-label platforms of
+              policy, it&apos;s the reason so few white-label platforms of
               any kind bother trying anymore.
             </p>
             <p>
@@ -324,7 +324,7 @@ export default function WhiteLabelMobileFaqView() {
               expensive, and it goes stale the moment the platform ships an
               update), or skip mobile branding entirely and just show
               resellers&apos; agents the vendor&apos;s own app with the
-              vendor&apos;s own name on it — which is the most common
+              vendor&apos;s own name on it, which is the most common
               outcome in this industry.
             </p>
 
@@ -358,19 +358,19 @@ export default function WhiteLabelMobileFaqView() {
               </div>
               <div className="wlm-vs-row">
                 <div className="wlm-vs-cell label">Mobile branding</div>
-                <div className="wlm-vs-cell us">Your logo, colors, and custom domain carry through automatically — same theme as desktop</div>
+                <div className="wlm-vs-cell us">Your logo, colors, and custom domain carry through automatically, same theme as desktop</div>
               </div>
               <div className="wlm-vs-row">
                 <div className="wlm-vs-cell label">Getting it installed</div>
-                <div className="wlm-vs-cell us">&ldquo;Add to Home Screen&rdquo; from the browser — seconds, no review process</div>
+                <div className="wlm-vs-cell us">&ldquo;Add to Home Screen&rdquo; from the browser: seconds, no review process</div>
               </div>
               <div className="wlm-vs-row">
                 <div className="wlm-vs-cell label">Update cycle</div>
-                <div className="wlm-vs-cell us">Instant — it&apos;s the same live codebase as the browser and desktop app</div>
+                <div className="wlm-vs-cell us">Instant, it&apos;s the same live codebase as the browser and desktop app</div>
               </div>
               <div className="wlm-vs-row">
                 <div className="wlm-vs-cell label">Cost to reseller</div>
-                <div className="wlm-vs-cell us">Included in Manager+ ($75/wk) — no separate mobile fee</div>
+                <div className="wlm-vs-cell us">Included in Manager+ ($75/wk), no separate mobile fee</div>
               </div>
             </div>
           </section>
@@ -378,7 +378,7 @@ export default function WhiteLabelMobileFaqView() {
           {/* ── HONEST LIMITATION ──────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>One honest limitation —</strong> a PWA is not a
+              <strong>One honest limitation, </strong> a PWA is not a
               listing in the App Store or Play Store. There&apos;s no
               storefront presence, no App Store search visibility, and no
               push-notification behavior identical to a fully native app on
@@ -399,7 +399,7 @@ export default function WhiteLabelMobileFaqView() {
               <Link href="/faq/white-label">White-label your dialer</Link>
               <Link href="/faq/manager-plus">What Manager+ adds over Pro</Link>
               <Link href="/faq/mobile">DialerSeat on mobile (standard accounts)</Link>
-              <Link href="/faq/managers">For managers — agency owners &amp; lead vendors</Link>
+              <Link href="/faq/managers">For managers, agency owners &amp; lead vendors</Link>
               <Link href="/faq/dialerseat-teams">DialerSeat for teams</Link>
               <Link href="/faq">FAQ</Link>
             </div>

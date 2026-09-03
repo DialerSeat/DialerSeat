@@ -167,7 +167,7 @@ async function createSubscriptionOrExplainAction(
       code: 'requires_action',
       message:
         'The bank asked the cardholder to authenticate this payment (3D Secure). ' +
-        'It cannot be completed automatically — it has to be approved once, by hand.',
+        'It cannot be completed automatically: it has to be approved once, by hand.',
       actionUrl,
     }
     throw seatErr
@@ -373,7 +373,7 @@ export async function createSeatSubscription(
         'payment_failed',
         `Seat for ${params.agentEmail} on ${params.teamName} billed ${billed} instead of ${full}` +
         `${pct ? ` (${pct}% off)` : ''} from a discount on the owner's Stripe customer that ` +
-        `could not be compared against their volume tier — most likely a fixed-amount coupon. ` +
+        `could not be compared against their volume tier, most likely a fixed-amount coupon. ` +
         `The seat opened normally; worth a look at which rate they should be on.`,
         { title: 'Seat took an account discount we did not choose' }
       )

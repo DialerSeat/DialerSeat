@@ -133,7 +133,7 @@ export async function POST(req: Request) {
                 const amount = ((invoice.amount_due ?? 0) / 100).toFixed(2)
                 await sendAdminPush(
                   'payment_failed',
-                  `${name}'s payment of $${amount} failed. Subscription is past due — recoverable if you reach them.`
+                  `${name}'s payment of $${amount} failed. Subscription is past due, recoverable if you reach them.`
                 )
               }
             } catch (e) {
@@ -162,7 +162,7 @@ export async function POST(req: Request) {
         const result = await assembleAndSaveDisputeEvidence(dispute)
         try {
           await sendAdminPush('payment_failed', result.summary, {
-            title: result.ok ? 'Dispute opened — evidence drafted' : 'Dispute opened — ACTION NEEDED',
+            title: result.ok ? 'Dispute opened: evidence drafted' : 'Dispute opened: ACTION NEEDED',
             url: '/dashboard/admin/desktop',
           })
         } catch (e) {
@@ -249,7 +249,7 @@ function resolveSubKind(subscription: Stripe.Subscription): 'team_seat' | 'white
   if (wlPriceId && subscription.items?.data?.some(i => i.price?.id === wlPriceId)) {
     console.warn(
       `[stripe/webhook] subscription ${subscription.id} has no sub_kind metadata but carries the ` +
-      `Manager+ price — treating as whitelabel. Without this it would be reported to admins as Pro.`
+      `Manager+ price, treating as whitelabel. Without this it would be reported to admins as Pro.`
     )
     return 'whitelabel'
   }
@@ -313,7 +313,7 @@ async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
       } else {
         console.error(
           '[team_seat] subscription.deleted has neither seat_charge_id metadata ' +
-          'nor a subscription item id — cannot void charge for sub:',
+          'nor a subscription item id: cannot void charge for sub:',
           subscription.id
         )
       }

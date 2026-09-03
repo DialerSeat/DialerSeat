@@ -33,7 +33,7 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
           name: brand,
           url: base,
           logo: { '@type': 'ImageObject', url: logo },
-          description: `${brand} — outbound calling platform powered by DialerSeat.`,
+          description: `${brand}, outbound calling platform powered by DialerSeat.`,
         },
         {
           '@type': 'SoftwareApplication',

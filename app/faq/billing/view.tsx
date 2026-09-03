@@ -68,7 +68,7 @@ export default function BillingFaqView() {
             <p>
               Cancellation doesn&apos;t cut your access off immediately.
               It schedules the subscription to end at the close of the
-              current billing period — meaning if you cancel on day 2 of a
+              current billing period, meaning if you cancel on day 2 of a
               paid week, you keep full access through day 7. You&apos;re not
               charged again after that, and nothing auto-renews.
             </p>
@@ -77,26 +77,26 @@ export default function BillingFaqView() {
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
                   <h4>YOU CLICK CANCEL</h4>
-                  <p>The subscription is marked to end at period close. No refund is issued for the current week — you already paid for it, so you keep it.</p>
+                  <p>The subscription is marked to end at period close. No refund is issued for the current week: you already paid for it, so you keep it.</p>
                 </div>
               </div>
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
                   <h4>YOU KEEP DIALING</h4>
-                  <p>Full access continues completely normally for the rest of the paid week — nothing is restricted or downgraded early.</p>
+                  <p>Full access continues completely normally for the rest of the paid week, nothing is restricted or downgraded early.</p>
                 </div>
               </div>
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
                   <h4>THE WEEK ENDS</h4>
-                  <p>Access stops. No further charge happens. There&apos;s nothing else to do — no retention call, no confirmation email you have to click through.</p>
+                  <p>Access stops. No further charge happens. There&apos;s nothing else to do: no retention call, no confirmation email you have to click through.</p>
                 </div>
               </div>
             </div>
 
             <p className="muted" style={{ marginTop: 20 }}>
               Changed your mind before the week ends? Reactivating just
-              un-schedules the cancellation — you&apos;re not treated as a
+              un-schedules the cancellation, you&apos;re not treated as a
               new signup and don&apos;t lose anything.
             </p>
           </section>
@@ -105,8 +105,8 @@ export default function BillingFaqView() {
           <section className="faq-section">
             <h2>▸ WHAT A FAILED CARD ACTUALLY DOES</h2>
             <p>
-              If a weekly charge fails — expired card, insufficient funds,
-              bank decline — the subscription moves to a{' '}
+              If a weekly charge fails: expired card, insufficient funds,
+              bank decline, the subscription moves to a{' '}
               <strong>past due</strong> state rather than canceling
               immediately. Stripe automatically retries the charge on its
               standard retry schedule.
@@ -119,15 +119,15 @@ export default function BillingFaqView() {
                 This is the one place a failed payment has an immediate,
                 visible effect: white-label goes inactive the moment a
                 charge fails, not after a grace period. The moment payment
-                succeeds again — whether from an automatic retry or you
-                updating your card — it reactivates on its own, no support
+                succeeds again, whether from an automatic retry or you
+                updating your card: it reactivates on its own, no support
                 ticket required.
               </p>
             </div>
 
             <p className="muted">
               You can still cancel a past-due subscription yourself if
-              you&apos;d rather stop retrying than fix the card — canceling
+              you&apos;d rather stop retrying than fix the card, canceling
               isn&apos;t blocked just because a payment failed.
             </p>
           </section>
@@ -136,16 +136,16 @@ export default function BillingFaqView() {
           <section className="faq-section">
             <h2>▸ ADDING OR REMOVING A SEAT MID-WEEK</h2>
             <p>
-              Each seat — Pro, Manager+, or an agent seat under a
-              Manager+ team — is its own Stripe subscription. Adding a
+              Each seat: Pro, Manager+, or an agent seat under a
+              Manager+ team, is its own Stripe subscription. Adding a
               seat starts billing for that seat from the moment it&apos;s
               created; removing one follows the same cancel-at-period-end
               rule as canceling your own account, so you don&apos;t lose
               access to a seat you already paid for that week.
             </p>
             <p>
-              For the manager-side mechanics of this — who pays for which
-              seat, owner-pays vs. agent-pays — see{' '}
+              For the manager-side mechanics of this, who pays for which
+              seat, owner-pays vs. agent-pays, see{' '}
               <Link href="/faq/manager-plus">what Manager+ adds over
               Pro</Link> and <Link href="/faq/dialerseat-teams">DialerSeat
               for teams</Link>.
@@ -164,7 +164,7 @@ export default function BillingFaqView() {
             <h2>▸ WHAT YOU CAN ACTUALLY LOSE</h2>
             <p>
               <strong>One week. $35.</strong> There is no free trial, which is
-              deliberate — a card up front is the cheapest way to filter out
+              deliberate, a card up front is the cheapest way to filter out
               signups that were never going to dial. What it means for you is
               that the most you can ever be out is a single week.
             </p>
@@ -173,8 +173,8 @@ export default function BillingFaqView() {
               downside, and it is worth saying plainly, because most of this
               industry does not let you find out this cheaply. There is no
               annual contract to break, no setup fee to write off and no
-              implementation project to walk away from — the incumbents
-              commonly charge $500–$2,000 before the first call is placed.
+              implementation project to walk away from, the incumbents
+              commonly charge $500: $2,000 before the first call is placed.
             </p>
             <p>
               Cancel in Settings and you keep access through the week you have
@@ -185,7 +185,7 @@ export default function BillingFaqView() {
               Your <strong>lead data is preserved</strong> if a subscription
               lapses. Campaigns, leads, dispositions and call history stay
               where they are, so coming back later means signing in rather than
-              rebuilding — which also means leaving is not a decision you have
+              rebuilding, which also means leaving is not a decision you have
               to be certain about.
             </p>
 
@@ -196,7 +196,7 @@ export default function BillingFaqView() {
               Not what you expected? Email{' '}
               <a href="mailto:support@dialerseat.com">support@dialerseat.com</a>{' '}
               within <strong>24 hours</strong> of the charge and we will refund
-              it. After that window the charge is final — canceling stops
+              it. After that window the charge is final, canceling stops
               future billing but does not refund the period you are already in.
             </p>
             <p className="muted">
@@ -209,7 +209,7 @@ export default function BillingFaqView() {
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>One thing worth knowing —</strong> there&apos;s no
+              <strong>One thing worth knowing, </strong> there&apos;s no
               annual or upfront billing option today. Every plan bills
               weekly, which means no discount for committing longer term,
               but also means you&apos;re never sitting on months of prepaid
@@ -237,7 +237,7 @@ export default function BillingFaqView() {
             <div className="faq-cta-eyebrow">▸ NO CONTRACT, NO RETENTION CALL</div>
             <h3 className="faq-cta-h">$35/week. Cancel with one click, any time.</h3>
             <p>
-              You keep access through what you already paid for — nothing
+              You keep access through what you already paid for, nothing
               cut off early, nothing to negotiate.
             </p>
             <a href={isSignedIn ? '/dashboard' : '/sign-up'} className="faq-cta-btn">

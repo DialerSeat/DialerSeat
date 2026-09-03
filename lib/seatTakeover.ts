@@ -53,7 +53,7 @@ export async function takeOverAgentPaidSeats(agentClerkId: string): Promise<Take
     const { getPlatformConfig } = await import('@/lib/platformConfig')
     const cfg = await getPlatformConfig()
     if (cfg?.seat_takeover_enabled === false) {
-      console.log('[seatTakeover] disabled in platform config — leaving seats to lapse')
+      console.log('[seatTakeover] disabled in platform config, leaving seats to lapse')
       return result
     }
   } catch {
@@ -222,7 +222,7 @@ export async function takeOverAgentPaidSeats(agentClerkId: string): Promise<Take
 
   if (result.takenOver.length > 0) {
     console.log(
-      `[seatTakeover] ${agentClerkId} cancelled their own plan — ` +
+      `[seatTakeover] ${agentClerkId} cancelled their own plan, ` +
       `${result.takenOver.length} seat(s) picked up by owners`
     )
   }

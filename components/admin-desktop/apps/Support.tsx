@@ -387,7 +387,7 @@ export default function SupportApp() {
               {/* response box */}
               <div style={{ marginTop: 22 }}>
                 <div style={{ fontSize: 10, letterSpacing: 2, color: TXT_FAINT, fontWeight: 700, marginBottom: 8 }}>
-                  RESPONSE — via support@dialerseat.com
+                  RESPONSE, via support@dialerseat.com
                 </div>
                 <textarea
                   value={draft}

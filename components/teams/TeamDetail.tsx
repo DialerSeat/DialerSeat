@@ -217,7 +217,7 @@ export default function TeamDetail({
                     It told the agent nothing they can act on, and framed their
                     seat as a headcount line rather than as their own. */}
                 {seat.suspended
-                  ? 'Contact whoever runs this team — only they can resume it.'
+                  ? 'Contact whoever runs this team, only they can resume it.'
                   : 'Active'}
               </div>
             </div>
@@ -228,7 +228,7 @@ export default function TeamDetail({
           {available.length === 0 ? (
             <div style={{ color: DIM, fontSize: 13, lineHeight: 1.7 }}>
               You are on this team, but no campaigns have been opened to you yet.
-              The team owner assigns those — reach out to whoever sent you your
+              The team owner assigns those, reach out to whoever sent you your
               join code.
             </div>
           ) : (
@@ -276,7 +276,7 @@ export default function TeamDetail({
           <Section title="Also On This Team">
             <div style={{ color: DIM, fontSize: 12.5, lineHeight: 1.7, marginBottom: 8 }}>
               You do not have access to these yet. Whoever runs this team can add
-              you to any of them without it costing you anything — your seat is
+              you to any of them without it costing you anything, your seat is
               already paid for. Ask them.
             </div>
             <div style={{ display: 'grid', gap: 6 }}>
@@ -302,8 +302,8 @@ export default function TeamDetail({
       }}>
         <Stat label="Members" value={String(team.members.length)} />
         <Stat label="Campaigns" value={String(team.campaigns.length)} />
-        <Stat label="Total Leads" value={totalLeads ? totalLeads.toLocaleString() : '—'} />
-        <Stat label="Dialed" value={calledLeads ? calledLeads.toLocaleString() : '—'} />
+        <Stat label="Total Leads" value={totalLeads ? totalLeads.toLocaleString() : ', '} />
+        <Stat label="Dialed" value={calledLeads ? calledLeads.toLocaleString() : ', '} />
       </div>
 
       {/* ── RENAME, WHERE THE NAME IS ─────────────────────────────────────
@@ -380,7 +380,7 @@ export default function TeamDetail({
                           code says so. */}
                       {campaignName
                         ? `${campaignName} · `
-                        : 'Team code — joins the team only, until you add them to a campaign · '}
+                        : 'Team code: joins the team only, until you add them to a campaign · '}
                       {c.payer === 'agent' ? 'agent pays their seat' : 'you pay the seat'}
                       {' · '}
                       {c.max_uses ? `${uses}/${c.max_uses} used` : `${uses} used`}
@@ -545,7 +545,7 @@ export default function TeamDetail({
 
             {seatTier.salesHandoff ? (
               <div style={{ marginTop: 4 }}>
-                You are past fifty seats — rates at this size are set individually.
+                You are past fifty seats, rates at this size are set individually.
                 Email <strong style={{ color: TEXT }}>sales@dialerseat.com</strong> and
                 we will put together a partnership that fits how you actually run.
               </div>
@@ -558,8 +558,8 @@ export default function TeamDetail({
                 {seatTier.next.seatsAway === 1 ? 'seat' : 'seats'} you pay for reaches{' '}
                 <strong style={{ color: TEXT }}>{seatTier.next.tier.label}</strong>
                 {typeof seatTier.next.tier.percentOff === 'number'
-                  ? ` — ${seatTier.next.tier.percentOff}% off weekly.`
-                  : ' — a rate we set with you directly. Email sales@dialerseat.com.'}
+                  ? `, ${seatTier.next.tier.percentOff}% off weekly.`
+                  : ', a rate we set with you directly. Email sales@dialerseat.com.'}
               </div>
             ) : null}
 
@@ -573,7 +573,7 @@ export default function TeamDetail({
               && seatTier.ownerPaidSeats < 10 && (
               <div style={{ marginTop: 4 }}>
                 Most of your seats are paid for by the agents themselves, so the
-                weekly discount does not apply — it only reduces what{' '}
+                weekly discount does not apply, it only reduces what{' '}
                 <em style={{ color: MUTED }}>you</em> are billed. A roster this size is
                 worth talking about directly: email{' '}
                 <strong style={{ color: TEXT }}>sales@dialerseat.com</strong>.

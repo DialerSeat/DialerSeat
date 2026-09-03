@@ -242,7 +242,7 @@ export default function Taskbar({
                 }}
                 title={
                   groupCount > 1
-                    ? `${app.name} — ${groupCount} windows (shift-click for a new one)`
+                    ? `${app.name}, ${groupCount} windows (shift-click for a new one)`
                     : `${app.name} (shift-click for a new window)`
                 }
                 style={{

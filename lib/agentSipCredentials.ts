@@ -190,7 +190,7 @@ async function ensureAgentConnectionIsDialable(
     const outcome = await ensureSipUriCallingEnabled(bareId, apiKey)
     if (outcome === 'enabled') {
       console.log(
-        `[agentSipCredentials] connection ${bareId} had SIP URI calling DISABLED — every agent-leg ` +
+        `[agentSipCredentials] connection ${bareId} had SIP URI calling DISABLED, every agent-leg ` +
         `dial was being hung up by Telnyx with 'user_busy' before reaching the browser. ` +
         `Set to "internal".`
       )
@@ -205,7 +205,7 @@ async function ensureAgentConnectionIsDialable(
         `[agentSipCredentials] could not verify SIP URI calling on connection ${bareId} ` +
         `(the read endpoint rejects our token). Harmless if it is already set. Only worth ` +
         `acting on if agent legs hang up ~100ms after dial with cause 'user_busy' and the ` +
-        `browser never sees an INVITE — then set "Receive SIP URI calls" to ` +
+        `browser never sees an INVITE, then set "Receive SIP URI calls" to ` +
         `"Only from my Connections" on this connection in Telnyx Mission Control.`
       )
     }
@@ -250,7 +250,7 @@ async function clearEncryptedMediaIfSet(
   }
 
   console.log(
-    `[agentSipCredentials] cleared encrypted_media on connection ${connection.id} — ` +
+    `[agentSipCredentials] cleared encrypted_media on connection ${connection.id}, ` +
     `browsers can now negotiate DTLS-SRTP, which is what was blocking call audio`
   )
 }
@@ -275,7 +275,7 @@ export async function resolveCredentialConnectionId(
 
   if (!ok || !Array.isArray(env?.data)) {
     console.error(
-      `[agentSipCredentials] could not list credential connections (${describeErrors(env, status)}) — ` +
+      `[agentSipCredentials] could not list credential connections (${describeErrors(env, status)}), ` +
       `per-agent credentials unavailable, falling back to the shared SIP user`
     )
     cachedConnectionId = null
@@ -406,7 +406,7 @@ async function createManagedCredentialConnection(
     console.error(
       `[agentSipCredentials] could not auto-create the "${MANAGED_CONNECTION_NAME}" credential ` +
       `connection (${describeErrors(env, status)}). Per-agent credentials are unavailable, so ` +
-      `dialing falls back to TELNYX_SIP_USERNAME — which must then name a SIP credential that ` +
+      `dialing falls back to TELNYX_SIP_USERNAME, which must then name a SIP credential that ` +
       `really exists on this Telnyx account. Either grant TELNYX_API_KEY permission to manage ` +
       `connections, or create a Credential Connection in Telnyx and set ` +
       `TELNYX_CREDENTIAL_CONNECTION_ID.`
@@ -415,7 +415,7 @@ async function createManagedCredentialConnection(
   }
 
   console.log(
-    `[agentSipCredentials] auto-created credential connection "${MANAGED_CONNECTION_NAME}" (${id}) — ` +
+    `[agentSipCredentials] auto-created credential connection "${MANAGED_CONNECTION_NAME}" (${id}), ` +
     `per-agent SIP credentials will now be provisioned against it`
   )
   return id
@@ -442,7 +442,7 @@ export async function getOrCreateAgentCredential(
   const resolved = resolveTelnyxConfig()
   if (!resolved.ok) {
     console.error(
-      `[agentSipCredentials] Telnyx not configured — ${resolved.errors.join('; ')}`
+      `[agentSipCredentials] Telnyx not configured, ${resolved.errors.join('; ')}`
     )
     return null
   }
@@ -477,7 +477,7 @@ export async function getOrCreateAgentCredential(
   if (!ok || !created?.id || !created?.sip_username) {
     console.error(
       `[agentSipCredentials] Telnyx rejected credential creation for ${clerkId} ` +
-      `(${describeErrors(env, status)}) — falling back to the shared SIP user`
+      `(${describeErrors(env, status)}), falling back to the shared SIP user`
     )
     return sharedFallback(config)
   }
@@ -549,7 +549,7 @@ async function readStoredCredential(clerkId: string): Promise<AgentSipCredential
     if (error.code === PG_UNDEFINED_TABLE || /agent_sip_credentials.*does not exist/i.test(error.message || '')) {
       storageUnavailable = true
       console.error(
-        '[agentSipCredentials] table agent_sip_credentials does not exist — apply ' +
+        '[agentSipCredentials] table agent_sip_credentials does not exist, apply ' +
         'db/migrations/2026-08-05-add-agent-sip-credentials.sql. Falling back to the shared ' +
         'SIP user for every agent until then.'
       )
@@ -637,7 +637,7 @@ export async function agentSipUriForClerkId(
       const outcome = await ensureSipUriCallingEnabled(bareId, config.apiKey)
       if (outcome === 'enabled') {
         console.log(
-          `[agentSipCredentials] connection ${bareId} had SIP URI calling DISABLED — that is why ` +
+          `[agentSipCredentials] connection ${bareId} had SIP URI calling DISABLED, that is why ` +
           `agent legs were being hung up by Telnyx (~100ms, 'user_busy') without ever reaching ` +
           `the browser. Set to "internal".`
         )
@@ -646,7 +646,7 @@ export async function agentSipUriForClerkId(
           `[agentSipCredentials] could NOT read/write SIP URI calling on connection ${bareId}. ` +
           `If agent legs keep ending in 'user_busy' with no INVITE at the browser, set ` +
           `"Receive SIP URI calls" to "Only from my Connections" on this connection in Telnyx ` +
-          `Mission Control — the API could not do it.`
+          `Mission Control, the API could not do it.`
         )
       }
     }
@@ -654,7 +654,7 @@ export async function agentSipUriForClerkId(
   }
 
   console.warn(
-    `[agentSipCredentials] dialing ${clerkId} via the SHARED SIP user — no per-agent credential ` +
+    `[agentSipCredentials] dialing ${clerkId} via the SHARED SIP user, no per-agent credential ` +
     `could be provisioned. This rings every registered browser, and fails outright if ` +
     `TELNYX_SIP_USERNAME does not name a real credential on this Telnyx account.`
   )
@@ -678,7 +678,7 @@ export async function agentSipUriForUserId(
   if (error || !data?.clerk_id) {
     console.error(
       `[agentSipCredentials] could not resolve clerk_id for user ${userId}` +
-      `${error ? `: ${error.message}` : ''} — using the shared SIP user, which will ring every ` +
+      `${error ? `: ${error.message}` : ''}: using the shared SIP user, which will ring every ` +
       `registered agent rather than this one`
     )
     return config.agentSipUri

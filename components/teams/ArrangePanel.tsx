@@ -244,7 +244,7 @@ export default function ArrangePanel({
 
       {order.length === 0 && (
         <div style={{ fontSize: 12, color: C.dim }}>
-          Nothing to arrange — you do not own any teams yet.
+          Nothing to arrange, you do not own any teams yet.
         </div>
       )}
 

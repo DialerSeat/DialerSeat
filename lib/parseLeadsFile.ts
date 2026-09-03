@@ -63,7 +63,7 @@ export function parseCSVText(text: string): any[] {
 // Converts a sheet's rows (as returned by SheetJS's sheet_to_json with
 // header:1, i.e. an array of arrays) into the same shape parseCSVText
 // produces: array of header-keyed objects if the first row looks like
-// headers, otherwise array of value arrays — matching the exact same
+// headers, otherwise array of value arrays, matching the exact same
 // "does the first row look like a phone number" heuristic.
 function rowsToLeadsShape(rows: any[][]): any[] {
   const cleaned = rows
@@ -125,7 +125,7 @@ export interface FileInspection {
 }
 
 // Call this first. For non-Excel files, or Excel workbooks with exactly
-// one sheet, needsSheetPicker is always false — just call parseLeadsFile()
+// one sheet, needsSheetPicker is always false, just call parseLeadsFile()
 // directly with no sheetName and you'll get the same one-step behavior as
 // before. Only workbooks with 2+ sheets ask for a choice.
 export async function inspectFile(file: File): Promise<FileInspection> {

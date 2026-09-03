@@ -12,23 +12,23 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — DialerSeat',
+  title: 'Privacy Policy: DialerSeat',
   description: 'How DialerSeat collects, uses, stores, and protects your data. Covers user accounts, lead data, call recordings, payment info, and your rights.',
   alternates: {
     canonical: 'https://dialerseat.com/privacy',
   },
   openGraph: {
-    title: 'Privacy Policy — DialerSeat',
+    title: 'Privacy Policy: DialerSeat',
     description:
-      'How DialerSeat collects, uses, stores, and protects your data — accounts, lead data, call recordings, payment information, and your rights.',
+      'How DialerSeat collects, uses, stores, and protects your data: accounts, lead data, call recordings, payment information, and your rights.',
     url: 'https://dialerseat.com/privacy',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Privacy Policy — DialerSeat',
+    title: 'Privacy Policy: DialerSeat',
     description:
-      'How DialerSeat collects, uses, stores, and protects your data — accounts, lead data, call recordings, payment information, and your rights.',
+      'How DialerSeat collects, uses, stores, and protects your data: accounts, lead data, call recordings, payment information, and your rights.',
   },
   robots: {
     index: true,
@@ -171,7 +171,7 @@ export default function PrivacyPolicyPage() {
 
           <div className="privacy-body">
             <div className="meta-row">
-              <strong>The short version:</strong> DialerSeat™ is software you use to make outbound calls. We store the information you give us — your account, your leads, your call records — to run the product for you. We don't sell your data, we don't train AI on your data, and we don't share it with advertisers. Full details below.
+              <strong>The short version:</strong> DialerSeat™ is software you use to make outbound calls. We store the information you give us: your account, your leads, your call records, to run the product for you. We don't sell your data, we don't train AI on your data, and we don't share it with advertisers. Full details below.
             </div>
 
             <div className="toc">
@@ -202,7 +202,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <p>
               When you use DialerSeat, you act as the <strong>data controller</strong> for the lead
-              information you upload — you decide what to collect, why, and how long to keep it.
+              information you upload: you decide what to collect, why, and how long to keep it.
               We act as the <strong>data processor</strong>, storing and processing that data on
               your behalf according to your instructions.
             </p>
@@ -214,7 +214,7 @@ export default function PrivacyPolicyPage() {
             <ul>
               <li>Your email address</li>
               <li>Your name (if provided)</li>
-              <li>Your password (handled by our authentication provider Clerk — we never see or store passwords directly)</li>
+              <li>Your password (handled by our authentication provider Clerk, we never see or store passwords directly)</li>
               <li>Your IP address and browser user-agent (for session security)</li>
             </ul>
 
@@ -289,12 +289,12 @@ export default function PrivacyPolicyPage() {
               the minimum data needed to perform their role:
             </p>
             <ul>
-              <li><strong>Supabase</strong> (database hosting) — stores all your account, lead, and call data. <a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
-              <li><strong>Vercel</strong> (application hosting) — runs the DialerSeat web application. <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
-              <li><strong>Clerk</strong> (authentication) — handles login, sessions, and password storage. <a href="https://clerk.com/legal/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
-              <li><strong>Stripe</strong> (payments) — processes your subscription billing. <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
-              <li><strong>Telnyx</strong> (telephony) — connects your outbound calls and stores call recordings. <a href="https://telnyx.com/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
-              <li><strong>Sentry</strong> (error monitoring) — receives error reports with stack traces. PII is scrubbed before transmission. <a href="https://sentry.io/privacy/" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
+              <li><strong>Supabase</strong> (database hosting): stores all your account, lead, and call data. <a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
+              <li><strong>Vercel</strong> (application hosting), runs the DialerSeat web application. <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
+              <li><strong>Clerk</strong> (authentication): handles login, sessions, and password storage. <a href="https://clerk.com/legal/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
+              <li><strong>Stripe</strong> (payments), processes your subscription billing. <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
+              <li><strong>Telnyx</strong> (telephony), connects your outbound calls and stores call recordings. <a href="https://telnyx.com/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
+              <li><strong>Sentry</strong> (error monitoring), receives error reports with stack traces. PII is scrubbed before transmission. <a href="https://sentry.io/privacy/" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
             </ul>
             <p>
               We may add or change subprocessors as we grow. Material changes will be reflected on this page.
@@ -328,8 +328,8 @@ export default function PrivacyPolicyPage() {
             <h2 id="data-retention">6. Data retention</h2>
             <p>Different types of data have different retention rules:</p>
             <ul>
-              <li><strong>Account data:</strong> Retained as long as your account is active. If you cancel and don't resubscribe, your data is preserved (we call this "lapsed user data preservation") so you can return later. You can request full deletion at any time — see <a href="#your-rights">Your rights</a>.</li>
-              <li><strong>Lead and call data:</strong> Same as account data — preserved through cancellation, deleted on your request.</li>
+              <li><strong>Account data:</strong> Retained as long as your account is active. If you cancel and don't resubscribe, your data is preserved (we call this "lapsed user data preservation") so you can return later. You can request full deletion at any time, see <a href="#your-rights">Your rights</a>.</li>
+              <li><strong>Lead and call data:</strong> Same as account data: preserved through cancellation, deleted on your request.</li>
               <li><strong>Call recordings:</strong> 30 days, then automatically deleted.</li>
               <li><strong>Billing records:</strong> Retained for 7 years as required by tax law.</li>
               <li><strong>Error logs and security logs:</strong> Retained for 90 days then automatically purged.</li>
@@ -369,7 +369,7 @@ export default function PrivacyPolicyPage() {
             <p>
               <strong>California residents (CCPA):</strong> You have the right to know what categories
               of personal information we collect, the right to delete it, and the right to opt out of
-              its "sale" (we don't sell data, so this last right is moot — but it's still your right).
+              its "sale" (we don't sell data, so this last right is moot, but it's still your right).
             </p>
             <p>
               <strong>EU/EEA/UK residents (GDPR):</strong> You have the same rights listed above plus

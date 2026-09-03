@@ -132,8 +132,8 @@ export default function View() {
 
           <p className="faq-deck">
             This page is for agency owners and lead vendors. If you&apos;re
-            running other agents — paying for their dialer, generating their
-            leads, or both — DialerSeat is built around what you actually need.
+            running other agents: paying for their dialer, generating their
+            leads, or both, DialerSeat is built around what you actually need.
             Here&apos;s the plain version of how it works.
           </p>
 
@@ -143,7 +143,7 @@ export default function View() {
 
             <p>
               Manager mode runs on <strong>Manager+, DialerSeat&apos;s
-              $75/week tier</strong> — it replaces your $35/week Pro
+              $75/week tier</strong>, it replaces your $35/week Pro
               subscription rather than stacking on top of it. You sign up,
               you get the same dialer, the same campaigns, the same
               recordings you&apos;d get on Pro, plus the manager view: add
@@ -156,7 +156,7 @@ export default function View() {
             <p>
               What makes it actually useful for you isn&apos;t the feature
               list. It&apos;s the economics. Beyond your own $75/week
-              platform cost, you decide — per code — who pays the $35/week
+              platform cost, you decide, per code, who pays the $35/week
               seat fee for each agent: you, or the agent. And you decide
               what the agent pays <em>you</em> on top of that, completely
               outside our platform. <strong>We don&apos;t see your resell
@@ -165,7 +165,7 @@ export default function View() {
             </p>
 
             <p>
-              Two flavors of this make sense — agency owner and lead vendor.
+              Two flavors of this make sense, agency owner and lead vendor.
               Read whichever fits.
             </p>
           </section>
@@ -177,10 +177,10 @@ export default function View() {
             <h3>You already run a floor. You already pay per seat somewhere.</h3>
 
             <p>
-              Most agency dialers charge $99–$199 per seat per month, locked
+              Most agency dialers charge $99: $199 per seat per month, locked
               into contracts, with onboarding fees, with admin fees, with
               whatever else they came up with last quarter. Five agents on the
-              floor and you&apos;re paying $750–$1,000 a month before anyone
+              floor and you&apos;re paying $750: $1,000 a month before anyone
               has dialed a single number.
             </p>
 
@@ -202,7 +202,7 @@ export default function View() {
             </p>
 
             <div className="mgr-math">
-              <div className="mgr-math-title">EXAMPLE — 5 AGENTS ON YOUR FLOOR (OWNER PAYS)</div>
+              <div className="mgr-math-title">EXAMPLE, 5 AGENTS ON YOUR FLOOR (OWNER PAYS)</div>
               <div className="mgr-math-row">
                 <span className="mgr-math-label">You charge each agent / week</span>
                 <span className="mgr-math-val">$150</span>
@@ -229,7 +229,7 @@ export default function View() {
               That&apos;s ~$26,000 a year in dialer-margin alone, on top of
               whatever you&apos;re already making on commission splits. The
               $75/week Manager+ cost is fixed no matter how many agents you
-              add, so the math gets better as you scale — 10 agents nets you
+              add, so the math gets better as you scale, 10 agents nets you
               ~$56k a year, 20 agents ~$116k. The dialer stops being a cost
               center and starts being a revenue line.
             </p>
@@ -258,8 +258,8 @@ export default function View() {
             <h3>You sell leads. The agents who buy them dial them somewhere.</h3>
 
             <p>
-              If you&apos;re generating leads and selling them — Medicare, ACA,
-              final expense, mortgage, solar, whatever — you&apos;re leaving
+              If you&apos;re generating leads and selling them: Medicare, ACA,
+              final expense, mortgage, solar, whatever, you&apos;re leaving
               money on the table by handing the lead off and hoping the agent
               knows what to do with it. Half of them dial through some bargain
               VOIP setup, half don&apos;t dial fast enough, and your refund
@@ -280,14 +280,14 @@ export default function View() {
             <p>
               And the seat fee is its own revenue stream. You charge per-lead
               <em> and </em>per-seat-access. Most lead vendors I know don&apos;t
-              even charge for the dialer access separately — they just bundle
+              even charge for the dialer access separately, they just bundle
               it into the lead price and let the agent feel like they&apos;re
               getting a free dialer. That&apos;s fine. The margin&apos;s still
               there.
             </p>
 
             <div className="mgr-math">
-              <div className="mgr-math-title">EXAMPLE — 10 AGENTS BUYING YOUR LEADS (OWNER PAYS)</div>
+              <div className="mgr-math-title">EXAMPLE, 10 AGENTS BUYING YOUR LEADS (OWNER PAYS)</div>
               <div className="mgr-math-row">
                 <span className="mgr-math-label">You bundle dialer access at / week</span>
                 <span className="mgr-math-val">$100</span>
@@ -315,7 +315,7 @@ export default function View() {
               top of every lead dollar you&apos;re already making. Prefer to
               skip the platform cost entirely? Set the campaign to AGENT
               PAYS instead and each buyer covers their own $35 seat directly
-              — you just charge your bundled access fee on top. The agent
+ you just charge your bundled access fee on top. The agent
               doesn&apos;t feel nickeled-and-dimed because they&apos;re used
               to paying for a dialer anyway, and they get a better one than
               they had before.
@@ -334,7 +334,7 @@ export default function View() {
             </p>
 
             <p>
-              That&apos;s the part vendors care about most — keeping your
+              That&apos;s the part vendors care about most, keeping your
               reputation tight. If your leads get burned by bad dialing, your
               refund rate goes up and your repeat customers stop repeating.
               Owning the dialer side fixes that.
@@ -389,7 +389,7 @@ export default function View() {
           {/* ── HONEST CALLOUT ─────────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>One honest thing</strong> — DialerSeat doesn&apos;t process
+              <strong>One honest thing</strong>, DialerSeat doesn&apos;t process
               your resell payments. If you charge agents $150/week and
               they&apos;re on agent-pays codes, they pay DialerSeat $35 directly
               for their seat, and they pay <em>you</em> $115 separately, through
@@ -416,7 +416,7 @@ export default function View() {
             <div className="mgr-wl-eyebrow">▸ THE NEXT STEP</div>
             <h3>Want it to look like your product, not ours?</h3>
             <p>
-              For $75/week — instead of the standard $35 — you get the entire
+              For $75/week, instead of the standard $35, you get the entire
               platform white-labeled. Your logo, your colors, your custom
               domain. Your agents log in and see your brand. They never see
               DialerSeat anywhere. It&apos;s the same product underneath, but
@@ -433,7 +433,7 @@ export default function View() {
               Sign up for a regular DialerSeat account. Subscribe. Go to the
               Teams tab. Click <em>Create a Team</em>. Attach a campaign to it.
               Generate a code. Send the code to your first agent. That&apos;s
-              the whole flow — there&apos;s no separate manager sign-up, no
+              the whole flow: there&apos;s no separate manager sign-up, no
               sales call, no waitlist.
             </p>
 
@@ -463,7 +463,7 @@ export default function View() {
             </Link>
             <div>
               <a
-                href="mailto:hello@dialerseat.com?subject=Manager mode — let's talk"
+                href="mailto:hello@dialerseat.com?subject=Manager mode, let's talk"
                 className="mgr-cta-secondary"
               >
                 OR EMAIL ME DIRECTLY →

@@ -13,7 +13,7 @@ import {
 const SLUG = 'five9'
 
 export const metadata: Metadata = {
-  title: 'DialerSeat vs Five9 — Enterprise Features Without the Enterprise Sales Cycle',
+  title: 'DialerSeat vs Five9: Enterprise Features Without the Enterprise Sales Cycle',
   description:
     'DialerSeat is the modern alternative to Five9. Self-serve signup in minutes (not weeks of demos), public $35/week pricing (no custom quotes), no annual contract, no implementation fees. Multi-line predictive dialing with the same compliance posture.',
   alternates: {
@@ -37,12 +37,12 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to Five9 on price?',
     answer:
-      "DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with public pricing and self-serve signup. Five9 doesn't publish pricing — most quotes land at $175+ per seat per month, often with a multi-year contract and implementation fees on top. DialerSeat has no setup fee, no contract, and you can sign up and start dialing in under 10 minutes.",
+      "DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with public pricing and self-serve signup. Five9 doesn't publish pricing: most quotes land at $175+ per seat per month, often with a multi-year contract and implementation fees on top. DialerSeat has no setup fee, no contract, and you can sign up and start dialing in under 10 minutes.",
   },
   {
     question: 'Why does Five9 require a sales call?',
     answer:
-      'Five9 is enterprise-focused — their sales motion is built around 50-500 seat call centers with procurement teams and custom requirements. The demo cycle takes 1-4 weeks, custom quotes are normal, and annual commitments are typical. DialerSeat is the opposite — self-serve signup, flat $35/week, no demo required. Both approaches are valid; we just match different buyer profiles.',
+      'Five9 is enterprise-focused, their sales motion is built around 50-500 seat call centers with procurement teams and custom requirements. The demo cycle takes 1-4 weeks, custom quotes are normal, and annual commitments are typical. DialerSeat is the opposite: self-serve signup, flat $35/week, no demo required. Both approaches are valid; we just match different buyer profiles.',
   },
   {
     question: 'Does DialerSeat have the same compliance as Five9?',
@@ -57,7 +57,7 @@ const FAQS = [
   {
     question: 'What does Five9 have that DialerSeat does not?',
     answer:
-      "Five9 has a longer enterprise feature surface — workforce management, dedicated implementation teams, white-glove migration services, and a much larger third-party integration ecosystem built over 20+ years. If you need workforce scheduling, dedicated CSMs, or pre-built integrations with niche enterprise tools, Five9 may be a better fit. If you want the core outbound dialer at a fraction of the price with self-serve setup, DialerSeat is the better fit.",
+      "Five9 has a longer enterprise feature surface: workforce management, dedicated implementation teams, white-glove migration services, and a much larger third-party integration ecosystem built over 20+ years. If you need workforce scheduling, dedicated CSMs, or pre-built integrations with niche enterprise tools, Five9 may be a better fit. If you want the core outbound dialer at a fraction of the price with self-serve setup, DialerSeat is the better fit.",
   },
 ]
 
