@@ -1,30 +1,50 @@
 'use client'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
+import { useState } from 'react'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
-import BackToVsButton from '@/components/back-to-vs-button'
+import SuggestionModal from '@/components/SuggestionModal'
 import { SITE } from '@/lib/siteTheme'
+import { inter } from '@/lib/fonts'
+
+// =============================================================================
+// /vs/everyone — the industry-wide breakdown
+// =============================================================================
+// Rebuilt to the directory shell: a dark navigation rail on the left and one
+// white article card on the right, its sections divided by hairlines and each
+// led by a round icon.
+//
+// The text inside every section is CENTERED. That is the one deliberate
+// departure from the reference, and it changes what the page is: left-aligned
+// sections beside an icon read as documentation you work through, and this
+// reads as an argument you take in top to bottom — which is what a comparison
+// page is for.
+//
+// The content is unchanged. Same six failures, same feature table, same team
+// scaling table, same head-to-heads. Only the shell around them is new.
+// =============================================================================
 
 const T = {
   bg: SITE.bg,
   surface: SITE.surface,
   surface2: SITE.borderSoft,
   border: SITE.border,
-  // dark/darker painted the hero gradient; the hero is light now and these
-  // survive only for the closing CTA, which stays dark on purpose.
-  dark: SITE.ink,
-  darker: SITE.ink,
   text: SITE.text,
   muted: SITE.muted,
   accent: SITE.deep,
   blue: SITE.blue,
+  royal: '#2a6eff',
   green: SITE.green,
   red: SITE.red,
   amber: SITE.amber,
+  /** The navigation rail. Dark, so the article beside it reads as the page. */
+  rail: '#0d1830',
+  railLine: 'rgba(255,255,255,0.10)',
+  railMuted: 'rgba(255,255,255,0.52)',
 }
 
-const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
+const HUB_FONT = inter.style.fontFamily
 
 type Cell = true | false | string
 
@@ -110,15 +130,36 @@ const SWITCHING_FROM = [
 
 const teamScaling: FeatureRow[] = [
   { feature: 'Whitelabel available', ds: 'Manager+, $75/mo flat', rm: false, mo: false, pb: false, f9: false, cv: false },
-  { feature: 'Manager/supervisor seat', ds: 'Included in Manager+', rm: 'Admin seat can\u2019t dial', mo: false, pb: 'Requires Professional tier', f9: 'Requires 50-seat Optimum quote', cv: 'Custom quote' },
+  { feature: 'Manager/supervisor seat', ds: 'Included in Manager+', rm: 'Admin seat can’t dial', mo: false, pb: 'Requires Professional tier', f9: 'Requires 50-seat Optimum quote', cv: 'Custom quote' },
   { feature: 'Live call monitoring / coaching', ds: true, rm: 'iQ tier only', mo: false, pb: 'Professional tier ($195+/seat)', f9: 'Optimum tier, custom quote', cv: true },
   { feature: 'Price change as team grows', ds: 'None: flat $35/wk per seat', rm: '+$50/seat at 5th license', mo: 'None: but no team plan exists', pb: '+$30-$50/seat per tier', f9: '50-seat minimum on every plan', cv: '~20-seat minimum before you can meaningfully start' },
+]
+
+/** The rail's middle block. Real published routes only. */
+const OTHER_VS = [
+  { label: 'DialerSeat vs ReadyMode', href: '/vs/readymode' },
+  { label: 'DialerSeat vs Mojo Dialer', href: '/vs/mojo' },
+  { label: 'DialerSeat vs PhoneBurner', href: '/vs/phoneburner' },
+  { label: 'DialerSeat vs BatchDialer', href: '/vs/batchdialer' },
+  { label: 'DialerSeat vs Five9', href: '/vs/five9' },
+  { label: 'DialerSeat vs Convoso', href: '/vs/convoso' },
+  { label: 'DialerSeat vs VICIdial', href: '/vs/vicidial' },
+  { label: 'DialerSeat vs Kixie', href: '/vs/kixie' },
+  { label: 'Dialer pricing for teams', href: '/vs/teams' },
+  { label: 'All dialer comparisons', href: '/vs' },
+]
+
+const SITE_INFO = [
+  { label: 'Privacy Policy', href: '/privacy' },
+  { label: 'Terms of Use', href: '/terms' },
+  { label: 'Frequently Asked Questions', href: '/faq' },
+  { label: 'Dialing Modes', href: '/dialing-modes' },
 ]
 
 function StatusCell({ value }: { value: Cell }) {
   if (value === true) return <span style={{ color: T.green, fontSize: 18, fontWeight: 'bold' }}>✓</span>
   if (value === false) return <span style={{ color: T.red, fontSize: 18, fontWeight: 'bold' }}>✕</span>
-  
+
   const lower = value.toLowerCase()
   let color: string = T.text
   if (lower.includes('add-on') || lower.includes('partial') || lower.includes('variable') || lower.includes('inconsistent') || lower.includes('limited') || lower.includes('only') || lower.includes('tier') || lower.includes('premium') || lower.includes('misses') || lower.includes('custom')) {
@@ -127,379 +168,552 @@ function StatusCell({ value }: { value: Cell }) {
   return <span style={{ color, fontSize: 11, fontStyle: lower.includes('add-on') || lower.includes('partial') ? 'italic' : 'normal', letterSpacing: 0.3 }}>{value}</span>
 }
 
+/* ── SECTION ICONS ─────────────────────────────────────────────────────── */
+
+function IconVerdict() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.6" />
+      <path d="M12 7.6v5" />
+      <path d="M12 16.2h.01" />
+    </svg>
+  )
+}
+function IconWeek() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3.6" y="5" width="16.8" height="15" rx="2.4" />
+      <path d="M3.6 9.8h16.8M8.4 3.4v3.2M15.6 3.4v3.2" />
+    </svg>
+  )
+}
+function IconFailures() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M10.3 3.9 1.9 18.4a1.9 1.9 0 0 0 1.7 2.9h16.8a1.9 1.9 0 0 0 1.7-2.9L13.7 3.9a1.9 1.9 0 0 0-3.4 0z" />
+      <path d="M12 9.4v4M12 17.2h.01" />
+    </svg>
+  )
+}
+function IconTable() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3.4" y="4.4" width="17.2" height="15.2" rx="2.2" />
+      <path d="M3.4 9.6h17.2M9.6 9.6v10" />
+    </svg>
+  )
+}
+function IconTeam() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="9" cy="8.4" r="3.3" />
+      <path d="M2.8 19.6a6.2 6.2 0 0 1 12.4 0" />
+      <path d="M16.4 5.6a3.3 3.3 0 0 1 0 5.7M17.6 14.2a6.2 6.2 0 0 1 3.6 5.4" />
+    </svg>
+  )
+}
+function IconSwitch() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3.6 8.2h13.2l-3.4-3.4M20.4 15.8H7.2l3.4 3.4" />
+    </svg>
+  )
+}
+function IconAsk() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.4 14.4a2.2 2.2 0 0 1-2.2 2.2H7.8L3.6 20.4V5.6a2.2 2.2 0 0 1 2.2-2.2h12.4a2.2 2.2 0 0 1 2.2 2.2z" />
+    </svg>
+  )
+}
+function RailChevron() {
+  return (
+    <svg className="chev" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
+    </svg>
+  )
+}
+
 export default function VsEveryoneView() {
   const { isLoaded, isSignedIn } = useUser()
   const showSignedIn = isLoaded && isSignedIn
+  const [askOpen, setAskOpen] = useState(false)
 
   return (
     <>
       <SiteHeader />
-      <BackToVsButton />
-      <main style={{
-        background: T.bg,
-        minHeight: '100vh',
-        fontFamily: FUTURA,
-        color: T.text,
-      }}>
+      <main
+        style={{
+          background: T.bg,
+          minHeight: '100vh',
+          fontFamily: HUB_FONT,
+          color: T.text,
+        }}
+      >
         <style>{`
-          .vs-root * { box-sizing: border-box; }
+          .vse * { box-sizing: border-box; }
+          .vse { max-width: 1220px; margin: 0 auto; padding: 34px 32px 80px; }
 
-          /* ── HERO ── */
-          .vs-hero {
-            /* Light, like the landing page. */
-            background: transparent;
-            color: ${T.text};
-            padding: 100px 32px 80px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-            border-bottom: 2px solid ${T.accent};
-          }
-          .vs-hero-inner { position: relative; max-width: 920px; margin: 0 auto; }
-          .vs-eyebrow {
-            display: inline-block;
-            padding: 6px 14px;
-            background: rgba(74,158,255,0.15);
-            border: 1px solid ${T.blue};
-            border-radius: 4px;
-            color: ${T.blue};
-            font-size: 11px;
-            letter-spacing: 3px;
-            font-weight: bold;
-            margin-bottom: 24px;
-          }
-          .vs-h1 {
-            font-size: 60px;
-            letter-spacing: -1.5px;
-            line-height: 1.05;
-            font-weight: 800;
-            margin: 0 0 20px 0;
-          }
-          .vs-h1 .versus { color: ${T.blue}; }
-          .vs-subhead {
-            font-size: 19px;
-            line-height: 1.55;
-            color: #c4c8d8;
-            max-width: 760px;
-            margin: 0 auto 36px;
-          }
-
-          /* ── BODY ── */
-          .vs-section { max-width: 1180px; margin: 0 auto; padding: 80px 32px; }
-          .vs-section-eyebrow { font-size: 11px; letter-spacing: 4px; color: ${T.muted}; font-weight: bold; margin-bottom: 12px; }
-          .vs-section-h2 {
-            font-size: 36px;
-            letter-spacing: -0.5px;
-            line-height: 1.15;
-            font-weight: 800;
-            margin: 0 0 16px 0;
-            color: ${T.text};
-          }
-          .vs-section-lede {
-            font-size: 16px;
-            color: ${T.muted};
-            line-height: 1.65;
-            max-width: 760px;
-            margin: 0 0 48px 0;
-          }
-
-          /* ── VERDICT CARD ── */
-          .verdict-card {
-            background: ${T.surface};
-            border: 1px solid ${T.border};
-            border-radius: 4px;
-            padding: 32px;
-            margin-bottom: 48px;
-            border-top: 3px solid ${T.blue};
-          }
-          .verdict-card h3 { font-size: 20px; font-weight: 800; margin: 0 0 12px 0; letter-spacing: -0.3px; }
-          .verdict-card p { font-size: 15px; line-height: 1.7; color: ${T.muted}; margin: 0; }
-
-          /* ── THE WEEK ──────────────────────────────────────────────────
-             The single sharpest number on the page, and the one nobody else
-             can answer: the smallest amount of dialing anyone else will sell
-             you is a month. Priced against the month, our week looks cheap.
-             Priced against the WEEK, there is nothing to price against. */
-          .week-math {
-            background: ${T.surface};
-            border: 1px solid ${T.border};
-            border-top: 3px solid ${T.blue};
-            border-radius: 4px;
-            padding: 32px;
-            margin-bottom: 48px;
+          .vse-grid {
             display: grid;
-            grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-            gap: 32px;
-            align-items: center;
-          }
-          .week-math h3 { font-size: 20px; font-weight: 800; margin: 0 0 12px 0; letter-spacing: -0.3px; }
-          .week-math p { font-size: 15px; line-height: 1.7; color: ${T.muted}; margin: 0 0 12px 0; }
-          .week-math p:last-child { margin-bottom: 0; }
-          .week-tiles { display: grid; gap: 10px; }
-          .week-tile {
-            border: 1px solid ${T.border};
-            border-radius: 4px;
-            padding: 18px 20px;
-            background: ${T.bg};
-          }
-          .week-tile.ours { background: ${T.dark}; border-color: ${T.dark}; }
-          .week-tile-num {
-            font-size: 34px; font-weight: 800; letter-spacing: -1.5px; line-height: 1;
-            color: ${T.muted};
-          }
-          .week-tile.ours .week-tile-num { color: ${T.blue}; }
-          .week-tile-label {
-            margin-top: 8px;
-            font-size: 11px; font-weight: bold; letter-spacing: 2px;
-            color: ${T.muted};
-          }
-          .week-tile.ours .week-tile-label { color: rgba(255,255,255,0.6); }
-          .week-tile-sub { margin-top: 6px; font-size: 13px; line-height: 1.5; color: ${T.muted}; }
-          .week-tile.ours .week-tile-sub { color: rgba(255,255,255,0.6); }
-
-          /* ── FAILURE GRID ── */
-          .failure-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 72px; }
-          .failure-card {
-            background: ${T.surface};
-            border: 1px solid ${T.border};
-            border-radius: 4px;
-            padding: 28px;
-            display: flex;
+            grid-template-columns: 290px minmax(0, 1fr);
             gap: 20px;
+            align-items: start;
           }
-          .failure-num { font-size: 32px; font-weight: 800; color: ${T.blue}; opacity: 0.5; line-height: 1; }
-          .failure-card h4 { font-size: 16px; font-weight: 800; margin: 0 0 8px 0; letter-spacing: 1px; color: ${T.text}; }
-          .failure-card p { font-size: 14px; line-height: 1.6; color: ${T.muted}; margin: 0; }
 
-          /* ── COMPARISON TABLE ── */
-          .table-container { 
-            background: ${T.surface}; 
-            border: 1px solid ${T.border}; 
-            border-radius: 4px; 
-            overflow-x: auto; 
-            margin-bottom: 72px; 
+          /* ── THE RAIL ─────────────────────────────────────────────── */
+          .vse-rail {
+            background: ${T.rail};
+            border-radius: 14px;
+            padding: 22px 0 14px;
+            position: sticky;
+            top: 78px;
           }
-          table { width: 100%; border-collapse: collapse; min-width: 900px; }
-          th { 
-            background: ${T.dark}; 
-            padding: 16px 20px; 
-            text-align: center; 
-            font-size: 10px; 
-            letter-spacing: 2.5px; 
-            color: ${T.muted}; 
-            border-bottom: 2px solid ${T.accent};
+          .vse-rail-label {
+            padding: 0 20px;
+            margin: 0 0 12px;
+            font-size: 10px; font-weight: bold; letter-spacing: 2.6px;
+            color: ${T.railMuted};
           }
-          th:first-child { text-align: left; }
-          td { 
-            padding: 14px 20px; 
-            border-bottom: 1px solid ${T.border}; 
-            text-align: center; 
-            font-size: 13px; 
+          .vse-rail-group + .vse-rail-group {
+            margin-top: 22px; padding-top: 20px;
+            border-top: 1px solid ${T.railLine};
           }
-          td:first-child { text-align: left; font-weight: 600; color: ${T.text}; width: 220px; }
-          tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
-          .ds-col { background: rgba(74,158,255,0.04) !important; color: ${T.blue} !important; font-weight: bold; }
+          .vse-rail a {
+            display: flex; align-items: center; gap: 11px;
+            padding: 10px 20px;
+            color: rgba(255,255,255,0.86);
+            text-decoration: none;
+            font-size: 14px;
+          }
+          .vse-rail a:hover { background: rgba(255,255,255,0.06); color: #fff; }
+          .vse-rail a .chev { color: rgba(255,255,255,0.34); flex-shrink: 0; }
+          .vse-rail a:hover .chev { color: ${T.blue}; }
+          .vse-rail a.here {
+            background: ${T.royal};
+            color: #fff; font-weight: 700;
+            margin: 0 12px; padding: 10px 14px; border-radius: 8px;
+          }
+          .vse-rail a.here .chev { color: rgba(255,255,255,0.75); }
 
-          /* ── SWITCHING GRID ── */
-          .switching-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 72px; }
-          .switching-card {
+          /* ── THE ARTICLE ──────────────────────────────────────────── */
+          .vse-card {
             background: ${T.surface};
             border: 1px solid ${T.border};
-            border-radius: 4px;
-            padding: 20px;
-            text-decoration: none;
-            transition: all 0.15s;
+            border-radius: 14px;
+            overflow: hidden;
           }
-          .switching-card:hover { transform: translateY(-2px); border-color: ${T.blue}; }
-          .switching-card h5 { font-size: 12px; font-weight: 800; color: ${T.blue}; margin: 0 0 8px 0; letter-spacing: 2px; }
-          .switching-card p { font-size: 13px; line-height: 1.5; color: ${T.muted}; margin: 0; }
-
-          /* ── BUTTONS ── */
-          .btn-primary {
-            padding: 16px 32px;
-            background: transparent;
-            border: 1px solid ${T.blue};
-            border-top: 3px solid ${T.blue};
-            color: ${T.blue};
-            font-size: 13px;
-            letter-spacing: 4px;
-            font-weight: bold;
-            text-decoration: none;
-            display: inline-block;
-            border-radius: 6px;
+          /* Every section is centered. That is the departure from the
+             reference, and it is what turns a documentation page into an
+             argument you read straight down. */
+          .vse-sec {
+            padding: 44px 48px;
+            border-bottom: 1px solid ${T.surface2};
+            text-align: center;
           }
-          .btn-secondary {
-            padding: 16px 32px;
-            background: transparent;
+          .vse-sec:last-child { border-bottom: none; }
+          .vse-icon {
+            width: 52px; height: 52px; margin: 0 auto 18px;
+            display: grid; place-items: center;
+            border-radius: 999px;
+            background: ${T.royal}; color: #fff;
+          }
+          .vse-sec h2 {
+            margin: 0 0 14px;
+            font-size: 27px; font-weight: 800; letter-spacing: -0.6px;
+            line-height: 1.2;
             color: ${T.text};
+          }
+          .vse-sec p {
+            margin: 0 auto 14px;
+            max-width: 660px;
+            font-size: 15.5px; line-height: 1.75;
+            color: ${T.muted};
+          }
+          .vse-sec p:last-child { margin-bottom: 0; }
+
+          .vse-hero { padding: 52px 48px 44px; }
+          .vse-hero .eyebrow {
+            font-size: 10px; font-weight: bold; letter-spacing: 3px;
+            color: ${T.accent};
+            margin-bottom: 14px;
+          }
+          .vse-hero h1 {
+            margin: 0 0 16px;
+            font-size: 42px; font-weight: 800; letter-spacing: -1.4px;
+            line-height: 1.08;
+          }
+          .vse-hero h1 .second { display: block; color: ${T.royal}; }
+          .vse-hero .stamp { margin-top: 16px; font-size: 12px; color: ${T.muted}; }
+
+          /* ── PRICE TILES ──────────────────────────────────────────── */
+          .vse-tiles {
+            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px; max-width: 620px; margin: 22px auto 0;
+            text-align: left;
+          }
+          .vse-tile {
+            border: 1px solid ${T.border}; border-radius: 10px;
+            background: ${T.bg}; padding: 20px 18px;
+          }
+          .vse-tile.ours { background: ${T.rail}; border-color: ${T.rail}; }
+          .vse-tile-num { font-size: 30px; font-weight: 800; letter-spacing: -1.2px; line-height: 1; color: ${T.muted}; }
+          .vse-tile.ours .vse-tile-num { color: ${T.blue}; }
+          .vse-tile-label { margin-top: 8px; font-size: 10px; font-weight: bold; letter-spacing: 2px; color: ${T.muted}; }
+          .vse-tile.ours .vse-tile-label { color: rgba(255,255,255,0.6); }
+          .vse-tile-sub { margin-top: 7px; font-size: 12.5px; line-height: 1.5; color: ${T.muted}; }
+          .vse-tile.ours .vse-tile-sub { color: rgba(255,255,255,0.6); }
+
+          /* ── FAILURES ─────────────────────────────────────────────── */
+          .vse-failures { display: grid; gap: 12px; margin-top: 24px; text-align: left; }
+          .vse-failure {
+            display: flex; gap: 16px;
+            background: ${T.bg};
             border: 1px solid ${T.border};
-            border-top: 3px solid ${T.muted};
-            font-size: 13px;
-            letter-spacing: 4px;
-            font-weight: bold;
-            text-decoration: none;
-            display: inline-block;
-            border-radius: 6px;
+            border-radius: 10px;
+            padding: 20px 22px;
+          }
+          .vse-failure .num {
+            font-size: 26px; font-weight: 800; color: ${T.royal};
+            opacity: 0.42; line-height: 1; flex-shrink: 0;
+          }
+          .vse-failure h3 { margin: 0 0 7px; font-size: 14px; font-weight: 800; letter-spacing: 1px; color: ${T.text}; }
+          .vse-failure p { margin: 0; max-width: none; font-size: 13.5px; line-height: 1.65; color: ${T.muted}; }
+
+          /* ── TABLES ───────────────────────────────────────────────── */
+          .vse-tablewrap {
+            margin-top: 24px;
+            border: 1px solid ${T.border};
+            border-radius: 10px;
+            overflow-x: auto;
+            text-align: left;
+          }
+          .vse-tablewrap table { width: 100%; border-collapse: collapse; min-width: 880px; }
+          .vse-tablewrap th {
+            background: ${T.rail};
+            color: rgba(255,255,255,0.7);
+            padding: 14px 16px;
+            text-align: center;
+            font-size: 10px; letter-spacing: 2px; font-weight: bold;
+            white-space: nowrap;
+          }
+          .vse-tablewrap th:first-child { text-align: left; }
+          .vse-tablewrap th.ds-head { color: ${T.blue}; }
+          .vse-tablewrap td {
+            padding: 12px 16px;
+            border-bottom: 1px solid ${T.surface2};
+            text-align: center;
+            font-size: 12.5px;
+          }
+          .vse-tablewrap tr:last-child td { border-bottom: none; }
+          .vse-tablewrap td:first-child {
+            text-align: left; font-weight: 600; color: ${T.text};
+            width: 230px; font-size: 13px;
+          }
+          .vse-tablewrap tr:nth-child(even) td { background: rgba(226,228,234,0.34); }
+          .vse-tablewrap td.ds-col { background: rgba(42,110,255,0.06) !important; color: ${T.royal} !important; font-weight: bold; }
+
+          /* ── SWITCHING ────────────────────────────────────────────── */
+          .vse-switch {
+            display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px; margin-top: 24px; text-align: left;
+          }
+          .vse-switch a {
+            background: ${T.bg}; border: 1px solid ${T.border};
+            border-radius: 10px; padding: 16px 18px;
+            text-decoration: none; display: block;
+            transition: border-color 0.15s, transform 0.15s;
+          }
+          .vse-switch a:hover { border-color: ${T.royal}; transform: translateY(-2px); }
+          .vse-switch h3 { margin: 0 0 7px; font-size: 12px; font-weight: 800; letter-spacing: 1.6px; color: ${T.royal}; }
+          .vse-switch p { margin: 0; max-width: none; font-size: 12.5px; line-height: 1.55; color: ${T.muted}; }
+
+          /* ── BUTTONS ──────────────────────────────────────────────── */
+          .vse-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+          .vse-btn {
+            display: inline-block; padding: 14px 28px; border-radius: 8px;
+            font-family: inherit;
+            font-size: 12px; font-weight: bold; letter-spacing: 2.6px;
+            text-decoration: none; cursor: pointer;
+          }
+          .vse-btn.primary { background: ${T.royal}; color: #fff; border: none; }
+          .vse-btn.primary:hover { background: ${T.accent}; }
+          .vse-btn.secondary {
+            background: transparent; color: ${T.text};
+            border: 1px solid ${T.border}; border-top: 3px solid ${T.text};
           }
 
-          /* ── CTA ── */
-          .final-cta { background: ${T.dark}; padding: 80px 32px; text-align: center; border-top: 2px solid ${T.accent}; }
-          .final-cta h2 { font-size: 42px; font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; line-height: 1.1; }
-          .final-cta p { font-size: 17px; color: ${T.muted}; max-width: 600px; margin: 0 auto 32px; }
+          .vse-inline {
+            background: none; border: none; padding: 0;
+            font: inherit; color: ${T.royal}; font-weight: 600;
+            text-decoration: underline; text-underline-offset: 3px;
+            cursor: pointer;
+          }
 
-          @media (max-width: 768px) {
-            .vs-h1 { font-size: 36px; }
-            .failure-grid { grid-template-columns: 1fr; }
-            .switching-grid { grid-template-columns: 1fr; }
-            .week-math { grid-template-columns: 1fr; padding: 24px 20px; gap: 22px; }
-            .week-tile-num { font-size: 28px; }
-            .btn-primary, .btn-secondary { width: 100%; text-align: center; }
+          @media (max-width: 1000px) {
+            .vse-grid { grid-template-columns: minmax(0, 1fr); }
+            .vse-rail { position: static; }
+            .vse-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          }
+          @media (max-width: 700px) {
+            .vse { padding: 20px 16px 56px; }
+            .vse-sec { padding: 32px 22px; }
+            .vse-hero { padding: 34px 22px 30px; }
+            .vse-hero h1 { font-size: 29px; letter-spacing: -0.8px; }
+            .vse-sec h2 { font-size: 22px; }
+            .vse-tiles { grid-template-columns: minmax(0, 1fr); }
+            .vse-switch { grid-template-columns: minmax(0, 1fr); }
+            .vse-failure { flex-direction: column; gap: 8px; }
+            .vse-btn { display: block; width: 100%; text-align: center; }
           }
         `}</style>
 
-        <section className="vs-hero">
-          <div className="vs-hero-inner">
-            <div className="vs-eyebrow">DIALERSEAT™ VS EVERYONE</div>
-            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Last Updated 07/28/2026</div>
-            <h1 className="vs-h1">
-              The industry is broken.<br />
-              <span className="versus">WE FIXED IT.</span>
-            </h1>
-            <p className="vs-subhead">
-              The outbound dialer industry was built by enterprise sales teams for enterprise budgets.
-              DialerSeat was built for the people actually making the calls.
-            </p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link href={showSignedIn ? '/dashboard' : '/sign-up'} className="btn-primary">
-                {showSignedIn ? 'GO TO DASHBOARD →' : 'GET STARTED →'}
-              </Link>
-              <Link href="#failures" className="btn-secondary">THE SIX FAILURES</Link>
-            </div>
-          </div>
-        </section>
+        <div className="vse">
+          <div className="vse-grid">
 
-        <section className="vs-section">
-          <div id="failures" className="vs-section-eyebrow">▸ THE VERDICT</div>
-          <h2 className="vs-section-h2">Legacy dialers are bloated, dated, and overpriced.</h2>
-          <p className="vs-section-lede">
-            Most of our customers switch from ReadyMode, Mojo, or Five9 because they&apos;re tired
-            of paying for features they don&apos;t use, UI they don&apos;t like, and contracts they can&apos;t escape.
-          </p>
-
-          <div className="verdict-card">
-            <h3>The DialerSeat Difference</h3>
-            <p>
-              We took the core predictive and power dialing technology that enterprise tools charge
-              hundreds for, stripped away the sales-demo bloat, and packaged it into a modern
-              interface that works on any device. Then we priced it at $35/week with no contract.
-              It&apos;s not a &quot;budget&quot; alternative, it&apos;s a more capable tool built for a modern workflow.
-            </p>
-          </div>
-
-          <div className="week-math">
-            <div>
-              <div className="vs-section-eyebrow">▸ ONE WEEK OF DIALING</div>
-              <h3>Nobody else sells a week.</h3>
-              <p>
-                Say you want to dial for one week: a push before a deadline, a test run on a new
-                list, a single busy stretch. Everywhere else, the smallest thing you can buy is a
-                month, so a week of dialing costs you a month&apos;s subscription. Month to month,
-                on the dialers that actually run multi-line predictive, that&apos;s roughly $120 to
-                $250 a seat before setup fees.
-              </p>
-              <p>
-                DialerSeat sells the week. $35, and if you don&apos;t want the next one you
-                don&apos;t buy it. Four weeks of DialerSeat still costs less than one month
-                almost anywhere on this page.
-              </p>
-            </div>
-            <div className="week-tiles">
-              <div className="week-tile">
-                <div className="week-tile-num">$120-$250</div>
-                <div className="week-tile-label">EVERYWHERE ELSE</div>
-                <div className="week-tile-sub">
-                  One month, because a month is the smallest unit sold. Setup fees extra.
-                </div>
+            {/* ── NAVIGATION RAIL ── */}
+            <aside className="vse-rail">
+              <div className="vse-rail-group">
+                <p className="vse-rail-label">MAIN MENU</p>
+                <Link href="/?view=landing"><RailChevron /> Home</Link>
+                <Link href="/vs" className="here"><RailChevron /> All Comparisons</Link>
+                <Link href="/faq"><RailChevron /> FAQ</Link>
+                <Link href="/dialing-modes"><RailChevron /> Dialing Modes</Link>
               </div>
-              <div className="week-tile ours">
-                <div className="week-tile-num">$35</div>
-                <div className="week-tile-label">DIALERSEAT</div>
-                <div className="week-tile-sub">
-                  One week. Cancel before the next one and that is the whole bill.
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <div className="vs-section-eyebrow">▸ SIX INDUSTRY FAILURES</div>
-          <h2 className="vs-section-h2">Why the industry needs a reset.</h2>
-          <div className="failure-grid">
-            {INDUSTRY_FAILURES.map(f => (
-              <div key={f.num} className="failure-card">
-                <div className="failure-num">{f.num}</div>
-                <div>
-                  <h4>{f.title}</h4>
-                  <p>{f.body}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="vs-section-eyebrow">▸ SIDE-BY-SIDE</div>
-          <h2 className="vs-section-h2">Every feature. Every competitor.</h2>
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>FEATURE</th>
-                  <th style={{ color: T.blue }}>DIALERSEAT</th>
-                  <th>READYMODE</th>
-                  <th>MOJO</th>
-                  <th>PHONEBURNER</th>
-                  <th>FIVE9</th>
-                  <th>CONVOSO</th>
-                </tr>
-              </thead>
-              <tbody>
-                {features.map((f, i) => (
-                  <tr key={i}>
-                    <td>{f.feature}</td>
-                    <td className="ds-col"><StatusCell value={f.ds} /></td>
-                    <td><StatusCell value={f.rm} /></td>
-                    <td><StatusCell value={f.mo} /></td>
-                    <td><StatusCell value={f.pb} /></td>
-                    <td><StatusCell value={f.f9} /></td>
-                    <td><StatusCell value={f.cv} /></td>
-                  </tr>
+              <div className="vse-rail-group">
+                <p className="vse-rail-label">OTHER VS PAGES</p>
+                {OTHER_VS.map((item) => (
+                  <Link key={item.href} href={item.href}>
+                    <RailChevron /> {item.label}
+                  </Link>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
 
-          <div className="vs-section-eyebrow">▸ SWITCHING FROM...</div>
-          <h2 className="vs-section-h2">Direct head-to-heads.</h2>
-          <div className="switching-grid">
-            {SWITCHING_FROM.map(s => (
-              <Link key={s.name} href={s.href || '#'} className="switching-card">
-                <h5>{s.name}</h5>
-                <p>{s.summary}</p>
-              </Link>
-            ))}
-          </div>
-        </section>
+              <div className="vse-rail-group">
+                <p className="vse-rail-label">SITE INFO</p>
+                {SITE_INFO.map((item) => (
+                  <Link key={item.href} href={item.href}>
+                    <RailChevron /> {item.label}
+                  </Link>
+                ))}
+              </div>
+            </aside>
 
-        <section className="final-cta">
-          <div className="vs-hero-inner">
-            <h2>STOP PAYING THE LEGACY TAX.</h2>
-            <p>
-              Join the teams closing more deals for 5x less cost. No contracts, no demos,
-              no setup fees. Just a better dialer.
-            </p>
-            <Link href={showSignedIn ? '/dashboard' : '/sign-up'} className="btn-primary">
-              {showSignedIn ? 'GO TO DASHBOARD →' : 'GET STARTED →'}
-            </Link>
+            {/* ── THE ARTICLE ── */}
+            <div className="vse-card">
+
+              <section className="vse-sec vse-hero">
+                <div className="eyebrow">▸ DIALERSEAT™ VS EVERYONE</div>
+                <h1>
+                  The industry is broken.
+                  <span className="second">We fixed it.</span>
+                </h1>
+                <p>
+                  The outbound dialer industry was built by enterprise sales teams for
+                  enterprise budgets. DialerSeat was built for the people actually making
+                  the calls.
+                </p>
+                <div className="vse-btns">
+                  <Link href={showSignedIn ? '/dashboard' : '/sign-up'} className="vse-btn primary">
+                    {showSignedIn ? 'GO TO DASHBOARD →' : 'GET STARTED →'}
+                  </Link>
+                  <a href="#failures" className="vse-btn secondary">THE SIX FAILURES</a>
+                </div>
+                <p className="stamp">Last updated 07/28/2026</p>
+              </section>
+
+              <section className="vse-sec">
+                <div className="vse-icon"><IconVerdict /></div>
+                <h2>Legacy dialers are bloated, dated, and overpriced.</h2>
+                <p>
+                  Most of our customers switch from ReadyMode, Mojo, or Five9 because
+                  they&apos;re tired of paying for features they don&apos;t use, UI they
+                  don&apos;t like, and contracts they can&apos;t escape.
+                </p>
+                <p>
+                  We took the core predictive and power dialing technology that enterprise
+                  tools charge hundreds for, stripped away the sales-demo bloat, and packaged
+                  it into a modern interface that works on any device. Then we priced it at
+                  $35/week with no contract. It&apos;s not a &quot;budget&quot; alternative,
+                  it&apos;s a more capable tool built for a modern workflow.
+                </p>
+              </section>
+
+              <section className="vse-sec">
+                <div className="vse-icon"><IconWeek /></div>
+                <h2>Nobody else sells a week.</h2>
+                <p>
+                  Say you want to dial for one week: a push before a deadline, a trial run on
+                  a new list, a single busy stretch. Everywhere else, the smallest thing you
+                  can buy is a month, so a week of dialing costs you a month&apos;s
+                  subscription. Month to month, on the dialers that actually run multi-line
+                  predictive, that&apos;s roughly $120 to $250 a seat before setup fees.
+                </p>
+                <p>
+                  DialerSeat sells the week. $35, and if you don&apos;t want the next one you
+                  don&apos;t buy it. Four weeks of DialerSeat still costs less than one month
+                  almost anywhere on this page.
+                </p>
+                <div className="vse-tiles">
+                  <div className="vse-tile">
+                    <div className="vse-tile-num">$120-$250</div>
+                    <div className="vse-tile-label">EVERYWHERE ELSE</div>
+                    <div className="vse-tile-sub">
+                      One month, because a month is the smallest unit sold. Setup fees extra.
+                    </div>
+                  </div>
+                  <div className="vse-tile ours">
+                    <div className="vse-tile-num">$35</div>
+                    <div className="vse-tile-label">DIALERSEAT</div>
+                    <div className="vse-tile-sub">
+                      One week. Cancel before the next one and that is the whole bill.
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="vse-sec" id="failures">
+                <div className="vse-icon"><IconFailures /></div>
+                <h2>Why the industry needs a reset.</h2>
+                <p>
+                  Six failures every legacy dialer shares. Not one of them is a technical
+                  limit; each is a pricing or packaging decision somebody made on purpose.
+                </p>
+                <div className="vse-failures">
+                  {INDUSTRY_FAILURES.map((f) => (
+                    <div key={f.num} className="vse-failure">
+                      <div className="num">{f.num}</div>
+                      <div>
+                        <h3>{f.title}</h3>
+                        <p>{f.body}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="vse-sec">
+                <div className="vse-icon"><IconTable /></div>
+                <h2>Every feature. Every competitor.</h2>
+                <p>
+                  Where a competitor is genuinely better, the row says so. A table where one
+                  column wins everything is marketing, not a comparison.
+                </p>
+                <div className="vse-tablewrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>FEATURE</th>
+                        <th className="ds-head">DIALERSEAT</th>
+                        <th>READYMODE</th>
+                        <th>MOJO</th>
+                        <th>PHONEBURNER</th>
+                        <th>FIVE9</th>
+                        <th>CONVOSO</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {features.map((f) => (
+                        <tr key={f.feature}>
+                          <td>{f.feature}</td>
+                          <td className="ds-col"><StatusCell value={f.ds} /></td>
+                          <td><StatusCell value={f.rm} /></td>
+                          <td><StatusCell value={f.mo} /></td>
+                          <td><StatusCell value={f.pb} /></td>
+                          <td><StatusCell value={f.f9} /></td>
+                          <td><StatusCell value={f.cv} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="vse-sec">
+                <div className="vse-icon"><IconTeam /></div>
+                <h2>What happens when you add the fifth agent.</h2>
+                <p>
+                  The headline seat rate is the number everyone compares. What decides the
+                  purchase is whether growing the floor is an afternoon decision or a
+                  procurement event.
+                </p>
+                <div className="vse-tablewrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>SCALING</th>
+                        <th className="ds-head">DIALERSEAT</th>
+                        <th>READYMODE</th>
+                        <th>MOJO</th>
+                        <th>PHONEBURNER</th>
+                        <th>FIVE9</th>
+                        <th>CONVOSO</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {teamScaling.map((f) => (
+                        <tr key={f.feature}>
+                          <td>{f.feature}</td>
+                          <td className="ds-col"><StatusCell value={f.ds} /></td>
+                          <td><StatusCell value={f.rm} /></td>
+                          <td><StatusCell value={f.mo} /></td>
+                          <td><StatusCell value={f.pb} /></td>
+                          <td><StatusCell value={f.f9} /></td>
+                          <td><StatusCell value={f.cv} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="vse-sec">
+                <div className="vse-icon"><IconSwitch /></div>
+                <h2>Direct head-to-heads.</h2>
+                <p>
+                  Every tool above gets its own page, with the pricing written the way that
+                  vendor writes it and the things they genuinely do better left in.
+                </p>
+                <div className="vse-switch">
+                  {SWITCHING_FROM.map((s) => (
+                    <Link key={s.name} href={s.href}>
+                      <h3>{s.name}</h3>
+                      <p>{s.summary}</p>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+
+              <section className="vse-sec">
+                <div className="vse-icon"><IconAsk /></div>
+                <h2>Still have questions?</h2>
+                <p>
+                  If your dialer isn&apos;t on this page, or something here doesn&apos;t match
+                  what you were quoted, tell us. A real person reads every one of these.{' '}
+                  <button type="button" className="vse-inline" onClick={() => setAskOpen(true)}>
+                    Send us a request here.
+                  </button>
+                </p>
+                <div className="vse-btns">
+                  <Link href={showSignedIn ? '/dashboard' : '/sign-up'} className="vse-btn primary">
+                    {showSignedIn ? 'GO TO DASHBOARD →' : 'GET STARTED →'}
+                  </Link>
+                  <Link href="/vs" className="vse-btn secondary">ALL COMPARISONS</Link>
+                </div>
+              </section>
+
+            </div>
           </div>
-        </section>
+        </div>
+
+        <SuggestionModal
+          open={askOpen}
+          onClose={() => setAskOpen(false)}
+          title="Send us a request"
+          intro="Tell us which dialer to compare next, or what this page got wrong. A real person reads these."
+          defaultKind="comparison"
+        />
       </main>
       <SiteFooter />
     </>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { SITE } from '@/lib/siteTheme'
 import { inter } from '@/lib/fonts'
+import SuggestionModal from '@/components/SuggestionModal'
 
 // =============================================================================
 // THE DIRECTORY HUB — the shared template behind /vs and /faq
@@ -66,7 +67,8 @@ export interface DirectoryHubProps {
 
   requestTitle: string
   requestLabel: string
-  requestHref: string
+  /** Intro line shown inside the Ask-us box. */
+  requestPrompt: string
 
   navTitle: string
   navDivider: string
@@ -77,11 +79,21 @@ export interface DirectoryHubProps {
   allCta: string
 
   recentTitle: string
-  recentCta: string
 }
 
 /** How many rows a column shows before it asks to be expanded. */
+/**
+ * How many index rows a phone shows before it offers to expand.
+ *
+ * Only a phone. On a desktop the full index IS the page — collapsing it behind
+ * a button hides the one thing the visitor came to scan, and the column has the
+ * room to show everything. The clamp is pure CSS below, so the rows are always
+ * in the DOM and always crawlable.
+ */
 const CHUNK = 12
+
+/** Recently Added is a fixed window, not a browsable list. */
+const RECENT_MAX = 25
 
 function IconHome() {
   return (
@@ -178,7 +190,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [showAll, setShowAll] = useState(false)
-  const [showAllRecent, setShowAllRecent] = useState(false)
+  const [askOpen, setAskOpen] = useState(false)
 
   const q = query.trim().toLowerCase()
 
@@ -197,8 +209,9 @@ export default function DirectoryHub(props: DirectoryHubProps) {
     [props.allItems],
   )
 
-  const visibleAll = q || showAll ? filtered : filtered.slice(0, CHUNK)
-  const visibleRecent = showAllRecent ? recent : recent.slice(0, CHUNK)
+  // Every match is rendered. What a phone actually shows is clamped in CSS, so
+  // "show all" is a mobile affordance rather than a gate on the content.
+  const visibleRecent = recent.slice(0, RECENT_MAX)
 
   // The Search button has to do something the live filter has not already done,
   // or it is a button that lies. When the query resolves to exactly one page,
@@ -323,6 +336,18 @@ export default function DirectoryHub(props: DirectoryHubProps) {
         }
         .hub-search button:hover { background: ${SITE.deep}; }
 
+        /* Looks like the link it replaced, because it does what that link only
+           promised — a mailto: works for people with a desktop mail client
+           configured, which is most of nobody, and leaves no record either way. */
+        .hub-ask {
+          padding: 0; border: none; background: none;
+          font-family: inherit; font-size: inherit; font-weight: 600;
+          color: var(--hub-royal);
+          text-decoration: underline; text-underline-offset: 3px;
+          cursor: pointer;
+        }
+        .hub-ask:hover { color: ${SITE.deep}; }
+
         .hub-request {
           display: flex; align-items: center; gap: 14px;
           background: ${SITE.surface};
@@ -430,6 +455,10 @@ export default function DirectoryHub(props: DirectoryHubProps) {
         }
         .hub-empty a { color: var(--hub-royal); font-weight: 600; }
 
+        /* The expander is a phone affordance only. On anything wider the full
+           index is shown, because scanning it is the reason the page exists. */
+        .hub-foot-phone { display: none; }
+
         .hub-foot { padding: 14px 16px; border-top: 1px solid var(--hub-line); }
         .hub-foot button {
           width: 100%;
@@ -464,6 +493,12 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           }
         }
         @media (max-width: 760px) {
+          /* Twenty-three rows is a lot of thumb on a phone, so the index
+             collapses to CHUNK until asked. Every row stays in the DOM. */
+          .hub-foot-phone { display: block; }
+          .hub-card-index:not(.is-expanded) a.hub-row:nth-of-type(n + ${CHUNK + 1}) { display: none; }
+          .hub-card-index:not(.is-expanded) a.hub-row:nth-of-type(${CHUNK}) { border-bottom: none; }
+
           .hub-inner { padding: 0 20px 64px; }
           .hub-hero { padding: 48px 20px 26px; }
           .hub-hero h1 { font-size: 34px; letter-spacing: -0.9px; }
@@ -518,7 +553,9 @@ export default function DirectoryHub(props: DirectoryHubProps) {
             <div>
               <div className="hub-request-title">{props.requestTitle}</div>
               <div className="hub-request-body">
-                <a href={props.requestHref}>{props.requestLabel}</a>.
+                <button type="button" className="hub-ask" onClick={() => setAskOpen(true)}>
+                  {props.requestLabel}
+                </button>
               </div>
             </div>
           </div>
@@ -542,15 +579,15 @@ export default function DirectoryHub(props: DirectoryHubProps) {
             ))}
           </aside>
 
-          {/* THE FULL INDEX */}
-          <section className="hub-card">
+          {/* THE FULL INDEX — every row, always. Clamped only on a phone. */}
+          <section className={`hub-card hub-card-index${showAll || q ? ' is-expanded' : ''}`}>
             <div className="hub-card-head">
               <span className="hub-badge blue"><IconScales /></span>
               <h2>{q ? 'Search results' : props.allTitle}</h2>
               {q && <span className="hub-card-count">{filtered.length}</span>}
             </div>
 
-            {visibleAll.map((item) => (
+            {filtered.map((item) => (
               <Link key={item.href} href={item.href} className="hub-row">
                 <span className="hub-row-label">{item.label}</span>
                 <Chevron className="hub-chev" />
@@ -560,13 +597,15 @@ export default function DirectoryHub(props: DirectoryHubProps) {
             {filtered.length === 0 && (
               <p className="hub-empty">
                 Nothing here matches &ldquo;{query.trim()}&rdquo;.{' '}
-                <a href={props.requestHref}>{props.requestLabel}</a>{' '}
+                <button type="button" className="hub-ask" onClick={() => setAskOpen(true)}>
+                  {props.requestLabel}
+                </button>{' '}
                 and we&apos;ll write it.
               </p>
             )}
 
             {!q && filtered.length > CHUNK && (
-              <div className="hub-foot">
+              <div className="hub-foot hub-foot-phone">
                 <button type="button" className="blue" onClick={() => setShowAll((v) => !v)}>
                   {showAll ? 'Show fewer' : props.allCta}{' '}
                   <span aria-hidden>{showAll ? '↑' : '→'}</span>
@@ -575,7 +614,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
             )}
           </section>
 
-          {/* RECENTLY ADDED */}
+          {/* RECENTLY ADDED — a fixed window of the newest 25. No expander. */}
           <section className="hub-card">
             <div className="hub-card-head">
               <span className="hub-badge green"><IconStar /></span>
@@ -589,19 +628,17 @@ export default function DirectoryHub(props: DirectoryHubProps) {
                 <Chevron className="hub-chev" />
               </Link>
             ))}
-
-            {recent.length > CHUNK && (
-              <div className="hub-foot">
-                <button type="button" className="green" onClick={() => setShowAllRecent((v) => !v)}>
-                  {showAllRecent ? 'Show fewer' : props.recentCta}{' '}
-                  <span aria-hidden>{showAllRecent ? '↑' : '→'}</span>
-                </button>
-              </div>
-            )}
           </section>
 
         </div>
       </div>
+
+      <SuggestionModal
+        open={askOpen}
+        onClose={() => setAskOpen(false)}
+        title={props.requestTitle}
+        intro={props.requestPrompt}
+      />
     </div>
   )
 }

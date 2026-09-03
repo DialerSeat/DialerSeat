@@ -228,12 +228,10 @@ const TOP_PICKS: HubItem[] = [
  * are the routes somebody lands here and then wants instead.
  */
 const NAV: HubItem[] = [
-  { href: '/?view=landing', label: 'Home' },
-  { href: '/?view=landing#pricing', label: 'Pricing' },
-  { href: '/dialing-modes', label: 'Dialing modes' },
-  { href: '/faq', label: 'Frequently asked questions' },
-  { href: '/vs/teams', label: 'Team pricing, compared' },
-  { href: '/faq/why-dialerseat', label: 'Why DialerSeat?' },
+  { href: '/?view=landing', label: 'Home page' },
+  { href: '/faq', label: 'FAQ' },
+  { href: '/terms', label: 'Terms' },
+  { href: '/privacy', label: 'Privacy policy' },
 ]
 
 export default function VsHubView() {
@@ -353,15 +351,14 @@ export default function VsHubView() {
           searchNoun="comparisons"
           requestTitle="Can't find yours?"
           requestLabel="Submit a request"
-          requestHref="mailto:support@dialerseat.com?subject=Comparison%20request"
-          navTitle="Home"
+          requestPrompt="Tell us which dialer to compare next, or ask anything about how DialerSeat stacks up. A real person reads these."
+          navTitle="VS"
           navDivider="ELSEWHERE ON THE SITE"
           navItems={NAV}
           allTitle="All Comparisons"
           allItems={COMPARISONS}
           allCta="Browse all comparisons"
-          recentTitle="Recently Added"
-          recentCta="View all recently added"
+          recentTitle="Recently Added"
         />
 
         <div className="vshub-band">

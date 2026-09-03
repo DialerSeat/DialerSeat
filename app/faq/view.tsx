@@ -249,12 +249,9 @@ const TOP_PICKS: HubItem[] = [
 
 /** The left column — where someone goes next, not a second copy of the index. */
 const NAV: HubItem[] = [
-  { href: '/?view=landing', label: 'Home' },
-  { href: '/?view=landing#pricing', label: 'Pricing' },
-  { href: '/dialing-modes', label: 'Dialing modes' },
-  { href: '/vs', label: 'Competitor comparisons' },
-  { href: '/vs/teams', label: 'Team pricing, compared' },
-  { href: '/faq/why-dialerseat', label: 'Why DialerSeat?' },
+  { href: '/vs', label: 'VS' },
+  { href: '/terms', label: 'Terms' },
+  { href: '/privacy', label: 'Privacy policy' },
 ]
 
 export default function FaqView() {
@@ -412,8 +409,7 @@ export default function FaqView() {
 
         <DirectoryHub
           headlineTop="Pick your question."
-          headlineBottom="We'll give you a straight answer."
-          underline="straight"
+          headlineBottom="We'll give you a straight answer."
           leadHref="/faq/why-dialerseat"
           leadLabel="Start with why we built this"
           picksLabel="TOP PICKS"
@@ -422,15 +418,14 @@ export default function FaqView() {
           searchNoun="answers"
           requestTitle="Can't find yours?"
           requestLabel="Ask us directly"
-          requestHref="mailto:support@dialerseat.com?subject=FAQ%20question"
-          navTitle="Home"
+          requestPrompt="Ask anything we have not answered here, or tell us what a page got wrong. A real person reads these."
+          navTitle="FAQ"
           navDivider="ELSEWHERE ON THE SITE"
           navItems={NAV}
           allTitle="All Answers"
           allItems={ANSWERS}
           allCta="Browse all answers"
-          recentTitle="Recently Added"
-          recentCta="View all recently added"
+          recentTitle="Recently Added"
         />
 
         <div className="faqx-band">

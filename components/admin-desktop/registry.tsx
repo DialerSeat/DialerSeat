@@ -76,6 +76,10 @@ const ComplianceApp = dynamic(() => import('./apps/Compliance'), {
   ssr: false,
 })
 
+const SuggestionsApp = dynamic(() => import('./apps/Suggestions'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 const NotificationsApp = dynamic(() => import('./apps/Notifications'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -231,6 +235,17 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin'],
     Component: ComplianceApp,
     defaultSize: { width: 900, height: 780 },
+  },
+  {
+    id: 'suggestions',
+    name: 'Suggestions',
+    shortName: 'Ideas',
+    icon: '💬',
+    iconBg: 'linear-gradient(135deg, #6aa8ff, #2a4a8a)',
+    description: 'Questions and suggestions visitors sent from /vs and /faq',
+    visibleTo: ['admin'],
+    Component: SuggestionsApp,
+    defaultSize: { width: 860, height: 700 },
   },
   {
     id: 'notifications',
