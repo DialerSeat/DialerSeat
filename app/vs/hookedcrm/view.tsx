@@ -3,22 +3,25 @@ import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import BackToVsButton from '@/components/back-to-vs-button'
+import { SITE } from '@/lib/siteTheme'
 
 
 const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#2a4a8a',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
+  bg: SITE.bg,
+  surface: SITE.surface,
+  surface2: SITE.borderSoft,
+  border: SITE.border,
+  // The hero below is explicitly light; these two now only paint the panels
+  // and the closing CTA, which stay dark deliberately.
+  dark: SITE.ink,
+  darker: SITE.ink,
+  text: SITE.text,
+  muted: SITE.muted,
+  accent: SITE.deep,
+  blue: SITE.blue,
+  green: SITE.green,
+  red: SITE.red,
+  amber: SITE.amber,
 }
 
 const features = [
@@ -61,8 +64,9 @@ export default function VsHookedCrmView() {
         <style>{`
           .vs-root * { box-sizing: border-box; }
           .vs-hero {
-            background: linear-gradient(135deg, ${T.darker} 0%, ${T.dark} 100%);
-            color: white;
+            /* Light, like the landing page. */
+            background: transparent;
+            color: ${T.text};
             padding: 80px 32px 100px;
             text-align: center;
             position: relative;
@@ -258,7 +262,7 @@ export default function VsHookedCrmView() {
               contract.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">GET STARTED →</Link>
             </div>
           </div>
         </div>
@@ -491,7 +495,7 @@ export default function VsHookedCrmView() {
               first dial in under 10 minutes.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">GET STARTED →</Link>
             </div>
           </div>
         </div>

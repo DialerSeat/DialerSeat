@@ -810,7 +810,7 @@ export default function FaqView() {
                   </p>
                   <div className="faq-cta-row">
                     <Link href="/sign-up" className="faq-btn-primary">
-                      START FREE 7 DAYS →
+                      GET STARTED →
                     </Link>
                     <Link href="/faq/why-dialerseat" className="faq-btn-secondary">
                       WHY DIALERSEAT?

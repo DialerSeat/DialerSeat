@@ -434,7 +434,7 @@ export default function View() {
               href={isSignedIn ? '/billing?plan=whitelabel' : '/signup?plan=whitelabel'}
               className="faq-cta-btn"
             >
-              {isSignedIn ? 'UPGRADE TO WHITE-LABEL →' : 'START FREE 7 DAYS →'}
+              {isSignedIn ? 'UPGRADE TO WHITE-LABEL →' : 'GET STARTED →'}
             </Link>
             <div>
               <a

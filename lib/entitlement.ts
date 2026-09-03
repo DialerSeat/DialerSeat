@@ -24,26 +24,17 @@
 /**
  * Subscription statuses that entitle somebody to use DialerSeat.
  *
- * `trialing` was added when the 7-day free trial shipped. Before that this was
- * `['active']` with a comment reading "no trials" — accurate at the time, and
- * exactly the line that would have made a trial silently grant nothing.
+ * `active` and nothing else. This briefly read `['active', 'trialing']` while
+ * the product offered a free week; the trial was removed on the reasoning that
+ * a card up front is the cheapest filter for an unserious signup there is.
+ *
+ * Legacy `trialing` rows still exist in the database from that period. They are
+ * deliberately NOT entitled: every one of them has an expiry date in the past,
+ * so honouring the status would grant access on the strength of a trial that
+ * already ended.
  */
-export const ENTITLED_STATUSES = ['active', 'trialing'] as const
+export const ENTITLED_STATUSES = ['active'] as const
 
 export function isEntitledStatus(status: string | null | undefined): boolean {
   return !!status && (ENTITLED_STATUSES as readonly string[]).includes(status)
 }
-
-/**
- * Is this subscription a trial that has not been paid for yet?
- *
- * Used where the distinction matters — banners, seat billing, anything that
- * should not treat a trial as revenue. Access-wise a trial is equal to a paid
- * subscription, which is the whole point of it.
- */
-export function isTrialing(status: string | null | undefined): boolean {
-  return status === 'trialing'
-}
-
-/** How long a new customer's free trial runs. */
-export const TRIAL_DAYS = 7

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DialingModeCTA from '@/components/DialingModeCTA'
+import { SITE } from '@/lib/siteTheme'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -45,14 +46,14 @@ export default function PreviewDialerPage() {
         <style>{`
           .dm-root, .dm-root * { box-sizing: border-box; }
           .dm-root {
-            background: #0a0a14;
+            background: ${SITE.bg};
             min-height: 100vh;
             font-family: 'Futura PT', Futura, sans-serif;
-            color: #ffffff;
+            color: ${SITE.text};
           }
           .dm-hero {
-            background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%);
-            color: white;
+            background: linear-gradient(135deg, ${SITE.bg} 0%, ${SITE.surface} 100%);
+            color: ${SITE.text};
             padding: 100px 32px 80px;
             text-align: center;
             position: relative;
@@ -70,7 +71,7 @@ export default function PreviewDialerPage() {
             background: ${MODE_COLOR}26;
             border: 1px solid ${MODE_COLOR};
             border-radius: 4px;
-            color: #c4c8d0;
+            color: ${SITE.muted};
             font-size: 11px;
             letter-spacing: 3px;
             font-weight: bold;
@@ -86,7 +87,7 @@ export default function PreviewDialerPage() {
           .dm-lead {
             font-size: 18px;
             line-height: 1.55;
-            color: #c4c8d8;
+            color: ${SITE.muted};
             max-width: 620px;
             margin: 0 auto;
           }
@@ -95,7 +96,7 @@ export default function PreviewDialerPage() {
             margin: 0 auto;
             padding: 72px 32px;
           }
-          .dm-section.alt { background: #1a1a2e; max-width: none; }
+          .dm-section.alt { background: ${SITE.surface}; max-width: none; }
           .dm-section.alt > .inner {
             max-width: 780px;
             margin: 0 auto;
@@ -115,7 +116,7 @@ export default function PreviewDialerPage() {
           .dm-section p {
             font-size: 16px;
             line-height: 1.75;
-            color: #c4c8d8;
+            color: ${SITE.muted};
             margin: 0 0 16px 0;
           }
           .dm-steps {
@@ -129,7 +130,7 @@ export default function PreviewDialerPage() {
             display: flex;
             gap: 16px;
             padding: 16px 0;
-            border-top: 1px solid #2a2a4a;
+            border-top: 1px solid ${SITE.border};
           }
           .dm-steps li:first-child { border-top: none; }
           .dm-steps li::before {
@@ -144,7 +145,7 @@ export default function PreviewDialerPage() {
           .dm-steps li > div {
             font-size: 15px;
             line-height: 1.65;
-            color: #c4c8d8;
+            color: ${SITE.muted};
           }
           .dm-shines-grid {
             display: grid;
@@ -155,7 +156,7 @@ export default function PreviewDialerPage() {
           .dm-shines-card {
             padding: 18px 20px;
             background: ${MODE_BG};
-            border: 1px solid #2a2a4a;
+            border: 1px solid ${SITE.border};
             border-left: 3px solid ${MODE_COLOR};
             border-radius: 6px;
           }
@@ -169,7 +170,7 @@ export default function PreviewDialerPage() {
           .dm-shines-card p {
             font-size: 13px;
             line-height: 1.55;
-            color: #c4c8d8;
+            color: ${SITE.muted};
             margin: 0;
           }
           .dm-pullquote {
@@ -180,16 +181,16 @@ export default function PreviewDialerPage() {
             border-radius: 4px;
             font-size: 15px;
             line-height: 1.7;
-            color: #ffffff;
+            color: ${SITE.text};
           }
           .dm-on-ds {
-            background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%);
-            color: white;
+            background: linear-gradient(135deg, ${SITE.bg} 0%, ${SITE.surface} 100%);
+            color: ${SITE.text};
             padding: 72px 32px;
           }
           .dm-on-ds > .inner { max-width: 780px; margin: 0 auto; }
-          .dm-on-ds h2 { color: white; }
-          .dm-on-ds p { color: #c4c8d8; }
+          .dm-on-ds h2 { color: ${SITE.text}; }
+          .dm-on-ds p { color: ${SITE.muted}; }
           .dm-on-ds .dm-bullets {
             list-style: none;
             padding: 0;
@@ -199,7 +200,7 @@ export default function PreviewDialerPage() {
             padding: 10px 0 10px 28px;
             font-size: 15px;
             line-height: 1.6;
-            color: #d4d8e0;
+            color: ${SITE.muted};
             position: relative;
             border-top: 1px solid rgba(255,255,255,0.08);
           }
@@ -213,7 +214,7 @@ export default function PreviewDialerPage() {
             top: 10px;
           }
           .dm-other {
-            background: #0a0a14;
+            background: ${SITE.bg};
             padding: 72px 32px;
           }
           .dm-other > .inner { max-width: 880px; margin: 0 auto; }
@@ -229,11 +230,11 @@ export default function PreviewDialerPage() {
           }
           .dm-other-card {
             padding: 22px 20px;
-            background: #1a1a2e;
+            background: ${SITE.surface};
             border: 1px solid #d8dce4;
             border-radius: 8px;
             text-decoration: none;
-            color: #ffffff;
+            color: ${SITE.text};
             transition: transform 0.12s, border-color 0.12s;
           }
           .dm-other-card:hover {
@@ -248,7 +249,7 @@ export default function PreviewDialerPage() {
             border-radius: 3px;
             margin-bottom: 8px;
           }
-          .dm-other-card.power .pill { background: #e8eef8; color: #2a4a8a; border: 1px solid #2a4a8a; }
+          .dm-other-card.power .pill { background: #e8eef8; color: ${SITE.deep}; border: 1px solid ${SITE.deep}; }
           .dm-other-card.progressive .pill { background: #e8f5e8; color: #1a6a1a; border: 1px solid #1a6a1a; }
           .dm-other-card.predictive .pill { background: #f8e8e8; color: #8a1a1a; border: 1px solid #8a1a1a; }
           .dm-other-card h3 {
@@ -259,11 +260,11 @@ export default function PreviewDialerPage() {
           .dm-other-card p {
             font-size: 13px;
             line-height: 1.5;
-            color: #8888aa;
+            color: ${SITE.muted};
             margin: 0;
           }
           .dm-cta {
-            background: #1a1a2e;
+            background: ${SITE.surface};
             padding: 72px 32px;
             text-align: center;
           }
@@ -273,7 +274,7 @@ export default function PreviewDialerPage() {
           }
           .dm-cta p {
             font-size: 16px;
-            color: #8888aa;
+            color: ${SITE.muted};
             max-width: 540px;
             margin: 0 auto 28px;
           }
@@ -282,8 +283,8 @@ export default function PreviewDialerPage() {
           }
           .dm-btn-primary {
             padding: 14px 28px;
-            background: linear-gradient(135deg, #4a9eff, #2a6eff);
-            color: white;
+            background: linear-gradient(135deg, ${SITE.blue}, #2a6eff);
+            color: ${SITE.text};
             font-size: 12px;
             letter-spacing: 2.5px;
             font-weight: bold;
@@ -293,8 +294,8 @@ export default function PreviewDialerPage() {
           .dm-btn-secondary {
             padding: 14px 28px;
             background: transparent;
-            color: #ffffff;
-            border: 1px solid #2a2a4a;
+            color: ${SITE.text};
+            border: 1px solid ${SITE.border};
             font-size: 12px;
             letter-spacing: 2.5px;
             font-weight: bold;
@@ -320,7 +321,7 @@ export default function PreviewDialerPage() {
         <section className="dm-hero">
           <div className="dm-hero-inner">
             <div className="dm-eyebrow">PREVIEW DIALER</div>
-          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
+          <span style={{ fontSize: 11, color: '${SITE.muted}', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
             <h1>The original outbound mode.</h1>
             <p className="dm-lead">
               One lead at a time. The agent reads first, then clicks dial.

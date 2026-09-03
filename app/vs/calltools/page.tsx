@@ -14,7 +14,7 @@ const SLUG = 'calltools'
 
 export const metadata: Metadata = {
   title: "DialerSeat vs CallTools \u2014 No Setup Fee, No Sales Call",
-  description: "CallTools runs about $119.99 per user per month with setup fees commonly $500\u2013$1,500 and integration quoted separately. DialerSeat is free for 7 days, then $35 per seat per week, self-serve, every dialer mode included.",
+  description: "CallTools runs about $119.99 per user per month with setup fees commonly $500\u2013$1,500 and integration quoted separately. DialerSeat is $35 per seat per week, self-serve, every dialer mode included.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/calltools',
   },

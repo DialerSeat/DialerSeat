@@ -336,7 +336,7 @@ export default function MobileFaqView() {
               to your home screen in the next sixty seconds.
             </p>
             <a href={isSignedIn ? '/dashboard/dialer' : '/sign-up'} className="faq-cta-btn">
-              {isSignedIn ? 'GO TO DIALER →' : 'START FREE 7 DAYS →'}
+              {isSignedIn ? 'GO TO DIALER →' : 'GET STARTED →'}
             </a>
           </div>
         </article>

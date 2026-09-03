@@ -336,7 +336,7 @@ export default function NumbersFaqView() {
               fee for local presence. It&apos;s the default on every seat.
             </p>
             <a href={isSignedIn ? '/dashboard/dialer' : '/sign-up'} className="faq-cta-btn">
-              {isSignedIn ? 'GO TO DIALER →' : 'START FREE 7 DAYS →'}
+              {isSignedIn ? 'GO TO DIALER →' : 'GET STARTED →'}
             </a>
           </div>
         </article>

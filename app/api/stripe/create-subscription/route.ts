@@ -3,11 +3,14 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { stripe } from '@/lib/stripe'
 import type Stripe from 'stripe'
-import { TRIAL_DAYS } from '@/lib/entitlement'
 
 const supabase = getServiceClient('stripe/create-subscription')
 
 const BLOCKING_STATUSES = ['active', 'past_due']
+// 'trialing' stays in this list even though nothing creates a trial any more.
+// It is a CLEANUP list, and its job is to clear historical rows out of the way
+// before a new subscription is written — legacy trialing rows still exist and
+// still need removing.
 const STALE_STATUSES = [
   'canceled',
   'incomplete_expired',
@@ -205,30 +208,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── ASK BEFORE DESTROYING THE EVIDENCE ────────────────────────────────
-    // This has to run BEFORE the two deletes below, and that ordering is the
-    // whole point. STALE_STATUSES includes 'canceled', so the cleanup wipes
-    // the record of anyone who ever held a real subscription — and the
-    // eligibility test further down then sees no prior subscriptions and
-    // concludes they are new.
-    //
-    // The effect was a free week for every returning customer: cancel,
-    // resubscribe, get seven days free. Exactly the "discount for churning"
-    // the comment below warns against, defeated by the order of two
-    // statements rather than by anything the check itself got wrong.
-    //
-    // 'incomplete' and 'incomplete_expired' are deliberately NOT counted.
-    // Those are abandoned checkouts — somebody who opened billing and left
-    // never bought anything, and should still get their first trial.
-    // Everything else means a subscription that actually existed.
-    const { data: paidBefore } = await supabase
-      .from('subscriptions')
-      .select('id')
-      .eq('user_id', userId)
-      .not('status', 'in', '(incomplete,incomplete_expired)')
-      .limit(1)
-
-    const hasEverSubscribed = (paidBefore || []).length > 0
 
     await supabase
       .from('subscriptions')
@@ -242,72 +221,6 @@ export async function POST(req: Request) {
       .eq('user_id', userId)
       .eq('status', 'incomplete')
 
-    // ── IS THIS A FIRST TRIAL? ────────────────────────────────────────────
-    // Two conditions, both about this account: they have never started a trial,
-    // and they have never had a subscription at all. A lapsed customer coming
-    // back is not a new customer, and giving them a free week every time they
-    // resubscribe would turn the trial into a discount for churning.
-    //
-    // The CARD check cannot happen here — the card is collected after this
-    // subscription exists — so it runs when the card first becomes visible and
-    // ends a repeat trial early rather than blocking checkout. See the webhook.
-    const { data: trialRow } = await supabase
-      .from('users')
-      .select('trial_started_at, trial_override_at')
-      .eq('clerk_id', userId)
-      .maybeSingle()
-
-    // A trial granted by hand to somebody the rules would refuse — see the
-    // column comment in the users_trial_override migration. It lifts the
-    // returning-customer bar and nothing else: trial_started_at still blocks a
-    // repeat, so this is one trial, not a standing exemption.
-    const trialGranted = !!trialRow?.trial_override_at
-
-    const { data: priorSubs } = await supabase
-      .from('subscriptions')
-      .select('id')
-      .eq('user_id', userId)
-      .limit(1)
-
-    // ── ONCE PER ACCOUNT, FOREVER ─────────────────────────────────────────
-    // trial_started_at is set the moment a trial begins and is NEVER cleared
-    // — not on cancel, not when the trial expires, not when they resubscribe.
-    // Cancelling during a trial does not return it, and neither does letting
-    // it run out. After that there is one route back in and it is payment.
-    //
-    // It is also the durable half of the check. The prior-subscription test
-    // below can be defeated: this route deletes abandoned `incomplete` rows,
-    // so somebody who bails at checkout looks new again by that measure. The
-    // flag does not move, which is why it is first.
-    // ── AND IT HAS TO BE THE PRO PLAN, WITH NO CODE IN HAND ──────────────
-    // Two holes, both found by a real signup (trial@dialerseat.com) that came
-    // in on a code and walked out with a trialing `wl` subscription.
-    //
-    //   plan === 'standard' — nothing anywhere advertises a free week of
-    //   Manager+. Every trial sentence on the site reads "free for 7 days,
-    //   then $35 per seat per week", which is the Pro price. Handing out the
-    //   $75 plan on copy that promised the $35 one gives away the more
-    //   expensive product and sets the wrong expectation for the renewal.
-    //
-    //   !promoCode — a team join always arrives holding a code, so this is
-    //   what actually enforces "team joins are never trials". Seats already
-    //   carry trial_period_days: 0 in lib/teamBilling.ts, but that only
-    //   covers the seat subscription the OWNER creates; it does nothing about
-    //   a subscription the joining agent creates for themselves here. It also
-    //   stops a discount code and a free week from stacking.
-    const eligibleForTrial =
-      // Never lifted, by anything. Whatever else is true, one trial each.
-      !trialRow?.trial_started_at &&
-      // The history bar, and the only one a manual grant can lift. Read before
-      // the stale-row cleanup above, so a cancelled customer is still
-      // recognisable as a returning one — a lapsed customer is not a new
-      // customer unless somebody has decided otherwise.
-      (trialGranted || (!hasEverSubscribed && (priorSubs || []).length === 0)) &&
-      // Deliberately outside the grant. Manager+ is not what the trial copy
-      // offers, and a code plus a free week still should not stack — neither
-      // becomes acceptable just because somebody was invited back.
-      plan === 'standard' &&
-      !promoCode
 
     const subParams: Stripe.SubscriptionCreateParams = {
       customer: customerId,
@@ -317,20 +230,8 @@ export async function POST(req: Request) {
         payment_method_types: ['card'],
         save_default_payment_method: 'on_subscription',
       },
-      ...(eligibleForTrial
-        ? {
-            trial_period_days: TRIAL_DAYS,
-            // A trial with no card on file must end, not roll into a free
-            // subscription nobody is paying for. The card is collected during
-            // checkout, so this only fires if something went wrong.
-            trial_settings: {
-              end_behavior: { missing_payment_method: 'cancel' as const },
-            },
-          }
-        : {}),
       metadata: {
         clerk_id: userId,
-        ...(eligibleForTrial ? { trial: 'first' } : {}),
         ...(plan === 'wl' ? { sub_kind: 'whitelabel' } : {}),
         ...(pendingTeamMemberId ? { pending_team_member_id: pendingTeamMemberId } : {}),
       },
@@ -418,10 +319,12 @@ export async function POST(req: Request) {
 
     const subscription = await stripe.subscriptions.create({
       ...subParams,
-      // pending_setup_intent as well as the invoice secret. A trial has
-      // nothing to charge today, so there is no PaymentIntent to confirm —
-      // Stripe puts a SetupIntent there instead, and confirming THAT is what
-      // saves the card for when the trial ends.
+      // pending_setup_intent is still expanded even though nothing here
+      // creates a subscription that defers payment. A 100% promo code leaves
+      // an invoice with nothing to charge, and Stripe puts a SetupIntent
+      // there instead of a PaymentIntent — the card still has to be saved for
+      // the renewal. Dropping the expand would make that path return no
+      // secret at all.
       expand: ['latest_invoice.confirmation_secret', 'pending_setup_intent'],
     })
 
@@ -439,43 +342,6 @@ export async function POST(req: Request) {
           currency: (invoice.currency as string) || 'usd',
         }
       : null
-
-    // ── A TRIAL CONFIRMS A SETUP, NOT A PAYMENT ───────────────────────────
-    // Nothing is owed today, so there is no PaymentIntent. Stripe puts a
-    // SetupIntent on pending_setup_intent instead, and the client confirms
-    // that to save the card for when the trial ends. Same Elements form, a
-    // different confirm call — which is why `mode` travels with the secret
-    // rather than the client guessing from the amount.
-    if (subscription.status === 'trialing') {
-      const setupIntent = (subscription as any).pending_setup_intent
-      const setupSecret = setupIntent?.client_secret ?? null
-
-      if (!setupSecret) {
-        console.error('Trial subscription has no pending_setup_intent', {
-          subId: subscription.id,
-          status: subscription.status,
-        })
-        return NextResponse.json(
-          { error: 'Failed to start your trial. Please try again.' },
-          { status: 500 }
-        )
-      }
-
-      const trialEnd = (subscription as any).trial_end
-      return NextResponse.json({
-        subscriptionId: subscription.id,
-        clientSecret: setupSecret,
-        // The client needs to call confirmSetup rather than confirmPayment.
-        mode: 'setup',
-        plan,
-        trial: {
-          days: TRIAL_DAYS,
-          endsAt: trialEnd ? new Date(trialEnd * 1000).toISOString() : null,
-        },
-        amounts,
-        coupon: appliedCoupon,
-      })
-    }
 
     if (!confirmationSecret) {
       if (subscription.status === 'active') {

@@ -459,7 +459,7 @@ export default function View() {
               href={isSignedIn ? '/dashboard/teams' : '/signup'}
               className="faq-cta-btn"
             >
-              {isSignedIn ? 'GO TO TEAMS →' : 'START FREE 7 DAYS →'}
+              {isSignedIn ? 'GO TO TEAMS →' : 'GET STARTED →'}
             </Link>
             <div>
               <a

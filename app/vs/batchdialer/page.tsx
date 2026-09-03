@@ -40,7 +40,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to BatchDialer on price?',
     answer:
-      "BatchDialer publishes $95, $151 and $199 per agent per month, but those are annual prepay rates — their own pricing reaches $95 by billing Starter at roughly $1,142 per agent per year. Month to month the same tiers are $119, $189 and $249. DialerSeat is free for 7 days, then $35 per seat per week, billed weekly, with no commitment and nothing prepaid — you can cancel any week rather than committing to a year to reach a headline rate.",
+      "BatchDialer publishes $95, $151 and $199 per agent per month, but those are annual prepay rates — their own pricing reaches $95 by billing Starter at roughly $1,142 per agent per year. Month to month the same tiers are $119, $189 and $249. DialerSeat is $35 per seat per week, billed weekly, with no commitment and nothing prepaid — you can cancel any week rather than committing to a year to reach a headline rate.",
   },
   {
     question: 'Does BatchDialer include automatic number replacement?',

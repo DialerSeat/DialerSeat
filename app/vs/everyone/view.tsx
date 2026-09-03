@@ -4,21 +4,24 @@ import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import BackToVsButton from '@/components/back-to-vs-button'
+import { SITE } from '@/lib/siteTheme'
 
 const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#2a4a8a',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
+  bg: SITE.bg,
+  surface: SITE.surface,
+  surface2: SITE.borderSoft,
+  border: SITE.border,
+  // dark/darker painted the hero gradient; the hero is light now and these
+  // survive only for the closing CTA, which stays dark on purpose.
+  dark: SITE.ink,
+  darker: SITE.ink,
+  text: SITE.text,
+  muted: SITE.muted,
+  accent: SITE.deep,
+  blue: SITE.blue,
+  green: SITE.green,
+  red: SITE.red,
+  amber: SITE.amber,
 }
 
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
@@ -143,8 +146,9 @@ export default function VsEveryoneView() {
 
           /* ── HERO ── */
           .vs-hero {
-            background: linear-gradient(135deg, ${T.darker} 0%, ${T.dark} 100%);
-            color: white;
+            /* Light, like the landing page. */
+            background: transparent;
+            color: ${T.text};
             padding: 100px 32px 80px;
             text-align: center;
             position: relative;
@@ -271,10 +275,10 @@ export default function VsEveryoneView() {
           /* ── BUTTONS ── */
           .btn-primary {
             padding: 16px 32px;
-            background: white;
-            border: none;
-            border-top: 3px solid white;
-            color: #1a1a2e;
+            background: transparent;
+            border: 1px solid ${T.blue};
+            border-top: 3px solid ${T.blue};
+            color: ${T.blue};
             font-size: 13px;
             letter-spacing: 4px;
             font-weight: bold;
@@ -285,9 +289,9 @@ export default function VsEveryoneView() {
           .btn-secondary {
             padding: 16px 32px;
             background: transparent;
-            color: white;
-            border: 1px solid #c4c8d0;
-            border-top: 3px solid white;
+            color: ${T.text};
+            border: 1px solid ${T.border};
+            border-top: 3px solid ${T.muted};
             font-size: 13px;
             letter-spacing: 4px;
             font-weight: bold;

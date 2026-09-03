@@ -60,39 +60,9 @@ function describeBilling(
     amountOffCents: number | null
     duration: 'once' | 'repeating' | 'forever'
     durationInMonths: number | null
-  } | null,
-  trialing = false
+  } | null
 ) {
   const fallback = planInfo.weeklyBlurb
-
-  // ── A TRIAL INVOICE CANNOT DESCRIBE WHAT HAPPENS AFTER THE TRIAL ───────
-  // Everything below prices the order from the real Stripe invoice, which is
-  // right for a normal checkout and wrong for a trial: the trial invoice is
-  // $0.00, so `recurringLabel: todayLabel` handed back $0.00 for BOTH halves.
-  // The consent read "I agree my card will be charged nothing today, then
-  // $0.00 when my free 7-day trial ends" — an agreement to never pay
-  // anything, printed above a Start button, which is worse than a cosmetic
-  // bug: it is the sentence we would have to stand behind in a dispute.
-  //
-  // So during a trial the recurring line comes from the PLAN, not the
-  // invoice. That is the number that will actually be charged on day 8, and
-  // it is the only one the $0.00 invoice cannot tell us.
-  if (trialing) {
-    const currency = amounts?.currency || 'usd'
-    const baseCents = planInfo.price * 100
-    let afterCents = baseCents
-    if (coupon?.percentOff) {
-      afterCents = Math.round(baseCents * (1 - coupon.percentOff / 100))
-    } else if (coupon?.amountOffCents) {
-      afterCents = Math.max(0, baseCents - coupon.amountOffCents)
-    }
-    return {
-      todayLabel: formatCents(0, currency),
-      recurringLabel: formatCents(afterCents, currency),
-      hasDiscount: afterCents !== baseCents,
-      todayCents: 0 as number | null,
-    }
-  }
 
   if (!amounts) {
     return {
@@ -161,13 +131,11 @@ export default function BillingPage() {
   const planInfo = PLAN_INFO[plan]
 
   const [clientSecret, setClientSecret] = useState<string | null>(null)
-  // 'setup' when the subscription is starting a free trial: nothing is owed
-  // today, so Stripe hands back a SetupIntent to save the card rather than a
-  // PaymentIntent to charge it. Same form, different confirm call — carried
-  // from the server rather than inferred from the amount, because a $0 total
-  // can also mean a 100% coupon, which IS a payment.
+  // 'setup' when nothing is owed today — which now only happens on a 100%
+  // promo code. Stripe hands back a SetupIntent to save the card rather than a
+  // PaymentIntent to charge it. Same form, different confirm call, carried
+  // from the server rather than inferred from the amount.
   const [confirmMode, setConfirmMode] = useState<'payment' | 'setup'>('payment')
-  const [trial, setTrial] = useState<{ days: number; endsAt: string | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [checkingStatus, setCheckingStatus] = useState(true)
   const [retryingBilling, setRetryingBilling] = useState(false)
@@ -312,7 +280,6 @@ export default function BillingPage() {
 
       setClientSecret(createData.clientSecret)
       setConfirmMode(createData.mode === 'setup' ? 'setup' : 'payment')
-      setTrial(createData.trial ?? null)
       setAmounts(createData.amounts ?? null)
       setCoupon(createData.coupon ?? null)
       if (codeToApply) setPromoApplied(codeToApply)
@@ -669,7 +636,7 @@ export default function BillingPage() {
     return <LoadingCard text="Preparing secure checkout" />
   }
 
-  const billing = describeBilling(planInfo, amounts, coupon, !!trial)
+  const billing = describeBilling(planInfo, amounts, coupon)
 
   return (
     <main style={pageStyle} className="billing-page">
@@ -699,9 +666,7 @@ export default function BillingPage() {
               </div>
             ) : (
               <div style={priceCaptionStyle} className="billing-price-caption">
-                {trial
-                  ? `Free for ${trial.days} days, then weekly until you cancel.`
-                  : 'Charged today, then weekly until you cancel.'}
+                Charged today, then weekly until you cancel.
               </div>
             )}
 
@@ -737,16 +702,7 @@ export default function BillingPage() {
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
                 <span>
-                  {trial ? (
-                    <>
-                      <strong style={{ color: '#32ff7e' }}>Nothing charged today</strong> —
-                      your {trial.days}-day free trial starts now
-                    </>
-                  ) : (
-                    <>
-                      <strong style={{ color: '#4a9eff' }}>{billing.todayLabel}</strong> charged today to start your subscription
-                    </>
-                  )}
+                  <strong style={{ color: '#4a9eff' }}>{billing.todayLabel}</strong> charged today to start your subscription
                   {billing.hasDiscount && (
                     <span style={{ color: '#32ff7e' }}> ({promoApplied?.toUpperCase()} applied)</span>
                   )}
@@ -879,7 +835,6 @@ export default function BillingPage() {
                 billing={billing}
                 teamMemberId={teamMemberId}
                 confirmMode={confirmMode}
-                trial={trial}
               />
             </Elements>
 
@@ -983,7 +938,6 @@ function CheckoutForm({
   billing,
   teamMemberId,
   confirmMode,
-  trial,
 }: {
   onAbandon: () => void
   abandoning: boolean
@@ -991,7 +945,6 @@ function CheckoutForm({
   billing: ReturnType<typeof describeBilling>
   teamMemberId: string | null
   confirmMode: 'payment' | 'setup'
-  trial: { days: number; endsAt: string | null } | null
 }) {
   const stripe = useStripe()
   const elements = useElements()
@@ -1029,13 +982,13 @@ function CheckoutForm({
     if (typeof billing.todayCents === 'number') successParams.set('amount', String(billing.todayCents))
     const successUrl = `${window.location.origin}/billing/success?${successParams.toString()}`
 
-    // ── A TRIAL SAVES A CARD; A PURCHASE CHARGES ONE ─────────────────────
+    // ── A $0 ORDER SAVES A CARD; A PURCHASE CHARGES ONE ──────────────────
     // confirmPayment against a SetupIntent fails outright, so this has to
     // follow what the server actually created rather than what the form looks
     // like. Both put the customer through 3D Secure if their bank asks, which
-    // is the reason to collect the card on-session at all: it means the charge
-    // when the trial ends is off-session against an already-authenticated
-    // card, instead of a requires_action dead end nobody can resolve.
+    // is the reason to collect the card on-session at all: it means every
+    // renewal is off-session against an already-authenticated card, instead of
+    // a requires_action dead end nobody can resolve.
     const { error } = confirmMode === 'setup'
       ? await stripe.confirmSetup({
           elements,
@@ -1075,28 +1028,13 @@ function CheckoutForm({
           onChange={(e) => setAgreed(e.target.checked)}
           style={{ marginRight: 10, marginTop: 2, accentColor: '#4a9eff', flexShrink: 0 }}
         />
-        {/* A trial charges nothing today, so the consent must not claim it
-            does. Saying "charged $35 today" above a $0 checkout is the kind
-            of wrong that reads as a bait and switch even when the code is
-            behaving correctly. */}
+        {/* The consent states the real numbers from the real invoice. A
+            promo code can still make today's figure $0, and the sentence has
+            to survive that without ever implying the recurring charge is
+            free too. */}
         <span>
-          {trial ? (
-            <>
-              I agree my card will be charged{' '}
-              <strong style={{ color: '#e0e2ea' }}>nothing today</strong>, then{' '}
-              <strong style={{ color: '#e0e2ea' }}>{billing.recurringLabel}</strong>{' '}
-              when my free {trial.days}-day trial ends
-              {trial.endsAt
-                ? ` on ${new Date(trial.endsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
-                : ''}
-              , unless I cancel before then.
-            </>
-          ) : (
-            <>
-              I agree my card will be charged <strong style={{ color: '#e0e2ea' }}>{billing.todayLabel} today</strong> and{' '}
-              <strong style={{ color: '#e0e2ea' }}>{billing.recurringLabel}</strong> thereafter unless I cancel.
-            </>
-          )}
+          I agree my card will be charged <strong style={{ color: '#e0e2ea' }}>{billing.todayLabel} today</strong> and{' '}
+          <strong style={{ color: '#e0e2ea' }}>{billing.recurringLabel}</strong> thereafter unless I cancel.
         </span>
       </label>
 
@@ -1112,7 +1050,7 @@ function CheckoutForm({
         }}
         className="billing-submit-btn"
       >
-        {submitting ? 'Processing...' : trial ? `Start free ${trial.days}-day trial` : 'Continue'}
+        {submitting ? 'Processing...' : 'Continue'}
       </button>
 
       <button

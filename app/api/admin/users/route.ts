@@ -3,7 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { requireAdmin } from '@/lib/admin'
 import { isSubscriptionTrulyActive } from '@/lib/subscriptionStatus'
-import { isEntitledStatus, isTrialing } from '@/lib/entitlement'
+import { isEntitledStatus } from '@/lib/entitlement'
 
 const supabase = getServiceClient('admin/users')
 
@@ -177,7 +177,7 @@ export async function GET(req: NextRequest) {
   const rows = users.map(u => {
     const sub = subByUser.get(u.clerk_id)
     // Active means: currently billing AND not on its way out.
-    // - status must be the literal Stripe 'active' (not trialing/past_due/etc.)
+    // - status must be the literal Stripe 'active' (not past_due/etc.)
     // - cancel_at_period_end must not be true (a user who's already told
     //   Stripe to cancel is not an active, recurring customer, even though
     //   Stripe leaves status='active' until the current period ends)
@@ -199,7 +199,6 @@ export async function GET(req: NextRequest) {
     // wrong. Answered with the same ENTITLED_STATUSES the proxy gates on, so
     // the badge and the door agree.
     const entitled = !!sub && isEntitledStatus(sub.status) && !sub.cancel_at_period_end
-    const trialing = !!sub && isTrialing(sub.status)
     const displayAsActive = isActive && !u.exclude_from_analytics
     const displayAsEntitled = entitled && !u.exclude_from_analytics
     return {
@@ -234,7 +233,6 @@ export async function GET(req: NextRequest) {
       is_active_subscription: displayAsActive,
       // Has access right now — includes a live trial. The pill reads this.
       has_access: displayAsEntitled,
-      is_trialing: trialing,
     }
   })
 

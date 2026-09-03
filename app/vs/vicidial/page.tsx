@@ -14,7 +14,7 @@ const SLUG = 'vicidial'
 
 export const metadata: Metadata = {
   title: "DialerSeat vs VICIdial \u2014 Free Software Is Not a Free Dialer",
-  description: "VICIdial is free and open source, and published total cost of ownership still lands at $130\u2013$400+ per agent per month once servers, SIP trunking and an administrator are counted. DialerSeat is free for 7 days, then $35 per seat per week with nothing to run.",
+  description: "VICIdial is free and open source, and published total cost of ownership still lands at $130\u2013$400+ per agent per month once servers, SIP trunking and an administrator are counted. DialerSeat is $35 per seat per week with nothing to run.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/vicidial',
   },

@@ -1,3 +1,4 @@
+import { SITE } from '@/lib/siteTheme'
 
 
 
@@ -10,13 +11,13 @@ interface Props {
 export default function ExplainerStyles({ accent, accentBg }: Props) {
   return (
     <style>{`
-      .exp-root { background: #0a0a14; min-height: 100vh; font-family: 'Futura PT', Futura, sans-serif; color: #ffffff; }
+      .exp-root { background: ${SITE.bg}; min-height: 100vh; font-family: 'Futura PT', Futura, sans-serif; color: ${SITE.text}; }
       .exp-root * { box-sizing: border-box; }
       .exp-hero {
-        background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%);
-        color: white; padding: 80px 32px 64px; text-align: center;
+        background: linear-gradient(135deg, ${SITE.bg} 0%, ${SITE.surface} 100%);
+        color: ${SITE.text}; padding: 80px 32px 64px; text-align: center;
         position: relative; overflow: hidden;
-        border-bottom: 2px solid #2a4a8a;
+        border-bottom: 2px solid ${SITE.deep};
       }
       .exp-hero::before {
         content: ''; position: absolute; inset: 0;
@@ -25,13 +26,13 @@ export default function ExplainerStyles({ accent, accentBg }: Props) {
       .exp-hero-inner { position: relative; max-width: 720px; margin: 0 auto; }
       .exp-breadcrumb {
         display: inline-block; font-size: 11px; letter-spacing: 2px;
-        color: #8888aa; text-decoration: none; margin-bottom: 22px;
+        color: ${SITE.muted}; text-decoration: none; margin-bottom: 22px;
       }
-      .exp-breadcrumb:hover { color: #4a9eff; }
+      .exp-breadcrumb:hover { color: ${SITE.blue}; }
       .exp-eyebrow {
         display: inline-block; padding: 6px 14px;
         background: ${accent}33; border: 1px solid ${accent};
-        border-radius: 4px; color: #c4c8d0;
+        border-radius: 4px; color: ${SITE.muted};
         font-size: 11px; letter-spacing: 3px; font-weight: bold;
         margin-bottom: 22px;
       }
@@ -40,74 +41,74 @@ export default function ExplainerStyles({ accent, accentBg }: Props) {
         line-height: 1.1; margin: 0 0 16px 0;
       }
       .exp-lead {
-        font-size: 17px; line-height: 1.6; color: #c4c8d8;
+        font-size: 17px; line-height: 1.6; color: ${SITE.muted};
         max-width: 580px; margin: 0 auto;
       }
       .exp-section { max-width: 780px; margin: 0 auto; padding: 56px 32px; }
-      .exp-section.alt { background: #1a1a2e; max-width: none; padding: 56px 0; }
+      .exp-section.alt { background: ${SITE.surface}; max-width: none; padding: 56px 0; }
       .exp-section.alt > .inner { max-width: 780px; margin: 0 auto; padding: 0 32px; }
       .exp-section-label {
-        font-size: 10px; letter-spacing: 4px; color: #8888aa;
+        font-size: 10px; letter-spacing: 4px; color: ${SITE.muted};
         font-weight: bold; margin-bottom: 14px;
       }
       .exp-section h2 {
         font-size: 28px; font-weight: 800; letter-spacing: -0.3px;
-        line-height: 1.2; margin: 0 0 18px 0; color: #ffffff;
+        line-height: 1.2; margin: 0 0 18px 0; color: ${SITE.text};
       }
       .exp-section h3 {
         font-size: 17px; font-weight: 700; margin: 24px 0 8px 0;
-        color: #ffffff;
+        color: ${SITE.text};
       }
       .exp-section p {
-        font-size: 16px; line-height: 1.75; color: #c4c8d8;
+        font-size: 16px; line-height: 1.75; color: ${SITE.muted};
         margin: 0 0 14px 0;
       }
       .exp-pullquote {
-        margin: 24px 0; padding: 20px 24px; background: #1a1a2e;
+        margin: 24px 0; padding: 20px 24px; background: ${SITE.surface};
         border-left: 3px solid ${accent}; border-radius: 4px;
-        font-size: 15px; line-height: 1.7; color: #c4c8d8;
+        font-size: 15px; line-height: 1.7; color: ${SITE.muted};
       }
       .exp-cards {
         display: grid; grid-template-columns: repeat(2, 1fr);
         gap: 14px; margin-top: 24px;
       }
       .exp-card {
-        padding: 20px 22px; background: #1a1a2e;
-        border: 1px solid #2a2a4a; border-left: 3px solid ${accent};
+        padding: 20px 22px; background: ${SITE.surface};
+        border: 1px solid ${SITE.border}; border-left: 3px solid ${accent};
         border-radius: 4px;
       }
       .exp-card h3 {
         font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
         margin: 0 0 8px 0; color: ${accent};
       }
-      .exp-card p { font-size: 13px; line-height: 1.6; color: #8888aa; margin: 0; }
+      .exp-card p { font-size: 13px; line-height: 1.6; color: ${SITE.muted}; margin: 0; }
       .exp-deepdive {
         display: flex; align-items: center; justify-content: space-between;
-        gap: 24px; padding: 24px 28px; background: #1a1a2e;
-        border: 1px solid #2a2a4a; border-left: 3px solid ${accent};
+        gap: 24px; padding: 24px 28px; background: ${SITE.surface};
+        border: 1px solid ${SITE.border}; border-left: 3px solid ${accent};
         border-radius: 4px;
       }
       .exp-deepdive h3 {
-        font-size: 18px; font-weight: 800; margin: 0 0 8px 0; color: #ffffff;
+        font-size: 18px; font-weight: 800; margin: 0 0 8px 0; color: ${SITE.text};
       }
       .exp-deepdive p {
-        font-size: 14px; line-height: 1.6; color: #8888aa; margin: 0;
+        font-size: 14px; line-height: 1.6; color: ${SITE.muted}; margin: 0;
       }
       .exp-deepdive-btn {
-        padding: 12px 22px; background: #0a0a14; color: #4a9eff;
+        padding: 12px 22px; background: ${SITE.bg}; color: ${SITE.blue};
         font-size: 11px; letter-spacing: 2.5px; font-weight: bold;
         border-radius: 4px; text-decoration: none; flex-shrink: 0;
         border-top: 3px solid ${accent};
       }
       .exp-qa { margin-top: 24px; }
       .exp-qa details {
-        background: #1a1a2e; border: 1px solid #2a2a4a;
+        background: ${SITE.surface}; border: 1px solid ${SITE.border};
         border-radius: 4px; margin-bottom: 10px; overflow: hidden;
       }
       .exp-qa details[open] { border-color: ${accent}; }
       .exp-qa summary {
         padding: 18px 22px; font-size: 15px; font-weight: 700;
-        color: #ffffff; cursor: pointer; list-style: none;
+        color: ${SITE.text}; cursor: pointer; list-style: none;
         display: flex; justify-content: space-between; align-items: center; gap: 16px;
       }
       .exp-qa summary::-webkit-details-marker { display: none; }
@@ -118,7 +119,7 @@ export default function ExplainerStyles({ accent, accentBg }: Props) {
       .exp-qa details[open] summary::after { content: '−'; }
       .exp-qa .answer {
         padding: 0 22px 20px; font-size: 14px; line-height: 1.75;
-        color: #8888aa;
+        color: ${SITE.muted};
       }
       .exp-qa .answer p { margin: 0 0 10px 0; }
       .exp-qa .answer p:last-child { margin-bottom: 0; }

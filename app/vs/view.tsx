@@ -1,201 +1,237 @@
 'use client'
+
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import DirectoryHub, { type HubItem } from '@/components/DirectoryHub'
 import { SITE } from '@/lib/siteTheme'
 
-const T = {
-  bg: SITE.bg,
-  surface: SITE.surface,
-  border: SITE.border,
-  // `dark`/`darker` used to paint BOTH the hero gradient and the closing CTA.
-  // The hero is now light like the landing page; the CTA stays dark on
-  // purpose, because a dark panel inside a light page is the exception that
-  // makes the light ground read as chosen. Both keys therefore mean "the CTA
-  // panel" now, and the hero rule below no longer uses them.
-  dark: SITE.ink,
-  darker: SITE.ink,
-  text: SITE.text,
-  muted: SITE.muted,
-  accent: SITE.deep,
-  blue: SITE.blue,
-}
+// =============================================================================
+// /vs — the comparison index
+// =============================================================================
+// This was a wall of twenty-three prose cards, two across. Every card carried a
+// tagline, a four-line pitch and a read-more, which meant the page was about
+// eleven screens long and a visitor who arrived knowing they wanted ReadyMode
+// had to scroll past twenty-two other dialers to find it.
+//
+// It is now a directory: top picks for the visitor who knows, a live search for
+// the visitor who doesn't, and the full index in a column they can scan in one
+// screen. The prose that used to sit in the cards belongs on the comparison
+// pages themselves, which is where somebody has actually chosen to read it.
+//
+// The layout lives in components/DirectoryHub.tsx because /faq is the same page
+// with different nouns.
+//
+// `added` is the date each page's first commit landed, read out of git rather
+// than estimated, because it drives the Recently Added column.
+// =============================================================================
 
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 
-interface Comparison {
-  slug: string
-  name: string
-  tagline: string
-  pitch: string
-  badge?: string
-}
+/**
+ * Every published /vs page, most-asked-about first.
+ *
+ * `keywords` are the segment labels from lib/competitors.ts — a visitor
+ * searching "call center" should find Five9 and Convoso without having to know
+ * either name. They are matched, never rendered.
+ */
+const COMPARISONS: HubItem[] = [
+  {
+    href: '/vs/everyone',
+    label: 'VS Every Legacy Dialer',
+    note: 'The six failures the whole category shares — start here',
+    added: '2026-05-17',
+    keywords: 'industry all legacy overview start here',
+  },
+  {
+    href: '/vs/readymode',
+    label: 'VS ReadyMode',
+    note: 'Same multi-line predictive, no setup fee, no contract',
+    added: '2026-05-16',
+    keywords: 'call center predictive',
+  },
+  {
+    href: '/vs/mojo',
+    label: 'VS Mojo Dialer',
+    note: 'Triple-line dialing without the real-estate lock-in',
+    added: '2026-05-16',
+    keywords: 'real estate investor triple line',
+  },
+  {
+    href: '/vs/phoneburner',
+    label: 'VS PhoneBurner',
+    note: 'Multi-line predictive PhoneBurner does not have',
+    added: '2026-05-16',
+    keywords: 'sales crm power dialer',
+  },
+  {
+    href: '/vs/batchdialer',
+    label: 'VS BatchDialer',
+    note: 'Their annual rate without the annual contract',
+    added: '2026-08-06',
+    keywords: 'real estate investor batch leads',
+  },
+  {
+    href: '/vs/five9',
+    label: 'VS Five9',
+    note: 'Enterprise compliance, self-serve setup',
+    added: '2026-05-18',
+    keywords: 'call center enterprise contact center',
+  },
+  {
+    href: '/vs/convoso',
+    label: 'VS Convoso',
+    note: 'Same dialer modes, no seat minimum',
+    added: '2026-07-18',
+    keywords: 'call center predictive',
+  },
+  {
+    href: '/vs/vicidial',
+    label: 'VS VICIdial',
+    note: 'Free software is not a free dialer',
+    added: '2026-08-07',
+    keywords: 'call center open source self hosted asterisk',
+  },
+  {
+    href: '/vs/kixie',
+    label: 'VS Kixie',
+    note: 'Every dialer mode at one price, no tier to climb',
+    added: '2026-07-18',
+    keywords: 'sales crm power dialer',
+  },
+  {
+    href: '/vs/justcall',
+    label: 'VS JustCall',
+    note: 'The dialer is not a Pro-tier upsell',
+    added: '2026-07-18',
+    keywords: 'sales crm',
+  },
+  {
+    href: '/vs/orum',
+    label: 'VS Orum',
+    note: 'Parallel dialing without enterprise pricing',
+    added: '2026-07-28',
+    keywords: 'sales crm parallel ai',
+  },
+  {
+    href: '/vs/wavv',
+    label: 'VS WAVV',
+    note: 'Every dialer mode, one flat price',
+    added: '2026-07-15',
+    keywords: 'real estate investor',
+  },
+  {
+    href: '/vs/calltools',
+    label: 'VS CallTools',
+    note: 'No setup fee, no sales call',
+    added: '2026-08-07',
+    keywords: 'call center predictive',
+  },
+  {
+    href: '/vs/dialedin',
+    label: 'VS DialedIn',
+    note: 'Formerly ChaseData, still tiered',
+    added: '2026-08-07',
+    keywords: 'call center chasedata chase data',
+  },
+  {
+    href: '/vs/cloudtalk',
+    label: 'VS CloudTalk',
+    note: 'The dialer is not in the $19 seat',
+    added: '2026-07-19',
+    keywords: 'phone system voip',
+  },
+  {
+    href: '/vs/aircall',
+    label: 'VS Aircall',
+    note: 'The power dialer is not on the basic plan',
+    added: '2026-07-19',
+    keywords: 'phone system voip',
+  },
+  {
+    href: '/vs/dialpad',
+    label: 'VS Dialpad',
+    note: 'The dialer is a separate product',
+    added: '2026-07-19',
+    keywords: 'phone system voip',
+  },
+  {
+    href: '/vs/ringcentral',
+    label: 'VS RingCentral',
+    note: 'A dialer, not a phone system',
+    added: '2026-08-07',
+    keywords: 'phone system voip ringcx',
+  },
+  {
+    href: '/vs/smrtphone',
+    label: 'VS smrtPhone',
+    note: 'One weekly number, not three charges',
+    added: '2026-08-07',
+    keywords: 'real estate investor podio',
+  },
+  {
+    href: '/vs/aloware',
+    label: 'VS Aloware',
+    note: 'Where the dialing actually lives',
+    added: '2026-08-07',
+    keywords: 'sales crm hubspot pipedrive',
+  },
+  {
+    href: '/vs/ytel',
+    label: 'VS Ytel',
+    note: 'No platform fee stacked on top of seats',
+    added: '2026-08-07',
+    keywords: 'call center api',
+  },
+  {
+    href: '/vs/3cx',
+    label: 'VS 3CX',
+    note: 'Sales dialer vs business phone system',
+    added: '2026-07-15',
+    keywords: 'phone system pbx voip',
+  },
+  {
+    href: '/vs/teams',
+    label: 'Dialer pricing for teams',
+    note: 'What five agents actually cost, across every tool',
+    added: '2026-08-06',
+    keywords: 'team seats floor agency manager five',
+  },
+]
 
-const COMPARISONS: Comparison[] = [
-  {
-    slug: 'everyone',
-    name: 'EVERY LEGACY DIALER',
-    tagline: 'The industry-wide breakdown',
-    pitch:
-      'Six failures every legacy dialer shares — opaque pricing, annual contracts, dated UI, add-ons, desktop-only, compliance shortcuts. DialerSeat fixes every one at $35/week.',
-    badge: 'START HERE',
-  },
-  {
-    slug: 'readymode',
-    name: 'VS READYMODE',
-    tagline: 'Same predictive at a fraction of the cost',
-    pitch:
-      'Same multi-line predictive at $35/week, cancel anytime, instead of $199–$249/month locked into a contract. No $500–$2,000 setup fee. Modern UI. Works on phones and tablets where ReadyMode is desktop-only.',
-  },
-  {
-    slug: 'batchdialer',
-    name: 'VS BATCHDIALER',
-    tagline: 'Their annual rate without the annual contract',
-    pitch:
-      "BatchDialer's advertised $95/seat is the annual prepay rate — month to month it's $119–$249. Automatic number replacement is gated behind their Pro tier; DialerSeat cycles numbers on every plan. No per-number fees, no lead-package add-ons, whitelabel at $75/mo flat.",
-  },
-  {
-    slug: 'mojo',
-    name: 'VS MOJO DIALER',
-    tagline: 'Triple-line dialing without the real-estate lock-in',
-    pitch:
-      'Same triple-line speed across every industry — not just real estate. No mandatory $10/mo Agent Access fee stacked on top of your plan. No $25–$49 data add-ons stacking. Multiple scripts, calendar-aligned analytics — all for $35/week, cancel anytime.',
-  },
-  {
-    slug: 'phoneburner',
-    name: 'VS PHONEBURNER',
-    tagline: 'Multi-line predictive PhoneBurner doesn\'t have',
-    pitch:
-      'Multi-line predictive included (PhoneBurner is single-line only). Weekly billing, no annual contract. Per-campaign dialer mode. Flexible list sizes — no forced increments.',
-  },
-  {
-    slug: 'five9',
-    name: 'VS FIVE9',
-    tagline: 'Enterprise compliance, self-serve setup',
-    pitch:
-      'Same compliance posture without the enterprise sales cycle. Self-serve setup in minutes, not weeks. Flat $35/week per seat vs Five9\'s $175+ with custom quotes and annual commits.',
-  },
-  {
-    slug: 'wavv',
-    name: 'VS WAVV',
-    tagline: 'Every dialer mode, one flat price',
-    pitch:
-      'WAVV charges $59–$149/month depending on which dialer mode you unlock, plus $1/mo per number. DialerSeat is $35/week flat — preview, power, and multi-line predictive all included, no tier to climb.',
-  },
-  {
-    slug: '3cx',
-    name: 'VS 3CX',
-    tagline: 'Sales dialer vs business phone system',
-    pitch:
-      '3CX is a real PBX licensed by simultaneous call capacity — not built for outbound sales campaigns. DialerSeat is purpose-built for it: lead lists, dispositions, AMD, and TCPA compliance at $35/week per seat, no capacity planning required.',
-  },
-  {
-    slug: 'hookedcrm',
-    name: 'VS HOOKED CRM',
-    tagline: 'Named dialer modes vs an unnamed one',
-    pitch:
-      'Hooked CRM calls itself an all-in-one dialer, but never names a specific dialing mode anywhere on their site. DialerSeat includes Preview, Power, Progressive, and Predictive dialing, named and included, at $35/week — self-serve signup, no demo required.',
-  },
-  {
-    slug: 'orum',
-    name: 'VS ORUM',
-    tagline: 'Parallel dialing at enterprise pricing',
-    pitch:
-      'Orum dials many lines in parallel with AI navigation and is genuinely fast at it, sold to sales teams with a budget to match. DialerSeat gives you predictive, power, progressive and preview at a published $35/week per seat, no demo required.',
-  },
-  {
-    slug: 'vicidial',
-    name: 'VS VICIDIAL',
-    tagline: 'Free software is not a free dialer',
-    pitch:
-      'VICIdial genuinely costs nothing to licence, and published total cost of ownership still lands at $130–$400+ per agent per month once you count the server, the SIP trunking and the administrator. Worth it past about 30 agents. Below that, $35/week and nothing to run.',
-    badge: 'BIGGEST NAME',
-  },
-  {
-    slug: 'calltools',
-    name: 'VS CALLTOOLS',
-    tagline: 'No setup fee, no sales call',
-    pitch:
-      'CallTools runs about $119.99/user/month with setup fees commonly $500–$1,500 and complex CRM integrations quoted at $2,000–$5,000 on top. DialerSeat is $35/week per seat, self-serve, every dialer mode included, nothing to negotiate.',
-  },
-  {
-    slug: 'dialedin',
-    name: 'VS DIALEDIN',
-    tagline: 'Formerly ChaseData, still tiered',
-    pitch:
-      'DialedIn publishes a starting price around $89/user/month and handles inbound as well as outbound, which DialerSeat does not. The catch is the usual one: the outbound features most teams want sit above the entry tier.',
-  },
-  {
-    slug: 'ringcentral',
-    name: 'VS RINGCENTRAL',
-    tagline: 'A dialer, not a phone system',
-    pitch:
-      'RingCentral plans start around $20/user/month and none of them include an auto dialer — that lives in RingCX, the contact-centre product, from about $65/user/month with dialer minutes metered on top. Excellent phone system. Expensive way to dial a list.',
-  },
-  {
-    slug: 'smrtphone',
-    name: 'VS SMRTPHONE',
-    tagline: 'One weekly number, not three charges',
-    pitch:
-      'smrtPhone stacks a $62–$104/month subscription, a $42–$75/seat/month dialer add-on, and then per-minute credits, so a heavy dialing day costs more than a light one. Real strength if you live in Podio. DialerSeat is $35/week with call time included.',
-  },
-  {
-    slug: 'aloware',
-    name: 'VS ALOWARE',
-    tagline: 'Where the dialing actually lives',
-    pitch:
-      'Aloware starts around $30/user/month and is genuinely good if your team works leads inside HubSpot or Pipedrive. Dialing capability is tiered above the entry plan, and ad-hoc charges sit outside the seat price. DialerSeat includes every mode at $35/week.',
-  },
-  {
-    slug: 'ytel',
-    name: 'VS YTEL',
-    tagline: 'No platform fee on top of seats',
-    pitch:
-      'Ytel prices contact-centre seats around $99/month on top of a platform fee, which a small team absorbs disproportionately. Real communications APIs if you are building on top. DialerSeat is $35/week per seat with no platform charge.',
-  },
-  {
-    slug: 'convoso',
-    name: 'VS CONVOSO',
-    tagline: 'Same dialer modes, no seat minimum',
-    pitch:
-      'Convoso is a genuinely strong predictive dialer built for 20+ seat operations with custom, usage-billed quotes. DialerSeat matches the four dialer modes at a published $35/week per seat — no seat minimum, no demo, no separate carrier billing.',
-  },
-  {
-    slug: 'kixie',
-    name: 'VS KIXIE',
-    tagline: 'Every dialer mode, one price',
-    pitch:
-      'Kixie is well-reviewed but tiers dialing power by price — multi-line dialing runs $95+/seat/month, AI voice detection is a $30/mo add-on. DialerSeat includes predictive, power, progressive, and preview dialing at $35/week, one price, no tier to climb.',
-  },
-  {
-    slug: 'justcall',
-    name: 'VS JUSTCALL',
-    tagline: 'The dialer isn\'t a Pro-tier upsell',
-    pitch:
-      'JustCall advertises $29/user/month, but the power and predictive dialer sit behind the $49+/month Pro tier, plus a 2-seat minimum on every standard plan. DialerSeat includes every dialer mode at $35/week per seat, one seat minimum: one.',
-  },
-  {
-    slug: 'cloudtalk',
-    name: 'VS CLOUDTALK',
-    tagline: 'The dialer isn\'t in the $19 seat',
-    pitch:
-      'CloudTalk\'s cheap headline price doesn\'t include a dialer — Power Dialer is a $15/seat/mo add-on, Parallel Dialer is $39/seat/mo, both stacked on top. DialerSeat includes every dialer mode at $35/week, flat, no add-on required.',
-  },
-  {
-    slug: 'aircall',
-    name: 'VS AIRCALL',
-    tagline: 'The power dialer isn\'t on the basic plan',
-    pitch:
-      'Aircall\'s $30 Essentials plan has no Power Dialer, no Salesforce integration, and no call monitoring — all three require the $50 Professional tier, plus a 3-license minimum. DialerSeat includes the dialer at $35/week, no tier upgrade, no seat minimum.',
-  },
-  {
-    slug: 'dialpad',
-    name: 'VS DIALPAD',
-    tagline: 'The dialer is a separate product',
-    pitch:
-      'Dialpad Connect\'s phone plans have no power dialer at any tier — it\'s exclusive to a separate product, Dialpad Sell, starting around $39/seat/mo. DialerSeat includes every dialer mode in one product at $35/week, no second purchase required.',
-  },
+/** The names people arrive already typing. */
+const TOP_PICKS: HubItem[] = [
+  { href: '/vs/readymode', label: 'VS ReadyMode' },
+  { href: '/vs/mojo', label: 'VS Mojo Dialer' },
+  { href: '/vs/phoneburner', label: 'VS PhoneBurner' },
+  { href: '/vs/batchdialer', label: 'VS BatchDialer' },
+  { href: '/vs/five9', label: 'VS Five9' },
+  { href: '/vs/convoso', label: 'VS Convoso' },
+  { href: '/vs/vicidial', label: 'VS VICIdial' },
+  { href: '/vs/kixie', label: 'VS Kixie' },
+  { href: '/vs/justcall', label: 'VS JustCall' },
+  { href: '/vs/ringcentral', label: 'VS RingCentral' },
+  { href: '/vs/aircall', label: 'VS Aircall' },
+  { href: '/vs/dialpad', label: 'VS Dialpad' },
+  { href: '/vs/cloudtalk', label: 'VS CloudTalk' },
+  { href: '/vs/calltools', label: 'VS CallTools' },
+]
+
+/**
+ * The left column.
+ *
+ * NOT the list of every /vs page — that is the middle column's job, and
+ * printing it twice made the old sidebar the tallest thing on the page. These
+ * are the routes somebody lands here and then wants instead.
+ */
+const NAV: HubItem[] = [
+  { href: '/?view=landing', label: 'Home' },
+  { href: '/?view=landing#pricing', label: 'Pricing' },
+  { href: '/dialing-modes', label: 'Dialing modes' },
+  { href: '/faq', label: 'Frequently asked questions' },
+  { href: '/vs/teams', label: 'Team pricing, compared' },
+  { href: '/faq/why-dialerseat', label: 'Why DialerSeat?' },
 ]
 
 export default function VsHubView() {
@@ -205,403 +241,161 @@ export default function VsHubView() {
   return (
     <>
       <SiteHeader />
-      <main style={{
-        background: T.bg,
-        minHeight: '100vh',
-        fontFamily: FUTURA,
-        color: T.text,
-      }}>
+      <main
+        style={{
+          background: SITE.bg,
+          minHeight: '100vh',
+          fontFamily: FUTURA,
+          color: SITE.text,
+        }}
+      >
         <style>{`
-          .vshub * { box-sizing: border-box; }
-
-          /* ── HERO ── */
-          .vshub-hero {
-            /* Light, like the landing page. This was a dark gradient
-               against a #f0f1f4 homepage — the inverse of the site. */
-            background: transparent;
-            color: ${T.text};
-            padding: 100px 32px 80px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-            border-bottom: 2px solid ${T.accent};
-          }
-          .vshub-hero-inner {
-            position: relative;
-            max-width: 880px;
-            margin: 0 auto;
-          }
-          .vshub-eyebrow {
-            display: inline-block;
-            padding: 6px 14px;
-            background: rgba(74,158,255,0.15);
-            border: 1px solid ${T.blue};
-            border-radius: 4px;
-            color: ${T.blue};
-            font-size: 11px;
-            letter-spacing: 3px;
-            font-weight: bold;
-            margin-bottom: 24px;
-          }
-          .vshub-hero h1 {
-            font-size: 56px;
-            font-weight: 800;
-            letter-spacing: -1.5px;
-            line-height: 1.05;
-            margin: 0 0 20px 0;
-          }
-          .vshub-lead {
-            font-size: 18px;
-            line-height: 1.6;
-            color: ${T.muted};
-            max-width: 680px;
-            margin: 0 auto;
-          }
-          .vshub-verified {
-            font-size: 12px;
-            color: ${T.muted};
-            margin-top: 16px;
-          }
-
-          /* ── BODY ── */
-          .vshub-body {
+          .vshub-band {
             max-width: 1180px;
             margin: 0 auto;
-            padding: 80px 32px;
+            padding: 0 32px 88px;
           }
-
-          /* ── SECTION HEADER ── */
-          .vshub-section-eyebrow {
-            font-size: 11px;
-            letter-spacing: 4px;
-            color: ${T.muted};
-            font-weight: bold;
+          .vshub-panel {
+            background: ${SITE.surface};
+            border: 1px solid ${SITE.border};
+            border-top: 3px solid #2a6eff;
+            border-radius: 12px;
+            padding: 34px 38px;
+            margin-bottom: 18px;
+          }
+          .vshub-eyebrow {
+            font-size: 10px; font-weight: bold; letter-spacing: 3px;
+            color: ${SITE.deep};
             margin-bottom: 12px;
-            text-align: center;
           }
-          .vshub-section-h2 {
-            font-size: 36px;
-            letter-spacing: -0.5px;
-            line-height: 1.15;
-            font-weight: 800;
-            margin: 0 0 16px 0;
-            color: ${T.text};
-            text-align: center;
-          }
-          .vshub-section-lede {
-            font-size: 16px;
-            color: ${T.muted};
-            line-height: 1.65;
-            max-width: 680px;
-            margin: 0 auto 48px auto;
-            text-align: center;
-          }
-          .vshub-section-lede a {
-            color: ${T.blue};
-            text-decoration: none;
-          }
-
-          /* ── FEATURED CARD (START HERE) ── */
-          .vshub-featured {
-            display: block;
-            background: ${T.surface};
-            border-radius: 4px;
-            padding: 40px 44px;
-            text-decoration: none;
-            color: ${T.text};
-            position: relative;
-            overflow: hidden;
-            margin-bottom: 20px;
-            transition: transform 0.15s;
-            border: 1px solid ${T.border};
-            border-top: 3px solid ${T.blue};
-          }
-          .vshub-featured:hover {
-            transform: translateY(-2px);
-            border-color: ${T.blue};
-          }
-          .vshub-featured-badge {
-            position: absolute;
-            top: 20px; right: 20px;
-            font-size: 9px;
-            letter-spacing: 2.5px;
-            font-weight: bold;
-            color: white;
-            background: ${T.blue};
-            padding: 4px 10px;
-            border-radius: 100px;
-          }
-          .vshub-featured-eyebrow {
-            position: relative;
-            display: inline-block;
-            padding: 4px 10px;
-            background: rgba(74,158,255,0.15);
-            border: 1px solid ${T.blue};
-            border-radius: 4px;
-            color: ${T.blue};
-            font-size: 9px;
-            letter-spacing: 2.5px;
-            font-weight: bold;
-            margin-bottom: 16px;
-          }
-          .vshub-featured h2 {
-            position: relative;
-            font-size: 32px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            line-height: 1.15;
+          .vshub-panel h2 {
             margin: 0 0 14px 0;
-            color: ${T.text};
+            font-size: 28px; font-weight: 800; letter-spacing: -0.6px;
+            line-height: 1.2;
+            color: ${SITE.text};
           }
-          .vshub-featured p {
-            position: relative;
-            font-size: 15px;
-            line-height: 1.7;
-            color: #c4c8d8;
-            margin: 0 0 20px 0;
-            max-width: 600px;
+          .vshub-panel p {
+            margin: 0 0 8px 0;
+            font-size: 15.5px; line-height: 1.7;
+            color: ${SITE.muted};
+            max-width: 760px;
           }
-          .vshub-featured-cta {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 11px;
-            letter-spacing: 2.5px;
-            font-weight: bold;
-            color: ${T.blue};
-          }
+          .vshub-panel a { color: #2a6eff; font-weight: 600; text-decoration: none; }
+          .vshub-panel a:hover { text-decoration: underline; text-underline-offset: 3px; }
 
-          /* ── COMPARISON GRID ── */
-          .vshub-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 14px;
-            margin-bottom: 72px;
-          }
-          .vshub-card {
-            background: ${T.surface};
-            border: 1px solid ${T.border};
-            border-radius: 4px;
-            padding: 28px 32px;
-            text-decoration: none;
-            color: ${T.text};
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-          }
-          .vshub-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(74,158,255,0.08) 0%, transparent 100%);
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            pointer-events: none;
-          }
-          .vshub-card:hover {
-            border-color: ${T.blue};
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(74,158,255,0.15);
-          }
-          .vshub-card:hover::before {
-            opacity: 1;
-          }
-          .vshub-card .tagline {
-            font-size: 11px;
-            letter-spacing: 2.5px;
-            font-weight: bold;
-            color: ${T.blue};
-            margin: 0;
-          }
-          .vshub-card h3 {
-            font-size: 20px;
-            font-weight: 800;
-            letter-spacing: -0.3px;
-            color: ${T.text};
-            margin: 0;
-          }
-          .vshub-card .pitch {
-            font-size: 14px;
-            line-height: 1.65;
-            color: ${T.muted};
-            margin: 0;
-          }
-          .vshub-card .read-more {
-            font-size: 10px;
-            letter-spacing: 2px;
-            font-weight: bold;
-            color: ${T.blue};
-            margin-top: auto;
-            padding-top: 8px;
-          }
-
-          /* ── TEAMS SECTION ── */
-          .vshub-teams-section { margin-bottom: 72px; }
-
-          /* ── CTA ── */
           .vshub-cta {
-            background: ${T.dark};
-            color: white;
-            padding: 80px 32px;
+            background: ${SITE.ink};
+            border-radius: 12px;
+            padding: 56px 40px;
             text-align: center;
-            border-top: 2px solid ${T.accent};
           }
-          .vshub-cta-inner { max-width: 720px; margin: 0 auto; }
           .vshub-cta-eyebrow {
-            font-size: 11px;
-            letter-spacing: 4px;
-            color: rgba(255,255,255,0.55);
-            font-weight: bold;
-            margin-bottom: 16px;
+            font-size: 10px; font-weight: bold; letter-spacing: 3px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 14px;
           }
           .vshub-cta h2 {
-            font-size: 42px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            color: white;
-            margin: 0 0 16px 0;
-            line-height: 1.15;
+            margin: 0 0 14px 0;
+            font-size: 38px; font-weight: 800; letter-spacing: -1px;
+            line-height: 1.12;
+            color: #fff;
           }
           .vshub-cta p {
-            font-size: 17px;
-            line-height: 1.6;
-            color: #c4c8d8;
-            margin: 0 auto 32px;
-            max-width: 520px;
+            margin: 0 auto 28px;
+            max-width: 540px;
+            font-size: 16px; line-height: 1.65;
+            color: rgba(255,255,255,0.66);
           }
-          
-          /* Landing page white outlined button style */
-          .vshub-btn-primary {
-            padding: 16px 32px;
-            background: white;
-            border: none;
-            border-top: 3px solid white;
-            color: #1a1a2e;
-            font-size: 13px;
-            letter-spacing: 4px;
-            font-weight: bold;
-            text-decoration: none;
+          .vshub-cta-row {
+            display: flex; align-items: center; justify-content: center;
+            gap: 14px; flex-wrap: wrap;
+          }
+          .vshub-btn {
             display: inline-block;
+            padding: 15px 30px;
             border-radius: 6px;
+            font-size: 12px; font-weight: bold; letter-spacing: 3px;
+            text-decoration: none;
+          }
+          .vshub-btn.primary {
+            background: #fff; color: ${SITE.text};
+            border-top: 3px solid #2a6eff;
+          }
+          .vshub-btn.secondary {
+            background: transparent; color: #fff;
+            border: 1px solid rgba(255,255,255,0.28);
+            border-top: 3px solid rgba(255,255,255,0.75);
           }
 
-          /* ── RESPONSIVE ── */
-          @media (max-width: 768px) {
-            .vshub-hero { padding: 64px 20px 56px; }
-            .vshub-h1 { font-size: 36px; letter-spacing: -0.5px; }
-            .vshub-lead { font-size: 16px; }
-            .vshub-body { padding: 56px 20px; }
-            .vshub-featured { padding: 28px 24px; }
-            .vshub-featured h2 { font-size: 24px; }
-            .vshub-section-h2 { font-size: 28px; }
-            .vshub-grid { grid-template-columns: 1fr; }
-            .vshub-cta { padding: 56px 20px; }
-            .vshub-cta h2 { font-size: 30px; }
-            .vshub-btn-primary { width: 100%; box-sizing: border-box; text-align: center; }
+          @media (max-width: 760px) {
+            .vshub-band { padding: 0 20px 64px; }
+            .vshub-panel { padding: 26px 22px; }
+            .vshub-panel h2 { font-size: 23px; }
+            .vshub-cta { padding: 40px 22px; }
+            .vshub-cta h2 { font-size: 28px; }
+            .vshub-btn { display: block; width: 100%; text-align: center; }
           }
         `}</style>
 
-        <div className="vshub">
+        <DirectoryHub
+          headlineTop="Pick your competitor."
+          headlineBottom="We'll show you why we win."
+          underline="why"
+          leadHref="/vs/everyone"
+          leadLabel="Start with the industry-wide breakdown"
+          picksLabel="TOP PICKS"
+          picks={TOP_PICKS}
+          searchPlaceholder="Search competitors..."
+          searchNoun="comparisons"
+          requestTitle="Can't find yours?"
+          requestLabel="Submit a request"
+          requestHref="mailto:support@dialerseat.com?subject=Comparison%20request"
+          navTitle="Home"
+          navDivider="ELSEWHERE ON THE SITE"
+          navItems={NAV}
+          allTitle="All Comparisons"
+          allItems={COMPARISONS}
+          allCta="Browse all comparisons"
+          recentTitle="Recently Added"
+          recentCta="View all recently added"
+        />
 
-          {/* ── HERO ── */}
-          <section className="vshub-hero">
-            <div className="vshub-hero-inner">
-              <div className="vshub-eyebrow">COMPARISONS</div>
-              <h1>
-                Pick your competitor.<br />
-                We&apos;ll show you why we win.
-              </h1>
-              <p className="vshub-lead">
-                Honest, side-by-side breakdowns of DialerSeat™ against every major outbound
-                dialer. Pricing, features, what each tool wins at, and who should switch.
-                No marketing fluff — just the facts.
-              </p>
-              <p className="vshub-verified">Last Updated 07/28/2026</p>
-            </div>
-          </section>
-
-          {/* ── BODY ── */}
-          <div className="vshub-body">
-
-            {/* FEATURED CARD — START HERE */}
-            {(() => {
-              const featured = COMPARISONS.find(c => c.slug === 'everyone')!
-              return (
-                <Link href="/vs/everyone" className="vshub-featured">
-                  {featured.badge && (
-                    <div className="vshub-featured-badge">{featured.badge}</div>
-                  )}
-                  <div className="vshub-featured-eyebrow">THE FULL PICTURE</div>
-                  <h2>{featured.name}</h2>
-                  <p>{featured.pitch}</p>
-                  <span className="vshub-featured-cta">
-                    READ THE BREAKDOWN →
-                  </span>
-                </Link>
-              )
-            })()}
-
-            {/* COMPARISON GRID */}
-            <div className="vshub-section-eyebrow" style={{ marginTop: 56 }}>▸ HEAD-TO-HEAD COMPARISONS</div>
-            <h2 className="vshub-section-h2">Every legacy dialer, broken down.</h2>
-            <p className="vshub-section-lede">
-              We&apos;ll keep adding more as our customers ask. Don&apos;t see your current
-              dialer?{' '}
-              <a href="mailto:support@dialerseat.com">Email support@dialerseat.com</a>{' '}
-              and we&apos;ll prioritize it.
+        <div className="vshub-band">
+          <div className="vshub-panel">
+            <div className="vshub-eyebrow">▸ FOR TEAMS &amp; AGENCIES</div>
+            <h2>Manager+ adds whitelabel for $75/week, flat.</h2>
+            <p>
+              Running more than one seat, or managing dialing for other people&apos;s teams?
+              Manager+ is a flat $75/week upgrade that puts your brand on the platform — same
+              rate whether you&apos;re managing 2 seats or 200. None of the dialers on this page
+              offer true whitelabel; the closest most get is a referral or reseller program that
+              keeps their name on the product.
             </p>
-
-            <div className="vshub-grid">
-              {COMPARISONS.filter(c => c.slug !== 'everyone').map((c) => (
-                <Link
-                  key={c.slug}
-                  href={`/vs/${c.slug}`}
-                  className="vshub-card"
-                >
-                  <p className="tagline">{c.tagline}</p>
-                  <h3>{c.name}</h3>
-                  <p className="pitch">{c.pitch}</p>
-                  <div className="read-more">VIEW COMPARISON →</div>
-                </Link>
-              ))}
-            </div>
-
-            {/* TEAMS SECTION */}
-            <div className="vshub-teams-section">
-              <div className="vshub-section-eyebrow">▸ FOR TEAMS &amp; AGENCIES</div>
-              <h2 className="vshub-section-h2">Manager+ adds whitelabel for $75/week, flat.</h2>
-              <p className="vshub-section-lede">
-                Running more than one seat, or managing dialing for other people&apos;s teams?
-                Manager+ is a flat $75/week upgrade that puts your brand on the platform — same
-                rate whether you&apos;re managing 2 seats or 200. None of the dialers on this
-                page offer true whitelabel; the closest most get is a referral or reseller
-                program that keeps their name on the product. Every comparison below breaks down
-                what each competitor actually charges to scale a team.
-              </p>
-            </div>
-
+            <p>
+              <Link href="/vs/teams">See what five agents cost on every tool →</Link>
+            </p>
           </div>
 
-          {/* ── CTA ── */}
           <section className="vshub-cta">
-            <div className="vshub-cta-inner">
-              <div className="vshub-cta-eyebrow">▸ SKIP THE COMPARISON</div>
-              <h2>Skip the comparison. Just try it.</h2>
-              <p>
-                $35/seat/week. Cancel anytime. Every feature included. No setup fee, no
-                contract, no demos. The fastest way to know if DialerSeat™ beats whatever
-                you&apos;re using now is to actually use it.
-              </p>
-              <Link href={showSignedIn ? '/dashboard/analytics' : '/sign-up'} className="vshub-btn-primary">
+            <div className="vshub-cta-eyebrow">▸ SKIP THE COMPARISON</div>
+            <h2>Skip the comparison. Just try it.</h2>
+            <p>
+              $35/seat/week. Cancel anytime. Every feature included. No setup fee, no contract,
+              no demos. The fastest way to know if DialerSeat™ beats whatever you&apos;re using
+              now is to actually use it.
+            </p>
+            <div className="vshub-cta-row">
+              <Link
+                href={showSignedIn ? '/dashboard/analytics' : '/sign-up'}
+                className="vshub-btn primary"
+              >
                 {showSignedIn ? 'GO TO DASHBOARD →' : 'GET STARTED →'}
+              </Link>
+              <Link href="/vs/everyone" className="vshub-btn secondary">
+                THE FULL BREAKDOWN
               </Link>
             </div>
           </section>
-
         </div>
       </main>
       <SiteFooter />

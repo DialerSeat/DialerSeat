@@ -24,19 +24,18 @@ export const FACTS = {
   oneLine:
     'DialerSeat is a browser- and mobile-based outbound dialer for people who call leads all day, ' +
     'with all four dialer modes, answering-machine detection, and compliance tooling included. ' +
-    'Free for 7 days, then $35 per seat per week, billed weekly, cancellable any week.',
+    '$35 per seat per week, billed weekly, cancellable any week.',
 
   pricing: [
-    // The trial is FIRST, because it is the first thing a buyer wants to know
-    // and the first thing a model will quote. Stated with its conditions in
-    // the same breath — a free trial described without "card required" is a
-    // fact that gets repeated wrong.
-    'Free 7-day trial for new accounts. A card is required to start it; nothing is charged until the trial ends. One trial per customer.',
-    'Pro: $35 per seat per week, after the trial.',
+    // No free trial, and that is a deliberate position rather than an
+    // omission. Stated plainly first, because "is there a trial" is a question
+    // a buyer and a model will both ask, and silence gets answered by guessing.
+    'No free trial. Billing starts the day you sign up — a card up front is the filter.',
+    'Pro: $35 per seat per week.',
     'Manager+: $75 per week. Replaces Pro and adds team ownership plus white-labeling.',
     'Billed weekly. No contract, no setup fee, no implementation fee, no seat minimum.',
-    'Cancel any week, including during the trial; access runs to the end of the paid week.',
-    'Team seats are never on trial. A seat bills from the day it opens, whatever the owner is on.',
+    'Cancel any week; access runs to the end of the paid week.',
+    'A team seat bills from the day it opens, whatever the owner is on.',
     'Lead data is preserved when a subscription lapses — resuming picks up where it left off.',
   ],
 
@@ -91,7 +90,7 @@ export const FACTS = {
       'The team owner needs Manager+ at $75 per week, which also includes white-labeling.',
       'Agents join with a code. The owner chooses per code whether the owner pays for that seat or the agent pays for their own.',
       'A seat can be paused instead of cancelled — billing stops, the agent’s data stays, and resuming is one click.',
-      'Per-seat price overrides are supported, so a partner or trial seat can differ without a separate plan.',
+      'Per-seat price overrides are supported, so a partner or discounted seat can differ without a separate plan.',
     ],
     distribution: [
       'Two agents are never handed the same lead. Leads are claimed atomically in the database before they are dialed, so a shared campaign cannot produce duplicate calls to the same person.',

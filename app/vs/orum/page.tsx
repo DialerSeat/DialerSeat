@@ -15,7 +15,7 @@ const SLUG = 'orum'
 export const metadata: Metadata = {
   title: 'DialerSeat vs Orum — $35/week vs $250+/month, Annual Contract',
   description:
-    'DialerSeat is the transparent, self-serve alternative to Orum. Orum starts around $250/user/month billed annually with a 3-seat minimum and no public pricing. DialerSeat is free for 7 days, then $35 per seat per week, cancel anytime, one seat minimum, sign up in minutes.',
+    'DialerSeat is the transparent, self-serve alternative to Orum. Orum starts around $250/user/month billed annually with a 3-seat minimum and no public pricing. DialerSeat is $35 per seat per week, cancel anytime, one seat minimum, sign up in minutes.',
   alternates: {
     canonical: 'https://dialerseat.com/vs/orum',
   },
@@ -37,7 +37,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to Orum on price?',
     answer:
-      'Orum doesn\'t publish pricing — you have to request a demo and get a custom quote. Third-party pricing research consistently reports a starting price around $250 per user per month on the Launch plan, billed annually, with a 3-seat minimum (roughly $9,000/year minimum commitment). Higher tiers are reported to reach $800/user/month. AI Coaching is a separate add-on reported at $50–200/user/month. DialerSeat is free for 7 days, then $35 per seat per week, billed weekly, cancel anytime, with a one-seat minimum and every dialer mode included.',
+      'Orum doesn\'t publish pricing — you have to request a demo and get a custom quote. Third-party pricing research consistently reports a starting price around $250 per user per month on the Launch plan, billed annually, with a 3-seat minimum (roughly $9,000/year minimum commitment). Higher tiers are reported to reach $800/user/month. AI Coaching is a separate add-on reported at $50–200/user/month. DialerSeat is $35 per seat per week, billed weekly, cancel anytime, with a one-seat minimum and every dialer mode included.',
   },
   {
     question: 'Does Orum require an annual contract?',

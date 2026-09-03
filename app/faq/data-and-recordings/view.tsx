@@ -193,7 +193,7 @@ export default function DataRecordingsFaqView() {
               them.
             </p>
             <a href={isSignedIn ? '/dashboard/settings' : '/sign-up'} className="faq-cta-btn">
-              {isSignedIn ? 'GO TO SETTINGS →' : 'START FREE 7 DAYS →'}
+              {isSignedIn ? 'GO TO SETTINGS →' : 'GET STARTED →'}
             </a>
           </div>
         </article>

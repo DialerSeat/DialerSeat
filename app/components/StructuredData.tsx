@@ -51,16 +51,6 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
           // canonicalFacts exists to prevent, reproduced one layer up.
           offers: [
             {
-              '@type': 'Offer',
-              name: 'Free 7-day trial',
-              price: '0.00',
-              priceCurrency: 'USD',
-              availability: 'https://schema.org/InStock',
-              url: `${base}/sign-up`,
-              description:
-                'Full access for 7 days. A card is required to start; nothing is charged until the trial ends. One trial per customer.',
-            },
-            {
             '@type': 'Offer',
             price: '35.00',
             priceCurrency: 'USD',
@@ -150,20 +140,9 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
       url: BASE,
       description:
         'Browser-based outbound dialer with predictive, progressive, power, and preview modes; automatic voicemail detection; inbound call reception; unlimited numbers; team workflow; TCPA compliance. Built for solo agents up through larger teams.',
-      // Third copy of the same two offers. Three files describing one price
-      // is three chances to disagree — worth consolidating, but not while
-      // quietly changing what a live page emits.
+      // Third copy of the same offer. Three files describing one price is
+      // three chances to disagree — worth consolidating.
       offers: [
-        {
-          '@type': 'Offer',
-          name: 'Free 7-day trial',
-          price: '0.00',
-          priceCurrency: 'USD',
-          availability: 'https://schema.org/InStock',
-          url: `${BASE}/sign-up`,
-          description:
-            'Full access for 7 days. A card is required to start; nothing is charged until the trial ends. One trial per customer.',
-        },
         {
           '@type': 'Offer',
           price: '35.00',

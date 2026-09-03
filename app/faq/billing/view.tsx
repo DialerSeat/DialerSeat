@@ -235,13 +235,13 @@ export default function BillingFaqView() {
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
           <div className="faq-cta">
             <div className="faq-cta-eyebrow">▸ NO CONTRACT, NO RETENTION CALL</div>
-            <h3 className="faq-cta-h">Free for 7 days, then $35/week. Cancel with one click, any time.</h3>
+            <h3 className="faq-cta-h">$35/week. Cancel with one click, any time.</h3>
             <p>
               You keep access through what you already paid for — nothing
               cut off early, nothing to negotiate.
             </p>
             <a href={isSignedIn ? '/dashboard' : '/sign-up'} className="faq-cta-btn">
-              {isSignedIn ? 'GO TO DASHBOARD →' : 'START FREE 7 DAYS →'}
+              {isSignedIn ? 'GO TO DASHBOARD →' : 'GET STARTED →'}
             </a>
           </div>
         </article>

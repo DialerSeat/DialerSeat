@@ -215,7 +215,7 @@ export default function ScriptsFaqView() {
               keep switching to.
             </p>
             <a href={isSignedIn ? '/dashboard/dialer' : '/sign-up'} className="faq-cta-btn">
-              {isSignedIn ? 'GO TO DIALER →' : 'START FREE 7 DAYS →'}
+              {isSignedIn ? 'GO TO DIALER →' : 'GET STARTED →'}
             </a>
           </div>
         </article>

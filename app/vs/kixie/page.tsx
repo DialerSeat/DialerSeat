@@ -37,7 +37,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to Kixie on price?',
     answer:
-      "DialerSeat is free for 7 days, then $35 per seat per week, billed weekly, with every dialer mode included. Kixie's entry Integrated tier starts around $35/user/month but is single-line only \u2014 the Multi-Line PowerDialer tier comparable to DialerSeat's included capability runs roughly $95\u2013$185/user/month depending on the source, and AI Human Voice Detection is a further $30/month add-on. Independent reviewers estimate real all-in Kixie cost lands 30\u201360% above the advertised entry price.",
+      "DialerSeat is $35 per seat per week, billed weekly, with every dialer mode included. Kixie's entry Integrated tier starts around $35/user/month but is single-line only \u2014 the Multi-Line PowerDialer tier comparable to DialerSeat's included capability runs roughly $95\u2013$185/user/month depending on the source, and AI Human Voice Detection is a further $30/month add-on. Independent reviewers estimate real all-in Kixie cost lands 30\u201360% above the advertised entry price.",
   },
   {
     question: 'Does Kixie offer predictive dialing?',

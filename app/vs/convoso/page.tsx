@@ -37,7 +37,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to Convoso on price?',
     answer:
-      "DialerSeat is free for 7 days, then $35 per seat per week, billed weekly, published on the homepage. Convoso doesn't publish pricing \u2014 third-party sources consistently cite roughly $90/user/month as a floor, not a ceiling, since carrier fees and DID number management are billed separately from the base subscription. Convoso also typically requires a ~20-seat minimum and runs on annual contracts.",
+      "DialerSeat is $35 per seat per week, billed weekly, published on the homepage. Convoso doesn't publish pricing \u2014 third-party sources consistently cite roughly $90/user/month as a floor, not a ceiling, since carrier fees and DID number management are billed separately from the base subscription. Convoso also typically requires a ~20-seat minimum and runs on annual contracts.",
   },
   {
     question: 'Does Convoso have the same dialer modes as DialerSeat?',

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DialingModeCTA from '@/components/DialingModeCTA'
+import { SITE } from '@/lib/siteTheme'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -42,7 +43,7 @@ const MODES = [
   {
     key: 'power',
     label: 'POWER',
-    color: '#2a4a8a',
+    color: '${SITE.deep}',
     tagline: 'Auto-dials the next lead the moment you hang up.',
     body:
       'One line per agent. The instant you finish a call, it dials the next lead automatically — no clicking between calls. You control the pace by toggling available / unavailable.',
@@ -71,7 +72,7 @@ const MODES = [
   },
 ]
 
-const ACCENT = '#2a4a8a'
+const ACCENT = '${SITE.deep}'
 
 export default function DialerModesTldrPage() {
   return (
@@ -87,14 +88,14 @@ export default function DialerModesTldrPage() {
         <style>{`
           .dmt-root, .dmt-root * { box-sizing: border-box; }
           .dmt-root {
-            background: #0a0a14;
+            background: ${SITE.bg};
             min-height: 100vh;
             font-family: 'Futura PT', Futura, sans-serif;
-            color: #ffffff;
+            color: ${SITE.text};
           }
           .dmt-hero {
-            background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%);
-            color: white;
+            background: linear-gradient(135deg, ${SITE.bg} 0%, ${SITE.surface} 100%);
+            color: ${SITE.text};
             padding: 84px 32px 64px;
             text-align: center;
             position: relative;
@@ -112,7 +113,7 @@ export default function DialerModesTldrPage() {
             background: ${ACCENT}33;
             border: 1px solid ${ACCENT};
             border-radius: 4px;
-            color: #9ab4e0;
+            color: ${SITE.deep};
             font-size: 11px;
             letter-spacing: 3px;
             font-weight: bold;
@@ -128,7 +129,7 @@ export default function DialerModesTldrPage() {
           .dmt-lead {
             font-size: 17px;
             line-height: 1.55;
-            color: #c4c8d8;
+            color: ${SITE.muted};
             max-width: 600px;
             margin: 0 auto;
           }
@@ -141,8 +142,8 @@ export default function DialerModesTldrPage() {
             gap: 18px;
           }
           .dmt-card {
-            background: #1a1a2e;
-            border: 1px solid #2a2a4a;
+            background: ${SITE.surface};
+            border: 1px solid ${SITE.border};
             border-top: 4px solid var(--mc);
             border-radius: 10px;
             padding: 24px 24px 20px;
@@ -155,7 +156,7 @@ export default function DialerModesTldrPage() {
             font-size: 11px;
             letter-spacing: 2px;
             font-weight: 800;
-            color: white;
+            color: ${SITE.text};
             background: var(--mc);
             border-radius: 4px;
             padding: 4px 10px;
@@ -166,7 +167,7 @@ export default function DialerModesTldrPage() {
             font-weight: 800;
             letter-spacing: -0.2px;
             margin: 0 0 10px 0;
-            color: #ffffff;
+            color: ${SITE.text};
           }
           .dmt-body {
             font-size: 14px;
@@ -196,7 +197,7 @@ export default function DialerModesTldrPage() {
             padding: 8px 24px 64px;
             text-align: center;
             font-size: 13px;
-            color: #8888aa;
+            color: ${SITE.muted};
             line-height: 1.6;
           }
           @media (max-width: 720px) {
@@ -208,7 +209,7 @@ export default function DialerModesTldrPage() {
         <section className="dmt-hero">
           <div className="dmt-hero-inner">
             <div className="dmt-eyebrow">DIALER MODES · TL;DR</div>
-          <span style={{ fontSize: 11, color: "#8888aa", letterSpacing: "2px", display: "block", marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
+          <span style={{ fontSize: 11, color: "${SITE.muted}", letterSpacing: "2px", display: "block", marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
             <h1>The four modes, in plain English.</h1>
             <p className="dmt-lead">
               DialerSeat has four ways to dial. Here&apos;s the simple version of

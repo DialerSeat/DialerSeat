@@ -228,7 +228,7 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
             </h1>
             <p className="vs-subhead">{c.summary}</p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS</Link>
+              <Link href="/sign-up" className="vs-btn-primary">GET STARTED</Link>
               <Link href="/vs" className="vs-btn-ghost">ALL COMPARISONS</Link>
             </div>
           </div>
@@ -395,7 +395,7 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
           </p>
 
           <div className="vs-cta-row" style={{ marginTop: 40, justifyContent: 'flex-start' }}>
-            <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS</Link>
+            <Link href="/sign-up" className="vs-btn-primary">GET STARTED</Link>
             <Link href="/faq" className="vs-btn-ghost">READ THE FAQ</Link>
           </div>
         </section>
