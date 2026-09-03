@@ -179,7 +179,18 @@ export default async function Home({ searchParams }: PageProps) {
         /* padding-bottom lives on the two-class rule below, not here: the
            later .ds-section padding shorthand outranks a single-class
            longhand on source order and silently wins. */
-        .ds-volume-section { max-width: none; }
+        /* ── FULL BLEED, WITH A CEILING ──────────────────────────────────
+           This section is deliberately wider than the rest of the page: the
+           panel runs inboard of the left edge and the headline out to the
+           right margin, which is what makes it read as a spread rather than
+           another centred block.
+
+           The ceiling exists only to stop the 192px left inset drifting away
+           from the content on a very zoomed-out window, where the viewport
+           grows and a fixed inset does not. 1720px is far above any ordinary
+           window, so at every normal width this behaves exactly as if it were
+           max-width: none. */
+        .ds-volume-section { max-width: 1720px; margin-left: auto; margin-right: auto; }
 
         /* ── WHY 1240px AND NOT 1000px ───────────────────────────────────────
            The two-column layout below has fixed costs that do not shrink:
@@ -211,17 +222,18 @@ export default async function Home({ searchParams }: PageProps) {
              the whole block ~67px lower than the mockup, which is what dragged
              "BUILT FOR VOLUME" and the headline down with it. */
           .ds-section.ds-volume-section {
-            /* ── ANCHORED TO THE CONTENT COLUMN, NOT THE VIEWPORT EDGE ──────
-               This used to be padding-left: 192px against max-width: none, so
-               the panel was positioned relative to the WINDOW while every
-               other section on the page centres inside 1280px. Zoom out and
-               the viewport grows, the 192px does not, and the panel slides
-               away from the content it is supposed to sit beside, it looked
-               unglued because it was measured against a different thing.
+            /* Left inset is deliberately much larger than the right: the panel
+               sits inboard of the page edge while the headline still runs out
+               to the same 80px margin as every other section.
 
-               The inset now lives on the centred grid below, so the panel
-               keeps its offset from the content column at any width. */
-            padding-left: 60px; padding-right: 60px; padding-top: 24px;
+               DO NOT centre this in a 1280px container. That was tried, to
+               stop the panel drifting on a zoomed-out window, and it squeezed
+               both columns: the panel jumped inward and the headline column
+               lost enough width to wrap from three lines to four and run off
+               the bottom of the section. The drift is handled by the
+               max-width on .ds-volume-section instead, which only engages far
+               wider than any normal window. */
+            padding-left: 192px; padding-right: 80px; padding-top: 24px;
             /* Tight to the feature cards. The demo and its caption are this
                section's payoff; 90px of trough under them made the cards read
                as an unrelated block rather than the continuation they are. */
@@ -230,14 +242,6 @@ export default async function Home({ searchParams }: PageProps) {
         }
         @media (min-width: 1240px) {
           .ds-volume-grid {
-            /* Same centred container as the hero, so the two sections agree
-               about where the page actually is. */
-            max-width: 1280px;
-            margin-left: auto;
-            margin-right: auto;
-            /* The mockup's inboard offset, now relative to the content column
-               rather than the window. */
-            padding-left: 132px;
             /* Demo holds a fixed readable width on the left; the headline takes
                everything else. A generous gap is what keeps the two halves from
                reading as one crowded row. */
