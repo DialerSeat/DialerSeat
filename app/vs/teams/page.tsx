@@ -238,7 +238,7 @@ export default function TeamsComparisonPage() {
               Remote and offshore agents
             </h2>
             <p style={{ fontSize: 15, lineHeight: 1.8, color: MUTED, marginTop: 12, maxWidth: 780 }}>
-              At $95–$250 per seat per month, an offshore floor costs more in software than in wages,
+              At $95-$250 per seat per month, an offshore floor costs more in software than in wages,
               which is why most teams never build one. At $35 per week the arithmetic changes.
             </p>
             <ul style={{ margin: '16px 0 0', paddingLeft: 17, fontSize: 14.5, lineHeight: 1.85, maxWidth: 800 }}>

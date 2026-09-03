@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const brandName = String(body.brand_name).trim()
     if (!brandName || brandName.length < 2 || brandName.length > 60) {
       return NextResponse.json(
-        { success: false, error: 'Brand name must be 2–60 characters.' },
+        { success: false, error: 'Brand name must be 2-60 characters.' },
         { status: 400 }
       )
     }

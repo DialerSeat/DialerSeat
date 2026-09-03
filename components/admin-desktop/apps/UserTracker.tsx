@@ -544,7 +544,7 @@ export default function UserTrackerApp() {
               )}
               <span style={{ fontSize: 11, color: C.faint, marginLeft: 'auto' }}>
                 {applied
-                  ? `Showing ${fmtDate(applied.from)}, ${fmtDate(applied.to)}, inclusive`
+                  ? `Showing ${fmtDate(applied.from)} to ${fmtDate(applied.to)}, inclusive`
                   : 'Pick two dates. Both days are included.'}
               </span>
             </div>

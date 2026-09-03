@@ -147,13 +147,13 @@ export async function POST(req: NextRequest) {
 
   if (!brandName || brandName.length < 2 || brandName.length > 60) {
     return NextResponse.json(
-      { error: 'invalid_brand_name', detail: 'Brand name must be 2–60 characters.' },
+      { error: 'invalid_brand_name', detail: 'Brand name must be 2-60 characters.' },
       { status: 400 }
     )
   }
   if (!subdomain || !SLUG_RE.test(subdomain)) {
     return NextResponse.json(
-      { error: 'invalid_subdomain', detail: 'Subdomain must be 3–30 chars, lowercase letters/digits/hyphens.' },
+      { error: 'invalid_subdomain', detail: 'Subdomain must be 3-30 chars, lowercase letters/digits/hyphens.' },
       { status: 400 }
     )
   }

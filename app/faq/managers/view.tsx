@@ -177,10 +177,10 @@ export default function View() {
             <h3>You already run a floor. You already pay per seat somewhere.</h3>
 
             <p>
-              Most agency dialers charge $99–$199 per seat per month, locked
+              Most agency dialers charge $99-$199 per seat per month, locked
               into contracts, with onboarding fees, with admin fees, with
               whatever else they came up with last quarter. Five agents on the
-              floor and you&apos;re paying $750–$1,000 a month before anyone
+              floor and you&apos;re paying $750-$1,000 a month before anyone
               has dialed a single number.
             </p>
 

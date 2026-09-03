@@ -29,8 +29,8 @@ const features = [
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: false },
   { feature: 'Weekly billing option', dialerseat: true, competitor: false },
   { feature: 'No annual contract required', dialerseat: true, competitor: true },
-  { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$129–$169/mo' },
-  { feature: 'AI add-on stacks on top of seat price', dialerseat: false, competitor: '+$59–$79/seat' },
+  { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$129-$169/mo' },
+  { feature: 'AI add-on stacks on top of seat price', dialerseat: false, competitor: '+$59-$79/seat' },
   { feature: 'Setup fee', dialerseat: '$0', competitor: 'Not published' },
   { feature: 'Named dialer modes (power/predictive/etc.)', dialerseat: 'Preview, Power, Progressive, Predictive', competitor: 'Not specified anywhere on their site' },
   { feature: 'Predictive dialer (multi-line)', dialerseat: true, competitor: 'Not specified' },
@@ -294,13 +294,13 @@ export default function VsHookedCrmView() {
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">PRICING</div>
-          <h2 className="vs-section-h2">$35 a week, flat, versus $129–$169 a month plus add-ons.</h2>
+          <h2 className="vs-section-h2">$35 a week, flat, versus $129-$169 a month plus add-ons.</h2>
           <p className="vs-section-lede">
             Hooked CRM's published pricing is genuinely more transparent than most legacy dialers 
             real numbers, no demo required to see them. Their per-seat price actually drops as your
-            team grows: $169/seat at 1–20 seats, $149/seat at 21–49, $129/seat at 50–99, custom
+            team grows: $169/seat at 1-20 seats, $149/seat at 21-49, $129/seat at 50-99, custom
             above that. The catch is what's not in the base price: Tacklebox AI (their AI coaching
-            and reporting layer) is a separate $59–$79/seat add-on, and calls, phone numbers, API
+            and reporting layer) is a separate $59-$79/seat add-on, and calls, phone numbers, API
             requests, and recording storage are all billed on top by usage. DialerSeat™ is $35/week,
             flat, cancel anytime: every dialer mode, AI or not, included at that one price.
           </p>
@@ -333,7 +333,7 @@ export default function VsHookedCrmView() {
                 <span className="price-card-big">$129+</span>
                 <span className="price-card-suffix">/seat/month</span>
               </div>
-              <div className="price-card-monthly">Starter tier is $169/seat. Tacklebox AI is $59–$79/seat extra.</div>
+              <div className="price-card-monthly">Starter tier is $169/seat. Tacklebox AI is $59-$79/seat extra.</div>
               <ul className="price-card-list">
                 <li className="bad"><span className="cross">✕</span> AI features cost extra, per seat</li>
                 <li className="bad"><span className="cross">✕</span> Per-minute call charges from $0.042/min</li>
@@ -394,7 +394,7 @@ export default function VsHookedCrmView() {
           <h2 className="vs-section-h2">Credit where it's due, growing your team doesn't cost you more per seat.</h2>
           <p className="vs-section-lede">
             Unlike ReadyMode or Five9, Hooked CRM's per-seat price goes down as headcount grows,
-            not up: $169 at 1–20 seats, down to $129 at 50–99. That's a genuinely fair structure
+            not up: $169 at 1-20 seats, down to $129 at 50-99. That's a genuinely fair structure
             for a growing team. What it doesn't include is whitelabel: we found no whitelabel or
             reseller program anywhere on their site. DialerSeat™ Manager+ is a flat $75/month
             add-on with full whitelabel included, on top of a price that never changes with seats
@@ -465,7 +465,7 @@ export default function VsHookedCrmView() {
             <div className="win-card">
               <div className="win-card-title">4. AI features included, not upsold</div>
               <p className="win-card-body">
-                No separate AI tier to unlock. Hooked CRM's Tacklebox AI is a $59–$79/seat add-on
+                No separate AI tier to unlock. Hooked CRM's Tacklebox AI is a $59-$79/seat add-on
                 stacked on top of every plan, including their top published tier.
               </p>
             </div>

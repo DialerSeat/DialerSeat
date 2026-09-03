@@ -19,7 +19,7 @@ import { isCallableNow } from '@/lib/callingWindow'
 // So the integrity of the table is asserted mechanically instead.
 // =============================================================================
 
-describe('AREA_CODES integrity — the checks a human cannot do by dialing', () => {
+describe('AREA_CODES integrity: the checks a human cannot do by dialing', () => {
   // THE MOST IMPORTANT TEST IN THIS FILE.
   //
   // callingWindow derives a state from the area code, then looks that state up
@@ -116,7 +116,7 @@ describe('AREA_CODES integrity — the checks a human cannot do by dialing', () 
   })
 })
 
-describe('classifyAreaCode — the null that used to mean four different things', () => {
+describe('classifyAreaCode: the null that used to mean four different things', () => {
   it('places US states', () => {
     expect(classifyAreaCode('336')).toEqual({ state: 'NC', region: 'southeast', kind: 'us' })
     expect(classifyAreaCode('304')).toMatchObject({ kind: 'us', state: 'WV' })
@@ -165,7 +165,7 @@ describe('classifyAreaCode — the null that used to mean four different things'
   })
 })
 
-describe('the end-to-end path — area code to a dialing decision', () => {
+describe('the end-to-end path: area code to a dialing decision', () => {
   // The integration that actually matters. A lead with NO state column and a
   // previously-missing area code must now resolve and be dialable, because
   // that is the entire bug: "leads should always be dialable, just take the

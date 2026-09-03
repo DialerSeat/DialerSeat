@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             success: false,
-            error: 'Code must be 4–32 chars, letters/numbers/dash/underscore only',
+            error: 'Code must be 4-32 chars, letters/numbers/dash/underscore only',
           },
           { status: 400 }
         )

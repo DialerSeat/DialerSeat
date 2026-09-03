@@ -36,7 +36,7 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
   process.exit(1)
 }
 if (!process.env.GMAIL_TOKEN_ENCRYPTION_KEY) {
-  console.error('Missing GMAIL_TOKEN_ENCRYPTION_KEY — set it before running.')
+  console.error('Missing GMAIL_TOKEN_ENCRYPTION_KEY, set it before running.')
   process.exit(1)
 }
 

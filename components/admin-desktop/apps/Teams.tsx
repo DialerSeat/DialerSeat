@@ -374,7 +374,7 @@ function TeamsTab() {
             { key: 'revenue', label: 'Revenue' },
             { key: 'members', label: 'Members' },
             { key: 'newest', label: 'Newest' },
-            { key: 'name', label: 'A–Z' },
+            { key: 'name', label: 'A-Z' },
           ] as const).map(o => (
             <button
               key={o.key}
@@ -879,7 +879,7 @@ function CampaignsTab() {
             { key: 'newest', label: 'Newest' },
             { key: 'leads', label: 'Leads' },
             { key: 'teams', label: 'Teams' },
-            { key: 'name', label: 'A–Z' },
+            { key: 'name', label: 'A-Z' },
           ] as const).map(o => (
             <button
               key={o.key}

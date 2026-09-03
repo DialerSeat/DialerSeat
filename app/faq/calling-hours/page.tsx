@@ -12,7 +12,7 @@ import { STATE_TIMEZONES } from '@/lib/timezones'
 export const metadata: Metadata = {
   title: 'Telemarketing Calling Hours by State: What DialerSeat Enforces | DialerSeat',
   description:
-    'The federal TCPA window is 8am–9pm in the lead’s local time, not yours. DialerSeat enforces 9am–9pm per lead, server-side, using the timezone of the number being called. Which states are stricter, and what that means for your list.',
+    'The federal TCPA window is 8am-9pm in the lead’s local time, not yours. DialerSeat enforces 9am-9pm per lead, server-side, using the timezone of the number being called. Which states are stricter, and what that means for your list.',
   alternates: { canonical: 'https://dialerseat.com/faq/calling-hours' },
   openGraph: {
     title: 'Telemarketing Calling Hours by State',
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Telemarketing Calling Hours by State',
     description:
-      'The federal window is 8am–9pm in the LEAD’s local time. DialerSeat enforces 9am–9pm per lead, server-side.',
+      'The federal window is 8am-9pm in the LEAD’s local time. DialerSeat enforces 9am-9pm per lead, server-side.',
   },
 }
 
@@ -48,7 +48,7 @@ const FAQS = [
   {
     question: 'Do some states have stricter calling hours than the federal rule?',
     answer:
-      'Yes. Florida and Maryland are commonly cited at 8am–8pm, Louisiana and Alabama restrict Sunday solicitation, Wisconsin bans Sunday telemarketing under its no-call statute, and Texas applies a narrower Sunday window. Several states have passed “mini-TCPA” laws since 2021 with their own hours, holiday and consent rules. DialerSeat does not currently enforce these state-specific variations automatically, it enforces the 9am–9pm baseline. Meeting stricter state law is your responsibility.',
+      'Yes. Florida and Maryland are commonly cited at 8am-8pm, Louisiana and Alabama restrict Sunday solicitation, Wisconsin bans Sunday telemarketing under its no-call statute, and Texas applies a narrower Sunday window. Several states have passed “mini-TCPA” laws since 2021 with their own hours, holiday and consent rules. DialerSeat does not currently enforce these state-specific variations automatically, it enforces the 9am-9pm baseline. Meeting stricter state law is your responsibility.',
   },
   {
     question: 'Can I turn the calling window off?',
@@ -85,12 +85,12 @@ const ZONE_LABELS: Record<string, string> = {
 }
 
 const STRICTER = [
-  { state: 'Florida', rule: 'Commonly cited at 8:00am–8:00pm' },
-  { state: 'Maryland', rule: 'Stop the Spam Calls Act: 8:00am–8:00pm' },
+  { state: 'Florida', rule: 'Commonly cited at 8:00am-8:00pm' },
+  { state: 'Maryland', rule: 'Stop the Spam Calls Act: 8:00am-8:00pm' },
   { state: 'Alabama', rule: 'Sunday solicitation prohibited' },
   { state: 'Louisiana', rule: 'Sunday solicitation prohibited' },
   { state: 'Wisconsin', rule: 'Sunday telemarketing banned under the state no-call statute' },
-  { state: 'Texas', rule: 'Narrower Sunday window, commonly reported as noon–9:00pm' },
+  { state: 'Texas', rule: 'Narrower Sunday window, commonly reported as noon-9:00pm' },
 ]
 
 export default function Page() {
@@ -125,7 +125,7 @@ export default function Page() {
           <div className="exp-section-label">▸ THE FEDERAL RULE</div>
           <h2>8:00am to 9:00pm, in the lead&apos;s time zone.</h2>
           <p>
-            The TCPA sets the outer boundary at 8:00am–9:00pm <em>local to the
+            The TCPA sets the outer boundary at 8:00am-9:00pm <em>local to the
             called party</em>. Not local to the agent, not local to the company,
             not local to wherever the server is.
           </p>
@@ -195,7 +195,7 @@ export default function Page() {
                       {states.sort().join(', ')}
                     </td>
                     <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', whiteSpace: 'nowrap', color: '#4ade80' }}>
-                      9am–9pm local
+                      9am-9pm local
                     </td>
                   </tr>
                 ))}
@@ -234,7 +234,7 @@ export default function Page() {
             color: '#c4c8d8',
           }}>
             <strong>Read this part carefully.</strong> DialerSeat enforces the
-            9am–9pm baseline. It does <em>not</em> currently apply these
+            9am-9pm baseline. It does <em>not</em> currently apply these
             state-specific variations automatically, and this page is a starting
             point rather than legal advice: state statutes change, and the
             summaries above are drawn from secondary sources. If your list is

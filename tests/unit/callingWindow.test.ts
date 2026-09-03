@@ -27,7 +27,7 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-describe('isCallableNow — inside and outside the window', () => {
+describe('isCallableNow: inside and outside the window', () => {
   it('allows a mid-morning call to an Eastern lead', () => {
     at('2026-08-05T14:00:00Z') // 10:00 EDT
     const r = isCallableNow({ phone: '+13365550142', state: 'NC' })
@@ -54,7 +54,7 @@ describe('isCallableNow — inside and outside the window', () => {
   })
 })
 
-describe('isCallableNow — the window is the LEAD\'s, not the agent\'s', () => {
+describe('isCallableNow: the window is the LEAD\'s, not the agent\'s', () => {
   it('can allow one lead and block another at the same instant', () => {
     // 13:30 UTC is 09:30 Eastern but only 08:30 Central. An agent dialing both
     // at this moment may legally call the first and not the second — this is
@@ -81,7 +81,7 @@ describe('isCallableNow — the window is the LEAD\'s, not the agent\'s', () => 
   })
 })
 
-describe('isCallableNow — retryAfter (the bug that fired 4 hours early)', () => {
+describe('isCallableNow: retryAfter (the bug that fired 4 hours early)', () => {
   it('returns 9am in the LEAD\'s timezone, not 9am UTC', () => {
     // The original helpers built a Date then called setHours/setDate, which
     // operate in the RUNTIME's zone — UTC on Vercel. "Tomorrow 9am Eastern"
@@ -113,7 +113,7 @@ describe('isCallableNow — retryAfter (the bug that fired 4 hours early)', () =
   })
 })
 
-describe('isCallableNow — fails closed', () => {
+describe('isCallableNow: fails closed', () => {
   it('refuses when the lead location cannot be established', () => {
     at('2026-08-05T14:00:00Z') // a time that is fine everywhere in the US
     // 999 is not an assigned US area code, so neither the state column nor
@@ -132,7 +132,7 @@ describe('isCallableNow — fails closed', () => {
   })
 })
 
-describe('isCallableNow — holidays and Sundays are dialable', () => {
+describe('isCallableNow: holidays and Sundays are dialable', () => {
   it('allows a Sunday call inside the hours', () => {
     // 2026-08-09 is a Sunday. Policy is explicitly hours-only: whether to dial
     // Sundays or holidays is the operator's call, not this module's.
@@ -141,7 +141,7 @@ describe('isCallableNow — holidays and Sundays are dialable', () => {
   })
 })
 
-describe('isCallableNow — override', () => {
+describe('isCallableNow: override', () => {
   it('allows an otherwise-blocked call when overrideWindow is set', () => {
     at('2026-08-05T12:00:00Z') // too early
     const r = isCallableNow({ phone: '+13365550142', state: 'NC' }, { overrideWindow: true })
@@ -171,7 +171,7 @@ describe('isCallableNow — override', () => {
 // An agent told to wait for a calling window will wait. If the real problem is
 // a seven-digit phone number, waiting never helps — so these three causes must
 // report as three different problems, not one.
-describe('isCallableNow — unreachable leads report why', () => {
+describe('isCallableNow: unreachable leads report why', () => {
   it('says the phone is missing, not that the window is closed', () => {
     const r = isCallableNow({ phone: '', state: null })
     expect(r.allowed).toBe(false)
@@ -201,7 +201,7 @@ describe('isCallableNow — unreachable leads report why', () => {
   })
 })
 
-describe('isImpossibleUsNumber — lenient, but realistic', () => {
+describe('isImpossibleUsNumber: lenient, but realistic', () => {
   // The point of this check is the leads that pass every other test: right
   // length, right shape, imports cleanly, sits in the queue forever burning a
   // call attempt every pass because no carrier can route it.
@@ -234,7 +234,7 @@ describe('isImpossibleUsNumber — lenient, but realistic', () => {
     expect(isImpossibleUsNumber('9995550142')).toBe(false)
   })
 
-  it('ignores wrong-length numbers — that is a separate verdict', () => {
+  it('ignores wrong-length numbers: that is a separate verdict', () => {
     expect(isImpossibleUsNumber('5551234')).toBe(false)
     expect(isImpossibleUsNumber('')).toBe(false)
   })

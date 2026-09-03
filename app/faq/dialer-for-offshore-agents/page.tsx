@@ -63,7 +63,7 @@ const FAQS = [
   {
     question: 'Does an offshore agent cost more per seat?',
     answer:
-      'No. This is the difference that makes an offshore floor viable at all: at $95–$250 per seat per month on other platforms, the software costs more than the wage, so the model does not work. At $35 per week it does.',
+      'No. This is the difference that makes an offshore floor viable at all: at $95-$250 per seat per month on other platforms, the software costs more than the wage, so the model does not work. At $35 per week it does.',
   },
   {
     question: 'How do calling hours work when the agent is in a different timezone?',

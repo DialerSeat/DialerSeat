@@ -511,7 +511,7 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
               You also give up a clean conscience about the dropped calls.
               Even a perfectly-tuned predictive campaign is going to abandon
               some calls. The legal cap is 3%, the practical target is
-              1–2%, and that means out of every 100 humans who pick up, one
+              1-2%, and that means out of every 100 humans who pick up, one
               or two of them hear silence and a click. That&apos;s the
               tradeoff that bought you the throughput, and there&apos;s no
               way around it.
@@ -539,7 +539,7 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
               notice a problem.
             </p>
             <ul className="dm-bullets">
-              <li>Per-campaign lines-per-agent setting (1–5). Default 1.5–3 depending on campaign maturity.</li>
+              <li>Per-campaign lines-per-agent setting (1-5). Default 1.5-3 depending on campaign maturity.</li>
               <li>Per-agent lines override. If you want to run 1.5 while the rest of the team runs 2.0, you can.</li>
               <li>Server-side controller fires lines on a 5-second heartbeat. Predictable cadence, no client-side guesswork.</li>
               <li>30-day rolling abandon-rate calculation per campaign, recomputed every controller tick.</li>

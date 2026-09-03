@@ -228,8 +228,8 @@ export default function View() {
             <div className="wl-math">
               <div className="wl-math-title">OPTION 1, BUILD YOUR OWN DIALER</div>
               <div className="wl-math-row">
-                <span className="wl-math-label">Engineering (1 senior, 6–12 mo)</span>
-                <span className="wl-math-val">$150,000–$300,000</span>
+                <span className="wl-math-label">Engineering (1 senior, 6-12 mo)</span>
+                <span className="wl-math-val">$150,000-$300,000</span>
               </div>
               <div className="wl-math-row">
                 <span className="wl-math-label">Telnyx / Twilio infrastructure</span>
@@ -249,15 +249,15 @@ export default function View() {
               <div className="wl-math-title">OPTION 2, LICENSE A WHITE-LABEL DIALER FROM ELSEWHERE</div>
               <div className="wl-math-row">
                 <span className="wl-math-label">Typical platform license</span>
-                <span className="wl-math-val">$500–$2,000/mo</span>
+                <span className="wl-math-val">$500-$2,000/mo</span>
               </div>
               <div className="wl-math-row">
                 <span className="wl-math-label">+ per-seat fees on top</span>
-                <span className="wl-math-val">$50–$150/seat/mo</span>
+                <span className="wl-math-val">$50-$150/seat/mo</span>
               </div>
               <div className="wl-math-row">
                 <span className="wl-math-label">+ setup / onboarding fees</span>
-                <span className="wl-math-val">$1,000–$5,000 upfront</span>
+                <span className="wl-math-val">$1,000-$5,000 upfront</span>
               </div>
               <div className="wl-math-row total">
                 <span>Year-one total (10 seats)</span>

@@ -67,7 +67,7 @@ export default function Page() {
             actually work: phone numbers, minutes used, voicemail
             detection, recording storage, additional agents. By the time
             you finish stacking add-ons, a &ldquo;$99 / month&rdquo; plan
-            often runs $300–$600 a month per agent.
+            often runs $300-$600 a month per agent.
           </p>
           <p>
             DialerSeat bundles all of that into one weekly price. Every
@@ -223,7 +223,7 @@ export default function Page() {
                 <summary>Why is &ldquo;multiple numbers&rdquo; such a big deal?</summary>
                 <div className="answer">
                   <p>
-                    Most dialers charge $1–$5 per phone number per month.
+                    Most dialers charge $1-$5 per phone number per month.
                     They cap how many you can have. They charge extra if
                     you want a number in a specific area code. If you
                     want to spoof local presence, display a local number

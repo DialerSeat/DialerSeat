@@ -568,7 +568,7 @@ export default function FaqView() {
               <summary>How does DialerSeat handle TCPA compliance?</summary>
               <div className="faqx-answer">
                 <p>
-                  The dialer enforces the federal calling-time window (8 AM–9 PM in the
+                  The dialer enforces the federal calling-time window (8 AM-9 PM in the
                   lead&apos;s local time zone) on every outbound call. Predictive mode
                   applies the FTC TSR safe-harbor conditions in software, 3% abandon-rate
                   cap, auto-degrade at 2.5% to leave a safety buffer, AMD pre-screen,

@@ -77,7 +77,7 @@ describe('every /api path referenced in source has a route', () => {
 
       for (const raw of matches) {
         const path = raw.slice(1)
-        // Interpolation or a trailing partial segment — not statically checkable.
+        // Interpolation or a trailing partial segment, not statically checkable.
         if (path.includes('${') || path.endsWith('/')) continue
         // Drop query strings and template remnants.
         const clean = path.split('?')[0].split('`')[0]

@@ -7,7 +7,7 @@ import { normalizeToE164 } from '@/lib/phoneNormalize'
 // they are the reason this file exists.
 // =============================================================================
 
-describe('normalizeToE164 — real bugs this catches', () => {
+describe('normalizeToE164: real bugs this catches', () => {
   it('does not double the country code on an 11-digit US number', () => {
     // The original bug: prepending +1 to a string that already led with 1,
     // producing +11XXXXXXXXXX. Telnyx rejected it with a generic format error
@@ -35,7 +35,7 @@ describe('normalizeToE164 — real bugs this catches', () => {
   })
 })
 
-describe('normalizeToE164 — US formatting', () => {
+describe('normalizeToE164: US formatting', () => {
   it('accepts common human formats for a 10-digit number', () => {
     const expected = '+13365550142'
     for (const input of [
@@ -51,7 +51,7 @@ describe('normalizeToE164 — US formatting', () => {
   })
 })
 
-describe('normalizeToE164 — international', () => {
+describe('normalizeToE164: international', () => {
   it('preserves an explicit + and its country code', () => {
     expect(normalizeToE164('+442071838750')).toBe('+442071838750')
     expect(normalizeToE164('+61 2 8015 5555')).toBe('+61280155555')
@@ -62,7 +62,7 @@ describe('normalizeToE164 — international', () => {
   })
 })
 
-describe('normalizeToE164 — empty and malformed', () => {
+describe('normalizeToE164: empty and malformed', () => {
   it('returns null rather than throwing on absent input', () => {
     expect(normalizeToE164(null)).toBeNull()
     expect(normalizeToE164(undefined)).toBeNull()

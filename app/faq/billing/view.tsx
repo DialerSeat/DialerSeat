@@ -174,7 +174,7 @@ export default function BillingFaqView() {
               industry does not let you find out this cheaply. There is no
               annual contract to break, no setup fee to write off and no
               implementation project to walk away from, the incumbents
-              commonly charge $500–$2,000 before the first call is placed.
+              commonly charge $500-$2,000 before the first call is placed.
             </p>
             <p>
               Cancel in Settings and you keep access through the week you have

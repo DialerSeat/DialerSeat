@@ -94,7 +94,7 @@ export class QueueDiagnosisBuilder {
       // which leads to go and fix.
       const allClock = reasons.every(r => CLOCK_CODES.has(r.code))
       if (allClock) {
-        summary = 'All leads are outside their local calling hours (9am–9pm).'
+        summary = 'All leads are outside their local calling hours (9am-9pm).'
       } else {
         const parts = reasons.map(r => `${r.count.toLocaleString()} ${LABELS[r.code]}`)
         const head = parts[0]
