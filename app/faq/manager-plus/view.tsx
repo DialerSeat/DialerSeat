@@ -22,13 +22,13 @@ const DESKTOP_SLIDES: Slide[] = [
     src: '/faq-images/manager-plus/desktop-dialer.png',
     alt: 'DialerSeat dialer terminal in power mode, white-labeled, showing manual dial pad and today\u2019s metrics sidebar',
     caption:
-      'The dialer terminal itself, same white-label skin. Manager+ doesn\u2019t change what agents dial with \u2014 it changes what the owner sees around it.',
+      'The dialer terminal itself, same white-label skin. Manager+ doesn\u2019t change what agents dial with, it changes what the owner sees around it.',
   },
   {
     src: '/faq-images/manager-plus/desktop-os-multiwindow.png',
     alt: 'DialerSeat desktop app showing Teams and Analytics windows open side by side',
     caption:
-      'The desktop app running Teams and Analytics side by side \u2014 a manager watching team performance update live while managing seat codes in the next window.',
+      'The desktop app running Teams and Analytics side by side, a manager watching team performance update live while managing seat codes in the next window.',
   },
 ]
 

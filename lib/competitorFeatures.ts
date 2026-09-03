@@ -34,7 +34,7 @@ export interface CompetitorFeatures {
 
 export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
   "3cx": {
-    lede: "3CX is priced and built around business phone infrastructure \u2014 extensions, ring groups, video conferencing, a PBX for the whole office \u2014 licensed by simultaneous call capacity, not by seat. DialerSeat\u2122 is built for one job: running outbound sales campaigns, with lead lists, dispositions, compliance, and a dialer that speeds up or slows down per campaign. Neither product is trying to be the other.",
+    lede: "3CX is priced and built around business phone infrastructure, extensions, ring groups, video conferencing, a PBX for the whole office, licensed by simultaneous call capacity, not by seat. DialerSeat\u2122 is built for one job: running outbound sales campaigns, with lead lists, dispositions, compliance, and a dialer that speeds up or slows down per campaign. Neither product is trying to be the other.",
     rows: [
   { feature: 'Built for outbound sales campaigns', dialerseat: true, competitor: false },
   { feature: 'Lead lists with dispositions', dialerseat: true, competitor: false },
@@ -54,7 +54,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "aircall": {
-    lede: "Aircall is a well-established, CRM-friendly business phone system, and its Power Dialer \u2014 confirmed directly from Aircall's own product content \u2014 is a genuine power dialer that queues and cycles leads automatically. The catch, sourced from Aircall's own blog and independently corroborated across multiple vendor-pricing analyses: that dialer sits on the Professional plan, $50/seat/month, not the advertised $30/seat Essentials entry. One G2 reviewer put it plainly \u2014 they signed up specifically for the power dialer, found it wasn't on the basic plan, and called the product \"unusable\" without the paid upgrade. DialerSeat\u2122 includes the dialer at the price you're quoted.",
+    lede: "Aircall is a well-established, CRM-friendly business phone system, and its Power Dialer, confirmed directly from Aircall's own product content, is a genuine power dialer that queues and cycles leads automatically. The catch, sourced from Aircall's own blog and independently corroborated across multiple vendor-pricing analyses: that dialer sits on the Professional plan, $50/seat/month, not the advertised $30/seat Essentials entry. One G2 reviewer put it plainly: they signed up specifically for the power dialer, found it wasn't on the basic plan, and called the product \"unusable\" without the paid upgrade. DialerSeat\u2122 includes the dialer at the price you're quoted.",
     rows: [
   { feature: 'Public per-seat pricing', dialerseat: true, competitor: 'Numbers only on third-party blogs, not their own pricing page' },
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: 'Not specified' },
@@ -104,7 +104,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "cloudtalk": {
-    lede: "CloudTalk shows up at the top of nearly every \"best cold calling dialer\" roundup for 2026, and it's a genuinely solid, broad cloud communications platform with strong CRM integrations. The catch, confirmed directly from CloudTalk's own published add-on menu: the seat price gets you a phone system, not a dialer. Power Dialer is a further $15/user/month, Parallel Dialer (multi-line) is a further $39/user/month \u2014 both stacked on top of the base seat. DialerSeat\u2122 includes every dialer mode in the one price.",
+    lede: "CloudTalk shows up at the top of nearly every \"best cold calling dialer\" roundup for 2026, and it's a genuinely solid, broad cloud communications platform with strong CRM integrations. The catch, confirmed directly from CloudTalk's own published add-on menu: the seat price gets you a phone system, not a dialer. Power Dialer is a further $15/user/month, Parallel Dialer (multi-line) is a further $39/user/month, both stacked on top of the base seat. DialerSeat\u2122 includes every dialer mode in the one price.",
     rows: [
   { feature: 'Public per-seat pricing', dialerseat: true, competitor: true },
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: true },
@@ -129,7 +129,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "convoso": {
-    lede: "Convoso earns its reputation with high-volume outbound teams \u2014 four dialer modes, claimed 97% AMD accuracy, and dedicated caller ID reputation management (their \"Ignite\" tooling). It's built for contact centers with 20+ agents running custom-quoted, usage-billed campaigns. DialerSeat\u2122 offers the same four dialer modes at a flat, published price with no seat minimum \u2014 built for teams that want to start with one seat and grow, not commit to a call-center-scale contract up front.",
+    lede: "Convoso earns its reputation with high-volume outbound teams: four dialer modes, claimed 97% AMD accuracy, and dedicated caller ID reputation management (their \"Ignite\" tooling). It's built for contact centers with 20+ agents running custom-quoted, usage-billed campaigns. DialerSeat\u2122 offers the same four dialer modes at a flat, published price with no seat minimum: built for teams that want to start with one seat and grow, not commit to a call-center-scale contract up front.",
     rows: [
   { feature: 'Public per-seat pricing', dialerseat: true, competitor: false },
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: false },
@@ -154,7 +154,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "dialpad": {
-    lede: "Dialpad shows up frequently in \"best dialer\" roundups, largely on the strength of its AI transcription and coaching tools. Worth knowing before you sign up: those roundups are usually describing Dialpad's AI features, not its dialer. The core Dialpad Connect phone plans (Standard $15, Pro $25, Enterprise $35 per user/month) don't include a power dialer at any tier \u2014 multiple independent pricing breakdowns confirm it, listing \"Power Dialer\" as available only inside the separate Dialpad Sell product line, itself starting around $39/user/month. DialerSeat\u2122 is one product with the dialer already in it.",
+    lede: "Dialpad shows up frequently in \"best dialer\" roundups, largely on the strength of its AI transcription and coaching tools. Worth knowing before you sign up: those roundups are usually describing Dialpad's AI features, not its dialer. The core Dialpad Connect phone plans (Standard $15, Pro $25, Enterprise $35 per user/month) don't include a power dialer at any tier: multiple independent pricing breakdowns confirm it, listing \"Power Dialer\" as available only inside the separate Dialpad Sell product line, itself starting around $39/user/month. DialerSeat\u2122 is one product with the dialer already in it.",
     rows: [
   { feature: 'Public per-seat pricing', dialerseat: true, competitor: true },
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: true },
@@ -180,7 +180,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "five9": {
-    lede: "Five9 is a market leader in enterprise contact-center-as-a-service. They serve large call centers with hundreds or thousands of seats, complex IVR routing, multi-channel engagement, and deep workforce management. That's a real product for a real audience. But for solo agents and small-to-mid sales teams that just need outbound dialing, it's overbuilt \u2014 and overpriced. DialerSeat\u2122 is the outbound dialer without the enterprise tax.",
+    lede: "Five9 is a market leader in enterprise contact-center-as-a-service. They serve large call centers with hundreds or thousands of seats, complex IVR routing, multi-channel engagement, and deep workforce management. That's a real product for a real audience. But for solo agents and small-to-mid sales teams that just need outbound dialing, it's overbuilt, and overpriced. DialerSeat\u2122 is the outbound dialer without the enterprise tax.",
     rows: [
   { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$175-$325/mo, contract' },
   { feature: 'Weekly billing', dialerseat: true, competitor: false },
@@ -208,7 +208,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "hookedcrm": {
-    lede: "Hooked CRM's calling workspace, CRM platform, and Tacklebox AI product pages are genuinely strong on inbound call handling, automatic lead creation, AI-assisted notes, and supervisor tools like monitor, whisper, and barge. What none of their public pages describe is a named outbound dialing mode \u2014 no predictive, power, or progressive dialer terminology anywhere on their site, unlike every other dialer in this category. DialerSeat\u2122 is built specifically for outbound: four dialer modes, lead lists, and dispositions, all included.",
+    lede: "Hooked CRM's calling workspace, CRM platform, and Tacklebox AI product pages are genuinely strong on inbound call handling, automatic lead creation, AI-assisted notes, and supervisor tools like monitor, whisper, and barge. What none of their public pages describe is a named outbound dialing mode: no predictive, power, or progressive dialer terminology anywhere on their site, unlike every other dialer in this category. DialerSeat\u2122 is built specifically for outbound: four dialer modes, lead lists, and dispositions, all included.",
     rows: [
   { feature: 'Public per-seat pricing', dialerseat: true, competitor: true },
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: false },
@@ -236,7 +236,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "justcall": {
-    lede: "JustCall's $29/user/month Team plan is real and gets you unlimited calling, SMS, and 100+ CRM integrations \u2014 but power and predictive dialing aren't included at that price; you need the Pro tier ($49/user/month) or higher. JustCall also runs the sales dialer as a genuinely separate mobile app from its general calling app \u2014 their own help center flags the two aren't interchangeable. DialerSeat\u2122 is one app, one price, dialer modes included from the first seat.",
+    lede: "JustCall's $29/user/month Team plan is real and gets you unlimited calling, SMS, and 100+ CRM integrations, but power and predictive dialing aren't included at that price; you need the Pro tier ($49/user/month) or higher. JustCall also runs the sales dialer as a genuinely separate mobile app from its general calling app, their own help center flags the two aren't interchangeable. DialerSeat\u2122 is one app, one price, dialer modes included from the first seat.",
     rows: [
   { feature: 'Public per-seat pricing', dialerseat: true, competitor: true },
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: true },
@@ -261,13 +261,13 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "kixie": {
-    lede: "Kixie holds a strong 4.8/5 on G2 across 800+ reviews, and its local presence and CRM-embedded workflow are real strengths for HubSpot- and Salesforce-native teams. Worth knowing going in: Kixie doesn't offer predictive dialing by design \u2014 their own content frames Multi-line PowerCall as an alternative that avoids predictive dialing's abandoned-call risk, a legitimate compliance-minded choice, not a gap. What is a gap is price structure: multi-line dialing, AI voice detection, and full minute allotments each add cost on top of the entry tier. DialerSeat\u2122 includes predictive, power, progressive, and preview dialing in one flat price.",
+    lede: "Kixie holds a strong 4.8/5 on G2 across 800+ reviews, and its local presence and CRM-embedded workflow are real strengths for HubSpot- and Salesforce-native teams. Worth knowing going in: Kixie doesn't offer predictive dialing by design: their own content frames Multi-line PowerCall as an alternative that avoids predictive dialing's abandoned-call risk, a legitimate compliance-minded choice, not a gap. What is a gap is price structure: multi-line dialing, AI voice detection, and full minute allotments each add cost on top of the entry tier. DialerSeat\u2122 includes predictive, power, progressive, and preview dialing in one flat price.",
     rows: [
   { feature: 'Public per-seat pricing', dialerseat: true, competitor: false },
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: 'Free trial exists; full pricing requires sales' },
   { feature: 'Weekly billing option', dialerseat: true, competitor: false },
   { feature: 'No annual contract required', dialerseat: true, competitor: 'Billed quarterly; Trustpilot reviewers report lock-in at renewal' },
-  { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$35\u2013$95+/mo by tier' },
+  { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$35-$95+/mo by tier' },
   { feature: 'Multi-line dialing included in base price', dialerseat: true, competitor: 'Requires PowerDialer tier, $95+/mo' },
   { feature: 'Predictive dialer', dialerseat: true, competitor: false },
   { feature: 'Power dialer', dialerseat: true, competitor: true },
@@ -284,7 +284,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "mojo": {
-    lede: "Mojo Dialer ($149/mo with the mandatory Agent Access fee) gives you their 3-line dialer plus a real-estate-tuned interface and integrations. Their Single Line Dialer runs $99\u2013109/mo with that same fee and drops multi-line entirely. The product is solid but its DNA is real estate prospecting \u2014 neighborhood searches, FSBO/expired tools, MLS integrations. DialerSeat\u2122 is built for any outbound team in any industry, for $35/week, cancel anytime.",
+    lede: "Mojo Dialer ($149/mo with the mandatory Agent Access fee) gives you their 3-line dialer plus a real-estate-tuned interface and integrations. Their Single Line Dialer runs $99-109/mo with that same fee and drops multi-line entirely. The product is solid but its DNA is real estate prospecting: neighborhood searches, FSBO/expired tools, MLS integrations. DialerSeat\u2122 is built for any outbound team in any industry, for $35/week, cancel anytime.",
     rows: [
   { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$99-$149/mo + mandatory fee' },
   { feature: 'Weekly billing', dialerseat: true, competitor: false },
@@ -308,7 +308,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "orum": {
-    lede: "Credit where due: Orum&apos;s AI-driven parallel dialing \u2014 up to 5: 10 lines at once \u2014 is a real, effective way to increase raw call volume for teams that can afford it. But it comes at a reported $250 to $800 per user per month, annual billing only, a 3-seat minimum, and pricing you can only get by requesting a demo. Reviewers also consistently flag a 1-2 second connection lag when a parallel-dialed call bridges to a rep, and numbers getting flagged &ldquo;Spam Likely&rdquo; over time. DialerSeat\u2122 is self-serve, published pricing, one seat minimum, and every dialer mode included from day one.",
+    lede: "Credit where due: Orum&apos;s AI-driven parallel dialing, up to 5: 10 lines at once, is a real, effective way to increase raw call volume for teams that can afford it. But it comes at a reported $250 to $800 per user per month, annual billing only, a 3-seat minimum, and pricing you can only get by requesting a demo. Reviewers also consistently flag a 1-2 second connection lag when a parallel-dialed call bridges to a rep, and numbers getting flagged &ldquo;Spam Likely&rdquo; over time. DialerSeat\u2122 is self-serve, published pricing, one seat minimum, and every dialer mode included from day one.",
     rows: [
   { feature: 'Public per-seat pricing', dialerseat: true, competitor: 'Request-a-quote only' },
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: false },
@@ -331,7 +331,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "phoneburner": {
-    lede: "PhoneBurner is deliberately single-line: agents dial through a list one at a time with voicemail drop and click-to-dial. That's a feature for solo agents who want maximum control. It's a limitation for teams that want predictive multi-line dialing on high-volume cold lists. DialerSeat\u2122 gives you all four modes \u2014 Preview, Power, Progressive, Predictive \u2014 configurable per campaign.",
+    lede: "PhoneBurner is deliberately single-line: agents dial through a list one at a time with voicemail drop and click-to-dial. That's a feature for solo agents who want maximum control. It's a limitation for teams that want predictive multi-line dialing on high-volume cold lists. DialerSeat\u2122 gives you all four modes, Preview, Power, Progressive, Predictive, configurable per campaign.",
     rows: [
   { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$165+/mo, contract for less' },
   { feature: 'Weekly billing', dialerseat: true, competitor: false },
@@ -354,7 +354,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "readymode": {
-    lede: "ReadyMode has been a fixture of the outbound dialer category for years. Their core dialer works well. Where they fall down is delivery model \u2014 opaque pricing, multi-month contracts, setup fees, legacy UI that takes hours to learn. DialerSeat\u2122 keeps the dialer quality and strips the friction.",
+    lede: "ReadyMode has been a fixture of the outbound dialer category for years. Their core dialer works well. Where they fall down is delivery model: opaque pricing, multi-month contracts, setup fees, legacy UI that takes hours to learn. DialerSeat\u2122 keeps the dialer quality and strips the friction.",
     rows: [
   { feature: 'Public per-seat pricing', dialerseat: true, competitor: false },
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: false },
@@ -381,7 +381,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "wavv": {
-    lede: "WAVV is a legitimate dialer with a real trial and real month-to-month billing \u2014 this isn't the \"opaque enterprise pricing\" story. Where the two products diverge is structure: WAVV splits its dialer into three priced tiers, so the calling speed you get depends on which plan you're willing to pay for. DialerSeat\u2122 doesn't tier the dialer \u2014 every seat gets every mode.",
+    lede: "WAVV is a legitimate dialer with a real trial and real month-to-month billing, this isn't the \"opaque enterprise pricing\" story. Where the two products diverge is structure: WAVV splits its dialer into three priced tiers, so the calling speed you get depends on which plan you're willing to pay for. DialerSeat\u2122 doesn't tier the dialer, every seat gets every mode.",
     rows: [
   { feature: 'Public per-seat pricing', dialerseat: true, competitor: true },
   { feature: 'Every dialer mode at one price', dialerseat: true, competitor: false },

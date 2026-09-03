@@ -314,7 +314,7 @@ export default function LogsApp() {
             {/* End-of-stream indicator with cursor */}
             <div style={{ ...S.line, marginTop: 16 }}>
               <span style={{ color: C.textMute }}>{'>'}</span>{' '}
-              <span style={{ color: C.textDim }}>--end of stream--</span>
+              <span style={{ color: C.textDim }}>&middot; end of stream &middot;</span>
             </div>
             <div style={S.line}>
               <span style={{ color: C.textDim }}>admin@dialerseat</span>

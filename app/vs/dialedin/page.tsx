@@ -13,7 +13,7 @@ import {
 const SLUG = 'dialedin'
 
 export const metadata: Metadata = {
-  title: "DialerSeat vs DialedIn (ChaseData) \u2014 Every Mode at One Price",
+  title: "DialerSeat vs DialedIn (ChaseData): Every Mode at One Price",
   description: "DialedIn, formerly ChaseData, starts around $89 per user per month with outbound features arriving further up the tiers. DialerSeat includes predictive, power, progressive and preview at $35 per seat per week.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/dialedin',
@@ -40,7 +40,7 @@ const FAQS = [
   {
     question: "Does DialedIn handle inbound as well?",
     answer:
-      "Yes, and that is a genuine advantage over DialerSeat. DialedIn covers inbound and outbound in one platform. DialerSeat is outbound only \u2014 if you run a blended floor, that difference matters more than price.",
+      "Yes, and that is a genuine advantage over DialerSeat. DialedIn covers inbound and outbound in one platform. DialerSeat is outbound only: if you run a blended floor, that difference matters more than price.",
   },
   {
     question: "Which one includes predictive dialing?",

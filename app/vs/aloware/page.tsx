@@ -13,7 +13,7 @@ import {
 const SLUG = 'aloware'
 
 export const metadata: Metadata = {
-  title: "DialerSeat vs Aloware \u2014 Where the Dialing Actually Lives",
+  title: "DialerSeat vs Aloware: Where the Dialing Actually Lives",
   description: "Aloware starts around $30 per user per month, with dialing capability tiered above it and ad-hoc charges outside the seat price. DialerSeat includes every dialer mode at $35 per seat per week.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/aloware',
@@ -40,7 +40,7 @@ const FAQS = [
   {
     question: "Is Aloware good for CRM-based sales teams?",
     answer:
-      "Yes \u2014 that is what it is built for, and the HubSpot and Pipedrive integration is a genuine strength. If your team works leads inside a CRM and wants calling and texting attached to that workflow, Aloware fits the shape of the job better than a list dialer does.",
+      "Yes: that is what it is built for, and the HubSpot and Pipedrive integration is a genuine strength. If your team works leads inside a CRM and wants calling and texting attached to that workflow, Aloware fits the shape of the job better than a list dialer does.",
   },
   {
     question: "Which is better for high-volume list dialing?",

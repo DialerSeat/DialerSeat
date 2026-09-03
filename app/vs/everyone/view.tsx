@@ -401,7 +401,7 @@ export default function VsEveryoneView() {
               <div className="vs-section-eyebrow">▸ ONE WEEK OF DIALING</div>
               <h3>Nobody else sells a week.</h3>
               <p>
-                Say you want to dial for one week: a push before a deadline, a trial run on a new
+                Say you want to dial for one week: a push before a deadline, a test run on a new
                 list, a single busy stretch. Everywhere else, the smallest thing you can buy is a
                 month, so a week of dialing costs you a month&apos;s subscription. Month to month,
                 on the dialers that actually run multi-line predictive, that&apos;s roughly $120 to

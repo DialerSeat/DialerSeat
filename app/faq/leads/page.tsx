@@ -26,14 +26,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Uploading & Managing Leads: DialerSeat',
     description:
-      'Column auto-detection, consent fields, retry logic, and what happens to leads that fail to import \u2014 the real mechanics of getting a list into a campaign.',
+      'Column auto-detection, consent fields, retry logic, and what happens to leads that fail to import, the real mechanics of getting a list into a campaign.',
     url: 'https://dialerseat.com/faq/leads',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Uploading & Managing Leads: DialerSeat',
-    description: 'Column auto-detection, consent fields, retry logic, and what happens to leads that fail to import \u2014 the real mechanics of getting a list into a campaign.',
+    description: 'Column auto-detection, consent fields, retry logic, and what happens to leads that fail to import, the real mechanics of getting a list into a campaign.',
   },
 }
 

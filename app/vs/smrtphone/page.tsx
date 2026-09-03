@@ -13,8 +13,8 @@ import {
 const SLUG = 'smrtphone'
 
 export const metadata: Metadata = {
-  title: "DialerSeat vs smrtPhone \u2014 Flat Weekly, Not Subscription Plus Credits",
-  description: "smrtPhone stacks three charges: a $62\u2013$104/month subscription, a $42\u2013$75/seat/month dialer add-on, then per-minute credits. DialerSeat is $35 per seat per week with call time included.",
+  title: "DialerSeat vs smrtPhone, Flat Weekly, Not Subscription Plus Credits",
+  description: "smrtPhone stacks three charges: a $62-$104/month subscription, a $42-$75/seat/month dialer add-on, then per-minute credits. DialerSeat is $35 per seat per week with call time included.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/smrtphone',
   },
@@ -40,12 +40,12 @@ const FAQS = [
   {
     question: "Is smrtPhone better for real-estate investors?",
     answer:
-      "If you run Podio or an REI CRM, quite possibly yes. smrtPhone is built for that world and the integration depth is real \u2014 it is a phone system wired into how investors already work, not a generic dialer with a connector bolted on. That is a genuine reason to choose it.",
+      "If you run Podio or an REI CRM, quite possibly yes. smrtPhone is built for that world and the integration depth is real, it is a phone system wired into how investors already work, not a generic dialer with a connector bolted on. That is a genuine reason to choose it.",
   },
   {
     question: "Does smrtPhone have predictive dialing?",
     answer:
-      "No. smrtDialer is single-line or multi-line power dialing up to four lines, which is a different thing \u2014 there is no pacing engine adjusting to your team's answer rate. DialerSeat includes predictive alongside power, progressive and preview.",
+      "No. smrtDialer is single-line or multi-line power dialing up to four lines, which is a different thing, there is no pacing engine adjusting to your team's answer rate. DialerSeat includes predictive alongside power, progressive and preview.",
   },
   {
     question: "What does DialerSeat charge for call time?",

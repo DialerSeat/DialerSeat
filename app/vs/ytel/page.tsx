@@ -13,7 +13,7 @@ import {
 const SLUG = 'ytel'
 
 export const metadata: Metadata = {
-  title: "DialerSeat vs Ytel \u2014 No Platform Fee on Top of Seats",
+  title: "DialerSeat vs Ytel: No Platform Fee on Top of Seats",
   description: "Ytel prices seats around $99 per month on top of a platform fee, which small teams absorb disproportionately. DialerSeat is $35 per seat per week with no platform charge.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/ytel',

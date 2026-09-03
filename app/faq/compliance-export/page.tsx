@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 export const metadata: Metadata = {
   title: 'Compliance Export: Proving It, Not Just Claiming It | DialerSeat',
   description:
-    'How to pull a per-campaign compliance record from DialerSeat: AMD results, abandon flags, dispositions, and call duration by date range, with phone-number redaction on by default \u2014 the actual export tool behind the compliance claims.',
+    'How to pull a per-campaign compliance record from DialerSeat: AMD results, abandon flags, dispositions, and call duration by date range, with phone-number redaction on by default, the actual export tool behind the compliance claims.',
   alternates: {
     canonical: 'https://dialerseat.com/faq/compliance-export',
   },
@@ -26,14 +26,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Compliance Export: DialerSeat',
     description:
-      'Per-campaign, per-date-range export of AMD results, abandon flags, and dispositions \u2014 redacted by default. The receipts behind the compliance claims.',
+      'Per-campaign, per-date-range export of AMD results, abandon flags, and dispositions, redacted by default. The receipts behind the compliance claims.',
     url: 'https://dialerseat.com/faq/compliance-export',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Compliance Export: DialerSeat',
-    description: 'Per-campaign, per-date-range export of AMD results, abandon flags, and dispositions \u2014 redacted by default. The receipts behind the compliance claims.',
+    description: 'Per-campaign, per-date-range export of AMD results, abandon flags, and dispositions, redacted by default. The receipts behind the compliance claims.',
   },
 }
 

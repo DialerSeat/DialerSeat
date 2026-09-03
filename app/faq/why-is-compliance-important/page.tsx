@@ -94,7 +94,7 @@ export default function Page() {
                 <p>If you&apos;re running predictive, you cannot abandon more than 3% of answered calls over any 30-day rolling window. FTC rule. Not negotiable.</p>
               </div>
               <div className="exp-card">
-                <h3>8 AM, 9 PM LOCAL</h3>
+                <h3>8 AM TO 9 PM LOCAL</h3>
                 <p>No outbound calls outside that window in the called party&apos;s time zone. Some states are stricter. We enforce this automatically.</p>
               </div>
               <div className="exp-card">
@@ -161,7 +161,7 @@ export default function Page() {
             </p>
             <div className="exp-cards">
               <div className="exp-card">
-                <h3>HARD 8 AM, 9 PM ENFORCEMENT</h3>
+                <h3>HARD 8 AM TO 9 PM ENFORCEMENT</h3>
                 <p>Every outbound call checks the lead&apos;s local time zone before it fires. Outside the window? Skipped, with a TCPA_BLOCKED disposition. You don&apos;t have to remember.</p>
               </div>
               <div className="exp-card">

@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 export const metadata: Metadata = {
   title: 'Recordings & Your Data: Export, Delete, Retention | DialerSeat',
   description:
-    'How call recordings work day to day, plus the full-account JSON export and permanent account deletion tools \u2014 what\u2019s actually included in each, and how account deletion is protected against accidental use.',
+    'How call recordings work day to day, plus the full-account JSON export and permanent account deletion tools: what\u2019s actually included in each, and how account deletion is protected against accidental use.',
   alternates: {
     canonical: 'https://dialerseat.com/faq/data-and-recordings',
   },

@@ -37,7 +37,7 @@ const FAQS = [
   {
     question: 'Is DialerSeat a replacement for 3CX?',
     answer:
-      'Not necessarily. 3CX is a general business PBX \u2014 extensions, ring groups, video conferencing \u2014 licensed by simultaneous call capacity. DialerSeat is purpose-built for outbound sales campaigns: lead lists, dispositions, a predictive dialer, and TCPA compliance. Many teams run 3CX for company-wide phone infrastructure and DialerSeat specifically for the sales floor\u2019s outbound dialing.',
+      'Not necessarily. 3CX is a general business PBX, extensions, ring groups, video conferencing, licensed by simultaneous call capacity. DialerSeat is purpose-built for outbound sales campaigns: lead lists, dispositions, a predictive dialer, and TCPA compliance. Many teams run 3CX for company-wide phone infrastructure and DialerSeat specifically for the sales floor\u2019s outbound dialing.',
   },
   {
     question: 'How is DialerSeat priced compared to 3CX?',
@@ -47,7 +47,7 @@ const FAQS = [
   {
     question: 'Does 3CX have a predictive dialer for sales campaigns?',
     answer:
-      '3CX is built around general business call routing \u2014 queues, ring groups, IVR \u2014 not a dialer purpose-built for cold outbound sales campaigns. It has no lead list management, no disposition tracking, and no answering-machine detection. DialerSeat includes preview, power, progressive, and multi-line predictive dialing modes built specifically for outbound sales.',
+      '3CX is built around general business call routing, queues, ring groups, IVR, not a dialer purpose-built for cold outbound sales campaigns. It has no lead list management, no disposition tracking, and no answering-machine detection. DialerSeat includes preview, power, progressive, and multi-line predictive dialing modes built specifically for outbound sales.',
   },
   {
     question: 'Does DialerSeat require capacity planning like 3CX\u2019s simultaneous call licensing?',

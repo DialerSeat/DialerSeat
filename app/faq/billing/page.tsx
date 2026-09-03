@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 export const metadata: Metadata = {
   title: 'Billing & Cancellation: How Weekly Billing Actually Works | DialerSeat',
   description:
-    'What actually happens when you cancel, when a payment fails, when you add or remove a seat mid-week, and how weekly billing through Stripe works in practice \u2014 not just the marketing line.',
+    'What actually happens when you cancel, when a payment fails, when you add or remove a seat mid-week, and how weekly billing through Stripe works in practice, not just the marketing line.',
   alternates: {
     canonical: 'https://dialerseat.com/faq/billing',
   },

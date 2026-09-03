@@ -13,8 +13,8 @@ import {
 const SLUG = 'calltools'
 
 export const metadata: Metadata = {
-  title: "DialerSeat vs CallTools \u2014 No Setup Fee, No Sales Call",
-  description: "CallTools runs about $119.99 per user per month with setup fees commonly $500\u2013$1,500 and integration quoted separately. DialerSeat is $35 per seat per week, self-serve, every dialer mode included.",
+  title: "DialerSeat vs CallTools: No Setup Fee, No Sales Call",
+  description: "CallTools runs about $119.99 per user per month with setup fees commonly $500-$1,500 and integration quoted separately. DialerSeat is $35 per seat per week, self-serve, every dialer mode included.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/calltools',
   },
@@ -35,7 +35,7 @@ const FAQS = [
   {
     question: "How much does CallTools cost?",
     answer:
-      "Roughly $119.99 per user per month month-to-month, or about $101.99 on an annual commitment. Those are starting figures \u2014 CallTools prices by quote, and reported setup fees run $500\u2013$1,500 before the first call, with complex CRM integrations quoted separately at $2,000\u2013$5,000. SMS is billed per message on top.",
+      "Roughly $119.99 per user per month month-to-month, or about $101.99 on an annual commitment. Those are starting figures, CallTools prices by quote, and reported setup fees run $500-$1,500 before the first call, with complex CRM integrations quoted separately at $2,000-$5,000. SMS is billed per message on top.",
   },
   {
     question: "Does DialerSeat charge a setup fee?",
@@ -50,7 +50,7 @@ const FAQS = [
   {
     question: "Can I try either without talking to sales?",
     answer:
-      "DialerSeat, yes \u2014 sign up and dial. CallTools is quote-based, so the real number requires a sales conversation.",
+      "DialerSeat, yes, sign up and dial. CallTools is quote-based, so the real number requires a sales conversation.",
   },
 ]
 

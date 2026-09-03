@@ -22,14 +22,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'DialerSeat vs JustCall',
     description:
-      'Predictive and power dialing included at $35/week per seat \u2014 not gated behind a Pro-tier upgrade or a 2-seat minimum.',
+      'Predictive and power dialing included at $35/week per seat, not gated behind a Pro-tier upgrade or a 2-seat minimum.',
     url: 'https://dialerseat.com/vs/justcall',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DialerSeat vs JustCall',
-    description: 'Predictive and power dialing included at $35/week per seat \u2014 not gated behind a Pro-tier upgrade or a 2-seat minimum.',
+    description: 'Predictive and power dialing included at $35/week per seat, not gated behind a Pro-tier upgrade or a 2-seat minimum.',
   },
 }
 
@@ -42,17 +42,17 @@ const FAQS = [
   {
     question: 'Does JustCall\u2019s $29 plan include the sales dialer?',
     answer:
-      "No. JustCall's entry Team plan covers unlimited calling, SMS, and CRM integrations, but the power dialer and predictive dialer require the Pro tier ($49/user/month) or higher. JustCall also runs its Sales Dialer as a separate mobile app from its general calling app \u2014 their own help center notes the two apps aren't interchangeable. DialerSeat includes all dialer modes in one app at $35/week per seat.",
+      "No. JustCall's entry Team plan covers unlimited calling, SMS, and CRM integrations, but the power dialer and predictive dialer require the Pro tier ($49/user/month) or higher. JustCall also runs its Sales Dialer as a separate mobile app from its general calling app, their own help center notes the two apps aren't interchangeable. DialerSeat includes all dialer modes in one app at $35/week per seat.",
   },
   {
     question: 'Does DialerSeat offer whitelabel like JustCall?',
     answer:
-      'Yes \u2014 Manager+ is $75/month flat and includes full whitelabel, with no seat minimum. We found no whitelabel or reseller program anywhere on JustCall\u2019s site. JustCall\u2019s Business tier, which includes HIPAA compliance, requires a 10-seat minimum.',
+      'Yes: Manager+ is $75/month flat and includes full whitelabel, with no seat minimum. We found no whitelabel or reseller program anywhere on JustCall\u2019s site. JustCall\u2019s Business tier, which includes HIPAA compliance, requires a 10-seat minimum.',
   },
   {
     question: 'Does DialerSeat work on mobile like JustCall?',
     answer:
-      'Yes, and it\u2019s one app for the full dialer experience. JustCall does have real, well-built iOS and Android apps, but runs the Sales Dialer as a separate app from its general JustCall calling app \u2014 reps need to know which one to use for which task. DialerSeat installs as a single Progressive Web App with the same dialer modes as desktop.',
+      'Yes, and it\u2019s one app for the full dialer experience. JustCall does have real, well-built iOS and Android apps, but runs the Sales Dialer as a separate app from its general JustCall calling app, reps need to know which one to use for which task. DialerSeat installs as a single Progressive Web App with the same dialer modes as desktop.',
   },
   {
     question: 'Is JustCall\u2019s unlimited calling really unlimited?',

@@ -15,21 +15,21 @@ const SLUG = 'aircall'
 export const metadata: Metadata = {
   title: 'DialerSeat vs Aircall: The Power Dialer Isn\u2019t on the Basic Plan',
   description:
-    'Aircall\u2019s advertised $30/seat Essentials plan doesn\u2019t include the Power Dialer, Salesforce integration, or call monitoring \u2014 all three require the $50/seat Professional tier, plus a 3-license minimum. DialerSeat includes every dialer mode at $35/seat/week.',
+    'Aircall\u2019s advertised $30/seat Essentials plan doesn\u2019t include the Power Dialer, Salesforce integration, or call monitoring: all three require the $50/seat Professional tier, plus a 3-license minimum. DialerSeat includes every dialer mode at $35/seat/week.',
   alternates: {
     canonical: 'https://dialerseat.com/vs/aircall',
   },
   openGraph: {
     title: 'DialerSeat vs Aircall',
     description:
-      'The power dialer, included at $35/week per seat \u2014 not a $50/month Professional-tier unlock with a 3-license minimum.',
+      'The power dialer, included at $35/week per seat, not a $50/month Professional-tier unlock with a 3-license minimum.',
     url: 'https://dialerseat.com/vs/aircall',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DialerSeat vs Aircall',
-    description: 'The power dialer, included at $35/week per seat \u2014 not a $50/month Professional-tier unlock with a 3-license minimum.',
+    description: 'The power dialer, included at $35/week per seat, not a $50/month Professional-tier unlock with a 3-license minimum.',
   },
 }
 
@@ -37,7 +37,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to Aircall on price?',
     answer:
-      "DialerSeat is $35 per seat per week, billed weekly, with the dialer included from the first seat. Aircall's Essentials plan is advertised from $30/user/month, but doesn't include the Power Dialer, Salesforce integration, or live call monitoring \u2014 those require the Professional plan at $50/user/month, and every Aircall plan carries a 3-license minimum. Independently reported transaction data (Vendr) shows real mid-size team costs commonly landing between $2,500 and $4,000/month once add-ons are included.",
+      "DialerSeat is $35 per seat per week, billed weekly, with the dialer included from the first seat. Aircall's Essentials plan is advertised from $30/user/month, but doesn't include the Power Dialer, Salesforce integration, or live call monitoring: those require the Professional plan at $50/user/month, and every Aircall plan carries a 3-license minimum. Independently reported transaction data (Vendr) shows real mid-size team costs commonly landing between $2,500 and $4,000/month once add-ons are included.",
   },
   {
     question: 'Does Aircall\u2019s $30 plan include a power dialer?',
@@ -52,7 +52,7 @@ const FAQS = [
   {
     question: 'Does DialerSeat offer whitelabel like Aircall?',
     answer:
-      'Yes \u2014 Manager+ is $75/month flat and includes full whitelabel, with no license minimum. We found no whitelabel or reseller program anywhere on Aircall\u2019s site. Aircall\u2019s Custom tier, typically requiring 25+ licenses, is quote-based rather than published.',
+      'Yes: Manager+ is $75/month flat and includes full whitelabel, with no license minimum. We found no whitelabel or reseller program anywhere on Aircall\u2019s site. Aircall\u2019s Custom tier, typically requiring 25+ licenses, is quote-based rather than published.',
   },
   {
     question: 'Is Aircall\u2019s list price the real price?',
