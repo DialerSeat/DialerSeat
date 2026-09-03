@@ -73,7 +73,6 @@ interface SubStatus {
   isActive: boolean
   status: string | null
   currentPeriodEnd: string | null
-  trialEnd: string | null
   cancelAtPeriodEnd: boolean
   tier?: 'active' | 'lapsed' | 'new'
   plan?: 'pro' | 'manager_plus' | 'both' | null
@@ -670,13 +669,6 @@ export default function SettingsPage() {
                 </span>
               </div>
 
-              {sub?.status === 'trialing' && sub?.trialEnd && (
-                <div style={rowStyle}>
-                  <span style={labelStyle}>TRIAL ENDS</span>
-                  <span style={valueStyle}>{formatDate(sub.trialEnd)}</span>
-                </div>
-              )}
-
               {sub?.currentPeriodEnd && sub?.tier !== 'lapsed' && (
                 <div style={rowStyle}>
                   <span style={labelStyle}>
@@ -1199,7 +1191,7 @@ function tierStatusLabel(sub: SubStatus | null, wlActive: boolean): string {
 function tierStatusColor(sub: SubStatus | null): string {
   if (!sub) return '#32ff7e'
   if (sub.tier === 'lapsed' && !sub.wlActive) return '#ffaa3e'
-  if (sub.status === 'active' || sub.status === 'trialing') return '#32ff7e'
+  if (sub.status === 'active') return '#32ff7e'
   if (sub.status === 'past_due') return '#ffaa3e'
   if (sub.wlActive) return '#32ff7e'
   return '#ff8888'

@@ -309,20 +309,16 @@ export async function createSeatSubscription(
     // action", so a blind retry loop burns its whole window on something
     // structurally impossible while the agent sits pending. The catch below
     // separates the two.
-    // ── A SEAT NEVER TRIALS ────────────────────────────────────────────
+    // ── A SEAT BILLS FROM DAY ONE ──────────────────────────────────────
     // Stated explicitly rather than left to the default, because the default
-    // is not ours to rely on: a trial configured on the PRICE in the Stripe
-    // dashboard would silently apply to every subscription created against
-    // it, and seats are created against the same price as everything else.
+    // is not ours to rely on: a free period configured on the PRICE in the
+    // Stripe dashboard would silently apply to every subscription created
+    // against it, and seats use the same price as everything else.
     //
-    // The rule is that a seat bills from the day it opens whatever the OWNER
-    // is doing. An owner on their own free trial is being given time to judge
-    // DialerSeat; they are not being given a free floor. Somebody who adds
-    // fifteen agents during a trial has stopped evaluating and started
-    // operating, and the seats are a real cost the moment those agents dial.
-    //
-    // It also removes the obvious exploit: trial, add thirty seats, cancel on
-    // day six, repeat.
+    // The product no longer offers a free period at all, so this is belt and
+    // braces rather than policy. It stays because the failure it prevents is
+    // silent, and because the dashboard is a place someone can change a price
+    // without touching this repo.
     trial_period_days: 0,
     payment_behavior: 'error_if_incomplete',
     proration_behavior: 'none',
@@ -466,20 +462,11 @@ export async function agentPaysForThemselves(agentClerkId: string): Promise<bool
     .from('subscriptions')
     .select('status')
     .eq('user_id', agentClerkId)
-    // ── 'active' ONLY, AND 'trialing' IS EXCLUDED ON PURPOSE ─────────────
-    // This looks like a missing case and is not. An agent on their own free
-    // trial has access, but nobody is paying for it — so treating them as
-    // self-funding would hand the owner a free seat for the length of
-    // somebody else's trial, which is the same exploit the no-trial rule on
-    // seats exists to close, just entered through the agent instead of the
-    // owner.
-    //
-    // The owner is charged from the day they open the seat. When the agent's
-    // trial ends without converting, the seat is already there and nothing
-    // is interrupted — which is a better outcome than a seat that has to be
-    // rescued the moment a trial lapses.
-    //
-    // Do not add 'trialing' here.
+    // ── 'active' ONLY ────────────────────────────────────────────────────
+    // Self-funding means somebody is actually paying. 'active' is the only
+    // status where that is true; past_due is a failed charge and the legacy
+    // 'trialing' rows are all expired. Widening this would hand the owner a
+    // free seat on the strength of an agent subscription nobody is paying.
     .eq('status', 'active')
     .limit(1)
 

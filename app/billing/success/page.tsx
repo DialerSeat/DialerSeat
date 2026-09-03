@@ -51,7 +51,7 @@ export default function BillingSuccessPage() {
   const [countdown, setCountdown] = useState(3)
 
   // ── ASK THE SERVER TO RE-READ STRIPE BEFORE WE SEND THEM ON ────────────
-  // A trial is only entitlement once the card is confirmed (lib/trialCard.ts),
+  // Entitlement requires an active subscription with a confirmed card,
   // and that confirmation reaches us by webhook, which has no deadline. The
   // three-second countdown below is otherwise a race: land on /dashboard
   // before the webhook and the proxy sees `incomplete` and bounces them back

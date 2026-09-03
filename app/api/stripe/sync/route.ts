@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { stripe } from '@/lib/stripe'
-import { persistableStatus } from '@/lib/trialCard'
 import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('stripe/sync')
@@ -10,10 +9,8 @@ const supabase = getServiceClient('stripe/sync')
 // ─────────────────────────────────────────────────────────────────────────
 // PULL THE TRUTH FROM STRIPE, RIGHT NOW
 //
-// The other half of lib/trialCard.ts. That file stops a trial from counting
-// as access until a card is confirmed; this one makes sure the access appears
-// the moment it IS confirmed, rather than whenever the webhook happens to
-// land.
+// Access should appear the moment a payment is confirmed, rather than whenever
+// the webhook happens to land.
 //
 // Without it the fix trades a security hole for a support ticket: somebody
 // finishes checkout, gets bounced to /billing because our row still says
@@ -22,8 +19,9 @@ const supabase = getServiceClient('stripe/sync')
 // already reflects the card.
 //
 // Deliberately NOT trusted to grant anything by itself — it re-reads the
-// subscription from Stripe and runs the same persistableStatus() the webhook
-// runs. The client can ask us to look again; it cannot tell us what to write.
+// subscription from Stripe and writes the status Stripe reports, exactly as
+// the webhook does. The client can ask us to look again; it cannot tell us
+// what to write.
 // ─────────────────────────────────────────────────────────────────────────
 
 export async function POST() {
@@ -46,7 +44,7 @@ export async function POST() {
     }
 
     const subscription = await stripe.subscriptions.retrieve(row.stripe_subscription_id)
-    const status = await persistableStatus(stripe, subscription)
+    const status = subscription.status
 
     if (status !== row.status) {
       const { error } = await supabase

@@ -321,7 +321,7 @@ export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscount
         status: 'all',
         limit: 100,
       })
-      const LIVE = new Set(['active', 'trialing', 'past_due'])
+      const LIVE = new Set(['active', 'past_due'])
       for (const sub of subs.data) {
         if (!LIVE.has(sub.status)) continue
         if ((sub.metadata as any)?.sub_kind === 'team_seat') continue

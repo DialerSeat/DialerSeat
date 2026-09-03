@@ -17,7 +17,7 @@ function monthlyCents(amountCents: number, interval: string, intervalCount: numb
 }
 
 interface BillingState {
-  state: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | 'none'
+  state: 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | 'none'
   planNickname: string | null
   amountCents: number
   currency: string
@@ -37,10 +37,9 @@ async function fetchSubscriptionState(subId: string): Promise<BillingState> {
   const intervalCount = price?.recurring?.interval_count ?? 1
   const qty = item?.quantity ?? 1
   const lineCents = amount * qty
-  // MRR should reflect money that's actually recurring right now — a
-  // trialing subscription hasn't been charged yet, and one that's
-  // cancel_at_period_end won't renew, so neither should count toward
-  // forward-looking revenue. Same definition used for the admin active
+  // MRR should reflect money that's actually recurring right now. A
+  // subscription set to cancel_at_period_end will not renew, so it should not
+  // count toward forward-looking revenue. Same definition used for the admin active
   // label; only the revenue figure is affected — `state` below still
   // reports the literal Stripe status regardless.
   const live = isSubscriptionTrulyActive({ status: sub.status, cancel_at_period_end: sub.cancel_at_period_end })
@@ -181,7 +180,7 @@ export async function GET(req: NextRequest) {
       if (t.billing) {
         currency = t.billing.currency || currency
         mrrCents += t.billing.mrrCents
-        if (t.billing.state === 'active' || t.billing.state === 'trialing') activeCount++
+        if (t.billing.state === 'active') activeCount++
         else if (t.billing.state === 'past_due' || t.billing.state === 'unpaid') pastDueCount++
         else if (t.billing.state === 'canceled' || t.billing.state === 'incomplete_expired') canceledCount++
       }

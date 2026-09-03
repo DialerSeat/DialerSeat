@@ -5,7 +5,7 @@ import { stripe } from '@/lib/stripe'
 
 const supabase = getServiceClient('stripe/abandon-billing')
 
-const PROTECTED_STATUSES = ['active', 'past_due', 'trialing']
+const PROTECTED_STATUSES = ['active', 'past_due']
 
 const CLEANUP_STATUSES = ['incomplete']
 

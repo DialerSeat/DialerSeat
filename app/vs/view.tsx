@@ -6,6 +6,7 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DirectoryHub, { type HubItem } from '@/components/DirectoryHub'
 import { SITE } from '@/lib/siteTheme'
+import { inter } from '@/lib/fonts'
 
 // =============================================================================
 // /vs — the comparison index
@@ -27,7 +28,8 @@ import { SITE } from '@/lib/siteTheme'
 // than estimated, because it drives the Recently Added column.
 // =============================================================================
 
-const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
+/** The hub runs on Inter, not the site's never-loaded Futura. See lib/fonts.ts. */
+const HUB_FONT = inter.style.fontFamily
 
 /**
  * Every published /vs page, most-asked-about first.
@@ -245,7 +247,7 @@ export default function VsHubView() {
         style={{
           background: SITE.bg,
           minHeight: '100vh',
-          fontFamily: FUTURA,
+          fontFamily: HUB_FONT,
           color: SITE.text,
         }}
       >

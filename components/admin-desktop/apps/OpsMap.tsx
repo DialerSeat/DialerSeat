@@ -33,7 +33,7 @@ const VIOLET = '#a98cff'
 const MODES = [
   { id: 'visitors', label: 'VISITORS', hint: 'Unique visitors — strangers, not accounts' },
   { id: 'online', label: 'ONLINE NOW', hint: 'Dialing in the last 90 seconds' },
-  { id: 'subscribed', label: 'ACTIVE SUB', hint: 'Active subscriptions, including trials' },
+  { id: 'subscribed', label: 'ACTIVE SUB', hint: 'Active paid subscriptions' },
   { id: 'all', label: 'ALL SIGNUPS', hint: 'Every account we can place' },
   // Accounts and strangers on one map. Deliberately last: it is the widest and
   // least specific answer, and a mode list should read from precise to broad.
@@ -49,14 +49,14 @@ const SYNC_MS = 5000
 type Point = {
   key: string; label: string; scope: 'state' | 'country'
   lat: number; lon: number; users: number; online: number; views: number
-  trialing: number; names: string[]
+  names: string[]
 }
 type Person = {
   id: string; label: string; username: string | null; email: string | null
   joined: string; place: string | null; device: string | null
   dialerState: string | null; dialerMode: string | null
   online: boolean; lastHeartbeat: string | null
-  status: string | null; plan: string | null; trialEnd: string | null
+  status: string | null; plan: string | null
   seatPayer: string | null; seatTeam: string | null
   placeKey: string | null; lat: number | null; lon: number | null
   calls: number; answered: number; lastCall: string | null
@@ -80,7 +80,7 @@ type PlacePerson = {
   joined: string; online: boolean
   device: string | null; mode: string | null; state: string | null
   lastHeartbeat: string | null
-  status: string | null; plan: string | null; trialEnd?: string | null
+  status: string | null; plan: string | null
   seatPayer?: string | null
   calls: number; answered: number; lastCall: string | null
   campaigns: number; leads: number
@@ -130,7 +130,7 @@ type Payload = {
   totals: {
     total: number; placed: number; unplaced: number; online: number
     locations: number; targetLocations: number; targetCalls: number
-    targetsUnmapped: number; trialing: number
+    targetsUnmapped: number
   }
   unplacedNames: string[]
 }
@@ -151,7 +151,7 @@ type Persisted = {
   compWindow?: '7d' | 'month' | 'all'
   showTargets?: boolean; feedView?: 'calls' | 'people'
   callFilter?: 'all' | 'answered' | 'missed' | 'machine' | 'human'
-  peopleFilter?: 'all' | 'online' | 'paying' | 'trial' | 'seat' | 'dialed' | 'unplaced'
+  peopleFilter?: 'all' | 'online' | 'paying' | 'seat' | 'dialed' | 'unplaced'
   peopleSort?: 'recent' | 'first'
   selected?: string | null
   // Where the map was pointing. Stored so a refresh does not throw away a
@@ -251,9 +251,15 @@ export default function OpsMap() {
   const [feedView, setFeedView] = useState<'calls' | 'people'>(saved.feedView ?? 'calls')
   const [callFilter, setCallFilter] = useState<'all' | 'answered' | 'missed' | 'machine' | 'human'>(saved.callFilter ?? 'all')
   // The PEOPLE view needs its own filter, not a shared one: "answered" means
-  // nothing about an account and "trial" means nothing about a call.
+  // nothing about an account.
   const [peopleFilter, setPeopleFilter] =
-    useState<'all' | 'online' | 'paying' | 'trial' | 'seat' | 'dialed' | 'unplaced'>(saved.peopleFilter ?? 'all')
+    useState<'all' | 'online' | 'paying' | 'seat' | 'dialed' | 'unplaced'>(
+      // A saved 'trial' filter from before trials were removed would select
+      // nothing and look broken. The type says that value is impossible; the
+      // localStorage it was read from disagrees, which is why this is checked
+      // as a string rather than trusted.
+      saved.peopleFilter && (saved.peopleFilter as string) !== 'trial'
+        ? saved.peopleFilter : 'all')
   // Restored from the last visit. Validated rather than trusted: a stored view
   // from an older build could be any shape, and clamping it here means a bad
   // value costs one frame instead of an unusable map.
@@ -511,7 +517,6 @@ export default function OpsMap() {
     switch (peopleFilter) {
       case 'online': return p.online
       case 'paying': return p.status === 'active' || !!p.seatPayer
-      case 'trial': return p.status === 'trialing'
       case 'seat': return !!p.seatPayer
       case 'dialed': return p.calls > 0
       // The ones the map cannot draw. Worth a filter of its own precisely
@@ -1100,8 +1105,7 @@ export default function OpsMap() {
       }}>
         <span style={{ color: GREEN }}>●</span> LIVE · {SYNC_MS / 1000}s
         {data && <> · {data.totals.placed} PLACED / {data.totals.locations} LOC</>}
-        {data && data.totals.trialing > 0 &&
-          <> · <span style={{ color: CYAN }}>{data.totals.trialing} TRIALING</span></>}
+
         {data && data.totals.targetCalls > 0 &&
           <> · <span style={{ color: AMBER }}>{data.totals.targetCalls} DIALED</span> / {data.totals.targetLocations} ST</>}
         {data && data.totals.unplaced > 0 && <> · <span style={{ color: AMBER }}>{data.totals.unplaced} UNPLACED</span></>}
@@ -1132,7 +1136,6 @@ export default function OpsMap() {
               <>
                 <Row k={isVisitors ? 'UNIQUE VISITORS' : 'PEOPLE'} v={String(selPoint.users)} c={CYAN} />
                 {selPoint.online > 0 && <Row k="DIALING NOW" v={String(selPoint.online)} c={GREEN} />}
-                {selPoint.trialing > 0 && <Row k="ON TRIAL" v={String(selPoint.trialing)} c={CYAN} />}
                 {!detail && <div style={{ color: DIM, fontSize: 10, padding: '6px 0' }}>Loading…</div>}
 
                 {detail?.traffic && (
@@ -1240,9 +1243,6 @@ export default function OpsMap() {
                 <Row k="STATUS" v={statusLabel(person)} c={statusColour(person)} />
                 {person.seatTeam && <Row k="TEAM" v={person.seatTeam} c={VIOLET} />}
                 {person.plan && <Row k="PLAN" v={person.plan.toUpperCase()} />}
-                {person.trialEnd && (
-                  <Row k="TRIAL ENDS" v={new Date(person.trialEnd).toLocaleString()} c={CYAN} />
-                )}
                 <Row k="JOINED" v={new Date(person.joined).toLocaleString()} />
               </Section>
 
@@ -1566,7 +1566,6 @@ export default function OpsMap() {
                           <option value="all">ALL ACCOUNTS</option>
                           <option value="online">ONLINE NOW</option>
                           <option value="paying">PAYING</option>
-                          <option value="trial">ON TRIAL</option>
                           <option value="seat">ON A TEAM SEAT</option>
                           <option value="dialed">HAS DIALED</option>
                           <option value="unplaced">UNPLACED</option>
@@ -1941,21 +1940,15 @@ function Pulse({ buckets }: { buckets: PulseBucket[] }) {
 // less useful question than "Chris is paying for this".
 type StatusLike = {
   seatPayer?: string | null; status: string | null
-  plan: string | null; trialEnd?: string | null
+  plan: string | null
 }
 function statusLabel(p: StatusLike): string {
   if (p.seatPayer) return `seat · ${p.seatPayer}`
   if (!p.status) return 'no sub'
-  if (p.status === 'trialing') {
-    if (!p.trialEnd) return 'trialing'
-    const days = Math.ceil((new Date(p.trialEnd).getTime() - Date.now()) / 86400000)
-    return days > 0 ? `trial · ${days}d left` : 'trial ending'
-  }
   return p.plan ? `${p.status} · ${p.plan}` : p.status
 }
 function statusColour(p: StatusLike): string {
   if (p.seatPayer) return VIOLET
-  if (p.status === 'trialing') return CYAN
   if (p.status === 'active') return GREEN
   if (p.status === 'canceled' || p.status === 'unpaid') return AMBER
   if (!p.status) return DIM

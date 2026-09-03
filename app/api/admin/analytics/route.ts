@@ -195,7 +195,7 @@ export async function GET(req: NextRequest) {
     .select(`
       user_id, status, current_period_end, cancel_at_period_end,
       created_at, canceled_at, updated_at, discount_coupon,
-      stripe_subscription_id, stripe_price_id, trial_start, trial_end
+      stripe_subscription_id, stripe_price_id
     `)
 
   const visibleSubs = (rawSubs || []).filter(s => !excluded.has(s.user_id))
@@ -362,38 +362,6 @@ export async function GET(req: NextRequest) {
       seats: count,
     }))
     .sort((a, b) => b.seats - a.seats)
-
-  // ── TRIALS ARE NOT REVENUE, BUT THEY ARE THE PIPELINE ─────────────────
-  // Deliberately outside every figure above: isSubscriptionTrulyActive
-  // requires the literal 'active', so a trial has never counted as WRR and
-  // must not start now — nobody has paid. But a trial is the best predictor
-  // of next week's revenue this screen has, and until now it was invisible
-  // here, which meant the week a trial cohort landed looked identical to a
-  // dead week.
-  const trialingSubs = latestSubs.filter(s => s.status === 'trialing')
-  const THREE_DAYS = 3 * 24 * 60 * 60 * 1000
-  const trialsEndingSoon = trialingSubs.filter(s => {
-    if (!s.trial_end) return false
-    const t = new Date(s.trial_end).getTime()
-    return t >= nowMs && t <= nowMs + THREE_DAYS
-  })
-  // What they would be worth if every one of them converted. A ceiling, not
-  // a forecast — labelled that way on the screen for the same reason.
-  const trialPipelineWrr = trialingSubs.reduce((sum, s) => sum + weeklyPriceFor(s), 0)
-
-  const trialsStartedInRange = allSubs.filter(s => {
-    if (!s.trial_start) return false
-    const t = new Date(s.trial_start).getTime()
-    return t >= start && t <= end
-  }).length
-
-  // Converted = the trial ended and the subscription is live and paying.
-  const trialsConvertedInRange = allSubs.filter(s => {
-    if (!s.trial_start || !s.trial_end) return false
-    const ended = new Date(s.trial_end).getTime()
-    if (ended < start || ended > end) return false
-    return s.status === 'active'
-  }).length
 
   const signupsInRange = usersInRange.length
 
@@ -619,11 +587,6 @@ export async function GET(req: NextRequest) {
       combinedWrr: wrr + seatWrrCents / 100,
       combinedMrr: (wrr + seatWrrCents / 100) * 4,
 
-      trialingCount: trialingSubs.length,
-      trialsEndingSoon: trialsEndingSoon.length,
-      trialPipelineWrr,
-      trialsStartedInRange,
-      trialsConvertedInRange,
       proWrr: proSubs.reduce((s, sub) => s + weeklyPriceFor(sub), 0),
       wlWrr: wlSubs.reduce((s, sub) => s + weeklyPriceFor(sub), 0),
 

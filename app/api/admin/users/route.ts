@@ -190,14 +190,11 @@ export async function GET(req: NextRequest) {
     // real subscription stays exactly as it is.
     // ── BILLING AND ACCESS ARE DIFFERENT QUESTIONS ───────────────────────
     // isSubscriptionTrulyActive answers "is this money arriving", and it is
-    // deliberately narrow: analytics divides revenue by it, so widening it to
-    // include trials would book income nobody has paid. Left alone.
+    // deliberately narrow because analytics divides revenue by it.
     //
-    // The overview asks something else — can this person use the product —
-    // and by that measure a trial IS active. Showing a live trial as INACTIVE
-    // next to a green ONLINE dot, on somebody dialing right now, is simply
-    // wrong. Answered with the same ENTITLED_STATUSES the proxy gates on, so
-    // the badge and the door agree.
+    // The overview asks something else, which is whether this person can use
+    // the product. That is answered with the same ENTITLED_STATUSES the proxy
+    // gates on, so the badge and the door can never disagree.
     const entitled = !!sub && isEntitledStatus(sub.status) && !sub.cancel_at_period_end
     const displayAsActive = isActive && !u.exclude_from_analytics
     const displayAsEntitled = entitled && !u.exclude_from_analytics
@@ -231,7 +228,7 @@ export async function GET(req: NextRequest) {
           }
         : null,
       is_active_subscription: displayAsActive,
-      // Has access right now — includes a live trial. The pill reads this.
+      // Has access right now. The pill reads this.
       has_access: displayAsEntitled,
     }
   })

@@ -18,7 +18,7 @@ export async function GET() {
 
     const { data: sub } = await supabase
       .from('subscriptions')
-      .select('status, current_period_end, trial_end, cancel_at_period_end, stripe_price_id')
+      .select('status, current_period_end, cancel_at_period_end, stripe_price_id')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -198,7 +198,6 @@ export async function GET() {
         isActive: wlActive || wlOnboardingPending,
         status: (wlActive || wlOnboardingPending) ? 'active' : null,
         currentPeriodEnd: null,
-        trialEnd: null,
         cancelAtPeriodEnd: false,
         tier,
         plan,
@@ -218,7 +217,6 @@ export async function GET() {
       isActive,
       status: sub.status,
       currentPeriodEnd: sub.current_period_end,
-      trialEnd: sub.trial_end,
       cancelAtPeriodEnd: sub.cancel_at_period_end,
       tier,
       plan,

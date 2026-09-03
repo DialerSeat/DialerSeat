@@ -370,6 +370,11 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   status                 text NOT NULL,
   current_period_start   timestamptz,
   current_period_end     timestamptz,
+  -- LEGACY. Nothing writes these any more: the free trial was removed and
+  -- create-subscription no longer sends trial_period_days, so every new row
+  -- has them null. Kept rather than dropped because they are the record of
+  -- what a customer was actually sold during the period the trial existed,
+  -- and that is the kind of thing a billing dispute turns on.
   trial_start            timestamptz,
   trial_end              timestamptz,
   cancel_at_period_end   boolean NOT NULL DEFAULT false,

@@ -28,10 +28,8 @@ const supabase = getServiceClient('admin/ops-map')
 // could not place would look complete, which is worse than looking empty.
 // ─────────────────────────────────────────────────────────────────────────
 
-// 'trialing' is deliberately NOT a mode of its own. A trial IS an active
 // subscription — it is the same person paying attention, and splitting them
 // made two thin lists where one useful one belongs. ops_map's 'subscribed'
-// already covers active and trialing together.
 // ── WHAT THE RPCs ACTUALLY RETURN ────────────────────────────────────────
 // Supabase types rpc() as `any`, so without these every field below is
 // unchecked — a renamed column in a migration would compile perfectly and fail
@@ -40,7 +38,6 @@ const supabase = getServiceClient('admin/ops-map')
 type OriginRow = {
   country: string | null; region: string | null
   user_count?: number | string; online_count?: number | string
-  trial_count?: number | string
   visitors?: number | string; views?: number | string
   names?: string[] | null
 }
@@ -60,7 +57,7 @@ type PersonRow = {
   joined: string; country: string | null; region: string | null
   device: string | null; dialer_state: string | null; dialer_mode: string | null
   online: boolean; last_heartbeat: string | null
-  status: string | null; plan: string | null; trial_end: string | null
+  status: string | null; plan: string | null
   seat_payer: string | null; seat_team: string | null
   calls: number | string; answered: number | string; last_call: string | null
   campaigns: number | string; leads: number | string
@@ -70,7 +67,7 @@ type PersonRow = {
  * A human name for a country/region pair.
  *
  * Region codes are only US state letters in one country. Jamaica numbers its
- * parishes, so a real trialing user was displayed as being "in 12" — the
+ * parishes, so a real subscriber was displayed as being "in 12" — the
  * label fell through to the raw code because the lookup only knew US states.
  * Outside the US the country is the honest answer: the region code is a
  * subdivision this product has no table for and no use for.
@@ -203,7 +200,7 @@ export async function GET(req: NextRequest) {
     type Pt = {
       key: string; label: string; scope: 'state' | 'country'
       lat: number; lon: number; users: number; online: number; views: number
-      trialing: number; names: string[]
+      names: string[]
     }
     const points: Pt[] = []
     let unplaced = 0
@@ -215,10 +212,8 @@ export async function GET(req: NextRequest) {
       const users = mode === 'visitors' ? Number(row.visitors) || 0 : Number(row.user_count) || 0
       const online = mode === 'visitors' ? 0 : Number(row.online_count) || 0
       const views = mode === 'visitors' ? Number(row.views) || 0 : 0
-      // Surfaced rather than folded in: ACTIVE SUB counts trials as
       // subscribers, and it should still be possible to see how many of them
       // have not paid yet.
-      const trialing = mode === 'visitors' ? 0 : Number(row.trial_count) || 0
       total += users
       onlineTotal += online
 
@@ -233,13 +228,12 @@ export async function GET(req: NextRequest) {
       const hit = points.find(p => p.key === where.key)
       if (hit) {
         hit.users += users; hit.online += online; hit.views += views
-        hit.trialing += trialing
         hit.names.push(...((row.names as string[]) || []))
       } else {
         points.push({
           key: where.key, label: where.label, scope: where.scope,
           lat: where.at[0], lon: where.at[1],
-          users, online, views, trialing,
+          users, online, views,
           names: ((row.names as string[]) || []).slice(),
         })
       }
@@ -260,7 +254,7 @@ export async function GET(req: NextRequest) {
             key: where.key, label: where.label, scope: where.scope,
             lat: where.at[0], lon: where.at[1],
             users: v, online: 0, views: Number(row.views) || 0,
-            trialing: 0, names: [],
+            names: [],
           })
         }
       }
@@ -397,7 +391,6 @@ export async function GET(req: NextRequest) {
       lastHeartbeat: r.last_heartbeat,
       status: r.status || null,
       plan: r.plan || null,
-      trialEnd: r.trial_end,
       // Who is paying for this seat, when it is not them. An owner-funded
       // agent holds no subscription of their own, so `status` alone reports
       // them as having nothing — which reads as a freeloader rather than as a
@@ -534,7 +527,6 @@ export async function GET(req: NextRequest) {
         unplaced,
         online: onlineTotal,
         locations: points.length,
-        trialing: points.reduce((n, p) => n + p.trialing, 0),
         targetLocations: targets.length,
         targetCalls: targets.reduce((s, t) => s + t.calls, 0),
         targetsUnmapped,

@@ -45,7 +45,6 @@ interface AdminUser {
   } | null
   is_active_subscription: boolean
   has_access?: boolean
-  is_trialing?: boolean
 }
 
 type FilterMode = 'all' | 'active' | 'inactive'
@@ -833,13 +832,12 @@ export default function OverviewApp() {
                   {timeAgo(u.created_at)}
                 </div>
                 <div className="ovr-status-stack">
-                  {/* Access, not billing. A trial is active — the person can
-                      dial — and showing them INACTIVE beside a green ONLINE
-                      dot was simply untrue. Labelled TRIAL rather than just
-                      coloured, so "active" never quietly means "paying". */}
+                  {/* Access, not billing. Answered with the same
+                      ENTITLED_STATUSES the proxy gates on, so the badge and
+                      the door can never disagree. */}
                   <span className={`ovr-pill-status ${(u.has_access ?? u.is_active_subscription) ? 'active' : 'inactive'}`}>
                     <span className={`ovr-status-dot ${(u.has_access ?? u.is_active_subscription) ? 'green' : 'gray'}`} />
-                    {u.is_trialing ? 'TRIAL' : (u.has_access ?? u.is_active_subscription) ? 'ACTIVE' : 'INACTIVE'}
+                    {(u.has_access ?? u.is_active_subscription) ? 'ACTIVE' : 'INACTIVE'}
                   </span>
                   {userOnline && (
                     <span className="ovr-pill-status online">

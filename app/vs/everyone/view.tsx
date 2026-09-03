@@ -215,6 +215,48 @@ export default function VsEveryoneView() {
           .verdict-card h3 { font-size: 20px; font-weight: 800; margin: 0 0 12px 0; letter-spacing: -0.3px; }
           .verdict-card p { font-size: 15px; line-height: 1.7; color: ${T.muted}; margin: 0; }
 
+          /* ── THE WEEK ──────────────────────────────────────────────────
+             The single sharpest number on the page, and the one nobody else
+             can answer: the smallest amount of dialing anyone else will sell
+             you is a month. Priced against the month, our week looks cheap.
+             Priced against the WEEK, there is nothing to price against. */
+          .week-math {
+            background: ${T.surface};
+            border: 1px solid ${T.border};
+            border-top: 3px solid ${T.blue};
+            border-radius: 4px;
+            padding: 32px;
+            margin-bottom: 48px;
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+            gap: 32px;
+            align-items: center;
+          }
+          .week-math h3 { font-size: 20px; font-weight: 800; margin: 0 0 12px 0; letter-spacing: -0.3px; }
+          .week-math p { font-size: 15px; line-height: 1.7; color: ${T.muted}; margin: 0 0 12px 0; }
+          .week-math p:last-child { margin-bottom: 0; }
+          .week-tiles { display: grid; gap: 10px; }
+          .week-tile {
+            border: 1px solid ${T.border};
+            border-radius: 4px;
+            padding: 18px 20px;
+            background: ${T.bg};
+          }
+          .week-tile.ours { background: ${T.dark}; border-color: ${T.dark}; }
+          .week-tile-num {
+            font-size: 34px; font-weight: 800; letter-spacing: -1.5px; line-height: 1;
+            color: ${T.muted};
+          }
+          .week-tile.ours .week-tile-num { color: ${T.blue}; }
+          .week-tile-label {
+            margin-top: 8px;
+            font-size: 11px; font-weight: bold; letter-spacing: 2px;
+            color: ${T.muted};
+          }
+          .week-tile.ours .week-tile-label { color: rgba(255,255,255,0.6); }
+          .week-tile-sub { margin-top: 6px; font-size: 13px; line-height: 1.5; color: ${T.muted}; }
+          .week-tile.ours .week-tile-sub { color: rgba(255,255,255,0.6); }
+
           /* ── FAILURE GRID ── */
           .failure-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 72px; }
           .failure-card {
@@ -309,6 +351,8 @@ export default function VsEveryoneView() {
             .vs-h1 { font-size: 36px; }
             .failure-grid { grid-template-columns: 1fr; }
             .switching-grid { grid-template-columns: 1fr; }
+            .week-math { grid-template-columns: 1fr; padding: 24px 20px; gap: 22px; }
+            .week-tile-num { font-size: 28px; }
             .btn-primary, .btn-secondary { width: 100%; text-align: center; }
           }
         `}</style>
@@ -350,6 +394,41 @@ export default function VsEveryoneView() {
               interface that works on any device. Then we priced it at $35/week with no contract.
               It&apos;s not a &quot;budget&quot; alternative — it&apos;s a more capable tool built for a modern workflow.
             </p>
+          </div>
+
+          <div className="week-math">
+            <div>
+              <div className="vs-section-eyebrow">▸ ONE WEEK OF DIALING</div>
+              <h3>Nobody else sells a week.</h3>
+              <p>
+                Say you want to dial for one week — a push before a deadline, a trial run on a new
+                list, a single busy stretch. Everywhere else, the smallest thing you can buy is a
+                month, so a week of dialing costs you a month&apos;s subscription. Month to month,
+                on the dialers that actually run multi-line predictive, that&apos;s roughly $120 to
+                $250 a seat before setup fees.
+              </p>
+              <p>
+                DialerSeat sells the week. $35, and if you don&apos;t want the next one you
+                don&apos;t buy it. Four weeks of DialerSeat still costs less than one month
+                almost anywhere on this page.
+              </p>
+            </div>
+            <div className="week-tiles">
+              <div className="week-tile">
+                <div className="week-tile-num">$120–$250</div>
+                <div className="week-tile-label">EVERYWHERE ELSE</div>
+                <div className="week-tile-sub">
+                  One month, because a month is the smallest unit sold. Setup fees extra.
+                </div>
+              </div>
+              <div className="week-tile ours">
+                <div className="week-tile-num">$35</div>
+                <div className="week-tile-label">DIALERSEAT</div>
+                <div className="week-tile-sub">
+                  One week. Cancel before the next one and that is the whole bill.
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="vs-section-eyebrow">▸ SIX INDUSTRY FAILURES</div>

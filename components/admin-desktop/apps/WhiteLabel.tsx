@@ -981,7 +981,7 @@ function money(cents: number, currency = 'USD'): string {
 }
 
 const BILLING_STATE_COLOR: Record<string, string> = {
-  active: C.green, trialing: C.blue,
+  active: C.green,
   past_due: C.amber, unpaid: C.amber,
   canceled: C.red, incomplete_expired: C.red, incomplete: C.muted,
   paused: C.muted, none: C.muted,

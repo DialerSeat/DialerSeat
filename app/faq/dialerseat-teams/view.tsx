@@ -676,7 +676,7 @@ export default function DialerSeatTeamsFaqView() {
                     Neither owner nor agents pay any per-campaign seat
                     charge. Best for small agencies under corporate
                     billing, internal training accounts, comping a
-                    trial seat, or premium-campaign memberships with a
+                    seat, or premium-campaign memberships with a
                     flat external access fee.
                   </p>
                 </div>

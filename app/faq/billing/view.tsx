@@ -163,10 +163,10 @@ export default function BillingFaqView() {
           <section className="faq-section">
             <h2>▸ WHAT YOU CAN ACTUALLY LOSE</h2>
             <p>
-              <strong>Nothing, for the first seven days.</strong> New accounts
-              start on a free trial — a card is required to begin it, but you
-              are not charged until it ends, and cancelling before then costs
-              you nothing at all.
+              <strong>One week. $35.</strong> There is no free trial, which is
+              deliberate — a card up front is the cheapest way to filter out
+              signups that were never going to dial. What it means for you is
+              that the most you can ever be out is a single week.
             </p>
             <p>
               <strong>After that: one week. $35.</strong> That is the whole

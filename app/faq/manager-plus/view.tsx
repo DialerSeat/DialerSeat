@@ -411,7 +411,7 @@ export default function ManagerPlusFaqView() {
             <p className="muted">
               Set this per seat code, not per account — a single team can mix
               owner-pays codes for your core reps and agent-pays codes for
-              contractors or trial hires, side by side. For the full
+              contractors or probationary hires, side by side. For the full
               mechanics of how seat codes, recruit codes, and shared campaigns
               work, see{' '}
               <Link href="/faq/dialerseat-teams">DialerSeat for teams</Link>.

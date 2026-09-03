@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { SITE } from '@/lib/siteTheme'
+import { inter } from '@/lib/fonts'
 
 // =============================================================================
 // THE DIRECTORY HUB — the shared template behind /vs and /faq
@@ -33,7 +34,11 @@ import { SITE } from '@/lib/siteTheme'
 export interface HubItem {
   href: string
   label: string
-  /** Second line on the row. Also searched. */
+  /**
+   * A one-line description of the page. Searched, not rendered — the index
+   * columns are single-line lists, and a second line under twenty-three rows
+   * turns a column somebody scans into a column somebody reads.
+   */
   note?: string
   /** ISO date the page went live. Items without one never reach Recently Added. */
   added?: string
@@ -213,7 +218,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           --hub-green: #1a6a4a;
           --hub-line: ${SITE.borderSoft};
           --hub-rowline: #f0f2f6;
-          font-family: 'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          font-family: ${inter.style.fontFamily};
           color: ${SITE.text};
         }
         .hub-inner { max-width: 1180px; margin: 0 auto; padding: 0 32px 88px; }
@@ -409,11 +414,6 @@ export default function DirectoryHub(props: DirectoryHubProps) {
         .hub-row:last-of-type { border-bottom: none; }
         .hub-row:hover { background: #f4f8ff; }
         .hub-row-label { flex: 1; min-width: 0; }
-        .hub-row-note {
-          display: block;
-          font-size: 12.5px; color: ${SITE.muted};
-          margin-top: 3px; line-height: 1.45;
-        }
         .hub-chev { color: #b6bcc8; flex-shrink: 0; transition: transform 0.14s ease, color 0.14s ease; }
         .hub-row:hover .hub-chev { color: var(--hub-royal); transform: translateX(3px); }
         .hub-chev-left { color: #b6bcc8; flex-shrink: 0; transition: color 0.14s ease; }
@@ -449,15 +449,26 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           .hub-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
           .hub-card-nav { grid-column: 1 / -1; }
           .hub-searchrow { grid-template-columns: minmax(0, 1fr); }
+
+          /* The pipe dividers dangle at the end of every wrapped row once the
+             bar folds past two lines, so narrower screens get chips instead.
+             Full width keeps the mockup's divided list. */
+          .hub-picks { padding: 12px; gap: 8px; }
+          .hub-picks-label { margin-right: 2px; }
+          .hub-pick {
+            padding: 8px 12px;
+            border-right: none;
+            border: 1px solid #dde6fb;
+            border-radius: 6px;
+            background: #f5f8ff;
+          }
         }
         @media (max-width: 760px) {
           .hub-inner { padding: 0 20px 64px; }
           .hub-hero { padding: 48px 20px 26px; }
           .hub-hero h1 { font-size: 34px; letter-spacing: -0.9px; }
           .hub-grid { grid-template-columns: minmax(0, 1fr); }
-          .hub-picks { padding: 12px 14px; }
-          .hub-picks-label { margin-right: 10px; }
-          .hub-pick { padding: 4px 12px; font-size: 13.5px; }
+          .hub-pick { font-size: 13.5px; }
           .hub-search { padding: 10px; flex-wrap: wrap; }
           .hub-search button { width: 100%; }
         }
@@ -536,15 +547,12 @@ export default function DirectoryHub(props: DirectoryHubProps) {
             <div className="hub-card-head">
               <span className="hub-badge blue"><IconScales /></span>
               <h2>{q ? 'Search results' : props.allTitle}</h2>
-              <span className="hub-card-count">{filtered.length}</span>
+              {q && <span className="hub-card-count">{filtered.length}</span>}
             </div>
 
             {visibleAll.map((item) => (
               <Link key={item.href} href={item.href} className="hub-row">
-                <span className="hub-row-label">
-                  {item.label}
-                  {item.note && <span className="hub-row-note">{item.note}</span>}
-                </span>
+                <span className="hub-row-label">{item.label}</span>
                 <Chevron className="hub-chev" />
               </Link>
             ))}
@@ -552,7 +560,8 @@ export default function DirectoryHub(props: DirectoryHubProps) {
             {filtered.length === 0 && (
               <p className="hub-empty">
                 Nothing here matches &ldquo;{query.trim()}&rdquo;.{' '}
-                <a href={props.requestHref}>{props.requestLabel}</a> and we&apos;ll write it.
+                <a href={props.requestHref}>{props.requestLabel}</a>{' '}
+                and we&apos;ll write it.
               </p>
             )}
 

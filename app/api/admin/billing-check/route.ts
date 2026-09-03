@@ -185,7 +185,7 @@ export async function GET(req: NextRequest) {
   const hasCard = !!(defaultPmId || cards.data.length)
   const comped = decision ? seatIsFullyComped(decision) : false
 
-  const LIVE = new Set(['active', 'trialing', 'past_due'])
+  const LIVE = new Set(['active', 'past_due'])
   const deadDiscount = subscriptions.find(
     s => s.kind === 'personal' && s.discount && !LIVE.has(s.status)
   )

@@ -1,5 +1,5 @@
 // A subscription counts as truly, currently active only when:
-//  - Stripe's status is the literal 'active' (not trialing, past_due, incomplete, etc.)
+//  - Stripe's status is the literal 'active' (not past_due, incomplete, etc.)
 //  - it is not already scheduled to cancel (cancel_at_period_end)
 //
 // Stripe leaves status='active' until the current billing period actually

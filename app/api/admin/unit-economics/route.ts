@@ -128,10 +128,6 @@ export async function GET(req: NextRequest) {
       const a = activity.get(u.clerk_id)
       const sub = subByUser.get(u.clerk_id)
       const isPaying = sub?.status === 'active'
-      // A trial earns nothing yet, which is true and worth separating from
-      // "not paying": one is a cost with a decision coming, the other is a
-      // cost with nothing behind it.
-      const isTrialing = sub?.status === 'trialing'
       const weeklyRate = sub?.plan === 'wl' ? MANAGER_PLUS_WEEKLY_USD : SEAT_PRICE_WEEKLY_USD
       const seatRevenue = seatRevenueByOwner.get(u.clerk_id) ?? 0
       const seatPayer = coveredBy.get(u.clerk_id) ?? null
@@ -152,7 +148,6 @@ export async function GET(req: NextRequest) {
         name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || null,
         internal: !!u.exclude_from_analytics,
         paying: isPaying || seatRevenue > 0,
-        trialing: isTrialing,
         plan: sub?.plan ?? null,
         subStatus: sub?.status ?? null,
         // Split so the page can show where the money came from. An owner with
@@ -177,9 +172,7 @@ export async function GET(req: NextRequest) {
           : null,
       }
     })
-    // Trials belong on this page even before they cost anything: the whole
-    // question a trial poses is what it will cost.
-    .filter(r => r.calls > 0 || r.paying || r.trialing)
+    .filter(r => r.calls > 0 || r.paying)
     .sort((a, b) => a.marginUsd - b.marginUsd)
 
     const totals = rows.reduce((acc, r) => ({
