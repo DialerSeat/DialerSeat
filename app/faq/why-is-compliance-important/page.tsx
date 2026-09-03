@@ -68,7 +68,7 @@ export default function Page() {
             things).
           </p>
           <p>
-            Break them, and the penalties are not small. TCPA: $500: $1,500
+            Break them, and the penalties are not small. TCPA: $500–$1,500
             <em> per call</em>. TSR: up to $53,088 per violation, the
             FTC&apos;s current inflation-adjusted maximum as of January
             2025. When the FTC settles with a serial offender, the numbers

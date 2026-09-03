@@ -15,7 +15,7 @@ const SLUG = 'batchdialer'
 export const metadata: Metadata = {
   title: 'DialerSeat vs BatchDialer: Their Annual Rate Without the Annual Contract',
   description:
-    "BatchDialer's advertised $95/seat is the annual prepay rate; month to month it is $119, $249. DialerSeat is $35/week billed weekly with all four dialer modes, automatic number cycling on every plan, multiple scripts per campaign, and whitelabel at $75/mo flat.",
+    "BatchDialer's advertised $95/seat is the annual prepay rate; month to month it is $119–$249. DialerSeat is $35/week billed weekly with all four dialer modes, automatic number cycling on every plan, multiple scripts per campaign, and whitelabel at $75/mo flat.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/batchdialer',
   },

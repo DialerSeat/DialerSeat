@@ -616,7 +616,7 @@ export default function DialerSeatTeamsFaqView() {
               {' '}increment globally: once anyone on the team dials a lead,
               every other agent sees the updated state. No double-dialing
               within the platform&apos;s 24-hour cooldown unless the owner
-              explicitly allows it. TCPA window enforcement (8am, 9pm local
+              explicitly allows it. TCPA window enforcement (8am–9pm local
               to the lead) applies team-wide, not per-agent.
             </p>
             <p>
@@ -834,7 +834,7 @@ export default function DialerSeatTeamsFaqView() {
                 <div className="tfaq-qa-card">
                   <h4>How does TCPA enforcement work across a team?</h4>
                   <p>
-                    Platform-wide. The 8am, 9pm local-to-the-lead window
+                    Platform-wide. The 8am–9pm local-to-the-lead window
                     applies to every dial regardless of which agent placed
                     it. Cooldowns and attempt caps are calculated across
                     the whole team, no agent can re-dial early to game

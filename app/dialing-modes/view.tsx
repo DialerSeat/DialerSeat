@@ -187,7 +187,7 @@ export default function DialingModesView() {
               <li style={li}><strong>3% abandon cap</strong> (FTC safe harbor), predictive auto-throttles at 2.5%, resumes below 2.0%.</li>
               <li style={li}><strong>15-second minimum ring</strong> before a call is treated as unanswered.</li>
               <li style={li}><strong>Recorded notice on abandons</strong> identifying the seller, per 16 CFR 310.4(b)(4)(iii).</li>
-              <li style={li}><strong>Calling windows</strong>, leads outside 8 AM, 9 PM local time are skipped automatically.</li>
+              <li style={li}><strong>Calling windows</strong>, leads outside 8 AM–9 PM local time are skipped automatically.</li>
               <li style={li}><strong>Full call records</strong>: every attempt, AMD result, and abandonment logged and exportable.</li>
             </ul>
           </div>

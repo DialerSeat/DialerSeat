@@ -162,7 +162,7 @@ export default function TeamsHowItWorksPage() {
 
           <Section
             title="Remote and offshore agents"
-            lead="At $95: $250 per seat per month an offshore floor costs more in software than in wages, which is why most teams never build one. At $35 per week the arithmetic changes."
+            lead="At $95–$250 per seat per month an offshore floor costs more in software than in wages, which is why most teams never build one. At $35 per week the arithmetic changes."
             items={FACTS.teams.offshore}
           />
 

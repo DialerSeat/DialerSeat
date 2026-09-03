@@ -62,14 +62,14 @@ export default function Page() {
           <p>
             When an outbound call connects, AMD does <em>not</em> connect
             you to the line immediately. Instead, the system holds the
-            audio for roughly 1, 2 seconds and analyzes what comes through.
+            audio for roughly 1–2 seconds and analyzes what comes through.
             Humans tend to answer with a quick &quot;hello?&quot; usually
             under 1.5 seconds of audio, with a clear pause afterward
             waiting for a response.
           </p>
           <p>
             Voicemail greetings sound different. They&apos;re longer,
-            usually 4: 15 seconds, run as a continuous monologue, and end
+            usually 4–15 seconds, run as a continuous monologue, and end
             with a beep. AMD looks at the duration of the initial speech,
             the pauses, the frequency profile, and (in modern systems)
             machine-learned signatures of common voicemail-greeting
@@ -88,8 +88,8 @@ export default function Page() {
                 <summary>How accurate is AMD?</summary>
                 <div className="answer">
                   <p>
-                    Modern AMD on a clean carrier path is around 90, 95%
-                    accurate. The remaining 5, 10% splits between two kinds
+                    Modern AMD on a clean carrier path is around 90–95%
+                    accurate. The remaining 5–10% splits between two kinds
                     of error: <strong>false positives</strong> (AMD thinks
                     a human is a voicemail and drops the call you wanted)
                     and <strong>false negatives</strong> (AMD thinks a

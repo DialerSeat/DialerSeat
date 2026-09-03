@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
   if (!name || name.length < NAME_MIN || name.length > NAME_MAX) {
     return NextResponse.json(
-      { error: 'invalid_name', detail: `Theme name must be ${NAME_MIN}, ${NAME_MAX} characters.` },
+      { error: 'invalid_name', detail: `Theme name must be ${NAME_MIN}–${NAME_MAX} characters.` },
       { status: 400 }
     )
   }
@@ -178,7 +178,7 @@ export async function PUT(req: NextRequest) {
     const v = String(body.name || '').trim()
     if (!v || v.length < NAME_MIN || v.length > NAME_MAX) {
       return NextResponse.json(
-        { error: 'invalid_name', detail: `Theme name must be ${NAME_MIN}, ${NAME_MAX} characters.` },
+        { error: 'invalid_name', detail: `Theme name must be ${NAME_MIN}–${NAME_MAX} characters.` },
         { status: 400 }
       )
     }

@@ -433,7 +433,7 @@ export default function PowerDialerPage() {
               waiting on each ring. On a list with a 25% pickup rate, three
               out of four dials are time you&apos;ll never get back. Add a
               few seconds per disposition, and your effective talk time
-              floats around 15, 20 minutes per hour.
+              floats around 15–20 minutes per hour.
             </p>
             <p>
               The other thing power gives up is voicemail filtering, by
@@ -486,7 +486,7 @@ export default function PowerDialerPage() {
               <Link href="/dialing-modes/predictive" className="dm-other-card predictive">
                 <span className="pill">PREDICTIVE</span>
                 <h3>Multiple lines, agent prediction</h3>
-                <p>1.5, 3× lines per agent. Highest throughput, needs a team of 8+ to really engage, auto-degrade keeps it off the legal line.</p>
+                <p>1.5–3× lines per agent. Highest throughput, needs a team of 8+ to really engage, auto-degrade keeps it off the legal line.</p>
               </Link>
             </div>
           </div>

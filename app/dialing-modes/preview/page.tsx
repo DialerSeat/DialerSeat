@@ -436,7 +436,7 @@ export default function PreviewDialerPage() {
             <p>
               Throughput. Preview agents do somewhere between 5 and 15 dials
               per hour depending on call length and review time. Power
-              dialers in the same hour will do 30, 60. Predictive can push
+              dialers in the same hour will do 30–60. Predictive can push
               that into triple digits. If your campaign is volume-bound
               instead of context-bound, preview is the wrong tool.
             </p>
@@ -465,7 +465,7 @@ export default function PreviewDialerPage() {
               <li>If the campaign has a script, it sits beside the profile so you can read both before dialing.</li>
               <li><em>Skip This Lead</em> dispositions cleanly and pulls the next one, no penalty for passing.</li>
               <li>Auto-pull next lead after disposition (toggle on/off in your settings).</li>
-              <li>TCPA window check still runs, leads outside their local 8 AM, 9 PM window are skipped automatically.</li>
+              <li>TCPA window check still runs, leads outside their local 8 AM–9 PM window are skipped automatically.</li>
               <li>Leads you have marked Do Not Call are never served again, that much the agent does not have to remember. Scrubbing against the National Registry is still yours to do before upload; see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link>.</li>
             </ul>
           </div>
@@ -479,7 +479,7 @@ export default function PreviewDialerPage() {
               <Link href="/dialing-modes/power" className="dm-other-card power">
                 <span className="pill">POWER</span>
                 <h3>Auto-dial, one line per agent</h3>
-                <p>Click once, system handles the queue. Same compliance profile as preview, 2, 3× the volume.</p>
+                <p>Click once, system handles the queue. Same compliance profile as preview, 2–3× the volume.</p>
               </Link>
               <Link href="/dialing-modes/progressive" className="dm-other-card progressive">
                 <span className="pill">PROGRESSIVE</span>
@@ -489,7 +489,7 @@ export default function PreviewDialerPage() {
               <Link href="/dialing-modes/predictive" className="dm-other-card predictive">
                 <span className="pill">PREDICTIVE</span>
                 <h3>Multiple lines, agent prediction</h3>
-                <p>1.5: 3× lines per agent, routed by algorithm. Highest throughput, tightest compliance.</p>
+                <p>1.5–3× lines per agent, routed by algorithm. Highest throughput, tightest compliance.</p>
               </Link>
             </div>
           </div>

@@ -316,7 +316,7 @@ export default function TermsPage() {
             </ul>
 
             <div className="warning-row">
-              <strong>⚠ This is serious.</strong> TCPA violations carry statutory damages of $500: $1,500 per call.
+              <strong>⚠ This is serious.</strong> TCPA violations carry statutory damages of $500–$1,500 per call.
               We reserve the right to suspend or terminate accounts that we reasonably believe are
               engaged in unlawful telemarketing, even before formal legal proceedings. We will cooperate
               with law enforcement investigations and respond to lawful subpoenas.
@@ -327,7 +327,7 @@ export default function TermsPage() {
               DialerSeat enforces certain TCPA-related guardrails automatically:
             </p>
             <ul>
-              <li>Calling-window restrictions per lead's local time (typically 8AM, 9PM)</li>
+              <li>Calling-window restrictions per lead's local time (typically 8AM–9PM)</li>
               <li>State-specific calling rule enforcement (Sunday bans where applicable)</li>
               <li>Automated abandon-rate protections in predictive mode (FTC TSR 3% rule)</li>
               <li>STIR/SHAKEN A-attestation on outbound calls where supported</li>

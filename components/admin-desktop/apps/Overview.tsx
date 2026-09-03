@@ -763,7 +763,7 @@ export default function OverviewApp() {
           <option value="joined_new">Newest joined</option>
           <option value="joined_old">Oldest joined</option>
           <option value="active_first">Most active first</option>
-          <option value="name">Name A, Z</option>
+          <option value="name">Name A–Z</option>
         </select>
       </div>
 

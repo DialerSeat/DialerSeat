@@ -249,7 +249,7 @@ export default function Page() {
             </div>
             <div className="exp-card">
               <h3>STATE-SPECIFIC RULES</h3>
-              <p>The 8 AM, 9 PM window is federal. Several states impose stricter rules (call frequency caps, holiday restrictions, registration requirements). Those are on you.</p>
+              <p>The 8 AM–9 PM window is federal. Several states impose stricter rules (call frequency caps, holiday restrictions, registration requirements). Those are on you.</p>
             </div>
           </div>
           <p style={{ marginTop: 24 }}>
@@ -269,7 +269,7 @@ export default function Page() {
             <p>
               Your list contains 5,000 leads across all four U.S. time zones.
               When dialing starts, the system filters in real-time: leads
-              currently in their local 8 AM: 9 PM window are eligible, leads
+              currently in their local 8 AM–9 PM window are eligible, leads
               outside it are skipped with <code>TCPA_BLOCKED</code> and re-
               queued for when they enter their window. By 2 PM Pacific
               you&apos;ll have called a different mix than you did at 11 AM
@@ -325,7 +325,7 @@ export default function Page() {
 
         <DialingModeCTA
           headline="Compliance you don't have to babysit."
-          description="The 3% cap, the 8 AM: 9 PM window, AMD, STIR/SHAKEN, 24-month records: enforced in software, not in policy docs. $35/week per seat, every mode included."
+          description="The 3% cap, the 8 AM–9 PM window, AMD, STIR/SHAKEN, 24-month records: enforced in software, not in policy docs. $35/week per seat, every mode included."
         />
       </main>
       <SiteFooter />

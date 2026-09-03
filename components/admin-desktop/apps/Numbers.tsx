@@ -2039,7 +2039,7 @@ export default function NumbersApp() {
                 guarantees nothing.<br />
                 • It is not what keeps your answer rate up. Labelling follows
                 behaviour: calls per number, short-call ratio, complaints. The
-                9, 12s hold and number-health rotation move that needle harder
+                9–12s hold and number-health rotation move that needle harder
                 than any filing does.
               </div>
             </div>

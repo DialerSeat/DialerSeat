@@ -1342,7 +1342,7 @@ function SettingsSubTab() {
                 <span style={{ fontSize: 11, color: C.muted, whiteSpace: 'nowrap' }}>.dialerseat.com</span>
               </div>
               <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>
-                Changing the slug breaks the old subdomain URL immediately. Validated server-side (1: 40 chars, a: z 0: 9 hyphens, not reserved).
+                Changing the slug breaks the old subdomain URL immediately. Validated server-side (1–40 chars, a–z 0–9 hyphens, not reserved).
               </div>
               <button className="wl-btn primary" style={{ marginTop: 8 }} disabled={saving || !slugDirty || !slug}
                 onClick={() => patch({ slug }, `Slug changed to "${slug}"`)}>

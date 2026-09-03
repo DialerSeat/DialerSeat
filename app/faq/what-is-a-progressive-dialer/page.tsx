@@ -446,7 +446,7 @@ export default function ProgressiveDialerPage() {
               You also give up some throughput vs predictive. Progressive is
               still one line per agent: if you have 10 ready agents, you
               have 10 outbound calls in flight at most. Predictive on the
-              same campaign would have 15, 30 lines in flight. For pure
+              same campaign would have 15–30 lines in flight. For pure
               volume, predictive wins. For everything else, progressive
               wins.
             </p>
@@ -499,7 +499,7 @@ export default function ProgressiveDialerPage() {
               <Link href="/dialing-modes/predictive" className="dm-other-card predictive">
                 <span className="pill">PREDICTIVE</span>
                 <h3>Multiple lines, agent prediction</h3>
-                <p>1.5, 3× lines per agent. Highest throughput, needs a team of 8+ to really engage, auto-degrade keeps it off the legal line.</p>
+                <p>1.5–3× lines per agent. Highest throughput, needs a team of 8+ to really engage, auto-degrade keeps it off the legal line.</p>
               </Link>
             </div>
           </div>

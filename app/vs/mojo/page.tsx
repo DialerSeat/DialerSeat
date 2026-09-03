@@ -15,21 +15,21 @@ const SLUG = 'mojo'
 export const metadata: Metadata = {
   title: 'DialerSeat vs Mojo Dialer: Triple-Line Speed for Every Industry',
   description:
-    'DialerSeat is the modern alternative to Mojo Dialer. Triple-line speed plus real multi-line predictive, multiple scripts per campaign, public API for any CRM, at flat $35/week per seat. No $10/mo Agent Access fee, no $25: $49 data add-ons, every industry welcome.',
+    'DialerSeat is the modern alternative to Mojo Dialer. Triple-line speed plus real multi-line predictive, multiple scripts per campaign, public API for any CRM, at flat $35/week per seat. No $10/mo Agent Access fee, no $25–$49 data add-ons, every industry welcome.',
   alternates: {
     canonical: 'https://dialerseat.com/vs/mojo',
   },
   openGraph: {
     title: 'DialerSeat vs Mojo Dialer',
     description:
-      'Same triple-line speed across every industry, not just real estate. No $10/mo Agent Access fee. No $25, $49 data add-ons stacking. $35/week per seat.',
+      'Same triple-line speed across every industry, not just real estate. No $10/mo Agent Access fee. No $25–$49 data add-ons stacking. $35/week per seat.',
     url: 'https://dialerseat.com/vs/mojo',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DialerSeat vs Mojo Dialer',
-    description: 'Same triple-line speed across every industry, not just real estate. No $10/mo Agent Access fee. No $25, $49 data add-ons stacking. $35/week per seat.',
+    description: 'Same triple-line speed across every industry, not just real estate. No $10/mo Agent Access fee. No $25–$49 data add-ons stacking. $35/week per seat.',
   },
 }
 
@@ -37,7 +37,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to Mojo Dialer on price?',
     answer:
-      'DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with everything included. Mojo Dialer advertises $139/month for Triple Line, but real customer bills land at $250: $350 once the $10/mo Agent Access fee and $25: $49 data add-ons (FSBO, Pre-Foreclosure, Neighborhood, Skip Tracer) are stacked. DialerSeat has no required access fee and no per-dataset subscriptions.',
+      'DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with everything included. Mojo Dialer advertises $139/month for Triple Line, but real customer bills land at $250–$350 once the $10/mo Agent Access fee and $25–$49 data add-ons (FSBO, Pre-Foreclosure, Neighborhood, Skip Tracer) are stacked. DialerSeat has no required access fee and no per-dataset subscriptions.',
   },
   {
     question: 'Is DialerSeat only for real estate?',

@@ -11,6 +11,34 @@ import JsonLd from '@/components/json-ld'
 import { organizationSchema, softwareApplicationSchema } from '@/lib/schema'
 import LeadQueueShowcase from '@/components/LeadQueueShowcase'
 
+/**
+ * One cell of the comparison table.
+ *
+ * A tick and a cross are the two values that carry meaning at a glance, so
+ * they get colour; everything else is a real figure and is left as text,
+ * because "Limited" and "$150+/mo" both say more than a cross would.
+ *
+ * `ours` changes weight and colour only. It does not change what is claimed:
+ * the DialerSeat column loses rows in this table and is supposed to.
+ */
+function CompareCell({ value, ours = false }: { value: string; ours?: boolean }) {
+  const isYes = value === '✓'
+  const isNo = value === '✗'
+  return (
+    <div
+      className="ds-compare-cell"
+      style={{
+        fontSize: isYes || isNo ? '15px' : '13.5px',
+        fontWeight: ours && !isNo ? 'bold' : 'normal',
+        color: isYes ? '#1a6a1a' : isNo ? '#9aa0ac' : ours ? '#2a4a8a' : '#5a5e6a',
+        textAlign: 'center',
+      }}
+    >
+      {value}
+    </div>
+  )
+}
+
 interface PageProps {
   searchParams: Promise<{ view?: string; tenant?: string }>
 }
@@ -351,8 +379,12 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-cta-buttons { flex-direction: column; width: 100%; gap: 10px !important; }
           .ds-cta-buttons > a { width: 100%; box-sizing: border-box; text-align: center; }
           .ds-feature-card { padding: 28px !important; }
-          .ds-step-card { flex-direction: column !important; gap: 12px !important; padding: 28px !important; }
-          .ds-step-num { font-size: 36px !important; }
+          /* The step row stays a ROW on a phone. It used to stack, which was
+             right when the number was a large transparent glyph; it is now a
+             fixed 52px filled badge, and stacking left it sitting alone above
+             the text with the icon orphaned between them. Only the sizes move. */
+          .ds-step-card { gap: 14px !important; padding: 16px 14px !important; }
+          .ds-step-num { width: 42px !important; height: 42px !important; font-size: 16px !important; }
           .ds-compare-row,
           .ds-compare-header {
             grid-template-columns: 1.4fr 0.9fr 0.9fr 0.9fr !important;
@@ -601,38 +633,54 @@ export default async function Home({ searchParams }: PageProps) {
           </div>
         </div>
 
+        {/* Each card ends in a real link. A feature grid that only asserts
+            is a wall of claims; one that offers the page behind each claim
+            gives an interested reader somewhere to go, and gives the nine
+            most-searched terms on this site an internal link from the
+            highest-authority page on the domain. */}
         <div className="ds-grid-3" style={{ display: 'grid', gap: '20px' }}>
           {[
-            { icon: '⚡', title: 'PREDICTIVE DIALING', desc: 'Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour, every hour.' },
-            { icon: '🎙️', title: 'IDENTIFIES VOICEMAIL', desc: 'Stop wasting your day on dead air. DialerSeat knows when a machine answers and skips ahead to the next live human.' },
-            { icon: '📋', title: 'MULTIPLE CAMPAIGNS', desc: 'Run unlimited campaigns simultaneously. Upload a CSV, name it, and you are dialing in seconds.' },
-            { icon: '🎯', title: 'MEMORY OF MARKED LEADS', desc: 'Every disposition, callback, and note remembers itself. Your work is never lost between sessions or seats.' },
-            { icon: '📞', title: 'MANUAL DIALER', desc: 'When you want to control every call yourself, we have you. Click-to-dial individual numbers any time.' },
-            { icon: '🏢', title: 'TEAM WORKFLOW', desc: 'Buy seats for your whole crew. Each agent gets their own login, campaigns, and call data, all under one roof.' },
-            { icon: '🌎', title: 'WORKS GLOBALLY', desc: 'Dial US based leads from any country in the world. No increased price jumps for dialing while abroad.' },
-            { icon: '✨', title: 'CLEAN, PLUG-AND-PLAY UI', desc: 'No bloat, no setup wizard, no learning curve. Sign in, upload, dial. Works on desktop and mobile.' },
-            { icon: '🔒', title: 'YOUR DATA, ALWAYS YOURS', desc: 'Your leads stay saved even if your subscription lapses. Pick up right where you left off, no questions asked.' },
+            { icon: '⚡', title: 'PREDICTIVE DIALING', href: '/dialing-modes/predictive', desc: 'Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour, every hour.' },
+            { icon: '🎙️', title: 'IDENTIFIES VOICEMAIL', href: '/faq/how-does-amd-work', desc: 'Stop wasting your day on dead air. DialerSeat knows when a machine answers and skips ahead to the next live human.' },
+            { icon: '📋', title: 'MULTIPLE CAMPAIGNS', href: '/faq/campaigns', desc: 'Run unlimited campaigns simultaneously. Upload a CSV, name it, and you are dialing in seconds.' },
+            { icon: '🎯', title: 'MEMORY OF MARKED LEADS', href: '/faq/leads', desc: 'Every disposition, callback, and note remembers itself. Your work is never lost between sessions or seats.' },
+            { icon: '📞', title: 'MANUAL DIALER', href: '/faq/what-is-a-preview-dialer', desc: 'When you want to control every call yourself, we have you. Click-to-dial individual numbers any time.' },
+            { icon: '🏢', title: 'TEAM WORKFLOW', href: '/faq/teams-how-it-works', desc: 'Buy seats for your whole crew. Each agent gets their own login, campaigns, and call data, all under one roof.' },
+            { icon: '🌎', title: 'WORKS GLOBALLY', href: '/faq/dialer-for-offshore-agents', desc: 'Dial US based leads from any country in the world. No increased price jumps for dialing while abroad.' },
+            { icon: '✨', title: 'CLEAN, PLUG-AND-PLAY UI', href: '/faq/mobile', desc: 'No bloat, no setup wizard, no learning curve. Sign in, upload, dial. Works on desktop and mobile.' },
+            { icon: '🔒', title: 'YOUR DATA, ALWAYS YOURS', href: '/faq/data-and-recordings', desc: 'Your leads stay saved even if your subscription lapses. Pick up right where you left off, no questions asked.' },
           ].map((f, i) => (
             <div key={i} className="ds-feature-card" style={{
-              padding: '36px',
-              borderRadius: '8px',
+              padding: '30px',
+              borderRadius: '4px',
               background: '#ffffff',
               border: '1px solid #c4c8d0',
-              borderTop: '3px solid #2a4a8a',
+              display: 'flex',
+              flexDirection: 'column',
             }}>
-              <div style={{ fontSize: '28px', marginBottom: '16px' }}>{f.icon}</div>
+              <div style={{ fontSize: '26px', marginBottom: '14px' }}>{f.icon}</div>
               <h3 style={{
-                fontSize: '12px',
+                fontSize: '13px',
                 fontWeight: 'bold',
-                letterSpacing: '3px',
-                color: '#1a1c24',
+                letterSpacing: '1.5px',
+                color: '#2a4a8a',
                 marginBottom: '12px',
               }}>{f.title}</h3>
               <p style={{
-                fontSize: '13px',
-                lineHeight: '1.7',
+                fontSize: '13.5px',
+                lineHeight: '1.65',
                 color: '#5a5e6a',
+                marginBottom: '18px',
               }}>{f.desc}</p>
+              {/* Pushed to the bottom edge so every card's link sits on the
+                  same line regardless of how long its description runs. */}
+              <Link href={f.href} style={{
+                marginTop: 'auto',
+                alignSelf: 'flex-end',
+                fontSize: '12.5px',
+                color: '#2a4a8a',
+                textDecoration: 'underline',
+              }}>Learn more &raquo;</Link>
             </div>
           ))}
         </div>
@@ -658,43 +706,56 @@ export default async function Home({ searchParams }: PageProps) {
           </h2>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* One bordered table rather than four floating cards. The steps are
+            a sequence, and a shared container with dividers reads as an ordered
+            list; four separated cards read as four unrelated options. */}
+        <div style={{
+          border: '1px solid #c4c8d0',
+          borderRadius: '4px',
+          background: '#ffffff',
+          overflow: 'hidden',
+        }}>
           {[
-            { step: '01', title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime.' },
-            { step: '02', title: 'UPLOAD YOUR LEADS', desc: 'Drop your CSV into a campaign. Name it, organize it, and have multiple campaigns ready to go simultaneously.' },
-            { step: '03', title: 'HIT DIAL AND GO', desc: 'Launch your campaign and DialerSeat starts working immediately. Live connections come through the second someone picks up.' },
-            { step: '04', title: 'TRACK AND CLOSE', desc: 'Disposition every call in one click. Track your performance in real time. Rinse and repeat until your list is done.' },
-          ].map((step, i) => (
+            { step: '01', icon: '👤', title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime.' },
+            { step: '02', icon: '📤', title: 'UPLOAD YOUR LEADS', desc: 'Drop your CSV into a campaign. Name it, organize it, and have multiple campaigns ready to go simultaneously.' },
+            { step: '03', icon: '📞', title: 'HIT DIAL AND GO', desc: 'Launch your campaign and DialerSeat starts working immediately. Live connections come through the second someone picks up.' },
+            { step: '04', icon: '📊', title: 'TRACK AND CLOSE', desc: 'Disposition every call in one click. Track your performance in real time. Rinse and repeat until your list is done.' },
+          ].map((step, i, arr) => (
             <div key={i} className="ds-step-card" style={{
               display: 'flex',
-              alignItems: 'flex-start',
-              gap: '32px',
-              padding: '36px',
-              borderRadius: '8px',
-              background: '#e2e4ea',
-              border: '1px solid #c4c8d0',
-              borderLeft: '3px solid #4a9eff',
+              alignItems: 'center',
+              gap: '22px',
+              padding: '22px 26px',
+              borderBottom: i < arr.length - 1 ? '1px solid #e2e4ea' : 'none',
             }}>
+              {/* Filled, not outlined. The number is the strongest thing in
+                  the row because the order is the point of the section. */}
               <div className="ds-step-num" style={{
-                fontSize: '48px',
-                fontWeight: 'bold',
-                color: '#4a9eff',
-                opacity: 0.35,
-                lineHeight: 1,
+                width: '52px',
+                height: '52px',
                 flexShrink: 0,
-                letterSpacing: '-2px',
+                borderRadius: '4px',
+                background: '#2a4a8a',
+                color: '#ffffff',
+                fontSize: '20px',
+                fontWeight: 'bold',
+                letterSpacing: '-0.5px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}>{step.step}</div>
-              <div>
+              <div style={{ fontSize: '24px', flexShrink: 0 }} aria-hidden="true">{step.icon}</div>
+              <div style={{ minWidth: 0 }}>
                 <h3 style={{
                   fontSize: '13px',
                   fontWeight: 'bold',
-                  letterSpacing: '3px',
-                  color: '#1a1c24',
-                  marginBottom: '12px',
+                  letterSpacing: '1.5px',
+                  color: '#2a4a8a',
+                  marginBottom: '6px',
                 }}>{step.title}</h3>
                 <p style={{
-                  fontSize: '14px',
-                  lineHeight: '1.7',
+                  fontSize: '13.5px',
+                  lineHeight: '1.6',
                   color: '#5a5e6a',
                 }}>{step.desc}</p>
               </div>
@@ -723,18 +784,22 @@ export default async function Home({ searchParams }: PageProps) {
           </h2>
         </div>
 
-        <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid #c4c8d0', background: '#ffffff' }}>
+        {/* A tick and a cross carry the meaning here, so they are coloured
+            rather than left as grey glyphs: green reads as "yes" before the
+            eye has finished crossing the row. Anything that is not a tick or a
+            cross is a real value and stays as text, because "Limited" and
+            "$150+/mo" say more than a cross would. */}
+        <div style={{ borderRadius: '4px', overflow: 'hidden', border: '1px solid #c4c8d0', background: '#ffffff' }}>
           <div className="ds-compare-header" style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr 1fr',
-            padding: '20px 32px',
-            background: '#1a1a2e',
-            borderBottom: '2px solid #2a4a8a',
+            gridTemplateColumns: '1.6fr 1fr 1fr 1fr',
+            padding: '15px 26px',
+            background: '#2a4a8a',
           }}>
-            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: '#8888aa' }}>FEATURE</div>
-            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: '#4a9eff', textAlign: 'center' }}>DIALERSEAT</div>
-            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: '#8888aa', textAlign: 'center' }}>READYMODE</div>
-            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: '#8888aa', textAlign: 'center' }}>OTHERS</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: '#ffffff' }}>FEATURE</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: '#ffffff', textAlign: 'center' }}>DIALERSEAT</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>READYMODE</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>OTHERS</div>
           </div>
 
           {[
@@ -756,15 +821,16 @@ export default async function Home({ searchParams }: PageProps) {
           ].map((row, i, arr) => (
             <div key={i} className="ds-compare-row" style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr 1fr',
-              padding: '16px 32px',
+              gridTemplateColumns: '1.6fr 1fr 1fr 1fr',
+              padding: '13px 26px',
+              alignItems: 'center',
               borderBottom: i < arr.length - 1 ? '1px solid #e2e4ea' : 'none',
-              background: i % 2 === 0 ? '#f0f1f4' : '#ffffff',
+              background: i % 2 === 1 ? '#f6f7f9' : '#ffffff',
             }}>
-              <div className="ds-compare-cell" style={{ fontSize: '13px', letterSpacing: '1px', color: '#5a5e6a' }}>{row.feature}</div>
-              <div className="ds-compare-cell" style={{ fontSize: '13px', fontWeight: 'bold', color: '#4a9eff', textAlign: 'center' }}>{row.us}</div>
-              <div className="ds-compare-cell" style={{ fontSize: '13px', color: '#5a5e6a', textAlign: 'center', opacity: 0.6 }}>{row.them1}</div>
-              <div className="ds-compare-cell" style={{ fontSize: '13px', color: '#5a5e6a', textAlign: 'center', opacity: 0.6 }}>{row.them2}</div>
+              <div className="ds-compare-cell" style={{ fontSize: '13.5px', color: '#1a1c24' }}>{row.feature}</div>
+              <CompareCell value={row.us} ours />
+              <CompareCell value={row.them1} />
+              <CompareCell value={row.them2} />
             </div>
           ))}
         </div>
