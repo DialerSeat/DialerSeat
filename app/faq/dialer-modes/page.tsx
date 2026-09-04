@@ -207,6 +207,73 @@ export default function DialerModesTldrPage() {
             .dmt-hero h1 { font-size: 34px; }
             .dmt-grid { grid-template-columns: 1fr; padding: 36px 18px 18px; }
           }
+        
+
+          /* ── INSIDE THE ARTICLE CARD ─────────────────────────────────
+             Written when this page WAS the column: its own hero gradient,
+             its own centered 780px measure, its own page padding. The card
+             owns all of that now, so those rules are unwound here and the
+             sections take the blueprint's centered, hairline-separated
+             shape. Content that is scanned rather than read goes back to
+             left-aligned inside them. */
+          .dmt-hero {
+            background: transparent;
+            padding: 52px 48px 44px;
+            border-bottom: 1px solid #e2e4ea;
+            overflow: visible;
+          }
+          .dmt-hero::before { display: none; }
+          .dmt-hero-inner { max-width: none; }
+          .dmt-hero h1 {
+            font-size: 42px; font-weight: 800;
+            letter-spacing: -1.4px; line-height: 1.08;
+          }
+          .dmt-lead {
+            max-width: 660px; margin-left: auto; margin-right: auto;
+            font-size: 15.5px; line-height: 1.75;
+          }
+          .dmt-eyebrow { letter-spacing: 3px; font-size: 10px; }
+
+          .dmt-section {
+            max-width: none;
+            margin: 0;
+            padding: 44px 48px;
+            border-bottom: 1px solid #e2e4ea;
+            text-align: center;
+          }
+          .dmt-section:last-of-type { border-bottom: none; }
+          .dmt-section h2 {
+            font-size: 27px; font-weight: 800;
+            letter-spacing: -0.6px; line-height: 1.2;
+          }
+          .dmt-section > p {
+            max-width: 660px; margin-left: auto; margin-right: auto;
+          }
+          .dmt-section a { color: #2a6eff; font-weight: 600; }
+
+          /* Scanned, not read. */
+          .dmt-section ul, .dmt-section ol, .dmt-section table,
+          .dmt-bullets, .dmt-steps, .dmt-pullquote,
+          .dmt-shines-grid, .dmt-shines-card,
+          .dmt-other-grid, .dmt-other-card,
+          .dmt-grid, .dmt-card, .dmt-note, .dmt-best {
+            text-align: left;
+          }
+
+          .dmt-cta {
+            margin: 0;
+            padding: 44px 48px;
+            border-top: 1px solid #e2e4ea;
+            border-radius: 0;
+          }
+
+          @media (max-width: 700px) {
+            .dmt-hero { padding: 34px 22px 30px; }
+            .dmt-hero h1 { font-size: 29px; letter-spacing: -0.8px; }
+            .dmt-section { padding: 32px 22px; }
+            .dmt-section h2 { font-size: 22px; }
+            .dmt-cta { padding: 32px 22px; }
+          }
         `}</style>
 
         <section className="dmt-hero">

@@ -413,7 +413,7 @@ export default function FaqTheme() {
       .faq-section ul, .faq-section ol,
       .faq-section table, .faq-section .faq-card, .faq-section .faq-grid,
       .faq-section .faq-callout, .faq-section .faq-flow,
-      .faq-section .faq-fieldtable, .faq-section .faq-badge-row,
+      .faq-section .faq-fieldtable,
       .faq-root > .faq-related, .faq-root > .faq-cta {
         text-align: left;
       }

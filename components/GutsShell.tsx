@@ -231,6 +231,14 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
           color: ${T.royal}; font-weight: 600;
           text-decoration: underline; text-underline-offset: 3px;
         }
+        /* Scanned, not read. A centered section centers everything inside it,
+           which is right for a heading and a paragraph and wrong for a list:
+           the markers end up hanging in space and the eye loses the left edge
+           it tracks back to. Lists and tables keep the section's column and
+           get their alignment back. */
+        .guts-sec ul, .guts-sec ol { text-align: left; max-width: 660px; margin-left: auto; margin-right: auto; }
+        .guts-sec table { text-align: left; }
+
         .guts-eyebrow {
           font-size: 10px; font-weight: bold; letter-spacing: 3px;
           color: ${T.accent};
