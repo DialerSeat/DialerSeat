@@ -228,7 +228,7 @@ const TOP_PICKS: HubItem[] = [
  * are the routes somebody lands here and then wants instead.
  */
 const NAV: HubItem[] = [
-  { href: '/?view=landing', label: 'Home page' },
+  { href: '/?view=landing', label: 'Home' },
   { href: '/faq', label: 'FAQ' },
   { href: '/terms', label: 'Terms' },
   { href: '/privacy', label: 'Privacy policy' },

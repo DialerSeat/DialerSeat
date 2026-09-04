@@ -79,6 +79,28 @@ export function vsRail(activeSlug?: string): RailGroup[] {
   ]
 }
 
+/**
+ * The rail for /privacy and /terms.
+ *
+ * MAIN MENU and SITE INFO only. Somebody reading the privacy policy is not
+ * part-way through the FAQ, so offering them seven other answers is noise —
+ * and SITE INFO already holds the other legal page, which is the one link
+ * that actually follows from being on this one.
+ */
+export function legalRail(): RailGroup[] {
+  return [
+    {
+      label: 'MAIN MENU',
+      items: [
+        { href: '/?view=landing', label: 'Home' },
+        { href: '/faq', label: 'FAQ' },
+        { href: '/vs', label: 'Comparisons' },
+      ],
+    },
+    SITE_INFO,
+  ]
+}
+
 /** The questions worth putting one click away from any answer page. */
 const RAIL_ANSWERS: { href: string; label: string }[] = [
   { href: '/faq/why-dialerseat', label: 'Why DialerSeat?' },
@@ -103,7 +125,7 @@ export function faqRail(activePath?: string): RailGroup[] {
       label: 'MAIN MENU',
       items: [
         { href: '/?view=landing', label: 'Home' },
-        { href: '/faq', label: 'All Questions' },
+        { href: '/faq', label: 'FAQ' },
         { href: '/vs', label: 'Comparisons' },
       ],
     },

@@ -191,6 +191,8 @@ export default function DirectoryHub(props: DirectoryHubProps) {
   const [query, setQuery] = useState('')
   const [showAll, setShowAll] = useState(false)
   const [askOpen, setAskOpen] = useState(false)
+  /** Only consulted on a phone; the card is always open at full width. */
+  const [navOpen, setNavOpen] = useState(false)
 
   const q = query.trim().toLowerCase()
 
@@ -459,6 +461,22 @@ export default function DirectoryHub(props: DirectoryHubProps) {
            index is shown, because scanning it is the reason the page exists. */
         .hub-foot-phone { display: none; }
 
+        /* The nav card's header doubles as its dropdown toggle on a phone. At
+           full width it is a heading that happens to be a button, so it is
+           made inert rather than left looking clickable. */
+        .hub-nav-toggle {
+          width: 100%;
+          font-family: inherit;
+          background: none;
+          border: none;
+          border-bottom: 1px solid var(--hub-line);
+          text-align: left;
+          cursor: default;
+          pointer-events: none;
+        }
+        .hub-nav-caret { display: none; }
+        .hub-nav-body { display: block; }
+
         .hub-foot { padding: 14px 16px; border-top: 1px solid var(--hub-line); }
         .hub-foot button {
           width: 100%;
@@ -504,6 +522,24 @@ export default function DirectoryHub(props: DirectoryHubProps) {
              things a phone visitor actually came for — and every link in it
              already appears in the index below. */
           .hub-picks { display: none; }
+
+          /* Same problem, same fix: the site-nav card sat fully open between
+             the search box and the index, so its four links pushed the thing
+             the visitor came for another screen down. The card's own header
+             becomes the toggle. */
+          .hub-nav-toggle { cursor: pointer; pointer-events: auto; }
+          .hub-nav-caret {
+            display: block;
+            margin-left: auto;
+            font-size: 14px;
+            color: var(--hub-royal);
+            transition: transform 0.16s ease;
+          }
+          .hub-nav-toggle[aria-expanded="true"] .hub-nav-caret { transform: rotate(180deg); }
+          .hub-nav-body { display: none; }
+          .hub-card-nav.is-open .hub-nav-body { display: block; }
+          /* Closed, the card is exactly its header — no dangling border. */
+          .hub-card-nav:not(.is-open) .hub-nav-toggle { border-bottom: none; }
 
           .hub-inner { padding: 0 20px 64px; }
           .hub-hero { padding: 48px 20px 26px; }
@@ -569,19 +605,28 @@ export default function DirectoryHub(props: DirectoryHubProps) {
         {/* ── THREE COLUMNS ── */}
         <div className="hub-grid">
 
-          {/* SITE NAV */}
-          <aside className="hub-card hub-card-nav">
-            <div className="hub-card-head here">
+          {/* SITE NAV — a dropdown on a phone, where it otherwise stands
+              between the search box and the index the visitor came for. */}
+          <aside className={`hub-card hub-card-nav${navOpen ? ' is-open' : ''}`}>
+            <button
+              type="button"
+              className="hub-card-head here hub-nav-toggle"
+              aria-expanded={navOpen}
+              onClick={() => setNavOpen((v) => !v)}
+            >
               <span className="hub-badge plain"><IconHome /></span>
               <h2>{props.navTitle}</h2>
+              <span className="hub-nav-caret" aria-hidden>▾</span>
+            </button>
+            <div className="hub-nav-body">
+              <div className="hub-divider">{props.navDivider}</div>
+              {props.navItems.map((item) => (
+                <Link key={item.href} href={item.href} className="hub-row">
+                  <Chevron className="hub-chev-left" />
+                  <span className="hub-row-label">{item.label}</span>
+                </Link>
+              ))}
             </div>
-            <div className="hub-divider">{props.navDivider}</div>
-            {props.navItems.map((item) => (
-              <Link key={item.href} href={item.href} className="hub-row">
-                <Chevron className="hub-chev-left" />
-                <span className="hub-row-label">{item.label}</span>
-              </Link>
-            ))}
           </aside>
 
           {/* THE FULL INDEX — every row, always. Clamped only on a phone. */}

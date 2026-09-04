@@ -249,6 +249,7 @@ const TOP_PICKS: HubItem[] = [
 
 /** The left column — where someone goes next, not a second copy of the index. */
 const NAV: HubItem[] = [
+  { href: '/?view=landing', label: 'Home' },
   { href: '/vs', label: 'VS' },
   { href: '/terms', label: 'Terms' },
   { href: '/privacy', label: 'Privacy policy' },
