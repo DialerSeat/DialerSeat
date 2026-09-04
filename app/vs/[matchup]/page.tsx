@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import JsonLd from '@/components/json-ld'
+import GutsShell from '@/components/GutsShell'
+import { vsRail } from '@/lib/gutsRail'
 import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import {
   COMPETITORS,
@@ -206,11 +208,8 @@ export default async function MatchupPage(
         { name: `${a.name} vs ${b.name}`, url: `/vs/${matchup}` },
       ])} />
 
-      <main style={{
-        background: 'var(--brand-page-bg, #f0f1f4)', color: INK,
-        fontFamily: FUTURA, minHeight: '100vh',
-      }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '80px 24px 96px' }}>
+      <GutsShell rail={vsRail()} activeHref="/vs">
+        <div className="guts-sec">
           <nav style={{ fontSize: 11, letterSpacing: 1.5, color: MUTED, marginBottom: 22 }}>
             <Link href="/" style={{ color: MUTED }}>HOME</Link>
             {' · '}
@@ -324,7 +323,7 @@ export default async function MatchupPage(
             {COMPETITORS.filter(c => c.crossShopped).map(c => c.name).join(', ')}.
           </p>
         </div>
-      </main>
+      </GutsShell>
     </>
   )
 }
