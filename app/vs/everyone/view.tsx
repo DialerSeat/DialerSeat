@@ -308,7 +308,7 @@ export default function VsEveryoneView() {
              than one being restyled into the other, so neither has to carry
              the other's appearance. */
           .vse-rail-toggle { display: none; }
-          .vse-rail-menu-body { display: block; }
+          .vse-rail-body { display: block; }
 
           /* ── THE ARTICLE ──────────────────────────────────────────── */
           .vse-card {
@@ -469,9 +469,13 @@ export default function VsEveryoneView() {
             .vse-rail { position: static; }
             .vse-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
+            /* Collapsed, the rail is exactly the height of its toggle. */
+            .vse-rail { padding: 12px 0; }
             .vse-rail-label-wide { display: none; }
-            .vse-rail-menu-body { display: none; }
-            .vse-rail-menu-body.is-open { display: block; }
+            .vse-rail-body { display: none; }
+            .vse-rail-body.is-open { display: block; padding-top: 18px; }
+            /* The first group's label is redundant with the toggle above it. */
+            .vse-rail-body.is-open .vse-rail-group:first-child { margin-top: 0; }
             .vse-rail-toggle {
               display: flex; align-items: center; justify-content: space-between;
               width: calc(100% - 24px);
@@ -488,7 +492,6 @@ export default function VsEveryoneView() {
             .vse-rail-toggle .caret { transition: transform 0.16s ease; font-size: 13px; }
             .vse-rail-toggle[aria-expanded="true"] { background: ${T.royal}; border-color: ${T.royal}; }
             .vse-rail-toggle[aria-expanded="true"] .caret { transform: rotate(180deg); }
-            .vse-rail-menu-body.is-open { padding-top: 8px; }
           }
           @media (max-width: 700px) {
             .vse { padding: 20px 16px 56px; }
@@ -508,43 +511,45 @@ export default function VsEveryoneView() {
 
             {/* ── NAVIGATION RAIL ── */}
             <aside className="vse-rail">
-              {/* Stacked above the article on a phone, this block pushed the
-                  page's first sentence off the screen. It collapses there and
-                  stays a plain list at full width, where it costs nothing. */}
-              <div className="vse-rail-group vse-rail-menu">
-                <p className="vse-rail-label vse-rail-label-wide">MAIN MENU</p>
-                <button
-                  type="button"
-                  className="vse-rail-toggle"
-                  aria-expanded={menuOpen}
-                  onClick={() => setMenuOpen((v) => !v)}
-                >
-                  MAIN MENU
-                  <span className="caret" aria-hidden>▾</span>
-                </button>
-                <div className={`vse-rail-menu-body${menuOpen ? ' is-open' : ''}`}>
+              {/* Stacked above the article on a phone, the whole rail is
+                  seventeen links standing between the visitor and the page's
+                  first sentence. One toggle folds all three groups away there,
+                  and does nothing at full width where the rail is a sidebar. */}
+              <button
+                type="button"
+                className="vse-rail-toggle"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((v) => !v)}
+              >
+                MAIN MENU
+                <span className="caret" aria-hidden>▾</span>
+              </button>
+
+              <div className={`vse-rail-body${menuOpen ? ' is-open' : ''}`}>
+                <div className="vse-rail-group">
+                  <p className="vse-rail-label vse-rail-label-wide">MAIN MENU</p>
                   <Link href="/?view=landing"><RailChevron /> Home</Link>
                   <Link href="/vs" className="here"><RailChevron /> All Comparisons</Link>
                   <Link href="/faq"><RailChevron /> FAQ</Link>
                 </div>
-              </div>
 
-              <div className="vse-rail-group">
-                <p className="vse-rail-label">OTHER VS PAGES</p>
-                {OTHER_VS.map((item) => (
-                  <Link key={item.href} href={item.href}>
-                    <RailChevron /> {item.label}
-                  </Link>
-                ))}
-              </div>
+                <div className="vse-rail-group">
+                  <p className="vse-rail-label">OTHER VS PAGES</p>
+                  {OTHER_VS.map((item) => (
+                    <Link key={item.href} href={item.href}>
+                      <RailChevron /> {item.label}
+                    </Link>
+                  ))}
+                </div>
 
-              <div className="vse-rail-group">
-                <p className="vse-rail-label">SITE INFO</p>
-                {SITE_INFO.map((item) => (
-                  <Link key={item.href} href={item.href}>
-                    <RailChevron /> {item.label}
-                  </Link>
-                ))}
+                <div className="vse-rail-group">
+                  <p className="vse-rail-label">SITE INFO</p>
+                  {SITE_INFO.map((item) => (
+                    <Link key={item.href} href={item.href}>
+                      <RailChevron /> {item.label}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </aside>
 
