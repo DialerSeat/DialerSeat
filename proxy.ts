@@ -39,6 +39,20 @@ const isPublicRoute = createRouteMatcher([
   // sanitised, and derives the visitor hash and auth state server-side. There
   // is nothing here to read and nothing worth forging.
   '/api/analytics/pageview',
+  // ── THE ASK-US BOX IS FOR PEOPLE WHO HAVE NOT SIGNED UP ─────────────
+  // The same failure as the beacon above, for the same reason. /vs and /faq
+  // are public, so the form renders for anonymous visitors — but the endpoint
+  // it posts to was not, so Clerk blocked every submission before the route
+  // could run. The visitor saw "something went wrong", and nothing was ever
+  // written. The whole point of the box is that somebody who has NOT signed
+  // up can ask a question, so a signed-in-only endpoint behind it could never
+  // have worked.
+  //
+  // Safe to open: it takes a kind from a fixed allow-list, a message and an
+  // optional email, all validated and length-capped server-side, rate limited
+  // per hashed IP, and written by the service role into a table with RLS on
+  // and no policies. There is nothing to read and nothing worth forging.
+  '/api/suggestions',
   '/terms',
   '/privacy',
   '/faq(.*)',
