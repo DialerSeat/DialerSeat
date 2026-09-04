@@ -347,9 +347,14 @@ export default function PowerDialerPage() {
             font-size: 27px; font-weight: 800;
             letter-spacing: -0.6px; line-height: 1.2;
           }
-          .dm-section > p {
+          /* Centered column, left-aligned prose: centered body text past about
+             three lines makes the eye hunt for each line start. These pages have
+             the longest paragraphs on the site. See components/GutsShell. */
+          .dm-section > p, .dm-section .inner > p {
             max-width: 660px; margin-left: auto; margin-right: auto;
           }
+          .dm-section p { text-align: left; }
+          .dm-hero .dm-lead { text-align: center; }
           .dm-section a { color: #2a6eff; font-weight: 600; }
 
           /* Scanned, not read. */

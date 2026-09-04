@@ -182,7 +182,13 @@ export default function ExplainerStyles({ accent, accentBg }: Props) {
       .exp-section h2 {
         font-size: 27px; letter-spacing: -0.6px; line-height: 1.2; font-weight: 800;
       }
-      .exp-section p { margin-left: auto; margin-right: auto; max-width: 660px; }
+
+      /* Centered column, left-aligned prose. The section composition stays
+         centered; the paragraphs inside it do not, because centered body text
+         past about three lines makes the eye hunt for each line start instead
+         of returning to a fixed left edge. See components/GutsShell. */
+      .exp-section p { margin-left: auto; margin-right: auto; max-width: 660px; text-align: left; }
+      .exp-hero .exp-lead, .exp-hero p { text-align: center; }
       .exp-section a { color: ${ROYAL}; font-weight: 600; }
       /* Scanned rather than read: back to left inside the centered section. */
       .exp-cards, .exp-card, .exp-qa, .exp-deepdive, .exp-pullquote,

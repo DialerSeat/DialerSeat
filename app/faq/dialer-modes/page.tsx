@@ -246,9 +246,14 @@ export default function DialerModesTldrPage() {
             font-size: 27px; font-weight: 800;
             letter-spacing: -0.6px; line-height: 1.2;
           }
-          .dmt-section > p {
+          /* Centered column, left-aligned prose: centered body text past about
+             three lines makes the eye hunt for each line start. These pages have
+             the longest paragraphs on the site. See components/GutsShell. */
+          .dmt-section > p, .dmt-section .inner > p {
             max-width: 660px; margin-left: auto; margin-right: auto;
           }
+          .dmt-section p { text-align: left; }
+          .dmt-hero .dmt-lead { text-align: center; }
           .dmt-section a { color: #2a6eff; font-weight: 600; }
 
           /* Scanned, not read. */

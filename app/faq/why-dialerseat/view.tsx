@@ -432,7 +432,7 @@ export default function WhyDialerSeatView() {
                 decade.
               </p>
               <p>
-                When you build a dialer in 2026 with modern telephony,
+                When you build a dialer today with modern telephony,
                 modern AMD, browser-native calling, an honest abandon-rate
                 controller, and a team that ships weekly, you don&apos;t
                 end up looking like a 2014 product. You don&apos;t need to.

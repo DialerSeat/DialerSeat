@@ -3,6 +3,8 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 
 const T = {
   bg: '#f0f1f4',
@@ -31,13 +33,8 @@ export default function DialingModesView() {
     }}>
       <SiteHeader />
 
-      <main style={{
-        maxWidth: 880,
-        margin: '0 auto',
-        padding: '48px 24px 80px',
-        width: '100%',
-        flex: 1,
-      }}>
+      <GutsShell rail={faqRail('/dialing-modes')} activeHref="/dialing-modes">
+        <div className="guts-sec">
 
         <div style={{ marginBottom: 48 }}>
           <div style={{
@@ -244,7 +241,8 @@ export default function DialingModesView() {
         }}>
           <strong>Not legal advice.</strong> This page describes our software&apos;s technical behavior with respect to specific U.S. federal regulations. It is not a legal opinion, does not establish an attorney-client relationship, and does not guarantee compliance for any specific use case. Telemarketing law varies by state and circumstance. Consult qualified counsel for advice on your specific operations. Last updated: July 2026. Citations: 16 CFR 310.4(b)(4); 47 CFR 64.1200; 47 USC 227.
         </p>
-      </main>
+      </div>
+      </GutsShell>
 
       <SiteFooter />
     </div>

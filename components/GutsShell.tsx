@@ -220,13 +220,29 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
           font-size: 16px; font-weight: 800; letter-spacing: -0.2px;
           color: ${T.text};
         }
+        /* ── CENTERED COLUMN, LEFT-ALIGNED PROSE ──────────────────────
+           The section stays centered — icon, heading, eyebrow, buttons —
+           because that composition is what makes these read as an argument
+           rather than documentation. The PARAGRAPHS do not.
+           Centered body text is measurably harder to read past about three
+           lines: every line starts in a different place, so the eye has to
+           hunt for the beginning of the next one instead of returning to a
+           fixed left edge. On the short sections it costs nothing, and on the
+           explainer pages, where paragraphs run five and six lines, it is the
+           difference between skimmable and not.
+           The block stays centered in the card; only the text inside it
+           aligns left. */
         .guts-sec p {
           margin: 0 auto 14px;
           max-width: 660px;
           font-size: 15.5px; line-height: 1.75;
           color: ${T.muted};
+          text-align: left;
         }
         .guts-sec p:last-child { margin-bottom: 0; }
+        /* The hero is the page's opening statement and runs two or three
+           lines. It stays centered with the headline above it. */
+        .guts-hero p { text-align: center; }
         .guts-sec a:not(.guts-btn) {
           color: ${T.royal}; font-weight: 600;
           text-decoration: underline; text-underline-offset: 3px;

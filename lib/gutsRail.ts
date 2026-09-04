@@ -21,7 +21,6 @@ const SITE_INFO: RailGroup = {
   items: [
     { href: '/privacy', label: 'Privacy Policy' },
     { href: '/terms', label: 'Terms of Use' },
-    { href: '/dialing-modes', label: 'Dialing Modes' },
   ],
 }
 

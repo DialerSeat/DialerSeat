@@ -154,7 +154,6 @@ const OTHER_VS = [
 const SITE_INFO = [
   { label: 'Privacy Policy', href: '/privacy' },
   { label: 'Terms of Use', href: '/terms' },
-  { label: 'Dialing Modes', href: '/dialing-modes' },
 ]
 
 function StatusCell({ value }: { value: Cell }) {

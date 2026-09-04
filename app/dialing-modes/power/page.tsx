@@ -4,6 +4,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 
 export const dynamic = 'force-dynamic'
@@ -41,7 +43,8 @@ export default function PowerDialerPage() {
       ])} />
       <>
       <SiteHeader />
-      <main className="dm-root dm-power">
+      <GutsShell rail={faqRail('/dialing-modes/power')} activeHref="/dialing-modes/power">
+      <div className="dm-root dm-power">
         <style>{`
           .dm-root, .dm-root * { box-sizing: border-box; }
           .dm-root {
@@ -304,6 +307,55 @@ export default function PowerDialerPage() {
             .dm-cta h2 { font-size: 26px; }
             .dm-btn-primary, .dm-btn-secondary { width: 100%; }
           }
+        
+
+          /* ── INSIDE THE ARTICLE CARD ─────────────────────────────────
+             Written when this page WAS the column. The card owns the column,
+             the background and the padding now, so those rules are unwound
+             here and the sections take the blueprint's centered,
+             hairline-separated shape. Prose inside them stays left-aligned:
+             centered body text past about three lines makes the eye hunt for
+             each line start. */
+          .dm-hero {
+            background: transparent;
+            padding: 52px 48px 44px;
+            border-bottom: 1px solid #e2e4ea;
+            overflow: visible;
+          }
+          .dm-hero::before { display: none; }
+          .dm-hero-inner { max-width: none; }
+          .dm-hero h1 { font-size: 42px; font-weight: 800; letter-spacing: -1.4px; line-height: 1.08; }
+          .dm-hero .dm-lead { text-align: center; }
+          .dm-lead { max-width: 660px; margin-left: auto; margin-right: auto; font-size: 15.5px; line-height: 1.75; }
+          .dm-eyebrow { letter-spacing: 3px; font-size: 10px; }
+
+          .dm-section {
+            max-width: none; margin: 0;
+            padding: 44px 48px;
+            border-bottom: 1px solid #e2e4ea;
+            text-align: center;
+          }
+          .dm-section:last-of-type { border-bottom: none; }
+          .dm-section h2 { font-size: 27px; font-weight: 800; letter-spacing: -0.6px; line-height: 1.2; }
+          .dm-section > p, .dm-section .inner > p { max-width: 660px; margin-left: auto; margin-right: auto; }
+          .dm-section p { text-align: left; }
+          .dm-section a { color: #2a6eff; font-weight: 600; }
+
+          /* Scanned, not read. */
+          .dm-section ul, .dm-section ol, .dm-section table,
+          .dm-bullets, .dm-steps, .dm-pullquote,
+          .dm-shines-grid, .dm-shines-card,
+          .dm-other-grid, .dm-other-card { text-align: left; }
+
+          .dm-cta { margin: 0; padding: 44px 48px; border-top: 1px solid #e2e4ea; border-radius: 0; }
+
+          @media (max-width: 700px) {
+            .dm-hero { padding: 34px 22px 30px; }
+            .dm-hero h1 { font-size: 29px; letter-spacing: -0.8px; }
+            .dm-section { padding: 32px 22px; }
+            .dm-section h2 { font-size: 22px; }
+            .dm-cta { padding: 32px 22px; }
+          }
         `}</style>
 
         {/* HERO */}
@@ -493,7 +545,8 @@ export default function PowerDialerPage() {
           headline="Start with power. Switch later if you want."
           description="Every account gets every mode. Pick power, start dialing, and change your mind any time. $35/week per seat, no contract."
         />
-      </main>
+        </div>
+      </GutsShell>
       <SiteFooter />
     </>
     </>
