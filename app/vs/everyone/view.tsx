@@ -149,10 +149,11 @@ const OTHER_VS = [
   { label: 'All dialer comparisons', href: '/vs' },
 ]
 
+/** No FAQ here — it is already in MAIN MENU, and a rail that lists the same
+ *  destination twice makes you read both lists to be sure. */
 const SITE_INFO = [
   { label: 'Privacy Policy', href: '/privacy' },
   { label: 'Terms of Use', href: '/terms' },
-  { label: 'Frequently Asked Questions', href: '/faq' },
   { label: 'Dialing Modes', href: '/dialing-modes' },
 ]
 
@@ -238,6 +239,12 @@ export default function VsEveryoneView() {
   const { isLoaded, isSignedIn } = useUser()
   const showSignedIn = isLoaded && isSignedIn
   const [askOpen, setAskOpen] = useState(false)
+  /**
+   * Only consulted below the stacked breakpoint. At full width the rail is a
+   * sidebar and the menu is always shown, so this staying false is correct
+   * rather than something the desktop layout has to work around.
+   */
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
     <>
@@ -295,6 +302,13 @@ export default function VsEveryoneView() {
             margin: 0 12px; padding: 10px 14px; border-radius: 8px;
           }
           .vse-rail a.here .chev { color: rgba(255,255,255,0.75); }
+
+          /* MAIN MENU is a plain labelled list at full width and a dropdown
+             once the rail stacks. The toggle and the label swap places rather
+             than one being restyled into the other, so neither has to carry
+             the other's appearance. */
+          .vse-rail-toggle { display: none; }
+          .vse-rail-menu-body { display: block; }
 
           /* ── THE ARTICLE ──────────────────────────────────────────── */
           .vse-card {
@@ -454,6 +468,27 @@ export default function VsEveryoneView() {
             .vse-grid { grid-template-columns: minmax(0, 1fr); }
             .vse-rail { position: static; }
             .vse-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+            .vse-rail-label-wide { display: none; }
+            .vse-rail-menu-body { display: none; }
+            .vse-rail-menu-body.is-open { display: block; }
+            .vse-rail-toggle {
+              display: flex; align-items: center; justify-content: space-between;
+              width: calc(100% - 24px);
+              margin: 0 12px;
+              padding: 12px 14px;
+              background: rgba(255,255,255,0.06);
+              border: 1px solid ${T.railLine};
+              border-radius: 8px;
+              color: #fff;
+              font-family: inherit;
+              font-size: 11px; font-weight: bold; letter-spacing: 2.6px;
+              cursor: pointer;
+            }
+            .vse-rail-toggle .caret { transition: transform 0.16s ease; font-size: 13px; }
+            .vse-rail-toggle[aria-expanded="true"] { background: ${T.royal}; border-color: ${T.royal}; }
+            .vse-rail-toggle[aria-expanded="true"] .caret { transform: rotate(180deg); }
+            .vse-rail-menu-body.is-open { padding-top: 8px; }
           }
           @media (max-width: 700px) {
             .vse { padding: 20px 16px 56px; }
@@ -473,12 +508,25 @@ export default function VsEveryoneView() {
 
             {/* ── NAVIGATION RAIL ── */}
             <aside className="vse-rail">
-              <div className="vse-rail-group">
-                <p className="vse-rail-label">MAIN MENU</p>
-                <Link href="/?view=landing"><RailChevron /> Home</Link>
-                <Link href="/vs" className="here"><RailChevron /> All Comparisons</Link>
-                <Link href="/faq"><RailChevron /> FAQ</Link>
-                <Link href="/dialing-modes"><RailChevron /> Dialing Modes</Link>
+              {/* Stacked above the article on a phone, this block pushed the
+                  page's first sentence off the screen. It collapses there and
+                  stays a plain list at full width, where it costs nothing. */}
+              <div className="vse-rail-group vse-rail-menu">
+                <p className="vse-rail-label vse-rail-label-wide">MAIN MENU</p>
+                <button
+                  type="button"
+                  className="vse-rail-toggle"
+                  aria-expanded={menuOpen}
+                  onClick={() => setMenuOpen((v) => !v)}
+                >
+                  MAIN MENU
+                  <span className="caret" aria-hidden>▾</span>
+                </button>
+                <div className={`vse-rail-menu-body${menuOpen ? ' is-open' : ''}`}>
+                  <Link href="/?view=landing"><RailChevron /> Home</Link>
+                  <Link href="/vs" className="here"><RailChevron /> All Comparisons</Link>
+                  <Link href="/faq"><RailChevron /> FAQ</Link>
+                </div>
               </div>
 
               <div className="vse-rail-group">

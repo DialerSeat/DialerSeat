@@ -499,11 +499,16 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           .hub-card-index:not(.is-expanded) a.hub-row:nth-of-type(n + ${CHUNK + 1}) { display: none; }
           .hub-card-index:not(.is-expanded) a.hub-row:nth-of-type(${CHUNK}) { border-bottom: none; }
 
+          /* Top picks is a desktop shortcut. Folded onto a phone it became six
+             rows of chips between the headline and the search box — the two
+             things a phone visitor actually came for — and every link in it
+             already appears in the index below. */
+          .hub-picks { display: none; }
+
           .hub-inner { padding: 0 20px 64px; }
           .hub-hero { padding: 48px 20px 26px; }
           .hub-hero h1 { font-size: 34px; letter-spacing: -0.9px; }
           .hub-grid { grid-template-columns: minmax(0, 1fr); }
-          .hub-pick { font-size: 13.5px; }
           .hub-search { padding: 10px; flex-wrap: wrap; }
           .hub-search button { width: 100%; }
         }
