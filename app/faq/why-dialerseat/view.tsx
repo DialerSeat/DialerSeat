@@ -25,6 +25,8 @@ import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import FaqTheme from '@/components/faq-theme'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
 
 
@@ -35,12 +37,7 @@ export default function WhyDialerSeatView() {
   return (
     <>
       <SiteHeader />
-      <main style={{
-        background: SITE.bg,
-        minHeight: '100vh',
-        fontFamily: 'Futura PT, Futura, sans-serif',
-        color: SITE.text,
-      }}>
+      <GutsShell rail={faqRail('/faq/why-dialerseat')} activeHref="/faq/why-dialerseat">
         <FaqTheme />
         <style>{`
 /* HERO */
@@ -622,7 +619,7 @@ export default function WhyDialerSeatView() {
           </section>
 
         </div>
-      </main>
+      </GutsShell>
       <SiteFooter />
     </>
   )

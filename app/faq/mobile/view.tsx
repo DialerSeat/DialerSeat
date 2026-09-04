@@ -6,6 +6,8 @@ import { useUser } from '@clerk/nextjs'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import FaqTheme from '@/components/faq-theme'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
 
 
@@ -82,15 +84,7 @@ export default function MobileFaqView() {
   return (
     <>
       <SiteHeader />
-      <div
-        style={{
-          flex: 1,
-          background: SITE.bg,
-          minHeight: 'calc(100vh - 64px)',
-          fontFamily: 'Futura PT, Futura, sans-serif',
-          color: SITE.text,
-        }}
-      >
+      <GutsShell rail={faqRail('/faq/mobile')} activeHref="/faq/mobile">
         <FaqTheme />
         <style>{`
 /* STRONG RECOMMENDATION CALLOUT */
@@ -340,7 +334,7 @@ export default function MobileFaqView() {
             </a>
           </div>
         </article>
-      </div>
+      </GutsShell>
       <SiteFooter />
     </>
   )

@@ -1,6 +1,11 @@
 'use client'
 
 import { SITE as T, SITE_TYPE, SITE_SPACE } from '@/lib/siteTheme'
+import { inter } from '@/lib/fonts'
+
+/** The article card's blue, and the font the shell runs on. See GutsShell. */
+const ROYAL = '#2a6eff'
+const FAQ_FONT = inter.style.fontFamily
 
 // =============================================================================
 // ONE VISUAL LANGUAGE FOR EVERY /faq ARTICLE — TAKEN FROM THE LANDING PAGE
@@ -328,6 +333,112 @@ export default function FaqTheme() {
         .faq-fieldrow .faq-fieldcell + .faq-fieldcell { padding-top: 0; }
         .faq-cta { padding: 32px 22px; }
         .faq-cta-h { font-size: 23px; }
+      }
+
+      /* =====================================================================
+         INSIDE THE ARTICLE CARD
+         =====================================================================
+         Everything above was written for a page that WAS the article column:
+         it owned its own max-width, its own page padding, and left-aligned
+         prose. These pages now render inside components/GutsShell, which owns
+         the column and paints the card, so the rules duplicating that job are
+         unwound here rather than surgically cut out above — the vocabulary is
+         unchanged and only its container moved.
+
+         Sections become centered and hairline-separated, matching the /vs
+         blueprint. Anything SCANNED rather than read — a list, a table, a card
+         — is pulled back to left-aligned inside its centered section, because
+         a centered bulleted list is unreadable.
+         ===================================================================== */
+      .faq-root {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+        font-family: ${FAQ_FONT};
+      }
+
+      /* The hero: eyebrow, headline and deck sit directly on the root rather
+         than inside a section. */
+      .faq-root > .faq-eyebrow {
+        padding: 52px 48px 0;
+        margin-bottom: 14px;
+        text-align: center;
+        font-size: 10px; letter-spacing: 3px; color: ${T.deep};
+      }
+      .faq-root > .faq-h1 {
+        padding: 0 48px;
+        text-align: center;
+        font-size: 42px; letter-spacing: -1.4px; line-height: 1.08;
+        font-weight: 800;
+        margin: 0 0 16px 0;
+      }
+      .faq-root > .faq-h1 .alt { color: ${ROYAL}; display: block; }
+      .faq-root > .faq-deck {
+        padding: 0 48px 44px;
+        margin: 0 auto;
+        max-width: 756px;
+        text-align: center;
+        border-bottom: 1px solid ${T.borderSoft};
+        font-size: 15.5px; line-height: 1.75;
+      }
+      /* Anything else loose on the root — a date stamp, a lede — centers with
+         the hero rather than hanging to the left of it. */
+      .faq-root > span { display: block; text-align: center; }
+
+      .faq-section {
+        margin: 0;
+        padding: 44px 48px;
+        border-bottom: 1px solid ${T.borderSoft};
+        text-align: center;
+      }
+      .faq-section:last-child { border-bottom: none; }
+
+      .faq-section > h2, .faq-section > .faq-h2 {
+        font-size: 27px; letter-spacing: -0.6px; line-height: 1.2;
+        font-weight: 800; margin: 0 0 14px 0;
+      }
+      .faq-section > h2 .alt, .faq-section > .faq-h2 .alt { color: ${ROYAL}; }
+      .faq-section > .faq-section-eyebrow {
+        font-size: 10px; letter-spacing: 3px; color: ${T.deep}; margin-bottom: 12px;
+      }
+      .faq-section > p, .faq-section > .faq-p {
+        margin: 0 auto 14px;
+        max-width: 660px;
+        font-size: 15.5px; line-height: 1.75;
+      }
+      .faq-section > p:last-child { margin-bottom: 0; }
+      .faq-section a { color: ${ROYAL}; font-weight: 600; }
+
+      /* Scanned, not read: back to left. */
+      .faq-section ul, .faq-section ol,
+      .faq-section table, .faq-section .faq-card, .faq-section .faq-grid,
+      .faq-section .faq-callout, .faq-section .faq-flow,
+      .faq-section .faq-fieldtable, .faq-section .faq-badge-row,
+      .faq-root > .faq-related, .faq-root > .faq-cta {
+        text-align: left;
+      }
+      .faq-section ul, .faq-section ol {
+        max-width: 660px;
+        margin-left: auto; margin-right: auto;
+      }
+
+      /* The closing CTA and related-links blocks are sections in their own
+         right now, so they carry the section's padding rather than a margin
+         that would collapse against the card's edge. */
+      .faq-root > .faq-cta, .faq-root > .faq-related {
+        margin: 0;
+        padding: 44px 48px;
+        border-top: 1px solid ${T.borderSoft};
+        border-radius: 0;
+      }
+
+      @media (max-width: 700px) {
+        .faq-root > .faq-eyebrow { padding: 34px 22px 0; }
+        .faq-root > .faq-h1 { padding: 0 22px; font-size: 29px; letter-spacing: -0.8px; }
+        .faq-root > .faq-deck { padding: 0 22px 32px; }
+        .faq-section { padding: 32px 22px; margin-bottom: 0; }
+        .faq-section > h2, .faq-section > .faq-h2 { font-size: 22px; }
+        .faq-root > .faq-cta, .faq-root > .faq-related { padding: 32px 22px; }
       }
     `}</style>
   )
