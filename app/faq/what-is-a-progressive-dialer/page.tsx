@@ -4,6 +4,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
 
@@ -42,7 +44,8 @@ export default function ProgressiveDialerPage() {
       ])} />
       <>
       <SiteHeader />
-      <main className="dm-root dm-progressive">
+      <GutsShell rail={faqRail('/faq/what-is-a-progressive-dialer')} activeHref="/faq/what-is-a-progressive-dialer">
+      <div className="dm-root dm-progressive">
         <style>{`
           .dm-root, .dm-root * { box-sizing: border-box; }
           .dm-root {
@@ -510,7 +513,8 @@ export default function ProgressiveDialerPage() {
           headline="Try progressive on a voicemail-heavy list."
           description="If your current dialer is making you sit through six voicemails for every connect, progressive cuts that to zero. $35/week per seat, no contract."
         />
-      </main>
+        </div>
+      </GutsShell>
       <SiteFooter />
     </>
     </>

@@ -4,6 +4,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
 
@@ -42,7 +44,8 @@ export default function PowerDialerPage() {
       ])} />
       <>
       <SiteHeader />
-      <main className="dm-root dm-power">
+      <GutsShell rail={faqRail('/faq/what-is-a-power-dialer')} activeHref="/faq/what-is-a-power-dialer">
+      <div className="dm-root dm-power">
         <style>{`
           .dm-root, .dm-root * { box-sizing: border-box; }
           .dm-root {
@@ -497,7 +500,8 @@ export default function PowerDialerPage() {
           headline="Start with power. Switch later if you want."
           description="Every account gets every mode. Pick power, start dialing, and change your mind any time. $35/week per seat, no contract."
         />
-      </main>
+        </div>
+      </GutsShell>
       <SiteFooter />
     </>
     </>

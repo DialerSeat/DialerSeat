@@ -1,5 +1,7 @@
 import { breadcrumbSchema } from '@/lib/schema'
 import JsonLd from '@/components/json-ld'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
@@ -54,12 +56,7 @@ export default function PrivacyPolicyPage() {
       ])} />
       <>
       <SiteHeader />
-      <main style={{
-        background: '#f0f1f4',
-        minHeight: '100vh',
-        fontFamily: 'Futura PT, Futura, sans-serif',
-        color: '#1a1c24',
-      }}>
+      <GutsShell rail={faqRail('/privacy')} activeHref="/privacy">
         <style>{`
           .privacy-root * { box-sizing: border-box; }
           .privacy-hero {
@@ -431,7 +428,7 @@ export default function PrivacyPolicyPage() {
             </p>
           </div>
         </div>
-      </main>
+      </GutsShell>
       <SiteFooter />
     </>
     </>

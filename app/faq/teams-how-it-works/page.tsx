@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import JsonLd from '@/components/json-ld'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
 
@@ -120,11 +122,8 @@ export default function TeamsHowItWorksPage() {
         { name: 'How Teams Work', url: '/faq/teams-how-it-works' },
       ])} />
 
-      <main style={{
-        background: 'var(--brand-page-bg, #f0f1f4)', minHeight: '100vh',
-        fontFamily: FUTURA, color: INK,
-      }}>
-        <div style={{ maxWidth: 940, margin: '0 auto', padding: '80px 24px 96px' }}>
+      <GutsShell rail={faqRail('/faq/teams-how-it-works')} activeHref="/faq/teams-how-it-works">
+        <div className="guts-sec">
           <nav style={{ fontSize: 11, letterSpacing: 1.5, color: MUTED, marginBottom: 22 }}>
             <Link href="/" style={{ color: MUTED }}>HOME</Link>{' · '}
             <Link href="/faq" style={{ color: MUTED }}>FAQ</Link>
@@ -211,7 +210,7 @@ export default function TeamsHowItWorksPage() {
             </Link>
           </div>
         </div>
-      </main>
+      </GutsShell>
     </>
   )
 }

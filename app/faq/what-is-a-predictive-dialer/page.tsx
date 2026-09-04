@@ -4,6 +4,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
 
@@ -42,7 +44,8 @@ export default function PredictiveDialerPage() {
       ])} />
       <>
       <SiteHeader />
-      <main className="dm-root dm-predictive">
+      <GutsShell rail={faqRail('/faq/what-is-a-predictive-dialer')} activeHref="/faq/what-is-a-predictive-dialer">
+      <div className="dm-root dm-predictive">
         <style>{`
           .dm-root, .dm-root * { box-sizing: border-box; }
           .dm-root {
@@ -581,7 +584,8 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
           headline="Run predictive without losing sleep over abandon rate."
           description="The controller does the math. Auto-degrades before you hit the FTC cap. Live abandon-rate display in the terminal. $35/week per seat, no contract."
         />
-      </main>
+        </div>
+      </GutsShell>
       <SiteFooter />
     </>
     </>

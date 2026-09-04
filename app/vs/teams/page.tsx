@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import JsonLd from '@/components/json-ld'
+import GutsShell from '@/components/GutsShell'
+import { vsRail } from '@/lib/gutsRail'
 import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { COMPETITORS, DIALERSEAT } from '@/lib/competitors'
 import { FACTS } from '@/lib/canonicalFacts'
@@ -117,11 +119,8 @@ export default function TeamsComparisonPage() {
         { name: 'Teams', url: '/vs/teams' },
       ])} />
 
-      <main style={{
-        background: 'var(--brand-page-bg, #f0f1f4)', minHeight: '100vh',
-        fontFamily: FUTURA, color: INK,
-      }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '80px 24px 96px' }}>
+      <GutsShell rail={vsRail()} activeHref="/vs/teams">
+        <div className="guts-sec">
           <nav style={{ fontSize: 11, letterSpacing: 1.5, color: MUTED, marginBottom: 22 }}>
             <Link href="/" style={{ color: MUTED }}>HOME</Link>{' · '}
             <Link href="/vs" style={{ color: MUTED }}>COMPARISONS</Link>
@@ -284,7 +283,7 @@ export default function TeamsComparisonPage() {
             </Link>
           </div>
         </div>
-      </main>
+      </GutsShell>
     </>
   )
 }

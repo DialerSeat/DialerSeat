@@ -4,6 +4,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
 
@@ -84,7 +86,8 @@ export default function DialerModesTldrPage() {
       ])} />
       <>
       <SiteHeader />
-      <main className="dmt-root">
+      <GutsShell rail={faqRail('/faq/dialer-modes')} activeHref="/faq/dialer-modes">
+      <div className="dmt-root">
         <style>{`
           .dmt-root, .dmt-root * { box-sizing: border-box; }
           .dmt-root {
@@ -241,7 +244,8 @@ export default function DialerModesTldrPage() {
           headline="Every account gets every mode."
           description="Pick one, start dialing, and change your mind any time. $35/week per seat, no contract."
         />
-      </main>
+        </div>
+      </GutsShell>
       <SiteFooter />
     </>
     </>

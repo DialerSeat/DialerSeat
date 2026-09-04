@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import JsonLd from '@/components/json-ld'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
 
@@ -98,11 +100,8 @@ export default function OffshoreAgentsPage() {
         { name: 'Offshore Agents', url: '/faq/dialer-for-offshore-agents' },
       ])} />
 
-      <main style={{
-        background: 'var(--brand-page-bg, #f0f1f4)', minHeight: '100vh',
-        fontFamily: FUTURA, color: INK,
-      }}>
-        <div style={{ maxWidth: 920, margin: '0 auto', padding: '80px 24px 96px' }}>
+      <GutsShell rail={faqRail('/faq/dialer-for-offshore-agents')} activeHref="/faq/dialer-for-offshore-agents">
+        <div className="guts-sec">
           <nav style={{ fontSize: 11, letterSpacing: 1.5, color: MUTED, marginBottom: 22 }}>
             <Link href="/" style={{ color: MUTED }}>HOME</Link>{' · '}
             <Link href="/faq" style={{ color: MUTED }}>FAQ</Link>
@@ -203,7 +202,7 @@ export default function OffshoreAgentsPage() {
             </Link>
           </div>
         </div>
-      </main>
+      </GutsShell>
     </>
   )
 }

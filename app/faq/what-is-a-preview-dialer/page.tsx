@@ -4,6 +4,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
 
@@ -42,7 +44,8 @@ export default function PreviewDialerPage() {
       ])} />
       <>
       <SiteHeader />
-      <main className="dm-root dm-preview">
+      <GutsShell rail={faqRail('/faq/what-is-a-preview-dialer')} activeHref="/faq/what-is-a-preview-dialer">
+      <div className="dm-root dm-preview">
         <style>{`
           .dm-root, .dm-root * { box-sizing: border-box; }
           .dm-root {
@@ -502,7 +505,8 @@ export default function PreviewDialerPage() {
           headline="Try it on a real list."
           description="Upload a CSV, pick preview mode, and dial. $35/week per seat, no contract. Cancel anytime."
         />
-      </main>
+        </div>
+      </GutsShell>
       <SiteFooter />
     </>
     </>

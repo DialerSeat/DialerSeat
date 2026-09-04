@@ -361,6 +361,21 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
           border-top: 1px solid ${T.surface2};
         }
 
+        /* ── LEGACY ARTICLE ROOTS ─────────────────────────────────────
+           Pages written before the shell existed each owned their own
+           column: a page background, a min-height, a centered max-width.
+           The card owns all three now, and a page that still sets them
+           paints a second background inside the first and centres a column
+           inside a column. Neutralised here rather than in ten stylesheets,
+           so a page keeps its own section styling and loses only the three
+           properties that fight the container. */
+        .guts-card > [class*="-root"] {
+          background: transparent;
+          min-height: 0;
+          max-width: none;
+          margin: 0;
+        }
+
         /* ── RESPONSIVE ───────────────────────────────────────────────── */
         @media (max-width: 1000px) {
           .guts-grid { grid-template-columns: minmax(0, 1fr); }
