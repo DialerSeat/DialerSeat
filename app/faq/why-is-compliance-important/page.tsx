@@ -6,6 +6,8 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import ExplainerStyles from '@/components/ExplainerStyles'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 
 export const dynamic = 'force-dynamic'
@@ -40,7 +42,8 @@ export default function Page() {
       ])} />
       <>
       <SiteHeader />
-      <main className="exp-root">
+      <GutsShell rail={faqRail('/faq/why-is-compliance-important')} activeHref="/faq/why-is-compliance-important">
+      <div className="exp-root">
         <ExplainerStyles accent="#8a6a1a" accentBg="#fdf4e8" />
 
         <section className="exp-hero">
@@ -210,7 +213,8 @@ export default function Page() {
           headline="Compliance shouldn't be the thing that wakes you up at 3 AM."
           description="We enforce the rules in software so you don't have to remember them. $35/week per seat, every mode included, no contract."
         />
-      </main>
+        </div>
+      </GutsShell>
       <SiteFooter />
     </>
     </>

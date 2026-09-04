@@ -6,6 +6,8 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import ExplainerStyles from '@/components/ExplainerStyles'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 
 export const metadata: Metadata = {
@@ -70,7 +72,8 @@ export default function Page() {
       ])} />
       <JsonLd data={faqPageSchema(FAQS)} />
       <SiteHeader />
-      <main className="exp-root">
+      <GutsShell rail={faqRail('/faq/how-many-numbers-do-i-need')} activeHref="/faq/how-many-numbers-do-i-need">
+      <div className="exp-root">
         <ExplainerStyles accent="#2a4a8a" accentBg="#e8eef8" />
 
         <section className="exp-hero">
@@ -184,7 +187,8 @@ export default function Page() {
           description="Buy what your volume needs, rotate automatically, retire what degrades. No per-number fee. $35/week per seat."
         />
         <ExplainerCrossLinks current="pool-sizing" />
-      </main>
+        </div>
+      </GutsShell>
       <SiteFooter />
     </>
   )

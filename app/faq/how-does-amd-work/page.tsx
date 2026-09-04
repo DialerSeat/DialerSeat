@@ -6,6 +6,8 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import ExplainerStyles from '@/components/ExplainerStyles'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 
 export const dynamic = 'force-dynamic'
@@ -40,7 +42,8 @@ export default function Page() {
       ])} />
       <>
       <SiteHeader />
-      <main className="exp-root">
+      <GutsShell rail={faqRail('/faq/how-does-amd-work')} activeHref="/faq/how-does-amd-work">
+      <div className="exp-root">
         <ExplainerStyles accent="#2a4a8a" accentBg="#e8eef8" />
 
         <section className="exp-hero">
@@ -239,7 +242,8 @@ export default function Page() {
           headline="Stop listening to voicemail greetings."
           description="AMD filters out machines before they reach your headset. Run progressive or predictive on a noisy list and feel the difference. $35/week per seat."
         />
-      </main>
+        </div>
+      </GutsShell>
       <SiteFooter />
     </>
     </>

@@ -1,4 +1,9 @@
 import { SITE } from '@/lib/siteTheme'
+import { inter } from '@/lib/fonts'
+
+/** Matches components/GutsShell, which now owns the page around this. */
+const ROYAL = '#2a6eff'
+const EXP_FONT = inter.style.fontFamily
 
 
 
@@ -138,6 +143,56 @@ export default function ExplainerStyles({ accent, accentBg }: Props) {
         .exp-cards { grid-template-columns: 1fr; }
         .exp-deepdive { flex-direction: column; align-items: flex-start; padding: 20px; }
         .exp-deepdive-btn { width: 100%; text-align: center; }
+      }
+
+      /* =====================================================================
+         INSIDE THE ARTICLE CARD
+         =====================================================================
+         Written for a page that WAS the article column: its own background,
+         its own min-height, its own centered 780px measure. components/GutsShell
+         owns all three now, so those rules are unwound here and the sections
+         become the blueprint's centered, hairline-separated blocks.
+         ===================================================================== */
+      .exp-root {
+        background: transparent;
+        min-height: 0;
+        font-family: ${EXP_FONT};
+        padding: 0;
+      }
+      .exp-hero {
+        background: transparent;
+        padding: 52px 48px 44px;
+        border-bottom: 1px solid ${SITE.borderSoft};
+      }
+      .exp-hero::before { display: none; }
+      .exp-hero h1 {
+        font-size: 42px; letter-spacing: -1.4px; line-height: 1.08; font-weight: 800;
+      }
+      .exp-breadcrumb { display: none; }
+      .exp-section, .exp-section.alt {
+        max-width: none;
+        margin: 0;
+        padding: 44px 48px;
+        border-bottom: 1px solid ${SITE.borderSoft};
+        text-align: center;
+        background: transparent;
+      }
+      .exp-section:last-of-type { border-bottom: none; }
+      .exp-section.alt > .inner { max-width: none; padding: 0; }
+      .exp-section h2 {
+        font-size: 27px; letter-spacing: -0.6px; line-height: 1.2; font-weight: 800;
+      }
+      .exp-section p { margin-left: auto; margin-right: auto; max-width: 660px; }
+      .exp-section a { color: ${ROYAL}; font-weight: 600; }
+      /* Scanned rather than read: back to left inside the centered section. */
+      .exp-cards, .exp-card, .exp-qa, .exp-deepdive, .exp-pullquote,
+      .exp-section ul, .exp-section ol, .exp-section table { text-align: left; }
+
+      @media (max-width: 700px) {
+        .exp-hero { padding: 34px 22px 30px; }
+        .exp-hero h1 { font-size: 29px; letter-spacing: -0.8px; }
+        .exp-section, .exp-section.alt { padding: 32px 22px; }
+        .exp-section h2 { font-size: 22px; }
       }
     `}</style>
   )

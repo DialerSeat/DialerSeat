@@ -6,6 +6,8 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import ExplainerStyles from '@/components/ExplainerStyles'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { STATE_TIMEZONES } from '@/lib/timezones'
 
@@ -105,7 +107,8 @@ export default function Page() {
       ])} />
       <JsonLd data={faqPageSchema(FAQS)} />
       <SiteHeader />
-      <main className="exp-root">
+      <GutsShell rail={faqRail('/faq/calling-hours')} activeHref="/faq/calling-hours">
+      <div className="exp-root">
         <ExplainerStyles accent="#2a4a8a" accentBg="#e8eef8" />
 
         <section className="exp-hero">
@@ -273,7 +276,8 @@ export default function Page() {
           description="DialerSeat checks every lead against its own local window before it dials, server-side. $35/week per seat, every dialer mode included."
         />
         <ExplainerCrossLinks current="calling-hours" />
-      </main>
+        </div>
+      </GutsShell>
       <SiteFooter />
     </>
   )

@@ -6,6 +6,8 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import ExplainerStyles from '@/components/ExplainerStyles'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 
 export const dynamic = 'force-dynamic'
@@ -40,7 +42,8 @@ export default function Page() {
       ])} />
       <>
       <SiteHeader />
-      <main className="exp-root">
+      <GutsShell rail={faqRail('/faq/how-we-keep-compliance')} activeHref="/faq/how-we-keep-compliance">
+      <div className="exp-root">
         <ExplainerStyles accent="#8a6a1a" accentBg="#fdf4e8" />
 
         <section className="exp-hero">
@@ -327,7 +330,8 @@ export default function Page() {
           headline="Compliance you don't have to babysit."
           description="The 3% cap, the 8 AM-9 PM window, AMD, STIR/SHAKEN, 24-month records: enforced in software, not in policy docs. $35/week per seat, every mode included."
         />
-      </main>
+        </div>
+      </GutsShell>
       <SiteFooter />
     </>
     </>

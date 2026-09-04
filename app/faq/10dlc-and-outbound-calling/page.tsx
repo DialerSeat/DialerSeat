@@ -6,6 +6,8 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import ExplainerStyles from '@/components/ExplainerStyles'
+import GutsShell from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 
 export const metadata: Metadata = {
@@ -70,7 +72,8 @@ export default function Page() {
       ])} />
       <JsonLd data={faqPageSchema(FAQS)} />
       <SiteHeader />
-      <main className="exp-root">
+      <GutsShell rail={faqRail('/faq/10dlc-and-outbound-calling')} activeHref="/faq/10dlc-and-outbound-calling">
+      <div className="exp-root">
         <ExplainerStyles accent="#2a4a8a" accentBg="#e8eef8" />
 
         <section className="exp-hero">
@@ -182,7 +185,8 @@ export default function Page() {
           description="A-attestation and CNAM come with every number in the pool, at no extra cost and with no forms to file. $35/week per seat."
         />
         <ExplainerCrossLinks current="registration" />
-      </main>
+        </div>
+      </GutsShell>
       <SiteFooter />
     </>
   )
