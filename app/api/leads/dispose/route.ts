@@ -167,23 +167,46 @@ export async function POST(req: Request) {
     let resolvedCallId: string | null = null
     if (openCall?.id) {
       resolvedCallId = openCall.id
+      // ── NEVER WRITE duration: 0 OVER A FINISHED CALL ────────────────────
+      // 0 is not "no time elapsed", it is the sentinel this codebase uses for
+      // STILL IN FLIGHT (see dialerPacing's abandon-rate math and the hangup
+      // handler, which writes Math.max(1, ...) specifically so it can never
+      // produce one).
+      //
+      // The hangup webhook closes the call correctly, and then this ran a
+      // moment later with whatever the client had, which for a call that never
+      // connected is nothing, and `duration || 0` turned that into a 0 that
+      // overwrote it. The call was then permanently "in flight": 567 of them
+      // in three days, 65-82% of some days, every one with a completed event
+      // on file and a duration saying it had never ended. That is where the
+      // "100 calls in flight" reading came from.
+      //
+      // So duration is only written when the client actually has one. The
+      // webhook owns this column otherwise, and it is the only party that
+      // knows when the call really stopped.
+      const callUpdates: Record<string, unknown> = {
+        disposition,
+        campaign_id, // backfill in case it was missing
+      }
+      if (typeof duration === 'number' && duration > 0) {
+        callUpdates.duration = duration
+      }
       await supabaseAdmin
         .from('calls')
-        .update({
-          disposition,
-          duration: duration || 0,
-          campaign_id, // backfill in case it was missing
-        })
+        .update(callUpdates)
         .eq('id', openCall.id)
     } else {
       // Fallback insert — lead has no open call row (rare, e.g., disposition
       // came through without a prior outbound dial attempt)
+      // Same reasoning as above: this row has no hangup webhook coming to
+      // correct it, so a 0 here would read as in-flight forever. 1 is the
+      // floor the hangup handler uses for exactly this reason.
       const { data: inserted } = await supabaseAdmin.from('calls').insert({
         user_id,
         lead_id,
         campaign_id,
         disposition,
-        duration: duration || 0,
+        duration: typeof duration === 'number' && duration > 0 ? duration : 1,
       }).select('id').maybeSingle()
       resolvedCallId = inserted?.id ?? null
     }

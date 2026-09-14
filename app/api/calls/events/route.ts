@@ -622,7 +622,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     const [{ data: callRow }, platformConfig] = await Promise.all([
       supabaseAdmin
         .from('calls')
-        .select('id, lead_id, dial_source, agent_call_control_id, answered_at')
+        .select('id, lead_id, dial_source, agent_call_control_id, answered_at, recording_status')
         .eq('call_control_id', callControlId)
         .maybeSingle(),
       getPlatformConfig(),
@@ -689,6 +689,32 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
         )
         return
       }
+    }
+
+    // ── AN ADVISORY VERDICT DECIDES A RECORDING, NEVER A CALL ─────────────
+    // The campaign has AMD OFF. We asked for a verdict anyway, for one reason
+    // only: to know whether a recording is worth starting, because recording
+    // without a verdict meant recording answering machines.
+    //
+    // So this returns BEFORE every hangup path below it. A call on an AMD-off
+    // campaign must end exactly as it does today: the agent hears the
+    // voicemail, decides, and moves on. Nothing is skipped that was not
+    // skipped before, and predictive's behaviour is untouched, since this is
+    // the only branch that changed and it cannot reach a hangup.
+    //
+    // The recording decision itself is made by the bridge/verdict path via
+    // recording_status: 'pending_amd_advisory' is claimed on a human verdict
+    // and simply left to expire on a machine, so no recording ever starts.
+    if (callRow?.recording_status === 'pending_amd_advisory') {
+      console.log(
+        `[calls/events] AMD '${result}' for ${callControlId} is ADVISORY ` +
+        `(campaign has AMD off). Recording decision only, call left alone.`
+      )
+      // Nothing to start: this branch is only reached on a machine verdict,
+      // and a machine is exactly what must never be recorded. The row is left
+      // on 'pending_amd_advisory' and simply expires unclaimed. The human path
+      // below is what starts an advisory recording.
+      return
     }
 
     if (agentAlreadyBridged && !hangupWhenBridged) {
@@ -960,8 +986,17 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   // the latency-critical thing on this path and must not wait on a recording
   // command. Held as a promise and settled before returning instead, because a
   // dangling promise on a serverless runtime is frozen with the response.
+  // 'pending_amd_advisory' joins 'pending_amd' here, and ONLY here. Both mean
+  // "a recording is owed once a human is confirmed"; they differ only in what
+  // the machine verdict does, which is end the call for one and nothing at all
+  // for the other. This is the moment they agree on.
+  //
+  // Deliberately not started at the bridge. The bridge happens at pickup,
+  // seconds BEFORE any verdict exists, so starting there would record every
+  // voicemail exactly as the old 'pending_bridge' did.
   const recordingStart =
-    callRow.recording_status === 'pending_amd'
+    callRow.recording_status === 'pending_amd' ||
+    callRow.recording_status === 'pending_amd_advisory'
       ? startRecordingForCall(callControlId, callRow.id)
       : Promise.resolve()
 
@@ -1143,7 +1178,11 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
  * file that plays as dead air. Recording now begins when the agent is actually
  * on the call, and the status column says which calls are still waiting:
  *
- *   'pending_bridge'  recording is on, AMD is off — start at the bridge.
+ *   'pending_amd_advisory'  NOT handled here either. Recording is on and the
+ *                     campaign has AMD off, so a verdict was requested purely
+ *                     to decide whether recording is worth starting. Claimed
+ *                     on the human verdict, never at the bridge, because the
+ *                     bridge happens before any verdict exists.
  *   'manual'          the agent pressed record — same trigger.
  *   'pending_amd'     NOT handled here. That one waits for a human verdict,
  *                     which is the whole reason it is a different status.
@@ -1162,7 +1201,7 @@ async function startRecordingIfOwedAtBridge(
     .from('calls')
     .update({ recording_status: 'starting' })
     .eq('id', callRowId)
-    .in('recording_status', ['pending_bridge', 'manual'])
+    .in('recording_status', ['manual'])
     .select('id')
 
   if (!claimed || claimed.length === 0) return // another webhook got there first

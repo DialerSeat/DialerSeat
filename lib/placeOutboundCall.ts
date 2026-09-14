@@ -613,7 +613,10 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   //
   //   AMD on   -> at the human verdict (already the case; see
   //               startRecordingForCall in calls/events).
-  //   AMD off  -> at the bridge, from recording_status 'pending_bridge'.
+  //   AMD off  -> still at a verdict, from 'pending_amd_advisory'. A verdict
+  //               is requested even though the campaign does not want machines
+  //               skipped, purely so a voicemail is never recorded. It cannot
+  //               end the call; see the advisory guard in calls/events.
   //   manual   -> at the bridge too. The old exception recorded from answer so
   //               a voicemail message would be captured, but it bought that by
   //               recording every ring, and an agent leaving a voicemail is
@@ -668,7 +671,23 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     dialBody.park_after_unbridge = 'self'
   }
 
-  if (p.amdEnabled) {
+  // ── WHY AMD MAY RUN ON A CAMPAIGN THAT HAS AMD OFF ──────────────────────
+  // Two different jobs share one detector.
+  //
+  //   STEERING    the campaign wants machines skipped, so a machine verdict
+  //               ends the call and advances the queue. p.amdEnabled.
+  //   CLASSIFYING the campaign wants recordings, and a recording of a
+  //               voicemail greeting is junk billed per minute and then
+  //               stored. The verdict decides whether to start recording at
+  //               all, and NOTHING else — the call carries on either way.
+  //
+  // Without this, recording with AMD off had no verdict to consult and
+  // recorded whatever answered. The verdict handler tells the two apart by
+  // recording_status: 'pending_amd' steers, 'pending_amd_advisory' only
+  // classifies and must never hang up a call.
+  const amdOnDial = p.amdEnabled || (!!p.recordingEnabled && !p.recordingManual)
+
+  if (amdOnDial) {
     // ── AMD RUNS ALONGSIDE A LIVE CALL, NOT IN FRONT OF IT ─────────────────
     // The call is already bridged by the time detection finishes. AMD's only
     // remaining job is to answer "should this call continue?" — and on a
@@ -982,7 +1001,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // config back, our parameters are accepted and the problem is the detector
   // or the bridge. If they are absent, it silently dropped them and we have
   // been tuning a field it never read.
-  if (p.amdEnabled) {
+  if (amdOnDial) {
     console.log(
       `[placeOutboundCall:${p.source}] AMD response ←`,
       JSON.stringify({
@@ -1032,7 +1051,10 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       // A third of answered calls sit in that bucket and there was no way to
       // tell the two apart, so the same investigation kept restarting. It is
       // also the denominator for AMD spend, which is billed per requesting leg.
-      amd_requested: p.amdEnabled,
+      // What we actually ASKED Telnyx for, which is now broader than the
+      // campaign's AMD setting. recording_status says which job the verdict
+      // was for.
+      amd_requested: amdOnDial,
       // ── RECORDING IS OWED, NOT YET STARTED ────────────────────────────────
       // Set when the campaign wants recording but AMD is going to decide first.
       // The webhook reads this on a human verdict and starts the recording
@@ -1052,12 +1074,25 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       // what is supposed to trigger it. 'manual' also tells the AMD path not
       // to discard the file on a machine verdict — somebody asked for that one
       // specifically.
+      // ── 'pending_bridge' IS GONE, AND THAT IS THE POINT ────────────────
+      // It meant "recording is on, AMD is off, so start at the bridge", which
+      // in practice meant record whatever answered. A bridge happens for a
+      // voicemail exactly as it does for a person, so those recordings were
+      // answering machines playing out until the agent gave up. Seven days:
+      // 70 of them, averaging 36.3s against 16.3s for confirmed-human calls.
+      // More than double the length, billed per minute and then stored.
+      //
+      // Recording now always waits for a verdict. When the campaign has AMD
+      // off we still ask for one, purely to answer "is this worth recording" —
+      // 'pending_amd_advisory' says exactly that, and the verdict handler
+      // reads it to know the call must NOT be hung up on a machine. AMD runs
+      // in the background and decides about the recording, nothing else.
       ...(p.recordingManual
         ? { recording_status: 'manual' }
         : p.recordingEnabled && p.amdEnabled
           ? { recording_status: 'pending_amd' }
           : p.recordingEnabled
-            ? { recording_status: 'pending_bridge' }
+            ? { recording_status: 'pending_amd_advisory' }
             : {}),
       duration: 0,
       disposition: null,
