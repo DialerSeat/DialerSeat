@@ -59,6 +59,49 @@ export const COST_PER_MINUTE_USD = 0.0056
  */
 export const COST_PER_AGENT_LEG_MINUTE_USD = 0.002
 
+// ── THE 30-SECOND MINIMUM, AND WHY IT IS THE WHOLE STORY ──────────────────
+// The August ledger billed 52,692 termination seconds. Our own legs for that
+// month total 14,843 seconds of actual duration. Four billing models were
+// tested against that target:
+//
+//   actual duration, no minimum      14,843
+//   6-second increments only         20,400
+//   30s minimum, then 6s             48,096   <- within 9%
+//   60s minimum, then 6s             90,522
+//
+// Only one is close. This account bills a 30-SECOND MINIMUM on every outbound
+// leg, then in 6-second increments.
+//
+// WHAT THAT MEANS, AND IT IS NOT SMALL. A dial costs half a minute of
+// termination whether it is answered, rings out, or is torn down after two
+// seconds. At $0.0056 a minute that is $0.0028 a dial before anybody says
+// hello, and with detection on top every dial has a floor near half a cent
+// regardless of outcome.
+//
+// It also explains why a floor's bill barely moves with TALK time and moves
+// hard with DIAL COUNT — and why the old model, which costed only answered
+// minutes, read a bill three times lower than the one that arrived.
+
+/** Seconds every outbound leg bills at minimum, answered or not. */
+export const BILLING_MINIMUM_SECONDS = 30
+
+/** Increment above the minimum. A 31-second call bills 36. */
+export const BILLING_INCREMENT_SECONDS = 6
+
+/**
+ * What a leg of `seconds` actually bills at, under this account's 30/6 terms.
+ *
+ * Use this rather than raw duration anywhere a cost is derived, or the figure
+ * will be the one that has been wrong all along.
+ */
+export function billableSeconds(seconds: number | null | undefined): number {
+  const s = Math.max(0, seconds ?? 0)
+  if (s <= 0) return 0
+  const rounded = Math.ceil(s / BILLING_INCREMENT_SECONDS) * BILLING_INCREMENT_SECONDS
+  return Math.max(BILLING_MINIMUM_SECONDS, rounded)
+}
+
+
 /**
  * Buying a number, once, on top of the monthly.
  *
@@ -99,6 +142,20 @@ export const COST_PER_AMD_LEG_USD = 0.002
  * day. Worth knowing before a floor runs on it.
  */
 export const COST_PER_PREMIUM_AMD_LEG_USD = 0.0065
+
+/**
+ * The floor cost of one dial, before anybody answers.
+ *
+ * Half a minute of termination at the 30-second minimum, plus one detection
+ * leg. This is what MOST calls cost in full on a floor with a 20% connect
+ * rate, which makes it the number to project a dialing day from — not the
+ * per-minute rate, which only applies to the fifth of calls that connect.
+ *
+ * Declared after the detection rates rather than beside the other minute
+ * constants, because it is built from both.
+ */
+export const COST_PER_DIAL_FLOOR_USD =
+  (BILLING_MINIMUM_SECONDS / 60) * COST_PER_MINUTE_USD + COST_PER_AMD_LEG_USD
 
 /**
  * Recording, per minute recorded.
