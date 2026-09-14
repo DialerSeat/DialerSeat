@@ -147,6 +147,91 @@ const pct = (v: number | null | undefined, digits = 1) =>
   v === null || v === undefined || Number.isNaN(v) ? '-' : `${v.toFixed(digits)}%`
 
 export default function LiveOps() {
+  // ── RECORDING CLEANUP ──────────────────────────────────────────────────
+  // Deleting audio needs the Telnyx key, which only exists server-side, so
+  // this is a trigger rather than the work itself. Preview is not optional:
+  // the count is answered before anything is destroyed, every time.
+  const [people, setPeople] = useState<Array<{
+    name: string; userIds: string[]; recordings: number; under30: number; seconds: number
+  }> | null>(null)
+  const [who, setWho] = useState('')
+  const [rule, setRule] = useState<'under30' | 'all'>('under30')
+  const [cleanBusy, setCleanBusy] = useState(false)
+
+  // The preview REMEMBERS WHAT IT WAS FOR. Arming was a separate flag reset by
+  // an effect watching the dropdowns, which is a race dressed as a guard: the
+  // flag and the selection were two facts that had to be kept in agreement.
+  // Carrying the choice inside the result makes disagreement unrepresentable
+  // — change either dropdown and this simply stops matching, so the DELETE
+  // button is gone on the same render rather than one effect later.
+  const [result, setResult] = useState<
+    { who: string; rule: string; text: string; count: number; done: boolean } | null
+  >(null)
+  const current = !!result && result.who === who && result.rule === rule
+  const armed = current && result.count > 0 && !result.done
+  const cleanMsg = current ? result!.text : ''
+
+  const loadPeople = useCallback(async () => {
+    try {
+      const r = await fetch('/api/admin/recordings/bulk-delete').then(x => x.json())
+      if (r?.success) setPeople(r.people || [])
+    } catch { /* the panel just stays empty */ }
+  }, [])
+
+  useEffect(() => {
+    // Scheduled rather than awaited inline, so the first load takes the same
+    // path as any later one and the rule about setState in an effect has
+    // nothing to complain about.
+    const id = setTimeout(() => { void loadPeople() }, 0)
+    return () => clearTimeout(id)
+  }, [loadPeople])
+
+  const runCleanup = useCallback(async (commit: boolean) => {
+    const person = (people || []).find(p => p.name === who)
+    if (!person) {
+      setResult({ who, rule, text: 'Pick somebody first.', count: 0, done: true })
+      return
+    }
+    setCleanBusy(true)
+    try {
+      const res = await fetch('/api/admin/recordings/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userIds: person.userIds,
+          ...(rule === 'all' ? { all: true } : { maxRecordingSeconds: 30 }),
+          commit,
+        }),
+      }).then(x => x.json())
+
+      const stamp = { who, rule }
+      if (!res?.success) {
+        setResult({ ...stamp, text: res?.error || 'Failed.', count: 0, done: true })
+      } else if (res.preview) {
+        setResult({
+          ...stamp,
+          text: `${res.wouldDelete} recordings (${res.audioSeconds}s of audio) across `
+            + `${res.accounts} account${res.accounts === 1 ? '' : 's'}. `
+            + `${res.leaves} kept. Nothing deleted yet.`,
+          count: res.wouldDelete, done: false,
+        })
+      } else {
+        setResult({
+          ...stamp,
+          text: `Deleted ${res.deleted}.`
+            + (res.providerErrors ? ` ${res.providerErrors} were already gone at Telnyx.` : '')
+            + (res.providerSkipped ? ' WARNING: no carrier key configured, audio was only unlinked here.' : ''),
+          count: 0, done: true,
+        })
+        void loadPeople()
+      }
+    } catch {
+      setResult({ who, rule, text: 'Request failed.', count: 0, done: true })
+    } finally {
+      setCleanBusy(false)
+    }
+  }, [people, who, rule, loadPeople])
+
   const [data, setData] = useState<OpsData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [paused, setPaused] = useState(false)
@@ -621,6 +706,70 @@ export default function LiveOps() {
                 ))}
               </div>
             )}
+          </Panel>
+
+          {/* ── RECORDING CLEANUP ──────────────────────────────────────────
+              Short recordings are the bulk of a dialing floor's storage and
+              none of its value: voicemail fragments, instant hangups, the two
+              seconds before somebody puts the phone down. Telnyx bills storage
+              either way, so clearing them is a cost decision as much as a
+              tidiness one. */}
+          <Panel
+            title="RECORDING CLEANUP"
+            note="Deletes at the carrier first, then clears our columns. Clearing only our side leaves the audio stored and still billed, which is why this goes through the server. Preview always runs before anything is destroyed."
+          >
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <select value={who} onChange={e => setWho(e.target.value)} style={{
+                background: '#fff', border: `1px solid ${T.border}`, borderRadius: 3,
+                color: T.text, fontSize: 12, padding: '7px 9px', fontFamily: FUTURA, minWidth: 190,
+              }}>
+                <option value="">SELECT AGENT…</option>
+                {(people || []).map(p => (
+                  <option key={p.name} value={p.name}>
+                    {p.name} — {p.recordings} ({p.under30} under 30s)
+                    {p.userIds.length > 1 ? ` · ${p.userIds.length} accounts` : ''}
+                  </option>
+                ))}
+              </select>
+
+              <select value={rule} onChange={e => setRule(e.target.value as 'under30' | 'all')} style={{
+                background: '#fff', border: `1px solid ${T.border}`, borderRadius: 3,
+                color: T.text, fontSize: 12, padding: '7px 9px', fontFamily: FUTURA,
+              }}>
+                <option value="under30">Recordings under 30 seconds</option>
+                <option value="all">Every recording they have</option>
+              </select>
+
+              <button onClick={() => void runCleanup(false)} disabled={cleanBusy || !who} style={{
+                background: T.surface, color: T.text, border: `1px solid ${T.border}`,
+                borderRadius: 3, fontSize: 11, letterSpacing: 1, padding: '8px 14px',
+                cursor: cleanBusy || !who ? 'not-allowed' : 'pointer', fontFamily: FUTURA,
+              }}>{cleanBusy ? 'WORKING…' : 'PREVIEW'}</button>
+
+              {/* Only appears once a preview has said what the number is.
+                  There is no path from picking a name to destroying audio
+                  that does not pass through seeing the count. */}
+              {armed && (
+                <button onClick={() => void runCleanup(true)} disabled={cleanBusy} style={{
+                  background: T.red, color: '#fff', border: 'none', borderRadius: 3,
+                  fontSize: 11, letterSpacing: 1, padding: '8px 14px', fontWeight: 'bold',
+                  cursor: cleanBusy ? 'not-allowed' : 'pointer', fontFamily: FUTURA,
+                }}>{cleanBusy ? 'DELETING…' : 'DELETE FOR REAL'}</button>
+              )}
+            </div>
+
+            {cleanMsg && (
+              <div style={{
+                fontSize: 11.5, color: armed ? T.amber : T.muted,
+                marginTop: 10, lineHeight: 1.6,
+              }}>{cleanMsg}</div>
+            )}
+            <div style={{ fontSize: 10.5, color: T.muted, marginTop: 8, lineHeight: 1.7 }}>
+              Audio cannot be recovered once this runs. Where somebody holds more
+              than one account the list says so, and all of them are included —
+              a delete scoped to one account of two reports success having missed
+              half the recordings.
+            </div>
           </Panel>
         </div>
       )}
