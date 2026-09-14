@@ -263,6 +263,9 @@ function DialerPageInner() {
   // and by the time it releases the effect has flushed statusRef to 'calling'
   // so a later click is caught there instead. No gap between them.
   const manualDialBusyRef = useRef(false)
+  /** The same latch for DIAL AGAIN, which has the same double-click window. */
+  const dialAgainBusyRef = useRef(false)
+  const [dialingAgain, setDialingAgain] = useState(false)
   // Drives the button's disabled state. The ref is the guard; this is only so
   // the button can look like what the guard is already doing.
   const [manualDialing, setManualDialing] = useState(false)
@@ -4337,6 +4340,83 @@ function DialerPageInner() {
     }, autoChainOnFailure ? 800 : 600)
   }
 
+  /**
+   * DIAL AGAIN — call this same lead back, instead of moving to the next one.
+   *
+   * The disposition sheet had one way out: pick an outcome, and 600ms later
+   * the dialer fetches the NEXT lead. There was no way to say "they hung up,
+   * I want another go at this one" short of finding them again by hand.
+   *
+   * WHY IT DOES NOT DISPOSITION FIRST. disposeLead rotates the lead out of the
+   * queue — that is the point of it, and the note on the AMD path says so
+   * plainly: a skip that writes no disposition never rotated, and had to be
+   * rotated explicitly. Dispositioning here would file the lead away and then
+   * immediately redial the thing we just filed. The call that ended already
+   * carries whatever the hangup path recorded; what this button means is that
+   * the LEAD is not finished.
+   *
+   * Notes are kept for the same reason. Whatever the agent typed about this
+   * person is still true on the second attempt.
+   *
+   * The attempt counter is bumped so this redial is visible to the same
+   * repeat-cap logic the automatic retries use, rather than being an
+   * invisible extra dial alongside them.
+   */
+  const handleDialAgain = async () => {
+    const lead = currentLead
+    if (!lead) return
+
+    // Same one-per-click guard as the keypad, and for the same reason: this
+    // awaits before it dials, and the button stays on screen while it does.
+    if (dialAgainBusyRef.current) return
+    if (statusRef.current === 'calling' || statusRef.current === 'connected') return
+    if (abortDialingRef.current) return
+    dialAgainBusyRef.current = true
+    setDialingAgain(true)
+    const release = () => {
+      dialAgainBusyRef.current = false
+      setDialingAgain(false)
+    }
+
+    // Same gate as every other dial path. A redial placed on a dead socket
+    // rings a real person nobody can answer for, and spends the attempt.
+    if (!isSipReachable()) {
+      setAgentLegError(
+        'NOT CONNECTED TO THE CALL SERVER, reconnecting. Nothing was dialed.'
+      )
+      release()
+      return
+    }
+    if (!availableRef.current) {
+      const live = await handleSetAvailable()
+      if (!live) {
+        setAgentLegError(
+          'MICROPHONE BLOCKED: allow mic access for this site, then reload. ' +
+          'Nothing was dialed.'
+        )
+        release()
+        return
+      }
+    }
+
+    try {
+      leadAttemptCountRef.current += 1
+      setShowDisposition(false)
+      setDisposition('')
+      setSeconds(0)
+      setActiveCallSid(null)
+      // Drop the browser leg from the call that just ended; dialLeadCall arms
+      // again on its way out. Same sequence the automatic voicemail redial
+      // uses a few hundred lines up.
+      disarmDialing()
+      setStatus('idle')
+      setAmdActivity(prev => ['REDIALING THIS LEAD', ...prev].slice(0, 5))
+      await dialLeadCall(lead)
+    } finally {
+      release()
+    }
+  }
+
   const handleManualDial = async () => {
     if (!manualNumber) return
 
@@ -6543,6 +6623,30 @@ function DialerPageInner() {
                 }}>
                   ⓘ System is still dialing in background. Next human routes automatically.
                 </div>
+              )}
+              {/* ── DIAL AGAIN ────────────────────────────────────────────
+                  Above the dispositions, because it is the alternative to
+                  picking one rather than another kind of outcome. Every button
+                  below this files the lead away and moves on; this one is how
+                  you say the lead is not finished.
+
+                  Not offered in predictive: the engine is still fanning out in
+                  the background and routes the next human automatically, so a
+                  manual redial would be dialing across it. */}
+              {!isPredictive && currentLead && (
+                <button onClick={handleDialAgain}
+                        disabled={dialingAgain || status === 'calling' || status === 'connected'}
+                        style={{
+                          width: '100%', padding: '9px 4px', marginBottom: 10,
+                          borderRadius: 3, background: 'transparent',
+                          border: `1px solid ${terminalAccent}`,
+                          color: terminalAccent, fontSize: 9, fontWeight: 'bold',
+                          letterSpacing: 2, fontFamily: FUTURA,
+                          cursor: dialingAgain ? 'not-allowed' : 'pointer',
+                          opacity: dialingAgain ? 0.5 : 1,
+                        }}>
+                  {dialingAgain ? 'REDIALING…' : '↻ DIAL AGAIN'}
+                </button>
               )}
               <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '8px' }}>▸ SELECT DISPOSITION</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px' }}>
