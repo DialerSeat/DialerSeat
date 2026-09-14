@@ -1542,11 +1542,20 @@ function DialerPageInner() {
             void reregister()
           },
           onDisconnect: (err?: Error) => {
-            markSip(false)
-            // Deliberate teardown still fires this. Reconnecting an instance
-            // the cleanup is disposing would resurrect a zombie that answers
-            // INVITEs meant for its replacement.
+            // ── THE GUARD COMES FIRST, AND THAT ORDER IS THE WHOLE POINT ──
+            // Teardown fires onDisconnect too, asynchronously, AFTER the
+            // replacement instance has already connected and registered.
+            // Marking the socket down here would flag the healthy live
+            // instance as dead, and nothing would ever set it back: the live
+            // one is connected so no reconnect fires, and markSip(true) only
+            // runs on a register that already happened. Every dial would have
+            // been refused with "NOT CONNECTED" until a reload.
+            //
+            // Reconnecting a disposed instance is the other half: it would
+            // resurrect a zombie that answers INVITEs meant for its
+            // replacement.
             if (cancelled) return
+            markSip(false)
             setAgentLegError(
               'DIALER DISCONNECTED, reconnecting. Calls cannot connect until this clears.'
             )
@@ -1650,12 +1659,34 @@ function DialerPageInner() {
         const registerer = new Registerer(userAgent)
         localRegisterer = registerer
         registererRef.current = registerer
+
+        // ── ONE SOURCE OF TRUTH FOR "CAN THIS AGENT BE REACHED" ───────────
+        // The dial gate asks sip.js directly (isSipReachable), so the banner
+        // is driven from the same transition rather than from a second guess.
+        // They cannot disagree, which matters because a gate saying "blocked"
+        // above a bar saying "fine" is how an agent ends up reloading at
+        // random hoping something changes.
+        //
+        // Registered is not a one-time event: sip.js refreshes before expiry
+        // and flips to Unregistered if a refresh fails, which is precisely the
+        // dead-socket case this whole change exists for.
+        registerer.stateChange.addListener((st: string) => {
+          if (cancelled) return
+          const up = st === 'Registered'
+          markSip(up)
+          if (up) setAgentLegError(null)
+          console.log(`[sip #${sipInstanceId}] registration -> ${st}`)
+        })
+
         await registerer.register()
         if (cancelled) return
 
         swClientRef.current = userAgent
         setSwReady(true)
-        markSip(true)
+        // Deliberately NOT markSip(true) here. register() resolves when the
+        // REGISTER is sent, not when Telnyx accepts it, so claiming
+        // reachability here would be one round trip early. The stateChange
+        // listener above marks it on the 200 OK, which is the real thing.
         console.log(`[sip] registered as instance #${sipInstanceId} (${sipUsername})`)
       } catch (err: any) {
         console.error('SIP init error:', err?.message || err)
@@ -1703,6 +1734,35 @@ function DialerPageInner() {
    * element is enough — the media keeps arriving and nobody hears it, and the
    * session is torn down properly a moment later by the server.
    */
+  /**
+   * Can this browser actually receive an agent leg RIGHT NOW?
+   *
+   * Asked of sip.js directly rather than read from a ref, because a ref is
+   * only as good as the events that maintain it and getting that wrong fails
+   * in the worst possible direction: a stale `false` refuses every dial and
+   * nothing ever clears it. That nearly shipped. A disposed instance's
+   * onDisconnect fires asynchronously, after its replacement has already
+   * connected, and it was marking the live instance dead.
+   *
+   * BOTH conditions, not just the socket. A connected transport with no
+   * registration on file is still an unreachable agent: Telnyx has no contact
+   * to fork the INVITE to, so the agent leg goes unanswered and the lead dies
+   * with it, which is the entire bug this guards against.
+   *
+   * Fails CLOSED on purpose. Refusing to dial is a visible, recoverable
+   * annoyance; dialing a stranger nobody can answer for spends a lead, bills
+   * a call, and lands a 0-second entry in the ratio Telnyx judges us on.
+   */
+  const isSipReachable = (): boolean => {
+    try {
+      const connected = swClientRef.current?.isConnected?.() === true
+      const registered = registererRef.current?.state === 'Registered'
+      return connected && registered
+    } catch {
+      return false
+    }
+  }
+
   const silenceSIPAudio = () => {
     try {
       const el = document.getElementById('sip-audio') as HTMLAudioElement | null
@@ -3921,7 +3981,7 @@ function DialerPageInner() {
     // that knows the truth: registration state lives in this browser's
     // socket, and Telnyx will happily accept a dial for an agent it cannot
     // reach.
-    if (!sipConnectedRef.current) {
+    if (!isSipReachable()) {
       setAgentLegError(
         'NOT CONNECTED TO THE CALL SERVER, reconnecting. No leads will be dialled until this clears.'
       )
@@ -4259,7 +4319,7 @@ function DialerPageInner() {
     // Same reason runDial refuses: a dial placed while this browser's SIP
     // socket is down rings a real person that nobody can answer for, and
     // Telnyx tears it down at about a second. See the note in runDial.
-    if (!sipConnectedRef.current) {
+    if (!isSipReachable()) {
       setAgentLegError(
         'NOT CONNECTED TO THE CALL SERVER, reconnecting. Nothing was dialed.'
       )
