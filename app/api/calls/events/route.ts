@@ -13,6 +13,7 @@ import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
 import { abortSiblingFanoutLines } from '@/lib/predictiveController'
 import { startTelnyxRecording } from '@/lib/telnyxRecording'
 import { remainingHoldMs, HOLD_SPREAD_SECONDS } from '@/lib/complianceHold'
+import { lifetimeAttemptCap } from '@/lib/dialerConstants'
 import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
 import { agentSipUriForUserId, resolveCredentialConnectionId } from '@/lib/agentSipCredentials'
 import { ensureSipUriCallingEnabled, isSipUriRejection } from '@/lib/telnyxSipUriCalling'
@@ -1674,17 +1675,26 @@ async function bumpLeadAttemptAndRelease(callId: string): Promise<void> {
   // would be a real regression for every existing predictive campaign;
   // defaulting to 3 preserves close-to-existing behavior (retries still
   // happen) while finally giving it a real, sane ceiling instead of none.
-  let repeatCap = 3
+  // ── ONE CAP, SHARED WITH /api/leads/dispose ───────────────────────────
+  // This computed its own, using dial_repeat_count as a LIFETIME cap, while
+  // dispose used lifetimeAttemptCap. The two disagreed: on 1x a predictive
+  // lead was retired permanently after a single attempt, while the same lead
+  // dialed by hand got three. Whether a lead survived depended on which mode
+  // happened to reach it, which is not a rule anybody chose.
+  //
+  // Both now read the same function, and that function currently returns
+  // unlimited, so nothing is retired for attempt count in either path.
+  let repeatCap = lifetimeAttemptCap(1)
   if (lead?.campaign_id) {
     const { data: campaign, error: campaignErr } = await supabaseAdmin
       .from('campaigns')
       .select('dial_repeat_count')
       .eq('id', lead.campaign_id)
       .maybeSingle()
-    // PGRST204-style "column doesn't exist yet" errors (migration not run)
-    // fall through to the default of 3 above, same as campaign===null.
-    if (!campaignErr && typeof campaign?.dial_repeat_count === 'number') {
-      repeatCap = Math.max(1, Math.min(3, campaign.dial_repeat_count))
+    // A missing column (migration not yet run) falls through to the default
+    // above, same as campaign===null.
+    if (!campaignErr) {
+      repeatCap = lifetimeAttemptCap(campaign?.dial_repeat_count)
     }
   }
 

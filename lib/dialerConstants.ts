@@ -45,21 +45,42 @@ export const HARD_LINE_CAP = 5
 // lead gets before it is genuinely set aside.
 // =============================================================================
 
-/** How many times the dialer may work through a lead before retiring it. */
-export const DIAL_PASSES = 3
+/**
+ * How many times the dialer may work through a lead before retiring it.
+ *
+ * 0 MEANS UNLIMITED, and 0 is the setting. A lead is never retired for having
+ * been dialed too often; it keeps cycling back into rotation and the agent
+ * decides when it is done by dispositioning it.
+ *
+ * This was 3. The effect of a lifetime cap is that a list quietly shrinks
+ * while an agent is working it, and leads vanish for a reason nothing on
+ * screen explains. Retiring a lead is a judgement about a person, and the
+ * person holding that judgement is the agent, not a counter.
+ *
+ * The ways a lead genuinely leaves rotation are unchanged and all of them are
+ * decisions: DNC, closed, appointment, or an agent marking it done. See
+ * TERMINAL_STATUSES in lib/dialableLead.ts.
+ */
+export const DIAL_PASSES = 0
+
+/** Returned when there is no lifetime cap, so `attempts >= cap` is never true. */
+export const UNLIMITED_ATTEMPTS = Number.POSITIVE_INFINITY
 
 /**
  * Total attempts a lead gets across its whole life, derived from the
  * campaign's per-pass repeat setting.
  *
- *   1x -> 3 total   (unchanged from the old hardcoded behavior)
- *   2x -> 6 total
- *   3x -> 9 total
+ * With DIAL_PASSES at 0 this is UNLIMITED_ATTEMPTS for every campaign. The
+ * per-pass arithmetic is kept rather than deleted because dial_repeat_count
+ * still governs back-to-back dialing within one pass, which is a separate and
+ * still-live setting, and because restoring a cap should be changing one
+ * number here rather than rewriting this.
  *
- * Defaults to 1x when the campaign has no setting, which keeps every existing
- * campaign exactly where it is today.
+ *   passes 0 -> unlimited
+ *   passes 3 -> 1x = 3 total, 2x = 6, 3x = 9
  */
 export function lifetimeAttemptCap(dialRepeatCount?: number | null): number {
+  if (DIAL_PASSES <= 0) return UNLIMITED_ATTEMPTS
   const perPass = Math.max(1, Math.min(3, dialRepeatCount ?? 1))
   return perPass * DIAL_PASSES
 }
