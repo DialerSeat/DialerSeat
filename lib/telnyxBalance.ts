@@ -20,7 +20,12 @@
 const TELNYX_API = 'https://api.telnyx.com/v2'
 
 export interface TelnyxBalance {
-  /** Spendable right now: balance plus credit, less anything pending. */
+  /**
+   * What Telnyx reports as spendable. Passed through, not derived: their own
+   * example gives balance 300, credit 100, pending 10 and available 400, so
+   * the obvious formula is not the one they use. Recomputing it here would
+   * mean shipping a number the carrier disagrees with.
+   */
   availableCredit: number | null
   /** Cash balance, before credit. */
   balance: number | null
