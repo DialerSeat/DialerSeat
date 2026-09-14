@@ -21,7 +21,10 @@ const T = {
 
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 
-type Range = 'today' | 'week' | 'month' | 'custom'
+// 'all' was already supported end to end by /api/teams/[id]/analytics — its
+// Range type, its validRanges and its rangeBounds all handle it. Only this
+// page left it out, so the option existed and was unreachable.
+type Range = 'today' | 'week' | 'month' | 'all' | 'custom'
 
 // Key for persisting the selected time filter across page refreshes,
 // scoped per team so switching teams doesn't clobber another team's
@@ -82,7 +85,7 @@ interface RecentCall {
 interface AnalyticsResponse {
   success: boolean
   error?: string
-  range: Range | 'all'
+  range: Range
   viewerRole: 'owner' | 'member'
   team: { id: string; name: string }
   campaigns: TeamCampaign[]
@@ -253,7 +256,9 @@ function TrendChart({ series }: { series: SeriesPoint[] }) {
 export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: teamId } = use(params)
 
-  const [range, setRange] = useState<Range>('week')
+  // All time by default, matching the other analytics screens. A team's last
+  // seven days is the wrong lens on whether the team is working out.
+  const [range, setRange] = useState<Range>('all')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
   const [campaignFilter, setCampaignFilter] = useState<string>('all')
@@ -274,7 +279,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
       const saved = localStorage.getItem(teamAnalyticsRangeStorageKey(teamId))
       if (!saved) return
       const parsed = JSON.parse(saved)
-      const validRanges: Range[] = ['today', 'week', 'month', 'custom']
+      const validRanges: Range[] = ['today', 'week', 'month', 'all', 'custom']
       if (validRanges.includes(parsed?.range)) setRange(parsed.range)
       if (typeof parsed?.customStart === 'string') setCustomStart(parsed.customStart)
       if (typeof parsed?.customEnd === 'string') setCustomEnd(parsed.customEnd)
@@ -516,13 +521,16 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
 
       <div className="ta-toolbar">
         <div className="ta-segmented">
-          {(['today', 'week', 'month', 'custom'] as const).map(r => (
+          {(['today', 'week', 'month', 'all', 'custom'] as const).map(r => (
             <button
               key={r}
               className={`ta-seg-btn ${range === r ? 'active' : ''}`}
               onClick={() => setRange(r)}
             >
-              {r === 'today' ? 'TODAY' : r === 'week' ? '7-DAY' : r === 'month' ? '30-DAY' : 'CUSTOM'}
+              {r === 'today' ? 'TODAY'
+                : r === 'week' ? '7-DAY'
+                : r === 'month' ? '30-DAY'
+                : r === 'all' ? 'ALL TIME' : 'CUSTOM'}
             </button>
           ))}
         </div>

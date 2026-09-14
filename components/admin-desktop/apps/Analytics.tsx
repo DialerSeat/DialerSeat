@@ -135,7 +135,8 @@ function useRangeState() {
   const role = services?.role ?? 'admin'
   const storageKey = `ds:${role}-desktop:analytics-range:v1`
 
-  const [range, setRange] = useState<Range>('30d')
+  // All time, for the same reason the dashboard is. See that note.
+  const [range, setRange] = useState<Range>('all')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
   const isFirstSaveRef = useRef(true)

@@ -160,7 +160,9 @@ export default function UserTrackerApp() {
   const [data, setData] = useState<ApiResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [range, setRange] = useState<RangeKey>('week')
+  // All time. Hours dialed against talk time is a ratio that needs volume to
+  // mean anything, and a week of one agent is not volume.
+  const [range, setRange] = useState<RangeKey>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const isFirstFiltersSaveRef = useRef(true)
 

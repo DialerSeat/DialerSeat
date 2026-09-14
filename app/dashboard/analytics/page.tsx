@@ -330,7 +330,12 @@ export default function AnalyticsPage({
 }: AnalyticsPageProps = {}) {
   const { user } = useUser()
   const [adminChecked] = useState(true)
-  const [range, setRange] = useState<Range>('week')
+  // All time by default. A 7-day window hides the thing people open this page
+  // to see: whether the work is adding up. A new user's first week is mostly
+  // empty and reads as failure, and an established one's last week says
+  // nothing about the account. Narrowing is one click away; noticing that you
+  // were looking at a week all along is not.
+  const [range, setRange] = useState<Range>('all')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
   const [summary, setSummary] = useState<any>(null)
