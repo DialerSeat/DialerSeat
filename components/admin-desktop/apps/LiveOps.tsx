@@ -39,6 +39,27 @@ const T = {
 const FUTURA = "'Futura PT', Futura, 'Trebuchet MS', sans-serif"
 const POLL_MS = 5000
 
+/** Shared style for the small actions on the live-legs panel. */
+const miniBtn: React.CSSProperties = {
+  background: '#fff', border: `1px solid ${'#c4c8d0'}`, borderRadius: 3,
+  fontSize: 9, letterSpacing: 1, fontWeight: 'bold', padding: '4px 8px',
+  cursor: 'pointer', color: '#1a1c24',
+}
+
+interface LiveLegsPayload {
+  authoritative: boolean
+  error: string | null
+  legs: Array<{
+    callControlId: string
+    userId: string | null
+    startedAt: string | null
+    ageSeconds: number | null
+    phone: string | null
+    leg: 'lead' | 'agent' | null
+    orphaned: boolean
+  }>
+}
+
 // ── WHEN A BALANCE IS WORTH A COLOUR ───────────────────────────────────────
 // Not percentages: there is no denominator here, a prepaid account has no
 // "full". These are absolutes chosen against what a dialing day costs. A busy
@@ -159,6 +180,82 @@ export default function LiveOps() {
       if (id) clearInterval(id)
     }
   }, [load, paused])
+
+  // ── LIVE LEGS ─────────────────────────────────────────────────────────
+  // Not on the 5s poll. Every refresh is a Telnyx API call, and this list is
+  // consulted when somebody suspects a stuck leg rather than continuously.
+  const [legs, setLegs] = useState<LiveLegsPayload | null>(null)
+  const [legsBusy, setLegsBusy] = useState(false)
+  const [legsMsg, setLegsMsg] = useState<string | null>(null)
+
+  const loadLegs = useCallback(async () => {
+    setLegsBusy(true)
+    try {
+      const r = await fetch('/api/admin/calls/live-legs', { cache: 'no-store' })
+      const j = await r.json()
+      if (j?.success) {
+        setLegs(j)
+        setLegsMsg(null)
+      } else {
+        setLegsMsg(j?.error || 'Could not list legs.')
+      }
+    } catch {
+      setLegsMsg('Could not reach the server to list legs.')
+    } finally {
+      setLegsBusy(false)
+    }
+  }, [])
+
+  // Both kill paths confirm first. The user asked for this button, so the
+  // confirm is not second-guessing them — it is that a misclick here hangs up
+  // on somebody mid-sentence, and the list is sorted oldest-first so the rows
+  // most likely to be stuck sit exactly where a stray click lands.
+  const killLeg = useCallback(async (id: string) => {
+    if (!window.confirm(
+      `End this leg?\n\n${id}\n\nIf somebody is talking on it, the call drops.`
+    )) return
+    setLegsBusy(true)
+    try {
+      const r = await fetch('/api/admin/calls/live-legs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callControlIds: [id] }),
+      })
+      const j = await r.json()
+      setLegsMsg(j?.success ? `Ended ${j.ended} of ${j.requested}.` : (j?.error || 'Failed.'))
+    } catch {
+      setLegsMsg('Failed to reach the server.')
+    } finally {
+      setLegsBusy(false)
+      void loadLegs()
+    }
+  }, [loadLegs])
+
+  const killOlderThan = useCallback(async (seconds: number) => {
+    if (!window.confirm(
+      `End every leg older than ${seconds / 60} minutes?\n\n`
+      + 'Legs with no matching call row are skipped, because their age is '
+      + 'unknown and they could be seconds old. End those individually.'
+    )) return
+    setLegsBusy(true)
+    try {
+      const r = await fetch('/api/admin/calls/live-legs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ olderThanSeconds: seconds }),
+      })
+      const j = await r.json()
+      setLegsMsg(j?.success
+        ? `Ended ${j.ended} of ${j.requested}.`
+          + (j.skippedUnknownAge ? ` ${j.skippedUnknownAge} skipped for unknown age.` : '')
+        : (j?.error || 'Failed.'))
+    } catch {
+      setLegsMsg('Failed to reach the server.')
+    } finally {
+      setLegsBusy(false)
+      void loadLegs()
+    }
+  }, [loadLegs])
 
   if (!data && !error) {
     return (
@@ -319,6 +416,83 @@ export default function LiveOps() {
                     }}>
                       {f.answered ? 'UP' : 'RING'}
                     </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
+
+          {/* ── LIVE LEGS ON THE CARRIER ────────────────────────────────
+              The panel above is what the SYSTEM believes is live. This one is
+              what TELNYX says is live, and the difference between them is the
+              whole reason this exists. A leg our table has lost track of bills
+              exactly the same as one we know about, and it is invisible to any
+              view built from our own rows.
+
+              The manual override for when automatic teardown misses one. Three
+              things already end a call and all three have failed here at some
+              point; this is the button for when they do. */}
+          <Panel
+            title={`LIVE ON TELNYX${legs ? `, ${legs.legs.length}` : ''}`}
+            note="Straight from the carrier. A leg here that IN FLIGHT does not show is one nothing of ours is tracking, and it bills by the minute until it is ended."
+          >
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+              <button onClick={loadLegs} disabled={legsBusy} style={miniBtn}>
+                {legsBusy ? 'WORKING…' : 'REFRESH'}
+              </button>
+              {/* Age-based sweep rather than "end all": the point is legs that
+                  are open and INACTIVE, and a button that ends everything would
+                  cut off whoever is mid-conversation. */}
+              {[120, 300].map(secs => (
+                <button key={secs} disabled={legsBusy} style={miniBtn}
+                        onClick={() => killOlderThan(secs)}>
+                  END OLDER THAN {secs / 60}M
+                </button>
+              ))}
+            </div>
+
+            {legsMsg && (
+              <div style={{ fontSize: 11, color: T.muted, marginBottom: 8, lineHeight: 1.5 }}>
+                {legsMsg}
+              </div>
+            )}
+
+            {!legs ? (
+              <div style={{ fontSize: 12, color: T.muted }}>Press REFRESH to ask the carrier.</div>
+            ) : !legs.authoritative ? (
+              <div style={{ fontSize: 12, color: T.amber }}>
+                Carrier unreachable, so this list is unknown rather than empty.
+                {legs.error && <> ({legs.error})</>}
+              </div>
+            ) : legs.legs.length === 0 ? (
+              <div style={{ fontSize: 12, color: T.muted }}>Telnyx reports no live legs.</div>
+            ) : (
+              <div style={{ maxHeight: 190, overflow: 'auto' }}>
+                {legs.legs.map(l => (
+                  <div key={l.callControlId} style={{
+                    display: 'flex', gap: 8, alignItems: 'center',
+                    padding: '5px 0', borderBottom: `1px solid ${T.surface}`, fontSize: 11.5,
+                  }}>
+                    <span style={{ fontFamily: 'monospace', flex: 1, minWidth: 0 }}>
+                      {l.phone || l.callControlId.slice(0, 12)}
+                    </span>
+                    {l.orphaned && (
+                      <span style={{
+                        fontSize: 9, fontWeight: 'bold', letterSpacing: 0.5,
+                        padding: '2px 5px', borderRadius: 2,
+                        background: '#fee2e2', color: '#991b1b',
+                      }}>UNTRACKED</span>
+                    )}
+                    {l.leg && <span style={{ color: T.muted, fontSize: 10 }}>{l.leg}</span>}
+                    <span style={{
+                      fontFamily: 'monospace', fontSize: 10,
+                      color: (l.ageSeconds ?? 0) > 150 ? T.red : T.muted,
+                      minWidth: 46, textAlign: 'right',
+                    }}>
+                      {l.ageSeconds === null ? '-' : `${l.ageSeconds}s`}
+                    </span>
+                    <button style={miniBtn} disabled={legsBusy}
+                            onClick={() => killLeg(l.callControlId)}>END</button>
                   </div>
                 ))}
               </div>
