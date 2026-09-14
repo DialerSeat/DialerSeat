@@ -1269,6 +1269,20 @@ async function handleHangup(
     detail: { hangup_cause: hangupCause, hangup_source: hangupSource },
   })
 
+  // ── THE SAME FACT, WHERE IT CAN BE QUERIED ────────────────────────────
+  // call_events.detail keeps the full payload and always has. Reading it
+  // means a full scan with JSON extraction on every row, which is fine for
+  // one call and impossible for "which numbers are dead" once this table is
+  // measured in millions. The two fields worth asking questions about are
+  // projected onto the call itself, where they are indexed.
+  //
+  //   not_found          the number does not exist; never dial it again
+  //   originator_cancel  we hung up mid-ring, which is what Telnyx counts
+  //                      as an abandoned call against their 20% threshold
+  //
+  // Written below the event log rather than instead of it: the event is the
+  // record, this is the index.
+
   // Mark the call as actually over. `duration` is the column that
   // distinguishes "still in flight" from "finished" elsewhere in this codebase
   // (dialerPacing.ts's abandon-rate math treats duration=0 as in-flight), so it
@@ -1313,6 +1327,15 @@ async function handleHangup(
 
     if (callRow) {
       const updates: Record<string, unknown> = {}
+
+      // The carrier's own verdict, projected onto the call. Written on every
+      // hangup including a duplicate webhook: unlike duration and talk_seconds
+      // below, this is a fact about the call rather than a clock reading, so
+      // rewriting it with the same value costs nothing and a late webhook
+      // carrying a cause we missed is worth taking.
+      if (hangupCause) updates.hangup_cause = hangupCause
+      if (hangupSource) updates.hangup_source = hangupSource
+
       // Only set duration once — a call already marked over shouldn't have
       // its duration recomputed if a duplicate/late hangup webhook arrives.
       if (!callRow.duration || callRow.duration === 0) {

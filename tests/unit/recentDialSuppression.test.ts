@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  dialKey, attemptsByNumber, isExhausted,
+  dialKey, attemptsByNumber, isExhausted, markDead, deadKeysFrom,
   MAX_DIALS_PER_NUMBER, ATTEMPT_WINDOW_DAYS,
 } from '@/lib/recentDialSuppression'
 
@@ -137,5 +137,38 @@ describe('the cap itself', () => {
 
   it('counts over 30 days, so a re-uploaded list is not dead forever', () => {
     expect(ATTEMPT_WINDOW_DAYS).toBe(30)
+  })
+})
+
+describe('dead numbers', () => {
+  it('blocks a number the carrier says does not exist, on the first hit', () => {
+    // Not after six attempts. A disconnected number will not start existing
+    // because we tried again.
+    const a = markDead(new Map(), deadKeysFrom([{ phone_number: '+15551234567' }]))
+    expect(isExhausted({ phone: '+15551234567' }, a)).toBe(true)
+  })
+
+  it('matches a dead number across formats', () => {
+    const a = markDead(new Map(), deadKeysFrom([{ phone_number: '+15551234567' }]))
+    expect(isExhausted({ phone: '(555) 123-4567' }, a)).toBe(true)
+  })
+
+  it('leaves live numbers alone', () => {
+    const a = markDead(new Map(), deadKeysFrom([{ phone_number: '+15551234567' }]))
+    expect(isExhausted({ phone: '+15559999999' }, a)).toBe(false)
+  })
+
+  it('does not disturb an existing budget for other numbers', () => {
+    const a = attemptsByNumber([
+      { phone_number: '+15559999999', duration: 20 },
+      { phone_number: '+15559999999', duration: 20 },
+    ])
+    markDead(a, deadKeysFrom([{ phone_number: '+15551234567' }]))
+    expect(a.get('5559999999')).toBe(2)
+    expect(isExhausted({ phone: '+15559999999' }, a)).toBe(false)
+  })
+
+  it('ignores rows with no usable number', () => {
+    expect(deadKeysFrom([{ phone_number: null }, { phone_number: 'x' }])).toEqual([])
   })
 })

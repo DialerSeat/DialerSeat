@@ -2,7 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { isCallableNow } from '@/lib/callingWindow'
 import {
-  ATTEMPT_WINDOW_DAYS, attemptsByNumber, isExhausted,
+  ATTEMPT_WINDOW_DAYS, attemptsByNumber, isExhausted, markDead, deadKeysFrom,
   type DialedRow,
 } from '@/lib/recentDialSuppression'
 import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
@@ -433,7 +433,25 @@ async function loadAttemptCounts(campaignIds: string[]): Promise<Map<string, num
     console.error('[leads/next] attempt-count lookup failed, dialing on', error)
     return new Map()
   }
-  return attemptsByNumber((data || []) as DialedRow[])
+  const attempts = attemptsByNumber((data || []) as DialedRow[])
+
+  // ── AND THE ONES THAT DO NOT EXIST ─────────────────────────────────────
+  // Deliberately NOT scoped to these campaigns or to the window above. A
+  // disconnected number is disconnected for every list and stays that way;
+  // scoping it would let the same dead number burn a fresh budget the moment
+  // it appeared in a different campaign, which is the exact behaviour the
+  // budget exists to stop.
+  const { data: dead, error: deadErr } = await supabaseAdmin
+    .from('calls')
+    .select('phone_number')
+    .eq('hangup_cause', 'not_found')
+    .not('phone_number', 'is', null)
+    .limit(20000)
+  if (deadErr) {
+    console.error('[leads/next] dead-number lookup failed, dialing on', deadErr)
+    return attempts
+  }
+  return markDead(attempts, deadKeysFrom((dead || []) as Array<{ phone_number: string | null }>))
 }
 
 const ID_CHUNK_SIZE = 150
