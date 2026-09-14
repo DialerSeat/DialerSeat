@@ -245,7 +245,31 @@ function DialerPageInner() {
   // heartbeat-side decision reads this instead.
   const statusRef = useRef<CallStatus>('idle')
   useEffect(() => { statusRef.current = status }, [status])
+
+  // ── ONE CLICK, ONE CALL ────────────────────────────────────────────────
+  // DIAL was disabled only on an empty number, so it stayed live for the whole
+  // of handleManualDial — which awaits twice, once on the microphone prompt
+  // and once on the POST. Two fast clicks both got through and placed two
+  // legs to the same stranger: two phones ringing, two bills, one intent.
+  //
+  // A ref rather than state because this has to be written and read in the
+  // SAME tick. setStatus is asynchronous, so a second click arriving before
+  // React re-renders reads the status the first click already invalidated,
+  // which is exactly the window being closed.
+  //
+  // statusRef cannot do this job alone for the same reason: it is assigned in
+  // an effect, so it is still 'idle' during the tick the first click runs in.
+  // The two cover different halves — this latch holds through the placement,
+  // and by the time it releases the effect has flushed statusRef to 'calling'
+  // so a later click is caught there instead. No gap between them.
+  const manualDialBusyRef = useRef(false)
+  // Drives the button's disabled state. The ref is the guard; this is only so
+  // the button can look like what the guard is already doing.
+  const [manualDialing, setManualDialing] = useState(false)
   const [manualNumber, setManualNumber] = useState('')
+  /** Whether DIAL should do anything: a number to call, and nothing in flight. */
+  const manualDialArmed = !!manualNumber && !manualDialing
+    && status !== 'calling' && status !== 'connected'
   // ── RECORD THIS CALL ────────────────────────────────────────────────────
   // A manual dial carries no campaign, so it had no recording setting to read
   // and could never be recorded — an agent who needed a record of one call
@@ -4316,6 +4340,20 @@ function DialerPageInner() {
   const handleManualDial = async () => {
     if (!manualNumber) return
 
+    // See manualDialBusyRef. Both halves of the one-call-per-click guard.
+    if (manualDialBusyRef.current) return
+    if (statusRef.current === 'calling' || statusRef.current === 'connected') return
+    manualDialBusyRef.current = true
+    setManualDialing(true)
+    // Every path out of this function releases the latch. Placement is what is
+    // being guarded, not the call: once the call is up, statusRef is what
+    // refuses the next click, and it has to, because a call can outlive this
+    // function by minutes.
+    const release = () => {
+      manualDialBusyRef.current = false
+      setManualDialing(false)
+    }
+
     // Same reason runDial refuses: a dial placed while this browser's SIP
     // socket is down rings a real person that nobody can answer for, and
     // Telnyx tears it down at about a second. See the note in runDial.
@@ -4323,6 +4361,7 @@ function DialerPageInner() {
       setAgentLegError(
         'NOT CONNECTED TO THE CALL SERVER, reconnecting. Nothing was dialed.'
       )
+      release()
       return
     }
 
@@ -4347,6 +4386,7 @@ function DialerPageInner() {
           'MICROPHONE BLOCKED: allow mic access for this site, then reload. ' +
           'Nothing was dialed.'
         )
+        release()
         return
       }
     }
@@ -4388,6 +4428,15 @@ function DialerPageInner() {
       }
     } catch {
       setStatus('idle')
+    } finally {
+      // finally, rather than a release on each branch: the 403 and 451 paths
+      // return from inside the try, and an alert() that threw would otherwise
+      // strand the latch set and leave DIAL dead for the rest of the session.
+      //
+      // Releasing on SUCCESS too is deliberate. What this latch guards is the
+      // placement, which is over; the live call is guarded by statusRef, which
+      // has to be the one doing it because a call outlives this function.
+      release()
     }
   }
 
@@ -5076,15 +5125,18 @@ function DialerPageInner() {
             borderBottom: `3px solid ${terminalBorder}`, color: terminalMuted,
             fontSize: inOverlay ? '24px' : '16px', cursor: 'pointer',
           }}>⌫</button>
-          <button onClick={handleManualDial} disabled={!manualNumber} style={{
+          {/* Disabled while a dial is being placed and while one is up. The
+              ref inside handleManualDial is what actually refuses the second
+              click; this is so the button stops inviting it. */}
+          <button onClick={handleManualDial} disabled={!manualDialArmed} style={{
             padding: inOverlay ? '20px' : '12px', borderRadius: '3px', border: 'none',
-            background: manualNumber ? terminalDark : terminalSurface,
-            borderBottom: `3px solid ${manualNumber ? 'var(--brand-primary)' : terminalBorder}`,
-            color: manualNumber ? 'var(--brand-primary)' : terminalMuted,
+            background: manualDialArmed ? terminalDark : terminalSurface,
+            borderBottom: `3px solid ${manualDialArmed ? 'var(--brand-primary)' : terminalBorder}`,
+            color: manualDialArmed ? 'var(--brand-primary)' : terminalMuted,
             fontSize: inOverlay ? '14px' : '11px', fontWeight: 'bold', letterSpacing: '2px',
-            cursor: manualNumber ? 'pointer' : 'not-allowed',
+            cursor: manualDialArmed ? 'pointer' : 'not-allowed',
             fontFamily: FUTURA,
-          }}>DIAL</button>
+          }}>{manualDialing ? 'DIALING' : 'DIAL'}</button>
         </div>
       </div>
     </>
