@@ -235,16 +235,21 @@ const hhmmss = (iso: string) => {
 // DUR column then paints it red as a sub-nine-second call: a live conversation
 // displayed as the exact thing this screen exists to flag as a failure.
 //
-// Live here means no disposition written, nothing in duration, and recent
-// enough that it cannot be an orphan. The age bound matters — calls that ended
+// LIVE MEANS A CONVERSATION, NOT A RINGING LINE. A ringing call is not worth
+// a clock — it is a number waiting to be picked up, it lasts under a minute
+// either way, and counting it clutters the one thing this column is for:
+// seeing who is actually talking to somebody right now.
+//
+// So: answered, no disposition written, nothing in duration, and recent enough
+// that it cannot be an orphan. The age bound matters — calls that ended
 // without ever being dispositioned do exist in this table, and without it one
 // of those would show a clock counting up forever.
 const LIVE_MAX_AGE_MS = 10 * 60_000
 const liveSeconds = (
-  f: { at: string; duration: number; disposition: string | null },
+  f: { at: string; duration: number; disposition: string | null; answered: boolean },
   nowMs: number,
 ): number | null => {
-  if (f.disposition || f.duration > 0) return null
+  if (!f.answered || f.disposition || f.duration > 0) return null
   const started = Date.parse(f.at)
   if (!Number.isFinite(started)) return null
   const elapsed = nowMs - started
@@ -427,7 +432,7 @@ export default function OpsMap() {
   // carrying a map and several charts.
   const [nowMs, setNowMs] = useState(() => Date.now())
   const hasRunningCall = (data?.feed ?? []).some(
-    f => !f.disposition && f.duration === 0
+    f => f.answered && !f.disposition && f.duration === 0
   )
   useEffect(() => {
     if (!hasRunningCall) return
@@ -1814,16 +1819,13 @@ export default function OpsMap() {
                             <td className="om-hide-sm" style={{ color: f.talkSeconds ? INK : DIM }}>
                               {f.talkSeconds ? f.talkSeconds + 's' : '-'}
                             </td>
-                            {/* Ringing and connected are different facts and
-                                the feed already knows which: answered_at is
-                                what separates them. */}
                             <td style={{
                               color: live !== null ? GREEN
                                 : f.disposition ? dispColour(f.disposition)
                                 : f.answered ? INK : DIM,
                             }}>
                               {live !== null
-                                ? (f.answered ? 'on call' : 'ringing')
+                                ? 'on call'
                                 : (f.disposition || (f.answered ? 'answered' : 'no answer'))}
                             </td>
                             <td className="om-hide-sm" style={{ color: amdColour(f.amdResult) }}>
