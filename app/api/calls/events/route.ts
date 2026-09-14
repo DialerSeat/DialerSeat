@@ -1042,19 +1042,46 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     return
   }
 
-  // ── ALREADY CONNECTED AT PICKUP — THIS IS ONLY THE CONFIRMATION ─────────
-  // The agent is bridged when the prospect answers now, not here. So by the
-  // time a human verdict lands the line is already up, and everything below —
-  // claiming a session, dialing an agent leg — would be doing it a second
-  // time. That would ring the agent again on a call they are already talking
-  // on and leave a stray leg behind.
+  // ── FAN-OUT: THIS IS WHERE THE AGENT ACTUALLY GETS CONNECTED ───────────
+  // This block was headed "ALREADY CONNECTED AT PICKUP" and said the agent is
+  // bridged when the prospect answers. That is true of an agent-attended dial,
+  // which carries bridge_on_answer. It was never true here. A fan-out line is
+  // placed with nobody attached — the comment on bridgeAgentOntoLead says so
+  // in as many words — so on this path nothing had connected anybody, and
+  // nothing below did either.
   //
-  // What the verdict still decides is the SIBLINGS. A human is confirmed, so
-  // every other line this session has ringing ends here. That is the whole of
-  // "if human, in-route calls abort" — and it deliberately still fires from
-  // the verdict rather than from the pickup, so a machine never kills the
-  // other lines on a false alarm.
+  // What that cost: 14 Sept, 138 fan-out calls, 35 answered, 7 of them human,
+  // ZERO bridged, by our bridged_at and by Telnyx's call.bridged webhook
+  // alike, against 80 of 80 for agent-attended dials. Each of those people
+  // answered their phone and heard silence for about nineteen seconds. An
+  // operator reported it independently as "goes silent on pickup". It is also
+  // why the agent legs leaked: the only teardown was gated on a bridge that
+  // never happened.
+  //
+  // THE BRIDGE COMES BEFORE THE SIBLINGS DIE. Killing the other ringing lines
+  // first and then failing to connect this one would throw away every chance
+  // the session had. If the bridge fails, this lead is hung up rather than
+  // left on an open line with nobody on it — the same thing the agent-attended
+  // path does — and the siblings are left alone to keep trying.
+  //
+  // UNVERIFIED IN PRODUCTION. Predictive is withdrawn (see the heartbeat), so
+  // no fan-out call can reach this code today. It must not be re-enabled until
+  // a fan-out call has actually been observed reaching call.bridged.
   if (callRow.agent_call_control_id) {
+    const outcome = await bridgeAgentOntoLead(callControlId, `fan-out AMD '${result}'`)
+    if (outcome === 'failed' || outcome === 'no-agent') {
+      console.error(
+        `[calls/events] fan-out human on ${callControlId} could not be bridged ` +
+        `(${outcome}), hanging up rather than leaving the lead on a dead line.`
+      )
+      await hangupCallControlId(callControlId)
+      await recordingStart
+      return
+    }
+
+    // A human is confirmed and connected, so every other line this session has
+    // ringing ends here. Deliberately fired from the verdict rather than the
+    // pickup, so a machine never kills the other lines on a false alarm.
     await abortSiblingFanoutLines({
       sessionId: callRow.dial_group_id,
       keepCallControlId: callControlId,
@@ -1417,6 +1444,43 @@ async function handleHangup(
         `sets it automatically, or set "Receive SIP URI calls" to "Only from my Connections" in ` +
         `Telnyx Mission Control.`
       )
+    }
+
+    // ── THE AGENT LEG GOES WHEN ITS CALL DOES ────────────────────────────
+    // The lead leg has ended. Whatever the agent leg was doing, there is no
+    // longer anybody on the other end of it, and an agent leg left open bills
+    // by the minute for silence.
+    //
+    // Until now the ONLY release was in the machine-verdict path, gated on
+    // `agentAlreadyBridged` — which is defined as dial_source === 'user_dial'
+    // and can therefore never be true for a fan-out call. So every fan-out
+    // agent leg leaked, and leaked for as long as the agent stayed online.
+    //
+    // Measured 14 Sept, from Telnyx's own cost records: 115 fan-out agent legs
+    // averaging 314 billed seconds and reaching 1,338 — twenty-two minutes of
+    // a leg nobody ever spoke on. Telnyx bills both halves of each, so it lands
+    // twice. Against 30.7 minutes of actual lead conversation that day, 1,307
+    // minutes were billed. This is where the money went, and it dwarfed AMD,
+    // recordings and dial volume combined.
+    //
+    // user_dial is not innocent either — 12 legs, one of them also parked for
+    // 1,302 seconds — so this is deliberately NOT restricted to fan-out. Any
+    // call that ends releases its agent leg.
+    //
+    // Safe to do unconditionally: every one of the 1,905 agent legs on record
+    // belongs to exactly one call, so this can never drop a leg another live
+    // call is using. hangupCallControlId treats 404 and 422 as success, so a
+    // leg Telnyx already tore down is a no-op, as is a duplicate webhook.
+    //
+    // Awaited rather than fired and forgotten, because a dangling promise on
+    // this runtime is frozen when the response returns — which is exactly how
+    // a teardown silently never happens.
+    if (callRow?.agent_call_control_id) {
+      try {
+        await hangupCallControlId(callRow.agent_call_control_id)
+      } catch (err) {
+        console.warn('[calls/events] agent leg release failed', callControlId, err)
+      }
     }
 
     if (callRow) {
