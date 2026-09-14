@@ -16,10 +16,23 @@ export const runtime = 'nodejs'
 // /api/admin/unit-economics — what each customer costs against what they pay
 // =============================================================================
 // The margin is currently known on paper. This makes it observable, and the
-// reason that matters is not curiosity: the dominant cost is answering-machine
-// detection, charged per LEG whether or not anyone picks up. A customer who
-// dials heavily and connects rarely can cost more than their seat while
-// looking like a great user by every other metric on the platform.
+// reason that matters is not curiosity: the cost that scales is answering-
+// machine detection, charged per LEG whether or not anyone picks up. A
+// customer who dials heavily and connects rarely can cost more than their seat
+// while looking like a great user by every other metric on the platform.
+//
+// WHAT THE NUMBERS ACTUALLY SAY RIGHT NOW. Over the last seven days: $0.20 of
+// minutes, $2.10 of detection, $0.10 of recording, and $4.83 of number rental.
+// Rental is the biggest line today, which reads as a contradiction of the
+// paragraph above and is not one. Rental is FIXED and detection is PER DIAL,
+// so at 21 numbers the two cross at roughly 2,400 dials a week. Last week was
+// 1,051. One team dialing properly clears that in a day, and from there
+// detection is the only line that keeps growing.
+//
+// Everything in that paragraph was being misreported before: minutes came from
+// `duration` and so billed the ringing, detection counted verdicts rather than
+// legs, and rental was not on the page at all. Total shown was $0.78 against
+// $7.23 real. The individual fixes are commented where they live.
 //
 // NOTHING HERE IS ESTIMATED. Where a figure cannot be computed it is returned
 // as null and rendered as a dash. A fabricated margin is worse than none — it
@@ -41,13 +54,13 @@ export async function GET(req: NextRequest) {
     ) || WINDOW_DAYS))
     const sinceIso = new Date(Date.now() - days * 24 * 60 * 60_000).toISOString()
 
-    const [usersRes, callsRes, subsRes, seatsRes] = await Promise.all([
+    const [usersRes, callsRes, subsRes, seatsRes, numbersRes] = await Promise.all([
       supabase
         .from('users')
         .select('clerk_id, email, first_name, last_name, exclude_from_analytics, created_at'),
       supabase
         .from('calls')
-        .select('user_id, duration, amd_result, recording_duration')
+        .select('user_id, talk_seconds, amd_requested, amd_result, recording_duration')
         .gte('created_at', sinceIso)
         .limit(200000),
       supabase
@@ -70,6 +83,14 @@ export async function GET(req: NextRequest) {
         .select('owner_id, agent_id, charged_cents, amount_cents, created_at')
         .eq('status', 'paid')
         .gte('created_at', sinceIso),
+      // ── NUMBER RENTAL IS A REAL BILL AND WAS NOT ON THIS PAGE ──────────
+      // The assumptions note used to end "does not include number rental",
+      // which is honest but leaves a standing monthly charge invisible on the
+      // one page that exists to show what the platform costs. It is read from
+      // the pool rather than assumed, so it tracks every number bought.
+      supabase
+        .from('phone_numbers')
+        .select('monthly_cost_cents')
     ])
 
     if (usersRes.error) return apiError(usersRes.error, { route: 'admin/unit-economics' })
@@ -80,10 +101,36 @@ export async function GET(req: NextRequest) {
       if (!c.user_id) continue
       const a = activity.get(c.user_id) || { calls: 0, talkSeconds: 0, amdLegs: 0, recordedSeconds: 0 }
       a.calls++
-      a.talkSeconds += typeof c.duration === 'number' ? Math.max(0, c.duration) : 0
-      // AMD is billed per leg it ran against, which is every call that came
-      // back with a result — including the ones nobody answered.
-      if (c.amd_result) a.amdLegs++
+      // ── MINUTES ARE BILLED FROM ANSWER, NOT FROM DIAL ──────────────────
+      // This added `duration`, which is wall clock from the dial and includes
+      // every second of ringing. Telnyx charges from answer, so a call that
+      // rang 25 seconds and talked for 5 was costed at 30. Measured over seven
+      // days: $0.386 counted against $0.201 actually billable, 93% overstated.
+      //
+      // talk_seconds IS the billed span, written once at hangup as
+      // answered_at -> now. No fallback to duration where it is missing: over
+      // seven days 5 answered calls of 309 lacked it, together worth 0.01 of a
+      // minute, and no unanswered call has ever carried talk time. Deriving
+      // those would add rounding noise to buy nothing.
+      a.talkSeconds += typeof c.talk_seconds === 'number'
+        ? Math.max(0, c.talk_seconds)
+        : 0
+      // ── AMD IS BILLED PER LEG IT RAN AGAINST, NOT PER VERDICT ──────────
+      // This counted calls that came BACK with a result. AMD is charged for
+      // running, and a call torn down before detection finishes has still been
+      // billed for it. Seven days: 183 counted against 1,051 actually billed,
+      // so 868 legs were free on this page and $1.74 was missing from a
+      // week's worth of traffic.
+      //
+      // It matters more than the arithmetic suggests. The note at the top of
+      // lib/telephonyCosts.ts says detection dominates the bill at volume and
+      // does not care about answer rate, which is exactly why undercounting it
+      // by 5.7x made the cheapest-looking line the largest real one.
+      //
+      // The amd_result arm is not redundant. The amd_requested flag only
+      // starts on 2026-08-11, and 216 older calls carry a verdict without it.
+      // This window reaches back 90 days, far enough to include them.
+      if (c.amd_requested || c.amd_result) a.amdLegs++
       a.recordedSeconds += typeof c.recording_duration === 'number' ? Math.max(0, c.recording_duration) : 0
       activity.set(c.user_id, a)
     }
@@ -183,6 +230,22 @@ export async function GET(req: NextRequest) {
       talkMinutes: acc.talkMinutes + r.talkMinutes,
     }), { costUsd: 0, revenueUsd: 0, calls: 0, amdLegs: 0, talkMinutes: 0 })
 
+    // ── THE POOL BILLS WHETHER ANYONE DIALS OR NOT ────────────────────────
+    // Rental is a standing monthly charge against a pool every customer
+    // shares, so it is deliberately NOT pushed down into the per-customer
+    // rows. Splitting $21 across users pro-rata by call volume would be an
+    // invention, and the rule at the top of this file is that nothing here is
+    // estimated. It sits at platform level, where it is a fact.
+    //
+    // Divided by 30.44, the average month, rather than 30. Over a 90 day
+    // window the difference is a day and a half of rental, and a figure that
+    // drifts with the length of the month is the kind of thing that gets
+    // noticed and mistrusted long before it gets debugged.
+    const numbersMonthlyUsd = ((numbersRes.data || []) as Array<{ monthly_cost_cents: number | null }>)
+      .reduce((sum, n) => sum + (typeof n.monthly_cost_cents === 'number' ? n.monthly_cost_cents : 0), 0) / 100
+    const numberRentalUsd = numbersMonthlyUsd * (days / 30.44)
+    const platformCostUsd = totals.costUsd + numberRentalUsd
+
     return NextResponse.json({
       success: true,
       windowDays: days,
@@ -202,6 +265,19 @@ export async function GET(req: NextRequest) {
         marginUsd: totals.revenueUsd - totals.costUsd,
         marginPct: totals.revenueUsd > 0
           ? ((totals.revenueUsd - totals.costUsd) / totals.revenueUsd) * 100
+          : null,
+      },
+      // Costs nobody's row carries. Kept apart from `totals` so the per-
+      // customer view stays strictly measured, and reported alongside it so
+      // the platform margin is not quietly better than the real one.
+      platform: {
+        numbers: (numbersRes.data || []).length,
+        numbersMonthlyUsd,
+        numberRentalUsd,
+        costUsd: platformCostUsd,
+        marginUsd: totals.revenueUsd - platformCostUsd,
+        marginPct: totals.revenueUsd > 0
+          ? ((totals.revenueUsd - platformCostUsd) / totals.revenueUsd) * 100
           : null,
       },
       rows,

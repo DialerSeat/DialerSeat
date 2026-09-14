@@ -36,8 +36,21 @@ export const COST_PER_MINUTE_USD = 0.002
  */
 export const COST_PER_AMD_LEG_USD = 0.002
 
-/** Recording storage and processing, per minute recorded. */
-export const COST_PER_RECORDED_MINUTE_USD = 0.0005
+/**
+ * Recording, per minute recorded.
+ *
+ * Was 0.0005 here, which was four times under Telnyx's published rate and made
+ * recording look like a rounding error next to detection. Confirmed against
+ * telnyx.com/pricing/voice-api on 2026-09-13: $0.002/min, the same rate as
+ * outbound termination, so an hour recorded costs what an hour talked does.
+ *
+ * Storage is genuinely separate at $0.006/GB/month, and genuinely negligible:
+ * recorded audio runs roughly 240KB a minute, putting a month of storage for a
+ * recorded minute near a millionth of a cent, and recordings carry
+ * recording_expires_at so they do not accumulate forever. Left out rather than
+ * modelled, because a line that small only adds false precision.
+ */
+export const COST_PER_RECORDED_MINUTE_USD = 0.002
 
 /** What a seat bills at, weekly. Never expressed monthly — billing is weekly. */
 export const SEAT_PRICE_WEEKLY_USD = 35
@@ -75,5 +88,7 @@ export function computeCost(input: CostInputs): CostBreakdown {
 export const COST_ASSUMPTIONS_NOTE =
   `Assumes $${COST_PER_MINUTE_USD.toFixed(3)}/min outbound, ` +
   `$${COST_PER_AMD_LEG_USD.toFixed(3)} per standard AMD leg, ` +
-  `$${COST_PER_RECORDED_MINUTE_USD.toFixed(4)}/min recorded. ` +
-  `Carrier list rates, does not include number rental or platform costs.`
+  `$${COST_PER_RECORDED_MINUTE_USD.toFixed(3)}/min recorded. ` +
+  `Carrier list rates. Number rental is counted separately as a platform ` +
+  `cost, from what the numbers actually bill, since a shared pool belongs to ` +
+  `no single customer.`

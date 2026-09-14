@@ -67,6 +67,15 @@ interface Payload {
     marginUsd: number
     marginPct: number | null
   }
+  /** Costs no single customer's row carries. See the route for why. */
+  platform: {
+    numbers: number
+    numbersMonthlyUsd: number
+    numberRentalUsd: number
+    costUsd: number
+    marginUsd: number
+    marginPct: number | null
+  }
   rows: Row[]
 }
 
@@ -74,7 +83,7 @@ const usd = (v: number) =>
   `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 /** A dash, never a plausible-looking number. */
-const pct = (v: number | null) => (v === null || Number.isNaN(v) ? ', ' : `${v.toFixed(0)}%`)
+const pct = (v: number | null) => (v === null || Number.isNaN(v) ? '-' : `${v.toFixed(0)}%`)
 
 export default function UnitEconomics() {
   const [data, setData] = useState<Payload | null>(null)
@@ -156,8 +165,14 @@ export default function UnitEconomics() {
             {[
               ['REVENUE', usd(data.totals.revenueUsd), T.text],
               ['CARRIER COST', usd(data.totals.costUsd), T.text],
-              ['MARGIN', usd(data.totals.marginUsd), data.totals.marginUsd >= 0 ? T.green : T.red],
-              ['MARGIN %', pct(data.totals.marginPct), data.totals.marginUsd >= 0 ? T.green : T.red],
+              // Rental bills whether anybody dials or not, so it is shown in
+              // its own right rather than folded into the carrier line.
+              ['NUMBER RENTAL', usd(data.platform.numberRentalUsd), T.text],
+              // The margin that counts is after rental. Showing the carrier
+              // margin here would flatter the business by exactly the amount
+              // of a bill that arrives every month regardless.
+              ['MARGIN', usd(data.platform.marginUsd), data.platform.marginUsd >= 0 ? T.green : T.red],
+              ['MARGIN %', pct(data.platform.marginPct), data.platform.marginUsd >= 0 ? T.green : T.red],
             ].map(([label, value, color]) => (
               <div key={label as string} style={{
                 background: '#fff', border: `1px solid ${T.border}`, borderRadius: 4, padding: 14,
@@ -180,6 +195,8 @@ export default function UnitEconomics() {
                 ? Math.round((data.totals.amdLegs * data.rates.perAmdLegUsd / data.totals.costUsd) * 100)
                 : 0}% of carrier cost.
             </strong>
+            {' '}{data.platform.numbers} numbers at {usd(data.platform.numbersMonthlyUsd)}/mo,
+            {' '}{usd(data.platform.numberRentalUsd)} of it inside this window.
           </div>
 
           {/* ── PER CUSTOMER ────────────────────────────────────────────── */}
