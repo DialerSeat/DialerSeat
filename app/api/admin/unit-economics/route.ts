@@ -23,17 +23,19 @@ export const runtime = 'nodejs'
 // while looking like a great user by every other metric on the platform.
 //
 // WHAT THE NUMBERS ACTUALLY SAY RIGHT NOW. Over the last seven days: $0.20 of
-// minutes, $2.10 of detection, $0.10 of recording, and $4.83 of number rental.
-// Rental is the biggest line today, which reads as a contradiction of the
-// paragraph above and is not one. Rental is FIXED and detection is PER DIAL,
-// so at 21 numbers the two cross at roughly 2,400 dials a week. Last week was
-// 1,051. One team dialing properly clears that in a day, and from there
-// detection is the only line that keeps growing.
+// minutes, $2.10 of detection, $0.10 of recording, and $2.53 of number rental
+// across the 11 numbers actually held.
 //
-// Everything in that paragraph was being misreported before: minutes came from
-// `duration` and so billed the ringing, detection counted verdicts rather than
-// legs, and rental was not on the page at all. Total shown was $0.78 against
-// $7.23 real. The individual fixes are commented where they live.
+// Detection is already the largest line, and it is the one that grows. Rental
+// is FIXED and detection is PER DIAL, so the two cross near 1,265 dials a week
+// at this pool size; last week was 1,051, which is why they currently sit so
+// close together. One team dialing properly leaves rental behind for good.
+//
+// Everything above was being misreported before: minutes came from `duration`
+// and so billed the ringing, detection counted verdicts rather than legs,
+// rental was not on the page at all, and when it was added it counted ten
+// released numbers we had already given back. Total shown was $0.78 against
+// $4.93 real. The individual fixes are commented where they live.
 //
 // NOTHING HERE IS ESTIMATED. Where a figure cannot be computed it is returned
 // as null and rendered as a dash. A fabricated margin is worse than none — it
@@ -92,6 +94,12 @@ export async function GET(req: NextRequest) {
       supabase
         .from('phone_numbers')
         .select('monthly_cost_cents')
+        // A released number is not ours any more: lib/numberPool.ts sets this
+        // status only after telnyxReleaseNumber succeeds, and the pool sync
+        // sets it for rows Telnyx says we do not own. Counting them billed 10
+        // numbers we gave back, $10 of a $21 figure. Every other pool query in
+        // the codebase carries this same exclusion.
+        .neq('status', 'released')
     ])
 
     if (usersRes.error) return apiError(usersRes.error, { route: 'admin/unit-economics' })
@@ -303,6 +311,7 @@ export async function GET(req: NextRequest) {
       // customer view stays strictly measured, and reported alongside it so
       // the platform margin is not quietly better than the real one.
       platform: {
+        /** Numbers still held, which is what is billed. Released ones are not. */
         numbers: (numbersRes.data || []).length,
         numbersMonthlyUsd,
         numberRentalUsd,
