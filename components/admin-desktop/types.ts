@@ -45,6 +45,7 @@ export type AppId =
   | 'explorer'
   | 'settings'
   | 'balance'
+  | 'ledger'
   | 'live-ops'
   | 'unit-economics'
   | 'notifications'

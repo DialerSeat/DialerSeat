@@ -74,6 +74,10 @@ const BalanceApp = dynamic(() => import('./apps/Balance'), {
   ssr: false,
   loading: () => null,
 })
+const LedgerApp = dynamic(() => import('./apps/Ledger'), {
+  ssr: false,
+  loading: () => null,
+})
 
 const ComplianceApp = dynamic(() => import('./apps/Compliance'), {
   loading: () => <AppLoading />,
@@ -224,6 +228,17 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin'],
     Component: BalanceApp,
     defaultSize: { width: 1100, height: 780 },
+  },
+  {
+    id: 'ledger',
+    name: 'Ledger',
+    shortName: 'Ledger',
+    icon: '⚖️',
+    iconBg: 'linear-gradient(135deg, #8a6a1a, #4a3a0a)',
+    description: 'What Telnyx reported, captured the day they reported it — and anything they later changed',
+    visibleTo: ['admin'],
+    Component: LedgerApp,
+    defaultSize: { width: 1000, height: 760 },
   },
   {
     id: 'live-ops',
