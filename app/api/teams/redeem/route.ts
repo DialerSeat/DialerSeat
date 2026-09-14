@@ -144,6 +144,39 @@ export async function POST(req: Request) {
       memberWasCreated = true
     }
 
+    // ── SPEND ONE USE, ONCE ────────────────────────────────────────────────
+    // use_count was read above and compared against max_uses, and nothing ever
+    // wrote it — so a code limited to five uses admitted everybody, because
+    // the number it was checked against never left zero.
+    //
+    // Only when a membership was actually CREATED. An existing member
+    // re-entering the code is not a new seat, and charging them a use would
+    // let somebody exhaust a code by pasting it twice.
+    //
+    // The RPC does the check and the increment in one statement under a row
+    // lock: doing it here would let two people redeeming the last seat both
+    // read the same count and both pass.
+    if (memberWasCreated) {
+      const { data: claim, error: claimErr } = await supabaseAdmin
+        .rpc('claim_team_code_use', { p_code: code })
+      // out_ok, not ok: the OUT columns are prefixed because unprefixed names
+      // collide with the table's own columns inside the function body.
+      const result = (Array.isArray(claim) ? claim[0] : claim) as
+        { out_ok?: boolean } | null
+      if (claimErr) {
+        // Never fail a redemption that already created a membership over a
+        // counter. The seat exists; losing the count is the lesser wrong.
+        console.error('[teams/redeem] use_count increment failed for', code, claimErr)
+      } else if (result && result.out_ok === false) {
+        // Someone took the last seat between the check above and here.
+        await supabaseAdmin.from('team_members').delete().eq('id', memberRow.id)
+        return NextResponse.json(
+          { success: false, error: 'This code has just reached its limit.' },
+          { status: 410 }
+        )
+      }
+    }
+
     let campaignsToGrant: string[] = []
     if (codeRow.code_type === 'seat') {
       if (codeRow.campaign_id) {
