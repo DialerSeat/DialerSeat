@@ -80,11 +80,18 @@ function apexSitemap(now: Date): MetadataRoute.Sitemap {
     // this reason. The individual pages now are too, so adding a competitor
     // cannot silently produce an unindexed page.
     //
-    // hookedcrm is listed separately: it has a page but is not in the registry,
-    // because we could not source the pricing detail the registry requires.
+    // hookedcrm used to be hand-listed here on the grounds that it "has a page
+    // but is not in the registry". It has neither. There is no page.tsx under
+    // app/vs/hookedcrm — only an orphaned view.tsx nothing imports — so the
+    // route 404s, and the sitemap was submitting it to crawlers at priority
+    // 0.8. That is the exact failure the paragraph above describes, arriving
+    // from the other direction: the generated list cannot go stale, and the
+    // one entry kept out of it did.
+    //
+    // If the page comes back, it comes back through COMPETITORS like every
+    // other one, and the sitemap picks it up with no edit here.
     ...COMPETITORS.map(c => e(`/vs/${c.slug}`, 0.8, 'monthly')),
-    e('/vs/hookedcrm', 0.8, 'monthly'),
-    
+
     e('/faq', 0.8, 'monthly'),
     e('/faq/why-dialerseat', 0.85, 'monthly'),
     e('/faq/dialer-modes', 0.75, 'monthly'),
