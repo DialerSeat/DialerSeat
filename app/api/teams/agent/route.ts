@@ -177,6 +177,8 @@ export async function GET(req: NextRequest) {
     // old 20,000-row cap inside a month, and a capped month reports three
     // weeks as though it were four.
     let totalCalls = 0
+    /** Dials that actually rang. The denominator for the rates below. */
+    let reachedCalls = 0
     let conversions = 0
     let contacted = 0
     let talk = 0
@@ -195,6 +197,11 @@ export async function GET(req: NextRequest) {
 
       for (const r of agg || []) {
         const n = Number(r.calls) || 0
+        // Dials that actually rang. The rates at the bottom divide by this
+        // rather than by n: a dial the dead-socket bug tore down before it
+        // rang is not an agent failing to make contact, and those rows are
+        // most of the history. See lib/dialOutcome.ts.
+        const reached = Number(r.reached) || 0
         const t = Number(r.talk_seconds) || 0
         const disp = (r.disposition || '').toUpperCase()
         const meta = campaignMeta.get(r.campaign_id)
@@ -207,6 +214,7 @@ export async function GET(req: NextRequest) {
         const isConv = !!disp && convSet.has(disp)
 
         totalCalls += n
+        reachedCalls += reached
         if (isConv) conversions += n
         if (r.disposition && CONTACT_DISPOSITIONS.has(r.disposition)) contacted += n
         talk += t
@@ -319,11 +327,11 @@ export async function GET(req: NextRequest) {
       stats: {
         calls: totalCalls,
         conversions,
-        conversionRate: totalCalls > 0
-          ? Math.round((conversions / totalCalls) * 1000) / 10
+        conversionRate: reachedCalls > 0
+          ? Math.round((conversions / reachedCalls) * 1000) / 10
           : null,
-        contactRate: totalCalls > 0
-          ? Math.round((contacted / totalCalls) * 1000) / 10
+        contactRate: reachedCalls > 0
+          ? Math.round((contacted / reachedCalls) * 1000) / 10
           : null,
         talkSeconds: talk,
         avgTalkSeconds: talkCalls > 0 ? Math.round(talk / talkCalls) : null,

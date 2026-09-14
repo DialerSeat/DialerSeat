@@ -242,7 +242,7 @@ export default function AgentDetail({
         <Stat
           label="Conversions"
           value={st.conversions ? String(st.conversions) : '-'}
-          sub={st.conversionRate === null ? undefined : `${st.conversionRate}% of calls`}
+          sub={st.conversionRate === null ? undefined : `${st.conversionRate}% of dials that rang`}
           accent={st.conversions > 0 ? GREEN : undefined}
         />
         <Stat

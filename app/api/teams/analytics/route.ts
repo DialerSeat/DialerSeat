@@ -169,6 +169,8 @@ export async function GET(req: NextRequest) {
     const rows: Array<{
       day: string; hour: number; campaign_id: string
       disposition: string; calls: number; talk: number
+      /** Dials that actually rang. See lib/dialOutcome.ts. */
+      reached: number
     }> = (agg || []).map((r: any) => ({
       day: r.day,
       hour: r.hour_of_day,
@@ -176,6 +178,7 @@ export async function GET(req: NextRequest) {
       disposition: r.disposition || '',
       calls: Number(r.calls) || 0,
       talk: Number(r.talk_seconds) || 0,
+      reached: Number(r.reached) || 0,
     })).sort((a: any, b: any) => a.day.localeCompare(b.day))
     if (rows.length === 0) {
       return NextResponse.json({
@@ -195,6 +198,8 @@ export async function GET(req: NextRequest) {
     }
 
     let totalCalls = 0
+    /** Dials that actually rang. The denominator for the rates below. */
+    let reachedCalls = 0
     let contacted = 0
     let conversions = 0
     let talkTotal = 0
@@ -211,6 +216,14 @@ export async function GET(req: NextRequest) {
       const isConversion = !!disp && convSet.has(disp)
 
       totalCalls += c.calls
+      // ── THE DENOMINATOR OF A RATE IS NOT THE DIAL COUNT ──────────────
+      // Dials that never rang stay in totalCalls, because they were really
+      // attempted and really billed, and stay out of reachedCalls, because
+      // nobody declined to answer them. The rates below divide by reached.
+      // They are 79% of the table platform-wide and they can never reach the
+      // numerator, since their disposition is NO_ANSWER — so all they ever did
+      // was make every agent look worse. See lib/dialOutcome.ts.
+      reachedCalls += c.reached
       if (isConversion) conversions += c.calls
       if (c.disposition && CONTACT_DISPOSITIONS.has(c.disposition)) contacted += c.calls
 
@@ -270,9 +283,9 @@ export async function GET(req: NextRequest) {
       scope: { kind: scopeKind, id: scopeId },
       tiles: {
         totalCalls,
-        contactRate: totalCalls > 0 ? Math.round((contacted / totalCalls) * 1000) / 10 : null,
+        contactRate: reachedCalls > 0 ? Math.round((contacted / reachedCalls) * 1000) / 10 : null,
         conversions,
-        conversionRate: totalCalls > 0 ? Math.round((conversions / totalCalls) * 1000) / 10 : null,
+        conversionRate: reachedCalls > 0 ? Math.round((conversions / reachedCalls) * 1000) / 10 : null,
         talkSecondsTotal: talkTotal,
         avgTalkSeconds: talkCalls > 0 ? Math.round(talkTotal / talkCalls) : null,
         bestCampaign,

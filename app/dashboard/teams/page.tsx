@@ -2135,7 +2135,7 @@ export default function TeamsPage() {
                 <StatTile
                   label="Conversions"
                   value={statsLoading ? '-' : fmtNum(stats?.tiles?.conversions)}
-                  sub={fmtPct(stats?.tiles?.conversionRate) + ' of calls'}
+                  sub={fmtPct(stats?.tiles?.conversionRate) + ' of dials that rang'}
                   accent="#16a34a"
                 />
                 <StatTile

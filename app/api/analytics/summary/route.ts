@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { reachedDials } from '@/lib/dialOutcome'
 import { resolveAnalyticsScope } from '@/lib/analyticsScope'
 import { fetchAllRows } from '@/lib/fetchAllRows'
 
@@ -46,8 +47,11 @@ export async function GET(req: NextRequest) {
         // other pages were fine.
         //
         // The aggregates below use exactly these: duration, disposition,
-        // campaign_id, created_at. Nothing else is read.
-        .select('duration, disposition, campaign_id, created_at')
+        // campaign_id, created_at, and answered_at. Nothing else is read.
+        //
+        // answered_at was added for the rate denominators below and is one
+        // timestamp, which does not undo the trimming this note is about.
+        .select('duration, disposition, campaign_id, created_at, answered_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: true })
         .range(from, to)
@@ -61,6 +65,19 @@ export async function GET(req: NextRequest) {
 
   const totalCalls = calls.length
   const totalDuration = calls.reduce((sum, c) => sum + (c.duration || 0), 0)
+
+  // ── THE DENOMINATOR OF A RATE IS NOT THE DIAL COUNT ────────────────────
+  // totalCalls stays every dial, because that is what it says it is and those
+  // dials were really made and really billed. The rates below divide by the
+  // dials that actually RANG.
+  //
+  // The dead-socket bug created a lead leg, tore it down before it rang, and
+  // recorded NO_ANSWER against somebody never called. Those are 79% of the
+  // table and they sit in this denominator, which is why a contact rate here
+  // reads about a fifth of the truth. It matters more since this page started
+  // defaulting to all time, because the poisoned history is now what opens
+  // rather than something you go looking for. See lib/dialOutcome.ts.
+  const reachedCalls = reachedDials(calls).length
 
   // Same cap, same consequence: every disposition count below (contacts,
   // conversions, closed, appointments, DNC) is derived from this set, so a
@@ -112,8 +129,8 @@ export async function GET(req: NextRequest) {
     bestCampaignName = cdata?.name || null
   }
 
-  const conversionRate = totalCalls > 0 ? (conversions / totalCalls) * 100 : 0
-  const contactRate = totalCalls > 0 ? (contactsReached / totalCalls) * 100 : 0
+  const conversionRate = reachedCalls > 0 ? (conversions / reachedCalls) * 100 : 0
+  const contactRate = reachedCalls > 0 ? (contactsReached / reachedCalls) * 100 : 0
 
   const connectedCalls = calls.filter(c => CONTACT_DISPS.includes(c.disposition))
   const avgCallLength = connectedCalls.length > 0
@@ -124,6 +141,8 @@ export async function GET(req: NextRequest) {
     success: true,
     summary: {
       totalCalls,
+      /** Dials that rang. The denominator the two rates below actually use. */
+      reachedCalls,
       contactsReached,
       conversions,
       closed,
