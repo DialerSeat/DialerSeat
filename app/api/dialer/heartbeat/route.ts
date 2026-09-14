@@ -173,7 +173,32 @@ export async function POST(req: NextRequest) {
 
     const state: string = body.state || 'paused'
     const rawCampaignId: string | null = body.campaign_id ?? null
-    const dialerMode: string | null = body.dialer_mode ?? null
+    // ── PREDICTIVE IS WITHDRAWN UNTIL IT BRIDGES ─────────────────────────
+    // This value arrives from the BROWSER and is written straight onto the
+    // session, and it is the session's mode — not the campaign's — that gates
+    // fan-out further down. So blocking predictive on the campaign routes
+    // alone does nothing: a client that keeps sending dialer_mode:'predictive'
+    // keeps fanning out no matter what the campaign says.
+    //
+    // Predictive does not connect anybody. The only code that would bridge an
+    // agent onto a fan-out line sits inside `if (!callRow.dial_group_id)` in
+    // app/api/calls/events, and a fan-out call is DEFINED by having a
+    // dial_group_id. Measured 14 Sept: 138 fan-out calls, 35 answered, 7 of
+    // them human, ZERO bridged — by our bridged_at and by Telnyx's
+    // call.bridged webhook alike, against 80 of 80 for agent-attended dials.
+    // Every one of those humans heard silence for about nineteen seconds. An
+    // operator reported it independently as "goes silent on pickup".
+    //
+    // Coerced rather than rejected, deliberately. The failure mode of this
+    // line is that somebody who asked for predictive gets progressive, which
+    // is the mode that works; rejecting the heartbeat would put an agent
+    // offline mid-shift over a config disagreement.
+    //
+    // DELETE THIS once the bridge is fixed and a fan-out call has been seen
+    // reaching call.bridged.
+    const requestedMode: string | null = body.dialer_mode ?? null
+    const dialerMode: string | null =
+      requestedMode === 'predictive' ? 'progressive' : requestedMode
     const rawCallId: string | null = body.current_call_id ?? null
     // GHOST-DIALING SERVER GUARD: the predictive controller (which fans out lead
     // calls) must only run when the client has EXPLICITLY armed the engine via

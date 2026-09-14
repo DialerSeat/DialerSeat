@@ -62,11 +62,35 @@ export async function POST(req: Request) {
     // The comment here used to describe this as a sandbox-only divergence
     // from a production route that defaulted to 'power'. There is no such
     // second route -- this is the only campaign insert path in the codebase.
-    const mode: DialerMode = dialer_mode && VALID_MODES.includes(dialer_mode)
+    // ── PREDICTIVE IS WITHDRAWN UNTIL IT BRIDGES ──────────────────────────
+    // Predictive does not connect anybody. A fan-out line is placed with
+    // nobody attached, and the only code that would bridge an agent onto it —
+    // bridgeAgentOntoLead, called from the AMD verdict in
+    // app/api/calls/events — sits inside `if (!callRow.dial_group_id)`. A
+    // fan-out call is DEFINED by having a dial_group_id, so that branch
+    // excludes every call that needs it.
+    //
+    // Measured 14 Sept: 138 fan-out calls, 35 answered, 7 of them human, ZERO
+    // bridged — by our bridged_at and by Telnyx's call.bridged webhook alike,
+    // against 80 of 80 for agent-attended dials. Those humans answered and
+    // heard silence for about nineteen seconds each. An operator independently
+    // reported it as "goes silent on pickup".
+    //
+    // Requests for it are downgraded here rather than rejected: a new
+    // subscriber picking it from a menu should get a working dialer, not an
+    // error. The mode is still in VALID_MODES so nothing else has to change
+    // when it comes back.
+    //
+    // DELETE THIS once the bridge is fixed and a fan-out call has been seen
+    // reaching call.bridged.
+    const requested: DialerMode = dialer_mode && VALID_MODES.includes(dialer_mode)
       ? dialer_mode
       : 'progressive'
+    const mode: DialerMode = requested === 'predictive' ? 'progressive' : requested
 
-    const amdDefault = mode === 'progressive' || mode === 'predictive'
+    // Was `progressive || predictive`. Predictive can no longer reach here,
+    // so the second test is dead — restore it with the mode.
+    const amdDefault = mode === 'progressive'
     const amdEnabled = typeof amd_enabled === 'boolean' ? amd_enabled : amdDefault
     // ── RECORDING DEFAULTS ON ─────────────────────────────────────────────
     // It was opt-in, and in practice that meant off: 17 of 21 campaigns on the

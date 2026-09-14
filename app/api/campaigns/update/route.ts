@@ -6,6 +6,32 @@ import { apiError } from '@/lib/apiError'
 const VALID_MODES = ['preview', 'power', 'progressive', 'predictive'] as const
 const VALID_STATUSES = ['active', 'inactive'] as const
 
+// ── PREDICTIVE IS WITHDRAWN UNTIL IT BRIDGES ─────────────────────────────
+// Predictive does not connect anybody. A fan-out line is placed with nobody
+// attached, and the only code that would bridge an agent onto it —
+// bridgeAgentOntoLead, called from the AMD verdict in app/api/calls/events —
+// sits inside `if (!callRow.dial_group_id)`. A fan-out call is DEFINED by
+// having a dial_group_id, so that branch excludes every call that needs it.
+//
+// Measured 14 Sept: 138 fan-out calls, 35 answered, 7 of them human, ZERO
+// bridged — by our own bridged_at and by Telnyx's call.bridged webhook alike,
+// against 80 of 80 for agent-attended dials. Every one of those humans
+// answered and heard silence for about nineteen seconds. An operator
+// independently reported the same thing as "goes silent on pickup".
+//
+// That is an abandoned call in the sense the FTC means it, it burns the lead,
+// and it is the fastest way to get a number marked as spam — which costs
+// answer rate on every other number in the pool.
+//
+// Blocked here rather than in the dialer because this is where it gets
+// chosen. A subscriber selected it nine minutes after signing up, was moved
+// off it, and selected it again thirty-five seconds later; no amount of
+// changing the data holds while the menu still offers it.
+//
+// DELETE THIS AND RESTORE THE MODE once the bridge is fixed and a fan-out
+// call has been observed reaching call.bridged.
+const WITHDRAWN_MODES = new Set(['predictive'])
+
 const ALLOWED_FIELDS = [
   'name',
   'status',
@@ -80,7 +106,10 @@ export async function POST(req: Request) {
         }
         case 'dialer_mode': {
           if (!VALID_MODES.includes(v)) continue
-          updates.dialer_mode = v
+          // A withdrawn mode is downgraded rather than ignored. Skipping the
+          // field would leave a campaign already on predictive sitting there,
+          // which is the exact state this exists to end.
+          updates.dialer_mode = WITHDRAWN_MODES.has(v) ? 'progressive' : v
           break
         }
         case 'amd_enabled': {
