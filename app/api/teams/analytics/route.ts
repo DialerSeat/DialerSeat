@@ -5,6 +5,7 @@ import { apiError } from '@/lib/apiError'
 import {
   canonical, labelFor, BREAKDOWN_FORMS, LEGACY_STATUS_VALUES,
 } from '@/lib/dispositions'
+import { VISIBLE_RECORDING_FILTER } from '@/lib/recordingVisibility'
 
 export const dynamic = 'force-dynamic'
 
@@ -374,6 +375,7 @@ export async function GET(req: NextRequest) {
       .select('id, user_id, created_at, phone_number, talk_seconds, answered_at, disposition, campaign_id', { count: 'exact' })
       .in('user_id', scopedAgents)
       .or('recording_id.not.is.null,recording_url.not.is.null')
+      .or(VISIBLE_RECORDING_FILTER)
       .order('created_at', { ascending: false })
       .limit(RECORDINGS_CAP)
     // start is null for all time, which is the default. No lower bound then,

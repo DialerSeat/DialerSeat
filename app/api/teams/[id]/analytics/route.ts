@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { computeDialingTime } from '@/lib/dialingTime'
 import { neverRang } from '@/lib/dialOutcome'
+import { isVisibleRecording } from '@/lib/recordingVisibility'
 
 /** See the note where this is used: the horizon of everything on this page. */
 const CALLS_CAP = 20000
@@ -406,7 +407,7 @@ export async function GET(
     // through /api/recordings/play, which resolves a fresh one per request.
     // No extra gating here: the query above already restricted `calls` to the
     // caller's own rows when they are not the owner, so the feed inherits it.
-    const recordedCalls = calls.filter(c => c.recording_id || c.recording_url)
+    const recordedCalls = calls.filter(isVisibleRecording)
     const recordings = recordedCalls
       .slice(0, RECORDINGS_CAP)
       // c is implicitly any because `calls` is; annotating it explicitly is

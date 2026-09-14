@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { VISIBLE_RECORDING_FILTER } from '@/lib/recordingVisibility'
 
 export const dynamic = 'force-dynamic'
 
@@ -205,6 +206,7 @@ export async function GET(req: NextRequest) {
       .eq('user_id', agentId)
       .gte('created_at', since.toISOString())
       .or('recording_id.not.is.null,recording_url.not.is.null')
+      .or(VISIBLE_RECORDING_FILTER)
       .order('created_at', { ascending: false })
       .limit(RECORDINGS_CAP)
 

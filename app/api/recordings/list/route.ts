@@ -3,6 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
 import { maskedCampaignIds, maskPhone } from '@/lib/leadMasking'
+import { VISIBLE_RECORDING_FILTER } from '@/lib/recordingVisibility'
 
 const supabase = getServiceClient('recordings/list')
 
@@ -59,6 +60,8 @@ export async function GET(req: NextRequest) {
     .from('calls')
     .select('*, leads(first_name, last_name, phone, notes), campaigns(name)', { count: 'exact' })
     .or('recording_url.not.is.null,recording_id.not.is.null')
+    // Hidden rows keep their audio at the carrier but stay off the screen.
+    .or(VISIBLE_RECORDING_FILTER)
 
   if (ownsThisTeamCampaign) {
     query = query.eq('campaign_id', campaignId)
