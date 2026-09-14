@@ -83,7 +83,19 @@ type Mode = (typeof MODES)[number]
 
 /** Matches the dialer's own staleness idea: a beat is ~5s, so 90s is gone. */
 const ONLINE_SECONDS = 90
-const FEED_LIMIT = 80
+
+// ── HOW MANY CALLS THE FEED CARRIES ────────────────────────────────────────
+// This was a fixed 80 and the dock could not show more, which is too few to
+// scan a floor's morning. It is now the client's choice, because the tension
+// is real: the whole payload is re-fetched every 5 seconds, so a feed sized
+// for reading back through an afternoon is one nobody wants polling behind
+// them all day.
+//
+// The default stays at 80 for that reason, and asking for more is a decision
+// somebody makes when they want it. The ceiling is what the dock can filter
+// and render client-side without the 5s beat becoming visible.
+const FEED_LIMIT_DEFAULT = 80
+const FEED_LIMIT_MAX = 1000
 
 export async function GET(req: NextRequest) {
   try {
@@ -134,6 +146,12 @@ export async function GET(req: NextRequest) {
       : rangeParam === '90d' ? 90 : 30
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
+    // Clamped, not trusted. parseInt of junk is NaN, which would reach
+    // Postgres as a null limit and quietly return the entire calls table.
+    const feedLimit = Math.min(FEED_LIMIT_MAX, Math.max(1, parseInt(
+      new URL(req.url).searchParams.get('feed') || String(FEED_LIMIT_DEFAULT), 10
+    ) || FEED_LIMIT_DEFAULT))
+
     // Bucket count follows the range: a day reads well in hours, ninety days
     // does not. Decided here so both the query and the axis label agree.
     const buckets = rangeParam === 'all' ? 40
@@ -156,7 +174,7 @@ export async function GET(req: NextRequest) {
         ? supabase.rpc('ops_map_visitors', { p_since: since })
         : Promise.resolve({ data: [], error: null }),
       supabase.rpc('ops_map_targets', { p_since: since }),
-      supabase.rpc('ops_map_feed', { p_limit: FEED_LIMIT }),
+      supabase.rpc('ops_map_feed', { p_limit: feedLimit }),
       supabase.rpc('ops_map_breakdown', { p_since: since }),
       supabase.rpc('ops_map_pulse', { p_since: since, p_buckets: buckets }),
       // Not filtered by mode or range: this is the dock's PEOPLE view, and its
@@ -520,6 +538,10 @@ export async function GET(req: NextRequest) {
       targets,
       arcs,
       feed,
+      // What the feed was actually allowed to hold. Reported because the
+      // client's request is clamped here, and a dock saying "80 of 80" while
+      // it asked for 5,000 is a dock that looks broken.
+      feedLimit,
       breakdown,
       totals: {
         total,

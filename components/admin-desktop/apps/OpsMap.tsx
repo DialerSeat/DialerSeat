@@ -46,6 +46,9 @@ type Range = (typeof RANGES)[number]
 
 const SYNC_MS = 5000
 
+/** Feed sizes offered in the dock. The route clamps to 1000 regardless. */
+const FEED_SIZES = [80, 250, 500, 1000]
+
 type Point = {
   key: string; label: string; scope: 'state' | 'country'
   lat: number; lon: number; users: number; online: number; views: number
@@ -126,6 +129,8 @@ type Payload = {
   people: Person[]
   points: Point[]; targets: Target[]
   feed: FeedRow[]
+  /** What the route allowed, which may be less than was asked for. */
+  feedLimit?: number
   breakdown: Record<string, { label: string; n: number; detail: string }[]>
   totals: {
     total: number; placed: number; unplaced: number; online: number
@@ -150,6 +155,7 @@ type Persisted = {
   pulseTab?: 'calls' | 'visitors' | 'income'
   compWindow?: '7d' | 'month' | 'all'
   showTargets?: boolean; feedView?: 'calls' | 'people'
+  feedSize?: number
   callFilter?: 'all' | 'answered' | 'missed' | 'machine' | 'human'
   peopleFilter?: 'all' | 'online' | 'paying' | 'seat' | 'dialed' | 'unplaced'
   peopleSort?: 'recent' | 'first'
@@ -249,6 +255,11 @@ export default function OpsMap() {
   // inside the other, so the panel switches rather than nesting one in the
   // other or growing a second panel nobody has room for.
   const [feedView, setFeedView] = useState<'calls' | 'people'>(saved.feedView ?? 'calls')
+  // How many calls to ask for. 80 was the fixed size for a long time and is
+  // kept as the default: the whole payload re-fetches every 5 seconds, so a
+  // bigger feed is a cost somebody should opt into rather than inherit.
+  const [feedSize, setFeedSize] = useState<number>(
+    FEED_SIZES.includes(saved.feedSize as number) ? saved.feedSize! : 80)
   const [callFilter, setCallFilter] = useState<'all' | 'answered' | 'missed' | 'machine' | 'human'>(saved.callFilter ?? 'all')
   // The PEOPLE view needs its own filter, not a shared one: "answered" means
   // nothing about an account.
@@ -333,7 +344,7 @@ export default function OpsMap() {
   // invisible, so `firstLoad` gates the loading state and nothing else does.
   const load = useCallback(async (quiet: boolean) => {
     try {
-      const res = await fetch(`/api/admin/ops-map?mode=${mode}&range=${range}`)
+      const res = await fetch(`/api/admin/ops-map?mode=${mode}&range=${range}&feed=${feedSize}`)
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to load')
       setData(json)
@@ -342,7 +353,7 @@ export default function OpsMap() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load')
     }
-  }, [mode, range])
+  }, [mode, range, feedSize])
 
   // No setState for "have we loaded yet" — that is `data === null`, and
   // deriving it removes a state that could disagree with the data it
@@ -452,7 +463,7 @@ export default function OpsMap() {
   useEffect(() => {
     try {
       window.localStorage.setItem(STORE, JSON.stringify({
-        mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView,
+        mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView, feedSize,
         notisOpen, compOpen, tasksOpen, notisTab, pulseTab, compWindow,
         callFilter, peopleFilter, peopleSort,
         selected,
@@ -467,7 +478,7 @@ export default function OpsMap() {
         },
       }))
     } catch { /* nothing here is worth failing a render for */ }
-  }, [mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView,
+  }, [mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView, feedSize,
       notisOpen, compOpen, tasksOpen, notisTab, pulseTab, compWindow,
       callFilter, peopleFilter, peopleSort,
       selected, view])
@@ -510,9 +521,10 @@ export default function OpsMap() {
   const targets = showTargets ? (data?.targets ?? []) : []
   const maxUsers = Math.max(1, ...points.map(p => p.users))
   const maxCalls = Math.max(1, ...targets.map(t => t.calls))
-  // Filtering here rather than in the query: the feed is 80 rows and already
-  // in memory, so a round trip per filter click would add latency to answer a
-  // question the client can answer instantly.
+  // Filtering here rather than in the query: the feed is already in memory, so
+  // a round trip per filter click would add latency to answer a question the
+  // client can answer instantly. Still true at the 1000-row ceiling, which is
+  // where that ceiling came from.
   const shownPeople = (data?.people ?? []).filter(p => {
     switch (peopleFilter) {
       case 'online': return p.online
@@ -1551,6 +1563,18 @@ export default function OpsMap() {
                         <button key={id} className="om-mini" data-on={callFilter === id}
                                 onClick={() => setCallFilter(id)}>{lbl}</button>
                       ))}
+                      {/* How deep the feed goes. A funnel rather than chips for
+                          the same reason as the people side: the strip cannot
+                          hold four more buttons without wrapping. */}
+                      <label className="om-funnel" title="How many calls to load">
+                        <span aria-hidden="true">≡</span>
+                        <select value={feedSize}
+                                onChange={e => setFeedSize(Number(e.target.value))}>
+                          {FEED_SIZES.map(n => (
+                            <option key={n} value={n}>LAST {n}</option>
+                          ))}
+                        </select>
+                      </label>
                     </>
                   ) : (
                     <>
@@ -1584,6 +1608,10 @@ export default function OpsMap() {
                   <span style={{ marginLeft: 'auto', color: DIM, fontSize: 9, letterSpacing: 1 }}>
                     {feedView === 'calls'
                       ? shownFeed.length + ' of ' + (data?.feed ?? []).length
+                        // A feed filled to its limit is a feed with older calls
+                        // behind it. Saying so is the difference between "this
+                        // is all of it" and "this is as much as you asked for".
+                        + (data && data.feed.length >= (data.feedLimit ?? 80) ? ' · more behind' : '')
                       : shownPeople.length + ' of ' + (data?.people ?? []).length + ' accounts'}
                   </span>
                 </div>
