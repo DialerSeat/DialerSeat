@@ -241,11 +241,6 @@ export default function AgentDetail({
       }}>
         <Stat label="Calls" value={st.calls ? st.calls.toLocaleString() : '-'} sub={`last ${ago(st.lastCallAt)}`} />
         <Stat
-          label="Contact rate"
-          value={st.contactRate === null ? '-' : `${st.contactRate}%`}
-          sub="reached a person"
-        />
-        <Stat
           label="Conversions"
           value={st.conversions ? String(st.conversions) : '-'}
           sub={st.conversionRate === null ? undefined : `${st.conversionRate}% of dials that rang`}
