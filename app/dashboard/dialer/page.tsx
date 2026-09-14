@@ -171,7 +171,17 @@ const ALL_ACTIVE = '__all_active__'
 const LS_LAST_CAMPAIGN = 'dialer:lastCampaign'
 const LS_LAST_SCOPE = 'dialer:lastScope'
 const LS_SESSION_STATS = 'dialer:sessionStats'
-const LS_ALL_ACTIVE_MODE = 'dialer:allActiveMode'
+// ── THE AGENT'S OWN MODE, AND WHY THE KEY HAS A v2 ──────────────────────
+// This is the only per-agent dialer mode that exists. There is no column for
+// it anywhere: the campaign's mode governs a specific campaign, and this
+// covers All Active Campaigns, which has no single campaign to read from.
+//
+// The key is versioned because the platform moved to progressive everywhere
+// and a value saved under the old key would silently outrank that decision —
+// an agent who picked power weeks ago would still be dialing power, on a
+// platform where no campaign is power any more, and nobody would see it. The
+// bump discards those picks once. Anything chosen after this sticks.
+const LS_ALL_ACTIVE_MODE = 'dialer:allActiveMode:v2'
 
 const VALID_MODES: DialerMode[] = ['preview', 'power', 'progressive', 'predictive']
 
@@ -724,7 +734,9 @@ function DialerPageInner() {
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false)
   const [modeSaving, setModeSaving] = useState(false)
 
-  const [allActiveOverrideMode, setAllActiveOverrideMode] = useState<DialerMode>('power')
+  // Progressive is the platform default: every campaign runs it, and this is
+  // what an agent gets under All Active until they choose otherwise.
+  const [allActiveOverrideMode, setAllActiveOverrideMode] = useState<DialerMode>('progressive')
 
   const [scriptIdx, setScriptIdx] = useState(0)
   // Draggable script-tab ordering. Holds a custom order of tab keys (campaign
@@ -940,11 +952,12 @@ function DialerPageInner() {
           : ((currentCampaign?.dialer_mode as DialerMode) || 'progressive'))
       : isAllActive
         ? allActiveOverrideMode
-        // No campaign selected at all -- nothing is being dialed, so this is a
-        // label for an idle screen rather than a dialing decision. Left at
-        // power on purpose; the branch above it, which covers a real campaign
-        // whose row has not loaded yet, is the one that reads progressive.
-        : 'power'
+        // No campaign selected at all -- nothing is being dialed, so this is
+        // a label for an idle screen rather than a dialing decision. It read
+        // power, which was a deliberate choice back when modes were mixed;
+        // with every campaign on progressive it now just tells an idle agent
+        // they are in a mode that no longer exists on this platform.
+        : 'progressive'
 
   // Load the selected campaign's persisted dial-repeat-count whenever the
   // campaign selection changes, so the 1x/2x/3x selector reflects that
