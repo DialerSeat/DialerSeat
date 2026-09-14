@@ -25,10 +25,19 @@ export const dynamic = 'force-dynamic'
 
 const DEFAULT_CONVERSION_DISPOSITIONS = ['APPOINTMENT', 'CLOSED']
 
-/** Dispositions that mean a human was actually reached. Used for contact rate —
- *  a dialer that connects nobody is the single most important thing to see. */
+// Dispositions that mean a human was actually reached. Used for contact rate:
+// a dialer that connects nobody is the single most important thing to see.
+//
+// 'completed' was in here and is not one. It is a carrier status that leaked
+// into the disposition column: 35 calls carry it, all from one account between
+// May and July, and every one has answered_at null and zero talk seconds.
+// Nobody was reached on any of them.
+//
+// It was inflating contact rate on the team side only — the personal analytics
+// routes never had it — which is exactly why an owner's view of an agent
+// disagreed with what the agent saw on their own page.
 const CONTACT_DISPOSITIONS = new Set([
-  'APPOINTMENT', 'CLOSED', 'NOT INTERESTED', 'DO NOT CALL', 'completed',
+  'APPOINTMENT', 'CLOSED', 'NOT INTERESTED', 'DO NOT CALL',
 ])
 
 type RangeKey = 'today' | 'week' | 'month' | 'all' | 'custom'
