@@ -66,20 +66,59 @@ export interface DialedRow {
   phone_number: string | null
   answered_at?: string | null
   duration?: number | null
+  disposition?: string | null
+  hangup_cause?: string | null
+}
+
+/**
+ * Did OUR plumbing kill this dial, rather than the person we called?
+ *
+ * Such a dial never reached the prospect's phone, so spending one of their six
+ * attempts on it is charging them for a call they never received. On 14 Sept
+ * one agent's SIP registration went stale and the dialer placed 86 calls in
+ * eight minutes, 40 of which died at ~1.1 seconds. Every one of those spent an
+ * attempt.
+ *
+ * TWO SIGNATURES, BECAUSE THE WEBHOOK EMITS TWO LABELS FOR ONE FAULT.
+ * AGENT_LEG_FAILED is only written when the agent leg's own hangup event has
+ * already been recorded and reports 'callee'. That event usually arrives
+ * first, and under rapid dialing it does not — so half of that agent's
+ * failures landed as NO_ANSWER with no hangup cause at all. The absent cause
+ * is the giveaway: a lead leg that never established has nothing to report,
+ * while a real rejection carries user_busy and a real ring-out carries
+ * timeout.
+ *
+ * DELIBERATELY GENEROUS. Getting this wrong in one direction dials somebody a
+ * seventh time; getting it wrong in the other silently retires a lead who was
+ * never actually called. Those are not equivalent mistakes.
+ */
+function killedByOurPlumbing(r: DialedRow): boolean {
+  if (r.disposition === 'AGENT_LEG_FAILED') return true
+  return !r.answered_at
+    && (r.duration ?? 0) > 0
+    && (r.duration ?? 0) <= 2
+    && !r.hangup_cause
 }
 
 /**
  * Attempts already spent, per number.
  *
- * A call that never rang is not an attempt. Those rows exist in their
- * thousands from the dead-socket era and one still turns up occasionally;
- * counting them would spend a person's budget on calls their phone never
- * received. See lib/dialOutcome.
+ * A call that never rang is not an attempt. Two kinds do not count:
+ *
+ *   duration 0 — the dead-socket era, thousands of rows, and one still turns
+ *   up occasionally. See lib/dialOutcome.
+ *
+ *   killed by our own plumbing — a stale SIP registration tearing the lead leg
+ *   down at ~1 second, before the prospect's phone rang. This clause was
+ *   missing and cost 39 leads an attempt each in three minutes on 14 Sept:
+ *   the exclusion tested for duration exactly 0, and that signature is 1.1
+ *   seconds.
  */
 export function attemptsByNumber(rows: DialedRow[]): Map<string, number> {
   const out = new Map<string, number>()
   for (const r of rows) {
     if (!r.answered_at && (r.duration ?? 0) === 0) continue
+    if (killedByOurPlumbing(r)) continue
     const k = dialKey(r.phone_number)
     if (!k) continue
     out.set(k, (out.get(k) ?? 0) + 1)

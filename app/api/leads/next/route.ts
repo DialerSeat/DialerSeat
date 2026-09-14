@@ -423,7 +423,9 @@ async function loadAttemptCounts(campaignIds: string[]): Promise<Map<string, num
   ).toISOString()
   const { data, error } = await supabaseAdmin
     .from('calls')
-    .select('phone_number, answered_at, duration')
+    // disposition and hangup_cause are needed to tell a dial the prospect
+    // rejected from one our own SIP registration killed.
+    .select('phone_number, answered_at, duration, disposition, hangup_cause')
     .in('campaign_id', campaignIds)
     .gte('created_at', since)
     .limit(50000)
