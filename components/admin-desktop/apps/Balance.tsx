@@ -80,6 +80,20 @@ interface PerUser {
   totalUsd: number
 }
 
+interface BillMonth {
+  month: string
+  billed: number | null
+  estimated: number
+  gapUsd: number | null
+  note: string | null
+  usage: {
+    amdLegs: number; amdUsd: number
+    talkMinutes: number; minutesUsd: number
+    recordedMinutes: number; recordingUsd: number
+    rentalUsd: number; numbersHeld: number; numbersBought: number
+  }
+}
+
 interface Ledger {
   windowDays: number
   covered: boolean
@@ -106,6 +120,11 @@ const when = (iso: string) =>
     month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
   })
 
+const inputStyle: React.CSSProperties = {
+  background: '#fff', border: `1px solid ${T.border}`, borderRadius: 3,
+  color: T.text, fontSize: 12, padding: '7px 9px', fontFamily: FUTURA,
+}
+
 function Panel({ title, note, children }: {
   title: string; note?: string; children: React.ReactNode
 }) {
@@ -129,7 +148,42 @@ export default function BalanceApp() {
   const [days, setDays] = useState(30)
   const [data, setData] = useState<Ledger | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<'statement' | 'charges' | 'people'>('statement')
+  const [tab, setTab] = useState<'statement' | 'charges' | 'people' | 'bills'>('statement')
+  const [bills, setBills] = useState<BillMonth[] | null>(null)
+  const [billForm, setBillForm] = useState<{ month: string; total: string; note: string }>({
+    month: new Date().toISOString().slice(0, 7), total: '', note: '',
+  })
+  const [billBusy, setBillBusy] = useState(false)
+  const [billMsg, setBillMsg] = useState<string | null>(null)
+
+  const loadBills = useCallback(async () => {
+    try {
+      const r = await fetch('/api/admin/telnyx-bill?months=6', { cache: 'no-store' })
+      const j = await r.json()
+      if (j?.success) setBills(j.months as BillMonth[])
+    } catch { /* the tab shows its own empty state */ }
+  }, [])
+
+  const saveBill = useCallback(async () => {
+    const total = Number(billForm.total)
+    if (!Number.isFinite(total) || total < 0) { setBillMsg('Enter the total as a number.'); return }
+    setBillBusy(true)
+    setBillMsg(null)
+    try {
+      const r = await fetch('/api/admin/telnyx-bill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month: billForm.month, totalUsd: total, note: billForm.note || null }),
+      })
+      const j = await r.json()
+      setBillMsg(j?.success ? `Recorded ${billForm.month}.` : (j?.error || 'Could not save.'))
+      if (j?.success) { setBillForm(f => ({ ...f, total: '', note: '' })); void loadBills() }
+    } catch {
+      setBillMsg('Could not reach the server.')
+    } finally {
+      setBillBusy(false)
+    }
+  }, [billForm, loadBills])
 
   const load = useCallback(async () => {
     try {
@@ -150,6 +204,14 @@ export default function BalanceApp() {
     const id = setTimeout(() => { void load() }, 0)
     return () => clearTimeout(id)
   }, [load])
+
+  // Fetched when the tab is first opened rather than up front: a monthly figure
+  // on a screen most visits never scroll to.
+  useEffect(() => {
+    if (tab !== 'bills' || bills !== null) return
+    const id = setTimeout(() => { void loadBills() }, 0)
+    return () => clearTimeout(id)
+  }, [tab, bills, loadBills])
 
   return (
     <div style={{
@@ -230,6 +292,7 @@ export default function BalanceApp() {
               ['statement', `STATEMENT (${data.entries.length})`],
               ['charges', `CHARGES (${data.chargesTotal})`],
               ['people', `PER PERSON (${data.perUser.length})`],
+              ['bills', 'VS THEIR LEDGER'],
             ] as const).map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} style={{
                 background: tab === id ? T.accent : '#fff',
@@ -415,6 +478,111 @@ export default function BalanceApp() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </Panel>
+          )}
+
+          {/* ── VS THEIR LEDGER ────────────────────────────────────────
+              The month-end invoice is the only thing that settles any of this.
+              Everything else here is inference; this is the answer. */}
+          {tab === 'bills' && (
+            <Panel
+              title="THE MONTH AGAINST THEIR INVOICE"
+              note="Telnyx issues a ledger at month end. Put its total in and every estimate here becomes a checkable claim. Across months the useful thing is not any single gap but whether the gap holds steady."
+            >
+              <div style={{
+                display: 'flex', gap: 8, alignItems: 'flex-end',
+                flexWrap: 'wrap', marginBottom: 14,
+              }}>
+                <label style={{ display: 'grid', gap: 4 }}>
+                  <span style={{ fontSize: 9.5, letterSpacing: 1.5, color: T.muted }}>MONTH</span>
+                  <input type="month" value={billForm.month}
+                         onChange={e => setBillForm(f => ({ ...f, month: e.target.value }))}
+                         style={inputStyle} />
+                </label>
+                <label style={{ display: 'grid', gap: 4 }}>
+                  <span style={{ fontSize: 9.5, letterSpacing: 1.5, color: T.muted }}>TOTAL BILLED</span>
+                  <input inputMode="decimal" placeholder="28.29" value={billForm.total}
+                         onChange={e => setBillForm(f => ({ ...f, total: e.target.value }))}
+                         style={{ ...inputStyle, fontFamily: MONO, width: 110 }} />
+                </label>
+                <label style={{ display: 'grid', gap: 4, flex: '1 1 200px' }}>
+                  <span style={{ fontSize: 9.5, letterSpacing: 1.5, color: T.muted }}>NOTE</span>
+                  <input placeholder="e.g. includes an August short-call surcharge"
+                         value={billForm.note}
+                         onChange={e => setBillForm(f => ({ ...f, note: e.target.value }))}
+                         style={inputStyle} />
+                </label>
+                <button onClick={() => void saveBill()} disabled={billBusy} style={{
+                  background: T.accent, color: '#fff', border: 'none', borderRadius: 3,
+                  fontSize: 11, letterSpacing: 1, padding: '8px 14px',
+                  cursor: billBusy ? 'not-allowed' : 'pointer', fontFamily: FUTURA,
+                  opacity: billBusy ? 0.6 : 1,
+                }}>{billBusy ? 'SAVING…' : 'RECORD'}</button>
+              </div>
+              {billMsg && (
+                <div style={{ fontSize: 11, color: T.muted, marginBottom: 10 }}>{billMsg}</div>
+              )}
+
+              {!bills ? (
+                <div style={{ fontSize: 12, color: T.muted }}>LOADING…</div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 680 }}>
+                    <thead>
+                      <tr>
+                        {['MONTH', 'NUMBERS', 'AMD', 'MINUTES', 'RECORDING', 'OUR ESTIMATE', 'THEY BILLED', 'GAP'].map((h, i) => (
+                          <th key={h} style={{
+                            textAlign: i === 0 ? 'left' : 'right', padding: '6px 8px',
+                            borderBottom: `1px solid ${T.border}`, color: T.muted,
+                            fontSize: 9, letterSpacing: 1, fontWeight: 'bold',
+                          }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bills.map(b => (
+                        <tr key={b.month}>
+                          <td style={{ padding: '7px 8px', borderBottom: `1px solid ${T.surface}`, fontWeight: 500 }}>
+                            {b.month}
+                            {b.note && (
+                              <div style={{ fontSize: 10, color: T.muted, fontWeight: 400 }}>{b.note}</div>
+                            )}
+                          </td>
+                          {[
+                            `${b.usage.numbersHeld}${b.usage.numbersBought > 0 ? ` (+${b.usage.numbersBought})` : ''}`,
+                            usd(b.usage.amdUsd),
+                            usd(b.usage.minutesUsd),
+                            usd(b.usage.recordingUsd),
+                            usd(b.estimated),
+                          ].map((v, i) => (
+                            <td key={i} style={{
+                              padding: '7px 8px', borderBottom: `1px solid ${T.surface}`,
+                              textAlign: 'right', fontFamily: MONO, color: T.muted,
+                            }}>{v}</td>
+                          ))}
+                          <td style={{
+                            padding: '7px 8px', borderBottom: `1px solid ${T.surface}`,
+                            textAlign: 'right', fontFamily: MONO, fontWeight: 'bold',
+                          }}>{b.billed === null ? '-' : usd(b.billed)}</td>
+                          <td style={{
+                            padding: '7px 8px', borderBottom: `1px solid ${T.surface}`,
+                            textAlign: 'right', fontFamily: MONO, fontWeight: 'bold',
+                            color: b.gapUsd === null ? T.muted : b.gapUsd > 0 ? T.amber : T.green,
+                          }}>{b.gapUsd === null ? 'no ledger yet' : usd(b.gapUsd)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div style={{ fontSize: 10.5, color: T.muted, marginTop: 10, lineHeight: 1.8 }}>
+                    The gap is what Telnyx billed minus what we can evidence, and it is not an
+                    overcharge on its own: per-number purchase fees, E911 and tax never reach
+                    our tables, and a surcharge can post a month after the behaviour that
+                    earned it. A gap that stays roughly constant per number per month is
+                    those fees. One that grows with dialing volume is a usage charge we are
+                    not seeing, and that is the one worth an email.
+                  </div>
                 </div>
               )}
             </Panel>
