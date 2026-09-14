@@ -492,31 +492,29 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
 }
 
 // =============================================================================
-// INBOUND CALLS — DialerSeat is outbound-only (for now)
+// INBOUND CALLS — REJECTED AT THE DOOR, NEVER ANSWERED
 // =============================================================================
-// Every owned Telnyx number needs SOME answer behavior for inbound calls,
-// or callers just hear ringing forever. This plays the same polite
-// "we don't accept inbound" message the old SignalWire/TwiML version did
-// (app/api/calls/inbound/route.ts, now removed) — but the mechanism is
-// necessarily different under native Call Control: TwiML could respond
-// synchronously with a document describing the whole call; Call Control
-// is asynchronous and command-driven, so this takes two steps across two
-// webhook events:
-//   1. call.initiated (direction=incoming): the call arrives "parked" —
-//      nothing happens automatically. We must explicitly issue `answer`.
-//   2. call.answered (direction=incoming): NOW we can issue `speak` to
-//      play the message, then `hangup`. (Issuing hangup immediately after
-//      speak, rather than waiting for a "speak ended" webhook, is
-//      deliberate — Telnyx queues commands on a call in order, so the
-//      hangup executes only after the speak command completes; see
-//      Telnyx's own demo-amd example, which uses this same
-//      speak-then-hangup pattern rather than waiting for an intermediate
-//      event.)
+// This used to ANSWER every inbound call and read a text-to-speech apology to
+// it. That was courteous, and it was the charge: answering is the precise
+// moment a call becomes billable.
+//
+// Measured 14 Sept, from the first call.cost webhook this platform ever
+// captured. An inbound callback lasting 9.6 seconds came back billed as
+// `billed_duration_secs: 60` — sip-trunking $0.0032/min plus call-control
+// $0.0020/min — so a rounding rule turned nine seconds into a full minute
+// and we paid $0.0052, plus TTS by the character, to say the words "this
+// number does not accept incoming calls."
+//
+// Rejecting instead means the call is never connected: no minutes to round
+// up, no TTS, nothing on the meter. CALL_REJECTED (Q.850 cause 21) is the
+// deliberate choice over USER_BUSY (cause 17) — busy invites the caller's
+// carrier to retry, and a retry is another call we would be paying to refuse.
+//
+// THE TRADE, STATED PLAINLY: a lead who rings one of our numbers back now
+// gets an intercept tone instead of a sentence explaining why. That is the
+// operator's call, made deliberately. Every alternative that says anything at
+// all has to answer first, and answering is the thing that costs.
 // =============================================================================
-
-const INBOUND_MESSAGE =
-  'Thank you for calling. This number does not accept incoming calls. ' +
-  'Please call back the number that contacted you, or visit dialerseat dot com for support. Goodbye.'
 
 async function callControlAction(
   callControlId: string,
@@ -545,22 +543,18 @@ async function callControlAction(
 }
 
 async function handleInboundCallInitiated(callControlId: string): Promise<void> {
-  await callControlAction(callControlId, 'answer')
+  // Before answer, which is the whole point. `cause` is required by the API.
+  await callControlAction(callControlId, 'reject', { cause: 'CALL_REJECTED' })
 }
 
+// Defensive only. A leg rejected at call.initiated should never reach
+// answered — but a reject that failed to send, or the two webhooks racing,
+// would otherwise leave a live inbound call sitting on the meter with nothing
+// driving it. Hang up at once. Do not speak: speak keeps the call up for the
+// length of the sentence, which is the cost this change exists to remove.
 async function handleInboundCallAnswered(callControlId: string): Promise<void> {
-  const spoke = await callControlAction(callControlId, 'speak', {
-    payload: INBOUND_MESSAGE,
-    voice: 'female',
-  })
-  if (spoke) {
-    // Queued behind the speak command — executes once speak completes.
-    await callControlAction(callControlId, 'hangup')
-  } else {
-    // If speak itself failed to even queue, don't leave the caller
-    // hanging silently — hang up directly.
-    await callControlAction(callControlId, 'hangup')
-  }
+  console.warn(`[calls/events] inbound call answered despite reject: ${callControlId}`)
+  await callControlAction(callControlId, 'hangup')
 }
 
 // ── WHAT COUNTS AS A ROBOT ─────────────────────────────────────────────────
