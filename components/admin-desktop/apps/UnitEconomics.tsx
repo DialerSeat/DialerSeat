@@ -67,6 +67,17 @@ interface Payload {
     marginUsd: number
     marginPct: number | null
   }
+  /** What is left at Telnyx, and how long it lasts at this window's burn. */
+  carrier: {
+    availableCredit: number | null
+    balance: number | null
+    pending: number | null
+    currency: string | null
+    authoritative: boolean
+    error: string | null
+    dailyBurnUsd: number
+    runwayDays: number | null
+  }
   /** Costs no single customer's row carries. See the route for why. */
   platform: {
     numbers: number
@@ -185,6 +196,60 @@ export default function UnitEconomics() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* ── CARRIER BALANCE AND RUNWAY ──────────────────────────────
+              Above the per-customer table on purpose. Margin per customer is
+              a question you think about; running out of carrier balance is one
+              that stops the floor, so it reads first. */}
+          <div style={{
+            background: '#fff', border: `1px solid ${T.border}`, borderRadius: 4,
+            padding: 14, marginBottom: 12,
+            display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'baseline',
+          }}>
+            <div>
+              <div style={{ fontSize: 9.5, letterSpacing: 2, color: T.muted, fontWeight: 'bold' }}>
+                TELNYX BALANCE
+              </div>
+              <div style={{
+                fontSize: 22, fontWeight: 'bold', marginTop: 6,
+                color: data.carrier.availableCredit === null ? T.muted
+                  : data.carrier.availableCredit < 10 ? T.red
+                  : data.carrier.availableCredit < 25 ? T.amber : T.text,
+              }}>
+                {data.carrier.availableCredit === null
+                  ? '-'
+                  : usd(data.carrier.availableCredit)}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 9.5, letterSpacing: 2, color: T.muted, fontWeight: 'bold' }}>
+                BURN / DAY
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 'bold', marginTop: 6, color: T.text }}>
+                {usd(data.carrier.dailyBurnUsd)}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 9.5, letterSpacing: 2, color: T.muted, fontWeight: 'bold' }}>
+                RUNWAY
+              </div>
+              <div style={{
+                fontSize: 22, fontWeight: 'bold', marginTop: 6,
+                color: data.carrier.runwayDays === null ? T.muted
+                  : data.carrier.runwayDays < 7 ? T.red
+                  : data.carrier.runwayDays < 30 ? T.amber : T.green,
+              }}>
+                {data.carrier.runwayDays === null
+                  ? '-'
+                  : `${Math.floor(data.carrier.runwayDays)} days`}
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6, flex: '1 1 260px' }}>
+              {data.carrier.authoritative
+                ? `Straight-line from the last ${data.windowDays} days of spend, including number rental. A floor that dials harder than last week burns faster than this.`
+                : `Carrier balance unavailable, so runway cannot be computed and shows a dash.${data.carrier.error ? ` (${data.carrier.error})` : ''}`}
+            </div>
           </div>
 
           <div style={{ fontSize: 11, color: T.muted, marginBottom: 12, lineHeight: 1.6 }}>

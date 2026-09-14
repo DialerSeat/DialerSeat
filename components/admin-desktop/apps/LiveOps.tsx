@@ -39,12 +39,36 @@ const T = {
 const FUTURA = "'Futura PT', Futura, 'Trebuchet MS', sans-serif"
 const POLL_MS = 5000
 
+// ── WHEN A BALANCE IS WORTH A COLOUR ───────────────────────────────────────
+// Not percentages: there is no denominator here, a prepaid account has no
+// "full". These are absolutes chosen against what a dialing day costs. A busy
+// floor runs a few dollars a day in carrier spend, so $25 is roughly a week of
+// warning and $10 is short enough to act on today.
+const BALANCE_LOW = 25
+const BALANCE_CRITICAL = 10
+
+/** Money, or a dash. Currency comes from the carrier, never assumed to be USD. */
+const money = (v: number | null, currency: string | null) => {
+  if (v === null) return '-'
+  const n = v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return currency === 'USD' || currency === null ? `$${n}` : `${n} ${currency}`
+}
+
 interface OpsData {
   generatedAt: string
   concurrency: {
     inFlightLegs: number | null
     budget: number
     authoritative: boolean
+  }
+  balance: {
+    availableCredit: number | null
+    balance: number | null
+    pending: number | null
+    creditLimit: number | null
+    currency: string | null
+    authoritative: boolean
+    error: string | null
   }
   inFlight: Array<{
     id: string
@@ -145,6 +169,10 @@ export default function LiveOps() {
   }
 
   const c = data?.concurrency
+  const bal = data?.balance ?? {
+    availableCredit: null, balance: null, pending: null, creditLimit: null,
+    currency: null, authoritative: false, error: null,
+  }
   const usedPct = c && c.budget > 0 && c.inFlightLegs !== null
     ? (c.inFlightLegs / c.budget) * 100
     : 0
@@ -216,6 +244,43 @@ export default function LiveOps() {
               {c!.authoritative
                 ? 'Reported by Telnyx. Nothing in DialerSeat blocks a dial at this number, the carrier enforces its own ceiling.'
                 : 'Carrier unreachable, so no live figure. The gauge shows a dash rather than a guess.'}
+            </div>
+          </Panel>
+
+          {/* ── CARRIER BALANCE ─────────────────────────────────────────── */}
+          <Panel
+            title="TELNYX BALANCE"
+            note="Spendable right now, straight from the carrier. Every dial costs whether or not it connects, so this falls on no-answers too."
+          >
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{
+                fontSize: 34, fontWeight: 'bold', lineHeight: 1,
+                color: bal.availableCredit === null ? T.muted
+                  : bal.availableCredit < BALANCE_CRITICAL ? T.red
+                  : bal.availableCredit < BALANCE_LOW ? T.amber : T.green,
+              }}>
+                {money(bal.availableCredit, bal.currency)}
+              </span>
+              <span style={{ fontSize: 15, color: T.muted }}>available</span>
+            </div>
+            <div style={{ fontSize: 11, color: T.muted, marginTop: 10, lineHeight: 1.65 }}>
+              {bal.authoritative ? (
+                <>
+                  Balance {money(bal.balance, bal.currency)}
+                  {bal.creditLimit !== null && bal.creditLimit > 0
+                    && <> · credit {money(bal.creditLimit, bal.currency)}</>}
+                  {bal.pending !== null && bal.pending > 0
+                    && <> · {money(bal.pending, bal.currency)} pending</>}
+                  {/* Burn is deliberately not shown here. This screen's window
+                      is the last few minutes, and a runway figure from that is
+                      noise. Unit Economics computes it over seven days. */}
+                </>
+              ) : (
+                <>Carrier unreachable, so no figure. A dash rather than a guess,
+                  because a balance panel confidently reading zero is the kind of
+                  thing somebody stops a floor over.
+                  {bal.error && <> ({bal.error})</>}</>
+              )}
             </div>
           </Panel>
 

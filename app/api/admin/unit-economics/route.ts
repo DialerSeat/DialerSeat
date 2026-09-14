@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
+import { getTelnyxBalance } from '@/lib/telnyxBalance'
 import { requireAdmin } from '@/lib/admin'
 import { apiError } from '@/lib/apiError'
 import {
@@ -246,6 +247,25 @@ export async function GET(req: NextRequest) {
     const numberRentalUsd = numbersMonthlyUsd * (days / 30.44)
     const platformCostUsd = totals.costUsd + numberRentalUsd
 
+    // ── HOW LONG THE MONEY LASTS ──────────────────────────────────────────
+    // The one number that makes the rest of this page urgent rather than
+    // interesting. Both halves are measured: burn is the platform cost above,
+    // over a real window of real calls, and the balance comes from Telnyx.
+    //
+    // Everything here goes null the moment either half is missing or the floor
+    // was idle. A runway of "infinite" because nobody dialed last week is a
+    // worse answer than no answer, and so is one extrapolated from a balance
+    // the carrier never confirmed.
+    //
+    // It is a straight-line projection of last week's spend and says so on the
+    // page. Monday is a team that has not dialed yet, so the honest reading of
+    // this figure that day is an upper bound, not a forecast.
+    const balance = await getTelnyxBalance()
+    const dailyBurnUsd = days > 0 ? platformCostUsd / days : 0
+    const runwayDays = balance.availableCredit !== null && dailyBurnUsd > 0
+      ? balance.availableCredit / dailyBurnUsd
+      : null
+
     return NextResponse.json({
       success: true,
       windowDays: days,
@@ -266,6 +286,18 @@ export async function GET(req: NextRequest) {
         marginPct: totals.revenueUsd > 0
           ? ((totals.revenueUsd - totals.costUsd) / totals.revenueUsd) * 100
           : null,
+      },
+      // What is left at the carrier, and how long it lasts at the burn this
+      // window measured. Null throughout when either half is unknown.
+      carrier: {
+        availableCredit: balance.availableCredit,
+        balance: balance.balance,
+        pending: balance.pending,
+        currency: balance.currency,
+        authoritative: balance.authoritative,
+        error: balance.error,
+        dailyBurnUsd,
+        runwayDays,
       },
       // Costs nobody's row carries. Kept apart from `totals` so the per-
       // customer view stays strictly measured, and reported alongside it so

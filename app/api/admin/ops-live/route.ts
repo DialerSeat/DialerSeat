@@ -3,6 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
 import { apiError } from '@/lib/apiError'
 import { getConcurrencySnapshot } from '@/lib/concurrency'
+import { getTelnyxBalance } from '@/lib/telnyxBalance'
 
 const supabase = getServiceClient('admin/ops-live')
 
@@ -52,8 +53,19 @@ export async function GET() {
     const day = new Date(now - 24 * 60 * 60_000).toISOString()
     const week = new Date(now - 7 * 24 * 60 * 60_000).toISOString()
 
-    const [concurrency, inFlightRes, dayRes, weekRes, sessionsRes] = await Promise.all([
+    const [concurrency, balance, inFlightRes, dayRes, weekRes, sessionsRes] = await Promise.all([
       getConcurrencySnapshot(),
+
+      // ── WHAT IS LEFT TO SPEND ────────────────────────────────────────
+      // Sits beside in-flight legs deliberately. Those two numbers are the
+      // same story told from both ends: legs are what is being spent right
+      // now, balance is how much of it there is. Watching one without the
+      // other is how a floor dials into an empty account.
+      //
+      // Its own failure is contained: getTelnyxBalance resolves to nulls
+      // rather than rejecting, so a carrier outage costs this screen one
+      // panel instead of all of it.
+      getTelnyxBalance(),
 
       // Calls believed live. duration = 0 is the in-flight sentinel the abort
       // sweep uses, so this list is exactly what abort would target.
@@ -264,6 +276,7 @@ export async function GET() {
       recentJoins,
       recentJoinCount: recentJoins.length,
       concurrency,
+      balance,
       inFlight,
       inFlightCount: inFlight.length,
       sourceMix,
