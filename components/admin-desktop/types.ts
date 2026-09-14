@@ -46,6 +46,7 @@ export type AppId =
   | 'settings'
   | 'balance'
   | 'ledger'
+  | 'storage'
   | 'live-ops'
   | 'unit-economics'
   | 'notifications'

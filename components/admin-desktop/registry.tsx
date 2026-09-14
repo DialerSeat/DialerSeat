@@ -78,6 +78,10 @@ const LedgerApp = dynamic(() => import('./apps/Ledger'), {
   ssr: false,
   loading: () => null,
 })
+const StorageApp = dynamic(() => import('./apps/Storage'), {
+  ssr: false,
+  loading: () => null,
+})
 
 const ComplianceApp = dynamic(() => import('./apps/Compliance'), {
   loading: () => <AppLoading />,
@@ -239,6 +243,17 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin'],
     Component: LedgerApp,
     defaultSize: { width: 1000, height: 760 },
+  },
+  {
+    id: 'storage',
+    name: 'Storage',
+    shortName: 'Storage',
+    icon: '🗄️',
+    iconBg: 'linear-gradient(135deg, #2a6a8a, #0a2a4a)',
+    description: 'How close the database is to read-only, and which table to delete first',
+    visibleTo: ['admin'],
+    Component: StorageApp,
+    defaultSize: { width: 940, height: 740 },
   },
   {
     id: 'live-ops',
