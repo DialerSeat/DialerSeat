@@ -169,7 +169,7 @@ export default function AgentCard({
           <Fig label="CALLS" value={String(member.callsToday)} />
           <Fig
             label="CONNECT"
-            value={member.connectRatePct === null ? ', ' : `${member.connectRatePct}%`}
+            value={member.connectRatePct === null ? '-' : `${member.connectRatePct}%`}
           />
           <Fig label="TALK" value={mmss(member.talkSecondsToday)} />
         </div>

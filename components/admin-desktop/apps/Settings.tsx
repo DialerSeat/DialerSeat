@@ -2854,7 +2854,7 @@ export default function SettingsApp() {
               title="Name"
               right={
                 <span style={{ color: LABEL_SECONDARY, fontSize: 14.5 }}>
-                  {userLoaded ? displayName : ', '}
+                  {userLoaded ? displayName : '-'}
                 </span>
               }
             />
@@ -2863,7 +2863,7 @@ export default function SettingsApp() {
               isLast
               right={
                 <span style={{ color: LABEL_SECONDARY, fontSize: 14.5 }}>
-                  {userLoaded ? (displayEmail || ', ') : ', '}
+                  {userLoaded ? (displayEmail || '-') : '-'}
                 </span>
               }
             />

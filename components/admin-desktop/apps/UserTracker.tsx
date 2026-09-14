@@ -718,7 +718,7 @@ export default function UserTrackerApp() {
                       <div className="ut-metric">{fmtDuration(r.b.connectedSeconds)}</div>
                       <div className="ut-metric-sub">{r.b.connectedCalls} calls</div>
                     </div>
-                    <div className="ut-metric">{r.avgCall > 0 ? fmtDuration(r.avgCall) : ', '}</div>
+                    <div className="ut-metric">{r.avgCall > 0 ? fmtDuration(r.avgCall) : '-'}</div>
                   </div>
                 ))}
               </div>

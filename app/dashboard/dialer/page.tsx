@@ -4756,7 +4756,7 @@ function DialerPageInner() {
 
   const connectedRate = sessionStats.calls > 0
     ? ((sessionStats.connected / sessionStats.calls) * 100).toFixed(0) + '%'
-    : ', '
+    : '-'
 
   if (tierLoaded && !isActive) {
     return (
@@ -5119,7 +5119,7 @@ function DialerPageInner() {
             color: pacingInfo && pacingInfo.abandonRate >= 0.025 ? terminalRed
               : pacingInfo && pacingInfo.abandonRate >= 0.020 ? terminalAmber : terminalGreen,
           }}>
-            {pacingInfo ? `${(pacingInfo.abandonRate * 100).toFixed(2)}%` : ', '}
+            {pacingInfo ? `${(pacingInfo.abandonRate * 100).toFixed(2)}%` : '-'}
           </div>
         </div>
       </div>
@@ -5569,13 +5569,13 @@ function DialerPageInner() {
                       alignItems: 'center', fontFamily: FUTURA, fontSize: 13,
                     }}>
                       <span className="dq-cell-name" style={{ gridArea: 'name', color: terminalText, fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {(lead.first_name || lead.last_name) ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim() : ', '}
+                        {(lead.first_name || lead.last_name) ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim() : '-'}
                       </span>
                       <span className="dq-cell-phone" style={{ gridArea: 'phone', color: terminalAccent, fontWeight: 'bold', fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>
                         {lead.phone}
                       </span>
                       <span className="dq-cell-state" style={{ gridArea: 'state', color: terminalMuted, fontSize: 12 }}>
-                        {lead.state || ', '}
+                        {lead.state || '-'}
                       </span>
                       <span className="dq-cell-badge" style={{ gridArea: 'badge', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 'bold', color: attempts > 0 ? terminalAccent : terminalMuted }}>
@@ -6271,7 +6271,7 @@ function DialerPageInner() {
                             NOW DIALING
                           </div>
                           <div className="dialer-live-now-dialing-number" style={{ fontFamily: FUTURA, fontSize: 17, fontWeight: 'bold', color: terminalText, letterSpacing: '1px', overflowWrap: 'anywhere' }}>
-                            {previewLead?.phone || activeDialingNumbers[0] || ', '}
+                            {previewLead?.phone || activeDialingNumbers[0] || '-'}
                           </div>
                           {(previewLead?.first_name || previewLead?.last_name) && (
                             <div style={{ fontFamily: FUTURA, fontSize: 12, color: terminalMuted, marginTop: 2, overflowWrap: 'anywhere' }}>
@@ -6363,7 +6363,7 @@ function DialerPageInner() {
                             <div style={{ fontSize: '10px', fontFamily: 'monospace', color: terminalMuted, letterSpacing: '1px', marginTop: '4px' }}>
                               {(() => {
                                 const st = displayState(displayLead)
-                                const loc = [displayLead.city, st.text === ', ' ? null : st.text]
+                                const loc = [displayLead.city, st.text === '-' ? null : st.text]
                                   .filter(Boolean).join(', ')
                                 return st.inferred
                                   ? <span style={{ opacity: 0.75, fontStyle: 'italic' }}>{loc}</span>
@@ -6883,7 +6883,7 @@ function displayState(lead: { state?: string | null; phone?: string | null }): {
   const guessed = phoneToState(lead.phone)
   if (guessed) return { text: `Maybe: ${guessed}`, inferred: true }
 
-  return { text: ': ', inferred: false }
+  return { text: '-', inferred: false }
 }
 
 const QUEUE_REASON_LABELS: Record<string, string> = {

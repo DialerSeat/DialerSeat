@@ -417,7 +417,7 @@ export async function GET(req: NextRequest) {
         id: r.id,
         date: r.created_at,
         agentName: agentName[r.agent_id] || r.agent_id,
-        teamName: r.team_id ? (teamName[r.team_id] || 'Team') : ': ',
+        teamName: r.team_id ? (teamName[r.team_id] || 'Team') : '-',
         serviceStart: r.period_start,
         serviceEnd: r.period_end,
         // Listed rate, then what was actually taken, then the difference.

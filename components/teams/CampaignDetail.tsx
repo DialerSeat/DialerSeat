@@ -502,11 +502,11 @@ export default function CampaignDetail({
         }}>
           {/* A dash, never a zero invented to fill the box: no calls yet is a
               different statement from nothing recorded. */}
-          {stat('Calls', myStats ? myStats.calls.toLocaleString() : ', ')}
-          {stat('Talk time', myStats ? `${mins}m` : ', ')}
-          {stat('Call Backs', myStats ? myStats.appointments : ', ')}
-          {stat('Closed', myStats ? myStats.closed : ', ')}
-          {stat('Not interested', myStats ? myStats.notInterested : ', ')}
+          {stat('Calls', myStats ? myStats.calls.toLocaleString() : '-')}
+          {stat('Talk time', myStats ? `${mins}m` : '-')}
+          {stat('Call Backs', myStats ? myStats.appointments : '-')}
+          {stat('Closed', myStats ? myStats.closed : '-')}
+          {stat('Not interested', myStats ? myStats.notInterested : '-')}
         </div>
 
         {/* ── THE WEEK, THEIR OWN ─────────────────────────────────────
@@ -860,8 +860,8 @@ export default function CampaignDetail({
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
       }}>
         <Stat label="Agents" value={String(agents.length)} />
-        <Stat label="Total Leads" value={data.totalLeads ? data.totalLeads.toLocaleString() : ', '} />
-        <Stat label="Dialed" value={data.calledLeads ? data.calledLeads.toLocaleString() : ', '} />
+        <Stat label="Total Leads" value={data.totalLeads ? data.totalLeads.toLocaleString() : '-'} />
+        <Stat label="Dialed" value={data.calledLeads ? data.calledLeads.toLocaleString() : '-'} />
         {/* No "Remaining" box. It was total minus dialed, sitting beside both
             of them, and the same number is stated twice more below — in the
             progress bar's percentage and in the Leads section's "N left to

@@ -30,7 +30,7 @@ const btn: React.CSSProperties = {
 }
 
 function dur(seconds: number | null | undefined): string {
-  if (!seconds) return ', '
+  if (!seconds) return '-'
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
   const s = seconds % 60
@@ -233,15 +233,15 @@ export default function AgentDetail({
         display: 'grid', gap: 12,
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
       }}>
-        <Stat label="Calls" value={st.calls ? st.calls.toLocaleString() : ', '} sub={`last ${ago(st.lastCallAt)}`} />
+        <Stat label="Calls" value={st.calls ? st.calls.toLocaleString() : '-'} sub={`last ${ago(st.lastCallAt)}`} />
         <Stat
           label="Contact rate"
-          value={st.contactRate === null ? ', ' : `${st.contactRate}%`}
+          value={st.contactRate === null ? '-' : `${st.contactRate}%`}
           sub="reached a person"
         />
         <Stat
           label="Conversions"
-          value={st.conversions ? String(st.conversions) : ', '}
+          value={st.conversions ? String(st.conversions) : '-'}
           sub={st.conversionRate === null ? undefined : `${st.conversionRate}% of calls`}
           accent={st.conversions > 0 ? GREEN : undefined}
         />
@@ -339,7 +339,7 @@ export default function AgentDetail({
                 </div>
                 <div style={{ textAlign: 'right', fontSize: 11.5, color: DIM }}>
                   <div style={{ color: TEXT, fontSize: 13 }}>
-                    {c.calls ? c.calls.toLocaleString() : ', '}
+                    {c.calls ? c.calls.toLocaleString() : '-'}
                   </div>
                   <div>{c.conversions > 0 ? `${c.conversions} converted` : 'no conversions'}</div>
                 </div>

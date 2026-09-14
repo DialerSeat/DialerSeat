@@ -550,7 +550,7 @@ function TeamCard({
         <div style={S.cardBody}>
           <div style={S.metaRow}>
             <MetaItem label="Created" value={fmtDate(team.createdAt)} />
-            <MetaItem label="Owner email" value={team.owner.email || ', '} />
+            <MetaItem label="Owner email" value={team.owner.email || '-'} />
             {team.joinCode && (
               <button className="ts-chip-btn" onClick={onCopyCode} style={S.codeChip}>
                 <span style={{ fontFamily: 'monospace', letterSpacing: 1 }}>{team.joinCode}</span>
@@ -1021,8 +1021,8 @@ function CampaignCard({
         <div style={S.cardBody}>
           <div style={S.metaRow}>
             <MetaItem label="Created" value={fmtDate(campaign.createdAt)} />
-            <MetaItem label="Owner email" value={campaign.owner.email || ', '} />
-            <MetaItem label="Dialer mode" value={campaign.dialerMode || ', '} />
+            <MetaItem label="Owner email" value={campaign.owner.email || '-'} />
+            <MetaItem label="Dialer mode" value={campaign.dialerMode || '-'} />
             <MetaItem label="Progress" value={`${campaign.calledLeads.toLocaleString()} / ${campaign.totalLeads.toLocaleString()} called`} />
           </div>
 

@@ -159,7 +159,7 @@ export default function Compliance() {
               fontSize: 40, fontWeight: 600, lineHeight: 1,
               color: headline.passing === false ? RED : GREEN,
             }}>
-              {headline.value === null ? ', ' : `${headline.value.toFixed(1)}%`}
+              {headline.value === null ? '-' : `${headline.value.toFixed(1)}%`}
             </span>
             <span style={{ fontSize: 12, color: 'var(--brand-muted-text)' }}>
               Telnyx allows {headline.threshold}%
@@ -210,7 +210,7 @@ export default function Compliance() {
               const h = Math.max(2, Math.min(100, (pct / 40) * 100))
               const over = pct > 15
               return (
-                <div key={d.day} title={`${d.day} · ${pct.toFixed(1)}% short of ${d.measured} · avg ${d.avgBilled?.toFixed(1) ?? ', '}s`}
+                <div key={d.day} title={`${d.day} · ${pct.toFixed(1)}% short of ${d.measured} · avg ${d.avgBilled?.toFixed(1) ?? '-'}s`}
                      style={{ flex: '1 0 10px', display: 'flex', flexDirection: 'column',
                               justifyContent: 'flex-end', height: '100%', minWidth: 10 }}>
                   <div style={{
@@ -245,7 +245,7 @@ export default function Compliance() {
                 fontSize: 18, fontWeight: 600,
                 color: c.passing === false ? RED : c.passing === true ? GREEN : AMBER,
               }}>
-                {c.value === null ? ', ' : `${c.unit === 's' ? c.value.toFixed(1) : c.value.toFixed(c.unit === '%' ? 1 : 0)}${c.unit}`}
+                {c.value === null ? '-' : `${c.unit === 's' ? c.value.toFixed(1) : c.value.toFixed(c.unit === '%' ? 1 : 0)}${c.unit}`}
               </span>
             </div>
             <div style={{ fontSize: 11, color: 'var(--brand-muted-text)', marginTop: 4 }}>

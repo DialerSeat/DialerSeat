@@ -202,7 +202,7 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
             <Stat label="CALLS TODAY" value={String(callsToday)} />
             <Stat
               label="CONNECT RATE"
-              value={callsToday >= 5 ? `${Math.round((answeredToday / callsToday) * 100)}%` : ', '}
+              value={callsToday >= 5 ? `${Math.round((answeredToday / callsToday) * 100)}%` : '-'}
             />
             <Stat label="TALK TIME" value={mmss(talkToday)} />
           </div>
@@ -250,7 +250,7 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
                     </span>
                     <Pill live={m.live} />
                     <span>{m.callsToday}</span>
-                    <span>{m.connectRatePct === null ? ', ' : `${m.connectRatePct}%`}</span>
+                    <span>{m.connectRatePct === null ? '-' : `${m.connectRatePct}%`}</span>
                     <span>{mmss(m.talkSecondsToday)}</span>
                     <span style={{ color: 'var(--brand-muted-text)', fontSize: 11 }}>
                       {m.seatSuspended ? 'PAUSED' : m.status === 'pending' ? 'PENDING' : 'ACTIVE'}
@@ -283,9 +283,9 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
             <AgentCard member={selected} selected onSelect={() => {}} />
 
             <dl style={{ marginTop: 18, fontSize: 12, display: 'grid', gap: 10 }}>
-              <Row k="Email" v={selected.email ?? ', '} />
+              <Row k="Email" v={selected.email ?? '-'} />
               <Row k="Live state" v={selected.live.replace('_', ' ')} />
-              <Row k="Dialer mode" v={selected.dialerMode ?? ', '} />
+              <Row k="Dialer mode" v={selected.dialerMode ?? '-'} />
               <Row k="Calls today" v={String(selected.callsToday)} />
               <Row k="Answered" v={String(selected.answeredToday)} />
               <Row k="Talk time" v={mmss(selected.talkSecondsToday)} />
@@ -294,7 +294,7 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
                 k="Billing"
                 v={selected.seatPriceCents != null
                   ? `$${(selected.seatPriceCents / 100).toFixed(2)}/wk`
-                  : selected.billingOverride ?? ', '}
+                  : selected.billingOverride ?? '-'}
               />
             </dl>
           </div>

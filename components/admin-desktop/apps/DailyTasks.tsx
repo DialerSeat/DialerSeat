@@ -223,7 +223,7 @@ export default function DailyTasksApp() {
             color: (data?.streak ?? 0) > 0 ? GREEN : 'var(--brand-muted-text)',
             fontVariantNumeric: 'tabular-nums',
           }}>
-            {data?.streak ?? ', '}
+            {data?.streak ?? '-'}
           </div>
           <div style={{ fontSize: 9, letterSpacing: 2, color: 'var(--brand-muted-text)', marginTop: 3 }}>
             DAY STREAK

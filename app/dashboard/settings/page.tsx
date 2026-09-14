@@ -730,7 +730,7 @@ export default function SettingsPage() {
                   <span style={seatBadgeStyle('#ffaa3e')}>AGENT PAID</span>
                 </div>
                 <div style={seatDetailStyle}>
-                  Campaign: <strong style={{ color: CHROME.text }}>{seat.campaignName || ', '}</strong>
+                  Campaign: <strong style={{ color: CHROME.text }}>{seat.campaignName || '-'}</strong>
                 </div>
                 <div style={seatDetailStyle}>
                   Owner: {seat.ownerName} · $35.00 / WEEK
@@ -1182,10 +1182,10 @@ function planLabelFor(plan: SubStatus['plan']): string {
 }
 
 function tierStatusLabel(sub: SubStatus | null, wlActive: boolean): string {
-  if (!sub) return wlActive ? 'ACTIVE' : ', '
+  if (!sub) return wlActive ? 'ACTIVE' : '-'
   if (sub.tier === 'lapsed' && !wlActive) return 'UNSUBSCRIBED'
   if (sub.cancelAtPeriodEnd) return `${sub.status?.toUpperCase()} (CANCELING)`
-  return sub.status?.toUpperCase() || (wlActive ? 'ACTIVE' : ', ')
+  return sub.status?.toUpperCase() || (wlActive ? 'ACTIVE' : '-')
 }
 
 function tierStatusColor(sub: SubStatus | null): string {

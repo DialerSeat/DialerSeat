@@ -302,8 +302,8 @@ export default function TeamDetail({
       }}>
         <Stat label="Members" value={String(team.members.length)} />
         <Stat label="Campaigns" value={String(team.campaigns.length)} />
-        <Stat label="Total Leads" value={totalLeads ? totalLeads.toLocaleString() : ', '} />
-        <Stat label="Dialed" value={calledLeads ? calledLeads.toLocaleString() : ', '} />
+        <Stat label="Total Leads" value={totalLeads ? totalLeads.toLocaleString() : '-'} />
+        <Stat label="Dialed" value={calledLeads ? calledLeads.toLocaleString() : '-'} />
       </div>
 
       {/* ── RENAME, WHERE THE NAME IS ─────────────────────────────────────

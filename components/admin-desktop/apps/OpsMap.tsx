@@ -194,7 +194,7 @@ const hhmmss = (iso: string) => {
   return d.toLocaleTimeString('en-GB', { hour12: false })
 }
 const prettyPhone = (p: string | null) => {
-  if (!p) return ', '
+  if (!p) return '-'
   const d = p.replace(/\D/g, '')
   const t = d.length === 11 && d.startsWith('1') ? d.slice(1) : d
   return t.length === 10 ? `${t.slice(0, 3)}.${t.slice(3, 6)}.${t.slice(6)}` : p
@@ -1090,7 +1090,7 @@ export default function OpsMap() {
               sometimes you want all of it — and remembers nothing, so the
               panels come back exactly as they were. */}
           <button className="om-chip" title={dockHidden ? 'Restore panels' : 'Minimise panels'}
-                  onClick={() => setDockHidden(v => !v)}>{dockHidden ? '▣' : ', '}</button>
+                  onClick={() => setDockHidden(v => !v)}>{dockHidden ? '▣' : '-'}</button>
           <button className="om-chip" title={isFull ? 'Exit fullscreen (Esc)' : 'Fullscreen'}
                   onClick={toggleFull}>{isFull ? '❐' : '⛶'}</button>
         </div>
@@ -1128,7 +1128,7 @@ export default function OpsMap() {
                 <Row k="CALLS PLACED" v={String(selTarget.calls)} c={AMBER} />
                 <Row k="ANSWERED" v={String(selTarget.answered)} c={GREEN} />
                 <Row k="CONNECTED" v={String(selTarget.connected)} c={CYAN} />
-                <Row k="ANSWER RATE" v={selTarget.calls ? `${Math.round((selTarget.answered / selTarget.calls) * 100)}%` : ', '} />
+                <Row k="ANSWER RATE" v={selTarget.calls ? `${Math.round((selTarget.answered / selTarget.calls) * 100)}%` : '-'} />
                 <Row k="AREA CODES" v={selTarget.codes.join(', ')} />
               </>
             )}
@@ -1251,7 +1251,7 @@ export default function OpsMap() {
                 <Row k="ANSWERED"
                      v={person.calls
                         ? `${person.answered} · ${Math.round((person.answered / person.calls) * 100)}%`
-                        : ', '} />
+                        : '-'} />
                 <Row k="CAMPAIGNS" v={String(person.campaigns)} />
                 <Row k="LEADS" v={String(person.leads)} />
                 <Row k="LAST CALL"
@@ -1466,13 +1466,13 @@ export default function OpsMap() {
                     against, together — a ratio with no threshold beside it is
                     not actionable. */}
                 <Row k={`SHORT CALLS (<=6s)`}
-                     v={comp.shortPct === null ? ', ' : `${comp.shortPct.toFixed(1)}% of ${comp.measured}`}
+                     v={comp.shortPct === null ? '-' : `${comp.shortPct.toFixed(1)}% of ${comp.measured}`}
                      c={comp.shortPct !== null && comp.shortPct > compMeta.threshold ? RED : GREEN} />
                 <Row k="THEIR LIMIT" v={`${compMeta.threshold}%`} />
                 <Row k="ANSWER RATE"
-                     v={comp.answerPct === null ? ', ' : `${comp.answerPct.toFixed(1)}%`} />
+                     v={comp.answerPct === null ? '-' : `${comp.answerPct.toFixed(1)}%`} />
                 <Row k="AVG BILLED"
-                     v={comp.avgBilled === null ? ', ' : `${comp.avgBilled.toFixed(1)}s`} />
+                     v={comp.avgBilled === null ? '-' : `${comp.avgBilled.toFixed(1)}s`} />
                 <Row k="PLACED / CONNECTED" v={`${comp.placed} / ${comp.connected}`} />
                 {/* Stated because the ratio is a MONTH's ratio: a bad week
                     early on keeps it high until the month turns, and knowing
@@ -1611,14 +1611,14 @@ export default function OpsMap() {
                           <tr key={f.id} data-fresh={freshIds.has(f.id) ? '1' : undefined}>
                             <td style={{ color: CYAN }}>{hhmmss(f.at)}</td>
                             <td style={{ color: GREEN }}>{f.agent}</td>
-                            <td className="om-hide-sm" style={{ color: MUTED }}>{f.agentPlace || ', '}</td>
+                            <td className="om-hide-sm" style={{ color: MUTED }}>{f.agentPlace || '-'}</td>
                             <td style={{ color: AMBER }}>{prettyPhone(f.phone)}</td>
                             <td className="om-hide-sm" style={{ color: MUTED }}>{f.targetPlace || 'unknown'}</td>
                             {/* Nine seconds is the compliance floor, so a short
                                 call is worth seeing without reading the number. */}
                             <td className="om-hide-sm" style={{ color: f.duration >= 9 ? INK : RED }}>{f.duration}s</td>
                             <td className="om-hide-sm" style={{ color: f.talkSeconds ? INK : DIM }}>
-                              {f.talkSeconds ? f.talkSeconds + 's' : ', '}
+                              {f.talkSeconds ? f.talkSeconds + 's' : '-'}
                             </td>
                             <td style={{ color: f.disposition ? dispColour(f.disposition) : (f.answered ? INK : DIM) }}>
                               {f.disposition || (f.answered ? 'answered' : 'no answer')}
@@ -1629,7 +1629,7 @@ export default function OpsMap() {
                             <td className="om-hide-sm" style={{ color: DIM }}>{f.campaign || 'manual'}</td>
                             <td className="om-hide-sm"
                                 style={{ color: f.recording === 'completed' ? VIOLET : DIM }}>
-                              {f.recording === 'completed' ? 'rec' : ', '}
+                              {f.recording === 'completed' ? 'rec' : '-'}
                             </td>
                           </tr>
                         ))}
@@ -1671,12 +1671,12 @@ export default function OpsMap() {
                             {/* The display label falls back to username, so
                                 without its own column the handle disappears the
                                 moment somebody sets a real name. */}
-                            <td className="om-hide-sm" style={{ color: CYAN }}>{pr.username || ', '}</td>
-                            <td className="om-hide-sm" style={{ color: MUTED }}>{pr.email || ', '}</td>
+                            <td className="om-hide-sm" style={{ color: CYAN }}>{pr.username || '-'}</td>
+                            <td className="om-hide-sm" style={{ color: MUTED }}>{pr.email || '-'}</td>
                             <td style={{ color: statusColour(pr) }}>{statusLabel(pr)}</td>
                             <td className="om-hide-sm" style={{ color: MUTED }}>{pr.place || 'unplaced'}</td>
                             <td className="om-hide-sm" style={{ color: DIM }}>
-                              {pr.device || ', '}{pr.dialerMode ? ' · ' + pr.dialerMode : ''}
+                              {pr.device || '-'}{pr.dialerMode ? ' · ' + pr.dialerMode : ''}
                             </td>
                             <td style={{ color: pr.calls ? INK : DIM }}>
                               {pr.calls}{pr.calls ? ' · ' + pr.answered + 'a' : ''}
@@ -1684,7 +1684,7 @@ export default function OpsMap() {
                             <td className="om-hide-sm" style={{ color: DIM }}>{pr.campaigns}</td>
                             <td className="om-hide-sm" style={{ color: DIM }}>{pr.leads}</td>
                             <td className="om-hide-sm" style={{ color: DIM }}>
-                              {pr.lastCall ? new Date(pr.lastCall).toLocaleDateString() : ', '}
+                              {pr.lastCall ? new Date(pr.lastCall).toLocaleDateString() : '-'}
                             </td>
                             <td className="om-hide-sm" style={{ color: DIM }}>
                               {new Date(pr.joined).toLocaleDateString()}

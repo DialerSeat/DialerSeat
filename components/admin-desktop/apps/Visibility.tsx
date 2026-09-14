@@ -20,12 +20,12 @@ const RANGES = [
 ]
 
 function n(v: number | null | undefined): string {
-  if (v === null || v === undefined) return ', '
+  if (v === null || v === undefined) return '-'
   return v.toLocaleString()
 }
 
 function ms(v: number | null | undefined): string {
-  if (!v) return ', '
+  if (!v) return '-'
   const sec = Math.round(v / 1000)
   if (sec < 60) return `${sec}s`
   const m = Math.floor(sec / 60)
@@ -417,7 +417,7 @@ export default function Visibility() {
             {audience === 'all' ? (
               <Tile
                 label="Signed in"
-                value={t.views > 0 ? `${Math.round((t.authedViews / t.views) * 100)}%` : ', '}
+                value={t.views > 0 ? `${Math.round((t.authedViews / t.views) * 100)}%` : '-'}
                 sub={`${n(t.anonViews)} anonymous`}
               />
             ) : (
@@ -429,7 +429,7 @@ export default function Visibility() {
             )}
             <Tile
               label="Pages per visit"
-              value={t.pagesPerVisit === null || t.pagesPerVisit === undefined ? ', ' : String(t.pagesPerVisit)}
+              value={t.pagesPerVisit === null || t.pagesPerVisit === undefined ? '-' : String(t.pagesPerVisit)}
               sub={
                 t.singlePageRate === null || t.singlePageRate === undefined
                   ? undefined
@@ -452,7 +452,7 @@ export default function Visibility() {
               label="vs previous"
               value={
                 t.changePct === null || t.changePct === undefined
-                  ? ', '
+                  ? '-'
                   : `${t.changePct >= 0 ? '+' : ''}${t.changePct}%`
               }
               sub={`${n(t.previousViews)} before`}
@@ -660,12 +660,12 @@ export default function Visibility() {
                           {p.source || 'direct'}
                         </td>
                         <td className="vz-path" title={p.landedOn || ''}>
-                          {p.landedOn || ', '}
+                          {p.landedOn || '-'}
                         </td>
                         <td className="num">{n(p.views)}</td>
                         <td className="num" style={{ color: DIM }}>{n(p.activeDays)}</td>
                         <td className="num" style={{ color: DIM }}>
-                          {p.lastSeen ? new Date(p.lastSeen).toLocaleDateString() : ', '}
+                          {p.lastSeen ? new Date(p.lastSeen).toLocaleDateString() : '-'}
                         </td>
                       </tr>
                     ))}

@@ -144,7 +144,7 @@ function Row({ label, b }: { label: string; b: Bucket }) {
         padding: '9px 12px', borderTop: `1px solid ${BORDER}`, textAlign: 'right',
         fontFamily: 'monospace', color: r === null ? MUTED : INK,
       }}>
-        {r === null ? ', ' : `${r.toFixed(1)}%`}
+        {r === null ? '-' : `${r.toFixed(1)}%`}
       </td>
     </tr>
   )

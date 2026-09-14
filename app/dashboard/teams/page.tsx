@@ -185,18 +185,18 @@ function StatTile({ label, value, sub, accent }: {
 /** A dash, not a zero, when there is nothing to report. They are different
  *  facts and a reader who cannot tell them apart will trust the wrong one. */
 function fmtNum(n: number | null | undefined): string {
-  if (n === null || n === undefined) return ', '
+  if (n === null || n === undefined) return '-'
   return n.toLocaleString()
 }
 
 function fmtPct(n: number | null | undefined): string {
-  if (n === null || n === undefined) return ', '
+  if (n === null || n === undefined) return '-'
   return `${n}%`
 }
 
 /** Hours only once there are hours. "0h 4m" reads as a rounding error. */
 function fmtDuration(seconds: number | null | undefined): string {
-  if (!seconds) return ', '
+  if (!seconds) return '-'
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
   const sec = seconds % 60
@@ -1794,7 +1794,7 @@ export default function TeamsPage() {
                     header: 'Campaigns',
                     numeric: true,
                     width: 110,
-                    render: (r: any) => r.campaignCount || ': ',
+                    render: (r: any) => r.campaignCount || '-',
                   },
                   {
                     key: 'manage',
@@ -2122,25 +2122,25 @@ export default function TeamsPage() {
                     not fetch. Every value below is counted from call rows. */}
                 <StatTile
                   label="Total Calls"
-                  value={statsLoading ? ', ' : fmtNum(stats?.tiles?.totalCalls)}
+                  value={statsLoading ? '-' : fmtNum(stats?.tiles?.totalCalls)}
                   sub={RANGES.find(r => r.key === range)?.label || ''}
                   accent="#2563eb"
                 />
                 <StatTile
                   label="Contact Rate"
-                  value={statsLoading ? ', ' : fmtPct(stats?.tiles?.contactRate)}
+                  value={statsLoading ? '-' : fmtPct(stats?.tiles?.contactRate)}
                   sub="reached a person"
                   accent="#2563eb"
                 />
                 <StatTile
                   label="Conversions"
-                  value={statsLoading ? ', ' : fmtNum(stats?.tiles?.conversions)}
+                  value={statsLoading ? '-' : fmtNum(stats?.tiles?.conversions)}
                   sub={fmtPct(stats?.tiles?.conversionRate) + ' of calls'}
                   accent="#16a34a"
                 />
                 <StatTile
                   label="Talk Time"
-                  value={statsLoading ? ', ' : fmtDuration(stats?.tiles?.talkSecondsTotal)}
+                  value={statsLoading ? '-' : fmtDuration(stats?.tiles?.talkSecondsTotal)}
                   sub={stats?.tiles?.avgTalkSeconds
                     ? `avg ${fmtDuration(stats.tiles.avgTalkSeconds)} /call`
                     : 'avg, /call'}
@@ -2148,7 +2148,7 @@ export default function TeamsPage() {
                 />
                 <StatTile
                   label="Best Campaign"
-                  value={statsLoading ? ', ' : (stats?.tiles?.bestCampaign?.name || ', ')}
+                  value={statsLoading ? '-' : (stats?.tiles?.bestCampaign?.name || '-')}
                   sub={stats?.tiles?.bestCampaign
                     ? `${stats.tiles.bestCampaign.rate}% of ${stats.tiles.bestCampaign.calls} calls`
                     : `need ${stats?.tiles?.minCallsToRank ?? 5}+ calls`}

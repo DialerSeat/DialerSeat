@@ -21,12 +21,12 @@ const RULE = '#d8dce3'
 const BRAND = '#2a6eff'
 
 function money(cents: number | null | undefined): string {
-  if (cents === null || cents === undefined) return ', '
+  if (cents === null || cents === undefined) return '-'
   return (cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
 
 function shortDate(iso: string | null | undefined): string {
-  if (!iso) return ', '
+  if (!iso) return '-'
   return new Date(iso).toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC',
   })

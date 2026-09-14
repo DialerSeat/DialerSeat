@@ -1385,7 +1385,7 @@ export default function NumbersApp() {
                     }}>
                       <span>ANSWER RATE</span>
                       <span style={{ color, fontWeight: 'bold', fontSize: 11 }}>
-                        {enough ? `${(rate! * 100).toFixed(1)}%` : ', '}
+                        {enough ? `${(rate! * 100).toFixed(1)}%` : '-'}
                         <span style={{ color: T.muted, fontWeight: 'normal', fontSize: 9 }}>
                           {' '}({calls.toLocaleString()} calls)
                         </span>
@@ -1552,7 +1552,7 @@ export default function NumbersApp() {
                 <div className="pool-stat-card" style={{ borderTopColor: T.red }}>
                   <div className="pool-stat-label">TOP SHORTAGE</div>
                   <div className="pool-stat-value" style={{ color: T.red, fontSize: 22 }}>
-                    {analytics.states[0]?.code ?? ', '}
+                    {analytics.states[0]?.code ?? '-'}
                   </div>
                   <div className="pool-stat-sub">
                     {analytics.states[0]
@@ -1610,7 +1610,7 @@ export default function NumbersApp() {
                             <td style={{ color: s.activeNumbers === 0 && s.leads > 0 ? '#c01a1a' : T.text }}>
                               {s.activeNumbers}
                             </td>
-                            <td>{s.leadsPerNumber !== null ? s.leadsPerNumber : ', '}</td>
+                            <td>{s.leadsPerNumber !== null ? s.leadsPerNumber : '-'}</td>
                             <td style={{ color: T.muted }}>{s.capacityPct}%</td>
                             <td style={{
                               color: s.gap > 0 ? T.red : s.gap < 0 ? T.green : T.muted,
@@ -1697,12 +1697,12 @@ export default function NumbersApp() {
                   <div className="pool-stat-label">POOL ACTIVE</div>
                 </div>
                 <div className="pool-stat-card">
-                  <div className="pool-stat-value">{cycleData.config?.numbers_per_user ?? ', '}</div>
+                  <div className="pool-stat-value">{cycleData.config?.numbers_per_user ?? '-'}</div>
                   <div className="pool-stat-label">PER USER</div>
                 </div>
                 <div className="pool-stat-card">
                   <div className="pool-stat-value">
-                    {cycleData.config ? Math.min(Math.max(cycleData.activeSubs * (cycleData.config.numbers_per_user ?? 0), cycleData.config.pool_floor ?? 0), 999999) : ', '}
+                    {cycleData.config ? Math.min(Math.max(cycleData.activeSubs * (cycleData.config.numbers_per_user ?? 0), cycleData.config.pool_floor ?? 0), 999999) : '-'}
                   </div>
                   <div className="pool-stat-label">NEXT TARGET</div>
                 </div>
@@ -1712,7 +1712,7 @@ export default function NumbersApp() {
                 fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 12,
                 fontFamily: 'monospace', lineHeight: 1.7,
               }}>
-                FLOOR: {cycleData.config?.pool_floor ?? ', '} · COOLDOWN: {cycleData.config?.release_cooldown_days ?? ', '}d ·
+                FLOOR: {cycleData.config?.pool_floor ?? '-'} · COOLDOWN: {cycleData.config?.release_cooldown_days ?? '-'}d ·
                 LAST RUN: {cycleData.config?.last_reconcile_month ?? 'never'}
                 {cycleData.config?.last_ratio_reconcile_at ? ` (${new Date(cycleData.config.last_ratio_reconcile_at).toLocaleString()})` : ''}
               </div>

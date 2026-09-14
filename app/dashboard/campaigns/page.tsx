@@ -107,7 +107,7 @@ const AMD_DEFAULT_BY_MODE: Record<DialerMode, boolean> = {
 }
 
 function relativeTime(iso: string | null | undefined): string {
-  if (!iso) return ', '
+  if (!iso) return '-'
   const then = new Date(iso).getTime()
   const now = Date.now()
   const diff = Math.max(0, now - then)

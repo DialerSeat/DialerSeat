@@ -196,7 +196,7 @@ export default function Incentives() {
                 <input
                   value={draft}
                   onChange={e => setDrafts(d => ({ ...d, [o.clerkId]: e.target.value }))}
-                  placeholder=", "
+                  placeholder="-"
                   inputMode="numeric"
                   style={{
                     width: 72, background: T.raised, color: T.text,

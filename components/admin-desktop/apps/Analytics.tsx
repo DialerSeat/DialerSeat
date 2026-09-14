@@ -323,7 +323,7 @@ function ManagerPerformanceView() {
                           <td className="an-td" style={{ fontFamily: 'monospace' }}>{c.callsInRange}</td>
                           <td className="an-td" style={{ fontFamily: 'monospace', color: c.connectRate >= 20 ? T.green : T.text }}>{c.connectRate}%</td>
                           <td className="an-td" style={{ fontFamily: 'monospace', fontSize: 10, color: T.muted }}>
-                            {c.topDispositions.length ? c.topDispositions.map(d => `${d.disposition} (${d.count})`).join(', ') : ', '}
+                            {c.topDispositions.length ? c.topDispositions.map(d => `${d.disposition} (${d.count})`).join(', ') : '-'}
                           </td>
                         </tr>
                       ))}
@@ -383,7 +383,7 @@ function ManagerPerformanceView() {
                           <td className="an-td"><Badge color={u.status === 'active' ? T.green : T.amber}>{u.status.toUpperCase()}</Badge></td>
                           <td className="an-td" style={{ fontFamily: 'monospace' }}>{u.callsInRange}</td>
                           <td className="an-td" style={{ fontFamily: 'monospace', fontSize: 10, color: T.muted }}>
-                            {u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleDateString() : ', '}
+                            {u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleDateString() : '-'}
                           </td>
                         </tr>
                       ))}

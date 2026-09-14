@@ -1088,10 +1088,10 @@ function BillingSubTab() {
                       <span style={{ color: C.muted, fontSize: 10 }}>no subscription</span>
                     )}
                   </td>
-                  <td style={{ fontSize: 10 }}>{t.is_demo ? ', ' : (b?.planNickname ?? (b ? `every ${intervalLabel(b)}` : ', '))}</td>
-                  <td style={{ fontFamily: 'monospace' }}>{t.is_demo ? ', ' : (b ? `${money(b.amountCents, b.currency)}/${intervalLabel(b)}` : ', ')}</td>
-                  <td style={{ fontFamily: 'monospace', color: !t.is_demo && b && b.mrrCents > 0 ? C.green : C.muted }}>{t.is_demo ? ', ' : (b ? money(b.mrrCents, b.currency) : ', ')}</td>
-                  <td style={{ fontSize: 10, color: C.muted }}>{t.is_demo ? ', ' : (b?.currentPeriodEnd ? new Date(b.currentPeriodEnd).toLocaleDateString() : ', ')}</td>
+                  <td style={{ fontSize: 10 }}>{t.is_demo ? '-' : (b?.planNickname ?? (b ? `every ${intervalLabel(b)}` : '-'))}</td>
+                  <td style={{ fontFamily: 'monospace' }}>{t.is_demo ? '-' : (b ? `${money(b.amountCents, b.currency)}/${intervalLabel(b)}` : '-')}</td>
+                  <td style={{ fontFamily: 'monospace', color: !t.is_demo && b && b.mrrCents > 0 ? C.green : C.muted }}>{t.is_demo ? '-' : (b ? money(b.mrrCents, b.currency) : '-')}</td>
+                  <td style={{ fontSize: 10, color: C.muted }}>{t.is_demo ? '-' : (b?.currentPeriodEnd ? new Date(b.currentPeriodEnd).toLocaleDateString() : '-')}</td>
                 </tr>
               )
             })}
@@ -1169,7 +1169,7 @@ function BillingDetailModal({ tenantId, onClose }: { tenantId: string; onClose: 
               <Field label="Plan" value={detail.billing.planNickname ?? `every ${intervalLabel(detail.billing)}`} />
               <Field label="Amount" value={`${money(detail.billing.amountCents, detail.billing.currency)} / ${intervalLabel(detail.billing)}`} />
               <Field label="Monthly (MRR)" value={money(detail.billing.mrrCents, detail.billing.currency)} />
-              <Field label="Next Charge" value={detail.billing.currentPeriodEnd ? new Date(detail.billing.currentPeriodEnd).toLocaleString() : ', '} />
+              <Field label="Next Charge" value={detail.billing.currentPeriodEnd ? new Date(detail.billing.currentPeriodEnd).toLocaleString() : '-'} />
             </>
           )}
           <Field label="Stripe Customer" value={detail.stripe_customer_id ?? '(none)'} mono />
@@ -1188,7 +1188,7 @@ function BillingDetailModal({ tenantId, onClose }: { tenantId: string; onClose: 
                       <td style={{ fontSize: 10 }}>{new Date(inv.created).toLocaleDateString()}</td>
                       <td style={{ fontFamily: 'monospace' }}>{money(inv.amountCents, inv.currency)}</td>
                       <td style={{ fontSize: 10, color: inv.status === 'paid' ? C.green : inv.status === 'open' ? C.amber : C.muted }}>
-                        {inv.status ?? ', '}
+                        {inv.status ?? '-'}
                       </td>
                       <td style={{ fontSize: 10, color: C.muted }}>{(inv.reason ?? '').replace(/_/g, ' ')}</td>
                       <td>
