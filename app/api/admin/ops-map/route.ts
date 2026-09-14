@@ -41,7 +41,12 @@ type OriginRow = {
   visitors?: number | string; views?: number | string
   names?: string[] | null
 }
-type TargetRow = { npa: string | null; calls: number | string; answered: number | string; connected: number | string }
+type TargetRow = {
+  npa: string | null; calls: number | string; answered: number | string
+  connected: number | string
+  /** Dials that actually rang. The honest denominator for an answer rate. */
+  reached: number | string
+}
 type FeedRowRaw = {
   call_id: string; at: string; agent: string | null
   agent_country: string | null; agent_region: string | null
@@ -328,7 +333,7 @@ export async function GET(req: NextRequest) {
     // must become one ping, not five stacked on the same centroid.
     const targetMap = new Map<string, {
       key: string; label: string; lat: number; lon: number
-      calls: number; answered: number; connected: number; codes: string[]
+      calls: number; answered: number; connected: number; reached: number; codes: string[]
     }>()
     let targetsUnmapped = 0
 
@@ -343,6 +348,7 @@ export async function GET(req: NextRequest) {
         hit.calls += calls
         hit.answered += Number(row.answered) || 0
         hit.connected += Number(row.connected) || 0
+        hit.reached += Number(row.reached) || 0
         hit.codes.push(npa)
       } else {
         targetMap.set(st, {
@@ -350,6 +356,7 @@ export async function GET(req: NextRequest) {
           calls,
           answered: Number(row.answered) || 0,
           connected: Number(row.connected) || 0,
+          reached: Number(row.reached) || 0,
           codes: [npa],
         })
       }

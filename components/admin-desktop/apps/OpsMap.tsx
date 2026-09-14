@@ -81,7 +81,10 @@ type Person = {
 }
 type Target = {
   key: string; label: string; lat: number; lon: number
-  calls: number; answered: number; connected: number; codes: string[]
+  calls: number; answered: number; connected: number
+  /** Dials that actually rang. Answer rate divides by this, not by `calls`. */
+  reached: number
+  codes: string[]
 }
 type FeedRow = {
   id: string; at: string; agent: string; agentPlace: string | null
@@ -1173,7 +1176,14 @@ export default function OpsMap() {
                 <Row k="CALLS PLACED" v={String(selTarget.calls)} c={AMBER} />
                 <Row k="ANSWERED" v={String(selTarget.answered)} c={GREEN} />
                 <Row k="CONNECTED" v={String(selTarget.connected)} c={CYAN} />
-                <Row k="ANSWER RATE" v={selTarget.calls ? `${Math.round((selTarget.answered / selTarget.calls) * 100)}%` : '-'} />
+                {/* Over dials that RANG. Dividing by `calls` counted the
+                    dead-socket rows, and this is the view somebody uses to
+                    decide where to buy numbers: area code 786 read 8.7% that
+                    way and is actually 90%. See lib/dialOutcome.ts. */}
+                <Row k="ANSWER RATE"
+                     v={selTarget.reached
+                       ? `${Math.round((selTarget.answered / selTarget.reached) * 100)}%`
+                       : '-'} />
                 <Row k="AREA CODES" v={selTarget.codes.join(', ')} />
               </>
             )}
