@@ -903,6 +903,13 @@ export default function OpsMap() {
         .om-hud-v { font-size:12px; font-weight:800; color:${INK}; }
         .om-hud-u { font-size:8.5px; letter-spacing:1px; color:${DIM}; }
         .om-hud-sep { width:1px; height:9px; background:rgba(255,255,255,0.14); }
+
+        /* The balance reads at a glance from across a room, which the other
+           chips do not need to. It is the one number on this screen that stops
+           a floor when it runs out. */
+        .om-hud-money { padding:6px 12px; }
+        .om-hud-money .om-hud-k { font-size:9.5px; }
+        .om-hud-money .om-hud-v { font-size:22px; line-height:1.1; }
         .om-pulse-wrap { flex:0 0 auto; }
         /* The two corner boxes sit on one row above CALL VOLUME, pushed to the
            outer edges so the middle of the map stays clear. */
@@ -1165,7 +1172,7 @@ export default function OpsMap() {
             <span className="om-hud-u">answered</span>
           </div>
 
-          <div className="om-hud" style={{ marginLeft: 'auto', pointerEvents: 'auto' }}
+          <div className="om-hud om-hud-money" style={{ marginLeft: 'auto', pointerEvents: 'auto' }}
                title={data.balance.authoritative
                  ? 'Spendable at Telnyx right now'
                  : (data.balance.error || 'Carrier unreachable')}>
