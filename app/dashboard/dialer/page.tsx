@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -184,6 +184,44 @@ const LS_SESSION_STATS = 'dialer:sessionStats'
 const LS_ALL_ACTIVE_MODE = 'dialer:allActiveMode:v2'
 
 const VALID_MODES: DialerMode[] = ['preview', 'power', 'progressive', 'predictive']
+
+// ── WHAT AN AGENT IS TOLD, AND WHAT THEY ARE NOT ─────────────────────────
+// Plumbing failures are the operator's business. An agent who reads "DIAL
+// LEAD FAILED: network error", a rejected mode write, or the fact that their
+// SIP socket dropped learns nothing they can act on — they just lose
+// confidence in a dialer whose internals were never theirs to fix. Those
+// lines are still produced and still reach the owner, who reads a session
+// through the ops map rather than over an agent's shoulder.
+//
+// THE TEST IS WHETHER THE AGENT CAN DO SOMETHING ABOUT IT. A blocked
+// microphone is theirs and stays. A dead socket, a carrier error code, the
+// predictive engine's own pacing chatter is not.
+//
+// AMD verdicts deliberately stay. They are not errors and not carrier
+// wording, and one of them — "AMD COULD NOT TELL" — asks the agent to listen
+// and judge, which is the most actionable line in the whole log.
+const OPERATOR_ONLY: RegExp[] = [
+  /FAILED/i,             // DIAL LEAD FAILED, MODE CHANGE FAILED
+  /AUTO-DEGRADED/i,      // pacing control reacting to abandon rate
+  /PREDICTIVE ENGINE/i,  // engine lifecycle
+  /LINES PREFERENCE/i,   // per-agent line count
+  /\bSIP\b|TELNYX/i,     // anything naming the carrier or the transport
+]
+
+// Dropping a line outright is wrong when it would leave somebody pressing a
+// button that does nothing, with no word for why. These are replaced instead,
+// in language that names the symptom without naming the plumbing.
+const NEUTRALISED: Array<[RegExp, string]> = [
+  [/DIAL BLOCKED: phone line not connected/i, '\u26a0 RECONNECTING, DIALING PAUSED'],
+]
+
+/** The line an agent should see, or null if this one is not theirs to read. */
+function agentSafeLine(line: string): string | null {
+  for (const [re, replacement] of NEUTRALISED) {
+    if (re.test(line)) return replacement
+  }
+  return OPERATOR_ONLY.some(re => re.test(line)) ? null : line
+}
 
 const MODE_OPTIONS: { value: DialerMode; label: string; color: string }[] = [
   { value: 'preview', label: 'PREVIEW', color: '#5a5e6a' },
@@ -411,6 +449,18 @@ function DialerPageInner() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [pacingInfo, setPacingInfo] = useState<PacingInfo | null>(null)
   const [amdActivity, setAmdActivity] = useState<string[]>([])
+  // Filtered at the point of DISPLAY, not at the point of writing, so every
+  // call site keeps recording what actually happened and only this decides
+  // who reads it. Consecutive duplicates collapse: three plumbing lines in a
+  // row must not become three identical "RECONNECTING" lines.
+  const agentActivity = useMemo(() => {
+    const out: string[] = []
+    for (const line of amdActivity) {
+      const safe = agentSafeLine(line)
+      if (safe !== null && safe !== out[out.length - 1]) out.push(safe)
+    }
+    return out
+  }, [amdActivity])
   // Currently-ringing numbers for the live-activity panel (predictive: all
   // lines in flight right now, so they can be shown highlighted together as
   // a group — distinct from amdActivity's historical scrollback log, which
@@ -6352,12 +6402,12 @@ function DialerPageInner() {
                         maxHeight: 180, overflowY: 'auto',
                         borderTop: `1px solid ${terminalBorder}`, paddingTop: 8,
                       }}>
-                        {amdActivity.length === 0 ? (
+                        {agentActivity.length === 0 ? (
                           <div style={{ fontFamily: FUTURA, fontSize: 11, color: terminalMuted, letterSpacing: '1px' }}>
                             Waiting for activity…
                           </div>
                         ) : (
-                          amdActivity.map((line, i) => (
+                          agentActivity.map((line, i) => (
                             <div key={i} className="dialer-live-activity-line" style={{
                               fontFamily: FUTURA,
                               fontSize: 11,
@@ -6838,7 +6888,7 @@ function DialerPageInner() {
           </div>
           <div style={{ padding: '5px 12px', background: '#1a1c24', height: '88px', overflowY: 'auto', flexShrink: 0 }}>
             {[
-              ...amdActivity.map(a => `> ${a}`),
+              ...agentActivity.map(a => `> ${a}`),
               status === 'connected' && `> CONNECTED, ${currentLead?.first_name} ${currentLead?.last_name}`,
               status === 'calling' && '> DIALING IN QUEUE...',
               status === 'preview_ready' && `> PREVIEW LOADED, ${previewLead?.first_name} ${previewLead?.last_name}`,
