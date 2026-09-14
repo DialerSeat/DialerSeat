@@ -185,7 +185,7 @@ type Persisted = {
   compWindow?: '7d' | 'month' | 'all'
   showTargets?: boolean; feedView?: 'calls' | 'people'
   feedSize?: number
-  callFilter?: 'all' | 'answered' | 'missed' | 'machine' | 'human'
+  callFilter?: 'all' | 'live' | 'answered' | 'missed' | 'machine' | 'human'
   peopleFilter?: 'all' | 'online' | 'paying' | 'seat' | 'dialed' | 'unplaced'
   peopleSort?: 'recent' | 'first'
   selected?: string | null
@@ -312,7 +312,7 @@ export default function OpsMap() {
   // bigger feed is a cost somebody should opt into rather than inherit.
   const [feedSize, setFeedSize] = useState<number>(
     FEED_SIZES.includes(saved.feedSize as number) ? saved.feedSize! : 80)
-  const [callFilter, setCallFilter] = useState<'all' | 'answered' | 'missed' | 'machine' | 'human'>(saved.callFilter ?? 'all')
+  const [callFilter, setCallFilter] = useState<'all' | 'live' | 'answered' | 'missed' | 'machine' | 'human'>(saved.callFilter ?? 'all')
   // The PEOPLE view needs its own filter, not a shared one: "answered" means
   // nothing about an account.
   const [peopleFilter, setPeopleFilter] =
@@ -434,6 +434,11 @@ export default function OpsMap() {
     const t = setInterval(() => setNowMs(Date.now()), 1000)
     return () => clearInterval(t)
   }, [hasRunningCall])
+
+  // Counted off the same predicate the rows use. Recomputed per render rather
+  // than stored, because it changes with the clock and not with the payload.
+  const liveCount = (data?.feed ?? []).reduce(
+    (n, f) => n + (liveSeconds(f, nowMs) !== null ? 1 : 0), 0)
 
   useEffect(() => {
     const t = setInterval(() => { load(false) }, SYNC_MS)
@@ -587,6 +592,9 @@ export default function OpsMap() {
   })
 
   const shownFeed = (data?.feed ?? []).filter(f => {
+    // Same predicate the DUR column uses, so what ACTIVE lists and what shows
+    // a running clock can never disagree.
+    if (callFilter === 'live') return liveSeconds(f, nowMs) !== null
     if (callFilter === 'answered') return f.answered
     if (callFilter === 'missed') return !f.answered
     if (callFilter === 'human') return f.amdResult === 'human'
@@ -1689,11 +1697,19 @@ export default function OpsMap() {
                     <>
                       <span className="om-sep" />
                       {([
-                        ['all', 'ALL'], ['answered', 'ANSWERED'], ['missed', 'MISSED'],
-                        ['human', 'HUMAN'], ['machine', 'MACHINE'],
+                        ['all', 'ALL'], ['live', 'ACTIVE'], ['answered', 'ANSWERED'],
+                        ['missed', 'MISSED'], ['human', 'HUMAN'], ['machine', 'MACHINE'],
                       ] as const).map(([id, lbl]) => (
                         <button key={id} className="om-mini" data-on={callFilter === id}
-                                onClick={() => setCallFilter(id)}>{lbl}</button>
+                                onClick={() => setCallFilter(id)}
+                                // Green only while something is actually up, so
+                                // the strip reads as a status light rather than
+                                // one more filter nobody looks at.
+                                style={id === 'live' && liveCount > 0
+                                  ? { color: GREEN, borderColor: GREEN }
+                                  : undefined}>
+                          {lbl}{id === 'live' && liveCount > 0 ? ` ${liveCount}` : ''}
+                        </button>
                       ))}
                       {/* How deep the feed goes. A funnel rather than chips for
                           the same reason as the people side: the strip cannot
