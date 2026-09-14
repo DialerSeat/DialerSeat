@@ -206,14 +206,44 @@ const OPERATOR_ONLY: RegExp[] = [
   /PREDICTIVE ENGINE/i,  // engine lifecycle
   /LINES PREFERENCE/i,   // per-agent line count
   /\bSIP\b|TELNYX/i,     // anything naming the carrier or the transport
+  // Connection state. It recovers on its own, there is nothing to do about it,
+  // and a line reading RECONNECTING only tells an agent their tools are
+  // unreliable. The operator watches this in the ops map instead.
+  /RECONNECT/i,
+  /DIALING PAUSED/i,
+  /NOT CONNECTED/i,
+  /DIAL BLOCKED/i,
 ]
 
-// Dropping a line outright is wrong when it would leave somebody pressing a
-// button that does nothing, with no word for why. These are replaced instead,
-// in language that names the symptom without naming the plumbing.
-const NEUTRALISED: Array<[RegExp, string]> = [
-  [/DIAL BLOCKED: phone line not connected/i, '\u26a0 RECONNECTING, DIALING PAUSED'],
-]
+// Previously this replaced "phone line not connected" with a neutral
+// "RECONNECTING" line, on the reasoning that silence is worse than a vague
+// word. That reasoning held while connection state was something an agent was
+// meant to watch. It no longer is: these faults recover on their own, the dial
+// button is disabled while they do, and the operator sees the real state in
+// the ops map. Nothing is substituted now — the line simply does not appear.
+const NEUTRALISED: Array<[RegExp, string]> = []
+
+// ── WHAT AN AGENT SEES AT ALL ────────────────────────────────────────────
+// Narrower than agentSafeLine below, and deliberately so. That rule hid the
+// lines an agent could not act on; this one hides every platform fault
+// outright. An agent's screen is for their leads and their dialing time.
+// Whether the call server is reachable is the operator's problem, and an
+// agent who watches it either tries to fix it — which for these faults means
+// reloading at random — or concludes the product is broken. Both are worse
+// than not knowing, because every one of these recovers on its own.
+//
+// THE MICROPHONE IS THE EXCEPTION, and the only one. It is the agent's own
+// device, it is the single fault nobody else can clear for them, and hiding
+// it leaves somebody sitting in silence with no way to know why. That is not
+// noise, it is the one actionable thing on the list.
+//
+// Filtered at the point of DISPLAY. agentLegError is still set, still cleared,
+// and still drives everything it drove before; only the banner is gated, so no
+// recovery logic changes behaviour.
+function agentVisibleError(err: string | null): string | null {
+  if (!err) return null
+  return /microphone/i.test(err) ? err : null
+}
 
 /** The line an agent should see, or null if this one is not theirs to read. */
 function agentSafeLine(line: string): string | null {
@@ -1748,10 +1778,17 @@ function DialerPageInner() {
               // Surfaced for EVERY accept failure, not only the ones we can
               // name. An unrecognised cause is still a call with no audio, and
               // saying "could not answer" beats showing nothing.
+              // ── THE CAUSE GOES TO THE CONSOLE, NOT TO THE AGENT ───────
+              // This used to interpolate `${err.name}: ${err.message}` into
+              // the banner. A blocked microphone is the agent's to fix and is
+              // named plainly; every other accept failure is transport,
+              // registration or SIP, none of which they can act on and all of
+              // which read as the product being broken. The full text is still
+              // logged above, which is where it is diagnosed from.
               setAgentLegError(
                 micBlocked
                   ? 'MICROPHONE BLOCKED: allow mic access for this site, then reload. Calls cannot connect until then.'
-                  : `COULD NOT ANSWER THIS CALL, ${msg}`
+                  : 'COULD NOT CONNECT THIS CALL. Reconnecting your line — nothing you need to do.'
               )
               if (micBlocked) {
                 console.error(
@@ -3666,12 +3703,12 @@ function DialerPageInner() {
         // server-side). Surface it in the queue row instead of failing
         // silently — this is real error text from the response, not invented.
         console.error('Outbound call failed:', res.status, data)
-        showQueueOutcome(
-          lead.id,
-          data?.error
-            ? `Call failed, ${data.error}${data?.detail ? ` (${data.detail})` : ''}`
-            : 'Call failed…'
-        )
+        // ── SAME RULE IN THE QUEUE ROW ─────────────────────────────────
+        // This surfaced data.error and data.detail verbatim. That text comes
+        // from /api/calls/outbound and names the carrier, SIP configuration
+        // and credentials by design — useful in a log, not on a floor. The
+        // console.error above keeps every word of it.
+        showQueueOutcome(lead.id, 'Could not place this call…')
         await disposeLead({
           lead_id: lead.id,
           campaign_id: lead.campaign_id,
@@ -4133,9 +4170,12 @@ function DialerPageInner() {
     // stateChange listener marks reachability on the 200 OK, and the next
     // chained dial proceeds normally once it does.
     if (agentLegFailStreakRef.current >= AGENT_LEG_FAIL_LIMIT) {
+      // Plain words only. "Re-registering" is what the code does, not what the
+      // agent needs to know, and naming the mechanism invites them to try to
+      // fix it — which for this fault means reloading at random.
       setAgentLegError(
-        'CALLS ARE NOT REACHING YOUR HEADSET. Re-registering — dialing is paused '
-        + 'until it clears. Nothing you need to do.'
+        'CALLS ARE NOT REACHING YOUR HEADSET. Reconnecting your line — dialing '
+        + 'is paused until it clears. Nothing you need to do.'
       )
       setAmdActivity(prev =>
         ['⚠ DIALING PAUSED, RECONNECTING YOUR LINE', ...prev].slice(0, 5))
@@ -6152,7 +6192,7 @@ function DialerPageInner() {
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
         <div className={`dialer-main-col ${profileFullscreen ? 'has-fullscreen' : ''}`} style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'auto', minHeight: 0 }}>
 
-          {agentLegError && (
+          {agentVisibleError(agentLegError) && (
             <div style={{
               padding: '10px 12px', marginBottom: 8, flexShrink: 0,
               background: 'rgba(220, 38, 38, 0.12)',
@@ -6161,7 +6201,7 @@ function DialerPageInner() {
               fontFamily: FUTURA, fontSize: 10, letterSpacing: 1.5,
               fontWeight: 'bold', lineHeight: 1.6,
             }}>
-              {agentLegError}
+              {agentVisibleError(agentLegError)}
             </div>
           )}
 
