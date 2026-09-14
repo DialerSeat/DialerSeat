@@ -111,7 +111,42 @@ export interface PlaceCallResult {
   leadLocalTime?: string | null
   retryAfter?: string
   httpStatus?: number
+  /**
+   * Whether dialing this lead again could ever work. Set on failures only.
+   *
+   * The caller cannot work this out for itself without string-matching error
+   * text, which is why it is decided here, where the cause is known. See
+   * FailureKind.
+   */
+  failureKind?: FailureKind
 }
+
+/**
+ * Why a placement failed, in the only terms the caller can act on.
+ *
+ * 727 fan-out failures over three days came from 22 leads, one of them
+ * attempted 86 times, because the controller treated every failure the same
+ * way: release the claim, let the next tick pick it up, fail again. For two of
+ * the three causes that loop could never terminate.
+ *
+ *   permanent  Dialing this lead will not work until a human changes
+ *              something. A Guam number against a US-only outbound profile is
+ *              not going to start working on the next tick. Taken out of
+ *              rotation rather than released.
+ *
+ *   capacity   Nothing to do with this lead: the account has no number to dial
+ *              from, or every number is at its cap. The next lead in the same
+ *              tick will fail identically, so the tick stops instead of
+ *              working through the whole batch one failure at a time.
+ *
+ *   transient  Might work next time. The agent's socket was down, Telnyx
+ *              returned something unrecognised. Released, as before.
+ *
+ * Unset means transient: an unclassified failure keeps today's behaviour
+ * rather than silently retiring somebody's lead on a cause nobody has looked
+ * at yet.
+ */
+export type FailureKind = 'permanent' | 'capacity' | 'transient'
 
 
 
@@ -336,6 +371,9 @@ export async function placeOutboundCall(
     return {
       success: false,
       error: 'No phone numbers available in pool. Contact admin.',
+      // Not this lead's fault and not fixable by retrying it: there is no
+      // number to dial FROM. Every other lead in this tick would fail here too.
+      failureKind: 'capacity' as const,
       httpStatus: 503,
     }
   }
@@ -964,6 +1002,11 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       return {
         success: false,
         error: 'Destination country not whitelisted on Telnyx',
+        // Permanent until somebody edits the Outbound Voice Profile. Three
+        // leads with Guam numbers (+1 671) were retried 172 times between them
+        // against a US-only profile, and every attempt was always going to be
+        // rejected in exactly the same way.
+        failureKind: 'permanent' as const,
         detail: `Telnyx rejected this call because ${p.toFormatted}'s country isn't in your Outbound Voice Profile's whitelisted destinations. Fix: Telnyx Mission Control → Outbound Voice Profiles → your profile → add that country/region, then retry.`,
         httpStatus: 500,
       }
@@ -977,6 +1020,10 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       return {
         success: false,
         error: 'Caller ID is not a Telnyx number',
+        // Telnyx D51. The pool was already reconciled automatically and there
+        // was no usable number to swap in, so this is the account's problem
+        // rather than the lead's, same as an empty pool.
+        failureKind: 'capacity' as const,
         detail:
           `Telnyx refused to place a call from ${p.fromNumber} because that number isn't owned by ` +
           `this Telnyx account (their D51). The number pool was reconciled with Telnyx automatically ` +

@@ -866,6 +866,10 @@ async function runPredictiveControllerInner(
   const dialedPhones: string[] = []
   const dialedLeadIds: string[] = []
   let skipped = 0
+  /** Leads taken out of rotation this tick because dialing them cannot work. */
+  let permanentlyFailed = 0
+  /** Failures caused by having no number to dial from, not by the lead. */
+  let capacityBlocked = 0
 
   const placements = await Promise.allSettled(
     leadsToCall.map(lead =>
@@ -891,10 +895,53 @@ async function runPredictiveControllerInner(
       dialedLeadIds.push(lead.id)
     } else {
       skipped++
-      try {
-        await supabase.rpc('release_lead_claim', { p_lead_id: lead.id })
-      } catch (relErr) {
-        console.error('[controller] release_lead_claim failed', relErr)
+
+      // ── NOT EVERY FAILURE DESERVES ANOTHER GO ──────────────────────────
+      // This released the claim unconditionally, which put the lead straight
+      // back in the pool for the next tick to claim and fail on again. Over
+      // three days that produced 727 fan-out failures from 22 leads: one lead
+      // attempted 86 times, five leads 66 times each inside 97 seconds. The
+      // loop had no way to end, because nothing here asked whether the failure
+      // was the kind retrying could fix. See FailureKind in placeOutboundCall.
+      const kind = result.status === 'fulfilled'
+        ? (result.value.failureKind ?? 'transient')
+        : 'transient'
+
+      if (kind === 'permanent') {
+        // Out of rotation. claim_next_leads_for_campaign only takes leads with
+        // status 'uncalled' or 'no_answer', so any other value stops it being
+        // claimed, and the partial index behind that claim excludes it too.
+        // dial_attempts is deliberately NOT bumped: this lead was never
+        // dialed, and spending an attempt would retire it for the wrong reason
+        // if somebody fixes the account setting and puts it back.
+        permanentlyFailed++
+        try {
+          await supabase
+            .from('leads')
+            .update({
+              status: 'undialable',
+              last_call_disposition: 'UNDIALABLE',
+              claimed_at: null,
+              claimed_by_session_id: null,
+            })
+            .eq('id', lead.id)
+        } catch (parkErr) {
+          console.error('[controller] parking undialable lead failed', parkErr)
+        }
+      } else if (kind === 'capacity') {
+        // Left CLAIMED on purpose, which is the whole fix for this case. The
+        // account has no number to dial FROM, so freeing the lead now just
+        // hands it to the next tick a second later. Holding the claim lets
+        // release_stale_lead_claims free it after 30 seconds, and that sweep
+        // runs at the top of every tick, so the backoff already exists and
+        // costs nothing to use. 66 attempts in 97 seconds becomes about 3.
+        capacityBlocked++
+      } else {
+        try {
+          await supabase.rpc('release_lead_claim', { p_lead_id: lead.id })
+        } catch (relErr) {
+          console.error('[controller] release_lead_claim failed', relErr)
+        }
       }
 
       // ── A FAILED FAN-OUT MUST LEAVE A TRACE ─────────────────────────────
@@ -929,7 +976,9 @@ async function runPredictiveControllerInner(
         lead_id: lead.id,
         source: 'system',
         status: result.status === 'fulfilled' ? String(result.value.httpStatus ?? '') : 'threw',
-        detail: { phone: lead.phone, reason },
+        // failureKind recorded so the branch taken here is queryable, rather
+        // than having to be inferred from the error text again later.
+        detail: { phone: lead.phone, reason, failureKind: kind },
       })
     }
   }
@@ -942,7 +991,14 @@ async function runPredictiveControllerInner(
     degraded,
     reason: degraded
       ? `auto-degraded to 1x (abandon rate >= ${ABANDON_AUTO_DEGRADE_PCT}%)`
-      : `dialed ${callSids.length}/${leadsToCall.length} unique${dupeLeadIds.length ? `, deduped ${dupeLeadIds.length}` : ''}`,
+      : `dialed ${callSids.length}/${leadsToCall.length} unique`
+        + (dupeLeadIds.length ? `, deduped ${dupeLeadIds.length}` : '')
+        // Named separately from `skipped` because they mean different things to
+        // whoever is reading a tick that dialed nothing. One is leads retired,
+        // the other is the account having no number to dial from, and only the
+        // second one is fixed by buying numbers.
+        + (permanentlyFailed ? `, ${permanentlyFailed} undialable` : '')
+        + (capacityBlocked ? `, ${capacityBlocked} held for capacity` : ''),
     callSids,
     skipped,
     released,
