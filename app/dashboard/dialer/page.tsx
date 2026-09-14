@@ -839,11 +839,38 @@ function DialerPageInner() {
   // outside both the window and an armed intent is still rejected.
   const sipInstanceCounterRef = useRef<number>(0)
   const expectingAgentLegRef = useRef<boolean>(false)
+
+  // ── THE CIRCUIT BREAKER ──────────────────────────────────────────────────
+  // isSipReachable() asks this browser whether it believes it is registered.
+  // On 14 Sept it believed so while Telnyx had already dropped the contact,
+  // and the dialer placed 86 calls in eight minutes — 40 torn down at ~1.1
+  // seconds before any prospect's phone rang. 39 leads burned. Nothing
+  // noticed, because nothing was watching the outcomes.
+  //
+  // Local registration state cannot detect this: it is what the client thinks,
+  // and the client was wrong. The only authority is whether the agent leg
+  // actually arrives, so that is what this counts.
+  //
+  // pending = a dial went out and we are waiting for its INVITE.
+  // streak   = consecutive dials whose INVITE never came.
+  const agentLegPendingRef = useRef<boolean>(false)
+  const agentLegFailStreakRef = useRef<number>(0)
   const expectAgentLegTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // How long after initiating a dial an agent-leg INVITE is still expected.
   // Comfortably longer than the agent leg's own 30s Telnyx ring timeout, so a
   // slow round trip can never fall outside it.
   const AGENT_LEG_EXPECT_MS = 45_000
+
+  /**
+   * Consecutive missing agent legs before dialing pauses.
+   *
+   * Two, not one: a single INVITE can go astray for reasons that fix
+   * themselves, and pausing a working floor is worse than the one lead it
+   * would save. Two in a row is not bad luck. At the rate this failure dials
+   * — eleven a minute, because failures return instantly — two is about
+   * eleven seconds and two leads, against thirty-nine.
+   */
+  const AGENT_LEG_FAIL_LIMIT = 2
   const registererRef = useRef<any>(null)
 
   const sessionHeartbeatRef = useRef<NodeJS.Timeout | null>(null)
@@ -1683,6 +1710,13 @@ function DialerPageInner() {
               `(available=${availableRef.current}, armed=${callIntentRef.current}, ` +
               `expectingAgentLeg=${expectingAgentLegRef.current})`
             )
+            // Proof the agent leg works: Telnyx reached this browser. Whatever
+            // the registration state claimed, reachability is now a fact.
+            agentLegPendingRef.current = false
+            if (agentLegFailStreakRef.current > 0) {
+              console.log('[agent-leg] INVITE arrived, streak cleared')
+              agentLegFailStreakRef.current = 0
+            }
             try {
               invitation.stateChange.addListener((state: any) => {
                 if (state === SessionState.Established) {
@@ -2759,6 +2793,18 @@ function DialerPageInner() {
    * flight. Self-closing, so no teardown path can leave it stuck open.
    */
   const openAgentLegWindow = () => {
+    // Still pending from the previous dial means that dial's INVITE never
+    // arrived. Counted here rather than on a timer because the failure is
+    // known the moment the next dial starts, and a timer would have to
+    // outlast the 45s window to say the same thing.
+    if (agentLegPendingRef.current) {
+      agentLegFailStreakRef.current += 1
+      console.warn(
+        `[agent-leg] no INVITE for the previous dial ` +
+        `(streak ${agentLegFailStreakRef.current}/${AGENT_LEG_FAIL_LIMIT})`
+      )
+    }
+    agentLegPendingRef.current = true
     expectingAgentLegRef.current = true
     if (expectAgentLegTimerRef.current) clearTimeout(expectAgentLegTimerRef.current)
     expectAgentLegTimerRef.current = setTimeout(() => {
@@ -4073,6 +4119,36 @@ function DialerPageInner() {
         'NOT CONNECTED TO THE CALL SERVER, reconnecting. No leads will be dialled until this clears.'
       )
       setAmdActivity(prev => ['⚠ DIAL BLOCKED: phone line not connected', ...prev].slice(0, 5))
+      return
+    }
+
+    // ── AND WHAT THE CALLS THEMSELVES SAY ────────────────────────────────
+    // The check above is this browser's opinion of its own reachability, and
+    // that opinion can be stale — it was, on 14 Sept, for eight minutes. This
+    // one is evidence: consecutive dials whose agent leg never arrived.
+    //
+    // Re-registering is the actual repair. The transport is usually fine; it
+    // is the REGISTER that Telnyx no longer holds, so reconnecting would fix
+    // nothing. Dialing does not resume from here — the registerer's
+    // stateChange listener marks reachability on the 200 OK, and the next
+    // chained dial proceeds normally once it does.
+    if (agentLegFailStreakRef.current >= AGENT_LEG_FAIL_LIMIT) {
+      setAgentLegError(
+        'CALLS ARE NOT REACHING YOUR HEADSET. Re-registering — dialing is paused '
+        + 'until it clears. Nothing you need to do.'
+      )
+      setAmdActivity(prev =>
+        ['⚠ DIALING PAUSED, RECONNECTING YOUR LINE', ...prev].slice(0, 5))
+      agentLegPendingRef.current = false
+      agentLegFailStreakRef.current = 0
+      void (async () => {
+        try {
+          await registererRef.current?.register()
+          console.log('[agent-leg] forced re-register after failure streak')
+        } catch (err) {
+          console.error('[agent-leg] forced re-register failed:', err)
+        }
+      })()
       return
     }
 
