@@ -77,6 +77,8 @@ type Person = {
   seatPayer: string | null; seatTeam: string | null
   placeKey: string | null; lat: number | null; lon: number | null
   calls: number; answered: number; lastCall: string | null
+  /** Dials that actually rang. Answer rate divides by this. */
+  reached: number
   campaigns: number; leads: number
 }
 type Target = {
@@ -1304,8 +1306,8 @@ export default function OpsMap() {
               <Section title="ACTIVITY">
                 <Row k="CALLS" v={String(person.calls)} c={person.calls ? INK : DIM} />
                 <Row k="ANSWERED"
-                     v={person.calls
-                        ? `${person.answered} · ${Math.round((person.answered / person.calls) * 100)}%`
+                     v={person.reached
+                        ? `${person.answered} · ${Math.round((person.answered / person.reached) * 100)}%`
                         : '-'} />
                 <Row k="CAMPAIGNS" v={String(person.campaigns)} />
                 <Row k="LEADS" v={String(person.leads)} />

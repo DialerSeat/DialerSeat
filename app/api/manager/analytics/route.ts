@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { reachedDials } from '@/lib/dialOutcome'
 import { getServiceClient } from '@/lib/supabase'
 import { requireTenantOwner, getTenantUserIds, TenantOwnerError } from '@/lib/tenant-scope'
 
@@ -106,7 +107,9 @@ export async function GET(req: NextRequest) {
 
   const { data: callsRaw } = await supabase
     .from('calls')
-    .select('user_id, campaign_id, team_id, disposition, created_at')
+    // answered_at and duration are read only by neverRang, which cannot tell a
+    // dial that never rang from one that rang out without both.
+    .select('user_id, campaign_id, team_id, disposition, created_at, answered_at, duration')
     .in('user_id', userIds)
     .gte('created_at', startIso)
     .lte('created_at', endIso)
@@ -210,7 +213,14 @@ export async function GET(req: NextRequest) {
 
   const totalCalls = calls.length
   const totalConnects = calls.filter(c => isConnect(c.disposition)).length
-  const overallConnectRate = totalCalls > 0 ? Number(((totalConnects / totalCalls) * 100).toFixed(1)) : 0
+  // Over dials that RANG. totalCalls stays every dial, because they were
+  // attempted and billed; the rate divides by the ones that reached a phone.
+  // The dead-socket rows are 79% of the table and cannot reach the numerator,
+  // so they only ever dragged this down. See lib/dialOutcome.ts.
+  const reachedCalls = reachedDials(calls).length
+  const overallConnectRate = reachedCalls > 0
+    ? Number(((totalConnects / reachedCalls) * 100).toFixed(1))
+    : 0
   const activeCampaigns = campaigns.filter(c => (c.status || '').toLowerCase() === 'active').length
   const activeMemberTotal = members.filter(m => m.status === 'active').length
 

@@ -65,6 +65,8 @@ type PersonRow = {
   status: string | null; plan: string | null
   seat_payer: string | null; seat_team: string | null
   calls: number | string; answered: number | string; last_call: string | null
+  /** Dials that actually rang. The denominator for a person's answer rate. */
+  reached: number | string
   campaigns: number | string; leads: number | string
 }
 
@@ -466,6 +468,7 @@ export async function GET(req: NextRequest) {
       seatTeam: r.seat_team || null,
       calls: Number(r.calls) || 0,
       answered: Number(r.answered) || 0,
+      reached: Number(r.reached) || 0,
       lastCall: r.last_call,
       campaigns: Number(r.campaigns) || 0,
       leads: Number(r.leads) || 0,
