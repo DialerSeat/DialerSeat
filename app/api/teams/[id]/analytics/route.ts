@@ -139,13 +139,29 @@ export async function GET(
       scopedCampaignIds = [filterCampaignId]
     }
 
+    // ── A TEAM IS ITS PEOPLE, NOT ITS CAMPAIGN LIST ───────────────────────
+    // This scoped every figure on the page to calls made on campaigns attached
+    // to the team, and required at least one such campaign before it would
+    // query at all. In practice that meant the page showed zeros: across the
+    // four teams with members, those members have made 850, 5, 5 and 5 calls,
+    // and NONE of them were on a team campaign. Every owner opened this to
+    // 0 calls, 0 connects, 0 conversions, for agents who were dialing daily.
+    //
+    // Scoped by MEMBERSHIP now. An agent on a seat their owner is paying for is
+    // that owner's agent on whatever list they are working, which is also what
+    // makes these numbers agree with the ones the agent sees on their own
+    // analytics page — the thing an owner is actually trying to check.
+    //
+    // The campaign filter still works and still refuses a campaign that is not
+    // attached to this team. It is a filter now rather than the scope.
     let calls: any[] = []
     const { since, until } = rangeBounds(range, startParam, endParam)
-    if (scopedCampaignIds.length > 0) {
+    if (memberClerkIds.length > 0) {
       let callsQuery = supabaseAdmin
         .from('calls')
         .select('id, user_id, campaign_id, lead_id, disposition, duration, talk_seconds, answered_at, recording_id, recording_url, recording_status, recording_duration, created_at, leads(first_name, last_name, phone)')
-        .in('campaign_id', scopedCampaignIds)
+
+      if (filterCampaignId) callsQuery = callsQuery.eq('campaign_id', filterCampaignId)
 
       if (since) callsQuery = callsQuery.gte('created_at', since.toISOString())
       if (until) callsQuery = callsQuery.lte('created_at', until.toISOString())
@@ -295,16 +311,37 @@ export async function GET(
       reachedCalls: number
       talkSeconds: number
     }
+    // ── NAMING CAMPAIGNS THE TEAM DOES NOT OWN ────────────────────────────
+    // Now that the scope is membership rather than the team's campaign list,
+    // an agent's calls can land on campaigns nobody attached to this team.
+    // teamCampaigns cannot name those, and a breakdown of unnamed rows is a
+    // breakdown of nothing, so the names are fetched for whatever actually
+    // turned up.
+    const seenCampaignIds = Array.from(new Set(
+      calls.map(c => c.campaign_id).filter(Boolean) as string[]
+    ))
+    const campaignNameById = new Map<string, string | null>(
+      teamCampaigns.map(tc => [tc.campaignId, tc.name])
+    )
+    const unnamed = seenCampaignIds.filter(id => !campaignNameById.has(id))
+    if (unnamed.length > 0) {
+      const { data: extraCampaigns } = await supabaseAdmin
+        .from('campaigns')
+        .select('id, name')
+        .in('id', unnamed)
+      for (const c of (extraCampaigns || []) as Array<{ id: string; name: string | null }>) {
+        campaignNameById.set(c.id, c.name)
+      }
+    }
+
     const statsByCampaign: Record<string, CampaignStat> = {}
     for (const cid of scopedCampaignIds) {
-      const tc = teamCampaigns.find(t => t.campaignId === cid)
-      statsByCampaign[cid] = { campaignId: cid, name: tc?.name || null, calls: 0, connected: 0, conversions: 0, reachedCalls: 0, talkSeconds: 0 }
+      statsByCampaign[cid] = { campaignId: cid, name: campaignNameById.get(cid) ?? null, calls: 0, connected: 0, conversions: 0, reachedCalls: 0, talkSeconds: 0 }
     }
     for (const c of calls) {
       const cid = c.campaign_id
       if (!statsByCampaign[cid]) {
-        const tc = teamCampaigns.find(t => t.campaignId === cid)
-        statsByCampaign[cid] = { campaignId: cid, name: tc?.name || null, calls: 0, connected: 0, conversions: 0, reachedCalls: 0, talkSeconds: 0 }
+        statsByCampaign[cid] = { campaignId: cid, name: campaignNameById.get(cid) ?? null, calls: 0, connected: 0, conversions: 0, reachedCalls: 0, talkSeconds: 0 }
       }
       const cs = statsByCampaign[cid]
       cs.calls++
@@ -380,7 +417,6 @@ export async function GET(
         const agentName = u
           ? [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || c.user_id.slice(0, 12)
           : c.user_id.slice(0, 12)
-        const tc = teamCampaigns.find(t => t.campaignId === c.campaign_id)
         return {
           id: c.id,
           at: c.created_at,
@@ -389,7 +425,9 @@ export async function GET(
           leadName: [lead.first_name, lead.last_name].filter(Boolean).join(' ').trim() || null,
           phone: lead.phone || null,
           campaignId: c.campaign_id,
-          campaignName: tc?.name || null,
+          // Same map as the breakdown: an agent's calls can be on campaigns
+          // this team never attached, and teamCampaigns cannot name those.
+          campaignName: campaignNameById.get(c.campaign_id) ?? null,
           disposition: c.disposition || null,
           // Both, because they answer different questions: how long the line
           // was open, and how long anybody was actually talking.
