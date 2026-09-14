@@ -268,7 +268,7 @@ export async function GET(req: NextRequest) {
     // It is a straight-line projection of last week's spend and says so on the
     // page. Monday is a team that has not dialed yet, so the honest reading of
     // this figure that day is an upper bound, not a forecast.
-    const balance = await getTelnyxBalance()
+    const balance = await getTelnyxBalance('unit-economics')
     const dailyBurnUsd = days > 0 ? platformCostUsd / days : 0
     const runwayDays = balance.availableCredit !== null && dailyBurnUsd > 0
       ? balance.availableCredit / dailyBurnUsd

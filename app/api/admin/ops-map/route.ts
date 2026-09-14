@@ -234,7 +234,7 @@ export async function GET(req: NextRequest) {
       //
       // Both resolve to nulls instead of rejecting, so a carrier outage costs
       // two small panels rather than the whole map.
-      getTelnyxBalance(),
+      getTelnyxBalance('ops-map'),
       getConcurrencySnapshot(),
       // Last 24 hours of dials, for the live-ops summary. Two narrow columns,
       // aggregated below rather than in SQL because the same rows answer both

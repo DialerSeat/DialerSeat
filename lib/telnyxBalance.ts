@@ -19,6 +19,16 @@
 
 const TELNYX_API = 'https://api.telnyx.com/v2'
 
+/**
+ * How long a flat balance goes unrecorded before a heartbeat row is written.
+ *
+ * Live Ops and the ops map both poll every five seconds. Snapshotting each poll
+ * would be seventeen thousand rows a day to record a number that moves a few
+ * times an hour, so a row is written when the value CHANGES — plus this, so a
+ * genuinely flat balance is distinguishable from nobody having looked.
+ */
+const HEARTBEAT_MS = 60 * 60_000
+
 export interface TelnyxBalance {
   /**
    * What Telnyx reports as spendable. Passed through, not derived: their own
@@ -56,13 +66,63 @@ function money(v: unknown): number | null {
 }
 
 /**
+ * Record this reading, if it says anything the last one did not.
+ *
+ * Deliberately best-effort and never awaited by the caller's critical path: a
+ * balance panel must not fail because a bookkeeping insert did. Errors are
+ * swallowed for the same reason.
+ *
+ * The ledger this builds is the only record of what Telnyx ACTUALLY charged.
+ * Every other cost figure on the platform is rate times usage, which answers
+ * what something should have cost and cannot answer what was billed — and the
+ * difference is every fee that never touches our tables: per-number purchase
+ * charges, E911, taxes, regulatory surcharges.
+ */
+async function snapshot(b: TelnyxBalance, source: string): Promise<void> {
+  if (!b.authoritative || b.availableCredit === null) return
+  try {
+    // Imported here rather than at module scope: this file is imported by the
+    // dial path, and a Supabase client built at module load would be
+    // constructed on requests that never touch the database.
+    const { getServiceClient } = await import('@/lib/supabase')
+    const supabase = getServiceClient('telnyxBalance/snapshot')
+
+    const { data: last } = await supabase
+      .from('telnyx_balance_snapshots')
+      .select('available_credit, at')
+      .order('at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const changed = !last || Number(last.available_credit) !== b.availableCredit
+    const stale = !last || Date.now() - new Date(last.at).getTime() > HEARTBEAT_MS
+    if (!changed && !stale) return
+
+    await supabase.from('telnyx_balance_snapshots').insert({
+      available_credit: b.availableCredit,
+      balance: b.balance,
+      pending: b.pending,
+      credit_limit: b.creditLimit,
+      currency: b.currency,
+      source,
+      heartbeat: !changed,
+    })
+  } catch {
+    // A missing snapshot is a gap in a ledger. A thrown one is a screen that
+    // will not render, and the screen matters more.
+  }
+}
+
+/**
  * Fetch the account balance from Telnyx.
  *
  * Returns nulls rather than zeros when the lookup fails. A balance gauge
  * reading a confident $0.00 because a request timed out would be read as "we
  * are out of money" and acted on, which is worse than showing nothing.
+ *
+ * @param source which surface asked, recorded on the snapshot for diagnostics
  */
-export async function getTelnyxBalance(): Promise<TelnyxBalance> {
+export async function getTelnyxBalance(source = 'unknown'): Promise<TelnyxBalance> {
   const apiKey = process.env.TELNYX_API_KEY
   if (!apiKey) return { ...UNAVAILABLE, error: 'TELNYX_API_KEY is not set' }
 
@@ -80,7 +140,7 @@ export async function getTelnyxBalance(): Promise<TelnyxBalance> {
     if (!d || typeof d !== 'object') {
       return { ...UNAVAILABLE, error: 'Telnyx returned no balance record' }
     }
-    return {
+    const result: TelnyxBalance = {
       availableCredit: money(d.available_credit),
       balance: money(d.balance),
       pending: money(d.pending),
@@ -90,6 +150,10 @@ export async function getTelnyxBalance(): Promise<TelnyxBalance> {
       authoritative: true,
       error: null,
     }
+    // Awaited rather than left dangling: on a serverless runtime a floating
+    // promise is frozen with the response and the insert may never land.
+    await snapshot(result, source)
+    return result
   } catch (e) {
     console.warn('[telnyxBalance] lookup threw:', e)
     return { ...UNAVAILABLE, error: e instanceof Error ? e.message : 'Lookup failed' }

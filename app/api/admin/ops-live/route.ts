@@ -66,7 +66,7 @@ export async function GET() {
       // Its own failure is contained: getTelnyxBalance resolves to nulls
       // rather than rejecting, so a carrier outage costs this screen one
       // panel instead of all of it.
-      getTelnyxBalance(),
+      getTelnyxBalance('ops-live'),
 
       // Calls believed live. duration = 0 is the in-flight sentinel the abort
       // sweep uses, so this list is exactly what abort would target.
