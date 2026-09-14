@@ -4691,6 +4691,22 @@ function DialerPageInner() {
       return
     }
 
+    // ── SAID ON THE WAY IN, NOT LEFT SITTING ON THE MENU ─────────────────
+    // A caution parked permanently under the option is read once and then
+    // becomes furniture. This fires at the moment of the decision and only
+    // then, which is the only moment it can change one.
+    //
+    // Worded to clear OPERATOR_ONLY above: "PREDICTIVE ENGINE" is filtered
+    // out of an agent's log as engine lifecycle chatter, so this must not
+    // contain that phrase, nor "FAILED". It is advice, not an error.
+    if (newMode === 'predictive') {
+      setAmdActivity(prev => [
+        '⚠ PREDICTIVE IS IN BETA AND NOT YET FINE TUNED. '
+        + 'PROGRESSIVE IS RECOMMENDED — PROCEED WITH CAUTION',
+        ...prev,
+      ].slice(0, 5))
+    }
+
     if (isAllActive) {
       // ── PREDICTIVE FROM "ALL ACTIVE" ─────────────────────────────────────
       // Predictive genuinely cannot run across every campaign at once: the
