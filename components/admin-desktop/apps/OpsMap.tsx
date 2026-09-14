@@ -2,10 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LAND, BORDERS, MAP_W, MAP_H, project } from '@/lib/worldMap'
-import { localDay } from '@/lib/dailyTasks'
-
-/** One of the four fixed daily tasks, as the mini panel needs it. */
-interface DailyCore { key: string; label: string; done: boolean }
 
 // ── PALETTE ─────────────────────────────────────────────────────────────
 // Deliberately NOT the admin desktop's chrome. This app is meant to read as
@@ -150,6 +146,20 @@ type Payload = {
   feed: FeedRow[]
   /** What the route allowed, which may be less than was asked for. */
   feedLimit?: number
+  liveOps: {
+    inFlightLegs: number | null
+    legBudget: number
+    legsAuthoritative: boolean
+    believedInFlight: number
+    dials24h: number
+    answered24h: number
+  }
+  balance: {
+    availableCredit: number | null
+    currency: string | null
+    authoritative: boolean
+    error: string | null
+  }
   breakdown: Record<string, { label: string; n: number; detail: string }[]>
   totals: {
     total: number; placed: number; unplaced: number; online: number
@@ -169,7 +179,7 @@ const STORE = 'ds:ops-map'
 type Persisted = {
   mode?: Mode; range?: Range
   feedOpen?: boolean; ranksOpen?: boolean; pulseOpen?: boolean
-  notisOpen?: boolean; compOpen?: boolean; tasksOpen?: boolean
+  notisOpen?: boolean; compOpen?: boolean
   notisTab?: 'notis' | 'logs'
   pulseTab?: 'calls' | 'visitors' | 'income'
   compWindow?: '7d' | 'month' | 'all'
@@ -252,13 +262,6 @@ export default function OpsMap() {
   // least flattering — the box should open on the number that matters.
   const [compWindow, setCompWindow] = useState<'7d' | 'month' | 'all'>(saved.compWindow ?? 'month')
   const [compOpen, setCompOpen] = useState(saved.compOpen ?? false)
-  const [tasksOpen, setTasksOpen] = useState(saved.tasksOpen ?? false)
-  // The daily list is personal, not operational, so it is fetched on its own
-  // rather than bolted onto the map payload — nothing else on this screen is
-  // scoped to one human, and the map route should not start being.
-  const [tasks, setTasks] = useState<
-    { core: DailyCore[]; streak: number; coreCount: number } | null
-  >(null)
 
   const [dockHidden, setDockHidden] = useState(false)
   // Which person's card is open. Held by id rather than by object so a refresh
@@ -430,45 +433,7 @@ export default function OpsMap() {
     return () => { cancelled = true }
   }, [personId])
 
-  // The daily list, refreshed on the same beat as everything else so the
-  // count in the corner cannot sit stale next to live data.
-  const loadTasks = useCallback(async () => {
-    try {
-      const r = await fetch(`/api/admin/daily-tasks?day=${localDay()}`)
-      const j = await r.json()
-      if (j?.ok) setTasks({ core: j.core, streak: j.streak, coreCount: j.coreCount })
-    } catch { /* the next beat tries again */ }
-  }, [])
 
-  useEffect(() => {
-    let cancelled = false
-    fetch(`/api/admin/daily-tasks?day=${localDay()}`)
-      .then(r => r.json())
-      .then((j: { ok?: boolean; core?: DailyCore[]; streak?: number; coreCount?: number }) => {
-        if (cancelled || !j?.ok || !j.core) return
-        setTasks({ core: j.core, streak: j.streak ?? 0, coreCount: j.coreCount ?? 4 })
-      })
-      .catch(() => { /* the next beat tries again */ })
-    return () => { cancelled = true }
-  }, [beat])
-
-  const toggleTask = useCallback(async (key: string, next: boolean) => {
-    // Optimistic, then reconciled from the server. Ticking a box here should
-    // feel like ticking a box, not like filing a request.
-    setTasks(t => t && ({ ...t, core: t.core.map(c => c.key === key ? { ...c, done: next } : c) }))
-    try {
-      await fetch('/api/admin/daily-tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'toggle', day: localDay(), taskKey: key, done: next }),
-      })
-    } finally {
-      void loadTasks()
-    }
-  }, [loadTasks])
-
-  const tasksDone = tasks ? tasks.core.filter(c => c.done).length : 0
-  const tasksTotal = tasks?.coreCount ?? 4
 
   const detail = detailFor && detailFor.key === selected ? detailFor.data : null
 
@@ -502,7 +467,7 @@ export default function OpsMap() {
     try {
       window.localStorage.setItem(STORE, JSON.stringify({
         mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView, feedSize,
-        notisOpen, compOpen, tasksOpen, notisTab, pulseTab, compWindow,
+        notisOpen, compOpen, notisTab, pulseTab, compWindow,
         callFilter, peopleFilter, peopleSort,
         selected,
         // Rounded before storing. The view changes on every frame of a drag,
@@ -517,7 +482,7 @@ export default function OpsMap() {
       }))
     } catch { /* nothing here is worth failing a render for */ }
   }, [mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView, feedSize,
-      notisOpen, compOpen, tasksOpen, notisTab, pulseTab, compWindow,
+      notisOpen, compOpen, notisTab, pulseTab, compWindow,
       callFilter, peopleFilter, peopleSort,
       selected, view])
 
@@ -924,6 +889,20 @@ export default function OpsMap() {
            around them, all belonged to a container nobody could see. */
         .om-dock { pointer-events:none; }
         .om-panel, .om-corner, .om-pulse-wrap { pointer-events:auto; }
+
+        /* Chips, not panels. These sit on the map rather than in the dock, so
+           they borrow the chip's weight and never grow tall enough to cover
+           the thing the map is for. */
+        .om-hud {
+          display:flex; align-items:baseline; gap:5px;
+          background:rgba(6,8,12,0.72); border:1px solid rgba(255,255,255,0.10);
+          border-radius:4px; padding:4px 8px;
+          font-family:ui-monospace, Menlo, monospace; white-space:nowrap;
+        }
+        .om-hud-k { font-size:8.5px; letter-spacing:1.4px; color:${DIM}; }
+        .om-hud-v { font-size:12px; font-weight:800; color:${INK}; }
+        .om-hud-u { font-size:8.5px; letter-spacing:1px; color:${DIM}; }
+        .om-hud-sep { width:1px; height:9px; background:rgba(255,255,255,0.14); }
         .om-pulse-wrap { flex:0 0 auto; }
         /* The two corner boxes sit on one row above CALL VOLUME, pushed to the
            outer edges so the middle of the map stays clear. */
@@ -1145,6 +1124,69 @@ export default function OpsMap() {
                   onClick={toggleFull}>{isFull ? '❐' : '⛶'}</button>
         </div>
       </div>
+
+      {/* ── UNDER THE BAR: OPS ON THE LEFT, MONEY ON THE RIGHT ────────────
+          A row rather than two absolutes, so both sit directly beneath the
+          controls they belong to at any width: the summary under the mode
+          chips, the balance under CALLS MADE. Both read from the map's own
+          payload, on its beat, so neither can disagree with Live Ops. */}
+      {data && (
+        <div style={{
+          display: 'flex', gap: 6, alignItems: 'flex-start',
+          pointerEvents: 'none', flexWrap: 'wrap',
+        }}>
+          <div className="om-hud" style={{ pointerEvents: 'auto' }}>
+            <span className="om-hud-k">LIVE</span>
+            {/* The carrier's count and ours, side by side. They should agree;
+                when they do not, that is the fact worth seeing rather than an
+                error to reconcile away. */}
+            <span className="om-hud-v" style={{
+              color: data.liveOps.inFlightLegs === null ? DIM
+                : data.liveOps.inFlightLegs > 0 ? GREEN : INK,
+            }}>
+              {data.liveOps.inFlightLegs === null ? '-' : data.liveOps.inFlightLegs}
+            </span>
+            <span className="om-hud-u">legs</span>
+            <span className="om-hud-sep" />
+            <span className="om-hud-v" style={{
+              color: data.liveOps.believedInFlight !== data.liveOps.inFlightLegs ? AMBER : DIM,
+            }}>{data.liveOps.believedInFlight}</span>
+            <span className="om-hud-u">ours</span>
+            <span className="om-hud-sep" />
+            <span className="om-hud-v">{data.liveOps.dials24h.toLocaleString()}</span>
+            <span className="om-hud-u">24h</span>
+            <span className="om-hud-sep" />
+            {/* Over dials that rang would need the raw rows; this is answered
+                over attempted and is labelled as such rather than called an
+                answer rate, which on this platform means something else. */}
+            <span className="om-hud-v" style={{ color: data.liveOps.answered24h > 0 ? GREEN : DIM }}>
+              {data.liveOps.answered24h.toLocaleString()}
+            </span>
+            <span className="om-hud-u">answered</span>
+          </div>
+
+          <div className="om-hud" style={{ marginLeft: 'auto', pointerEvents: 'auto' }}
+               title={data.balance.authoritative
+                 ? 'Spendable at Telnyx right now'
+                 : (data.balance.error || 'Carrier unreachable')}>
+            <span className="om-hud-k">TELNYX</span>
+            <span className="om-hud-v" style={{
+              color: data.balance.availableCredit === null ? DIM
+                : data.balance.availableCredit < 10 ? RED
+                : data.balance.availableCredit < 25 ? AMBER : GREEN,
+            }}>
+              {data.balance.availableCredit === null
+                ? '-'
+                : `${data.balance.currency && data.balance.currency !== 'USD'
+                    ? ''
+                    : '$'}${data.balance.availableCredit.toLocaleString(undefined, {
+                      minimumFractionDigits: 2, maximumFractionDigits: 2,
+                    })}${data.balance.currency && data.balance.currency !== 'USD'
+                    ? ` ${data.balance.currency}` : ''}`}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Status strip — now a sibling in the column above, so it follows the
           bar down instead of being overlapped by it. */}
@@ -1478,68 +1520,9 @@ export default function OpsMap() {
             )}
           </div>
 
-          {/* The right corner is a column now: the daily list sits above
-              compliance. It is the only thing on this screen addressed to a
-              person rather than to the platform, which is exactly why it goes
-              where the eye already lands. */}
+          {/* The right corner is a column. The daily list used to sit above
+              compliance here and has been removed along with its app. */}
           <div className="om-corner" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-
-          <div className="om-panel">
-            <div className="om-head" onClick={() => setTasksOpen(o => !o)}>
-              DAILY TASKS
-              <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-                {tasks && (
-                  <span style={{
-                    color: tasksDone >= tasksTotal ? GREEN : AMBER,
-                    fontFamily: 'ui-monospace, Menlo, monospace', fontWeight: 800, fontSize: 10,
-                  }}>{tasksDone}/{tasksTotal}</span>
-                )}
-                {/* The streak earns a badge only once it exists. A "0d" chip
-                    every morning is a reminder of nothing. */}
-                {!!tasks?.streak && (
-                  <span style={{
-                    background: GREEN, color: VOID, borderRadius: 8, padding: '0 5px',
-                    fontSize: 8.5, fontWeight: 900, letterSpacing: 0.5,
-                  }}>{tasks.streak}d</span>
-                )}
-                <span className="om-caret">{tasksOpen ? '▼' : '▲'}</span>
-              </span>
-            </div>
-            {tasksOpen && (
-              <div style={{ padding: '7px 9px 9px' }}>
-                <div style={{
-                  fontSize: 9, color: DIM, letterSpacing: 1, fontStyle: 'italic', marginBottom: 7,
-                }}>
-                  Regardless how you feel.
-                </div>
-                {!tasks ? (
-                  <div style={{ color: DIM, fontSize: 10.5 }}>Loading…</div>
-                ) : tasks.core.map(t => (
-                  <div
-                    key={t.key}
-                    onClick={() => void toggleTask(t.key, !t.done)}
-                    style={{
-                      display: 'flex', gap: 7, alignItems: 'flex-start',
-                      padding: '4px 0', cursor: 'pointer',
-                    }}
-                  >
-                    <span style={{
-                      width: 13, height: 13, flexShrink: 0, marginTop: 1, borderRadius: 2,
-                      border: `1.5px solid ${t.done ? GREEN : DIM}`,
-                      background: t.done ? GREEN : 'transparent',
-                      color: VOID, fontSize: 9, lineHeight: '10px', fontWeight: 900,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>{t.done ? '✓' : ''}</span>
-                    <span style={{
-                      fontSize: 10.5, lineHeight: 1.35,
-                      color: t.done ? DIM : INK,
-                      textDecoration: t.done ? 'line-through' : 'none',
-                    }}>{t.label}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
           <div className="om-panel">
             <div className="om-head" onClick={() => setCompOpen(o => !o)}>
@@ -1626,7 +1609,10 @@ export default function OpsMap() {
                 </div>
                 {pulseTab === 'calls' ? <Pulse buckets={data!.pulse} />
                   : pulseTab === 'visitors' ? <VisitorPulse buckets={data?.visitorPulse ?? []} />
-                  : <IncomePulse buckets={data?.incomePulse ?? []} />}
+                  : <IncomeSummary
+                      buckets={data?.incomePulse ?? []}
+                      rangeLabel={range === 'all' ? 'All time' : range.toUpperCase()}
+                    />}
               </>
             )}
           </div>
@@ -1985,22 +1971,81 @@ function VisitorPulse({ buckets }: { buckets: VisitorBucket[] }) {
   )
 }
 
-/** Money in, over time. */
-function IncomePulse({ buckets }: { buckets: IncomeBucket[] }) {
+// ── MONEY IS A NUMBER, NOT A SHAPE ─────────────────────────────────────────
+// This was a line chart, and a line is the wrong instrument for it. Call and
+// visitor volume are worth seeing as shapes because the question is when and
+// how steadily; income over a handful of billing events is a jagged line whose
+// peaks are just "somebody was charged that day". What anybody actually wants
+// off this panel is the totals.
+//
+// Seats and subscriptions stay apart rather than summing into one headline,
+// because only one of them is measured. Seat charges carry charged_cents,
+// which is what was really invoiced after comps. Subscriptions come from
+// billing_events.amount_cents, which the webhook writes at flat list price, so
+// that figure is an upper bound rather than a receipt. Adding a measured
+// number to an estimated one produces a third number that is neither.
+function IncomeSummary({ buckets, rangeLabel }: {
+  buckets: IncomeBucket[]
+  rangeLabel: string
+}) {
+  const seat = buckets.reduce((n, b) => n + (b.seatUsd || 0), 0)
+  const sub = buckets.reduce((n, b) => n + (b.subUsd || 0), 0)
+  const events = buckets.reduce((n, b) => n + (b.events || 0), 0)
+  const days = buckets.length
+
+  const usd = (v: number) =>
+    `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  if (events === 0) {
+    return (
+      <div style={{ padding: '10px 10px 12px', color: DIM, fontSize: 10.5 }}>
+        Nothing billed in this range.
+      </div>
+    )
+  }
+
   return (
-    <LineChart
-      buckets={buckets.map(b => b.at)}
-      format={n => `$${n.toFixed(2)}`}
-      empty="Nothing billed in this range."
-      series={[
-        // Seats are the measured half — charged_cents is what was actually
-        // invoiced after comps. Subscriptions are billing_events.amount_cents,
-        // which the webhook writes as a flat list price, so that line is an
-        // upper bound rather than a receipt. Drawn separately for that reason.
-        { label: 'SEATS', colour: GREEN, values: buckets.map(b => b.seatUsd) },
-        { label: 'SUBS (LIST)', colour: CYAN, values: buckets.map(b => b.subUsd) },
-      ]}
-    />
+    <div style={{ padding: '8px 10px 11px' }}>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 8.5, letterSpacing: 1.4, color: DIM }}>SEATS, CHARGED</div>
+          <div style={{
+            fontSize: 19, fontWeight: 800, color: GREEN,
+            fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 2,
+          }}>{usd(seat)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 8.5, letterSpacing: 1.4, color: DIM }}>SUBS, LIST</div>
+          <div style={{
+            fontSize: 19, fontWeight: 800, color: CYAN,
+            fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 2,
+          }}>{usd(sub)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 8.5, letterSpacing: 1.4, color: DIM }}>EVENTS</div>
+          <div style={{
+            fontSize: 19, fontWeight: 800, color: INK,
+            fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 2,
+          }}>{events.toLocaleString()}</div>
+        </div>
+        {/* Per-day only where it means something. One bucket is not a rate,
+            it is the same number wearing a different label. */}
+        {days > 1 && (
+          <div>
+            <div style={{ fontSize: 8.5, letterSpacing: 1.4, color: DIM }}>PER DAY</div>
+            <div style={{
+              fontSize: 19, fontWeight: 800, color: INK,
+              fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 2,
+            }}>{usd((seat + sub) / days)}</div>
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: 9, color: DIM, marginTop: 8, lineHeight: 1.6 }}>
+        {rangeLabel}. Seats are what was actually invoiced after comps. Subs are
+        list price from the billing webhook, so that half is an upper bound and
+        the two are deliberately not added together.
+      </div>
+    </div>
   )
 }
 

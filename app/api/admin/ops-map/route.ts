@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { getTelnyxBalance } from '@/lib/telnyxBalance'
+import { getConcurrencySnapshot } from '@/lib/concurrency'
 import { requireAdmin } from '@/lib/admin'
 import { locate, US_STATES, COUNTRIES } from '@/lib/worldMap'
 import { stateForNumber, AREA_CODE_STATE } from '@/lib/areaCodes'
@@ -209,7 +211,7 @@ export async function GET(req: NextRequest) {
       : rangeParam === '7d' ? 28
       : rangeParam === '90d' ? 45 : 30
 
-    const [originsRes, extraVisitorsRes, targetsRes, feedRes, breakdownRes, pulseRes, peopleRes, notisRes, compRes, logsRes, visitorsRes, vPulseRes, incomeRes] = await Promise.all([
+    const [originsRes, extraVisitorsRes, targetsRes, feedRes, balanceRes, concurrencyRes, dayCallsRes, breakdownRes, pulseRes, peopleRes, notisRes, compRes, logsRes, visitorsRes, vPulseRes, incomeRes] = await Promise.all([
       mode === 'visitors'
         ? supabase.rpc('ops_map_visitors', { p_since: since })
         : supabase.rpc('ops_map', {
@@ -224,6 +226,24 @@ export async function GET(req: NextRequest) {
         : Promise.resolve({ data: [], error: null }),
       supabase.rpc('ops_map_targets', { p_since: since }),
       supabase.rpc('ops_map_feed', { p_limit: feedLimit }),
+      // ── CARRIER STATE, ON THE MAP'S OWN BEAT ─────────────────────────
+      // Balance and live legs both come from Telnyx and both already existed
+      // on Live Ops. They ride this payload rather than fetching themselves so
+      // the map stays one request per beat, and so the figure in the corner
+      // can never disagree with the one on the other screen.
+      //
+      // Both resolve to nulls instead of rejecting, so a carrier outage costs
+      // two small panels rather than the whole map.
+      getTelnyxBalance(),
+      getConcurrencySnapshot(),
+      // Last 24 hours of dials, for the live-ops summary. Two narrow columns,
+      // aggregated below rather than in SQL because the same rows answer both
+      // questions and a second round trip would buy nothing.
+      supabase
+        .from('calls')
+        .select('answered_at, duration, created_at')
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60_000).toISOString())
+        .limit(50000),
       supabase.rpc('ops_map_breakdown', { p_since: since }),
       supabase.rpc('ops_map_pulse', { p_since: since, p_buckets: buckets }),
       // Not filtered by mode or range: this is the dock's PEOPLE view, and its
@@ -572,6 +592,28 @@ export async function GET(req: NextRequest) {
       events: Number(r.events) || 0,
     }))
 
+    // ── THE LIVE OPS SUMMARY'S OWN NUMBERS ────────────────────────────────
+    // duration = 0 on a recent call is the in-flight sentinel the abort sweep
+    // uses, so this is our own belief about what is up. It is reported next to
+    // the carrier's count rather than instead of it: when the two disagree,
+    // that disagreement is the thing worth seeing.
+    const IN_FLIGHT_MAX_AGE_MS = 10 * 60_000
+    const nowMs = Date.now()
+    let believedInFlight = 0
+    let dials24h = 0
+    let answered24h = 0
+    for (const c of (dayCallsRes.data || []) as Array<{
+      answered_at: string | null; duration: number | null; created_at: string
+    }>) {
+      dials24h++
+      if (c.answered_at) answered24h++
+      if ((c.duration ?? 0) === 0 && !c.answered_at
+          && nowMs - new Date(c.created_at).getTime() < IN_FLIGHT_MAX_AGE_MS) {
+        believedInFlight++
+      }
+    }
+    const liveOpsCounts = { believedInFlight, dials24h, answered24h }
+
     return NextResponse.json({
       success: true,
       notis,
@@ -594,6 +636,26 @@ export async function GET(req: NextRequest) {
       // client's request is clamped here, and a dock saying "80 of 80" while
       // it asked for 5,000 is a dock that looks broken.
       feedLimit,
+      // ── A LIVE OPS SUMMARY, NOT A SECOND LIVE OPS ────────────────────
+      // Enough to answer "is the floor actually running right now" without
+      // leaving the map: what the carrier has up, what our own table thinks is
+      // up, and how much is left to spend. The gap between the first two is
+      // itself the signal — Live Ops has the full version.
+      liveOps: {
+        ...liveOpsCounts,
+        inFlightLegs: concurrencyRes.inFlightLegs,
+        legBudget: concurrencyRes.budget,
+        legsAuthoritative: concurrencyRes.authoritative,
+        // Our own view of in-flight, from the duration-zero sentinel. Named
+        // separately from the carrier's because when they disagree, that IS
+        // the interesting fact rather than an error to reconcile away.
+      },
+      balance: {
+        availableCredit: balanceRes.availableCredit,
+        currency: balanceRes.currency,
+        authoritative: balanceRes.authoritative,
+        error: balanceRes.error,
+      },
       breakdown,
       totals: {
         total,
