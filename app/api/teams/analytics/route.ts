@@ -40,6 +40,9 @@ const CONTACT_DISPOSITIONS = new Set([
   'APPOINTMENT', 'CLOSED', 'NOT INTERESTED', 'DO NOT CALL',
 ])
 
+/** Only the columns the roster filter reads. */
+type MemberRow = { user_id: string | null; status: string | null; removed_at: string | null }
+
 type RangeKey = 'today' | 'week' | 'month' | 'all' | 'custom'
 
 function rangeStart(range: RangeKey, from: string | null): Date | null {
@@ -82,30 +85,50 @@ export async function GET(req: NextRequest) {
     const ownedTeamIds = (ownedTeams || []).map((t: any) => t.id)
     const teamNameById = new Map((ownedTeams || []).map((t: any) => [t.id, t.name]))
 
-    // ── TEAM CAMPAIGNS ONLY ──────────────────────────────────────────────
-    // This used to merge in every campaign the owner personally owns, attached
-    // to a team or not — so a vendor who dials their own book on the side saw
-    // that work inflating their team's numbers, and "how is my floor doing"
-    // came back answered partly with their own calls.
+    // ── THE ROSTER, NOT THE CAMPAIGN LIST ────────────────────────────────
+    // This scoped to campaigns attached to a team, and returned empty when
+    // there were none. Members do not dial team campaigns — not one member
+    // call on the platform is on one — so the page rendered a dash in every
+    // tile and "No calls in this range" under every chart.
     //
-    // A campaign counts here only once it is attached to a team. The owner's
-    // personal dialing is theirs and belongs on their own analytics page, not
-    // in a report about people they are paying seats for.
+    // It is the roster now, matching the per-team page. An agent on a seat
+    // their owner pays for is that owner's agent on whatever list they are
+    // working.
+    //
+    // THIS REVERSES A DELIBERATE EARLIER CHOICE and says so out loud. The old
+    // note here explained that merging in the owner's personal campaigns let a
+    // vendor's own book inflate their floor's figures. That reasoning still
+    // holds, and the owner is on this roster, so their own dialing is counted
+    // again. The alternative was a page that reports nothing at all, which is
+    // what it did. Worth revisiting once real agents are dialing and the
+    // owner's share stops being the whole number.
     let attachedCampaignIds: string[] = []
+    let rosterIds: string[] = []
     if (ownedTeamIds.length > 0) {
-      const { data: tc } = await supabaseAdmin
-        .from('team_campaigns')
-        .select('campaign_id')
-        .in('team_id', ownedTeamIds)
-        .limit(2000)
+      const [{ data: tc }, { data: tm }] = await Promise.all([
+        supabaseAdmin
+          .from('team_campaigns')
+          .select('campaign_id')
+          .in('team_id', ownedTeamIds)
+          .limit(2000),
+        supabaseAdmin
+          .from('team_members')
+          .select('user_id, status, removed_at')
+          .in('team_id', ownedTeamIds)
+          .limit(2000),
+      ])
       attachedCampaignIds = (tc || []).map((r: any) => r.campaign_id).filter(Boolean)
+      rosterIds = ((tm || []) as MemberRow[])
+        // Removed on either column, for the same reason as everywhere else:
+        // where the two disagree, fall to the side that grants less.
+        .filter(m => !!m.user_id && !m.removed_at && m.status !== 'removed')
+        .map(m => m.user_id as string)
     }
 
     const campaignIds = Array.from(new Set(attachedCampaignIds))
-
-    if (campaignIds.length === 0) {
-      return NextResponse.json({ success: true, empty: true, tiles: null, charts: null })
-    }
+    // The owner is on their own roster. They dial too, and a floor report that
+    // leaves out the person running it is describing a different floor.
+    const agentIds = Array.from(new Set([userId, ...rosterIds]))
 
     // Names and conversion rules for every campaign we might report on.
     const { data: allCampaignRows } = await supabaseAdmin
@@ -124,28 +147,41 @@ export async function GET(req: NextRequest) {
     }
 
     // Narrow to the requested scope, inside what they are allowed to see.
-    let scopedCampaignIds = campaignIds
-    let scopedAgentId: string | null = null
+    //
+    // The campaign list is a FILTER now rather than the scope. Left null when
+    // nobody asked for one, so the aggregate covers whatever the roster dialed
+    // instead of only what happens to be attached to a team.
+    let scopedCampaignIds: string[] | null = null
+    let scopedAgents: string[] = agentIds
 
     if (scopeKind === 'team' && scopeId) {
       if (!ownedTeamIds.includes(scopeId)) {
         return NextResponse.json({ success: false, error: 'Not your team' }, { status: 403 })
       }
-      const { data: tc } = await supabaseAdmin
-        .from('team_campaigns')
-        .select('campaign_id')
+      // One team: that team's roster, not its campaigns.
+      const { data: tm } = await supabaseAdmin
+        .from('team_members')
+        .select('user_id, status, removed_at')
         .eq('team_id', scopeId)
-      scopedCampaignIds = (tc || []).map((r: any) => r.campaign_id)
+      scopedAgents = Array.from(new Set([
+        userId,
+        ...((tm || []) as MemberRow[])
+          .filter(m => !!m.user_id && !m.removed_at && m.status !== 'removed')
+          .map(m => m.user_id as string),
+      ]))
     } else if (scopeKind === 'campaign' && scopeId) {
       if (!campaignIds.includes(scopeId)) {
         return NextResponse.json({ success: false, error: 'Not your campaign' }, { status: 403 })
       }
       scopedCampaignIds = [scopeId]
     } else if (scopeKind === 'agent' && scopeId) {
-      scopedAgentId = scopeId
+      if (!agentIds.includes(scopeId)) {
+        return NextResponse.json({ success: false, error: 'Not your agent' }, { status: 403 })
+      }
+      scopedAgents = [scopeId]
     }
 
-    if (scopedCampaignIds.length === 0) {
+    if (scopedAgents.length === 0) {
       return NextResponse.json({ success: true, empty: true, tiles: null, charts: null })
     }
 
@@ -167,7 +203,8 @@ export async function GET(req: NextRequest) {
         p_campaign_ids: scopedCampaignIds,
         p_since: (start ?? new Date(0)).toISOString(),
         p_until: range === 'custom' && to ? new Date(to).toISOString() : null,
-        p_agent: scopedAgentId,
+        p_agent: null,
+        p_agents: scopedAgents,
       }
     )
     if (callErr) throw callErr
@@ -292,8 +329,78 @@ export async function GET(req: NextRequest) {
 
     const orderedBuckets = Array.from(buckets.entries()).sort((a, b) => a[0].localeCompare(b[0]))
 
+    // ── EVERY RECORDING THE FLOOR HAS MADE ────────────────────────────────
+    // Newest first, as they happened. Its own query rather than a by-product of
+    // the aggregate above, because that groups by day and disposition and loses
+    // the individual calls — and an individual call is the whole point of a
+    // recording.
+    //
+    // Scoped to the same roster and the same window as everything else on the
+    // page, so the filters at the top narrow this too.
+    //
+    // No URL is sent. calls.recording_url is a presigned S3 link Telnyx expires
+    // ten minutes after the call, so shipping it would give a list of links
+    // already dead. Playback goes through /api/recordings/play, which resolves
+    // a fresh one per request and re-checks the viewer may have it.
+    const RECORDINGS_CAP = 300
+    let recQuery = supabaseAdmin
+      .from('calls')
+      .select('id, user_id, created_at, phone_number, talk_seconds, answered_at, disposition, campaign_id', { count: 'exact' })
+      .in('user_id', scopedAgents)
+      .or('recording_id.not.is.null,recording_url.not.is.null')
+      .order('created_at', { ascending: false })
+      .limit(RECORDINGS_CAP)
+    // start is null for all time, which is the default. No lower bound then,
+    // rather than a bound of "now".
+    if (start) recQuery = recQuery.gte('created_at', start.toISOString())
+    if (scopedCampaignIds && scopedCampaignIds.length > 0) {
+      recQuery = recQuery.in('campaign_id', scopedCampaignIds)
+    }
+    const { data: recRows, count: recCount } = await recQuery
+
+    // The whole roster, not only the agents who happen to have a recording:
+    // this same map names the filter dropdown, and a filter missing the quiet
+    // people is a filter that cannot answer "why has nobody heard from Dave".
+    const recNameById = new Map<string, string>()
+    if (agentIds.length > 0) {
+      const { data: recUsers } = await supabaseAdmin
+        .from('users')
+        .select('clerk_id, first_name, last_name, email')
+        .in('clerk_id', agentIds)
+      for (const u of (recUsers || []) as Array<{
+        clerk_id: string; first_name: string | null; last_name: string | null; email: string | null
+      }>) {
+        recNameById.set(
+          u.clerk_id,
+          [u.first_name, u.last_name].filter(Boolean).join(' ').trim()
+            || u.email || u.clerk_id.slice(0, 12)
+        )
+      }
+    }
+
+    const recordings = ((recRows || []) as Array<{
+      id: string; user_id: string | null; created_at: string; phone_number: string | null
+      talk_seconds: number | null; answered_at: string | null
+      disposition: string | null; campaign_id: string | null
+    }>).map(r => ({
+      id: r.id,
+      at: r.created_at,
+      agentId: r.user_id,
+      agentName: r.user_id ? (recNameById.get(r.user_id) ?? r.user_id.slice(0, 12)) : 'Unknown',
+      phone: r.phone_number,
+      talkSeconds: typeof r.talk_seconds === 'number' ? r.talk_seconds : 0,
+      answered: !!r.answered_at,
+      disposition: r.disposition,
+      campaign: r.campaign_id ? (campaignName.get(r.campaign_id) ?? null) : null,
+    }))
+
     return NextResponse.json({
       success: true,
+      recordings,
+      recordingsTotal: typeof recCount === 'number' ? recCount : recordings.length,
+      // Who is on the roster, so the page can offer a filter without a second
+      // request. Named from the same lookup the recordings use.
+      agents: agentIds.map(id => ({ id, name: recNameById.get(id) ?? null })),
       empty: false,
       range,
       scope: { kind: scopeKind, id: scopeId },

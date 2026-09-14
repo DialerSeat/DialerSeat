@@ -170,6 +170,174 @@ function toSidebarTeams(teams: ApiTeam[]): SidebarTeam[] {
 
 /** The value carries full weight; label and comparison drop to context.
  *  Rendering all three at the same size is what makes a dashboard read as noise. */
+interface FeedRecording {
+  id: string
+  at: string
+  agentId: string | null
+  agentName: string
+  phone: string | null
+  talkSeconds: number
+  answered: boolean
+  disposition: string | null
+  campaign: string | null
+}
+
+/**
+ * The floor's recordings, newest first.
+ *
+ * Ungrouped deliberately: grouping by agent or campaign answers a different
+ * question, and the one a feed answers is what happened and in what order.
+ * Narrowing by person is the dropdown; narrowing in time is the range control
+ * at the top of the page, since this reads the same window as the tiles.
+ */
+function RecordingsFeed({ recordings, total, agents }: {
+  recordings: FeedRecording[]
+  total: number
+  agents: Array<{ id: string; name: string | null }>
+}) {
+  const [who, setWho] = useState<string>('all')
+  /** One open at a time. Two playing at once is noise, not comparison. */
+  const [playingId, setPlayingId] = useState<string | null>(null)
+  const [playErrors, setPlayErrors] = useState<Record<string, boolean>>({})
+  // Collapsed to the five most recent. The feed can run to hundreds and it
+  // sits at the bottom of a page with four charts above it, so opened by
+  // default it would bury everything else under a scroll nobody asked for.
+  const [expanded, setExpanded] = useState(false)
+
+  const matching = who === 'all' ? recordings : recordings.filter(r => r.agentId === who)
+  const PREVIEW = 5
+  const shown = expanded ? matching : matching.slice(0, PREVIEW)
+  const hidden = matching.length - shown.length
+
+  const dur = (s: number) => {
+    if (s <= 0) return 'no answer'
+    const m = Math.floor(s / 60)
+    return m > 0 ? `${m}m ${s % 60}s` : `${s}s`
+  }
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        marginBottom: 10, flexWrap: 'wrap',
+      }}>
+        {/* The header is the control. A caret alone is easy to miss at the
+            bottom of a long page, so the whole row toggles and says what
+            opening it will do. */}
+        <button
+          onClick={() => setExpanded(v => !v)}
+          aria-expanded={expanded}
+          style={{
+            background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 7, color: TEXT,
+            fontSize: 13, fontWeight: 600,
+          }}
+        >
+          <span style={{
+            display: 'inline-block', fontSize: 10, color: MUTED,
+            transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform .15s',
+          }}>▶</span>
+          Recordings
+          <span style={{ color: MUTED, fontWeight: 400 }}>
+            {matching.length}{total > recordings.length ? ` of ${total}` : ''}
+            {!expanded && hidden > 0 && ` · showing ${shown.length}`}
+          </span>
+        </button>
+        <label style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, color: MUTED }}>Agent</span>
+          <select
+            value={who}
+            onChange={e => setWho(e.target.value)}
+            style={{
+              background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+              color: TEXT, fontSize: 12, padding: '5px 8px',
+            }}
+          >
+            <option value="all">Everyone</option>
+            {agents.map(a => (
+              <option key={a.id} value={a.id}>{a.name || a.id.slice(0, 12)}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {shown.length === 0 ? (
+        <div style={{
+          background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+          padding: '14px 16px', fontSize: 12.5, color: MUTED, lineHeight: 1.7,
+        }}>
+          No recordings in this range. Recording is on for every campaign, and a
+          call gets audio once detection confirms a human answered, so voicemails
+          and no-answers leave nothing to play.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 6 }}>
+          {shown.map(r => (
+            <div key={r.id} style={{
+              background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+              padding: '10px 12px', display: 'flex', alignItems: 'center',
+              gap: 10, flexWrap: 'wrap',
+            }}>
+              <div style={{ minWidth: 0, flex: '1 1 200px' }}>
+                <div style={{ fontSize: 13, fontFamily: 'monospace', color: TEXT }}>
+                  {r.phone || '-'}
+                </div>
+                <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
+                  {r.agentName}
+                  {' · '}
+                  {new Date(r.at).toLocaleString(undefined, {
+                    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                  })}
+                  {r.campaign && <> · {r.campaign}</>}
+                  {r.disposition && <> · {r.disposition}</>}
+                </div>
+              </div>
+              {/* Talk time, not call duration: for a recording, how long
+                  somebody actually spoke is the number worth seeing. */}
+              <div style={{ fontSize: 12, color: MUTED, fontFamily: 'monospace' }}>
+                {dur(r.talkSeconds)}
+              </div>
+              <button
+                onClick={() => setPlayingId(playingId === r.id ? null : r.id)}
+                aria-expanded={playingId === r.id}
+                style={{
+                  background: 'transparent', border: `1px solid ${HAIRLINE}`,
+                  borderRadius: 4, color: MUTED, fontSize: 11,
+                  padding: '5px 10px', cursor: 'pointer',
+                }}
+              >{playingId === r.id ? 'Close' : 'Play'}</button>
+              {playingId === r.id && (
+                <audio
+                  style={{ flexBasis: '100%', width: '100%', marginTop: 6 }}
+                  controls autoPlay
+                  src={`/api/recordings/play?call_id=${encodeURIComponent(r.id)}`}
+                  onError={() => setPlayErrors(p => ({ ...p, [r.id]: true }))}
+                />
+              )}
+              {playErrors[r.id] && (
+                <div style={{ flexBasis: '100%', fontSize: 11, color: '#b45309', marginTop: 4 }}>
+                  Recording unavailable. Telnyx deletes audio on its own retention
+                  schedule, so an older call can have a row here and no audio behind it.
+                </div>
+              )}
+            </div>
+          ))}
+          {!expanded && hidden > 0 && (
+            <button
+              onClick={() => setExpanded(true)}
+              style={{
+                background: 'transparent', border: `1px dashed ${HAIRLINE}`,
+                borderRadius: 4, color: MUTED, fontSize: 12,
+                padding: '9px 12px', cursor: 'pointer', textAlign: 'center',
+              }}
+            >Show {hidden} more</button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StatTile({ label, value, sub, accent }: {
   label: string; value: string; sub?: string; accent: string
 }) {
@@ -2187,6 +2355,18 @@ export default function TeamsPage() {
                 <DispositionChart points={stats?.charts?.dispositions || []} />
                 <CampaignChart points={stats?.charts?.byCampaign || []} />
               </div>
+
+              {/* ── EVERY RECORDING THE FLOOR HAS MADE ────────────────────
+                  At the bottom, newest first, as they happened. Ungrouped on
+                  purpose: the point of a feed is seeing the floor's day in the
+                  order it occurred. The dropdown on the right narrows it to
+                  one person; the range chips at the top of the page narrow it
+                  in time, because it reads the same window as the tiles. */}
+              <RecordingsFeed
+                recordings={stats?.recordings || []}
+                total={stats?.recordingsTotal ?? 0}
+                agents={stats?.agents || []}
+              />
 
             </>
           )}
