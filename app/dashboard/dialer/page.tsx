@@ -2479,8 +2479,13 @@ function DialerPageInner() {
         lastIncomingCallSidRef.current = data.call.sid
         armDialing() // a human is being routed to us right now — allow the bridge
 
+        // "LEAD", not "HUMAN". The detector's own vocabulary is human vs
+        // machine, and it leaked onto the agent's screen — where the person on
+        // the other end is a lead, not a classification result. The internal
+        // predicates keep the detector's wording; this is the only place it
+        // was ever displayed.
         setAmdActivity(prev => [
-          `HUMAN ROUTED, ${data.lead?.first_name || ''} ${data.lead?.last_name || ''}`.trim(),
+          `LEAD ROUTED, ${data.lead?.first_name || ''} ${data.lead?.last_name || ''}`.trim(),
           ...prev,
         ].slice(0, 5))
 
