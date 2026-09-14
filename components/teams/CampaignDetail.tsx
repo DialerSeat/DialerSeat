@@ -803,7 +803,7 @@ export default function CampaignDetail({
                     }}
                   >▶ Recording</a>
                 ) : (
-                  <span style={{ fontSize: 11, color: DIM, flexShrink: 0 }}>, </span>
+                  <span style={{ fontSize: 11, color: DIM, flexShrink: 0 }}>-</span>
                 )}
               </div>
             ))}

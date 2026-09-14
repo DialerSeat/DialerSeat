@@ -6152,7 +6152,7 @@ function DialerPageInner() {
                     </span>
                   </div>
                 ) : (
-                  <div style={{ fontSize: 14, fontFamily: 'monospace', color: terminalMuted }}>, </div>
+                  <div style={{ fontSize: 14, fontFamily: 'monospace', color: terminalMuted }}>-</div>
                 )}
               </div>
               <div>

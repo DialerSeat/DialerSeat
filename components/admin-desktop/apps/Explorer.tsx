@@ -571,12 +571,12 @@ export default function ExplorerApp() {
                     <td style={tdStyle}>
                       {u.recording_count > 0
                         ? u.recording_count.toLocaleString()
-                        : <span style={{ color: T.muted }}>, </span>}
+                        : <span style={{ color: T.muted }}>-</span>}
                     </td>
                     <td style={tdStyle}>
                       {(() => {
                         const seats = u.seats || []
-                        if (seats.length === 0) return <span style={{ color: T.muted }}>, </span>
+                        if (seats.length === 0) return <span style={{ color: T.muted }}>-</span>
                         const first = seats[0]
                         return (
                           <div style={{ lineHeight: 1.35 }}>
@@ -734,7 +734,7 @@ export default function ExplorerApp() {
                       {l.disposition ? (
                         <span style={badgeStyle}>{l.disposition.toUpperCase()}</span>
                       ) : (
-                        <span style={{ color: T.muted }}>, </span>
+                        <span style={{ color: T.muted }}>-</span>
                       )}
                     </td>
                     <td style={tdStyle}>{l.dial_attempts ?? 0}</td>
@@ -797,7 +797,7 @@ export default function ExplorerApp() {
                         <td style={{ ...tdStyle, fontWeight: 'bold' }}>{leadName || '-'}</td>
                         <td style={{ ...tdStyle, color: T.muted }}>{r.phone_number || '-'}</td>
                         <td style={tdStyle}>
-                          {r.disposition ? <span style={badgeStyle}>{r.disposition.toUpperCase()}</span> : <span style={{ color: T.muted }}>, </span>}
+                          {r.disposition ? <span style={badgeStyle}>{r.disposition.toUpperCase()}</span> : <span style={{ color: T.muted }}>-</span>}
                         </td>
                         <td style={{ ...tdStyle, color: T.muted }}>
                           {r.amd_result === 'human' ? <span style={{ color: T.green }}>PERSON</span>

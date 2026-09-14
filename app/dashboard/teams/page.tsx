@@ -1786,7 +1786,7 @@ export default function TeamsPage() {
                       if (parked.length > 0) {
                         return <span style={{ fontSize: 12, color: '#fbbf24' }}>Parked, not billed</span>
                       }
-                      return <span style={{ fontSize: 12, color: DIM }}>, </span>
+                      return <span style={{ fontSize: 12, color: DIM }}>-</span>
                     },
                   },
                   {
