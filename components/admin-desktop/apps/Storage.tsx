@@ -164,6 +164,24 @@ export default function StorageApp() {
                 </>
               )}
             </div>
+
+            {/* The projection assumes nothing is deleted, which is not how this
+                platform is operated. Said here rather than left implicit,
+                because a countdown that ignores the pruning that actually
+                happens reads as a deadline instead of a trend. */}
+            <div style={{
+              fontSize: 10.5, color: T.muted, marginTop: 10, lineHeight: 1.7,
+              paddingTop: 10, borderTop: `1px solid ${T.surface}`,
+            }}>
+              <strong>This assumes nothing is deleted.</strong> Old call_events
+              partitions get dropped and data is pruned by hand, so the real
+              curve is flatter than the countdown — treat it as a trend, not a
+              deadline.
+              <br />
+              <strong>Recording retention does not help this number.</strong> The
+              audio lives at the carrier; expiry clears a URL column worth bytes.
+              What reclaims real space here is dropping a call_events partition.
+            </div>
           </Panel>
 
           <Panel
