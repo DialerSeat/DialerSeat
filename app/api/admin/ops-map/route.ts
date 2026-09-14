@@ -94,6 +94,9 @@ const ONLINE_SECONDS = 90
 // The default stays at 80 for that reason, and asking for more is a decision
 // somebody makes when they want it. The ceiling is what the dock can filter
 // and render client-side without the 5s beat becoming visible.
+/** How many of one person's calls the panel carries. A card, not an archive. */
+const PERSON_CALLS_LIMIT = 50
+
 const FEED_LIMIT_DEFAULT = 80
 const FEED_LIMIT_MAX = 1000
 
@@ -129,6 +132,45 @@ export async function GET(req: NextRequest) {
       })
       if (error) throw error
       return NextResponse.json({ success: true, place, detail: data })
+    }
+
+    // ── ONE PERSON'S CALLS ───────────────────────────────────────────────
+    // Same reasoning as the place detail above, and the same shape: asked for
+    // only when somebody opens a card. The person panel could say how many
+    // calls an account had made and when the last one was, but not what any of
+    // them were, so "this agent looks wrong" had no next click — you left the
+    // map and went to find them somewhere else.
+    //
+    // Deliberately not filtered by the map's range. The panel's question is
+    // "what has this person been doing", and an agent who last dialed on
+    // Friday should not read as an agent who has never dialed because the map
+    // happens to be showing 24 hours.
+    const personId = req.nextUrl.searchParams.get('person')
+    if (personId) {
+      const { data, error } = await supabase
+        .from('calls')
+        .select('id, created_at, phone_number, duration, talk_seconds, answered_at, disposition, dial_source, amd_result, recording_id, recording_url, campaigns(name)')
+        .eq('user_id', personId)
+        .order('created_at', { ascending: false })
+        .limit(PERSON_CALLS_LIMIT)
+      if (error) throw error
+      const calls = (data || []).map(c => {
+        const camp = c.campaigns as { name?: string } | { name?: string }[] | null
+        return {
+          id: c.id,
+          at: c.created_at,
+          phone: c.phone_number,
+          durationSeconds: typeof c.duration === 'number' ? c.duration : 0,
+          talkSeconds: typeof c.talk_seconds === 'number' ? c.talk_seconds : 0,
+          answered: !!c.answered_at,
+          disposition: c.disposition,
+          source: c.dial_source,
+          amd: c.amd_result,
+          hasRecording: !!(c.recording_id || c.recording_url),
+          campaign: Array.isArray(camp) ? (camp[0]?.name ?? null) : (camp?.name ?? null),
+        }
+      })
+      return NextResponse.json({ success: true, person: personId, calls })
     }
 
     const rawMode = req.nextUrl.searchParams.get('mode') || 'visitors'

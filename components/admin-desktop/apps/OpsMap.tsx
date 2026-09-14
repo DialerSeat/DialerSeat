@@ -54,6 +54,20 @@ type Point = {
   lat: number; lon: number; users: number; online: number; views: number
   names: string[]
 }
+type PersonCall = {
+  id: string
+  at: string
+  phone: string | null
+  durationSeconds: number
+  talkSeconds: number
+  answered: boolean
+  disposition: string | null
+  source: string | null
+  amd: string | null
+  hasRecording: boolean
+  campaign: string | null
+}
+
 type Person = {
   id: string; label: string; username: string | null; email: string | null
   joined: string; place: string | null; device: string | null
@@ -245,6 +259,10 @@ export default function OpsMap() {
   // Which person's card is open. Held by id rather than by object so a refresh
   // reopens it against the NEW row instead of pinning a stale copy on screen.
   const [personId, setPersonId] = useState<string | null>(null)
+  // Held as a {for, calls} pair rather than cleared on close, for the same
+  // reason the place detail is: a slow response for one person must not land
+  // inside a card the user has since opened for somebody else.
+  const [personCalls, setPersonCalls] = useState<{ for: string; calls: PersonCall[] } | null>(null)
   // Sorting is a different question from filtering — "who joined first" is not
   // a subset, it is an order — so it lives beside the filter, not inside it.
   const [peopleSort, setPeopleSort] = useState<'recent' | 'first'>(saved.peopleSort ?? 'recent')
@@ -391,6 +409,21 @@ export default function OpsMap() {
       .catch(() => { /* the next beat tries again */ })
     return () => { cancelled = true }
   }, [selected, range, beat])
+
+  // One person's calls, fetched when their card opens. Not on the 5s beat:
+  // the panel is opened deliberately and a log that reshuffles under the
+  // cursor every five seconds is harder to read, not fresher.
+  useEffect(() => {
+    if (!personId) return
+    let cancelled = false
+    fetch(`/api/admin/ops-map?person=${encodeURIComponent(personId)}`)
+      .then(r => r.json())
+      .then((j: { success?: boolean; calls?: PersonCall[] }) => {
+        if (!cancelled && j?.success) setPersonCalls({ for: personId, calls: j.calls ?? [] })
+      })
+      .catch(() => { /* the card still shows the totals it already has */ })
+    return () => { cancelled = true }
+  }, [personId])
 
   // The daily list, refreshed on the same beat as everything else so the
   // count in the corner cannot sit stale next to live data.
@@ -1285,6 +1318,59 @@ export default function OpsMap() {
                 <Row k="LAST BEAT"
                      v={person.lastHeartbeat ? new Date(person.lastHeartbeat).toLocaleString() : 'never'}
                      c={person.lastHeartbeat ? undefined : DIM} />
+              </Section>
+
+              {/* ── THIS PERSON'S CALLS ──────────────────────────────────
+                  The panel could say how many calls an account had made and
+                  when the last one was, but not what any of them WERE, so
+                  "this agent looks wrong" had no next click: you left the map
+                  and went looking for them somewhere else.
+
+                  Not filtered by the map's range. The question a card answers
+                  is what this person has been doing, and an agent who last
+                  dialed on Friday should not read as one who has never dialed
+                  because the map happens to be showing 24 hours. */}
+              <Section title={`CALLS${
+                personCalls?.for === person.id ? ` · LAST ${personCalls.calls.length}` : ''
+              }`}>
+                {personCalls?.for !== person.id ? (
+                  <div style={{ fontSize: 10, color: DIM, letterSpacing: 1 }}>LOADING…</div>
+                ) : personCalls.calls.length === 0 ? (
+                  <div style={{ fontSize: 10, color: DIM, letterSpacing: 1 }}>NEVER DIALED</div>
+                ) : (
+                  <div style={{ maxHeight: 220, overflowY: 'auto', margin: '0 -4px' }}>
+                    {personCalls.calls.map(c => (
+                      <div key={c.id} style={{
+                        display: 'flex', alignItems: 'baseline', gap: 8,
+                        padding: '4px 4px', borderBottom: `1px solid ${'rgba(0,0,0,0.06)'}`,
+                        fontSize: 10, whiteSpace: 'nowrap',
+                      }}>
+                        <span style={{ color: MUTED, flexShrink: 0, width: 84 }}>
+                          {new Date(c.at).toLocaleString(undefined, {
+                            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                          })}
+                        </span>
+                        <span style={{ color: INK, flexShrink: 0, fontFamily: 'monospace' }}>
+                          {c.phone || '-'}
+                        </span>
+                        <span style={{
+                          color: c.answered ? GREEN : DIM, flexShrink: 0,
+                        }}>
+                          {/* Talk time, not duration: on an unanswered call the
+                              duration is just how long it rang. */}
+                          {c.answered ? `${c.talkSeconds}s` : 'no answer'}
+                        </span>
+                        <span style={{
+                          marginLeft: 'auto', color: MUTED, overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}>
+                          {c.disposition || c.amd || c.source || ''}
+                          {c.hasRecording && <span style={{ color: CYAN }}> ●</span>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Section>
 
               {/* Only offered when there is somewhere to go. An account the map
