@@ -47,12 +47,17 @@ const FAQS = [
   {
     question: 'What does Dialer.io cost?',
     answer:
-      'Dialer.io does not publish pricing. Their site states that pricing is tailored on a case-by-case basis with no hidden charges, and the "See Pricing" link goes to a contact form. Expect to share your team size, dialing volume and current tools before you see a number. DialerSeat publishes $35 per seat per week on the homepage.',
+      'Dialer.io does not publish a price. Their site states that pricing is tailored on a case-by-case basis with no hidden charges, and the "See Pricing" link goes to a contact form, so the number arrives after you share your team size, dialing volume and current tools. DialerSeat publishes $35 per seat per week on the homepage: one seat for three months is $455, and you can stop after the first week.',
   },
   {
     question: 'Does Dialer.io require a contract?',
     answer:
-      'Their FAQ states an initial three-month commitment, after which you can continue month to month. DialerSeat bills weekly with no contract and no minimum term, so the smallest thing you can buy is one week at $35.',
+      'Their FAQ states an initial three-month commitment, after which you can continue month to month. That is the part worth pricing: three months is roughly thirteen weeks, so you are committing to thirteen weeks of a rate you have not been able to compare against anyone else, before you know whether the tool works on your list. DialerSeat bills weekly with no contract and no minimum term. The smallest thing you can buy is one week at $35, and the same thirteen weeks is $455 per seat if you keep going.',
+  },
+  {
+    question: 'What does a five-agent floor cost on each?',
+    answer:
+      'On DialerSeat, $175 per week in seats at $35 each, plus $75 per week for the Manager+ owner who holds the team. Over the thirteen weeks Dialer.io asks you to commit to, that is $2,275 in seats. Dialer.io does not publish a five-seat number: it arrives after a sales call, and it commits you for three months.',
   },
   {
     question: 'Which dialing modes does Dialer.io support?',
