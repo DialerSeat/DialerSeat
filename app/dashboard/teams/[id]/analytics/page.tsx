@@ -1,9 +1,6 @@
 'use client'
 import { use, useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from 'recharts'
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -254,35 +251,6 @@ function Avatar({ name, accent }: { name: string; accent?: string | null }) {
     }}>
       {initials(name)}
     </div>
-  )
-}
-
-function TrendChart({ series }: { series: SeriesPoint[] }) {
-  const data = series.map(p => ({
-    label: new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    calls: p.calls,
-    connected: p.connected,
-    conversions: p.conversions,
-  }))
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-        <XAxis dataKey="label" stroke={T.muted} fontSize={10} />
-        <YAxis stroke={T.muted} fontSize={10} allowDecimals={false} domain={[0, 'auto']} />
-        <Tooltip
-          contentStyle={{
-            background: 'var(--brand-sidebar-bg)',
-            border: '1px solid var(--brand-card-border)',
-            color: 'var(--brand-on-sidebar)',
-            fontSize: 11,
-          }}
-        />
-        <Line type="monotone" dataKey="calls" stroke={T.blue} strokeWidth={2} dot={false} name="Calls" />
-        <Line type="monotone" dataKey="connected" stroke={T.amber} strokeWidth={2} dot={false} name="Connected" />
-        <Line type="monotone" dataKey="conversions" stroke={T.green} strokeWidth={2} dot={false} name="Conversions" />
-      </LineChart>
-    </ResponsiveContainer>
   )
 }
 
@@ -836,15 +804,6 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                     </div>
                   )}
                 </div>
-              </div>
-            )}
-
-            {/* TREND — everyone sees this, same as totals. A shape over
-                time instead of one flat number for the whole range. */}
-            {data.series.length > 1 && (
-              <div className="ta-section">
-                <div className="ta-section-head">▸ TREND</div>
-                <TrendChart series={data.series} />
               </div>
             )}
 

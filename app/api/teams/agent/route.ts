@@ -283,11 +283,14 @@ export async function GET(req: NextRequest) {
       // The grouping loses exact timestamps, so "last call" comes from its own
       // one-row query rather than being inferred from the newest day — a day
       // bucket cannot tell you whether they stopped at nine or at five.
+      // No campaign filter, for the same reason the aggregate above has none.
+      // This kept .in('campaign_id', ownerCampaignIds) after that was fixed,
+      // so it matched nothing and the card read "last never" next to a call
+      // count of 850 — two facts on one row that cannot both be true.
       const { data: lastRow } = await supabaseAdmin
         .from('calls')
         .select('created_at')
         .eq('user_id', agentId)
-        .in('campaign_id', ownerCampaignIds)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()

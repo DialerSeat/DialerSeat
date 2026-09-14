@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { LineChart } from './AnalyticsCharts'
 
 const PANEL = 'var(--teams-panel, #232428)'
 const HAIRLINE = 'var(--teams-border, #1a1b1e)'
@@ -270,15 +269,6 @@ export default function AgentDetail({
       <div style={{ fontSize: 11.5, color: DIM, marginTop: 10, lineHeight: 1.7 }}>
         {st.scope}. These are the same figures they see on their own analytics.
       </div>
-
-      <Section title={range === 'all' ? 'Calls, all time' : `Calls over the ${range === 'today' ? 'day' : range}`}>
-        <div style={{
-          background: PANEL, border: `1px solid ${HAIRLINE}`,
-          borderRadius: 4, padding: '12px 14px 14px',
-        }}>
-          <LineChart points={data.series || []} />
-        </div>
-      </Section>
 
       {/* ── RECORDINGS ────────────────────────────────────────────────────
           The reason an owner opens somebody's page. Newest first, played
