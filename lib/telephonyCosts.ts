@@ -21,8 +21,62 @@
 // negotiated, change them here and every surface follows.
 // =============================================================================
 
-/** Outbound US termination, per minute. */
-export const COST_PER_MINUTE_USD = 0.002
+// ── THE RATES BELOW ARE READ OFF A REAL INVOICE ───────────────────────────
+// Everything here used to be a published list rate applied by hand. The August
+// 2026 ledger arrived as a CSV of actual charges and disagreed with this file
+// in three ways that mattered. The figures are now the ones Telnyx actually
+// billed, with the cost codes named so the next person can check them against a
+// statement rather than take this on faith.
+
+/**
+ * An outbound minute, all in.
+ *
+ * Was 0.002, which is a third of what a minute costs. Telnyx bills the SAME
+ * seconds under two codes, and both appeared on every line of the ledger with
+ * identical unit counts:
+ *
+ *   GLOBAL-CONV-RATE0-USAGE          52,692s   $3.17   carrier termination
+ *   CALL-CONTROL-RATE0-TERMINATION   52,692s   $1.76   call-control platform
+ *
+ * $0.0036 and $0.0020 per minute. The old constant was the second of the two on
+ * its own, so every minute figure on the platform read at about a third of the
+ * truth.
+ *
+ * The carrier half varies by destination — a RATE0 tier, not one price — so
+ * this is the August blend rather than a quoted rate.
+ */
+export const COST_PER_MINUTE_USD = 0.0056
+
+/**
+ * The AGENT leg, per minute. Previously not costed at all.
+ *
+ * A user dial is two legs and only one was ever counted. The browser leg bills
+ * as SIP-URI-ORIGINATION: 15,678 seconds for $0.52 in August, $0.002 a minute.
+ *
+ * Worth watching rather than simply adding, because the agent leg is parked
+ * between calls rather than torn down — so this bills for time nobody is
+ * talking on.
+ */
+export const COST_PER_AGENT_LEG_MINUTE_USD = 0.002
+
+/**
+ * Buying a number, once, on top of the monthly.
+ *
+ * DID-RATE0-OTC, eight numbers for exactly $8.00 in August. That was the single
+ * largest line on the invoice — more than every minute, every detection and
+ * every recording put together — and nothing on this platform recorded it.
+ */
+export const COST_PER_NUMBER_PURCHASE_USD = 1.00
+
+/**
+ * Tax and regulatory surcharge, as a share of everything else.
+ *
+ * Three codes — TAX-CHARGES, TAX-CHARGES-USF, TAX-CHARGES-TRS — totalling
+ * $1.27 against $21.90 of charges in August. A multiplier rather than an
+ * itemisation, because the split between the three is theirs and not something
+ * predictable per call.
+ */
+export const TAX_RATE = 0.058
 
 /**
  * Answering-machine detection, per call leg.
@@ -30,19 +84,30 @@ export const COST_PER_MINUTE_USD = 0.002
  * Charged on every leg AMD runs against, including calls nobody picks up,
  * which is why it dominates the bill at volume rather than minutes.
  *
- * This is the STANDARD rate, which is what we run. Premium is roughly $0.005
- * per leg; if platform_config.amd_detector is ever switched to premium this
- * must change with it, or every margin figure understates cost by 2.5x.
+ * CALL-CONTROL-FEATURES-STANDARD-AMD on the ledger: 506 legs for $1.0120 in
+ * August, exactly $0.002 each. This constant was already right.
  */
 export const COST_PER_AMD_LEG_USD = 0.002
+
+/**
+ * Premium detection, per leg. $0.0065, not the $0.005 guessed here before — and
+ * it is NOT unused, whatever the note above once claimed.
+ *
+ * CALL-CONTROL-FEATURES-PREMIUM-AMD billed 13 legs on 2026-08-06. Thirteen legs
+ * is eight cents and does not matter; that ANY appeared does, because the config
+ * says 'detect' and premium is 3.25x standard. Something asked for premium that
+ * day. Worth knowing before a floor runs on it.
+ */
+export const COST_PER_PREMIUM_AMD_LEG_USD = 0.0065
 
 /**
  * Recording, per minute recorded.
  *
  * Was 0.0005 here, which was four times under Telnyx's published rate and made
  * recording look like a rounding error next to detection. Confirmed against
- * telnyx.com/pricing/voice-api on 2026-09-13: $0.002/min, the same rate as
- * outbound termination, so an hour recorded costs what an hour talked does.
+ * telnyx.com/pricing/voice-api on 2026-09-13, then again by the August ledger,
+ * where CALL-RECORDING-TERMINATION-USAGE billed 7,800 seconds for $0.26 —
+ * $0.002 a minute exactly.
  *
  * Storage is genuinely separate at $0.006/GB/month, and genuinely negligible:
  * recorded audio runs roughly 240KB a minute, putting a month of storage for a
@@ -89,6 +154,8 @@ export const COST_ASSUMPTIONS_NOTE =
   `Assumes $${COST_PER_MINUTE_USD.toFixed(3)}/min outbound, ` +
   `$${COST_PER_AMD_LEG_USD.toFixed(3)} per standard AMD leg, ` +
   `$${COST_PER_RECORDED_MINUTE_USD.toFixed(3)}/min recorded. ` +
-  `Carrier list rates. Number rental is counted separately as a platform ` +
-  `cost, from what the numbers actually bill, since a shared pool belongs to ` +
-  `no single customer.`
+  `Rates taken from the August 2026 Telnyx invoice, not from list pricing. ` +
+  `Minutes include both the carrier and call-control halves, which are billed ` +
+  `separately against the same seconds. Number rental and per-number purchase ` +
+  `fees are counted as platform costs, since a shared pool belongs to no ` +
+  `single customer. Tax adds about ${(TAX_RATE * 100).toFixed(1)}% on top.`
