@@ -14,8 +14,11 @@
 // reach the daily spend limit on detection alone while the minutes bill is
 // still pocket change.
 //
-// We run STANDARD AMD (platform_config.amd_detector = detect). Premium is
-// roughly 2.5x the per-leg rate and is deliberately not in use.
+// We run STANDARD AMD and it is now enforced rather than assumed: the dial path
+// clamps the detector to 'detect' and the config will not accept anything else.
+// See STANDARD_AMD_DETECTOR in lib/placeOutboundCall.ts. This note used to say
+// premium was "deliberately not in use", which the August invoice disproved —
+// 13 premium legs billed on a day the config said standard.
 //
 // These are Telnyx list rates as of the Telnyx migration. If a custom rate is
 // negotiated, change them here and every surface follows.

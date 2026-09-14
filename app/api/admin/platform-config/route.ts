@@ -59,11 +59,20 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   // The carrier's account limit, mirrored for the Live Ops gauge only.
   // Nothing enforces it — see lib/concurrency.ts.
   concurrency_budget:        v => intInRange(v, 1, 5000),
-  // Only Telnyx's documented modes. An unrecognised value here would be
-  // rejected at dial time, failing every call.
-  amd_detector: v => (typeof v === 'string' &&
-    ['detect', 'detect_beep', 'detect_words', 'greeting_end', 'premium'].includes(v))
-    ? (v as unknown as number) : null,
+  // ── STANDARD BILLING ONLY ───────────────────────────────────────────────
+  // This accepted every Telnyx mode including 'premium', which bills at
+  // $0.0065 a leg against standard's $0.0020 — 3.25x, on a charge that already
+  // lands on every single dial. The August invoice showed 13 premium legs
+  // appearing without the stored config ever saying premium, so the setting was
+  // not the only way in; it should not be one of them either.
+  //
+  // 'detect' is the only mode the invoice evidences as standard-billed, so it
+  // is the only one accepted. The dial path clamps to it as well — see
+  // STANDARD_AMD_DETECTOR in lib/placeOutboundCall.ts — because a config guard
+  // alone would not have caught what happened in August.
+  //
+  // Widening this means agreeing to pay whatever the added mode bills at.
+  amd_detector: v => v === 'detect' ? (v as unknown as number) : null,
   amd_tuning_enabled:        v => typeof v === 'boolean' ? v : null,
   // Floors and ceilings that keep a typo from making detection useless: too
   // short and it decides on nothing, too long and the agent waits.

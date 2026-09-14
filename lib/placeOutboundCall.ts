@@ -11,6 +11,18 @@ import { normalizeToE164 } from '@/lib/phoneNormalize'
 import { checkSuppression } from '@/lib/suppression'
 import { logCallEvent } from '@/lib/callEvents'
 
+/**
+ * The only answering-machine detector allowed out of this file.
+ *
+ * Telnyx bills detection in two tiers and only this one is evidenced as the
+ * cheap one: the August 2026 invoice billed 506 legs of
+ * CALL-CONTROL-FEATURES-STANDARD-AMD at $0.0020 while the stored detector read
+ * 'detect'. The premium tier is $0.0065, and the other modes
+ * (detect_beep, detect_words, greeting_end, premium) are not evidenced either
+ * way — so they are treated as premium until an invoice says otherwise.
+ */
+const STANDARD_AMD_DETECTOR = 'detect'
+
 // ── A CEILING ON EVERY LEG: REVERTED, AND WHY ────────────────────────────
 // This set time_limit_secs on both dials so an orphaned leg could not run to
 // Telnyx's four-hour default. It was removed after live dialing broke: every
@@ -828,7 +840,33 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     //
     // Voicemail drop needs both, and only 'premium' provides both. That is a
     // cost decision, not an engineering one — see AMD.md.
-    dialBody.answering_machine_detection = amdCfg.amd_detector || 'detect'
+    //
+    // ── STANDARD ONLY, ENFORCED HERE RATHER THAN TRUSTED ──────────────────
+    // The August invoice carried 13 legs of CALL-CONTROL-FEATURES-PREMIUM-AMD
+    // on 2026-08-06, the day after platform_config was last touched, while the
+    // stored detector read 'detect' and has ever since. Thirteen legs is eight
+    // cents. What it proves is that a premium dial CAN leave this line without
+    // the config saying so, and premium bills 3.25x standard: $0.0065 a leg
+    // against $0.0020. On a floor at 15,000 dials a week that is $98 instead
+    // of $30, and it would surface a month later on a statement rather than
+    // anywhere anybody looks.
+    //
+    // 'detect' is the ONLY mode this ledger evidences as standard-billed, so
+    // it is the only one allowed out. Anything else is clamped rather than
+    // refused: a dial that fails costs a lead, and a dial that runs standard
+    // when something asked for premium costs nothing at all.
+    //
+    // Changing this is a deliberate act. Widening the allowlist means agreeing
+    // to the price of whatever is added, and the invoice is how you check.
+    const requestedDetector = amdCfg.amd_detector || 'detect'
+    if (requestedDetector !== 'detect') {
+      console.warn(
+        `[placeOutboundCall] detector '${requestedDetector}' requested but only ` +
+        `'detect' bills at the standard rate. Forcing 'detect'. ` +
+        `Change STANDARD_AMD_DETECTOR in lib/placeOutboundCall.ts to allow it.`
+      )
+    }
+    dialBody.answering_machine_detection = STANDARD_AMD_DETECTOR
 
     // Guarded by its own switch: an unrecognised parameter name makes Telnyx
     // reject the WHOLE dial request, failing every call rather than merely
