@@ -289,6 +289,9 @@ export function DispositionChart({ points }: { points: DispositionSlice[] }) {
               // cast through unknown rather than asserted to overlap.
               label={(props: unknown) => renderDispositionLabels({
                 ...(props as object), data: points, chartHeight: 240,
+                // This surface is dark. Without it the labels render in the
+                // analytics page's near-black ink and are invisible here.
+                labelColor: TEXT,
               } as unknown as Parameters<typeof renderDispositionLabels>[0])}
               labelLine={false}
             >

@@ -7,10 +7,15 @@
 // opened. Extracted rather than copied: 130 lines of label collision-avoidance
 // is exactly the kind of thing that drifts once there are two of it.
 //
-// The palette is inlined rather than imported. The two pages have separate T
-// objects with the same values for these five tokens, and importing one page's
-// palette into a shared component would tie the component to whichever page
-// happened to define it first.
+// The slice palette is inlined: the two pages have separate T objects with the
+// same values for these five colours, and importing one page's palette would
+// tie this component to whichever page happened to define it first.
+//
+// LABEL COLOUR IS NOT INLINED, and that was a bug worth naming. It was fixed at
+// the analytics page's ink (#1a1c24), which is invisible on the teams page —
+// that surface is dark. Slice fills were fine because they are the same in both
+// themes; only the text was wrong. It is a parameter now, defaulting to the
+// light value so the analytics page is unchanged.
 // =============================================================================
 
 const T = {
@@ -21,11 +26,28 @@ const T = {
   amber: '#8a6a1a',
 }
 
+// One colour per outcome, and every outcome that can reach a pie has one.
+// Four of these were the only entries for a long time; everything else fell
+// through to the '#bbb' default, which was survivable while SKIPPED dominated
+// the chart and hid it. With SKIPPED out of the breakdown, Voicemail is the
+// largest slice on real traffic and sat in the same grey as No answer,
+// directly beside it. Keyed on CANONICAL values — canonical() runs before
+// anything reaches here, so aliases never need their own entry.
 export const DISPOSITION_COLORS: Record<string, string> = {
+  // Agent outcomes: the rows anybody opens this chart to read.
   'CLOSED': T.green,
   'APPOINTMENT': T.accent,
   'NOT INTERESTED': T.amber,
   'DO NOT CALL': T.red,
+  // System outcomes, each visibly distinct from the greys beside it.
+  'VOICEMAIL': '#6a4a8a',
+  'TCPA_BLOCKED': '#2a7a7a',
+  'ABANDONED': '#a06a3a',
+  // Our own plumbing failing, not the lead. Deliberately not a grey: it is
+  // the one bucket here that means something is broken on our side.
+  'AGENT_LEG_FAILED': '#5a5a7a',
+  // Kept though the breakdown excludes it, because other surfaces colour
+  // legends and tables from this same map.
   'SKIPPED': '#888',
   'NO ANSWER': '#bbb',
   'NO_ANSWER': '#bbb',
@@ -43,10 +65,14 @@ export function renderDispositionLabels(props: {
   cy: number
   outerRadius: number
   index: number
-  data: { disposition: string; count: number }[]
+  data: { disposition: string; label?: string; count: number }[]
   chartHeight: number
+  /** Ink for the label text. Defaults to the light pages' value; the teams
+   *  page is dark and passes its own. */
+  labelColor?: string
 }) {
   const { cx, cy, outerRadius, index, data, chartHeight } = props
+  const labelColor = props.labelColor ?? T.text
   // Recharts invokes `label` once per slice. We only want to compute
   // and draw the *entire* label set a single time (on the first slice)
   // so labels don't get stacked on top of themselves N times.
@@ -85,7 +111,12 @@ export function renderDispositionLabels(props: {
     const anchorY = cy + lineInnerRadius * Math.sin(angleRad)
     const bendX = cx + lineBendRadius * Math.cos(angleRad)
     return {
-      name: d.disposition,
+      // The label when the caller supplied one, so the pie reads "Voicemail"
+      // rather than NO_ANSWER_AMD. Setting nameKey on <Pie> does not reach
+      // here — recharts passes nameKey to its own built-in label renderer,
+      // and this replaces that renderer entirely. The teams page set nameKey
+      // and got raw stored values on screen for exactly that reason.
+      name: d.label || d.disposition,
       value,
       fraction,
       color: DISPOSITION_COLORS[d.disposition] || '#bbb',
@@ -176,7 +207,7 @@ export function renderDispositionLabels(props: {
               dy={4}
               textAnchor={textAnchor}
               fontSize={fontSize}
-              fill={T.text}
+              fill={labelColor}
             >
               {it.name}
             </text>

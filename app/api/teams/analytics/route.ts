@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
-import { canonical, labelFor } from '@/lib/dispositions'
+import {
+  canonical, labelFor, BREAKDOWN_FORMS, LEGACY_STATUS_VALUES,
+} from '@/lib/dispositions'
 
 export const dynamic = 'force-dynamic'
 
@@ -280,8 +282,30 @@ export async function GET(req: NextRequest) {
       // only honest measure of time on the phone. `duration` includes ring.
       talkTotal += c.talk
 
-      const dKey = c.disposition || 'No disposition'
-      dispositionCounts.set(dKey, (dispositionCounts.get(dKey) || 0) + c.calls)
+      // ── ONE SLICE PER OUTCOME, AND ONLY OUTCOMES ──────────────────────
+      // Keyed on the CANONICAL value, not the stored one. Keying on stored
+      // put VOICEMAIL and its alias NO_ANSWER_AMD in separate buckets, and
+      // both then resolved to the same words downstream — the chart drew two
+      // slices both labelled Voicemail, which is what got reported.
+      //
+      // The same three exclusions /api/analytics/dispositions applies, so the
+      // two pages are charts of the same thing: no disposition is an absence
+      // rather than an outcome, SKIPPED is the dialer moving on and buries
+      // everything else, and completed/failed are SignalWire-era call
+      // statuses that leaked into this column years ago. All still counted
+      // in every rate above — this only decides what the pie is about.
+      //
+      // A GUARD, NOT A `continue`. Skipping the rest of the iteration would
+      // take the per-campaign and per-bucket accumulation below out with it,
+      // and the Campaign Performance chart alongside this one would have gone
+      // blank for every excluded row — which is most of them.
+      const inBreakdown = !!c.disposition
+        && !LEGACY_STATUS_VALUES.has(c.disposition)
+        && BREAKDOWN_FORMS.has(c.disposition)
+      if (inBreakdown) {
+        const dKey = canonical(c.disposition) as string
+        dispositionCounts.set(dKey, (dispositionCounts.get(dKey) || 0) + c.calls)
+      }
 
       const pc = perCampaign.get(c.campaign_id) || { calls: 0, conversions: 0, talk: 0, reached: 0, contacted: 0 }
       pc.calls += c.calls
@@ -429,14 +453,15 @@ export async function GET(req: NextRequest) {
         // the same components can draw both and the same figure stops wearing
         // two different shapes depending on which screen you opened.
         //
-        // canonical() collapses legacy spellings and labelFor() gives the words
-        // — so the pie reads "Not interested" rather than NOT INTERESTED, on
-        // both pages, from one implementation.
+        // Canonical and filtered already, at count time — so this is only an
+        // ordering and a naming. labelFor() supplies the words, so the pie
+        // reads "Not interested" rather than NOT INTERESTED, on both pages,
+        // from one implementation.
         dispositions: Array.from(dispositionCounts.entries())
           .sort((a, b) => b[1] - a[1])
-          .map(([stored, count]) => ({
-            disposition: canonical(stored) ?? stored,
-            label: labelFor(stored),
+          .map(([value, count]) => ({
+            disposition: value,
+            label: labelFor(value),
             count,
           })),
         byCampaign: Array.from(perCampaign.entries())
