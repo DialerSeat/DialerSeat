@@ -23,6 +23,37 @@ import { logCallEvent } from '@/lib/callEvents'
  */
 const STANDARD_AMD_DETECTOR = 'detect'
 
+// ── RING LENGTH: RANDOMISED, AND WHY THE FLOOR IS 30 ──────────────────────
+// The floor is 30 because that is what the carrier bills anyway. Telnyx charges
+// a 30-second minimum on every outbound leg, so a leg that gives up at 20
+// seconds is billed for ten seconds it never used. 42 answers over 90 days
+// landed between 21 and 30 seconds — 5.9% on top of everything arriving inside
+// 21, thrown away to save money that was charged regardless.
+//
+// The ceiling is 43 because a fixed duration is a fingerprint. Every leg ending
+// at exactly the same second is one of the cheaper things for carrier analytics
+// to notice, and answer rates are downstream of reputation. A spread costs
+// little and removes the signal.
+//
+// IT IS NOT FREE ABOVE 30, and that is worth stating plainly. Past the minimum
+// the meter runs in 6-second blocks: 36 seconds bills 36, 43 bills 48. Only
+// genuine ring-outs pay it — 42.9% of legs — which works out near $2.40 a week
+// for an agent at 5,000 dials. Against that, another 40 answers over the same
+// 90 days arrived after 30 seconds. Roughly six cents per extra conversation,
+// which is the right side of the trade.
+//
+// PREDICTIVE DOES NOT GET THIS. Its pacing needs a ringing line to be
+// shorter-lived than the 30-second claim covering it; see the arithmetic in
+// lib/predictiveController.ts.
+const RING_MIN_SECONDS = 30
+const RING_MAX_SECONDS = 43
+
+/** A ring length in [30, 43]. Random per call, so no two look alike. */
+function progressiveRingSeconds(): number {
+  return RING_MIN_SECONDS
+    + Math.floor(Math.random() * (RING_MAX_SECONDS - RING_MIN_SECONDS + 1))
+}
+
 // ── A CEILING ON EVERY LEG: REVERTED, AND WHY ────────────────────────────
 // This set time_limit_secs on both dials so an orphaned leg could not run to
 // Telnyx's four-hour default. It was removed after live dialing broke: every
@@ -485,7 +516,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // regulated. The ten free seconds are not worth it there.
   const isTsrRegulated = p.dialerMode === 'progressive' || p.dialerMode === 'predictive'
   const ringTimeoutSecs = p.dialerMode === 'predictive' ? 20
-    : isTsrRegulated ? 30
+    : isTsrRegulated ? progressiveRingSeconds()
     : 60
 
   // ── STEP 1: DIAL THE AGENT'S SIP LEG (user_dial only) ───────────────────
