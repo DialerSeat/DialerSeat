@@ -39,6 +39,8 @@ interface MemberStat {
   calls: number
   connected: number
   conversions: number
+  /** Dials that actually rang. The denominator for a connect rate. */
+  reachedCalls: number
   talkSeconds: number
   /** How long this agent's dial sequence ran. Always >= talkSeconds. */
   dialedSeconds: number
@@ -94,6 +96,7 @@ interface AnalyticsResponse {
   members: TeamMemberRef[]
   totals: {
     calls: number; connected: number; conversions: number
+    reachedCalls: number
     talkSeconds: number
     /** How long dial sequences ran, summed across agents. See the KPI note. */
     dialedSeconds: number
@@ -378,13 +381,16 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
   const isOwner = data?.viewerRole === 'owner'
   const showMemberFilter = isOwner && (data?.members?.length || 0) > 1
 
-  const connectPct = data && data.totals.calls > 0
-    ? (data.totals.connected / data.totals.calls) * 100
+  // Both rates divide by dials that RANG, not dials attempted. See
+  // lib/dialOutcome.ts: a dial the dead-socket bug tore down before it rang is
+  // not somebody who declined to answer, and it used to sit in the denominator.
+  const connectPct = data && data.totals.reachedCalls > 0
+    ? (data.totals.connected / data.totals.reachedCalls) * 100
     : null
 
   const leaderboardRows = isOwner ? (data?.leaderboard || []) : []
-  const viewerConnectPct = data && data.viewerStats.calls > 0
-    ? (data.viewerStats.connected / data.viewerStats.calls) * 100
+  const viewerConnectPct = data && data.viewerStats.reachedCalls > 0
+    ? (data.viewerStats.connected / data.viewerStats.reachedCalls) * 100
     : null
 
   return (
@@ -687,7 +693,11 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                     <div className="ta-empty">NO ACTIVE MEMBERS YET</div>
                   ) : (
                     leaderboardRows.map((m, i) => {
-                      const cr = m.calls > 0 ? (m.connected / m.calls) * 100 : null
+                      // Over dials that RANG, not dials attempted. A dial the
+                      // dead-socket bug tore down before it rang is not a
+                      // person who declined to pick up, and it used to sit in
+                      // this denominator. See lib/dialOutcome.ts.
+                      const cr = m.reachedCalls > 0 ? (m.connected / m.reachedCalls) * 100 : null
                       const accent = rankAccent(i)
                       return (
                         // ── CLICK AN AGENT TO SEE ONLY THEM ────────────
@@ -751,7 +761,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                               <div className="ta-lb-metric-key">CALLS</div>
                             </div>
                             <div className="ta-lb-metric">
-                              <div className="ta-lb-metric-val">{m.calls > 0 ? `${Math.round(cr!)}%` : '-'}</div>
+                              <div className="ta-lb-metric-val">{cr !== null ? `${Math.round(cr)}%` : '-'}</div>
                               <div className="ta-lb-metric-key">CONNECT</div>
                             </div>
                             <div className="ta-lb-metric">

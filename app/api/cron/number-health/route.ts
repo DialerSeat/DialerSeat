@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { sendAdminPush } from '@/lib/pushNotify'
+import { neverRang } from '@/lib/dialOutcome'
 import { HEALTH_WINDOW_DAYS } from '@/lib/dialerConstants'
 
 export const dynamic = 'force-dynamic'
@@ -146,9 +147,11 @@ export async function GET(req: Request) {
     // the same signature because duration is written at hangup. A call that is
     // ringing right now is not evidence either way yet, and including it would
     // count it as a miss.
-    const neverRang = (c: { answered_at: string | null; duration: number | null }) =>
-      c.answered_at === null && (c.duration ?? 0) === 0
-
+    //
+    // Platform-wide the same distortion reads 8.8% against a real 41.7%.
+    // The predicate lives in lib/dialOutcome.ts, shared with every other rate
+    // on the platform. It was written here first and copying it would have let
+    // this job and the dashboards drift into disagreeing about the same calls.
     const tally = new Map<string, { placed: number; answered: number }>()
     let excluded = 0
     for (const c of calls || []) {

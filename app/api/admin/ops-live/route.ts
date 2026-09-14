@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/admin'
 import { apiError } from '@/lib/apiError'
 import { getConcurrencySnapshot } from '@/lib/concurrency'
 import { getTelnyxBalance } from '@/lib/telnyxBalance'
+import { neverRang } from '@/lib/dialOutcome'
 
 const supabase = getServiceClient('admin/ops-live')
 
@@ -81,7 +82,9 @@ export async function GET() {
       // dead" a glance rather than an investigation.
       supabase
         .from('calls')
-        .select('dial_source, answered_at')
+        // duration is needed by neverRang, which cannot tell a dial that
+        // never rang from one that rang out without it.
+        .select('dial_source, answered_at, duration')
         .gte('created_at', day)
         .limit(20000),
 
@@ -110,11 +113,15 @@ export async function GET() {
     }))
 
     // ── 24h source mix ───────────────────────────────────────────────────
-    const bySource = new Map<string, { dials: number; connects: number }>()
+    const bySource = new Map<string, { dials: number; connects: number; reached: number }>()
     for (const c of dayRes.data || []) {
       const key = c.dial_source || 'unknown'
-      const b = bySource.get(key) || { dials: 0, connects: 0 }
+      const b = bySource.get(key) || { dials: 0, connects: 0, reached: 0 }
       b.dials++
+      // Dials that never rang stay in `dials`, because they were attempted and
+      // billed, and stay out of `reached`, because nobody declined to answer
+      // them. Connect rate divides by reached. See lib/dialOutcome.ts.
+      if (!neverRang(c)) b.reached++
       if (c.answered_at) b.connects++
       bySource.set(key, b)
     }
@@ -125,7 +132,8 @@ export async function GET() {
         connects: v.connects,
         // A dash upstream rather than a fake 0% on a sample too small to mean
         // anything. 20 is low, but this is an operational gauge, not a stat.
-        connectRate: v.dials >= 20 ? (v.connects / v.dials) * 100 : null,
+        reached: v.reached,
+        connectRate: v.reached >= 20 ? (v.connects / v.reached) * 100 : null,
       }))
       .sort((a, b) => b.dials - a.dials)
 

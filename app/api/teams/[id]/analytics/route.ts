@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { computeDialingTime } from '@/lib/dialingTime'
+import { neverRang } from '@/lib/dialOutcome'
 
 /** See the note where this is used: the horizon of everything on this page. */
 const CALLS_CAP = 20000
@@ -178,6 +179,8 @@ export async function GET(
       calls: number
       connected: number
       conversions: number
+      /** Dials that actually rang. The denominator for a connect rate. */
+      reachedCalls: number
       talkSeconds: number
       /** How long the dial sequence ran. Always >= talkSeconds. */
       dialedSeconds: number
@@ -199,6 +202,7 @@ export async function GET(
         calls: 0,
         connected: 0,
         conversions: 0,
+        reachedCalls: 0,
         talkSeconds: 0,
         dialedSeconds: 0,
       }
@@ -207,13 +211,22 @@ export async function GET(
     const seedSet = filterUserId ? [filterUserId] : memberClerkIds
     for (const uid of seedSet) statsByUser[uid] = seedFor(uid)
 
-    const teamTotals = { calls: 0, connected: 0, conversions: 0, talkSeconds: 0, dialedSeconds: 0 }
+    const teamTotals = {
+      calls: 0, connected: 0, conversions: 0, reachedCalls: 0, talkSeconds: 0, dialedSeconds: 0,
+    }
 
     for (const c of calls) {
       const uid = c.user_id
       if (!statsByUser[uid]) statsByUser[uid] = seedFor(uid)
       const s = statsByUser[uid]
       s.calls++; teamTotals.calls++
+      // ── THE DENOMINATOR OF A CONNECT RATE ────────────────────────────
+      // Dials that never rang are counted above, because they were really
+      // attempted and really billed, and excluded here, because nobody
+      // declined to answer them. Platform-wide they are 79% of the table and
+      // they drag answer rate from a real 41.7% down to a reported 8.8%.
+      // See lib/dialOutcome.ts.
+      if (!neverRang(c)) { s.reachedCalls++; teamTotals.reachedCalls++ }
       // ── CONNECTED MEANS SOMEBODY ANSWERED ────────────────────────────
       // This counted any call with a duration above zero, which is every call
       // that reached the carrier at all — a phone ringing out for 25 seconds
