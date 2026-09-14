@@ -41,11 +41,17 @@ const USER_TRACKER_FILTERS_STORAGE_KEY = 'ds:admin-desktop:usertracker-filters:v
 
 interface BucketStats {
   calls: number
+  /** Sum of call durations. Lines open, not the shift. */
   dialSeconds: number
   connectedCalls: number
+  /** Talk time: seconds actually speaking to somebody. */
   connectedSeconds: number
   skippedCalls: number
   wastedSeconds: number
+  /** Hours dialed: dial sequence running, wrap-up included, pauses excluded. */
+  sessionSeconds: number
+  /** Gaps between calls too long to count as dialing. */
+  pausedSeconds: number
 }
 
 interface UserRow {
@@ -560,15 +566,32 @@ export default function UserTrackerApp() {
                   <div className="ut-kpi-value">{fmtNum(ov?.totals.calls ?? 0)}</div>
                   <div className="ut-kpi-sub">{RANGE_LABEL[range]}</div>
                 </div>
+                {/* Two different numbers, deliberately side by side. Hours
+                    Dialed is the shift: calls plus wrap-up, with longer gaps
+                    excluded as paused. Talk Time is the part spent speaking to
+                    somebody. The ratio between them is the useful reading, and
+                    it was previously impossible to take because "Time Dialed"
+                    was the sum of call durations, a small fraction of a shift
+                    that made a full day of dialing look like an hour. */}
                 <div className="ut-kpi">
-                  <div className="ut-kpi-label">Time Dialed</div>
-                  <div className="ut-kpi-value">{fmtDuration(ov?.totals.dialSeconds ?? 0)}</div>
-                  <div className="ut-kpi-sub">across all users</div>
+                  <div className="ut-kpi-label">Hours Dialed</div>
+                  <div className="ut-kpi-value">{fmtDuration(ov?.totals.sessionSeconds ?? 0)}</div>
+                  <div className="ut-kpi-sub">
+                    dial sequence running
+                    {(ov?.totals.pausedSeconds ?? 0) > 0
+                      ? ` · ${fmtDuration(ov!.totals.pausedSeconds)} paused`
+                      : ''}
+                  </div>
                 </div>
                 <div className="ut-kpi">
-                  <div className="ut-kpi-label">Time Connected</div>
+                  <div className="ut-kpi-label">Talk Time</div>
                   <div className="ut-kpi-value">{fmtDuration(ov?.totals.connectedSeconds ?? 0)}</div>
-                  <div className="ut-kpi-sub">{fmtNum(ov?.totals.connectedCalls ?? 0)} connected calls</div>
+                  <div className="ut-kpi-sub">
+                    {fmtNum(ov?.totals.connectedCalls ?? 0)} connected
+                    {(ov?.totals.sessionSeconds ?? 0) > 0
+                      ? ` · ${Math.round(((ov?.totals.connectedSeconds ?? 0) / ov!.totals.sessionSeconds) * 100)}% of dialing`
+                      : ''}
+                  </div>
                 </div>
                 <div className="ut-kpi">
                   <div className="ut-kpi-label">Skipped / No Answer</div>

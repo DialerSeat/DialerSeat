@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
+import { computeDialingTime, type DialedCall } from '@/lib/dialingTime'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,10 +19,27 @@ interface BucketStats {
   connectedSeconds: number
   skippedCalls: number
   wastedSeconds: number
+  /**
+   * HOURS DIALED: how long the dial sequence was actually running.
+   *
+   * Distinct from dialSeconds, which sums call durations and so answers "how
+   * long were the lines open". On a 20% connect rate that is a small fraction
+   * of the shift, and an agent dialing all day reported about an hour.
+   *
+   * This is calls plus a bounded wrap-up allowance between them, with longer
+   * gaps treated as paused rather than worked. connectedSeconds is the talking
+   * subset. See lib/dialingTime.ts.
+   */
+  sessionSeconds: number
+  /** Time between calls that was NOT credited as dialing. */
+  pausedSeconds: number
 }
 
 function emptyBucket(): BucketStats {
-  return { calls: 0, dialSeconds: 0, connectedCalls: 0, connectedSeconds: 0, skippedCalls: 0, wastedSeconds: 0 }
+  return {
+    calls: 0, dialSeconds: 0, connectedCalls: 0, connectedSeconds: 0,
+    skippedCalls: 0, wastedSeconds: 0, sessionSeconds: 0, pausedSeconds: 0,
+  }
 }
 
 function addBucket(
@@ -258,6 +276,11 @@ export async function GET(req: Request) {
   }
 
   // ---- per-user aggregation ---------------------------------------------
+  // Timestamps are kept per user so dialing time can be reconstructed after
+  // this loop. It cannot be accumulated call-by-call like the other figures:
+  // a stretch of work is defined by the GAPS between calls, which is only
+  // knowable once the whole set is in hand.
+  const timeRowsByUser = new Map<string, DialedCall[]>()
   const statsByUser = new Map<string, UserStatsRow>()
   const seriesMap = new Map<string, { calls: number; dialSeconds: number; connectedSeconds: number; wastedSeconds: number; activeUsers: Set<string> }>()
 
@@ -274,6 +297,13 @@ export async function GET(req: Request) {
     if (!s) { s = emptyUserStats(); statsByUser.set(uid, s) }
 
     const t = new Date(c.created_at).getTime()
+    const timeRows = timeRowsByUser.get(uid) ?? []
+    timeRows.push({
+      created_at: c.created_at,
+      duration: c.duration,
+      talk_seconds: connectedSecondsByCall.get(c.id) ?? null,
+    })
+    timeRowsByUser.set(uid, timeRows)
     const rawSeconds = c.duration || 0
     const isSkippedOrNoAnswer = SKIPPED_OR_NO_ANSWER_DISPOSITIONS.has(c.disposition || '')
     // Real dial time excludes skipped/no-answer duration — that leftover
@@ -308,6 +338,32 @@ export async function GET(req: Request) {
     }
   }
 
+  // ---- dialing time, per user per window -----------------------------------
+  // Run after the loop because a stretch of work is defined by the gaps
+  // BETWEEN calls, so it cannot be accumulated one call at a time. Each window
+  // is computed from its own slice: an agent who dialed this morning and last
+  // week has two separate shifts, and concatenating them would bridge a
+  // six-day gap into one span.
+  for (const [uid, rows] of timeRowsByUser) {
+    const stats = statsByUser.get(uid)
+    if (!stats) continue
+    const within = (from: number, to?: number) =>
+      rows.filter(r => {
+        const t = new Date(r.created_at).getTime()
+        return t >= from && (to === undefined || t <= to)
+      })
+    const apply = (bucket: BucketStats, subset: DialedCall[]) => {
+      const d = computeDialingTime(subset)
+      bucket.sessionSeconds = d.dialedSeconds
+      bucket.pausedSeconds = d.pausedSeconds
+    }
+    apply(stats.all, rows)
+    apply(stats.month30, within(month30Start))
+    apply(stats.week, within(weekStart))
+    apply(stats.today, within(todayStart))
+    if (hasCustomRange) apply(stats.custom, within(customFrom!, customTo!))
+  }
+
   // ---- shape user rows ----------------------------------------------------
   const users = Array.from(userMeta.values()).map(u => {
     const s = statsByUser.get(u.clerk_id) || emptyUserStats()
@@ -335,6 +391,11 @@ export async function GET(req: Request) {
       out.connectedSeconds += b.connectedSeconds
       out.skippedCalls += b.skippedCalls
       out.wastedSeconds += b.wastedSeconds
+      // Summed across users because these are separate people dialing at the
+      // same time. Two agents each working an hour is two agent-hours, which
+      // is the figure an operator is paying for.
+      out.sessionSeconds += b.sessionSeconds
+      out.pausedSeconds += b.pausedSeconds
     }
     return out
   }
