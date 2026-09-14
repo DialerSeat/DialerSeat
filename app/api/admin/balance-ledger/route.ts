@@ -99,6 +99,8 @@ export async function GET(req: NextRequest) {
       periodStart: string
       deltaUsd: number
       direction: 'out' | 'in'
+      /** A credit we cannot attribute. See the note on totals.unverifiedCreditsUsd. */
+      unverifiedCredit: boolean
       balanceAfter: number
       pending: number | null
       activity: {
@@ -159,6 +161,19 @@ export async function GET(req: NextRequest) {
         // the page never has to guess which way a row goes.
         deltaUsd: delta,
         direction: delta < 0 ? 'out' : 'in',
+        // ── A CREDIT IS NOT A TOP-UP ────────────────────────────────────
+        // Nothing here knows why the balance went UP. Telnyx posts corrections
+        // and occasional spurious credits that settle back out, and this
+        // account has seen one: +$1.04 at 11:01 on 14 Sept, with available
+        // credit and balance both moving and pending at zero, followed by a
+        // $0.92 debit six minutes later during a window in which not one call
+        // was placed.
+        //
+        // Counting that as money added makes a glitch look like a deposit and
+        // quietly inflates every net-cost figure derived from this ledger.
+        // Flagged instead, and kept out of the totals that feed cost analysis.
+        // The month-end invoice is the only thing that settles what it was.
+        unverifiedCredit: delta > 0,
         balanceAfter: cur,
         pending: to.pending === null ? null : Number(to.pending),
         activity: {
@@ -177,7 +192,10 @@ export async function GET(req: NextRequest) {
     entries.reverse() // newest first, like a statement
 
     const totalOut = entries.reduce((n, e) => e.deltaUsd < 0 ? n + -e.deltaUsd : n, 0)
-    const totalIn = entries.reduce((n, e) => e.deltaUsd > 0 ? n + e.deltaUsd : n, 0)
+    // Deliberately NOT called "topped up". We observe the balance rising; we
+    // do not observe a payment. Until a credit is matched to something real,
+    // it is an unexplained movement in our favour and nothing more.
+    const totalCredited = entries.reduce((n, e) => e.deltaUsd > 0 ? n + e.deltaUsd : n, 0)
     const totalExplained = entries.reduce(
       (n, e) => n + (e.deltaUsd < 0 ? e.explainedUsd : 0), 0)
 
@@ -281,7 +299,15 @@ export async function GET(req: NextRequest) {
       currency: 'USD',
       totals: {
         outUsd: totalOut,
-        inUsd: totalIn,
+        // Kept under the old key so nothing reading this breaks, but it is
+        // credits observed, not deposits confirmed.
+        inUsd: totalCredited,
+        unverifiedCreditsUsd: totalCredited,
+        creditNote:
+          'Balance increases are reported as observed, not as confirmed top-ups. '
+          + 'Telnyx posts corrections and occasional spurious credits that settle '
+          + 'back out, so a rise here is not proof money was added. Net spend '
+          + 'computed from this ledger will be wrong by the size of any glitch.',
         explainedUsd: totalExplained,
         unexplainedUsd: Math.max(0, totalOut - totalExplained),
       },

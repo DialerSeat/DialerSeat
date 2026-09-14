@@ -100,7 +100,8 @@ interface Ledger {
   snapshots: number
   watchingSince: string | null
   balanceNow: number | null
-  totals: { outUsd: number; inUsd: number; explainedUsd: number; unexplainedUsd: number }
+  totals: { outUsd: number; inUsd: number; explainedUsd: number; unexplainedUsd: number
+            unverifiedCreditsUsd?: number; creditNote?: string }
   entries: Entry[]
   charges: Charge[]
   chargesTotal: number
@@ -254,7 +255,13 @@ export default function BalanceApp() {
                 data.balanceNow === null ? T.muted
                   : data.balanceNow < 10 ? T.red : data.balanceNow < 25 ? T.amber : T.green],
               ['OUT', data.covered ? usd(data.totals.outUsd) : '-', T.red],
-              ['IN', data.covered ? usd(data.totals.inUsd) : '-', T.green],
+              // Not "IN". We observe the balance rising; we never observe a
+              // payment. Telnyx posts corrections and occasional spurious
+              // credits that settle back out -- this account saw +$1.04 at
+              // 11:01 on 14 Sept followed by a $0.92 debit six minutes later,
+              // during a window with zero calls. Calling that "IN" turns a
+              // glitch into a deposit.
+              ['CREDITED', data.covered ? usd(data.totals.inUsd) : '-', T.green],
               // The whole reason the app exists, so it gets a tile rather than
               // a footnote.
               ['UNEXPLAINED', data.covered ? usd(data.totals.unexplainedUsd) : '-',
@@ -335,11 +342,14 @@ export default function BalanceApp() {
                       </div>
                       <div style={{ fontSize: 11, color: T.muted, marginTop: 6, lineHeight: 1.7 }}>
                         {e.direction === 'in' ? (
-                          // Money arriving is a top-up. We have no record of who
-                          // made it or why, and saying so is better than dressing
-                          // it up as something we understood.
-                          <>Money added to the account. Nothing on our side records a top-up,
-                            so there is no detail to attach to this.</>
+                          // A rise is not a deposit. Nothing here knows why the
+                          // balance went up, and Telnyx is known to post credits
+                          // that settle back out -- so this says what was seen
+                          // rather than what it assumes happened.
+                          <>The balance rose by this much. Nothing on our side records a
+                            payment, and the carrier posts corrections and occasional
+                            spurious credits that reverse later — so treat this as an
+                            observation, not money banked. The month-end invoice settles it.</>
                         ) : e.activity.calls === 0 && e.activity.numbersBought.length === 0 ? (
                           <>Nothing was dialed in this interval. A charge with no activity
                             behind it is rental posting, a fee, or tax.</>
