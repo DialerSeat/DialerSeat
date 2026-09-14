@@ -122,6 +122,54 @@ async function snapshot(b: TelnyxBalance, source: string): Promise<void> {
  *
  * @param source which surface asked, recorded on the snapshot for diagnostics
  */
+// ─────────────────────────────────────────────────────────────────────────
+// SAMPLING WHILE THE FLOOR IS DIALING
+// ─────────────────────────────────────────────────────────────────────────
+// snapshot() only runs when getTelnyxBalance() is called, and that happens
+// when somebody opens the balance panel. So the ledger is dense while a human
+// is watching and empty the rest of the time: on 14 Sept the average gap
+// between readings was 587 seconds.
+//
+// That resolution cannot answer the question it exists for. Two debits of
+// $2.03 and $2.12 landed that afternoon inside a window whose entire billable
+// activity was seven cents, and the best that could be said was "somewhere in
+// the last ten minutes".
+//
+// It matters more than it looks, because Telnyx does not expose transaction
+// detail until the following month. Until October these snapshots ARE the
+// record. A gap in them is not an inconvenience, it is the absence of the
+// only evidence there will be.
+//
+// So: sample on hangup, which is the one event that fires whenever money is
+// actually moving. Throttled, never awaited, and it cannot fail a call —
+// balance bookkeeping must never be in the path of a phone call.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Shortest gap between call-driven readings. */
+const CALL_SAMPLE_MIN_MS = 45_000
+
+/** Per-instance, so several serverless instances may each sample once a
+ *  window. The DB write is already guarded by snapshot()'s own change check,
+ *  so the cost of that is a few extra Telnyx reads, not duplicate rows. */
+let lastCallSampleAt = 0
+
+/**
+ * Record the balance if it has been a while, without blocking anything.
+ *
+ * Deliberately returns void rather than a promise: every caller is on a code
+ * path where a phone call is in flight, and the only correct thing to do with
+ * this is forget about it.
+ */
+export function sampleBalanceAfterCall(source = 'call'): void {
+  const now = Date.now()
+  if (now - lastCallSampleAt < CALL_SAMPLE_MIN_MS) return
+  lastCallSampleAt = now
+  void getTelnyxBalance(source).catch(() => {
+    // Swallowed on purpose. A missed sample is a gap in a ledger; a thrown one
+    // would be an unhandled rejection in a webhook that has a call to finish.
+  })
+}
+
 export async function getTelnyxBalance(source = 'unknown'): Promise<TelnyxBalance> {
   const apiKey = process.env.TELNYX_API_KEY
   if (!apiKey) return { ...UNAVAILABLE, error: 'TELNYX_API_KEY is not set' }

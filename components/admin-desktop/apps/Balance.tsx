@@ -149,7 +149,42 @@ export default function BalanceApp() {
   const [days, setDays] = useState(30)
   const [data, setData] = useState<Ledger | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<'statement' | 'charges' | 'people' | 'bills'>('statement')
+  const [tab, setTab] = useState<
+    'statement' | 'charges' | 'people' | 'bills' | 'telnyx'
+  >('statement')
+
+  // ── WHAT TELNYX SAYS, NOT WHAT WE CALCULATE ──────────────────────────────
+  // Every other number in this app is our rates times our usage. That answers
+  // what something SHOULD have cost and cannot answer what was billed.
+  //
+  // On 14 Sept two debits of $2.03 and $2.12 landed in a window whose entire
+  // billable activity modelled out at seven cents — sixty times off — and the
+  // portal does not expose transaction detail until the following month.
+  // GET /v2/detail_records does, and every record carries the billed cost.
+  interface TelnyxCharge {
+    recordType: string; count: number; totalCost: number; currency: string
+  }
+  interface TelnyxResult {
+    success: boolean; error?: string; grandTotalUsd?: number
+    charged?: TelnyxCharge[]; noCharges?: string[]
+    unavailable?: Array<{ type: string; error: string }>
+  }
+  const [telnyx, setTelnyx] = useState<TelnyxResult | null>(null)
+  const [telnyxBusy, setTelnyxBusy] = useState(false)
+  const [telnyxRange, setTelnyxRange] = useState('today')
+
+  const loadTelnyx = useCallback(async () => {
+    setTelnyxBusy(true)
+    try {
+      const r = await fetch(`/api/admin/telnyx-charges?range=${encodeURIComponent(telnyxRange)}`)
+        .then(x => x.json())
+      setTelnyx(r)
+    } catch {
+      setTelnyx({ success: false, error: 'Request failed.' })
+    } finally {
+      setTelnyxBusy(false)
+    }
+  }, [telnyxRange])
   const [bills, setBills] = useState<BillMonth[] | null>(null)
   const [billForm, setBillForm] = useState<{ month: string; total: string; note: string }>({
     month: new Date().toISOString().slice(0, 7), total: '', note: '',
@@ -300,6 +335,7 @@ export default function BalanceApp() {
               ['charges', `CHARGES (${data.chargesTotal})`],
               ['people', `PER PERSON (${data.perUser.length})`],
               ['bills', 'VS THEIR LEDGER'],
+              ['telnyx', 'WHAT TELNYX BILLED'],
             ] as const).map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} style={{
                 background: tab === id ? T.accent : '#fff',
@@ -310,6 +346,113 @@ export default function BalanceApp() {
               }}>{label}</button>
             ))}
           </div>
+
+          {/* ── WHAT TELNYX BILLED ─────────────────────────────────────── */}
+          {tab === 'telnyx' && (
+            <Panel
+              title="WHAT TELNYX ACTUALLY BILLED"
+              note="Read straight from their detail records, not computed from our rates. The portal hides this until the following month; the API does not. Every record type on the account is queried, because a charge nobody expected is by definition not in the category anybody is watching."
+            >
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
+                <select value={telnyxRange}
+                        onChange={e => setTelnyxRange(e.target.value)}
+                        style={inputStyle}>
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="last_week">Last week</option>
+                  <option value="this_month">This month</option>
+                  <option value="last_month">Last month</option>
+                </select>
+                <button onClick={() => void loadTelnyx()} disabled={telnyxBusy} style={{
+                  background: T.accent, color: '#fff', border: 'none', borderRadius: 3,
+                  fontSize: 11, letterSpacing: 1, padding: '8px 14px', fontFamily: FUTURA,
+                  cursor: telnyxBusy ? 'not-allowed' : 'pointer', opacity: telnyxBusy ? 0.6 : 1,
+                }}>{telnyxBusy ? 'ASKING TELNYX…' : 'PULL BILLED CHARGES'}</button>
+              </div>
+
+              {telnyx && telnyx.success === false && (
+                <div style={{ fontSize: 12, color: T.red }}>{telnyx.error}</div>
+              )}
+
+              {telnyx?.success && (
+                <>
+                  <div style={{
+                    fontSize: 22, fontFamily: MONO, fontWeight: 'bold', marginBottom: 12,
+                  }}>
+                    {usd(telnyx.grandTotalUsd ?? 0)}
+                    <span style={{ fontSize: 11, color: T.muted, fontWeight: 'normal', marginLeft: 8 }}>
+                      billed across {telnyx.charged?.length ?? 0} record type
+                      {(telnyx.charged?.length ?? 0) === 1 ? '' : 's'}
+                    </span>
+                  </div>
+
+                  {(telnyx.charged ?? []).length === 0 ? (
+                    <div style={{ fontSize: 12, color: T.muted }}>
+                      Telnyx reports no billed records in this window.
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 520 }}>
+                        <thead>
+                          <tr>
+                            {['RECORD TYPE', 'RECORDS', 'BILLED'].map((h, i) => (
+                              <th key={h} style={{
+                                textAlign: i === 0 ? 'left' : 'right', padding: '6px 8px',
+                                borderBottom: `1px solid ${T.border}`, color: T.muted,
+                                fontSize: 9, letterSpacing: 1, fontWeight: 'bold',
+                              }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(telnyx.charged ?? []).map((c) => (
+                            <tr key={c.recordType}>
+                              <td style={{ padding: '7px 8px', borderBottom: `1px solid ${T.surface}` }}>
+                                {c.recordType}
+                              </td>
+                              <td style={{
+                                padding: '7px 8px', borderBottom: `1px solid ${T.surface}`,
+                                textAlign: 'right', fontFamily: MONO, color: T.muted,
+                              }}>{c.count}</td>
+                              <td style={{
+                                padding: '7px 8px', borderBottom: `1px solid ${T.surface}`,
+                                textAlign: 'right', fontFamily: MONO, fontWeight: 'bold',
+                              }}>{usd(c.totalCost)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {(telnyx.noCharges ?? []).length > 0 && (
+                    <div style={{ fontSize: 10.5, color: T.muted, marginTop: 12, lineHeight: 1.7 }}>
+                      <strong>Nothing billed:</strong> {(telnyx.noCharges ?? []).join(', ')}.
+                      These were queried and came back empty, which is the answer we want
+                      from every product line nobody turned on.
+                    </div>
+                  )}
+
+                  {(telnyx.unavailable ?? []).length > 0 && (
+                    <div style={{ fontSize: 10.5, color: T.amber, marginTop: 10, lineHeight: 1.7 }}>
+                      <strong>Could not be checked:</strong>{' '}
+                      {(telnyx.unavailable ?? []).map((u) => u.type).join(', ')}.
+                      Not the same as zero — these were not successfully queried, so
+                      a charge could be hiding in one of them.
+                    </div>
+                  )}
+                </>
+              )}
+
+              {!telnyx && !telnyxBusy && (
+                <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.7 }}>
+                  Nothing is fetched until you ask. This calls Telnyx once per record
+                  type, so it is a deliberate action rather than something that runs
+                  every time the app opens.
+                </div>
+              )}
+            </Panel>
+          )}
 
           {/* ── STATEMENT ──────────────────────────────────────────────── */}
           {tab === 'statement' && (
@@ -351,8 +494,24 @@ export default function BalanceApp() {
                             spurious credits that reverse later — so treat this as an
                             observation, not money banked. The month-end invoice settles it.</>
                         ) : e.activity.calls === 0 && e.activity.numbersBought.length === 0 ? (
-                          <>Nothing was dialed in this interval. A charge with no activity
-                            behind it is rental posting, a fee, or tax.</>
+                          // ── SETTLEMENT LAGS, SO THIS IS NORMAL ──────────
+                          // This used to read "a charge with no activity behind
+                          // it is rental, a fee, or tax", which invited the
+                          // wrong conclusion. Telnyx does not debit per call —
+                          // it settles in batches minutes to hours later. On 14
+                          // Sept $1.50 drained between 11:01 and 12:25 while not
+                          // one call was placed; the dialing that paid for it
+                          // had finished at 10:54.
+                          //
+                          // So an empty interval is the usual case, not a
+                          // mystery. Matching a charge to the calls that caused
+                          // it is not possible at this resolution and the app
+                          // should not pretend otherwise.
+                          <>No calls were placed during this interval — which is normal.
+                            Telnyx settles in batches minutes to hours after the calls
+                            themselves, so a charge here most likely belongs to earlier
+                            dialing. It can also be rental, a fee or tax. At this
+                            resolution the two cannot be told apart.</>
                         ) : (
                           <>
                             {e.activity.calls.toLocaleString()} calls

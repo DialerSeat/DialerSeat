@@ -8,6 +8,7 @@ import {
 } from '@/lib/telnyxIdempotency'
 import { recordAmdResult, markCallAbandoned } from '@/lib/dialerPacing'
 import { logCallEvent } from '@/lib/callEvents'
+import { sampleBalanceAfterCall } from '@/lib/telnyxBalance'
 import { hangupCallControlId, bridgeCallControlIds } from '@/lib/placeOutboundCall'
 import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
 import { abortSiblingFanoutLines } from '@/lib/predictiveController'
@@ -1261,6 +1262,20 @@ async function handleHangup(
   hangupCause?: string,
   hangupSource?: string
 ): Promise<void> {
+  // ── SAMPLE THE BALANCE WHILE MONEY IS MOVING ──────────────────────────
+  // Telnyx hides transaction detail until the following month, so until then
+  // these readings are the only contemporaneous record of what was charged.
+  // Sampling happened only when somebody opened the balance panel, which left
+  // gaps averaging 587 seconds — far too coarse to say which calls a charge
+  // belonged to. On 14 Sept two debits of $2.03 and $2.12 landed in a window
+  // whose entire billable activity modelled out at seven cents, and the best
+  // that could be said was "somewhere in the last ten minutes".
+  //
+  // Hangup is the one event that fires whenever money actually moves.
+  // Throttled to once every 45 seconds, never awaited, and it cannot throw.
+  // A phone call must never wait on bookkeeping.
+  sampleBalanceAfterCall('hangup')
+
   void logCallEvent({
     event_type: 'completed',
     call_control_id: callControlId,
