@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
-  dialKey, suppressedKeys, isSuppressed, SUPPRESSION_WINDOW_HOURS,
+  dialKey, attemptsByNumber, isExhausted,
+  MAX_DIALS_PER_NUMBER, ATTEMPT_WINDOW_DAYS,
 } from '@/lib/recentDialSuppression'
+
+const dialed = (phone: string, n: number) =>
+  Array.from({ length: n }, () => ({ phone_number: phone, duration: 22, answered_at: null }))
 
 describe('dialKey', () => {
   it('matches the same number written five different ways', () => {
@@ -32,79 +36,106 @@ describe('dialKey', () => {
   })
 })
 
-describe('suppressedKeys', () => {
-  it('includes a number that was really dialed', () => {
-    const s = suppressedKeys([
-      { phone_number: '+15551234567', answered_at: null, duration: 22 },
-    ])
-    expect(s.has('5551234567')).toBe(true)
+describe('attemptsByNumber', () => {
+  it('counts real dials', () => {
+    const a = attemptsByNumber(dialed('+15551234567', 3))
+    expect(a.get('5551234567')).toBe(3)
   })
 
-  it('IGNORES a dial that never rang', () => {
-    // The dead-socket signature: no answer and zero duration. Resting a
-    // number on one of these would suppress a call nobody ever made.
-    const s = suppressedKeys([
+  it('IGNORES dials that never rang', () => {
+    // The dead-socket signature: no answer, zero duration. Counting these
+    // would spend a person's budget on calls their phone never received.
+    const a = attemptsByNumber([
+      { phone_number: '+15551234567', answered_at: null, duration: 0 },
       { phone_number: '+15551234567', answered_at: null, duration: 0 },
     ])
-    expect(s.size).toBe(0)
+    expect(a.size).toBe(0)
   })
 
-  it('keeps an answered call even at zero duration', () => {
-    const s = suppressedKeys([
+  it('counts an answered call even at zero duration', () => {
+    const a = attemptsByNumber([
       { phone_number: '+15551234567', answered_at: '2026-09-14T14:00:00Z', duration: 0 },
     ])
-    expect(s.has('5551234567')).toBe(true)
+    expect(a.get('5551234567')).toBe(1)
   })
 
-  it('treats a missing duration as zero, not as dialed', () => {
-    const s = suppressedKeys([{ phone_number: '+15551234567' }])
-    expect(s.size).toBe(0)
+  it('treats a missing duration as never rang', () => {
+    expect(attemptsByNumber([{ phone_number: '+15551234567' }]).size).toBe(0)
   })
 
-  it('collapses the same number in different formats to one entry', () => {
-    const s = suppressedKeys([
-      { phone_number: '+15551234567', duration: 30 },
-      { phone_number: '(555) 123-4567', duration: 12 },
+  it('POOLS the same number across formats into one budget', () => {
+    // The whole point: one person, one budget, however many lists they are in.
+    const a = attemptsByNumber([
+      ...dialed('+15551234567', 2),
+      ...dialed('(555) 123-4567', 2),
+      ...dialed('555.123.4567', 2),
     ])
-    expect(s.size).toBe(1)
+    expect(a.size).toBe(1)
+    expect(a.get('5551234567')).toBe(6)
   })
 
   it('skips rows with no usable number instead of throwing', () => {
-    const s = suppressedKeys([
+    const a = attemptsByNumber([
       { phone_number: null, duration: 30 },
       { phone_number: 'n/a', duration: 30 },
     ])
-    expect(s.size).toBe(0)
+    expect(a.size).toBe(0)
   })
 })
 
-describe('isSuppressed', () => {
-  const set = new Set(['5551234567'])
-
-  it('suppresses the same number in a different format', () => {
-    expect(isSuppressed({ phone: '(555) 123-4567' }, set)).toBe(true)
+describe('isExhausted', () => {
+  it('allows a number below the cap', () => {
+    const a = attemptsByNumber(dialed('+15551234567', MAX_DIALS_PER_NUMBER - 1))
+    expect(isExhausted({ phone: '+15551234567' }, a)).toBe(false)
   })
 
-  it('lets a different number through', () => {
-    expect(isSuppressed({ phone: '+15559999999' }, set)).toBe(false)
+  it('blocks a number at the cap', () => {
+    const a = attemptsByNumber(dialed('+15551234567', MAX_DIALS_PER_NUMBER))
+    expect(isExhausted({ phone: '+15551234567' }, a)).toBe(true)
   })
 
-  it('lets an unusable number through rather than blocking the queue', () => {
-    // A lead we cannot key must never be silently undialable — the TCPA and
-    // dialable checks own that decision, not this one.
-    expect(isSuppressed({ phone: null }, set)).toBe(false)
-    expect(isSuppressed({ phone: '123' }, set)).toBe(false)
+  it('blocks a number over the cap', () => {
+    const a = attemptsByNumber(dialed('+15551234567', 112))
+    expect(isExhausted({ phone: '+15551234567' }, a)).toBe(true)
+  })
+
+  it('blocks across campaigns, which is the entire point', () => {
+    // Three lists, two attempts each. Per-list counting would see 2, 2, 2 and
+    // dial on. Per-number counting sees 6 and stops.
+    const a = attemptsByNumber([
+      ...dialed('+15551234567', 2),
+      ...dialed('+15551234567', 2),
+      ...dialed('+15551234567', 2),
+    ])
+    expect(isExhausted({ phone: '555-123-4567' }, a)).toBe(true)
+  })
+
+  it('never blocks a number it cannot key', () => {
+    const a = attemptsByNumber(dialed('+15551234567', 99))
+    expect(isExhausted({ phone: null }, a)).toBe(false)
+    expect(isExhausted({ phone: '123' }, a)).toBe(false)
   })
 
   it('lets everything through when nothing has been dialed', () => {
-    expect(isSuppressed({ phone: '+15551234567' }, new Set())).toBe(false)
+    expect(isExhausted({ phone: '+15551234567' }, new Map())).toBe(false)
+  })
+
+  it('honours an explicit cap', () => {
+    const a = attemptsByNumber(dialed('+15551234567', 4))
+    expect(isExhausted({ phone: '+15551234567' }, a, 3)).toBe(true)
+    expect(isExhausted({ phone: '+15551234567' }, a, 8)).toBe(false)
   })
 })
 
-describe('the window', () => {
-  it('rests a number for a day, so next-week follow-up is untouched', () => {
-    // Guards the distinction this module exists for: it is not an attempt
-    // cap. Raising this to weeks would quietly become one.
-    expect(SUPPRESSION_WINDOW_HOURS).toBe(24)
+describe('the cap itself', () => {
+  it('is six — the smallest cap that cost nobody on real traffic', () => {
+    // Measured over 30 days: cap 6 removed 16.5% of dials and lost 0 of the
+    // 44 people reached. Cap 5 lost one. Lowering this is a real trade and
+    // should be made deliberately, not drifted into.
+    expect(MAX_DIALS_PER_NUMBER).toBe(6)
+  })
+
+  it('counts over 30 days, so a re-uploaded list is not dead forever', () => {
+    expect(ATTEMPT_WINDOW_DAYS).toBe(30)
   })
 })

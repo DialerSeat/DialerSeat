@@ -2,7 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { isCallableNow } from '@/lib/callingWindow'
 import {
-  SUPPRESSION_WINDOW_HOURS, suppressedKeys, isSuppressed,
+  ATTEMPT_WINDOW_DAYS, attemptsByNumber, isExhausted,
   type DialedRow,
 } from '@/lib/recentDialSuppression'
 import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
@@ -269,15 +269,15 @@ async function handleNextLead(req: Request) {
       // lib/queueDiagnosis — reporting only the first reason is how a queue of
       // broken phone numbers came to be described as "outside calling hours".
       const diagnosis = new QueueDiagnosisBuilder()
-      const suppressed = await loadSuppressedNumbers(scopedCampaignIds)
+      const attempts = await loadAttemptCounts(scopedCampaignIds)
 
       for (const c of orderedCandidates) {
         if (callable) { toRelease.push(c.id); continue }
 
-        // Dialed from one of these campaigns within the window. Released like
-        // any other pass so the row returns to the pool rather than sitting
-        // claimed by a session that is not going to call it.
-        if (isSuppressed(c, suppressed)) { toRelease.push(c.id); continue }
+        // This number has spent its attempts across every campaign it sits
+        // in. Released like any other pass so the row returns to the pool
+        // rather than staying claimed by a session that will not call it.
+        if (isExhausted(c, attempts)) { toRelease.push(c.id); continue }
         const result = isCallableNow({ phone: c.phone ?? '', state: c.state }, { overrideWindow })
         if (result.allowed) { callable = c; continue }
         if (!blockReason) blockReason = result.reason || null
@@ -409,32 +409,31 @@ async function handleNextLead(req: Request) {
     // whole allowlist and pulled every matching lead back just to reorder them
     // in memory. The panel's earliest rows live in the first chunk, so the
     // common case now answers from one small query and stops.
-    // ── ALREADY CALLED TODAY, BY ANY CAMPAIGN ────────────────────────────────
-// Scoped to the CAMPAIGNS in play rather than to the agent, because the waste
-// this removes is cross-campaign by definition: the same number sitting in two
-// lists, dialed once from each. Scoping to one agent would let a teammate on
-// the other list call the same person ten minutes later, which is the exact
-// thing being fixed.
+    // ── ATTEMPTS SPENT, PER NUMBER, ACROSS EVERY CAMPAIGN ────────────────────
+// Scoped to the CAMPAIGNS in play rather than to the agent: a number in two
+// lists must share one budget however many people are dialing it. Scoping per
+// agent would let a teammate on the other list spend the budget again.
 //
-// One query per request against an indexed column over a one-day window. The
-// alternative — asking per candidate — is 150 round trips to answer the same
-// question.
-async function loadSuppressedNumbers(campaignIds: string[]): Promise<Set<string>> {
-  if (campaignIds.length === 0) return new Set()
-  const since = new Date(Date.now() - SUPPRESSION_WINDOW_HOURS * 3600_000).toISOString()
+// One query per request against an indexed column. The alternative — asking
+// per candidate — is 150 round trips to answer the same question.
+async function loadAttemptCounts(campaignIds: string[]): Promise<Map<string, number>> {
+  if (campaignIds.length === 0) return new Map()
+  const since = new Date(
+    Date.now() - ATTEMPT_WINDOW_DAYS * 24 * 3600_000
+  ).toISOString()
   const { data, error } = await supabaseAdmin
     .from('calls')
     .select('phone_number, answered_at, duration')
     .in('campaign_id', campaignIds)
     .gte('created_at', since)
-    .limit(20000)
-  // A failure here must never stop dialing. Suppression is an optimisation;
-  // an empty set simply means nothing is rested this request.
+    .limit(50000)
+  // A failure here must never stop dialing. The budget is an optimisation;
+  // an empty map simply means nothing is capped this request.
   if (error) {
-    console.error('[leads/next] suppression lookup failed, dialing on', error)
-    return new Set()
+    console.error('[leads/next] attempt-count lookup failed, dialing on', error)
+    return new Map()
   }
-  return suppressedKeys((data || []) as DialedRow[])
+  return attemptsByNumber((data || []) as DialedRow[])
 }
 
 const ID_CHUNK_SIZE = 150
@@ -547,11 +546,11 @@ const ID_CHUNK_SIZE = 150
     let callable: any = null
     let blockReason: string | null = null
     const personalDiagnosis = new QueueDiagnosisBuilder()
-    const personalSuppressed = await loadSuppressedNumbers(
+    const personalAttempts = await loadAttemptCounts(
       campaign_id && campaign_id !== 'all' ? [campaign_id] : activeCampaignIds
     )
     for (const c of orderedPersonalCandidates) {
-      if (isSuppressed(c, personalSuppressed)) continue
+      if (isExhausted(c, personalAttempts)) continue
       // Belt-and-braces against the status query above: isDialableLead also
       // rejects the retiring dispositions (DO NOT CALL / NOT INTERESTED /
       // CLOSED), which the status filter alone would miss for any row whose

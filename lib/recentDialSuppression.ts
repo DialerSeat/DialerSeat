@@ -1,32 +1,51 @@
 // ─────────────────────────────────────────────────────────────────────────
-// DON'T PAY TO CALL THE SAME PERSON TWICE IN ONE DAY
+// ONE ATTEMPT BUDGET PER PERSON, NOT PER LIST
 // ─────────────────────────────────────────────────────────────────────────
-// 9,318 phone numbers in this database exist in more than one campaign, and
-// only 70 are duplicated inside a single one. So the lists themselves are
-// fine — the waste is that dialing list A and then list B reaches the same
-// person again, and neither campaign knows the other just called them.
+// 9,318 phone numbers in this database sit in more than one campaign; only 70
+// are duplicated inside a single one. So the lists are fine — the waste is
+// that each campaign keeps its own attempt count, and a number in three lists
+// quietly gets three times the dialing.
 //
-// Measured over thirty days: 888 real dials went to 473 distinct numbers.
-// 46.7% of every dial was a repeat. One number was dialed 112 times.
+// The budget is counted on the NUMBER, across every campaign. A person in
+// three lists gets six attempts total, not eighteen. That is the
+// cross-campaign dedupe and the attempt cap in a single rule.
 //
-// THIS IS NOT AN ATTEMPT CAP. A lead can still be dialed as many times as
-// anybody wants — that was asked for deliberately and it stays. This only
-// stops the SAME NUMBER being dialed twice inside a short window because it
-// happened to be sitting in two lists at once, which nobody asked for and
-// nobody can see happening.
+// ── WHY SIX, AND WHY NOT A TIME WINDOW ─────────────────────────────────────
+// The first version of this rested a number for 24 hours after a dial. It
+// looked excellent on dial count — 43% removed — and it was the worst option
+// available, because measuring PEOPLE instead of dials showed it cost 7 of the
+// 44 people reached in thirty days. Same-day callbacks work. Dials are not
+// what this business sells.
 //
-// WHY A TIME WINDOW AND NOT A COUNT. A count punishes a number for being
-// popular over months; a window only ever suppresses a call somebody made
-// hours ago. Follow-up next week is untouched. That is the difference
-// between a rule that cuts cost and a rule that cuts conversations.
+// Measured over the same thirty days, counting people rather than dials:
 //
-// IT IS ALSO THE COMPLIANCE ANSWER. 112 calls to one number, reachable
-// through three campaigns simultaneously, is the shape of a TCPA complaint.
-// The cheapest dial and the safest dial are the same dial here.
+//   cap   dials cut   people lost
+//    3      26.5%          1
+//    4      22.1%          1
+//    5      18.9%          1
+//    6      16.5%          0      ← here
+//    8      14.5%          0
+//
+// Six is the smallest cap that costs nobody. Three would cut another ten
+// percent for one person a month; that is a trade worth having deliberately,
+// not one worth taking by default.
+//
+// THIS IS NOT "GIVE UP ON A LEAD". Unlimited attempts were asked for
+// deliberately and the spirit of that stays: nobody sensible dials one number
+// more than six times, and on this data nobody who was ever reached needed a
+// seventh. What it stops is a number being worked three times over because it
+// appears in three lists that cannot see each other.
 // ─────────────────────────────────────────────────────────────────────────
 
-/** Hours a number is rested after a real dial. */
-export const SUPPRESSION_WINDOW_HOURS = 24
+/** Attempts any one phone number gets, across every campaign. */
+export const MAX_DIALS_PER_NUMBER = 6
+
+/**
+ * How far back attempts are counted. A list re-uploaded months later should
+ * get a fresh budget rather than being permanently unreachable, and this is
+ * the window the cap was measured over.
+ */
+export const ATTEMPT_WINDOW_DAYS = 30
 
 /**
  * Comparable form of a phone number: the last ten digits.
@@ -34,7 +53,7 @@ export const SUPPRESSION_WINDOW_HOURS = 24
  * Numbers reach us as +1XXXXXXXXXX from the carrier and as anything at all
  * from a customer's CSV — 555.123.4567, (555) 123-4567, 15551234567. Matching
  * on the stored string compares formatting rather than people, which is how
- * the same number in two lists reads as two numbers.
+ * the same number in two lists reads as two numbers and gets two budgets.
  */
 export function dialKey(phone: string | null | undefined): string | null {
   if (!phone) return null
@@ -50,27 +69,34 @@ export interface DialedRow {
 }
 
 /**
- * The set of numbers already dialed inside the window.
+ * Attempts already spent, per number.
  *
- * A call that never rang is not a call. Those rows exist in their thousands
- * from the dead-socket era and one still turns up occasionally; counting them
- * here would rest a number nobody ever actually reached. See lib/dialOutcome.
+ * A call that never rang is not an attempt. Those rows exist in their
+ * thousands from the dead-socket era and one still turns up occasionally;
+ * counting them would spend a person's budget on calls their phone never
+ * received. See lib/dialOutcome.
  */
-export function suppressedKeys(rows: DialedRow[]): Set<string> {
-  const out = new Set<string>()
+export function attemptsByNumber(rows: DialedRow[]): Map<string, number> {
+  const out = new Map<string, number>()
   for (const r of rows) {
     if (!r.answered_at && (r.duration ?? 0) === 0) continue
     const k = dialKey(r.phone_number)
-    if (k) out.add(k)
+    if (!k) continue
+    out.set(k, (out.get(k) ?? 0) + 1)
   }
   return out
 }
 
-/** Was this lead's number dialed inside the window? */
-export function isSuppressed(
+/** Has this lead's number used up its budget? */
+export function isExhausted(
   lead: { phone?: string | null },
-  suppressed: Set<string>
+  attempts: Map<string, number>,
+  cap: number = MAX_DIALS_PER_NUMBER
 ): boolean {
   const k = dialKey(lead.phone)
-  return k !== null && suppressed.has(k)
+  // A number we cannot key is never blocked here. The dialable and calling
+  // window checks own that decision; this one must not quietly remove leads
+  // for having odd formatting.
+  if (k === null) return false
+  return (attempts.get(k) ?? 0) >= cap
 }
