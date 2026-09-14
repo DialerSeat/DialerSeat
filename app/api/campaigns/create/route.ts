@@ -51,11 +51,28 @@ export async function POST(req: Request) {
 
     const amdDefault = mode === 'progressive' || mode === 'predictive'
     const amdEnabled = typeof amd_enabled === 'boolean' ? amd_enabled : amdDefault
-    // Recording defaults OFF. It is opt-in per campaign: recording bills per
-    // minute plus storage on Telnyx, and silently recording by default is a
-    // legal exposure in two-party-consent states for a multi-tenant product.
-    // Only an explicit true turns it on.
-    const recordingEnabled = typeof recording_enabled === 'boolean' ? recording_enabled : false
+    // ── RECORDING DEFAULTS ON ─────────────────────────────────────────────
+    // It was opt-in, and in practice that meant off: 17 of 21 campaigns on the
+    // platform had never turned it on, so a team owner who wanted to hear how
+    // an agent sounded had nothing to listen to. A recording that was not made
+    // cannot be made later, which is what makes this the wrong default to
+    // leave to a checkbox nobody finds.
+    //
+    // Explicit false still wins, and the platform-wide kill switch
+    // (platform_config.recording_enabled_global) still overrides everything —
+    // resolveWithGlobal only ever turns things OFF, so that switch remains the
+    // way to stop recording everywhere in seconds without touching a campaign.
+    //
+    // WHAT THIS COSTS, since it is not only the recording line. AMD is what
+    // decides whether to record, so enabling recording on a campaign also runs
+    // detection on every dial from it (see amdOnDial in placeOutboundCall).
+    // Detection is billed per leg answered or not, and it is the cost that
+    // scales with dialing rather than with talk time.
+    //
+    // TWO-PARTY CONSENT is a real exposure and does not go away because the
+    // default changed. It now rests on the disclosure the agent gives and on
+    // the compliance surface, not on most campaigns happening to be off.
+    const recordingEnabled = typeof recording_enabled === 'boolean' ? recording_enabled : true
 
     // Whole lines only — see lib/predictiveController.ts. A fractional value
     // gets floored downstream, so 1.5 was silently one line and predictive
