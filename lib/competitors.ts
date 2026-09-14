@@ -653,6 +653,48 @@ export const COMPETITORS: Competitor[] = [
     crossShopped: false,
     segment: 'phone_system',
   },
+  // ── EVERY FIELD BELOW COMES FROM DIALER.IO'S OWN FAQ ───────────────────
+  // Their marketing pages publish almost nothing concrete: no pricing, no
+  // mode list, no integration names. dialer.io/faq answers all three
+  // directly, so that is what this is built from.
+  //
+  // Where they say nothing, this says nothing rather than filling the gap
+  // with a plausible guess. "Predictive is not claimed" is checkable against
+  // their own page; "has no predictive dialer" is an assertion about another
+  // company's product that nobody verified.
+  {
+    slug: 'dialer-io',
+    name: 'Dialer.io',
+    summary:
+      'A speed-to-lead dialer for SDR teams, built around number health and calling a fresh lead within seconds of it landing.',
+    pricing:
+      'Not published. Dialer.io states that pricing is tailored case by case with no hidden charges, quoted after a conversation about team size and dialing volume.',
+    contract: 'An initial three-month commitment, then month to month.',
+    dialing:
+      'Preview is the core mode, with power and progressive also offered. Predictive and multi-line dialing are not claimed.',
+    wins: [
+      'Speed to lead: a new lead is queued for dialing the moment it arrives, with cadences and cooldowns on the follow-ups',
+      'A proprietary number-health system that monitors caller IDs, cools down flagged ones and rotates them back in',
+      'Local presence matches the outbound caller ID to the area code being dialed',
+      'Calling-window and holiday restrictions covering both the United States and Australia',
+      'Native GoHighLevel and HubSpot sync through DialerSync, plus Zapier and Make.com',
+    ],
+    friction: [
+      'Pricing is published nowhere, so every quote starts with a sales conversation',
+      'A three-month commitment before month-to-month billing becomes available',
+      'Predictive and multi-line dialing are not claimed, so a high-volume floor stays at one live call per agent',
+      'Answering machine detection is not mentioned anywhere in their published material',
+    ],
+    bestFor:
+      'Inbound-lead SDR teams working out of GoHighLevel or HubSpot, where reaching a fresh lead in seconds matters more than raw dial volume.',
+    team: {
+      minimum: 'Quoted per team, starting with a three-month commitment',
+      addingASeat: 'Ask for a revised quote: seat pricing is not published',
+      fiveSeats: 'Not published',
+    },
+    crossShopped: false,
+    segment: 'sales_crm',
+  },
 ]
 
 export function competitorBySlug(slug: string): Competitor | undefined {

@@ -180,6 +180,13 @@ const COMPARISONS: HubItem[] = [
     keywords: 'sales crm hubspot pipedrive',
   },
   {
+    href: '/vs/dialer-io',
+    label: 'VS Dialer.io',
+    note: 'A published price against a three-month commitment',
+    added: '2026-09-14',
+    keywords: 'sales crm speed to lead gohighlevel hubspot dialerio dialer io sdr',
+  },
+  {
     href: '/vs/ytel',
     label: 'VS Ytel',
     note: 'No platform fee stacked on top of seats',
@@ -358,7 +365,7 @@ export default function VsHubView() {
           allTitle="All Comparisons"
           allItems={COMPARISONS}
           allCta="Browse all comparisons"
-          recentTitle="Recently Added"
+          recentTitle="Recently Added"
         />
 
         <div className="vshub-band">
