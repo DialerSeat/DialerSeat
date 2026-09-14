@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { canonical, labelFor } from '@/lib/dispositions'
 
 export const dynamic = 'force-dynamic'
 
@@ -253,7 +254,7 @@ export async function GET(req: NextRequest) {
     const dispositionCounts = new Map<string, number>()
     // `reached` on both: dials that actually rang, which is the denominator
     // every rate below uses. `calls` stays every dial. See lib/dialOutcome.ts.
-    const perCampaign = new Map<string, { calls: number; conversions: number; talk: number; reached: number }>()
+    const perCampaign = new Map<string, { calls: number; conversions: number; talk: number; reached: number; contacted: number }>()
     const buckets = new Map<string, { calls: number; conversions: number; reached: number }>()
 
     for (const c of rows) {
@@ -282,12 +283,13 @@ export async function GET(req: NextRequest) {
       const dKey = c.disposition || 'No disposition'
       dispositionCounts.set(dKey, (dispositionCounts.get(dKey) || 0) + c.calls)
 
-      const pc = perCampaign.get(c.campaign_id) || { calls: 0, conversions: 0, talk: 0, reached: 0 }
+      const pc = perCampaign.get(c.campaign_id) || { calls: 0, conversions: 0, talk: 0, reached: 0, contacted: 0 }
       pc.calls += c.calls
       // Ranking campaigns by a rate whose denominator is dials rather than
       // dials that RANG ranks them by how much of their history predates the
       // dead-socket fix. See lib/dialOutcome.ts.
       pc.reached += c.reached
+      if (c.disposition && CONTACT_DISPOSITIONS.has(c.disposition)) pc.contacted += c.calls
       if (isConversion) pc.conversions += c.calls
       pc.talk += c.talk
       perCampaign.set(c.campaign_id, pc)
@@ -420,16 +422,31 @@ export async function GET(req: NextRequest) {
           label: k,
           value: v.reached > 0 ? Math.round((v.conversions / v.reached) * 1000) / 10 : 0,
         })),
+        // ── SAME SHAPE AS THE PERSONAL ANALYTICS PAGE ──────────────────
+        // These two were {label,value} and {label,value,conversions}, which is
+        // what the old bar lists wanted. They now carry exactly what
+        // /api/analytics/dispositions and /api/analytics/campaigns carry, so
+        // the same components can draw both and the same figure stops wearing
+        // two different shapes depending on which screen you opened.
+        //
+        // canonical() collapses legacy spellings and labelFor() gives the words
+        // — so the pie reads "Not interested" rather than NOT INTERESTED, on
+        // both pages, from one implementation.
         dispositions: Array.from(dispositionCounts.entries())
           .sort((a, b) => b[1] - a[1])
-          .map(([label, value]) => ({ label, value })),
+          .map(([stored, count]) => ({
+            disposition: canonical(stored) ?? stored,
+            label: labelFor(stored),
+            count,
+          })),
         byCampaign: Array.from(perCampaign.entries())
           .sort((a, b) => b[1].calls - a[1].calls)
           .slice(0, 8)
           .map(([cid, v]) => ({
-            label: campaignName.get(cid) || 'Campaign',
-            value: v.calls,
-            conversions: v.conversions,
+            name: campaignName.get(cid) || 'Campaign',
+            total: v.calls,
+            contacted: v.contacted,
+            converted: v.conversions,
           })),
       },
     })

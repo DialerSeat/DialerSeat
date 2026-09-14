@@ -1,6 +1,11 @@
 'use client'
 
 import { useId, useState } from 'react'
+import {
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
+  CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from 'recharts'
+import { DISPOSITION_COLORS, renderDispositionLabels } from '@/components/analytics/dispositionPie'
 
 // ── COLOURS COME FROM THE TENANT, VIA STYLE NOT ATTRIBUTES ───────────────
 // The rest of the teams area reads --brand-* variables. These charts could
@@ -28,6 +33,14 @@ const DIM = 'var(--teams-muted, #80848e)'
 // filter is a chart nobody can compare against the one they saw a second ago.
 const SERIES = ['#4a9eff', '#32c48d', '#c4884a', '#a37bd8', '#d86a8a', '#4ac0c4']
 const GRID = 'var(--teams-border, #2a2c31)'
+
+/** One tooltip style for both charts, matching the rest of the teams area. */
+const TOOLTIP = {
+  background: 'var(--teams-panel, #232428)',
+  border: '1px solid var(--teams-border, #1a1b1e)',
+  color: 'var(--teams-text, #f2f3f5)',
+  fontSize: 11,
+} as const
 
 export interface Point { label: string; value: number }
 export interface CampaignPoint extends Point { conversions: number }
@@ -241,60 +254,87 @@ export function ConversionChart({ points }: { points: Point[] }) {
   )
 }
 
-export function DispositionChart({ points }: { points: Point[] }) {
+export interface DispositionSlice {
+  disposition: string
+  label: string
+  count: number
+}
+
+/**
+ * The same pie the personal analytics page draws.
+ *
+ * This was a horizontal bar list, so the identical figure looked like two
+ * different things depending on which screen you opened. The pie, its colours
+ * and its label collision-avoidance now live in components/analytics and are
+ * imported by both, rather than reimplemented here where they would drift.
+ */
+export function DispositionChart({ points }: { points: DispositionSlice[] }) {
   return (
     <Card title="Disposition Breakdown">
-      <BarList points={points} colorByIndex />
+      {points.length === 0 ? <Empty /> : (
+        <ResponsiveContainer width="100%" height={240}>
+          <PieChart>
+            <Pie
+              data={points}
+              dataKey="count"
+              // The label, not the stored value — so it reads "Not interested"
+              // rather than NOT INTERESTED, and no legacy spelling reaches the
+              // screen.
+              nameKey="label"
+              cx="50%"
+              cy="50%"
+              outerRadius={75}
+              // recharts supplies cx/cy/outerRadius/index at call time, which
+              // no static type here can know about, so the merged object is
+              // cast through unknown rather than asserted to overlap.
+              label={(props: unknown) => renderDispositionLabels({
+                ...(props as object), data: points, chartHeight: 240,
+              } as unknown as Parameters<typeof renderDispositionLabels>[0])}
+              labelLine={false}
+            >
+              {points.map((d, i) => (
+                <Cell key={i} fill={DISPOSITION_COLORS[d.disposition] || '#bbb'} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={TOOLTIP} />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
     </Card>
   )
 }
 
-export function CampaignChart({ points }: { points: CampaignPoint[] }) {
+export interface CampaignBar {
+  name: string
+  total: number
+  contacted: number
+  converted: number
+}
+
+/**
+ * The same grouped bars the personal analytics page draws: total, contacted,
+ * converted, side by side per campaign.
+ *
+ * It used to be one bar per campaign with conversions overlaid inside it,
+ * which hid "contacted" entirely and made the conversion share hard to read
+ * against anything but itself.
+ */
+export function CampaignChart({ points }: { points: CampaignBar[] }) {
   return (
-    <Card
-      title="Campaign Performance"
-      subtitle={points.length > 0 ? 'Calls placed, with conversions' : undefined}
-    >
+    <Card title="Campaign Performance">
       {points.length === 0 ? <Empty /> : (
-        <div style={{ display: 'grid', gap: 8, paddingTop: 2 }}>
-          {points.map(p => {
-            const max = Math.max(...points.map(x => x.value), 1)
-            const rate = p.value > 0 ? Math.round((p.conversions / p.value) * 1000) / 10 : 0
-            return (
-              <div key={p.label}>
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between',
-                  fontSize: 11.5, marginBottom: 3,
-                }}>
-                  <span style={{ color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {p.label}
-                  </span>
-                  <span style={{ color: DIM, flexShrink: 0, marginLeft: 10 }}>
-                    {p.value.toLocaleString()} · {rate}%
-                  </span>
-                </div>
-                {/* Two marks, 2px apart, so the conversions bar reads as part of
-                    the calls bar rather than a second unrelated series. */}
-                <div style={{ height: 6, background: GRID, borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
-                  <div style={{
-                    width: `${(p.value / max) * 100}%`, height: '100%',
-                    background: SERIES[0], borderRadius: 3,
-                  }} />
-                  <div style={{
-                    position: 'absolute', top: 0, left: 0,
-                    width: `${(p.conversions / max) * 100}%`, height: '100%',
-                    background: SERIES[1], borderRadius: 3,
-                    boxShadow: `0 0 0 2px ${PANEL}`,
-                  }} />
-                </div>
-              </div>
-            )
-          })}
-          <div style={{ display: 'flex', gap: 14, marginTop: 4, fontSize: 10.5, color: DIM }}>
-            <span><span style={{ display: 'inline-block', width: 8, height: 8, background: SERIES[0], borderRadius: 2, marginRight: 5 }} />Calls</span>
-            <span><span style={{ display: 'inline-block', width: 8, height: 8, background: SERIES[1], borderRadius: 2, marginRight: 5 }} />Conversions</span>
-          </div>
-        </div>
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={points} layout="horizontal">
+            <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+            <XAxis dataKey="name" stroke={DIM} fontSize={9} />
+            <YAxis stroke={DIM} fontSize={10} allowDecimals={false} domain={[0, 'auto']} />
+            <Tooltip contentStyle={TOOLTIP} />
+            <Legend wrapperStyle={{ fontSize: 10 }} />
+            <Bar dataKey="total" fill={SERIES[0]} name="Total" />
+            <Bar dataKey="contacted" fill={SERIES[3]} name="Contacted" />
+            <Bar dataKey="converted" fill={SERIES[1]} name="Converted" />
+          </BarChart>
+        </ResponsiveContainer>
       )}
     </Card>
   )
