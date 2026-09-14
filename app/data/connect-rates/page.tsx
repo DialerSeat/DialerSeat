@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { neverRang } from '@/lib/dialOutcome'
 import Link from 'next/link'
 import JsonLd from '@/components/json-ld'
 import { organizationSchema, breadcrumbSchema } from '@/lib/schema'
@@ -83,7 +84,9 @@ async function loadBuckets(): Promise<{ byState: Bucket[]; byHour: Bucket[]; tot
   // lead, a customer, or a campaign.
   const { data, error } = await supabase
     .from('calls')
-    .select('phone_number, answered_at, created_at')
+    // duration is read only by neverRang, which cannot tell a dial that never
+    // rang from one that rang out without it.
+    .select('phone_number, answered_at, created_at, duration')
     .gte('created_at', since)
     .limit(100000)
 
@@ -94,6 +97,17 @@ async function loadBuckets(): Promise<{ byState: Bucket[]; byHour: Bucket[]; tot
   const total: Bucket = { key: 'all', dials: 0, connects: 0 }
 
   for (const row of data) {
+    // ── A DIAL THAT NEVER RANG IS NOT A DIAL THIS PAGE SHOULD PUBLISH ────
+    // This is a public page stating our own connect rate. The dead-socket bug
+    // created lead legs that were torn down before they reached a phone, and
+    // they are 79% of the table — publishing them would tell the world our
+    // connect rate is 8.8% when the calls that actually rang answer at 41.7%.
+    //
+    // Skipped outright rather than counted-but-excluded, because unlike the
+    // internal surfaces there is no dial count on this page to keep whole.
+    // See lib/dialOutcome.ts.
+    if (neverRang(row)) continue
+
     const connected = !!row.answered_at
     total.dials++
     if (connected) total.connects++

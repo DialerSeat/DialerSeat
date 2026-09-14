@@ -205,8 +205,10 @@ export async function GET(req: NextRequest) {
     let talkTotal = 0
 
     const dispositionCounts = new Map<string, number>()
-    const perCampaign = new Map<string, { calls: number; conversions: number; talk: number }>()
-    const buckets = new Map<string, { calls: number; conversions: number }>()
+    // `reached` on both: dials that actually rang, which is the denominator
+    // every rate below uses. `calls` stays every dial. See lib/dialOutcome.ts.
+    const perCampaign = new Map<string, { calls: number; conversions: number; talk: number; reached: number }>()
+    const buckets = new Map<string, { calls: number; conversions: number; reached: number }>()
 
     for (const c of rows) {
       const disp = c.disposition.toUpperCase()
@@ -234,8 +236,12 @@ export async function GET(req: NextRequest) {
       const dKey = c.disposition || 'No disposition'
       dispositionCounts.set(dKey, (dispositionCounts.get(dKey) || 0) + c.calls)
 
-      const pc = perCampaign.get(c.campaign_id) || { calls: 0, conversions: 0, talk: 0 }
+      const pc = perCampaign.get(c.campaign_id) || { calls: 0, conversions: 0, talk: 0, reached: 0 }
       pc.calls += c.calls
+      // Ranking campaigns by a rate whose denominator is dials rather than
+      // dials that RANG ranks them by how much of their history predates the
+      // dead-socket fix. See lib/dialOutcome.ts.
+      pc.reached += c.reached
       if (isConversion) pc.conversions += c.calls
       pc.talk += c.talk
       perCampaign.set(c.campaign_id, pc)
@@ -245,8 +251,9 @@ export async function GET(req: NextRequest) {
       const bk = range === 'today'
         ? `${String(c.hour).padStart(2, '0')}:00`
         : c.day
-      const b = buckets.get(bk) || { calls: 0, conversions: 0 }
+      const b = buckets.get(bk) || { calls: 0, conversions: 0, reached: 0 }
       b.calls += c.calls
+      b.reached += c.reached
       if (isConversion) b.conversions += c.calls
       buckets.set(bk, b)
     }
@@ -262,8 +269,8 @@ export async function GET(req: NextRequest) {
     const MIN_CALLS_TO_RANK = 5
     let bestCampaign: { id: string; name: string; rate: number; calls: number } | null = null
     for (const [cid, v] of perCampaign) {
-      if (v.calls < MIN_CALLS_TO_RANK) continue
-      const rate = v.conversions / v.calls
+      if (v.reached < MIN_CALLS_TO_RANK) continue
+      const rate = v.conversions / v.reached
       if (!bestCampaign || rate > bestCampaign.rate) {
         bestCampaign = {
           id: cid,
@@ -295,7 +302,7 @@ export async function GET(req: NextRequest) {
         volume: orderedBuckets.map(([k, v]) => ({ label: k, value: v.calls })),
         conversionRate: orderedBuckets.map(([k, v]) => ({
           label: k,
-          value: v.calls > 0 ? Math.round((v.conversions / v.calls) * 1000) / 10 : 0,
+          value: v.reached > 0 ? Math.round((v.conversions / v.reached) * 1000) / 10 : 0,
         })),
         dispositions: Array.from(dispositionCounts.entries())
           .sort((a, b) => b[1] - a[1])

@@ -291,22 +291,30 @@ export async function GET(
       calls: number
       connected: number
       conversions: number
+      /** Dials that rang. The denominator for this campaign's connect rate. */
+      reachedCalls: number
       talkSeconds: number
     }
     const statsByCampaign: Record<string, CampaignStat> = {}
     for (const cid of scopedCampaignIds) {
       const tc = teamCampaigns.find(t => t.campaignId === cid)
-      statsByCampaign[cid] = { campaignId: cid, name: tc?.name || null, calls: 0, connected: 0, conversions: 0, talkSeconds: 0 }
+      statsByCampaign[cid] = { campaignId: cid, name: tc?.name || null, calls: 0, connected: 0, conversions: 0, reachedCalls: 0, talkSeconds: 0 }
     }
     for (const c of calls) {
       const cid = c.campaign_id
       if (!statsByCampaign[cid]) {
         const tc = teamCampaigns.find(t => t.campaignId === cid)
-        statsByCampaign[cid] = { campaignId: cid, name: tc?.name || null, calls: 0, connected: 0, conversions: 0, talkSeconds: 0 }
+        statsByCampaign[cid] = { campaignId: cid, name: tc?.name || null, calls: 0, connected: 0, conversions: 0, reachedCalls: 0, talkSeconds: 0 }
       }
       const cs = statsByCampaign[cid]
       cs.calls++
-      if (c.duration && c.duration > 0) { cs.connected++; cs.talkSeconds += c.duration }
+      // Same two corrections as the per-agent loop above, which this block was
+      // missed by: connected means somebody answered, not that the line was
+      // open, and talk time is the answered span rather than wall clock
+      // including ring. reached is the denominator for the rate.
+      if (!neverRang(c)) cs.reachedCalls++
+      if (c.answered_at) cs.connected++
+      cs.talkSeconds += typeof c.talk_seconds === 'number' ? Math.max(0, c.talk_seconds) : 0
       if (c.disposition && CONVERSION_DISPOS.has(c.disposition)) cs.conversions++
     }
     const campaignBreakdown = Object.values(statsByCampaign).sort((a, b) => b.calls - a.calls)

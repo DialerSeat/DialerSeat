@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { neverRang } from '@/lib/dialOutcome'
 import { getServiceClient } from '@/lib/supabase'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
@@ -121,7 +122,7 @@ export async function GET(
       // them as calls understates every connect rate on the page.
       supabase
         .from('calls')
-        .select('user_id, answered_at, talk_seconds, created_at')
+        .select('user_id, answered_at, talk_seconds, created_at, duration')
         .eq('team_id', teamId)
         .not('call_control_id', 'is', null)
         .gte('created_at', sinceIso)
@@ -141,11 +142,20 @@ export async function GET(
       if (s.user_id) sessionByUser.set(String(s.user_id), s)
     }
 
-    const callsByUser = new Map<string, { answered: boolean; talk: number }[]>()
+    const callsByUser = new Map<string, { answered: boolean; talk: number; reached: boolean }[]>()
     for (const c of callsRes.data ?? []) {
       const key = String(c.user_id)
       const list = callsByUser.get(key) ?? []
-      list.push({ answered: !!c.answered_at, talk: c.talk_seconds ?? 0 })
+      // reached: the dial actually got to a phone. The dead-socket bug created
+      // lead legs torn down before they rang, and they belong in callsToday
+      // but not in the denominator of a connect rate. Same reasoning as the
+      // note above about dispositions with no Telnyx call behind them, and the
+      // same effect. See lib/dialOutcome.ts.
+      list.push({
+        answered: !!c.answered_at,
+        talk: c.talk_seconds ?? 0,
+        reached: !neverRang(c),
+      })
       callsByUser.set(key, list)
     }
 
@@ -164,6 +174,7 @@ export async function GET(
         []
 
       const answered = calls.filter(c => c.answered).length
+      const reached = calls.filter(c => c.reached).length
       const full = [u?.first_name, u?.last_name].filter(Boolean).join(' ').trim()
 
       let live: LiveState = 'offline'
@@ -192,8 +203,8 @@ export async function GET(
         answeredToday: answered,
         // Null rather than 0% on a tiny sample — a dash is honest where a
         // percentage would invent precision nobody has earned yet.
-        connectRatePct: calls.length >= 5
-          ? Math.round((answered / calls.length) * 100)
+        connectRatePct: reached >= 5
+          ? Math.round((answered / reached) * 100)
           : null,
         talkSecondsToday: calls.reduce((s, c) => s + c.talk, 0),
         spark: calls.slice(-20).map(c => (c.answered ? 1 : 0)),

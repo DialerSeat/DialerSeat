@@ -50,6 +50,8 @@ interface MemberStat {
 interface CampaignStat {
   campaignId: string
   name: string | null
+  /** Dials that rang. The denominator for this campaign's connect rate. */
+  reachedCalls: number
   calls: number
   connected: number
   conversions: number
@@ -854,7 +856,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                 <div className="ta-section-head">▸ BY CAMPAIGN</div>
                 <div className="ta-list">
                   {data.campaignBreakdown.map(c => {
-                    const cr = c.calls > 0 ? (c.connected / c.calls) * 100 : null
+                    const cr = c.reachedCalls > 0 ? (c.connected / c.reachedCalls) * 100 : null
                     return (
                       <div key={c.campaignId} className="ta-row">
                         <div style={{ minWidth: 0, flex: 1 }}>
