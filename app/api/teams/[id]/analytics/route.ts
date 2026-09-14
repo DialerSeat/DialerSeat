@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { computeDialingTime } from '@/lib/dialingTime'
+
+/** See the note where this is used: the horizon of everything on this page. */
+const CALLS_CAP = 20000
+
+// How many recorded calls the feed carries.
+//
+// Bounded because every row can open an <audio> element, and with recording now
+// on for every campaign a busy team produces these by the thousand. Three
+// hundred is several days of a floor's recorded calls, which is the range over
+// which "scroll the feed" is still how anybody would look for one. Past that
+// the filters above it are the tool, and the page says when it is truncated
+// rather than quietly ending.
+const RECORDINGS_CAP = 300
 
 type Range = 'today' | 'week' | 'month' | 'custom' | 'all'
 
@@ -129,7 +143,7 @@ export async function GET(
     if (scopedCampaignIds.length > 0) {
       let callsQuery = supabaseAdmin
         .from('calls')
-        .select('id, user_id, campaign_id, lead_id, disposition, duration, created_at, leads(first_name, last_name, phone)')
+        .select('id, user_id, campaign_id, lead_id, disposition, duration, talk_seconds, answered_at, recording_id, recording_url, recording_status, recording_duration, created_at, leads(first_name, last_name, phone)')
         .in('campaign_id', scopedCampaignIds)
 
       if (since) callsQuery = callsQuery.gte('created_at', since.toISOString())
@@ -143,7 +157,12 @@ export async function GET(
         callsQuery = callsQuery.in('user_id', memberClerkIds)
       }
 
-      callsQuery = callsQuery.order('created_at', { ascending: false }).limit(2000)
+      // Raised from 2,000 with the default range now being all time. Stats and
+      // the recordings feed are both built from this one array, so the cap is
+      // the real horizon of this page: past it, an owner's oldest calls simply
+      // stop existing here. 9,004 calls exist platform-wide today, so no team
+      // is close, and the page says so when a team does reach it.
+      callsQuery = callsQuery.order('created_at', { ascending: false }).limit(CALLS_CAP)
 
       const { data, error: callsErr } = await callsQuery
       if (callsErr) throw callsErr
@@ -160,6 +179,8 @@ export async function GET(
       connected: number
       conversions: number
       talkSeconds: number
+      /** How long the dial sequence ran. Always >= talkSeconds. */
+      dialedSeconds: number
       spentCents?: number
     }
     const statsByUser: Record<string, MemberStat> = {}
@@ -179,30 +200,66 @@ export async function GET(
         connected: 0,
         conversions: 0,
         talkSeconds: 0,
+        dialedSeconds: 0,
       }
     }
 
     const seedSet = filterUserId ? [filterUserId] : memberClerkIds
     for (const uid of seedSet) statsByUser[uid] = seedFor(uid)
 
-    const teamTotals = { calls: 0, connected: 0, conversions: 0, talkSeconds: 0 }
+    const teamTotals = { calls: 0, connected: 0, conversions: 0, talkSeconds: 0, dialedSeconds: 0 }
 
     for (const c of calls) {
       const uid = c.user_id
       if (!statsByUser[uid]) statsByUser[uid] = seedFor(uid)
       const s = statsByUser[uid]
       s.calls++; teamTotals.calls++
-      if (c.duration && c.duration > 0) {
+      // ── CONNECTED MEANS SOMEBODY ANSWERED ────────────────────────────
+      // This counted any call with a duration above zero, which is every call
+      // that reached the carrier at all — a phone ringing out for 25 seconds
+      // has a duration. answered_at is the only field that means answered.
+      if (c.answered_at) {
         s.connected++
-        s.talkSeconds += c.duration
         teamTotals.connected++
-        teamTotals.talkSeconds += c.duration
       }
+      // ── TALK TIME IS NOT WALL CLOCK ──────────────────────────────────
+      // And this added `duration`, which runs from the dial and includes all
+      // of the ringing. Same bug as the one fixed in unit economics, where it
+      // overstated the figure by 93%. talk_seconds is the answered span.
+      const talk = typeof c.talk_seconds === 'number' ? Math.max(0, c.talk_seconds) : 0
+      s.talkSeconds += talk
+      teamTotals.talkSeconds += talk
       if (c.disposition && CONVERSION_DISPOS.has(c.disposition)) {
         s.conversions++
         teamTotals.conversions++
       }
     }
+
+    // ── HOURS DIALED, WHICH IS NOT TALK TIME ──────────────────────────────
+    // An owner asking "how hard is this agent working" is not asking for talk
+    // time. On a 20% connect rate a full day of dialing is about an hour of
+    // talking, and an agent who dialed all day reads as barely present. Hours
+    // dialed is how long the dial sequence was actually running: the calls
+    // themselves plus the bounded wrap-up between them.
+    //
+    // Reconstructed from call timestamps rather than read from a session
+    // table, because agent_sessions is upserted per user and keeps no history.
+    // See lib/dialingTime.ts for why the gaps are measured end to start.
+    const callsForTime: Record<string, Array<{ created_at: string; duration: number | null; talk_seconds: number | null }>> = {}
+    for (const c of calls) {
+      if (!c.user_id) continue
+      ;(callsForTime[c.user_id] ||= []).push({
+        created_at: c.created_at, duration: c.duration, talk_seconds: c.talk_seconds,
+      })
+    }
+    for (const uid of Object.keys(statsByUser)) {
+      statsByUser[uid].dialedSeconds = computeDialingTime(callsForTime[uid] || []).dialedSeconds
+    }
+    // The team's own figure is the SUM of each agent's, not the merge of all
+    // their calls. Two agents dialing at once are two people working, and a
+    // merged interval would count that hour once.
+    const teamDialedSeconds = Object.values(statsByUser)
+      .reduce((sum, m) => sum + (m.dialedSeconds || 0), 0)
 
     const leaderboard = Object.values(statsByUser).sort((a, b) => {
       if (b.conversions !== a.conversions) return b.conversions - a.conversions
@@ -275,6 +332,53 @@ export async function GET(
     // regardless of the owner's own plan, so this only means anything if
     // it reads the real amount_cents off each charge. Financial data, so
     // owner-only, same gating as the leaderboard.
+    // ── THE RECORDINGS FEED ───────────────────────────────────────────────
+    // Every recorded call in scope, newest first, as they came in. Built from
+    // the same `calls` array as the stats above, so what the feed shows and
+    // what the numbers say can never disagree, and the campaign, agent and
+    // timeframe filters apply to both without being implemented twice.
+    //
+    // A row appears when the call HAS audio (recording_id or recording_url),
+    // not when recording was merely requested. A call still being recorded, or
+    // one where AMD decided against it, has nothing to play.
+    //
+    // No URL is sent. calls.recording_url is a presigned S3 link that Telnyx
+    // expires ten minutes after the call, so shipping it would give a feed of
+    // links that are dead by the time anyone clicks them. Playback goes
+    // through /api/recordings/play, which resolves a fresh one per request.
+    // No extra gating here: the query above already restricted `calls` to the
+    // caller's own rows when they are not the owner, so the feed inherits it.
+    const recordedCalls = calls.filter(c => c.recording_id || c.recording_url)
+    const recordings = recordedCalls
+      .slice(0, RECORDINGS_CAP)
+      // c is implicitly any because `calls` is; annotating it explicitly is
+      // what the lint rule objects to, and inference gives the same thing.
+      .map(c => {
+        const lead = c.leads || {}
+        const u = userById[c.user_id]
+        const agentName = u
+          ? [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || c.user_id.slice(0, 12)
+          : c.user_id.slice(0, 12)
+        const tc = teamCampaigns.find(t => t.campaignId === c.campaign_id)
+        return {
+          id: c.id,
+          at: c.created_at,
+          agentId: c.user_id,
+          agentName,
+          leadName: [lead.first_name, lead.last_name].filter(Boolean).join(' ').trim() || null,
+          phone: lead.phone || null,
+          campaignId: c.campaign_id,
+          campaignName: tc?.name || null,
+          disposition: c.disposition || null,
+          // Both, because they answer different questions: how long the line
+          // was open, and how long anybody was actually talking.
+          durationSeconds: typeof c.duration === 'number' ? c.duration : 0,
+          talkSeconds: typeof c.talk_seconds === 'number' ? c.talk_seconds : 0,
+          recordingSeconds: typeof c.recording_duration === 'number' ? c.recording_duration : null,
+          answered: !!c.answered_at,
+        }
+      })
+
     let totalSeatSpendCents = 0
     if (isOwner) {
       let spendQuery = supabaseAdmin
@@ -332,10 +436,15 @@ export async function GET(
           : uid.slice(0, 12)
         return { userId: uid, name, isOwner: uid === team.owner_id }
       }),
-      totals: teamTotals,
+      totals: { ...teamTotals, dialedSeconds: teamDialedSeconds },
+      /** True when the window hit CALLS_CAP, so the page can say it is partial. */
+      truncated: calls.length >= CALLS_CAP,
       leaderboard: isOwner ? leaderboard : [],
       viewerStats,
       recentCalls,
+      recordings,
+      /** How many recorded calls matched, before RECORDINGS_CAP trimmed them. */
+      recordingsTotal: recordedCalls.length,
       campaignBreakdown,
       series,
       totalSeatSpendCents: isOwner ? totalSeatSpendCents : null,

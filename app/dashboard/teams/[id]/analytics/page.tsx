@@ -40,6 +40,8 @@ interface MemberStat {
   connected: number
   conversions: number
   talkSeconds: number
+  /** How long this agent's dial sequence ran. Always >= talkSeconds. */
+  dialedSeconds: number
   spentCents?: number
 }
 
@@ -90,13 +92,39 @@ interface AnalyticsResponse {
   team: { id: string; name: string }
   campaigns: TeamCampaign[]
   members: TeamMemberRef[]
-  totals: { calls: number; connected: number; conversions: number; talkSeconds: number }
+  totals: {
+    calls: number; connected: number; conversions: number
+    talkSeconds: number
+    /** How long dial sequences ran, summed across agents. See the KPI note. */
+    dialedSeconds: number
+  }
   leaderboard: MemberStat[]
   viewerStats: MemberStat
   recentCalls: RecentCall[]
+  recordings: TeamRecording[]
+  /** Matches before the feed's cap. Larger than recordings.length means more. */
+  recordingsTotal?: number
+  /** True when the window hit the row cap, so the page can say it is partial. */
+  truncated?: boolean
   campaignBreakdown: CampaignStat[]
   series: SeriesPoint[]
   totalSeatSpendCents: number | null
+}
+
+interface TeamRecording {
+  id: string
+  at: string
+  agentId: string
+  agentName: string
+  leadName: string | null
+  phone: string | null
+  campaignId: string | null
+  campaignName: string | null
+  disposition: string | null
+  durationSeconds: number
+  talkSeconds: number
+  recordingSeconds: number | null
+  answered: boolean
 }
 
 function fmtTime(s: number): string {
@@ -263,6 +291,10 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
   const [customEnd, setCustomEnd] = useState('')
   const [campaignFilter, setCampaignFilter] = useState<string>('all')
   const [memberFilter, setMemberFilter] = useState<string>('all')
+  /** Which recording is open. One at a time: two playing at once is noise. */
+  const [playingId, setPlayingId] = useState<string | null>(null)
+  /** Per-recording playback failure, so a dead one says so instead of nothing. */
+  const [playErrors, setPlayErrors] = useState<Record<string, boolean>>({})
   const [data, setData] = useState<AnalyticsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -464,6 +496,22 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
           display: flex; align-items: center; gap: 12px;
         }
         .ta-row:last-child { border-bottom: none; }
+        .ta-row-click { cursor: pointer; }
+        .ta-row-click:hover { background: color-mix(in srgb, var(--brand-on-page-bg) 4%, transparent); }
+        .ta-row-click:focus-visible { outline: 2px solid ${T.blue}; outline-offset: -2px; }
+
+        .ta-rec-main { min-width: 0; flex: 1 1 auto; }
+        .ta-rec-lead { font-size: 13px; font-weight: 700; color: ${T.text};
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ta-rec-meta { font-size: 10px; letter-spacing: 1px; color: ${T.muted}; margin-top: 2px; }
+        .ta-rec-right { margin-left: auto; text-align: right; flex-shrink: 0; }
+        .ta-rec-play {
+          background: none; border: 1px solid ${T.border}; border-radius: 3px;
+          color: ${T.text}; font-size: 10px; letter-spacing: 1px; font-weight: 700;
+          padding: 5px 10px; cursor: pointer; flex-shrink: 0;
+        }
+        .ta-rec-play:hover { border-color: ${T.blue}; color: ${T.blue}; }
+        .ta-rec-audio { width: 100%; margin-top: 8px; }
 
         .ta-lb-metrics { display: flex; gap: 20px; margin-left: auto; flex-wrap: wrap; }
         .ta-lb-metric { text-align: right; min-width: 56px; }
@@ -610,6 +658,20 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                   </div>
                 </div>
               </div>
+              {/* ── HOURS DIALED IS NOT TALK TIME ──────────────────────────
+                  The pair is the point. On a 20% connect rate a full day of
+                  dialing is about an hour of talking, so talk time alone makes
+                  a floor that worked hard look idle. This is how long the dial
+                  sequences actually ran, summed across agents, so two people
+                  dialing at once is two hours. */}
+              <div className="ta-kpi">
+                <div>
+                  <div className="ta-kpi-label">HOURS DIALED</div>
+                  <div className="ta-kpi-value">
+                    {data.totals.dialedSeconds > 0 ? fmtTime(data.totals.dialedSeconds) : <Awaiting />}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* LEADERBOARD — owner only — ranked cards instead of a table */}
@@ -628,7 +690,33 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                       const cr = m.calls > 0 ? (m.connected / m.calls) * 100 : null
                       const accent = rankAccent(i)
                       return (
-                        <div key={m.userId} className="ta-row">
+                        // ── CLICK AN AGENT TO SEE ONLY THEM ────────────
+                        // Filtering the whole page rather than opening a
+                        // separate one: their stats, their recordings and
+                        // their campaign mix are the same components with a
+                        // narrower scope, and a second page would be the same
+                        // code with its own bugs. Clicking the selected agent
+                        // again clears it, so the row is a toggle and there is
+                        // no dead end to back out of.
+                        <div key={m.userId}
+                             className="ta-row ta-row-click"
+                             role="button"
+                             tabIndex={0}
+                             aria-pressed={memberFilter === m.userId}
+                             title={memberFilter === m.userId
+                               ? `Showing only ${m.name}. Click to show everyone.`
+                               : `Show only ${m.name}`}
+                             onClick={() => setMemberFilter(
+                               memberFilter === m.userId ? 'all' : m.userId)}
+                             onKeyDown={e => {
+                               if (e.key === 'Enter' || e.key === ' ') {
+                                 e.preventDefault()
+                                 setMemberFilter(memberFilter === m.userId ? 'all' : m.userId)
+                               }
+                             }}
+                             style={memberFilter === m.userId
+                               ? { borderLeft: `3px solid ${T.blue}` }
+                               : undefined}>
                           <span style={{
                             width: 22, textAlign: 'center', fontSize: 12, fontWeight: 800,
                             color: accent || T.muted, flexShrink: 0,
@@ -675,6 +763,12 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                             <div className="ta-lb-metric">
                               <div className="ta-lb-metric-val">{m.talkSeconds > 0 ? fmtTime(m.talkSeconds) : '-'}</div>
                               <div className="ta-lb-metric-key">TALK</div>
+                            </div>
+                            {/* Beside TALK on purpose: the gap between the two
+                                is the thing an owner is actually reading. */}
+                            <div className="ta-lb-metric">
+                              <div className="ta-lb-metric-val">{m.dialedSeconds > 0 ? fmtTime(m.dialedSeconds) : '-'}</div>
+                              <div className="ta-lb-metric-key">DIALED</div>
                             </div>
                             {typeof m.spentCents === 'number' && (
                               <div className="ta-lb-metric">
@@ -848,7 +942,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                             {c.disposition}
                           </span>
                         ) : (
-                          <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>, </span>
+                          <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>-</span>
                         )}
                         <div className="ta-call-right">
                           <div className="ta-call-time">{relTime(c.createdAt)}</div>
@@ -858,6 +952,93 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                     ))
                   ) : (
                     <div className="ta-empty">NO CALLS LOGGED YET</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── RECORDINGS ──────────────────────────────────────────────
+                The whole team's recorded calls, newest first, exactly as they
+                came in. Deliberately not grouped by agent or by campaign: the
+                point of a feed is that you see the floor's morning in the
+                order it happened. Narrowing it is what the filters above are
+                for, including clicking an agent in the leaderboard.
+
+                Owner only, and it is the same gate as the leaderboard. A
+                member opening this page sees their own recordings here,
+                because the API narrows `calls` to them before the feed is
+                built from it. */}
+            {isOwner && (
+              <div className="ta-section">
+                <div className="ta-section-head">
+                  ▸ RECORDINGS{data.recordings.length > 0 && ` (${data.recordings.length}${
+                    (data.recordingsTotal ?? 0) > data.recordings.length
+                      ? ` OF ${data.recordingsTotal}` : ''})`}
+                  {memberFilter !== 'all' && <span style={{ color: T.amber }}>· MEMBER FILTERED</span>}
+                  {campaignFilter !== 'all' && <span style={{ color: T.amber }}>· CAMPAIGN FILTERED</span>}
+                </div>
+                <div className="ta-list">
+                  {data.recordings.length > 0 ? (
+                    data.recordings.map(r => (
+                      <div key={r.id} className="ta-row" style={{ flexWrap: 'wrap' }}>
+                        <Avatar name={r.agentName} />
+                        <div className="ta-rec-main">
+                          <div className="ta-rec-lead">
+                            {r.leadName || r.phone || 'Unknown lead'}
+                            {r.leadName && r.phone && (
+                              <span style={{ color: T.muted, fontWeight: 400 }}> · {r.phone}</span>
+                            )}
+                          </div>
+                          <div className="ta-rec-meta">
+                            {r.agentName}
+                            {r.campaignName && <> · {r.campaignName}</>}
+                            {r.disposition && <> · {r.disposition}</>}
+                          </div>
+                        </div>
+                        <div className="ta-rec-right">
+                          <div className="ta-call-time">{relTime(r.at)}</div>
+                          {/* Talk time, not call duration: for a recording,
+                              how long somebody spoke is the useful number. */}
+                          <div className="ta-call-dur">
+                            {r.talkSeconds > 0 ? fmtTime(r.talkSeconds) : 'no answer'}
+                          </div>
+                        </div>
+                        <button className="ta-rec-play"
+                                onClick={() => setPlayingId(playingId === r.id ? null : r.id)}
+                                aria-expanded={playingId === r.id}>
+                          {playingId === r.id ? 'CLOSE' : 'PLAY'}
+                        </button>
+                        {playingId === r.id && (
+                          // Streamed through our own route, never from
+                          // calls.recording_url: that is a presigned S3 link
+                          // Telnyx expires ten minutes after the call, so a
+                          // direct src would be dead for anything but the
+                          // call that just ended. The route resolves a fresh
+                          // URL per request and checks that this owner is
+                          // allowed the agent's audio.
+                          <audio className="ta-rec-audio" controls autoPlay
+                                 src={`/api/recordings/play?call_id=${encodeURIComponent(r.id)}`}
+                                 onError={() => setPlayErrors(p => ({ ...p, [r.id]: true }))} />
+                        )}
+                        {playErrors[r.id] && (
+                          <div style={{ flexBasis: '100%', fontSize: 10, color: T.amber, letterSpacing: 1 }}>
+                            RECORDING UNAVAILABLE. Telnyx deletes audio on its own
+                            retention schedule, so an older call can have a row here
+                            and no audio behind it.
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="ta-empty">
+                      NO RECORDINGS IN THIS RANGE
+                    </div>
+                  )}
+                  {(data.recordingsTotal ?? 0) > data.recordings.length && (
+                    <div className="ta-empty" style={{ color: T.amber }}>
+                      NEWEST {data.recordings.length} SHOWN OF {data.recordingsTotal}.
+                      NARROW BY AGENT, CAMPAIGN OR DATE TO SEE OLDER ONES.
+                    </div>
                   )}
                 </div>
               </div>
