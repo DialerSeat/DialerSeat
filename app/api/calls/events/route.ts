@@ -192,6 +192,10 @@ export async function POST(req: Request) {
         await handleHangup(callControlId, payload.hangup_cause, payload.hangup_source)
         break
 
+      case 'call.cost':
+        await handleCallCost(callControlId, payload as unknown as Record<string, unknown>)
+        break
+
       case 'call.recording.saved':
         await handleRecordingSaved(
           callControlId,
@@ -1255,6 +1259,87 @@ async function startRecordingForCall(
     source: 'webhook',
   })
   return true
+}
+
+// ── WHAT TELNYX SAYS THE CALL COST ─────────────────────────────────────────
+// They push this. We have been receiving call.cost webhooks -- 553 on 14 Sept
+// alone -- and throwing the amount away: the default branch of the switch
+// stores only payload.result, and a cost event has no result field, so every
+// one was logged as "unhandled" with a null detail.
+//
+// Every cost figure on this platform is our rates times our usage, and today
+// that inference failed badly enough to open a carrier ticket: $2.12 left the
+// balance around a single eighteen-second call that models out at $0.0063.
+// The number that would have settled it was arriving by webhook the whole
+// time.
+//
+// Stored in two places on purpose. calls.telnyx_cost so any query that already
+// joins a call can compare their figure to ours in the same row. And
+// telnyx_ledger_records, which is append-only, so if they ever restate a cost
+// for a call the original survives beside it. The Ledger app reads that table
+// and will surface the disagreement without further work.
+//
+// Never throws. A bookkeeping row must not be able to fail a webhook that has
+// a call to finish.
+async function handleCallCost(
+  callControlId: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  // The amount is read defensively rather than from one assumed field. A
+  // missed key would silently record a real charge as zero, which is the exact
+  // failure this handler exists to end.
+  const raw =
+    payload.total_cost ?? payload.cost ?? payload.amount ??
+    (payload.cost as { amount?: unknown } | undefined)?.amount
+  const amount = typeof raw === 'string' ? Number(raw) : typeof raw === 'number' ? raw : NaN
+  const currency = typeof payload.currency === 'string' ? payload.currency : 'USD'
+
+  void logCallEvent({
+    event_type: 'cost',
+    call_control_id: callControlId,
+    status: Number.isFinite(amount) ? String(amount) : 'unparsed',
+    source: 'webhook',
+    // The whole payload, not only the field we understood today. A charge
+    // nobody expected will be described in a field nobody extracted.
+    detail: payload,
+  })
+
+  if (!Number.isFinite(amount)) {
+    console.warn('[calls/events] call.cost had no readable amount', callControlId, payload)
+    return
+  }
+
+  try {
+    await supabaseAdmin
+      .from('calls')
+      .update({
+        telnyx_cost: amount,
+        telnyx_cost_currency: currency,
+        telnyx_cost_at: new Date().toISOString(),
+      })
+      .eq('call_control_id', callControlId)
+  } catch (err) {
+    console.error('[calls/events] could not store telnyx_cost', callControlId, err)
+  }
+
+  // And into the append-only ledger, so a later restatement cannot overwrite
+  // what they said the first time.
+  try {
+    const stable = JSON.stringify(payload, Object.keys(payload).sort())
+    const { createHash } = await import('crypto')
+    await supabaseAdmin.from('telnyx_ledger_records').insert({
+      record_type: 'call.cost',
+      telnyx_id: callControlId,
+      occurred_at: new Date().toISOString(),
+      cost: amount,
+      currency,
+      payload,
+      payload_hash: createHash('sha256').update(stable).digest('hex').slice(0, 32),
+      capture_window: 'webhook',
+    })
+  } catch {
+    // A duplicate is the unique index doing its job on a redelivered webhook.
+  }
 }
 
 async function handleHangup(

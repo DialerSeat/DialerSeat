@@ -19,6 +19,13 @@ export type CallEventType =
   | 'completed'
   | 'failed'
   | 'abandoned'
+  // Telnyx's call.cost — what THEY billed for the call, pushed per call.
+  // Received and discarded for the life of this codebase: the webhook's
+  // default branch stored only payload.result, and a cost event has none, so
+  // 553 of them were logged as 'unhandled' with a null detail on 14 Sept
+  // alone. Every cost figure on this platform was an inference from our own
+  // rates while the carrier's own number arrived by webhook.
+  | 'cost'
   | 'disposition_set'
   | 'hangup_requested'
   // A hangup we issued did NOT take, after retries. Recorded because this
