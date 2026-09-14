@@ -183,7 +183,7 @@ type Persisted = {
   notisTab?: 'notis' | 'logs'
   pulseTab?: 'calls' | 'visitors' | 'income'
   compWindow?: '7d' | 'month' | 'all'
-  showTargets?: boolean; feedView?: 'calls' | 'people'
+  showTargets?: boolean; feedView?: 'calls' | 'people' | 'logs'
   feedSize?: number
   callFilter?: 'all' | 'live' | 'answered' | 'missed' | 'machine' | 'human'
   peopleFilter?: 'all' | 'online' | 'paying' | 'seat' | 'dialed' | 'unplaced'
@@ -311,7 +311,7 @@ export default function OpsMap() {
   // roster of accounts. They answer different questions and neither belongs
   // inside the other, so the panel switches rather than nesting one in the
   // other or growing a second panel nobody has room for.
-  const [feedView, setFeedView] = useState<'calls' | 'people'>(saved.feedView ?? 'calls')
+  const [feedView, setFeedView] = useState<'calls' | 'people' | 'logs'>(saved.feedView ?? 'calls')
   // How many calls to ask for. 80 was the fixed size for a long time and is
   // kept as the default: the whole payload re-fetches every 5 seconds, so a
   // bigger feed is a cost somebody should opt into rather than inherit.
@@ -606,6 +606,42 @@ export default function OpsMap() {
     if (callFilter === 'machine') return f.amdResult === 'machine'
     return true
   })
+
+  // ── ALL LOGS: ONE TIMELINE ─────────────────────────────────────────────
+  // Calls and system log lines are the same story told in two places. A
+  // number gets rested, an agent's leg fails, a campaign runs dry -- each of
+  // those explains the calls around it, and reading them in separate panels
+  // means holding two clocks in your head and hoping they line up.
+  //
+  // Interleaved strictly by time, newest first, so the line that explains a
+  // run of bad calls sits directly above them.
+  //
+  // Capped, because this is a dock panel and not an export. The call feed is
+  // already limited by feedSize; logs are matched to it so one side cannot
+  // crowd the other out of the window.
+  const allLogs = useMemo(() => {
+    type Row =
+      | { kind: 'call'; at: number; call: FeedRow }
+      | { kind: 'log'; at: number; log: Noti; source: 'billing' | 'alert' }
+    const rows: Row[] = []
+    for (const f of (data?.feed ?? [])) {
+      const t = Date.parse(f.at)
+      if (Number.isFinite(t)) rows.push({ kind: 'call', at: t, call: f })
+    }
+    // Both streams. notis are the ones that raised a bell, logs are the ones
+    // that did not; on a combined timeline that distinction is a colour, not
+    // a reason to show only half of what happened.
+    for (const n of (data?.logs ?? [])) {
+      const t = Date.parse(n.at)
+      if (Number.isFinite(t)) rows.push({ kind: 'log', at: t, log: n, source: 'billing' })
+    }
+    for (const n of (data?.notis ?? [])) {
+      const t = Date.parse(n.at)
+      if (Number.isFinite(t)) rows.push({ kind: 'log', at: t, log: n, source: 'alert' })
+    }
+    rows.sort((a, b) => b.at - a.at)
+    return rows.slice(0, feedSize)
+  }, [data?.feed, data?.logs, data?.notis, feedSize])
 
   const unreadNotis = (data?.notis ?? []).filter(n => n.unread).length
   // BOTH interleaves by time rather than concatenating, so a payment and the
@@ -1682,7 +1718,7 @@ export default function OpsMap() {
         <div className="om-dock-row">
           <div className="om-panel om-feed-wrap" data-open={feedOpen}>
             <div className="om-head" onClick={() => setFeedOpen(o => !o)}>
-              {feedView === 'calls' ? 'LIVE CALLS' : 'PEOPLE'}
+              {feedView === 'calls' ? 'LIVE CALLS' : feedView === 'logs' ? 'ALL LOGS' : 'PEOPLE'}
               <span className="om-caret">{feedOpen ? '▼' : '▲'}</span>
             </div>
 
@@ -1694,11 +1730,31 @@ export default function OpsMap() {
                     explained. Stops propagation so picking a filter does not
                     also collapse the panel underneath it. */}
                 <div className="om-subbar" onClick={e => e.stopPropagation()}>
+                  {/* Left of CALLS on purpose: it is the widest view, and a
+                      narrowing sits to the right of the thing it narrows. */}
+                  <button className="om-mini" data-on={feedView === 'logs'}
+                          onClick={() => setFeedView('logs')}>ALL LOGS</button>
                   <button className="om-mini" data-on={feedView === 'calls'}
                           onClick={() => setFeedView('calls')}>CALLS</button>
                   <button className="om-mini" data-on={feedView === 'people'}
                           onClick={() => setFeedView('people')}>PEOPLE</button>
-                  {feedView === 'calls' ? (
+                  {feedView === 'logs' ? (
+                    /* Only the depth control. The call filters narrow by call
+                       OUTCOME, which half the rows in this view do not have —
+                       a rested number is neither answered nor missed. */
+                    <>
+                      <span className="om-sep" />
+                      <label className="om-funnel" title="How many events to load">
+                        <span aria-hidden="true">≡</span>
+                        <select value={feedSize}
+                                onChange={e => setFeedSize(Number(e.target.value))}>
+                          {FEED_SIZES.map(n => (
+                            <option key={n} value={n}>LAST {n}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </>
+                  ) : feedView === 'calls' ? (
                     <>
                       <span className="om-sep" />
                       {([
@@ -1759,7 +1815,11 @@ export default function OpsMap() {
                     </>
                   )}
                   <span style={{ marginLeft: 'auto', color: DIM, fontSize: 9, letterSpacing: 1 }}>
-                    {feedView === 'calls'
+                    {feedView === 'logs'
+                      ? allLogs.length + ' events · '
+                        + allLogs.filter(r => r.kind === 'call').length + ' calls, '
+                        + allLogs.filter(r => r.kind === 'log').length + ' log lines'
+                      : feedView === 'calls'
                       ? shownFeed.length + ' of ' + (data?.feed ?? []).length
                         // A feed filled to its limit is a feed with older calls
                         // behind it. Saying so is the difference between "this
@@ -1770,7 +1830,73 @@ export default function OpsMap() {
                 </div>
 
                 <div className="om-scroll">
-                  {feedView === 'calls' ? (
+                  {feedView === 'logs' ? (
+                    /* ── ALL LOGS ────────────────────────────────────────
+                       Calls and system lines on one clock. A number being
+                       rested, an agent leg failing, a campaign running dry —
+                       each of those explains the calls around it, and reading
+                       them in two panels means holding two clocks in your head
+                       and hoping they line up. */
+                    <table className="om-t">
+                      <thead>
+                        <tr>
+                          <th>TIME</th>
+                          <th>WHAT</th>
+                          <th className="om-hide-sm">WHO</th>
+                          <th>DETAIL</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allLogs.map(r => r.kind === 'call' ? (
+                          <tr key={'c' + r.call.id}
+                              data-fresh={freshIds.has(r.call.id) ? '1' : undefined}>
+                            <td style={{ color: CYAN }}>{hhmmss(r.call.at)}</td>
+                            <td style={{ color: GREEN }}>CALL</td>
+                            <td className="om-hide-sm" style={{ color: GREEN }}>{r.call.agent}</td>
+                            <td style={{ color: MUTED }}>
+                              {prettyPhone(r.call.phone)}
+                              {r.call.targetPlace ? ' · ' + r.call.targetPlace : ''}
+                              {' · '}
+                              <span style={{
+                                color: r.call.disposition
+                                  ? dispColour(r.call.disposition)
+                                  : r.call.answered ? INK : DIM,
+                              }}>
+                                {r.call.disposition || (r.call.answered ? 'answered' : 'no answer')}
+                              </span>
+                              {r.call.talkSeconds ? ' · ' + r.call.talkSeconds + 's talk' : ''}
+                            </td>
+                          </tr>
+                        ) : (
+                          <tr key={'l' + r.log.id}>
+                            <td style={{ color: CYAN }}>{hhmmss(r.log.at)}</td>
+                            {/* The kind is the carrier of meaning here, so it
+                                gets the colour rather than the row. Unread is
+                                amber because it is the one thing nobody has
+                                looked at yet. */}
+                            <td style={{ color: r.log.unread ? AMBER : VIOLET }}>
+                              {(r.log.kind || 'log').toUpperCase().slice(0, 14)}
+                            </td>
+                            {/* A billing event is about a named customer; an
+                                alert is about the platform. Saying "system"
+                                for both would flatten that away. */}
+                            <td className="om-hide-sm" style={{ color: DIM }}>
+                              {r.source === 'billing' ? 'billing' : 'system'}
+                            </td>
+                            <td style={{ color: r.log.unread ? INK : MUTED }}>
+                              {r.log.title}
+                              {r.log.body ? ' · ' + r.log.body.slice(0, 90) : ''}
+                            </td>
+                          </tr>
+                        ))}
+                        {allLogs.length === 0 && (
+                          <tr><td colSpan={4} style={{ color: DIM, padding: 10 }}>
+                            Nothing logged yet.
+                          </td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  ) : feedView === 'calls' ? (
                     <table className="om-t">
                       <thead>
                         <tr>
