@@ -110,20 +110,57 @@ export async function GET(req: Request) {
     // reviewable in one place rather than split across a SQL function.
     const { data: calls, error: callErr } = await supabase
       .from('calls')
-      .select('pool_number_id, answered_at')
+      .select('pool_number_id, answered_at, duration')
       .gte('created_at', since)
       .not('pool_number_id', 'is', null)
       .limit(500_000)
 
     if (callErr) throw callErr
 
+    // ── A CALL THAT NEVER RANG IS NOT EVIDENCE ABOUT THE NUMBER ───────────
+    // This counted every row as a placed call, and for a long stretch most
+    // rows were not calls. The dialer placed the lead leg without waiting to
+    // learn whether this browser's SIP socket was up, so a dead socket
+    // produced a lead leg that was torn down before it rang and written down
+    // as NO_ANSWER against somebody who was never called. That bug is fixed,
+    // but its rows are still inside this rolling window and they are what this
+    // job has been judging numbers on.
+    //
+    // What that did, measured on the pool this morning:
+    //
+    //   +1 415 862 7515  CA   4.48% recorded, rested.  316 of 344 never rang.
+    //                         On the calls that did ring: 89.3%.
+    //   +1 229 459 3952  GA   6.12% recorded, rested.  41 of 49 never rang.
+    //                         On the calls that did ring: 37.5%.
+    //
+    // So the number with the best answer rate in the pool was rested for
+    // having the worst one, and a low_answer_rate rest lasts four days.
+    //
+    // THE TEST. A lead leg that reached the destination has a duration: it
+    // rang, and the ring is wall clock. Of 1,134 NO_ANSWER calls on pool
+    // numbers, 1,128 have a duration of exactly zero and two have a normal
+    // twenty-to-thirty-second ring-out. Zero duration with nobody answering is
+    // not a quiet phone, it is a call that never happened.
+    //
+    // This also and deliberately excludes calls still in flight, which carry
+    // the same signature because duration is written at hangup. A call that is
+    // ringing right now is not evidence either way yet, and including it would
+    // count it as a miss.
+    const neverRang = (c: { answered_at: string | null; duration: number | null }) =>
+      c.answered_at === null && (c.duration ?? 0) === 0
+
     const tally = new Map<string, { placed: number; answered: number }>()
+    let excluded = 0
     for (const c of calls || []) {
       const key = c.pool_number_id as string
+      if (neverRang(c)) { excluded++; continue }
       const t = tally.get(key) || { placed: 0, answered: 0 }
       t.placed += 1
       if (c.answered_at !== null) t.answered += 1
       tally.set(key, t)
+    }
+    if (excluded > 0) {
+      console.log(`[number-health] ignored ${excluded} calls that never rang (dead socket or still in flight)`)
     }
 
     const stats: NumberStat[] = active.map(n => {
