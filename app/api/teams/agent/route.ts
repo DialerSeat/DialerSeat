@@ -34,12 +34,19 @@ export async function GET(req: NextRequest) {
     }
 
     const agentId = req.nextUrl.searchParams.get('userId')
-    const range = req.nextUrl.searchParams.get('range') || 'week'
+    const range = req.nextUrl.searchParams.get('range') || 'all'
     if (!agentId) {
       return NextResponse.json({ success: false, error: 'userId required' }, { status: 400 })
     }
 
-    const days = range === 'today' ? 1 : range === 'month' ? 30 : 7
+    // 'all' reaches back past anything in the table rather than using
+    // Infinity, which stringifies to null in JSON and lands in Postgres as a
+    // null bound. Default, matching every other analytics surface: a week is
+    // the wrong lens on whether an agent is working out.
+    const days = range === 'today' ? 1
+      : range === 'week' ? 7
+      : range === 'month' ? 30
+      : 3650
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
     // ── TWO WAYS TO BE ENTITLED TO THIS PAGE ─────────────────────────────
@@ -172,10 +179,53 @@ export async function GET(req: NextRequest) {
       for (const c of camps || []) campaignMeta.set(c.id, c)
     }
 
-    // ── DIALING, ON THIS OWNER'S CAMPAIGNS ONLY ──────────────────────────
-    // Aggregated in Postgres. One agent at a thousand calls a day passes the
-    // old 20,000-row cap inside a month, and a capped month reports three
-    // weeks as though it were four.
+    // ── THIS AGENT'S RECORDINGS ──────────────────────────────────────────
+    // Their own row, not an aggregate, because the point of a recording is
+    // listening to it. Only calls that HAVE audio: a call still recording, or
+    // one AMD decided against, has nothing to play.
+    //
+    // No URL is sent. calls.recording_url is a presigned S3 link Telnyx expires
+    // ten minutes after the call, so shipping it would give a list of links
+    // already dead. Playback goes through /api/recordings/play, which resolves
+    // a fresh one per request and re-checks that this viewer is allowed it.
+    const RECORDINGS_CAP = 200
+    const { data: recRows, count: recCount } = await supabaseAdmin
+      .from('calls')
+      .select('id, created_at, phone_number, duration, talk_seconds, answered_at, disposition, campaign_id', { count: 'exact' })
+      .eq('user_id', agentId)
+      .gte('created_at', since.toISOString())
+      .or('recording_id.not.is.null,recording_url.not.is.null')
+      .order('created_at', { ascending: false })
+      .limit(RECORDINGS_CAP)
+
+    const recordings = ((recRows || []) as Array<{
+      id: string; created_at: string; phone_number: string | null
+      talk_seconds: number | null; answered_at: string | null
+      disposition: string | null; campaign_id: string | null
+    }>).map(r => ({
+      id: r.id,
+      at: r.created_at,
+      phone: r.phone_number,
+      talkSeconds: typeof r.talk_seconds === 'number' ? r.talk_seconds : 0,
+      answered: !!r.answered_at,
+      disposition: r.disposition,
+      campaign: r.campaign_id ? (campaignMeta.get(r.campaign_id)?.name ?? null) : null,
+    }))
+    const recordingsTotal = typeof recCount === 'number' ? recCount : recordings.length
+
+    // ── EVERYTHING THIS AGENT HAS DIALED ─────────────────────────────────
+    // Scoped to the owner's campaigns until now, which meant zeros. Team
+    // members do not dial team campaigns: across every team on the platform
+    // not one member call is on one, so the filter matched nothing and this
+    // card reported 0 calls for people dialing every day.
+    //
+    // Scoped by AGENT instead, which is also what makes these figures agree
+    // with the ones the agent sees on their own analytics page — the whole
+    // point of an owner opening it.
+    //
+    // Still aggregated in Postgres. One agent at a thousand calls a day passes
+    // a 20,000-row cap inside a month, and a capped month reports three weeks
+    // as though it were four.
     let totalCalls = 0
     /** Dials that actually rang. The denominator for the rates below. */
     let reachedCalls = 0
@@ -187,9 +237,11 @@ export async function GET(req: NextRequest) {
     const byDay = new Map<string, number>()
     const byCampaign = new Map<string, { calls: number; conversions: number }>()
 
-    if (ownerCampaignIds.length > 0) {
+    {
       const { data: agg } = await supabaseAdmin.rpc('call_agg_by_day_campaign', {
-        p_campaign_ids: ownerCampaignIds,
+        // null means no campaign filter. The agent is the scope, and the
+        // function refuses to run with neither — see its migration note.
+        p_campaign_ids: null,
         p_since: since.toISOString(),
         p_until: null,
         p_agent: agentId,
@@ -336,13 +388,17 @@ export async function GET(req: NextRequest) {
         talkSeconds: talk,
         avgTalkSeconds: talkCalls > 0 ? Math.round(talk / talkCalls) : null,
         lastCallAt,
-        // Named so nobody mistakes this for everything the person did.
+        // Named so nobody mistakes this for something narrower than it is.
+        // It used to say team campaigns only, and did mean it — which is why
+        // it read zero for everybody. Now it is the person's whole dialing.
         scope: isSelf
-          ? 'Your team campaigns only'
-          : 'Your team campaigns only',
+          ? 'Everything you have dialed'
+          : 'Everything this agent has dialed, on any campaign',
         isSelf,
       },
       series,
+      recordings,
+      recordingsTotal,
     })
   } catch (error: any) {
     console.error('Agent detail error:', error)

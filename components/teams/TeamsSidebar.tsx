@@ -59,6 +59,16 @@ export interface SidebarTeam {
   name: string
   isOwner?: boolean
   campaigns: SidebarCampaign[]
+  /**
+   * The team's roster, independent of any campaign.
+   *
+   * Agents used to appear only nested under a campaign, which hid them
+   * whenever the team had no campaigns attached — and that is the normal case
+   * here rather than an edge one. Across every team on the platform, members
+   * dial their own lists and none of their calls are on a team campaign, so a
+   * roster reachable only through campaigns was a roster nobody could reach.
+   */
+  agents: SidebarAgent[]
 }
 
 export type TeamsScope =
@@ -67,6 +77,10 @@ export type TeamsScope =
   | { kind: 'team'; teamId: string }
   | { kind: 'campaign'; teamId: string; campaignId: string }
   | { kind: 'agent'; teamId: string; campaignId: string; userId: string }
+  // An agent selected from the team's own roster rather than through a
+  // campaign. Carries no campaignId because there is none to carry: the point
+  // of this scope is everything that person has done for this team.
+  | { kind: 'teamAgent'; teamId: string; userId: string }
 
 interface Props {
   teams: SidebarTeam[]
@@ -361,6 +375,13 @@ export default function TeamsSidebar({
         .ts-team-row { font-size: 15px; font-weight: 600; color: ${TEXT}; }
         .ts-campaign-row { font-size: 14px; font-weight: 500; padding-left: 22px; }
         .ts-agent-row { font-size: 13.5px; padding-left: 44px; color: ${TEXT_DIM}; }
+        .ts-roster-row { font-size: 13.5px; padding-left: 12px; color: ${TEXT_DIM}; }
+        .ts-roster-row:hover { color: ${TEXT}; }
+        /* Quiet enough to be a label rather than another row you can click. */
+        .ts-section-label {
+          font-size: 9.5px; letter-spacing: 1.4px; color: ${TEXT_DIM};
+          opacity: 0.75; padding: 6px 0 2px 16px; text-transform: uppercase;
+        }
         .ts-agent-row:hover { color: ${TEXT}; }
 
         /* Icon buttons in the header stay invisible until the header is
@@ -782,17 +803,61 @@ export default function TeamsSidebar({
                 </button>
               </div>
 
+              {/* ── THE ROSTER, DIRECTLY UNDER THE TEAM ────────────────────
+                  Agents used to hang only off campaigns, so a team with no
+                  campaigns attached showed no people — and that is the normal
+                  case here, not an edge one. Every team on the platform has
+                  members dialing their own lists, with nothing on a team
+                  campaign, so the roster was unreachable for exactly the
+                  people who use it.
+
+                  Above the campaigns because it answers the first question an
+                  owner has, which is who is on this team. */}
+              {teamOpen && team.agents.length > 0 && (
+                <div className="ts-section-label ts-indent-1">PEOPLE</div>
+              )}
+              {teamOpen && team.agents.map(agent => (
+                <div
+                  key={`roster:${agent.id}`}
+                  className={`ts-row-wrap ts-indent-1${isSelected({ kind: 'teamAgent', teamId: team.id, userId: agent.id }) ? ' is-selected' : ''}`}
+                >
+                  {selectMode && (
+                    <button
+                      className={`ts-bubble${selected[`roster:${agent.id}`] ? ' is-on' : ''}`}
+                      onClick={() => toggleSelected({
+                        kind: 'agent', id: `roster:${agent.id}`,
+                        teamId: team.id, memberId: agent.memberId, label: agent.name,
+                      })}
+                      aria-pressed={!!selected[`roster:${agent.id}`]}
+                      aria-label={`Select ${agent.name}`}
+                    />
+                  )}
+                  <button
+                    className="ts-row ts-roster-row"
+                    onClick={() => onScopeChange({
+                      kind: 'teamAgent', teamId: team.id, userId: agent.id,
+                    })}
+                  >
+                    {agent.isLive && <span className="ts-live-dot" />}
+                    <span className="ts-row-label">{agent.name}</span>
+                  </button>
+                </div>
+              ))}
+
               {/* An expanded team with nothing under it looked like a tree
                   that had failed to load. It has not — there is simply
                   nothing on it yet, which is a normal state for a team that
                   has just been created or one whose campaigns have not been
                   shared. */}
-              {teamOpen && team.campaigns.length === 0 && (
+              {teamOpen && team.campaigns.length === 0 && team.agents.length === 0 && (
                 <div className="ts-empty ts-indent-1">
                   {team.isOwner
-                    ? 'No campaigns on this team yet'
-                    : 'No campaigns available for this team'}
+                    ? 'Nobody on this team yet'
+                    : 'Nothing shared with you on this team yet'}
                 </div>
+              )}
+              {teamOpen && team.campaigns.length > 0 && (
+                <div className="ts-section-label ts-indent-1">CAMPAIGNS</div>
               )}
 
               {teamOpen && team.campaigns.map(campaign => {

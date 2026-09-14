@@ -132,6 +132,14 @@ function toSidebarTeams(teams: ApiTeam[]): SidebarTeam[] {
       id: team.id,
       name: team.name,
       isOwner: team.isOwner,
+      // The roster, independent of any campaign. Every member of the team,
+      // whether or not a campaign has been shared with them — see the note on
+      // SidebarTeam.agents for why that distinction hid everybody.
+      agents: members.map(m => ({
+        id: m.userId || m.id,
+        memberId: m.id,
+        name: displayName(m),
+      })),
       campaigns: (team.campaigns || []).map(tc => {
         // accessMode 'free' opens a campaign to the whole team, so every member
         // may work it. Anything else means the roster is a grant list.
@@ -614,7 +622,7 @@ export default function TeamsPage() {
       const params = new URLSearchParams({ range })
       if (scope.kind === 'team') { params.set('scope', 'team'); params.set('scopeId', scope.teamId) }
       else if (scope.kind === 'campaign') { params.set('scope', 'campaign'); params.set('scopeId', scope.campaignId) }
-      else if (scope.kind === 'agent') { params.set('scope', 'agent'); params.set('scopeId', scope.userId) }
+      else if (scope.kind === 'agent' || scope.kind === 'teamAgent') { params.set('scope', 'agent'); params.set('scopeId', scope.userId) }
       const r = await fetch(`/api/teams/analytics?${params}`).then(x => x.json())
       setStats(r.success ? r : null)
     } catch {
@@ -1241,7 +1249,10 @@ export default function TeamsPage() {
     setView(
       next.kind === 'team' ? 'team'
       : next.kind === 'campaign' ? 'campaign'
-      : next.kind === 'agent' ? 'agent'
+      // Both ways of reaching a person open the same page. One came through a
+      // campaign and one through the roster, but the thing being opened is the
+      // person either way.
+      : next.kind === 'agent' || next.kind === 'teamAgent' ? 'agent'
       : 'overview'
     )
   }
@@ -1489,7 +1500,7 @@ export default function TeamsPage() {
         }}>
           {view === 'floor' && <FloorView onBack={goOverview} />}
 
-          {view === 'agent' && scope.kind === 'agent' && (
+          {view === 'agent' && (scope.kind === 'agent' || scope.kind === 'teamAgent') && (
             <AgentDetail
               userId={scope.userId}
               onBack={goOverview}

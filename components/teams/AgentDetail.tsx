@@ -16,6 +16,7 @@ const RANGES = [
   { key: 'today', label: 'Today' },
   { key: 'week', label: 'Week' },
   { key: 'month', label: 'Month' },
+  { key: 'all', label: 'All time' },
 ]
 
 const btn: React.CSSProperties = {
@@ -86,10 +87,16 @@ export default function AgentDetail({
   onBack: () => void
   onManageMember?: (memberId: string) => void
 }) {
-  const [range, setRange] = useState('week')
+  // All time, matching every other analytics surface. A week is the wrong lens
+  // on whether an agent is working out, and a new one's first week is empty.
+  const [range, setRange] = useState('all')
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  /** Which recording is open. One at a time: two playing at once is noise. */
+  const [playingId, setPlayingId] = useState<string | null>(null)
+  /** Per-recording playback failure, so a dead one says so instead of nothing. */
+  const [playErrors, setPlayErrors] = useState<Record<string, boolean>>({})
   const [seatBusy, setSeatBusy] = useState<string | null>(null)
   const [seatNote, setSeatNote] = useState<string | null>(null)
 
@@ -253,23 +260,100 @@ export default function AgentDetail({
       </div>
 
       {/* ── WHAT THESE NUMBERS ARE, AND ARE NOT ──────────────────────────
-          An agent may also dial their own leads on their own subscription.
-          That work is not on a campaign this owner provided and not on a seat
-          they are paying for — counting it would show an owner activity they
-          have no claim to, and quietly inflate the figure they judge the seat
-          by. Said out loud so nobody reads a low number as a slow agent when
-          it may just be somebody who works elsewhere too. */}
+          This counted only calls on the owner's team campaigns, on the
+          reasoning that an agent's own lists are not the owner's business.
+          In practice team members do not dial team campaigns at all — not one
+          member call on the platform is on one — so the figure was always
+          zero, and an owner reading zero concluded the agent was idle.
+          It is the person's whole dialing now, which is also what makes it
+          agree with what the agent sees on their own page. */}
       <div style={{ fontSize: 11.5, color: DIM, marginTop: 10, lineHeight: 1.7 }}>
-        {st.scope}. Anything they dial on their own campaigns is not counted here.
+        {st.scope}. These are the same figures they see on their own analytics.
       </div>
 
-      <Section title={`Calls over the ${range === 'today' ? 'day' : range}`}>
+      <Section title={range === 'all' ? 'Calls, all time' : `Calls over the ${range === 'today' ? 'day' : range}`}>
         <div style={{
           background: PANEL, border: `1px solid ${HAIRLINE}`,
           borderRadius: 4, padding: '12px 14px 14px',
         }}>
           <LineChart points={data.series || []} />
         </div>
+      </Section>
+
+      {/* ── RECORDINGS ────────────────────────────────────────────────────
+          The reason an owner opens somebody's page. Newest first, played
+          through our own route rather than from a URL in this payload:
+          calls.recording_url is a presigned S3 link Telnyx expires ten minutes
+          after the call, so a direct src would be dead for anything but the
+          call that just ended. */}
+      <Section title={`Recordings${
+        data.recordingsTotal ? ` (${Math.min(data.recordings?.length ?? 0, data.recordingsTotal)}${
+          data.recordingsTotal > (data.recordings?.length ?? 0) ? ` of ${data.recordingsTotal}` : ''})` : ''
+      }`}>
+        {!data.recordings || data.recordings.length === 0 ? (
+          <div style={{
+            background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+            padding: '14px 16px', fontSize: 12.5, color: DIM, lineHeight: 1.7,
+          }}>
+            Nothing recorded in this range. Recording is on for every campaign,
+            and a call gets audio once detection confirms a human answered, so
+            voicemails and no-answers leave nothing to play.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 6 }}>
+            {/* Shaped inline rather than left as any: `data` is untyped here,
+                so this row is the only place its fields are stated at all. */}
+            {data.recordings.map((r: {
+              id: string; at: string; phone: string | null
+              talkSeconds: number; disposition: string | null; campaign: string | null
+            }) => (
+              <div key={r.id} style={{
+                background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+                padding: '10px 12px', display: 'flex', alignItems: 'center',
+                gap: 10, flexWrap: 'wrap',
+              }}>
+                <div style={{ minWidth: 0, flex: '1 1 180px' }}>
+                  <div style={{ fontSize: 13, fontFamily: 'monospace' }}>{r.phone || '-'}</div>
+                  <div style={{ fontSize: 11, color: DIM, marginTop: 2 }}>
+                    {new Date(r.at).toLocaleString(undefined, {
+                      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                    })}
+                    {r.campaign && <> · {r.campaign}</>}
+                    {r.disposition && <> · {r.disposition}</>}
+                  </div>
+                </div>
+                {/* Talk time, not call duration: for a recording, how long
+                    somebody spoke is the number worth seeing. */}
+                <div style={{ fontSize: 12, color: DIM, fontFamily: 'monospace' }}>
+                  {r.talkSeconds > 0 ? dur(r.talkSeconds) : 'no answer'}
+                </div>
+                <button
+                  onClick={() => setPlayingId(playingId === r.id ? null : r.id)}
+                  aria-expanded={playingId === r.id}
+                  style={{
+                    ...btn,
+                    borderColor: playingId === r.id ? ACCENT : HAIRLINE,
+                    color: playingId === r.id ? ACCENT : MUTED,
+                  }}
+                >{playingId === r.id ? 'Close' : 'Play'}</button>
+                {playingId === r.id && (
+                  <audio
+                    style={{ flexBasis: '100%', width: '100%', marginTop: 6 }}
+                    controls autoPlay
+                    src={`/api/recordings/play?call_id=${encodeURIComponent(r.id)}`}
+                    onError={() => setPlayErrors(p => ({ ...p, [r.id]: true }))}
+                  />
+                )}
+                {playErrors[r.id] && (
+                  <div style={{ flexBasis: '100%', fontSize: 11, color: AMBER, marginTop: 4 }}>
+                    Recording unavailable. Telnyx deletes audio on its own retention
+                    schedule, so an older call can have a row here and no audio behind it.
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </Section>
 
       <Section title="Seat">
