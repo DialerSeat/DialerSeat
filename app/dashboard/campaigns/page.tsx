@@ -311,6 +311,18 @@ export default function CampaignsPage() {
   
   const [showCreate, setShowCreate] = useState(false)
   const [campaignName, setCampaignName] = useState('')
+  // ── A CAMPAIGN MUST BE NAMED ───────────────────────────────────────────
+  // The server refuses an unnamed campaign now rather than inventing
+  // "Untitled". This is the same rule stated where somebody can act on it:
+  // a disabled button with a reason beats a round trip that comes back an
+  // error, and both paths below go through it so the two cannot drift.
+  const nameProblem = (() => {
+    const n = campaignName.trim()
+    if (!n) return 'Name your campaign before saving it.'
+    if (/^untitled(\s*\(\d+\))?$/i.test(n)) return 'Give it a real name, not "Untitled".'
+    if (n.length > 120) return 'That name is too long (120 characters max).'
+    return null
+  })()
   const [createMode, setCreateMode] = useState<DialerMode>('progressive')
   const [createAmd, setCreateAmd] = useState<boolean>(true) // tracks mode default + user override — true matches AMD_DEFAULT_BY_MODE.progressive
   // ── RECORDING IS OFF ON A NEW CAMPAIGN ────────────────────────────────
@@ -718,6 +730,7 @@ export default function CampaignsPage() {
   
   const createBlankSheet = async () => {
     if (!user) return
+    if (nameProblem) { alert(nameProblem); return }
     setCreating(true)
     try {
       const res = await fetch('/api/campaigns/create', {
@@ -779,6 +792,7 @@ export default function CampaignsPage() {
 
   const handleCreate = async () => {
     if (!user) return
+    if (nameProblem) { alert(nameProblem); return }
     setCreating(true)
     try {
       
@@ -3115,6 +3129,18 @@ export default function CampaignsPage() {
               <button className="settings-close" onClick={() => setShowCreate(false)}>×</button>
             </div>
 
+            {/* Says why the button is off, rather than leaving somebody to
+                work it out from a greyed-out control. Only once they have
+                started typing, or after a failed attempt — telling a person
+                they have not filled in a field they have not reached yet is
+                nagging, not help. */}
+            {nameProblem && campaignName.length > 0 && (
+              <div style={{
+                padding: '8px 16px', fontSize: 12, color: '#8a1a1a',
+                background: '#f7e0e0', borderBottom: '1px solid #e0c4c4',
+              }}>{nameProblem}</div>
+            )}
+
             <div className="settings-body">
 
               {/* CAMPAIGN section */}
@@ -3323,8 +3349,8 @@ export default function CampaignsPage() {
                     type="button"
                     className="cmp-blank-sheet-btn"
                     onClick={createBlankSheet}
-                    disabled={creating}
-                    title={'Open a blank lead sheet'}
+                    disabled={creating || !!nameProblem}
+                    title={nameProblem ?? 'Open a blank lead sheet'}
                   >▤ START A BLANK LEAD SHEET</button>
                   <span className="cmp-blank-sheet-tip">
                     Skip the file and build leads by hand, like a blank spreadsheet.
@@ -3397,7 +3423,8 @@ export default function CampaignsPage() {
                 <button
                   className="ds-btn primary"
                   onClick={handleCreate}
-                  disabled={creating}
+                  disabled={creating || !!nameProblem}
+                  title={nameProblem ?? 'Create this campaign'}
                 >{creating ? 'CREATING…' : 'CREATE CAMPAIGN'}</button>
               </div>
             </div>

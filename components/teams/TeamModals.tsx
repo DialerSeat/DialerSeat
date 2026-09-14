@@ -272,7 +272,18 @@ export function CreateCampaignModal({
     )
   }
 
-  const blockedSubmit = !teamId || (mode === 'new' ? !name.trim() : !existingId)
+  // ── A CAMPAIGN MUST BE NAMED ─────────────────────────────────────────────
+  // A blank name was already blocked here. "Untitled" was not, and the server
+  // used to hand it out for free -- three of the busiest lists on the platform
+  // carry that name, including one holding 4,363 leads. Refusing the word too
+  // keeps it from becoming the thing people type to get past the check.
+  const nameProblem =
+    mode !== 'new' ? null
+    : !name.trim() ? 'Name your campaign before saving it.'
+    : /^untitled(\s*\(\d+\))?$/i.test(name.trim()) ? 'Give it a real name, not "Untitled".'
+    : name.trim().length > 120 ? 'That name is too long (120 characters max).'
+    : null
+  const blockedSubmit = !teamId || !!nameProblem || (mode === 'existing' && !existingId)
 
   return (
     <Shell
@@ -285,6 +296,7 @@ export function CreateCampaignModal({
           <button
             style={{ ...btnPrimary, opacity: blockedSubmit || busy ? 0.5 : 1 }}
             disabled={blockedSubmit || busy}
+            title={nameProblem ?? undefined}
             onClick={() => onCreate({
               teamId,
               name: mode === 'new' ? name.trim() : '',
@@ -331,6 +343,13 @@ export function CreateCampaignModal({
             onChange={e => setName(e.target.value)}
             placeholder="Fresh Lead Campaign"
           />
+          {/* Only once they have started typing. Telling somebody they have
+              not filled in a field they have not reached yet is nagging. */}
+          {nameProblem && name.length > 0 && (
+            <p style={{ margin: '6px 0 0', fontSize: 12, color: '#8a1a1a' }}>
+              {nameProblem}
+            </p>
+          )}
         </div>
       ) : (
         <div style={{ marginBottom: 16 }}>

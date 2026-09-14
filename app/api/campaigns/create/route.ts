@@ -20,21 +20,38 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { name, dialer_mode, amd_enabled, recording_enabled, predictive_lines_per_agent, dial_repeat_count, voicemail_drop_url } = body
 
-    let finalName = (typeof name === 'string' ? name.trim() : '')
+    // ── A CAMPAIGN MUST BE NAMED ─────────────────────────────────────────
+    // This used to invent one: Untitled, then Untitled (1), (2), and so on.
+    // It meant nobody was ever stopped, and the platform filled up with
+    // campaigns nobody could tell apart -- three of the busiest lists here are
+    // called "Untitled", including one with 4,363 leads in it. Every screen
+    // that groups by campaign, every analytics comparison, and every
+    // conversation about which list is worth dialing got harder because of a
+    // default that existed to avoid one moment of friction at creation.
+    //
+    // Refused rather than defaulted. The caller knows what this list is; the
+    // server never will.
+    const finalName = (typeof name === 'string' ? name.trim() : '')
     if (!finalName) {
-      const { data: existing } = await supabaseAdmin
-        .from('campaigns')
-        .select('name')
-        .eq('user_id', userId)
-        .ilike('name', 'Untitled%')
-      const taken = new Set((existing || []).map(c => (c.name || '').trim()))
-      if (!taken.has('Untitled')) {
-        finalName = 'Untitled'
-      } else {
-        let n = 1
-        while (taken.has(`Untitled (${n})`)) n++
-        finalName = `Untitled (${n})`
-      }
+      return NextResponse.json(
+        { success: false, error: 'Name your campaign before saving it.' },
+        { status: 400 }
+      )
+    }
+    // "Untitled" is refused explicitly too. Otherwise the old default simply
+    // becomes something people type to get past the check, and the problem
+    // returns wearing the same word.
+    if (/^untitled(\s*\(\d+\))?$/i.test(finalName)) {
+      return NextResponse.json(
+        { success: false, error: 'Give the campaign a real name, not "Untitled".' },
+        { status: 400 }
+      )
+    }
+    if (finalName.length > 120) {
+      return NextResponse.json(
+        { success: false, error: 'Campaign name is too long (120 characters max).' },
+        { status: 400 }
+      )
     }
 
     // Progressive is the house default for a new campaign, and the column
