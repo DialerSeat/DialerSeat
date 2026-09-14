@@ -66,6 +66,14 @@ export const DISPOSITIONS: DispositionDef[] = [
     agentChosen: false, contact: false, conversion: false },
   { value: 'NO_ANSWER', aliases: ['NO ANSWER'], label: 'No answer',
     agentChosen: false, contact: false, conversion: false },
+  // ── NOT A NO-ANSWER. OUR OWN PLUMBING. ────────────────────────────────
+  // The agent's browser lost its SIP socket, so its own leg went unanswered,
+  // Telnyx tore it down at ~1.2s, and the lead leg died with it before the
+  // lead's phone ever rang. Kept as a separate value precisely so it cannot
+  // hide inside NO_ANSWER again: it spent a month there, accounting for 67%
+  // of every dial on the platform, looking exactly like people not picking up.
+  { value: 'AGENT_LEG_FAILED', aliases: [], label: 'Dialer disconnected',
+    agentChosen: false, contact: false, conversion: false },
   // Skipped is the dialer moving on - a lead outside calling hours, a queue
   // advancing, an agent passing. It is the largest bucket by far and says
   // nothing about how a conversation went.

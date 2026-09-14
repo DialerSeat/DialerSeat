@@ -29,6 +29,11 @@ export type CallEventType =
   | 'hangup_failed'
   // A voicemail drop was played into a lead's answering machine at the beep.
   | 'voicemail_dropped'
+  // The agent's browser never answered its own leg, so the lead leg died
+  // before the lead's phone rang. OUR failure, not a no-answer, and recorded
+  // as its own type so it can be counted rather than hidden inside NO_ANSWER.
+  // It was hidden there for a month: 1,270 calls, 67% of every dial.
+  | 'agent_leg_failed'
   // Any Telnyx event the dispatcher has no case for. The raw event type goes
   // in `status`. Recorded rather than discarded because silently dropping
   // these is what made detect_beep impossible to diagnose — the events that

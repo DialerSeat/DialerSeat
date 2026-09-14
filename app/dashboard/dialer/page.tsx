@@ -348,6 +348,20 @@ function DialerPageInner() {
   const [activeCallSid, setActiveCallSid] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const [swReady, setSwReady] = useState(false)
+  /**
+   * Is the SIP WebSocket actually up RIGHT NOW?
+   *
+   * swReady means "we finished setting up once". It stays true after the
+   * socket dies, which is exactly how 67% of dials in a month were spent on
+   * leads that could never connect: the transport dropped, nothing noticed,
+   * and every dial afterwards placed a real call to a real person with no
+   * agent leg able to answer it.
+   *
+   * A ref because the dial path has to read it synchronously at click time,
+   * and state because the agent needs to see it.
+   */
+  const sipConnectedRef = useRef(false)
+  const [sipConnected, setSipConnected] = useState(false)
   const [micGranted, setMicGranted] = useState(false)
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
   const [dialZoomed, setDialZoomed] = useState(false)
@@ -1398,7 +1412,12 @@ function DialerPageInner() {
           uri,
           authorizationUsername: sipUsername,
           authorizationPassword: sipPassword,
-          transportOptions: { server: wssServer },
+          // ── KEEPALIVE IS NOT OPTIONAL ────────────────────────────────
+          // Without traffic, an idle WebSocket is closed by whatever sits
+          // between the browser and Telnyx: home routers, corporate proxies,
+          // mobile carrier NAT. Thirty seconds is comfortably inside every
+          // common idle timeout and costs two bytes.
+          transportOptions: { server: wssServer, keepAliveInterval: 30 },
           sessionDescriptionHandlerFactoryOptions: {
             // ── DO NOT WAIT FOR EVERY ICE CANDIDATE BEFORE ANSWERING ───────
             // This is where the remaining seconds of silence lived, and it is
@@ -1452,7 +1471,88 @@ function DialerPageInner() {
           },
         })
 
+        // Reconnection is driven from here rather than from sip.js's own
+        // reconnectionAttempts, which is deprecated AND defaults to zero:
+        //
+        //   user-agent.js:781
+        //   if (error && this.options.reconnectionAttempts > 0) {
+        //
+        // That default is why this failed silently. The socket died, sip.js
+        // declined to reconnect, nothing re-registered, and Telnyx had no
+        // contact to route an agent leg to. Every dial after that placed a
+        // real call to a real lead that could never be answered.
+        let reconnectAttempt = 0
+        let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+
+        const markSip = (up: boolean) => {
+          sipConnectedRef.current = up
+          setSipConnected(up)
+        }
+
+        /**
+         * Re-REGISTER, not just reconnect.
+         *
+         * A reconnected transport is not a reachable agent. The registration
+         * lived on the old socket, so Telnyx still has no contact for this
+         * user until we register again, and an unregistered agent is exactly
+         * the state that burns leads.
+         */
+        const reregister = async () => {
+          // onConnect also fires during the initial userAgent.start(), before
+          // the Registerer below exists. There is nothing to re-register yet
+          // and the setup path is about to register anyway, so bail rather
+          // than reporting a reachable agent that has no contact on file.
+          if (!registererRef.current) return
+          try {
+            await registererRef.current.register()
+            markSip(true)
+            setAgentLegError(null)
+            console.log(`[sip #${sipInstanceId}] transport back, re-registered`)
+          } catch (err) {
+            console.error(`[sip #${sipInstanceId}] re-register failed:`, err)
+          }
+        }
+
+        const scheduleReconnect = () => {
+          if (cancelled) return
+          reconnectAttempt += 1
+          // Backoff, capped. A browser left open overnight on a dead network
+          // should keep trying, but not hammer Telnyx every second for hours.
+          const delayMs = Math.min(30000, 1000 * Math.pow(2, reconnectAttempt - 1))
+          console.warn(
+            `[sip #${sipInstanceId}] transport down, reconnect attempt ` +
+            `${reconnectAttempt} in ${delayMs}ms`
+          )
+          if (reconnectTimer) clearTimeout(reconnectTimer)
+          reconnectTimer = setTimeout(async () => {
+            if (cancelled) return
+            try {
+              await userAgent.reconnect()
+              // onConnect re-registers and resets the counter.
+            } catch {
+              scheduleReconnect()
+            }
+          }, delayMs)
+        }
+
         userAgent.delegate = {
+          onConnect: () => {
+            reconnectAttempt = 0
+            if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null }
+            void reregister()
+          },
+          onDisconnect: (err?: Error) => {
+            markSip(false)
+            // Deliberate teardown still fires this. Reconnecting an instance
+            // the cleanup is disposing would resurrect a zombie that answers
+            // INVITEs meant for its replacement.
+            if (cancelled) return
+            setAgentLegError(
+              'DIALER DISCONNECTED, reconnecting. Calls cannot connect until this clears.'
+            )
+            console.error(`[sip #${sipInstanceId}] transport disconnected:`, err?.message || err)
+            scheduleReconnect()
+          },
           onInvite: async (invitation: any) => {
             // ── NO GATE. THE REGISTRATION IS THE GATE. ─────────────────────
             // Every version of a conditional guard here has silently broken
@@ -1555,6 +1655,7 @@ function DialerPageInner() {
 
         swClientRef.current = userAgent
         setSwReady(true)
+        markSip(true)
         console.log(`[sip] registered as instance #${sipInstanceId} (${sipUsername})`)
       } catch (err: any) {
         console.error('SIP init error:', err?.message || err)
@@ -1564,6 +1665,8 @@ function DialerPageInner() {
 
     return () => {
       cancelled = true
+      sipConnectedRef.current = false
+      setSipConnected(false)
       // Unregister BEFORE stopping: unregistering removes this contact from
       // Telnyx so no further INVITE can be forked to it. Stopping without
       // unregistering can leave the registration alive on Telnyx's side until
@@ -3805,6 +3908,27 @@ function DialerPageInner() {
   }
 
   const runDial = async () => {
+    // ── A DEAD SOCKET MUST NOT SPEND A LEAD ─────────────────────────────────
+    // The server places the agent leg first and the lead leg ~200ms later,
+    // without waiting to learn whether the agent leg was answered. So when
+    // this browser's SIP transport is down, the lead is dialled anyway, rings
+    // nobody, is torn down at about 1.2 seconds when Telnyx gives up on the
+    // orphaned agent leg, and is recorded NO_ANSWER against a person who was
+    // never called. Measured over thirty days: 1,270 calls, 754 distinct
+    // leads, 67% of every dial on the platform.
+    //
+    // Checked here rather than server-side because this is the only place
+    // that knows the truth: registration state lives in this browser's
+    // socket, and Telnyx will happily accept a dial for an agent it cannot
+    // reach.
+    if (!sipConnectedRef.current) {
+      setAgentLegError(
+        'NOT CONNECTED TO THE CALL SERVER, reconnecting. No leads will be dialled until this clears.'
+      )
+      setAmdActivity(prev => ['⚠ DIAL BLOCKED: phone line not connected', ...prev].slice(0, 5))
+      return
+    }
+
     // ── HARD GUARD ──────────────────────────────────────────────────────────
     // The single authoritative gate: a dial may only proceed if you are
     // actively available at THIS moment. This stops "ghost dialing" — calls
@@ -4131,6 +4255,16 @@ function DialerPageInner() {
 
   const handleManualDial = async () => {
     if (!manualNumber) return
+
+    // Same reason runDial refuses: a dial placed while this browser's SIP
+    // socket is down rings a real person that nobody can answer for, and
+    // Telnyx tears it down at about a second. See the note in runDial.
+    if (!sipConnectedRef.current) {
+      setAgentLegError(
+        'NOT CONNECTED TO THE CALL SERVER, reconnecting. Nothing was dialed.'
+      )
+      return
+    }
 
     // ── DIAL MEANS GO LIVE ────────────────────────────────────────────────
     // Pressing DIAL while offline used to place the call anyway, and the call
@@ -5703,6 +5837,23 @@ function DialerPageInner() {
               {swReady ? 'AUDIO' : '...'}
             </span>
           </div>
+          {/* ── THE STATE THAT WAS INVISIBLE ────────────────────────────
+              swReady above means "setup finished once" and stays lit after
+              the socket dies. This is the live one. Its absence is why an
+              agent could dial for an hour into a dead connection and see
+              nothing but leads refusing to answer. Only shown when it is
+              WRONG, so a healthy bar stays quiet. */}
+          {isActive && swReady && !sipConnected && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '6px', height: '6px', borderRadius: '50%', background: '#ff6464',
+                boxShadow: '0 0 6px #ff6464',
+              }} />
+              <span style={{ fontSize: '9px', letterSpacing: '2px', color: '#ff6464', fontWeight: 'bold' }}>
+                RECONNECTING
+              </span>
+            </div>
+          )}
 
         </div>
         <div className="dialer-status-bar-right">

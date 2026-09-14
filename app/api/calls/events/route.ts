@@ -1244,7 +1244,7 @@ async function handleHangup(
   try {
     const { data: callRow } = await supabaseAdmin
       .from('calls')
-      .select('id, created_at, duration, disposition, answered_at, talk_seconds, lead_id, dial_group_id, dial_source')
+      .select('id, created_at, duration, disposition, answered_at, talk_seconds, lead_id, dial_group_id, dial_source, call_control_id, agent_call_control_id')
       .eq('call_control_id', callControlId)
       .maybeSingle()
 
@@ -1306,6 +1306,65 @@ async function handleHangup(
         .from('agent_sessions')
         .update({ current_call_id: null })
         .eq('current_call_id', callRow.id)
+
+      // ── OUR FAILURE IS NOT THE LEAD'S FAULT ─────────────────────────────
+      // When the agent's browser loses its SIP socket, Telnyx gives up on the
+      // orphaned agent leg at about 1.2 seconds and the lead leg dies with it
+      // ~0.4s later. The lead's phone never rang. Recording that as NO_ANSWER
+      // spends a dial attempt on someone who was never called, and pushes a
+      // 0-second call into the short-call ratio Telnyx judges us on.
+      //
+      // Measured before this existed: 1,270 calls over thirty days, 754
+      // distinct leads, 67% of every dial on the platform.
+      //
+      // Detected on the LEAD leg only, and only when it was never answered.
+      // The agent leg's own hangup arrives first (consistently ~0.4s earlier),
+      // so by the time this runs the evidence is already on file.
+      if (
+        callControlId === callRow.call_control_id &&
+        !callRow.answered_at &&
+        callRow.agent_call_control_id
+      ) {
+        const { data: agentEnd } = await supabaseAdmin
+          .from('call_events')
+          .select('detail')
+          .eq('call_control_id', callRow.agent_call_control_id)
+          .eq('event_type', 'completed')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        // 'callee' on the agent leg IS the agent's browser. Telnyx reporting
+        // that the callee hung up an unanswered agent leg means the browser
+        // never took it, which is the signature of a dead socket.
+        if ((agentEnd?.detail as { hangup_source?: string } | null)?.hangup_source === 'callee') {
+          void logCallEvent({
+            event_type: 'agent_leg_failed',
+            call_control_id: callControlId,
+            status: 'lead_not_spent',
+            source: 'webhook',
+            detail: { reason: 'agent browser did not answer its leg; lead never rang' },
+          })
+
+          await supabaseAdmin
+            .from('calls')
+            .update({ disposition: 'AGENT_LEG_FAILED' })
+            .eq('id', callRow.id)
+
+          // Released WITHOUT bumping dial_attempts. This lead has not been
+          // called, so it must not move closer to being set aside.
+          if (callRow.lead_id) {
+            await supabaseAdmin
+              .from('leads')
+              .update({
+                status: 'new',
+                claimed_at: null,
+                claimed_by_session_id: null,
+              })
+              .eq('id', callRow.lead_id)
+          }
+        }
+      }
 
       // ── A FINISHED FAN-OUT LINE MUST GIVE ITS LEAD BACK ──────────────────
       // This is why predictive dialed once and then sat at "2/2 lines" forever.
