@@ -149,16 +149,38 @@ export const COST_PER_PREMIUM_AMD_LEG_USD = 0.0065
 /**
  * The floor cost of one dial, before anybody answers.
  *
- * Half a minute of termination at the 30-second minimum, plus one detection
- * leg. This is what MOST calls cost in full on a floor with a 20% connect
- * rate, which makes it the number to project a dialing day from — not the
- * per-minute rate, which only applies to the fifth of calls that connect.
+ * Half a minute of termination at the 30-second minimum, and nothing else —
+ * detection is NOT included, because it bills per answer rather than per dial.
+ * See COST_PER_ANSWERED_AMD_USD below.
  *
- * Declared after the detection rates rather than beside the other minute
- * constants, because it is built from both.
+ * This is what most calls cost in full on a floor with a 20% connect rate,
+ * which makes it the number to project a dialing day from rather than the
+ * per-minute rate, which only touches the fifth of calls that connect.
  */
 export const COST_PER_DIAL_FLOOR_USD =
-  (BILLING_MINIMUM_SECONDS / 60) * COST_PER_MINUTE_USD + COST_PER_AMD_LEG_USD
+  (BILLING_MINIMUM_SECONDS / 60) * COST_PER_MINUTE_USD
+
+// ── DETECTION BILLS PER ANSWER, NOT PER DIAL ──────────────────────────────
+// This was added into the per-dial floor above, which overstated it by five
+// times. The August invoice billed 519 detection legs against 478 answered
+// calls and 1,484 legs placed — it tracks ANSWERS, and mechanically it must:
+// detection runs after answer, so a call nobody picks up never starts it.
+//
+// It matters for projecting a floor. At a 24.6% answer rate, detection costs
+// $0.0005 a dial rather than $0.0020, and the weekly figure for one agent at
+// 5,000 dials is $2.46 rather than $10. Termination, not detection, is the
+// line that dominates.
+export const COST_PER_ANSWERED_AMD_USD = COST_PER_AMD_LEG_USD
+
+/**
+ * Detection cost spread over dials, given an answer rate.
+ *
+ * Use this when projecting from a dial count. Multiplying dials by the per-leg
+ * rate directly is the mistake this replaces.
+ */
+export function amdCostPerDial(answerRate: number): number {
+  return Math.max(0, Math.min(1, answerRate)) * COST_PER_AMD_LEG_USD
+}
 
 /**
  * Recording, per minute recorded.

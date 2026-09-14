@@ -460,8 +460,33 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // directions. See buildClientState / parseClientState below.
   const clientState = buildClientState({ u: p.userId, s: p.source })
 
+  // ── RING FOR WHAT YOU HAVE ALREADY PAID FOR ───────────────────────────────
+  // Telnyx bills this account a 30-SECOND MINIMUM on every outbound leg, then
+  // in 6-second increments (evidenced in lib/telephonyCosts.ts against the
+  // August invoice). A leg that rings out at 20 seconds bills 30. A leg that
+  // rings 30 seconds bills 30. The last ten seconds are already bought.
+  //
+  // Measured over 90 days: 42 answers landed between 21 and 30 seconds — 5.9%
+  // on top of the 707 that arrive inside 21. Progressive was hanging up on
+  // every one of them to save money it was being charged anyway.
+  //
+  // Same shape as amd_hold_seconds_after_machine: read what the carrier
+  // actually bills and stop leaving paid time on the table.
+  //
+  // TSR is a FLOOR, not a ceiling — 16 CFR 310.4(b)(4) asks for at least 15
+  // seconds or 4 rings before abandoning, so 30 is more compliant than 20, not
+  // less.
+  //
+  // PREDICTIVE IS DELIBERATELY LEFT AT 20. Its pacing depends on a ringing line
+  // being shorter-lived than the 30-second lead claim that covers it — see the
+  // arithmetic in lib/predictiveController.ts. Ring for 30 and the claim can
+  // expire while the line is still up, which uncounts it and lets the
+  // controller over-dial. That is an abandon-rate problem, and abandon rate is
+  // regulated. The ten free seconds are not worth it there.
   const isTsrRegulated = p.dialerMode === 'progressive' || p.dialerMode === 'predictive'
-  const ringTimeoutSecs = isTsrRegulated ? 20 : 60
+  const ringTimeoutSecs = p.dialerMode === 'predictive' ? 20
+    : isTsrRegulated ? 30
+    : 60
 
   // ── STEP 1: DIAL THE AGENT'S SIP LEG (user_dial only) ───────────────────
   // Dialed FIRST and immediately — no gating on the lead answering — so
