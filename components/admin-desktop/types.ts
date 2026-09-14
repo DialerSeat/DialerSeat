@@ -44,6 +44,7 @@ export type AppId =
   | 'appstore'
   | 'explorer'
   | 'settings'
+  | 'balance'
   | 'live-ops'
   | 'unit-economics'
   | 'notifications'

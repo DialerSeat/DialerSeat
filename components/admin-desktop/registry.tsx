@@ -70,6 +70,10 @@ const LiveOpsApp = dynamic(() => import('./apps/LiveOps'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+const BalanceApp = dynamic(() => import('./apps/Balance'), {
+  ssr: false,
+  loading: () => null,
+})
 
 const ComplianceApp = dynamic(() => import('./apps/Compliance'), {
   loading: () => <AppLoading />,
@@ -209,6 +213,17 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin', 'manager'],
     Component: TeamsApp,
     defaultSize: { width: 1100, height: 720 },
+  },
+  {
+    id: 'balance',
+    name: 'Balance',
+    shortName: 'Balance',
+    icon: '🏦',
+    iconBg: 'linear-gradient(135deg, #4fd47a, #1a6a1a)',
+    description: 'The Telnyx account as a bank statement: what went out, what came in, and exactly why',
+    visibleTo: ['admin'],
+    Component: BalanceApp,
+    defaultSize: { width: 1100, height: 780 },
   },
   {
     id: 'live-ops',
