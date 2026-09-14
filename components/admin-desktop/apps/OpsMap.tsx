@@ -228,6 +228,32 @@ const hhmmss = (iso: string) => {
   const d = new Date(iso)
   return d.toLocaleTimeString('en-GB', { hour12: false })
 }
+
+// ── A CALL THAT HAS NOT ENDED YET ────────────────────────────────────────
+// duration and talk_seconds are written by the hangup webhook, so a call still
+// in progress carries 0 in both. Rendered literally that reads "0s", and the
+// DUR column then paints it red as a sub-nine-second call: a live conversation
+// displayed as the exact thing this screen exists to flag as a failure.
+//
+// Live here means no disposition written, nothing in duration, and recent
+// enough that it cannot be an orphan. The age bound matters — calls that ended
+// without ever being dispositioned do exist in this table, and without it one
+// of those would show a clock counting up forever.
+const LIVE_MAX_AGE_MS = 10 * 60_000
+const liveSeconds = (
+  f: { at: string; duration: number; disposition: string | null },
+  nowMs: number,
+): number | null => {
+  if (f.disposition || f.duration > 0) return null
+  const started = Date.parse(f.at)
+  if (!Number.isFinite(started)) return null
+  const elapsed = nowMs - started
+  if (elapsed < 0 || elapsed > LIVE_MAX_AGE_MS) return null
+  return Math.floor(elapsed / 1000)
+}
+
+/** A running call reads as a clock, not a count of seconds. */
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 const prettyPhone = (p: string | null) => {
   if (!p) return '-'
   const d = p.replace(/\D/g, '')
@@ -393,6 +419,21 @@ export default function OpsMap() {
   // an initial-fetch flag that is itself state describing the fetch.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(false) }, [load])
+
+  // ── THE SECOND HAND ────────────────────────────────────────────────────
+  // The feed itself polls every SYNC_MS. An elapsed clock that only moves
+  // every five seconds reads as broken, so this ticks once a second — and
+  // only while a row is actually running, because it re-renders a screen
+  // carrying a map and several charts.
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  const hasRunningCall = (data?.feed ?? []).some(
+    f => !f.disposition && f.duration === 0
+  )
+  useEffect(() => {
+    if (!hasRunningCall) return
+    const t = setInterval(() => setNowMs(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [hasRunningCall])
 
   useEffect(() => {
     const t = setInterval(() => { load(false) }, SYNC_MS)
@@ -1726,7 +1767,15 @@ export default function OpsMap() {
                         </tr>
                       </thead>
                       <tbody>
-                        {shownFeed.map(f => (
+                        {shownFeed.map(f => {
+                          const live = liveSeconds(f, nowMs)
+                          // A skipped call was never placed: no leg, no answer,
+                          // nothing billed. Printing "0s" in the red reserved
+                          // for short calls says a dial failed when none was
+                          // ever made.
+                          const neverPlaced = live === null
+                            && f.duration === 0 && !f.answered
+                          return (
                           <tr key={f.id} data-fresh={freshIds.has(f.id) ? '1' : undefined}>
                             <td style={{ color: CYAN }}>{hhmmss(f.at)}</td>
                             <td style={{ color: GREEN }}>{f.agent}</td>
@@ -1734,13 +1783,32 @@ export default function OpsMap() {
                             <td style={{ color: AMBER }}>{prettyPhone(f.phone)}</td>
                             <td className="om-hide-sm" style={{ color: MUTED }}>{f.targetPlace || 'unknown'}</td>
                             {/* Nine seconds is the compliance floor, so a short
-                                call is worth seeing without reading the number. */}
-                            <td className="om-hide-sm" style={{ color: f.duration >= 9 ? INK : RED }}>{f.duration}s</td>
+                                call is worth seeing without reading the number.
+                                Neither bound applies to a call that is still up
+                                or was never placed. */}
+                            <td className="om-hide-sm" style={{
+                              color: live !== null ? GREEN
+                                : neverPlaced ? DIM
+                                : f.duration >= 9 ? INK : RED,
+                            }}>
+                              {live !== null ? mmss(live)
+                                : neverPlaced ? '-'
+                                : `${f.duration}s`}
+                            </td>
                             <td className="om-hide-sm" style={{ color: f.talkSeconds ? INK : DIM }}>
                               {f.talkSeconds ? f.talkSeconds + 's' : '-'}
                             </td>
-                            <td style={{ color: f.disposition ? dispColour(f.disposition) : (f.answered ? INK : DIM) }}>
-                              {f.disposition || (f.answered ? 'answered' : 'no answer')}
+                            {/* Ringing and connected are different facts and
+                                the feed already knows which: answered_at is
+                                what separates them. */}
+                            <td style={{
+                              color: live !== null ? GREEN
+                                : f.disposition ? dispColour(f.disposition)
+                                : f.answered ? INK : DIM,
+                            }}>
+                              {live !== null
+                                ? (f.answered ? 'on call' : 'ringing')
+                                : (f.disposition || (f.answered ? 'answered' : 'no answer'))}
                             </td>
                             <td className="om-hide-sm" style={{ color: amdColour(f.amdResult) }}>
                               {f.amdResult || (f.amdRequested ? 'pending' : 'off')}
@@ -1751,7 +1819,8 @@ export default function OpsMap() {
                               {f.recording === 'completed' ? 'rec' : '-'}
                             </td>
                           </tr>
-                        ))}
+                          )
+                        })}
                         {shownFeed.length === 0 && (
                           <tr><td colSpan={11} style={{ color: DIM, padding: 10 }}>
                             {(data?.feed ?? []).length === 0
