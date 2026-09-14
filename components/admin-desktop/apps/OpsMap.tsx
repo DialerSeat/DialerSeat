@@ -622,26 +622,27 @@ export default function OpsMap() {
   const allLogs = useMemo(() => {
     type Row =
       | { kind: 'call'; at: number; call: FeedRow }
-      | { kind: 'log'; at: number; log: Noti; source: 'billing' | 'alert' }
+      | { kind: 'log'; at: number; log: Noti; source: 'billing' }
     const rows: Row[] = []
     for (const f of (data?.feed ?? [])) {
       const t = Date.parse(f.at)
       if (Number.isFinite(t)) rows.push({ kind: 'call', at: t, call: f })
     }
-    // Both streams. notis are the ones that raised a bell, logs are the ones
-    // that did not; on a combined timeline that distinction is a colour, not
-    // a reason to show only half of what happened.
+    // LOGS ONLY. Notifications used to be merged in here too, on the theory
+    // that a bell and a log line are the same event wearing different clothes.
+    // In practice they are not: a log line records something that happened on
+    // the floor, and a notification is a thing addressed to whoever is
+    // reading. Interleaved, the second kind reads as noise between the calls
+    // it sits among, which is the opposite of what one timeline is for.
+    // They keep their own tab, where they are the subject rather than an
+    // interruption.
     for (const n of (data?.logs ?? [])) {
       const t = Date.parse(n.at)
       if (Number.isFinite(t)) rows.push({ kind: 'log', at: t, log: n, source: 'billing' })
     }
-    for (const n of (data?.notis ?? [])) {
-      const t = Date.parse(n.at)
-      if (Number.isFinite(t)) rows.push({ kind: 'log', at: t, log: n, source: 'alert' })
-    }
     rows.sort((a, b) => b.at - a.at)
     return rows.slice(0, feedSize)
-  }, [data?.feed, data?.logs, data?.notis, feedSize])
+  }, [data?.feed, data?.logs, feedSize])
 
   const unreadNotis = (data?.notis ?? []).filter(n => n.unread).length
   // BOTH interleaves by time rather than concatenating, so a payment and the
@@ -1877,11 +1878,12 @@ export default function OpsMap() {
                             <td style={{ color: r.log.unread ? AMBER : VIOLET }}>
                               {(r.log.kind || 'log').toUpperCase().slice(0, 14)}
                             </td>
-                            {/* A billing event is about a named customer; an
-                                alert is about the platform. Saying "system"
-                                for both would flatten that away. */}
+                            {/* Only billing logs reach this timeline now, so
+                                this no longer has to distinguish them from
+                                platform alerts — it names the one stream that
+                                is here rather than implying there are two. */}
                             <td className="om-hide-sm" style={{ color: DIM }}>
-                              {r.source === 'billing' ? 'billing' : 'system'}
+                              {r.source}
                             </td>
                             <td style={{ color: r.log.unread ? INK : MUTED }}>
                               {r.log.title}
