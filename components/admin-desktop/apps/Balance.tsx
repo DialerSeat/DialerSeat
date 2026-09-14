@@ -126,6 +126,32 @@ const inputStyle: React.CSSProperties = {
   color: T.text, fontSize: 12, padding: '7px 9px', fontFamily: FUTURA,
 }
 
+/** Right-aligned monospace cell. Money in a table only reads if it lines up. */
+const cellNum: React.CSSProperties = {
+  padding: '7px 8px', borderBottom: `1px solid ${T.surface}`,
+  textAlign: 'right', fontFamily: MONO, whiteSpace: 'nowrap',
+}
+
+/** One headline number with its label, for a row of them above a table. */
+function Figure({ label, value, sub, tone }: {
+  label: string; value: string; sub?: string; tone?: string
+}) {
+  return (
+    <div>
+      <div style={{ fontSize: 9, letterSpacing: 1.5, color: T.muted, fontWeight: 'bold' }}>
+        {label}
+      </div>
+      <div style={{
+        fontSize: 20, fontFamily: MONO, fontWeight: 'bold',
+        color: tone || T.text, marginTop: 3,
+      }}>{value}</div>
+      {sub && (
+        <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{sub}</div>
+      )}
+    </div>
+  )
+}
+
 function Panel({ title, note, children }: {
   title: string; note?: string; children: React.ReactNode
 }) {
@@ -150,8 +176,51 @@ export default function BalanceApp() {
   const [data, setData] = useState<Ledger | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<
-    'statement' | 'charges' | 'people' | 'bills' | 'telnyx'
+    'statement' | 'charges' | 'people' | 'bills' | 'telnyx' | 'reconcile'
   >('statement')
+
+  // ── WHAT LEFT THE ACCOUNT VS WHAT CAN EXPLAIN IT ─────────────────────────
+  // VS THEIR LEDGER settles a month once it is over, from a total typed in by
+  // hand. It cannot see money leaving right now, which is the thing that
+  // started this: 14 Sept spent $7.83 against $1.00 of modelled activity, and
+  // $2.54 of that left across windows in which nothing was dialled at all.
+  //
+  // This walks consecutive balance samples and names the residual per window.
+  // The obvious objection was tested before relying on any of it: if their
+  // cost records simply lagged the call, a debit could land in an idle window
+  // and mean nothing. 492 of 545 records that day arrived within 60 seconds.
+  // The lag explains about a twentieth of the records, not the money.
+  interface ReconcileWindow {
+    from: string; to: string; minutes: number
+    balanceFrom: number; balanceTo: number; moved: number
+    dials: number; answered: number
+    theirsUsd: number; theirsCalls: number; oursUsd: number
+    unexplainedUsd: number
+  }
+  interface ReconcileResult {
+    success: boolean; error?: string; note?: string | null
+    snapshots?: number
+    spentTotalUsd?: number; theirsTotalUsd?: number; oursTotalUsd?: number
+    unexplainedTotalUsd?: number; unexplainedPct?: number
+    spentWithNoCallsUsd?: number; spentWithNoCallsWindows?: number
+    windows?: ReconcileWindow[]
+  }
+  const [recon, setRecon] = useState<ReconcileResult | null>(null)
+  const [reconBusy, setReconBusy] = useState(false)
+  const [reconHours, setReconHours] = useState('24')
+
+  const loadRecon = useCallback(async () => {
+    setReconBusy(true)
+    try {
+      const r = await fetch(`/api/admin/balance-reconcile?hours=${reconHours}`)
+        .then(x => x.json())
+      setRecon(r)
+    } catch {
+      setRecon({ success: false, error: 'Request failed.' })
+    } finally {
+      setReconBusy(false)
+    }
+  }, [reconHours])
 
   // ── WHAT TELNYX SAYS, NOT WHAT WE CALCULATE ──────────────────────────────
   // Every other number in this app is our rates times our usage. That answers
@@ -336,6 +405,7 @@ export default function BalanceApp() {
               ['people', `PER PERSON (${data.perUser.length})`],
               ['bills', 'VS THEIR LEDGER'],
               ['telnyx', 'WHAT TELNYX BILLED'],
+              ['reconcile', 'UNEXPLAINED'],
             ] as const).map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} style={{
                 background: tab === id ? T.accent : '#fff',
@@ -346,6 +416,142 @@ export default function BalanceApp() {
               }}>{label}</button>
             ))}
           </div>
+
+          {/* ── UNEXPLAINED ────────────────────────────────────────────── */}
+          {tab === 'reconcile' && (
+            <Panel
+              title="WHAT LEFT THE ACCOUNT, AND WHAT CAN ACCOUNT FOR IT"
+              note="Balance movement between consecutive samples, against two independent floors: what Telnyx themselves reported for calls in that window, and what this account's own invoice-derived terms say it should have cost. The larger of the two is the one used, which is the reading most favourable to the carrier. What is left over is the residual."
+            >
+              <div style={{
+                display: 'flex', gap: 8, alignItems: 'center',
+                marginBottom: 14, flexWrap: 'wrap',
+              }}>
+                <select value={reconHours} onChange={e => setReconHours(e.target.value)}
+                        style={inputStyle}>
+                  <option value="6">Last 6 hours</option>
+                  <option value="24">Last 24 hours</option>
+                  <option value="72">Last 3 days</option>
+                  <option value="168">Last week</option>
+                </select>
+                <button onClick={() => void loadRecon()} disabled={reconBusy} style={{
+                  background: T.accent, color: '#fff', border: 'none', borderRadius: 3,
+                  fontSize: 11, letterSpacing: 1, padding: '8px 14px', fontFamily: FUTURA,
+                  cursor: reconBusy ? 'not-allowed' : 'pointer', opacity: reconBusy ? 0.6 : 1,
+                }}>{reconBusy ? 'RECONCILING…' : 'RECONCILE'}</button>
+              </div>
+
+              {recon && recon.success === false && (
+                <div style={{ fontSize: 12, color: T.red }}>{recon.error}</div>
+              )}
+              {recon?.note && (
+                <div style={{ fontSize: 11, color: T.amber, marginBottom: 12, lineHeight: 1.6 }}>
+                  {recon.note}
+                </div>
+              )}
+
+              {recon?.success && (recon.windows?.length ?? 0) > 0 && (
+                <>
+                  <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 16 }}>
+                    <Figure label="SPENT" value={usd(recon.spentTotalUsd ?? 0)} />
+                    <Figure label="THEY REPORTED" value={usd(recon.theirsTotalUsd ?? 0)} />
+                    <Figure label="OUR MODEL" value={usd(recon.oursTotalUsd ?? 0)} />
+                    <Figure
+                      label="UNEXPLAINED"
+                      value={usd(recon.unexplainedTotalUsd ?? 0)}
+                      tone={(recon.unexplainedPct ?? 0) > 25 ? T.red : undefined}
+                      sub={`${recon.unexplainedPct ?? 0}% of spend`}
+                    />
+                  </div>
+
+                  {(recon.spentWithNoCallsWindows ?? 0) > 0 && (
+                    <div style={{
+                      fontSize: 11.5, color: T.red, lineHeight: 1.7, marginBottom: 14,
+                      padding: '9px 11px', background: 'rgba(138,26,26,0.06)',
+                      border: `1px solid ${T.red}`, borderRadius: 3,
+                    }}>
+                      <strong>{usd(recon.spentWithNoCallsUsd ?? 0)}</strong> left the account
+                      across <strong>{recon.spentWithNoCallsWindows}</strong> window(s) in
+                      which no call was dialled. There is no usage in those windows to round
+                      up, apply a minimum to, or surcharge.
+                    </div>
+                  )}
+
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{
+                      width: '100%', borderCollapse: 'collapse',
+                      fontSize: 12, minWidth: 680,
+                    }}>
+                      <thead>
+                        <tr>
+                          {['WINDOW', 'BALANCE', 'MOVED', 'DIALS', 'THEIRS', 'OURS', 'UNEXPLAINED']
+                            .map((h, i) => (
+                              <th key={h} style={{
+                                textAlign: i === 0 ? 'left' : 'right', padding: '6px 8px',
+                                borderBottom: `1px solid ${T.border}`, color: T.muted,
+                                fontSize: 9, letterSpacing: 1, fontWeight: 'bold',
+                              }}>{h}</th>
+                            ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(recon.windows ?? []).filter(w => w.moved !== 0).map(w => (
+                          <tr key={w.from + w.to}>
+                            <td style={{
+                              padding: '7px 8px', borderBottom: `1px solid ${T.surface}`,
+                              whiteSpace: 'nowrap',
+                            }}>
+                              {new Date(w.from).toLocaleTimeString(undefined, {
+                                hour: '2-digit', minute: '2-digit',
+                              })}
+                              {' → '}
+                              {new Date(w.to).toLocaleTimeString(undefined, {
+                                hour: '2-digit', minute: '2-digit',
+                              })}
+                            </td>
+                            <td style={{ ...cellNum, color: T.muted }}>
+                              {w.balanceFrom.toFixed(2)} → {w.balanceTo.toFixed(2)}
+                            </td>
+                            <td style={{
+                              ...cellNum, fontWeight: 'bold',
+                              color: w.moved < 0 ? T.red : T.green,
+                            }}>
+                              {w.moved > 0 ? '+' : ''}{w.moved.toFixed(4)}
+                            </td>
+                            <td style={{
+                              ...cellNum,
+                              color: w.dials === 0 ? T.red : T.muted,
+                              fontWeight: w.dials === 0 ? 'bold' : 'normal',
+                            }}>{w.dials}</td>
+                            <td style={{ ...cellNum, color: T.muted }}>
+                              {w.theirsUsd ? usd4(w.theirsUsd) : '–'}
+                            </td>
+                            <td style={{ ...cellNum, color: T.muted }}>
+                              {w.oursUsd ? usd4(w.oursUsd) : '–'}
+                            </td>
+                            <td style={{
+                              ...cellNum, fontWeight: 'bold',
+                              color: w.unexplainedUsd > 0 ? T.red : T.muted,
+                            }}>
+                              {w.unexplainedUsd > 0 ? usd4(w.unexplainedUsd) : '–'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {!recon && !reconBusy && (
+                <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.7 }}>
+                  Nothing is computed until you ask. Balance is only sampled while this
+                  desktop is open, so the record is as complete as the time somebody has
+                  spent watching it.
+                </div>
+              )}
+            </Panel>
+          )}
 
           {/* ── WHAT TELNYX BILLED ─────────────────────────────────────── */}
           {tab === 'telnyx' && (
