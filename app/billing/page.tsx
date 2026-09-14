@@ -159,6 +159,21 @@ export default function BillingPage() {
   // code performs a real redeem, and a re-render firing it a second time would
   // be a duplicate join attempt.
   const autoAppliedRef = useRef(false)
+  /**
+   * The code that ARRIVED, as opposed to one somebody is typing.
+   *
+   * Auto-apply keys on promoCode, and an empty box going to one character is
+   * a change like any other, so typing the first letter of a code submitted
+   * that single letter, failed, and made the agent start over. Reported as
+   * "as soon as you type a single letter it submits it".
+   *
+   * Holding what arrived separately is what tells the two apart. Only a value
+   * this app put in the box auto-applies; anything a human types waits for
+   * them to finish and press the button.
+   */
+  const arrivedCodeRef = useRef<string>(
+    (searchParams.get('promo') || '').trim().toUpperCase()
+  )
   // ── TWO KINDS OF CODE, ONE BOX ────────────────────────────────────────
   // A person holding a code has no reason to know whether it is a Stripe
   // promo or a DialerSeat team invite, so both are typed into the same
@@ -513,7 +528,14 @@ export default function BillingPage() {
     ;(async () => {
       try {
         const r = await fetch('/api/join/pending').then(x => x.json())
-        if (!cancelled && r?.code) setPromoCode(String(r.code).toUpperCase())
+        if (!cancelled && r?.code) {
+          const arrived = String(r.code).toUpperCase()
+          // Recorded BEFORE the state write, so the auto-apply effect that
+          // the write triggers already recognises this as an arriving code
+          // rather than typing.
+          arrivedCodeRef.current = arrived
+          setPromoCode(arrived)
+        }
       } catch {
         // An empty box is the old behaviour, not a failure worth interrupting
         // somebody's checkout to report.
@@ -531,6 +553,14 @@ export default function BillingPage() {
     if (checkingStatus || !isLoaded) return
     if (!promoCode) return
     if (promoApplied || teamCodes.length > 0) return
+    // ── ONLY A CODE THIS APP PUT THERE APPLIES ITSELF ──────────────────
+    // The team-invite flow depends on this firing: a code arriving as
+    // ?promo=CODE or from the join cookie must still apply on its own, which
+    // is what carries an agent from an instant signup link into billing with
+    // their seat already attached. That path is unchanged.
+    //
+    // What must NOT fire is the same effect reacting to somebody typing.
+    if (promoCode !== arrivedCodeRef.current) return
 
     autoAppliedRef.current = true
     handleApplyPromo({ auto: true })
