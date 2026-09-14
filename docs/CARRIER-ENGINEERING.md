@@ -167,6 +167,16 @@ full 60-second minimum plus AMD. That cost is not reachable by engineering — i
 is list quality and time-of-day. The lever is dialing fewer numbers that are
 always going to be a machine, not handling machines more cheaply.
 
+> **The "no verdict" row is not a bug and not a cost.** AMD is enabled and runs
+> on all of them — 375 answered calls, every one on a campaign with
+> `amd_enabled: true`. The verdict simply is not what ended the call. 87 were
+> SKIPPED by an agent who was already talking (`bridge_on_answer` connects at
+> pickup, so the agent is on the line from second one while detection runs in
+> parallel), 32 of those ending inside AMD's own 3.31s median verdict time. A
+> further 7 are real dispositioned conversations averaging 167 seconds. The
+> consequence is that AMD metrics undercount, not that money is wasted — the
+> whole row is worth about $0.23 a month.
+
 ---
 
 ## 7. Cost telemetry
@@ -234,6 +244,38 @@ one, comfortably clear on the other.
 
 The naive measurement counts ring time and reports 91% SDC. It is wrong and it
 will cause somebody to panic. Measure on answered calls.
+
+### The short-call hold, and why it is randomised
+
+When **we** are the ones hanging up — a machine verdict, an agent skipping — the
+line is held past the six-second threshold rather than dropped at two seconds.
+`lib/complianceHold.ts`.
+
+**The hold is free.** An answered outbound leg bills a 60-second minimum either
+way (§6), so a call dropped at 2s and a call held to 11s cost exactly the same.
+It buys surcharge headroom for nothing, which is why the floor is generous.
+
+**The randomisation is the clever part, and it is not decoration.** A fixed hold
+produces calls that end at 9.0s every time, forever. That is a signature — a
+carrier looking at a duration distribution sees a spike on one value that no
+human conversation would ever produce, sitting three seconds above their own
+short-call threshold. The entire point of the hold is to stop being flagged, and
+a mechanical tell is its own kind of flag.
+
+So each hold picks a fresh target uniformly between the floor and **3.5 seconds**
+above it, at sub-second resolution. Durations land across 9, 10, 11 and 12 with
+no mode — an ordinary spread of short calls. The spread is 3.5 rather than 3
+because a uniform 3 over a floor of 9 yields [9, 12), which truncates to only
+9, 10 or 11: "sometimes twelve" would have quietly meant never.
+
+**Measured from ANSWER, not from dial.** Ring time is neither billed nor counted
+toward the short-call ratio, so holding from dial would both overshoot and vary
+with how long the phone rang.
+
+The floor itself is configuration, not a constant —
+`platform_config.amd_hold_seconds_after_machine` — so it can be raised if a
+carrier ever moves its threshold. Randomness only ever *adds* to it; nothing in
+the module can return less than the configured minimum.
 
 Separately, the predictive controller enforces the **FTC 3% abandon ceiling per
 campaign** over a rolling 30 days. It is per campaign because the rule is per
