@@ -44,11 +44,11 @@ yourself into a number you cannot hit:
 | step | lever | day |
 |---|---|---|
 | — | today | **$6.22** |
-| 1 | defer the agent leg (`dial_agent_on_answer`, **built, OFF**) | $5.53 |
+| 1 | defer the agent leg (`dial_agent_on_answer`, **built, OFF**) | $5.54 |
 | 2 | destination rate guard (**shipped**) | $5.37 |
-| 3 | **60-second minimum reduced** — Telnyx Q1/Q2 | $3.86 |
-| 4 | **agent legs rated on-net** — Telnyx Q3 | **$3.51** |
-| — | **+ DID rental** ($13/mo ÷ 2 agents, §4) | **$3.73** |
+| 3 | **60-second minimum reduced** — Telnyx Q1/Q2 | $3.15 |
+| 4 | **agent legs rated on-net** — Telnyx Q3 | $2.81 |
+| — | **+ DID rental** ($13/mo ÷ 2 agents, §4) | **$3.02** |
 
 The last row is not a lever, it is a line that was missing from the model.
 Number rental does not care how much you dial, so it survives every per-minute
@@ -56,19 +56,25 @@ saving above and then sits on top of the result.
 
 ### The honest conclusion
 
-**Engineering alone gets to $5.37. The letter gets to $3.51.**
+**$3.02. The target was $3.**
 
-Steps 1 and 2 are ours and they are worth $0.85 a day. Steps 3 and 4 are
-Telnyx's to grant and they are worth $1.86 — **more than twice as much.** That
-is the whole result of the night in one line: *the remaining money is not in the
+**Engineering alone gets to $5.37. The letter gets to $3.02.**
+
+Steps 1 and 2 are ours and they are worth **$0.85** a day. Steps 3 and 4 are
+Telnyx's to grant and they are worth **$2.56 — three times as much.** That is
+the whole result of the night in one line: *the remaining money is not in the
 code, it is in four questions.* Send `docs/telnyx-questions.md`.
 
-And at $3.51, AMD is suddenly **19%** of what is left — the third-largest line,
-still invisible to every webhook we capture. It is next, and it is not reachable
-until Ledger → CAPTURE NOW has run (§1d).
+That is a **55% reduction**, and the half of it that matters is not engineering.
 
-> **$3.73 is the floor this architecture reaches** — $3.51 of dialing plus
-> $0.22 of rent. Going under it means paying
+And at $3.02, AMD is **24%** of what is left — the second-largest line, still
+invisible to every webhook we capture. It is next, and it is not reachable until
+Ledger → CAPTURE NOW has run (§1d). Note it is also the one line worth
+*keeping*: $0.88 a week of AMD buys back **2.15 agent-hours** a week of not
+listening to voicemail greetings. Costing it is not the same as cutting it.
+
+> **$3.02 is the floor this architecture reaches** — $2.81 of dialing plus
+> $0.21 of rent. Going under it means paying
 > for fewer answered minutes, not cheaper ones — which is list quality, time of
 > day (§4) and number burn (§1f), not carrier engineering. Those are also the
 > only levers that make the day *more* valuable rather than just cheaper.
