@@ -1173,6 +1173,71 @@ worth dropping an index on a live dialer at the end of a long night.
 
 ---
 
+## 1aa. HOW MANY TIMES IS ONE CALL CHARGED? Three records, and two are the same leg
+
+The direct question, answered from 364 call sessions.
+
+### Telnyx is NOT triple-charging, and the detail records are not extra money
+
+`call.cost` is an **aggregate** — its `cost_parts` already contain the
+call-control, sip-trunking and call-recording components. `/detail_records` then
+reports those same components as their own rows. Matched on leg id:
+
+| | detail records | webhook, same legs |
+|---|---|---|
+| `call-control` | **$0.0234** | **$0.0234** |
+| `billed_sec` identical | **24 of 24** | |
+
+**Same charge, itemised and aggregated.** Summing both double-counts — which is
+exactly the “charged three times” picture that is *not* happening. The ledger
+screen did that and has been fixed: the total is now `call.cost` plus only the
+types it does not already contain, and every component row is flagged
+`countedInTotal: false`.
+
+### What one call actually produces
+
+**2.95 billing records per call session.** A worked example:
+
+| record | cost parts | $ |
+|---|---|---|
+| **LEAD leg** (PSTN) | `call-control@0.002` + `sip-trunking@0.005` | **0.2380** |
+| **AGENT leg** (call-control conn) | `call-control@0.002` + `sip-trunking@`**`0`** | **0.0686** |
+| **AGENT twin** (credential conn) | `sip-trunking@0.002` | **0.0686** |
+| | | **0.3752** |
+
+**The lead is charged once. That is correct.** PSTN carriage plus the platform
+fee — both legitimate.
+
+**The agent's own leg is charged twice, identically.** Same duration, same
+amount, two connections. And Telnyx writes `sip-trunking@0` on the first one,
+confirming no carrier is involved in either.
+
+### The drain, sized
+
+| across 364 call sessions | |
+|---|---|
+| total billed | **$5.1828** |
+| **the agent leg** | **$3.1136 — 60.1%** |
+| the lead leg — the actual product | $2.0120 — 38.8% |
+| mean share per individual call | **54.4%** |
+
+> **That window spans the parked-leg leak.** Post-teardown the agent leg is
+> **24.6%** of spend (§1g). Both figures are real; 24.6% is the one that
+> describes today. What does **not** change with the fix is the *doubling* —
+> that is structural, and it is what §1g question 3 asks about.
+
+### So, precisely
+
+- **Not triple-charged.** Three records, and the third is the second leg's twin.
+- **The lead leg is billed once and correctly.**
+- **The agent leg is billed twice** — `call-control` on one connection,
+  `browser/app calling` (§1o) on the other. Both published; neither touches a
+  carrier.
+- **Halving that is a quarter of today's bill**, and it is the one item where
+  Telnyx's own record concedes the premise by writing `$0` in a rate field.
+
+---
+
 ## 1z. WHAT THE LEDGER CAPTURE ACTUALLY CONTAINED
 
 The capture returned exactly 50 records of every type — Telnyx's page cap, since

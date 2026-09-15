@@ -119,17 +119,62 @@ export async function GET(req: NextRequest) {
 
     const revisions = (revisedRes.data || []) as Array<Record<string, unknown>>
 
+    // ── DO NOT SUM EVERY ROW. MOST OF THEM DESCRIBE THE SAME MONEY TWICE ──
+    // `call.cost` is an AGGREGATE: its `cost_parts` array already contains the
+    // call-control, sip-trunking and call-recording components of that leg.
+    // /detail_records then reports those same components as their own rows.
+    //
+    // Proven by matching on leg id: 24 of 24 call-control detail records have
+    // IDENTICAL billed_sec and IDENTICAL cost to the call.cost row for the same
+    // leg — $0.0234 against $0.0234. Telnyx is not charging twice; it is the
+    // same charge, itemised and aggregated.
+    //
+    // So a naive sum over this table double-counts, and would show exactly the
+    // "I am being charged three times" picture that is NOT happening. Which is
+    // worse than useless on a screen someone reads to answer that question.
+    //
+    // AMD is the exception that proves the rule: it has no cost_part in
+    // call.cost at all (§1d), so it is genuinely additive. Same for anything
+    // that is not a voice leg.
+    const COMPONENT_OF_CALL_COST = new Set(['call-control', 'sip-trunking', 'recording'])
+
+    const aggregate = [...byType.entries()].filter(([t]) => t === 'call.cost')
+    const components = [...byType.entries()].filter(([t]) => COMPONENT_OF_CALL_COST.has(t))
+    const additive = [...byType.entries()]
+      .filter(([t]) => t !== 'call.cost' && !COMPONENT_OF_CALL_COST.has(t))
+
+    const sum = (xs: Array<[string, { cost: number }]>) =>
+      Math.round(xs.reduce((n, [, v]) => n + v.cost, 0) * 10000) / 10000
+
     return NextResponse.json({
       success: true,
       windowDays: days,
       totalRecords: stored.length,
-      totalBilledUsd: Math.round(stored.reduce((n, r) => n + Number(r.cost ?? 0), 0) * 10000) / 10000,
+      // call.cost + only the types it does not already contain.
+      totalBilledUsd: Math.round((sum(aggregate) + sum(additive)) * 10000) / 10000,
+      totals: {
+        fromCallCost: sum(aggregate),
+        additiveTypes: sum(additive),
+        // Shown so the number is legible rather than mysterious, and flagged as
+        // what it is: a second view of money already counted above.
+        componentsAlreadyInCallCost: sum(components),
+      },
+      note_on_double_counting:
+        'call.cost already contains call-control, sip-trunking and recording as ' +
+        'cost_parts. Those detail rows are the SAME charge itemised, verified by ' +
+        'matching leg ids, and are excluded from the total. AMD has no cost_part ' +
+        'and is added.',
       byType: [...byType.entries()]
         .map(([recordType, v]) => ({
           recordType,
           records: v.records,
           billedUsd: Math.round(v.cost * 10000) / 10000,
           billedSeconds: v.billedSec,
+          // The flag that stops someone adding the column up by hand.
+          countedInTotal: recordType === 'call.cost' || !COMPONENT_OF_CALL_COST.has(recordType),
+          ...(COMPONENT_OF_CALL_COST.has(recordType)
+            ? { note: 'already included inside call.cost cost_parts' }
+            : {}),
         }))
         .sort((a, b) => b.billedUsd - a.billedUsd),
       // Non-empty means a figure moved after we first read it.
