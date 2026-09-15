@@ -10,96 +10,77 @@ about 40% of what you pay for an answered call is a minimum you never used.**
 
 ## THE LIST
 
-Everything found, ordered by what it is worth. Detail in the numbered sections.
+Everything found, and what state it is in. Detail in the numbered sections.
 
-### Do these — no engineering, and the top two are the biggest items in the file
-
-| # | action | worth | where |
-|---|---|---|---|
-| 1 | **Switch Telnyx payment to ACH Direct Debit** | 3% of every dollar, forever — **~$199/mo at 100 agents** | §1q |
-| 2 | **Turn on ACH auto-recharge, card as fallback only** | prevents *“negative balance 1 month → all numbers deleted”* | §1r |
-| 3 | **Admin → Numbers → `$ AUDIT`** | settles **$0–$19.50/month** of E911 in one click | §1o, §1u |
-| 4 | **Send `docs/telnyx-questions.md`** (5 questions) | **Q1 alone is 55.6% of answered-call billing** (§1a) — rewritten, the old version asked for 1.3% | §1a–c, §1g |
-| 5 | **Ledger → CAPTURE NOW** | 1 of 19 record types has ever been captured | §1d |
-| 6 | **Admin → Numbers → `⚠ SURCHARGE`** | both ratios month-to-date; portal pie chart still outranks it | §1i |
-| 7 | **Admin → Numbers → `SET CNAM`** | free; landlines only, no answer-rate claim | §1t |
-| 8 | Register the pool at `freecallerregistry.com` | free; First Orion + TNS + Hiya in one form | §1f |
-| **10** | **Point Telnyx's inbound SMS webhook at `/api/webhooks/telnyx-sms`**, and hand-suppress the two people who already texted in | **somebody texted STOP and nothing heard it. $500–$1,500 per call, no safe harbour** | **§1ac** |
-| **0** | **Upgrade Vercel to Pro ($20/mo)** | **two agents already use ~35–40% of Hobby's invocation cap; it PAUSES for 30 days, and Hobby forbids commercial use** | **§1x** |
-
-### Last, once the rest is done
-
-| # | action | why |
-|---|---|---|
-| 9 | ~~Full structural audit of everything shipped~~ | **DONE — §1v.** Found 3 defects: 2 created tonight, 1 worth 4.7× |
-
-Nine changes landed on or beside the dial path in one night, several of them
-interacting: a guard that can refuse, a guard that delays, a new failure branch,
-a new webhook handler, and a changed cost constant. **The risk is no longer any
-one of them — it is the combination.** Specifically worth proving:
-
-- a dial cannot be delayed *and then* refused into something pathological;
-- the backoff cannot serialise a predictive tick's parallel lines;
-- the socket breaker's new per-dial query has not put latency on the happy path;
-- the D17 regex cannot false-positive onto an unrelated Telnyx error;
-- the CNAM write hits the endpoint and body shape Telnyx actually documents;
-- the corrected agent-leg rate has not broken a figure elsewhere.
-
-### Shipped tonight
+### ✅ EXECUTED — shipped and verified
 
 | what | worth |
 |---|---|
-| Agent socket breaker | abandonment **33.8% → 15.4%**, under the surcharge line |
-| `call.bridged` recorded from the carrier's event | proved predictive works; unblocked it |
-| Agent-leg rate corrected $0.002 → $0.004 | reconciler was ~40% wrong on that half |
-| Billing model validated against Telnyx | **184 of 192 legs predicted exactly** |
-| **Number audit** (`$ AUDIT` / `SET CNAM`) | answers E911 and sets CNAM without Mission Control |
-| **Real-time outage alert + D17 detection** | 11 Sept ran **ten hours** unseen; the cron is daily on Hobby |
-| **Surcharge exposure screen** (`⚠ SURCHARGE`) | the $3.53 breach was invisible; also the gate on `dial_agent_on_answer` |
-| **Platform-failure backoff** | ~7 attempts/min → under 1; delay-only, first success clears it |
+| **Agent socket breaker** | abandonment **22.1% → 3.8%**. This single guard clears the abandoned-call surcharge (§1ad) |
+| **Inbound SMS opt-out handler** | somebody texted STOP and nothing heard it. $500–$1,500/call, no safe harbour (§1ac) |
+| **Revoked public EXECUTE on `refresh_dial_performance`** | a destructive SECURITY DEFINER function was callable with the **browser anon key**. `security_invariants()` now returns **0** |
+| **`dial_performance_daily` billing model** | used a 30-second minimum that does not exist, and counted abandonment with a cause that **never occurs**. Rebuilt every day |
+| **Abandonment from `hangup_cause`** | the shape proxy was wrong **both ways** — 33.8% vs the true 22.1% |
+| **`call.bridged` recorded from the carrier** | proved predictive bridges 136/137; unblocked it |
+| **Ledger capture paginated** | was reading **one page** — seven minutes of data presented as a ledger |
+| **Ledger total de-duplicated** | detail records and `call.cost` are the same money; the screen summed both |
+| **Daily spend alarm, $3/agent** | fires in the cost webhook at 1×/2×/4×/8× (§0a) |
+| **Real-time outage alert + D17 detection** | nothing recognised a blocked account (§1n) |
+| **Platform-failure backoff** | ceiling set **below** the function timeout so it cannot orphan a leg |
+| **Predictive restored, capped at 1** | capped by **16 CFR 310.4(b)(4)**, not by taste (§1y) |
+| **TSR 15-second ring floor** | 160 legs were cancelled under 15s, averaging 4.7s — a safe-harbour breach |
+| **Number audit + CNAM tooling** | `$ AUDIT` / `SET CNAM` / `⚠ SURCHARGE` in Admin → Numbers |
+| **Agent-leg rate, `computeCost`, unit economics** | margin was built on **a fifth** of real cost |
+| **Dropped the dead `signalwire` index** | 6.1 MB, scanned **3 times ever**, maintained on every insert |
 
-### Built or designed, deliberately not on
+### ⏳ NEEDS YOUR HANDS — I cannot and should not do these
 
-| what | gate |
+| # | action | why it is yours |
+|---|---|---|
+| **1** | **Point Telnyx's inbound SMS webhook** at `/api/webhooks/telnyx-sms`<br>*Mission Control → Messaging → profile → Inbound Settings* | **The route is live and receiving nothing until you do.** Highest item on this list |
+| **2** | **Hand-suppress the two who already texted in** — `+1 650 290 0972` (STOP) and `+1 323 603 7154` | the webhook only catches what arrives **from now on**. Both are still in the lead list 3× |
+| **3** | **Send `docs/telnyx-questions.md`** | Q1 alone is **55.6%** of answered-call billing. It is your account and your letter |
+| **4** | **Switch Telnyx payment to ACH + auto-recharge** | 3% of every dollar, forever. **I will not touch payment credentials** |
+| **5** | **Re-run Ledger → CAPTURE NOW** | your last capture was truncated to one page. The fix is deployed; the old totals are partial |
+| **6** | **Admin → Numbers → `$ AUDIT`** | settles E911 at **$0 or $19.50/month**. One click, needs your admin session |
+| **7** | Register the pool at `freecallerregistry.com` | free; third-party registration is not permitted, so it must be you |
+
+### 🔒 BUILT, DELIBERATELY NOT ON
+
+| what | the gate |
 |---|---|
-| `dial_agent_on_answer` (−$0.68/agent/day) | **abandonment must measure under 20% first** — §1i |
-| Voicemail drop into the prepaid 49 seconds (§1j) | playback billing unverified **and** prerecorded-voice consent is counsel's call |
+| **`dial_agent_on_answer`** (−$0.0019/dial) | **The gate is nearly met** — the socket breaker projects 3.8% abandonment. But that projection has **not run in production**: nothing has dialled since midnight. Turn it on after **one clean session** confirms it, not before, or you cannot tell which change did what |
+| Predictive above 1 line | needs a **TSR-compliant no-agent message** (seller name + phone, within 2s). Legal, not technical (§1y) |
+| Voicemail drop into the prepaid 49s | playback billing unverified **and** prerecorded-voice consent is counsel's call (§1j) |
 
-### Rejected — do not re-check
+### ❌ REJECTED — do not re-check
 
-Branded Calling ($0.075/call, 6× a whole dial) · calling bundles (Operator
-Connect/Zoom only, and Programmable Voice does not consume them) · channel
-billing (inbound only, $144/mo against a $28 bill) · leaving Call Control (loses
-AMD, which skips 54% of answers) · inbound `reject` (took the dialer down; inbound
-costs **$0.90/month**) · changing the ring timeout (both directions lose) ·
-lowering `voicemail_streak_limit` (curve is flat) · spam-label testing the two
-numbers §1f originally named · inbound CNAM lookup · pre-answer AMD (not on this
-stack) · call transfer anywhere ($0.10 per invocation).
+Branded Calling ($0.075/call) · calling bundles (Operator Connect/Zoom only) ·
+channel billing (inbound only) · leaving Call Control (loses AMD) · inbound
+`reject` (cost a dialing day; inbound is **$0.90/month**) · changing the ring
+timeout (both directions lose) · lowering `voicemail_streak_limit` (curve is
+flat) · spam-testing the two numbers §1f named · inbound CNAM lookup · pre-answer
+AMD · call transfer ($0.10/invocation) · **Vercel Pro** (already on it).
 
-### Found in the ledger capture (§1z)
+### 📝 STILL OPEN
 
-| | |
-|---|---|
-| **PSTN bills 60/60, on-net bills 6/6** | overturned §1a's headline; the ask went from 1.3% to **55.6%** |
-| the capture read **one page** | 50 records/type — seven minutes of sip-trunking. Fixed |
-| AMD is its own record type | `rate_measured_in: invocations`, $0.002, `is_telnyx_billable: true` |
-| `messaging` records exist | 3 of them, $0.00 — nothing sends SMS. Worth knowing the meter is there |
+- **Two thirds of calls do not write back to their lead** (§4). Backstop in place;
+  the write path is the real fix.
+- **FCC Form 499-A** around 100 subscribers (§1h). Advisor, not engineering.
+- **Pool sizing sets answer rate** — 13 numbers supports **0.7 agents** at a
+  healthy 40 dials/number/day. A budgeting input, not a bug.
 
-### Still unknown
+### The corrections, kept visible
 
-1. Is **E911** enabled? — $0 or $19.50/month. **Invoice answers it.**
-2. What **attestation level** are we getting? Free and automatic, level unnamed.
-3. Which price-list line is the agent leg's **second $0.002/min**?
-4. Does **`playback_start`** bill separately?
-5. Does the **CPS surcharge** apply at all? (§1p says almost certainly not.)
+Number burn · voicemail retirement (6×→1.5×) · predictive “never bridging” · the
+CPS surcharge · the agent leg “double billed” · **PSTN being on 6-second
+increments** (it is 60/60 — the single most valuable correction, 1.3% → 55.6%) ·
+**cost per agent-hour** (wrong unit and wrong arithmetic) · **Vercel Hobby** (it
+is Pro) · **“the 11 Sept outage was unseen”** (it alerted 5 times) · **abandonment
+from call shape** (the carrier's own `hangup_cause` says 22.1%, not 33.8%).
 
-### The corrections, kept visible on purpose
-
-Five claims of mine did not survive checking: number burn (window artifact),
-voicemail retirement (6× → 1.5×), predictive “never bridging” (telemetry gap), the
-CPS surcharge (**priced off another product's tier table**), and the agent leg
-being “double billed” (it is a published line). Four of the five came from reading
-a column we populate as though it were the carrier's state — see §1m.
+**Most came from reading a column we populate as though it were the carrier's
+state.** That is §1m, and it is the rule worth keeping from all of this.
 
 ---
 
