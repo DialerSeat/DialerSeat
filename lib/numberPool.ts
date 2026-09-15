@@ -29,11 +29,32 @@ const supabase = createClient(
  * single number places per day, the faster carriers flag it as spam. Raising
  * it increases capacity per number and increases that risk together.
  */
-// Raised 125 -> 200 on 2026-08-07 by account-owner decision. The tradeoff is
-// unchanged: 200 is 60% more capacity per number and 60% more volume for a
-// carrier to score. Watch health_answer_rate per number after the change --
-// that is the signal that says whether the extra headroom cost anything.
-export const DEFAULT_DAILY_CAP = 200
+// 125 -> 200 on 2026-08-07, then 200 -> 100 on 2026-09-15, both by account-owner
+// decision. The evidence for coming back down, from this account's own 30 days:
+//
+//     1-25  dials/day on one number    48.7% answered
+//     26-50                            31.1%
+//     51-100                           25.4%
+//     151+                             25.1%
+//
+// Partly confounded -- the heaviest days were also the days the dialer was
+// broken -- but monotonic across decent samples, and it matches §1f. Answer
+// rate is the denominator under every cost figure here: a flagged number does
+// not cost a fraction of a cent, it costs every conversation it would have
+// carried.
+//
+// SCALE BY BUYING NUMBERS, NOT BY RAISING THIS. 2,500 dials/day needs ~25
+// active numbers at this cap. Raising it instead trades answer rate for
+// capacity, which is backwards -- the pool is the cheap input and the
+// conversation is the expensive output.
+//
+// THIS CONSTANT IS THE REAL SETTING, not the column default. A migration on
+// 15 Sept lowered daily_cap on every existing row AND set the column default
+// to 100 -- and a number bought at 18:34 that same day still arrived at 200,
+// because all three insert paths (buyNumber here, telnyxNumberSync, and
+// admin/pool/import-existing) pass DEFAULT_DAILY_CAP explicitly and override
+// the default. Changing the data without changing this is changing nothing.
+export const DEFAULT_DAILY_CAP = 100
 
 export interface PoolNumber {
   id: string
