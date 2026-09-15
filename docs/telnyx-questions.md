@@ -38,9 +38,15 @@ records, one per connection, each at $0.002/min. Example from a single
 | credential connection | `80101afa-…` | 2058s | $0.0686 | `sip-trunking @ 0.00200` |
 | Call Control application | `7fe7e45e-…` | 2058s | $0.0686 | `call-control @ 0.00200`, `sip-trunking @ 0` |
 
-Identical duration, identical charge, one agent leg. Can on-net legs between two
-connections on the same account be zero-rated, or billed once rather than on
-both connections? This is roughly a quarter of my bill.
+Identical duration, identical charge, one agent leg.
+
+Your SIP URI Calling article says this $0.002/min *“is charged to the owner of
+the connection that receives the call”* and applies to calls **from sources
+Telnyx cannot identify** — and that *“if the source matches a Telnyx SIP
+Connection, the call is treated as an On-Net call and billed according to your
+Telnyx rate deck.”* My source is a Telnyx SIP Connection: my own Call Control
+application, on this same account. Should these legs be rated On-Net? This is
+roughly a quarter of my bill.
 
 **4. Attestation and CPS.** Two quick ones:
 

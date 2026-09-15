@@ -51,16 +51,38 @@
 export const COST_PER_MINUTE_USD = 0.0056
 
 /**
- * The AGENT leg, per minute. Previously not costed at all.
+ * The AGENT leg, per minute. TWO connections are billed for it, not one.
  *
- * A user dial is two legs and only one was ever counted. The browser leg bills
- * as SIP-URI-ORIGINATION: 15,678 seconds for $0.52 in August, $0.002 a minute.
+ * This was 0.002, taken from August's SIP-URI-ORIGINATION line (15,678 seconds
+ * for $0.52). That line is real but it is only half the leg.
  *
- * Worth watching rather than simply adding, because the agent leg is parked
- * between calls rather than torn down — so this bills for time nobody is
- * talking on.
+ * The agent leg is a SIP URI dialled from our Call Control application to the
+ * credential connection the browser registered against. It traverses two
+ * connections, and Telnyx meters each one separately. A single call session:
+ *
+ *   credential  conn  leg 80101afa  2058s  $0.0686  sip-trunking @0.00200
+ *   callcontrol conn  leg 7fe7e45e  2058s  $0.0686  call-control @0.00200
+ *                                                   sip-trunking @0
+ *   callcontrol conn  leg 801a750e  2040s  $0.2380  ← the lead leg, for scale
+ *
+ * Same seconds, same charge, different call_leg_ids. The first two are ONE
+ * agent leg. Note `sip-trunking @0` on the second: Telnyx is confirming there
+ * is no carrier in this call at all. Every cent here is connection fee.
+ *
+ * The credential-connection record is invisible to any join we can write — it
+ * carries a call_control_id we never issued, so it matches neither
+ * calls.call_control_id nor calls.agent_call_control_id. Only call_session_id
+ * or the connection id finds it. Anything that costs agent legs by joining on
+ * agent_call_control_id is reporting half of this number.
+ *
+ * Still worth watching rather than accepting: $0.004/min against $0.0052 for a
+ * real PSTN call means ringing a browser costs 77% of ringing a phone. See
+ * docs/telnyx-questions.md — their SIP URI Calling article says the $0.002
+ * applies to sources they cannot identify, and that a source matching a Telnyx
+ * SIP Connection is On-Net and billed on the rate deck. Ours is their own Call
+ * Control application, on this account.
  */
-export const COST_PER_AGENT_LEG_MINUTE_USD = 0.002
+export const COST_PER_AGENT_LEG_MINUTE_USD = 0.004
 
 // ── THE BILLING RULES, DERIVED FROM 1,103 OF THEIR OWN COST RECORDS ───────
 // This block previously described a 30-second minimum on EVERY outbound leg,

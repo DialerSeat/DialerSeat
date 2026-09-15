@@ -5,6 +5,7 @@ import { apiError } from '@/lib/apiError'
 import {
   billableSeconds,
   COST_PER_MINUTE_USD,
+  COST_PER_AGENT_LEG_MINUTE_USD,
   COST_PER_AMD_LEG_USD,
   COST_PER_RECORDED_MINUTE_USD,
   TAX_RATE,
@@ -137,11 +138,19 @@ export async function GET(req: NextRequest) {
       // the agent's leg, which has no floor and bills roughly the same wall
       // time. Summing only the lead leg was the omission that made an earlier
       // version of this screen report 87% of spend as unexplained.
-      const billedSec = gapCalls.reduce(
-        (n, c) =>
-          n
-          + billableSeconds(c.duration, { leadLeg: true, answered: !!c.answered_at })
-          + billableSeconds(c.duration, { leadLeg: false, answered: !!c.answered_at }),
+      //
+      // They are priced separately. The lead leg is PSTN termination plus the
+      // platform fee. The agent leg never reaches a carrier at all, but bills
+      // on two connections at $0.002 each — see COST_PER_AGENT_LEG_MINUTE_USD,
+      // which documents the three-record session that proves it. Charging the
+      // PSTN blend to both put ~40% too much on the agent half, which reads as
+      // the carrier undercharging us rather than as a modelling error.
+      const leadSec = gapCalls.reduce(
+        (n, c) => n + billableSeconds(c.duration, { leadLeg: true, answered: !!c.answered_at }),
+        0
+      )
+      const agentSec = gapCalls.reduce(
+        (n, c) => n + billableSeconds(c.duration, { leadLeg: false, answered: !!c.answered_at }),
         0
       )
       const amdLegs = gapCalls.filter(c => c.amd_result).length
@@ -150,7 +159,8 @@ export async function GET(req: NextRequest) {
         .reduce((n, c) => n + Math.max(0, c.duration ?? 0), 0)
 
       const oursPreTax =
-        (billedSec / 60) * COST_PER_MINUTE_USD +
+        (leadSec / 60) * COST_PER_MINUTE_USD +
+        (agentSec / 60) * COST_PER_AGENT_LEG_MINUTE_USD +
         amdLegs * COST_PER_AMD_LEG_USD +
         (recordedSec / 60) * COST_PER_RECORDED_MINUTE_USD
       const oursUsd = oursPreTax * (1 + TAX_RATE)

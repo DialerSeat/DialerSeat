@@ -3,6 +3,7 @@ import {
   billableSeconds,
   LEAD_ANSWERED_MINIMUM_SECONDS,
   BILLING_INCREMENT_SECONDS,
+  COST_PER_AGENT_LEG_MINUTE_USD,
 } from '@/lib/telephonyCosts'
 
 // =============================================================================
@@ -114,6 +115,41 @@ describe('billableSeconds', () => {
 
     it('costs a minimum of a minute the moment they answer', () => {
       expect(billableSeconds(4, lead(true))).toBe(60)
+    })
+  })
+
+  // ===========================================================================
+  // THE AGENT LEG IS METERED ON TWO CONNECTIONS
+  // ===========================================================================
+  // It is a SIP URI from our Call Control application to the credential
+  // connection the browser registered against. It traverses two connections and
+  // Telnyx bills each at $0.002/min. Proven on one call session, where both
+  // records carry 2058 billed seconds and $0.0686 under different call_leg_ids.
+  //
+  // This was 0.002 for months because August's invoice showed only the
+  // credential-connection line. Half the leg was free as far as the platform
+  // was concerned. The assertion is here so the reversion is loud.
+  describe('the agent leg bills on both connections', () => {
+    it('is $0.004 a minute, not $0.002', () => {
+      expect(COST_PER_AGENT_LEG_MINUTE_USD).toBe(0.004)
+    })
+
+    it('reproduces the measured post-teardown session', () => {
+      // 148 agent legs produced 148 records on EACH connection: 111.9 and 111.5
+      // billed minutes, $0.2238 and $0.2230. One leg, ~111.7 minutes of it.
+      const legMinutes = 111.7
+      const measuredTotal = 0.2238 + 0.2230
+      const modelled = legMinutes * COST_PER_AGENT_LEG_MINUTE_USD
+      expect(Math.abs(modelled - measuredTotal)).toBeLessThan(0.005)
+    })
+
+    it('still costs most of what reaching a real phone costs', () => {
+      // $0.0052/min measured on lead legs ($0.00321 termination + $0.002
+      // platform). The agent leg never touches a carrier and is 77% of it.
+      const pstnPerMinute = 0.0052
+      const ratio = COST_PER_AGENT_LEG_MINUTE_USD / pstnPerMinute
+      expect(ratio).toBeGreaterThan(0.7)
+      expect(ratio).toBeLessThan(0.85)
     })
   })
 })
