@@ -11,6 +11,7 @@ import { normalizeToE164 } from '@/lib/phoneNormalize'
 import { checkSuppression } from '@/lib/suppression'
 import { logCallEvent } from '@/lib/callEvents'
 import { paceOrigination } from '@/lib/cpsGovernor'
+import { checkDestinationRate } from '@/lib/destinationRates'
 
 /**
  * The only answering-machine detector allowed out of this file.
@@ -249,6 +250,38 @@ export async function placeOutboundCall(
         ? 'This number is on the platform do-not-call list'
         : 'This number is on your do-not-call list',
       detail: suppressed.reason ?? undefined,
+      httpStatus: 451,
+    }
+  }
+
+  // ── TOO EXPENSIVE TO CALL ────────────────────────────────────────────────
+  // Not every US number costs the same. From Telnyx's own call.cost records:
+  // 71.5% of spend at the $0.002 base rate, 23.7% at $0.005, and 4.1% at
+  // $0.07 — thirty-five times base, from two exchanges across five calls. One
+  // voicemail to a 209 number cost fourteen cents. Rural high-cost
+  // termination, passed through legitimately and invisible until now.
+  //
+  // Rates are LEARNED from traffic, so this never protects the first call to
+  // an exchange, only the second. It fires solely on a corroborated finding
+  // about a specific exchange — see lib/destinationRates.ts — and every
+  // failure path there permits the dial.
+  //
+  // Placed after suppression on purpose: a do-not-call number must be refused
+  // for that reason and logged as that, whatever it costs.
+  const rateVerdict = await checkDestinationRate(toFormatted)
+  if (rateVerdict.tooExpensive) {
+    console.warn(
+      `[placeOutboundCall:${source}] BLOCKED, ${toFormatted} is in exchange ` +
+      `${rateVerdict.npanxx} which has billed $${rateVerdict.observedRate}/min ` +
+      `across ${rateVerdict.samples} calls (ceiling $${rateVerdict.ceiling})`
+    )
+    return {
+      success: false,
+      error: 'This number is on a high-cost carrier and was not dialed',
+      detail:
+        `Exchange ${rateVerdict.npanxx} bills $${rateVerdict.observedRate}/min, ` +
+        `over the $${rateVerdict.ceiling} ceiling. Adjust platform_config.` +
+        `max_destination_rate, or set it to 0, to change this.`,
       httpStatus: 451,
     }
   }
@@ -548,6 +581,32 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // lead answers and Telnyx bridges — an unbridged leg is silent — and
   // abort-on-pickup tears the surplus down as soon as a human is confirmed.
   // The alternative is the reactive bridge, which does not work at all.
+  // ── WHEN THE AGENT'S LEG IS PLACED ───────────────────────────────────────
+  // Normally: now, alongside the lead, so bridge_on_answer can connect them at
+  // pickup with no dead air. The cost is an agent leg live for the whole time
+  // the lead's phone rings, on every dial, including the ~65% nobody answers.
+  // Measured 14 Sept on a clean session: 317 such legs, 176 billed minutes,
+  // 17% of that session's entire carrier spend, buying nothing.
+  //
+  // With dial_agent_on_answer on, this is skipped and the agent's leg is placed
+  // from the call.answered handler instead — see app/api/calls/events. No
+  // agentCallControlId means no link_to and no bridge_on_answer below, which is
+  // the whole mechanism; nothing else here has to know.
+  //
+  // ── THE FLAG IS NOT HONOURED HERE YET, DELIBERATELY ──────────────────────
+  // platform_config.dial_agent_on_answer exists and this is where it would be
+  // read. It is NOT read, because the other half — placing the agent leg from
+  // the call.answered handler, covering the gap with speech, and bridging — is
+  // not written.
+  //
+  // Half of it is worse than none of it. Skipping the agent leg here without
+  // that handler means the lead answers and hears nothing at all, which is
+  // precisely the fault that had seven people saying "hello?" into silence on
+  // 14 Sept. A flag an operator can flip into that state is a trap, not a
+  // feature.
+  //
+  // WHEN THE ANSWER-SIDE HANDLER EXISTS: read the config here and gate the
+  // block below on it. Both halves ship together or neither does.
   let agentCallControlId: string | undefined
   if (p.source === 'user_dial' || p.source === 'controller_fanout') {
     // THIS agent's own SIP endpoint — not a shared one. p.userId is the

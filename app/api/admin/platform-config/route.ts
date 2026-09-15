@@ -27,7 +27,11 @@ export const dynamic = 'force-dynamic'
 
 const supabase = getServiceClient('admin/platform-config')
 
-type Validator = (v: unknown) => boolean | number | null
+// string joins the union for connecting_message — the first text setting on
+// this table. A validator returning null still means "rejected", so an empty
+// string has to be returned explicitly by the validator that allows it rather
+// than falling through as falsy.
+type Validator = (v: unknown) => boolean | number | string | null
 
 /**
  * One entry per writable field. A key absent from here cannot be written,
@@ -96,6 +100,35 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   // above ~12 is buying nothing, because a 20s call and a 7s call count
   // identically to them, while getting closer to the beep every second.
   amd_hold_seconds_after_machine: v => intInRange(v, 0, 15),
+
+  // ── COST CONTROLS ──────────────────────────────────────────────────────
+  // Place the agent's leg when the lead answers rather than alongside the
+  // dial. Saves the agent-leg minutes burned ringing on unanswered calls —
+  // 17% of a measured session — and moves where failure lands: an unreachable
+  // agent is then discovered AFTER the lead has answered, which is an
+  // abandoned call. Kept writable here precisely so it can be turned off
+  // without a deploy when abandoned calls move.
+  dial_agent_on_answer: v => typeof v === 'boolean' ? v : null,
+
+  // Spoken to the lead while that leg comes up. Length-capped because it is
+  // read aloud on live calls and billed per character; an accidental paste of
+  // a paragraph would be both expensive and absurd. Empty string is valid and
+  // means play nothing.
+  connecting_message: v =>
+    typeof v === 'string' && v.length <= 200 ? v : null,
+
+  // Refuse exchanges billing at or above this per minute. Ceiling of 1.0 is a
+  // sanity bound, not a real rate — anything near it would be a data error.
+  // Zero disables the guard, which is why the floor is 0 and not the base
+  // rate: turning it off must be expressible.
+  max_destination_rate: v =>
+    typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1
+      ? Math.round(v * 100000) / 100000
+      : null,
+
+  // How many observations before an exchange is trusted enough to refuse on.
+  // Minimum 1; a guard that fires on zero samples would be firing on nothing.
+  max_rate_min_samples: v => intInRange(v, 1, 50),
 }
 
 function intInRange(v: unknown, min: number, max: number): number | null {
@@ -146,7 +179,10 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 })
     }
 
-    const updates: Record<string, boolean | number> = {}
+    // string included since connecting_message — the first text setting here.
+    // Only values a validator returned reach this map, so widening the type
+    // does not widen what can be written.
+    const updates: Record<string, boolean | number | string> = {}
     const rejected: string[] = []
 
     for (const [key, raw] of Object.entries(body)) {

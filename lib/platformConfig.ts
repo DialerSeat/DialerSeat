@@ -72,6 +72,40 @@ export interface PlatformConfig {
   /** Whether a machine verdict ends a call the agent is already bridged into. */
   amd_hangup_when_bridged: boolean
   /**
+   * Place the agent's leg WHEN THE LEAD ANSWERS rather than alongside the dial.
+   *
+   * Both legs normally go out together so Telnyx can bridge them at pickup,
+   * which is what makes an answered call open without dead air. The price is an
+   * agent leg live for the whole time the lead's phone rings — on every dial,
+   * including the roughly two thirds nobody answers. Measured on the clean
+   * evening of 14 Sept: 317 such legs, 176 billed minutes, 17% of that
+   * session's entire carrier spend, buying nothing.
+   *
+   * IT MOVES WHERE FAILURE LANDS, which is why it is a switch. Today a dead
+   * agent socket fails before the lead's phone rings and nobody is disturbed.
+   * With this on, the lead answers first and the agent is discovered
+   * unreachable afterwards — an abandoned call in the sense the FTC means it.
+   * Turn it off the moment abandoned calls move.
+   */
+  dial_agent_on_answer: boolean
+  /** Spoken to the lead while the agent leg comes up. Empty plays nothing. */
+  connecting_message: string
+  /**
+   * Refuse to dial an exchange whose observed rate meets or exceeds this.
+   *
+   * Not every US number costs the same. Measured 15 Sept from Telnyx's own
+   * call.cost records: 71.5% of spend at the $0.002 base rate, 23.7% at
+   * $0.005, and 4.1% at $0.07 — two exchanges, five calls, thirty-five times
+   * base. Rural high-cost termination, passed through legitimately.
+   *
+   * $0.01 sits deliberately clear of the $0.005 tier: blocking that would
+   * refuse a quarter of the list to save 2.5× on calls still costing fractions
+   * of a cent. 0 disables the guard with no deploy.
+   */
+  max_destination_rate: number
+  /** Times an exchange must be seen at a high rate before it is refused. */
+  max_rate_min_samples: number
+  /**
    * Seconds the LEAD's leg stays up after a call would otherwise end early —
    * an AMD machine verdict, or an agent skipping under the threshold — once
    * the agent has already advanced to the next lead.
@@ -140,6 +174,17 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   amd_in_preview: false,
   // Voicemail skipping is why AMD exists; keep it, now that preview is out.
   amd_hangup_when_bridged: true,
+  // FALSE is the fail-safe here, and the direction matters. If the config table
+  // cannot be read, the dialer falls back to placing both legs together —
+  // the behaviour that has never abandoned anybody. An unreadable settings row
+  // must not be able to change who hears silence.
+  dial_agent_on_answer: false,
+  connecting_message: 'One moment, connecting you now.',
+  // Matches the column defaults. If the config table cannot be read the guard
+  // still works from these — it is built on observed facts, not on settings,
+  // so a settings outage should not hand back the $0.07 exchanges.
+  max_destination_rate: 0.01,
+  max_rate_min_samples: 2,
   // ── FAILS TOWARD COMPLIANCE, NOT AWAY FROM IT ────────────────────────────
   // This was 0, on the reasoning that a fallback which silently held live calls
   // open would be the worst possible default. That reasoning was backwards for
@@ -207,7 +252,8 @@ const CONFIG_COLUMNS =
   'amd_total_analysis_ms, amd_after_greeting_silence_ms, ' +
   'amd_in_preview, amd_hangup_when_bridged, amd_max_seconds_after_answer, ' +
   'amd_greeting_duration_ms, amd_max_words, amd_initial_silence_ms, ' +
-  'amd_hold_seconds_after_machine'
+  'amd_hold_seconds_after_machine, dial_agent_on_answer, connecting_message, ' +
+  'max_destination_rate, max_rate_min_samples'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few

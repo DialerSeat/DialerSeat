@@ -19,6 +19,7 @@ import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
 import { agentSipUriForUserId, resolveCredentialConnectionId } from '@/lib/agentSipCredentials'
 import { ensureSipUriCallingEnabled, isSipUriRejection } from '@/lib/telnyxSipUriCalling'
 import { getPlatformConfig } from '@/lib/platformConfig'
+import { recordDestinationRate } from '@/lib/destinationRates'
 
 // =============================================================================
 // UNIFIED CALL CONTROL EVENTS WEBHOOK — replaces status + amd-result
@@ -1376,6 +1377,33 @@ async function handleCallCost(
         telnyx_cost_at: new Date().toISOString(),
       })
       .eq('call_control_id', callControlId)
+
+    // ── LEARN WHAT THIS DESTINATION COSTS ────────────────────────────────
+    // Every cost_part carries the rate its seconds were billed at, and they
+    // are not all the same: 71.5% of spend came in at $0.002, 23.7% at
+    // $0.005, and 4.1% at $0.07 — rural high-cost termination, passed through
+    // legitimately. Two exchanges produced that last slice across five calls.
+    //
+    // Recorded per exchange so the NEXT dial to one of them can be refused.
+    // It can never protect the call being measured, which is the honest limit
+    // of learning rates from traffic rather than from a rate deck.
+    const { data: costRow } = await supabaseAdmin
+      .from('calls')
+      .select('phone_number')
+      .eq('call_control_id', callControlId)
+      .maybeSingle()
+
+    const phone = costRow?.phone_number
+    if (phone) {
+      const parts = Array.isArray(payload.cost_parts) ? payload.cost_parts : []
+      for (const raw of parts) {
+        const part = raw as { rate?: unknown; cost?: unknown }
+        const rate = Number(part.rate)
+        if (Number.isFinite(rate) && rate > 0) {
+          await recordDestinationRate(phone, rate, Number(part.cost) || 0)
+        }
+      }
+    }
   } catch (err) {
     console.error('[calls/events] could not store telnyx_cost', callControlId, err)
   }
