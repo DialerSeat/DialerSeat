@@ -535,7 +535,42 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
       .eq('agent_call_control_id', callControlId)
       .maybeSingle()
 
-    if (asAgentLeg?.call_control_id && !asAgentLeg.bridged_at) {
+    // ── ONLY WHEN THE LEAD IS ACTUALLY ON THE LINE ────────────────────
+    // `answered_at` is the whole guard, and leaving it out took the dialer
+    // down on 15 September.
+    //
+    // This block exists for dial_agent_on_answer, where the agent's leg is
+    // placed AFTER the lead picks up, so by definition the lead is already
+    // answered when the agent's leg answers. It was written with only
+    // `!bridged_at` as its condition, which is true in the DEFAULT flow too —
+    // and in that flow it is true at exactly the wrong moment.
+    //
+    // In the default flow the agent's leg is pre-attached and the lead leg
+    // carries bridge_on_answer, so Telnyx bridges the two by itself when the
+    // prospect picks up. The browser auto-answers its own leg in about 0.4
+    // seconds; a person takes five to fifteen. So the agent's call.answered
+    // lands while the prospect's phone is STILL RINGING, this block found
+    // bridged_at null (correctly — nothing has been bridged yet), tried to
+    // bridge an agent onto a ringing call, failed because there is nothing to
+    // bridge to, and then hung the prospect up.
+    //
+    // Measured on the seven dials at 13:00-13:02 UTC:
+    //
+    //     agent answered   lead killed    gap
+    //     13:00:58.917     13:00:59.734   0.8s
+    //     13:01:17.305     13:01:17.652   0.35s
+    //     13:01:23.417     13:01:23.923   0.5s   (hangup_requested — ours)
+    //
+    // One of the seven survived, and it is the proof: at 13:01:07 the LEAD
+    // answered at .269 and the agent at .378. The lead won the race, Telnyx
+    // had already bridged them, bridged_at was set, this block was skipped,
+    // and the call ran a full 13 seconds. Every call the agent's browser won
+    // — which is nearly all of them — died inside a second.
+    //
+    // So: if the lead has not answered, an agent leg answering early is the
+    // NORMAL pre-attached case and there is nothing to do. bridge_on_answer
+    // handles it. Touching it here can only break it.
+    if (asAgentLeg?.call_control_id && !asAgentLeg.bridged_at && asAgentLeg.answered_at) {
       const outcome = await bridgeAgentOntoLead(
         asAgentLeg.call_control_id,
         'deferred agent leg answered'
