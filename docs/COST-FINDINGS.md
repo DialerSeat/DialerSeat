@@ -450,6 +450,29 @@ That is an extension of an existing entitlement across product lines, evidenced
 from their own records, rather than a discount request. **57.3% of what is
 billed on answered calls is rounding, not conversation.**
 
+### 1a-bis. Confirmed on a 10× sample after the capture fix
+
+The paginated capture returned 489 `call-control` and 250 `sip-trunking` detail
+records instead of 50 each. Classified correctly — by **`direction` +
+`connection_id`**, not by `dest_number`:
+
+| | legs | increment | avg used → billed | **rounding** |
+|---|---|---|---|---|
+| **PSTN outbound (lead leg)** | **169** | **60/60, 169 of 169** | 34.1s → **80.6s** | **57.7%** |
+| on-net, call-control | 227 | 6-second, 227 of 227 | 34.7s → 37.3s | 7.1% |
+| on-net, sip-trunking | 82 | 6-second, 82 of 82 | 46.9s → 49.1s | 4.5% |
+
+**57.7% of what is billed on a PSTN leg is rounding, not conversation** — on 169
+legs rather than the handful §1a was first written on.
+
+> **A trap worth recording.** Splitting by `dest_number LIKE 'sip:%'` puts 81
+> agent-leg **twins** into the PSTN bucket, because the twin record carries a
+> PSTN-looking destination while being `direction: inbound` on the credential
+> connection. That made PSTN `sip-trunking` look 55% fine-grained and suggested
+> Telnyx was billing two components of one leg differently. They are not — on
+> every leg carrying both, the two components bill identical seconds. **Classify
+> by direction and connection, never by the number.**
+
 ### 1b. STIR/SHAKEN attestation level
 
 > **§1s largely answers this.** Telnyx: *“Every outbound call with a valid U.S.

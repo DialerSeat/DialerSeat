@@ -23,9 +23,11 @@ PSTN legs bill **60/60** — every one of my 192 billed lead-leg records is a
 multiple of 60, none is a multiple of 6, and a `call_sec` of **163** billed
 **180**.
 
-Across 648 answered PSTN legs in 30 days I used 19,149 seconds and was billed
-44,820 — **57.3% of billed time is rounding rather than conversation.** On a
-6-second increment the same traffic is 19,902 seconds.
+Across 169 PSTN legs in your own `/detail_records`, `call_sec` totals 34.1
+seconds on average against `billed_sec` of 80.6 — **57.7% of what I am billed on
+a PSTN leg is rounding rather than conversation.** Every one of those 169 is a
+multiple of 60; not one is a multiple of 6. Over 648 answered legs in 30 days
+that is 44,820 seconds billed against 19,149 used.
 
 **Can the 6-second increment my account already receives on-net be extended to
 PSTN outbound?** I am not asking for a rate change — the per-minute rate can
