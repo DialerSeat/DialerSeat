@@ -11,32 +11,30 @@ Send as one ticket. Paste the block below.
 Hi — five billing questions about my account, all with figures from your own
 `call.cost` webhooks so they should be quick to check.
 
-**1. Billing increments.** Your documentation states 60/60 increments and says
-6-second billing is no longer offered. My records show otherwise: of 1,490
-billed durations, 1,033 are multiples of 6 and not 60 — including values of 6,
-12, 18, 24, 30, 36, 42, 48 and 54 seconds. The smallest billed duration on
-record is 6 seconds. Can you confirm which increment applies to my account, so I
-can model costs accurately?
+**1. Extending the 6-second increment I already have to PSTN.** My account
+receives two different billing increments depending on the leg, and I can show
+both from your own records.
 
-**2. The minimum on answered outbound.** Separately from the increment, answered
-outbound legs carry a 60-second minimum. Over the last 30 days, across 648
-answered legs:
+On-net legs (SIP URI to my credential connection) bill on a **6-second**
+increment — 344 of 361 `call.cost` records are multiples of 6 and not 60, and a
+`/detail_records` row shows `call_sec` 182 billing `billed_sec` **186**.
 
-| answered by | legs | avg seconds **after answer** | your billed seconds |
-|---|---|---|---|
-| answering machine | 377 | **10.9** | **60.0** |
-| a person | 99 | 111.4 | 150.5 |
+PSTN legs bill **60/60** — every one of my 192 billed lead-leg records is a
+multiple of 60, none is a multiple of 6, and a `call_sec` of **163** billed
+**180**.
 
-**49,656 seconds billed against 21,048 that the 6-second increment alone would
-produce — 57.6% of billed time.**
+Across 648 answered PSTN legs in 30 days I used 19,149 seconds and was billed
+44,820 — **57.3% of billed time is rounding rather than conversation.** On a
+6-second increment the same traffic is 19,902 seconds.
 
-So I can be precise about the rule rather than guessing at it: modelling
-post-answer duration, rounded up to 6 seconds, floored at 60, reproduces your
-own `billed_duration_secs` **exactly on 184 of the 192 legs** where I hold both,
-with an average error of 1.8 seconds and 98.8% of total billed time.
+**Can the 6-second increment my account already receives on-net be extended to
+PSTN outbound?** I am not asking for a rate change — the per-minute rate can
+stay exactly as it is.
 
-Given the 6-second increment already applies on this account, can the minimum on
-answered outbound be reduced to match it?
+**2. Confirming there is no separate minimum.** Related, so I model it
+correctly: on PSTN I see no floor distinct from the increment — a 61-second call
+appears to bill 120, not 61 or 66. Is that right, or is there a minimum as well
+as the 60-second increment?
 
 **3. On-net legs billed on both connections.** My agent-side legs are SIP URI
 calls from my own Call Control application to my own credential connection —
@@ -69,14 +67,7 @@ Two questions on it:
 
 This is roughly a quarter of my bill.
 
-**4. Does audio playback bill separately?** If I use the Call Control
-`playback_start` endpoint to play an audio URL on a leg that is already
-connected and already being billed, is there any charge beyond the
-`call-control` and `sip-trunking` minutes I am already paying for that leg? I
-cannot find playback in the published pricing breakdown and I would rather ask
-than assume.
-
-**5. Attestation and CPS.** Two quick ones:
+**4. Attestation and CPS.** Two quick ones:
 
 - What STIR/SHAKEN attestation level are my outbound calls receiving? A SIP
   trace on my account showed `verstat=No-TN-Validation`.
@@ -88,30 +79,31 @@ than assume.
 
 Thanks.
 
+**5. Does audio playback bill separately?** If I use the Call Control
+`playback_start` endpoint to play an audio URL on a leg that is already
+connected and already being billed, is there any charge beyond the
+`call-control` and `sip-trunking` minutes I am already paying for that leg? I
+cannot find playback in the published pricing breakdown and I would rather ask
+than assume.
+
 ---
 
 ## Why each one is worth asking
 
-**The increment question is the lever.** It is framed as "confirm which applies"
-rather than "you are wrong" because the discrepancy favours *us* — the account
-gets better terms than the documentation promises. Asking it first establishes
-that the numbers are real before the second question arrives.
+**The increment question is now the whole letter.** An earlier draft had this
+backwards — it claimed the account was already on 6-second billing everywhere
+and asked only for the “minimum” to come down. That was worth **1.3%**, and it
+rested on a sample that turned out to be entirely agent legs. Split by leg, ZERO
+of 360 PSTN records use a 6-second increment.
 
-**The minimum is the single biggest line in the bill.** 476.8 minutes of the 827
-billed on answered calls is minimum rather than conversation — **57.6%**. A
-voicemail holds the line for 10.9 seconds and bills 60, so **78.3% of
-machine-answered billed seconds buy nothing.** It is a reasonable ask precisely
-because the fine-grained increment already exists on the account.
+The corrected ask is worth **55.6%** of what is billed on answered calls, and it
+is stronger in kind as well as size: it asks them to extend a granularity the
+account **already has** on one product line to another, evidenced from their own
+detail records. It is not a discount request and should not be framed as one.
 
-**Lead with the model validation.** 184 of 192 legs predicted exactly is the
-sentence that makes this a reconciliation rather than a complaint — it says
-“I know what your rule is, I am asking you to change it” instead of “I think
-you are overcharging me.”
-
-> **An earlier draft of this letter said 26.2 seconds and 39.4%.** Those came
-> from a duration column that includes the ring, and billing starts at answer.
-> Do not send any version carrying those numbers: they are wrong, they
-> understate the case, and a figure they can disprove costs more than it buys.
+> **Do not send any draft claiming “you are already on 6-second increments.”**
+> For PSTN that is false, their public documentation saying 60/60 is correct,
+> and leading with a provably wrong premise loses the question that matters.
 
 **The agent-leg question was rewritten and is weaker than it first looked.** An
 earlier draft called it double billing. It is not: “Browser/app calling” is a

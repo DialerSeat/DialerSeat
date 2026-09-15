@@ -19,7 +19,7 @@ Everything found, ordered by what it is worth. Detail in the numbered sections.
 | 1 | **Switch Telnyx payment to ACH Direct Debit** | 3% of every dollar, forever — **~$199/mo at 100 agents** | §1q |
 | 2 | **Turn on ACH auto-recharge, card as fallback only** | prevents *“negative balance 1 month → all numbers deleted”* | §1r |
 | 3 | **Admin → Numbers → `$ AUDIT`** | settles **$0–$19.50/month** of E911 in one click | §1o, §1u |
-| 4 | **Send `docs/telnyx-questions.md`** (5 questions) | **~$2.56/agent/day** if 2 and 3 land | §1a–c, §1g |
+| 4 | **Send `docs/telnyx-questions.md`** (5 questions) | **Q1 alone is 55.6% of answered-call billing** (§1a) — rewritten, the old version asked for 1.3% | §1a–c, §1g |
 | 5 | **Ledger → CAPTURE NOW** | 1 of 19 record types has ever been captured | §1d |
 | 6 | **Admin → Numbers → `⚠ SURCHARGE`** | both ratios month-to-date; portal pie chart still outranks it | §1i |
 | 7 | **Admin → Numbers → `SET CNAM`** | free; landlines only, no answer-rate claim | §1t |
@@ -74,6 +74,15 @@ costs **$0.90/month**) · changing the ring timeout (both directions lose) ·
 lowering `voicemail_streak_limit` (curve is flat) · spam-label testing the two
 numbers §1f originally named · inbound CNAM lookup · pre-answer AMD (not on this
 stack) · call transfer anywhere ($0.10 per invocation).
+
+### Found in the ledger capture (§1z)
+
+| | |
+|---|---|
+| **PSTN bills 60/60, on-net bills 6/6** | overturned §1a's headline; the ask went from 1.3% to **55.6%** |
+| the capture read **one page** | 50 records/type — seven minutes of sip-trunking. Fixed |
+| AMD is its own record type | `rate_measured_in: invocations`, $0.002, `is_telnyx_billable: true` |
+| `messaging` records exist | 3 of them, $0.00 — nothing sends SMS. Worth knowing the meter is there |
 
 ### Still unknown
 
@@ -181,58 +190,78 @@ listening to voicemail greetings. Costing it is not the same as cutting it.
 No engineering. Between them they are worth **more than twice** everything
 shipped so far — see §0 for the arithmetic.
 
-### 1a. The 60-second minimum — worth ~20% of the bill
+### 1a. It is not a minimum — PSTN is billed 60/60, and that is worth 55.6%
 
-**You are already on 6-second increments.** 1,033 of 1,490 billed records are
-multiples of 6 and *not* 60 — observed values include 6, 12, 18, 24, 30, 36, 42,
-48, 54, 66, 72, 90, 108. Their public documentation says the opposite: *"60/60
-billing increments"* and *"we no longer offer 6 second billing increments."*
+**This section said the opposite for most of a night, and the detail records
+settle it.**
 
-But the **answered lead leg carries a 60-second minimum** on top of that
-increment.
+The claim was: *“you are already on 6-second increments; the 60 is a minimum
+sitting on top.”* It rested on 1,033 of 1,490 billed records being multiples of
+6 and not 60. **Those 1,033 are the agent legs.** 344 + 344 + 345 = 1,033
+exactly — the agent leg, its credential-connection twin, and their two cost
+parts. Not one of them is a PSTN call.
 
-> **These figures were revised upward on 15 Sept.** The earlier version measured
-> `calls.duration`, which **includes the ring** — 10.5s of it on average.
-> Billing starts at answer, so ring seconds were never billable and counting
-> them inflated “actual duration” by about double. Everything below is
-> post-answer only, over 30 days.
+Split by leg, across 1,103 `call.cost` records:
 
-| who answered | legs | avg **post-answer** | 6s increment alone | with the 60s minimum | wasted |
-|---|---|---|---|---|---|
-| **machine** | 377 | **10.9s** | 13.1s | **60.0s** | **78.3%** |
-| no verdict | 166 | 23.7s | 28.1s | 70.9s | 60.4% |
-| human | 99 | 111.4s | 114.8s | 150.5s | 23.7% |
-| not_sure | 6 | 12.8s | 16.0s | 60.0s | 73.3% |
+| leg | records | **6-second increment** | 60-second |
+|---|---|---|---|
+| agent leg (on-net SIP) | 361 | **344 — 97.2%** | 10 |
+| agent twin (credential conn) | 382 | **345 — 94.5%** | 20 |
+| **lead leg (PSTN)** | 360 | **0 — 0.0%** | **192, every billed one** |
 
-**648 answered legs. 49,656 seconds billed against 21,048 that the 6-second
-increment alone would produce. 476.8 minutes — 57.6% — is minimum, not
-conversation.** The old figure was 39.4%; it was understated because the ring
-was counted as talk.
+Confirmed independently in the `/detail_records` capture, where `call_sec` and
+`billed_sec` sit side by side on the same call session:
 
-**A voicemail occupies the line for 10.9 seconds and bills 60.**
+| leg | destination | `call_sec` | `billed_sec` | |
+|---|---|---|---|---|
+| agent | `sip:gencred1…@sip.telnyx.com` | 182 | **186** | 6-second |
+| lead | `+16262007113` | 163 | **180** | 60-second |
 
-### The model reproduces their billing exactly, which is what makes it an ask
+163 seconds rounds to 168 on a 6-second increment. It billed **180** — the third
+minute.
 
-Post-answer duration → 6-second increments → 60-second floor, run against
-Telnyx's own `billed_duration_secs` on every leg where both exist:
+> **So Telnyx's documentation was right and I was wrong.** *“60/60 billing
+> increments”* is exactly what PSTN gets. The 6-second billing is real but it
+> lives on the **on-net** product, which is why it looked like an account-wide
+> concession when the agent legs dominated the sample.
 
-| | |
+### There is no “minimum”. The floor and the increment are the same thing.
+
+A 61-second conversation does not bill 61, or 66. **It bills 120.** That is worse
+than a floor, because a floor only costs you once.
+
+### What that does to the ask
+
+648 answered lead legs, 30 days, seconds after answer:
+
+| | seconds | minutes |
+|---|---|---|
+| actually used | 19,149 | 319 |
+| **billed today (60/60)** | **44,820** | **747** |
+| if the 60s floor were cut to a 6s increment — *the old ask* | 44,226 | 737 |
+| **if PSTN moved to 6/6 — the real ask** | **19,902** | **332** |
+
+| ask | worth |
 |---|---|
-| legs matched | 192 |
-| **exact matches** | **184 (95.8%)** |
-| average absolute error | **1.8 seconds** |
-| total predicted vs billed | 14,766s vs 14,940s — **98.8%** |
+| what the letter said (reduce the “minimum”) | **1.3%** |
+| **what it should say (60/60 → 6/6 on PSTN)** | **55.6%** |
 
-There is no dispute available about what the rule is. The only question is
-whether the floor can come down to meet the increment.
+**The letter was asking for 1.3% while the prize was 55.6%**, and it was asking
+for something that mostly does not exist.
 
-The ask: *the 6-second increment already applies; can the minimum on answered
-outbound be reduced to match it?* Two facts they hold, no accusation.
+### The version to actually send
 
-> **Second-order effect if they say yes:** the 9-second compliance hold stops
-> being free. It costs nothing today because a voicemail bills 60 seconds
-> regardless. At a 6-second minimum it becomes real money — still worth paying
-> for surcharge protection, but it wants re-tuning.
+Not *“please give me a better rate”* — that gets a no. It is:
+
+> **My account already receives 6-second billing on its on-net legs** — 344 of
+> 361 records are multiples of 6 and not 60. My PSTN legs are billed 60/60 —
+> all 192 billed records are multiples of 60, and a 163-second call billed 180.
+> **Can the 6-second increment my account already has be extended to PSTN
+> outbound?**
+
+That is an extension of an existing entitlement across product lines, evidenced
+from their own records, rather than a discount request. **57.3% of what is
+billed on answered calls is rounding, not conversation.**
 
 ### 1b. STIR/SHAKEN attestation level
 
@@ -1141,6 +1170,58 @@ its TypeScript phase does pass.
 `idx_calls_campaign_id_created_at` are both `(campaign_id, created_at DESC)`.
 Every insert maintains both halves of each pair. Pre-existing, small, and not
 worth dropping an index on a live dialer at the end of a long night.
+
+---
+
+## 1z. WHAT THE LEDGER CAPTURE ACTUALLY CONTAINED
+
+The capture returned exactly 50 records of every type — Telnyx's page cap, since
+fixed (§1w). But those 50 were enough to overturn the biggest claim in this
+document, because `/detail_records` carries a field the `call.cost` webhook does
+not: **`call_sec` alongside `billed_sec`.**
+
+The webhook tells you what you were charged for. The detail record tells you
+what you used **and** what you were charged for, on the same row. That single
+pairing is what made the increment visible — see §1a.
+
+### The other fields worth knowing exist
+
+| field | why it matters |
+|---|---|
+| `call_sec` / `billed_sec` | the increment, side by side. Nothing else exposes it |
+| `is_telnyx_billable` | an explicit flag — a record can carry a cost and not be charged |
+| `rate_measured_in` | `"invocations"` on AMD, `"minutes"` on carriage. Says what you are buying |
+| `telnyx_session_id` | joins both legs of a call across record types |
+| `cld` / `dest_number` | `sip:` prefix distinguishes an on-net leg from PSTN — which is the whole §1a finding |
+| `attempted` / `completed` / `connected` | Telnyx's own connect accounting, independent of ours |
+| `caller_name` | empty on every record — consistent with no CNAM set (§1t) |
+
+### AMD, confirmed from the source
+
+```
+"record_type": "amd", "feature": "STANDARD",
+"rate": "0.002", "rate_measured_in": "invocations", "invocations": 1,
+"is_telnyx_billable": true
+```
+
+**Billed per invocation, not per answered call**, on its own record type, absent
+from `call.cost` entirely. §1d inferred this from a gap of exactly the right
+size; this is the receipt. It also means a call where AMD is invoked twice is
+charged twice — worth remembering if detection is ever retried.
+
+### A meter nobody is watching
+
+**`messaging` returned 3 records at $0.00.** Nothing in this platform sends SMS.
+Three zero-cost rows are harmless, but the meter exists and is being written to,
+and an unexpected charge is by definition in a category nobody is watching. Now
+in the capture set.
+
+### What to do with the fixed capture
+
+Re-run **Ledger → CAPTURE NOW**. It now pages to the end of the window and
+returns `complete: true` or names every type it cut short. The previous run's
+totals for `sip-trunking`, `call-control` and `amd` are **partial** and should
+not be compared against anything.
 
 ---
 
