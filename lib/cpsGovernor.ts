@@ -3,78 +3,79 @@ import { getServiceClient } from '@/lib/supabase'
 const supabase = getServiceClient('cpsGovernor')
 
 // =============================================================================
-// CPS GOVERNOR — spread originations so the carrier never sees a spike
+// CPS GOVERNOR — a leaky bucket, so the carrier never sees a spike
 // =============================================================================
-// Telnyx bills calls-per-second on the 95th PERCENTILE OF HOURLY PEAKS, tiered:
-// the first 5 CPS are free, then $12/CPS to 25, $16 to 200, $24 to 250, $30
-// beyond. Their own worked example is a peak of 163 CPS costing $2,448/month.
-// Because it is billed on sustained peaks rather than averages, a pattern that
-// bursts regularly is expensive even when the average rate is trivial.
+// Telnyx bills calls-per-second on the 95th PERCENTILE OF HOURLY PEAKS: the
+// first 5 CPS free, then $12/CPS to 25, $16 to 200, $24 to 250, $30 beyond.
+// Their own worked example is a peak of 163 CPS costing $2,448/month. Peaks,
+// not averages — so a pattern that bursts is expensive even when the average
+// is trivial, and flattening the bursts is the entire saving.
 //
-// Measured on this account: the P95 hourly peak is 5.4 CPS — barely over the
-// free tier — but every burst above two calls in a second came from ONE agent,
-// because a predictive fan-out places three to five lines on a single tick.
-// The same physics reaches progressive at headcount: a hundred agents whose
-// dials happen to coincide produce the same second as twenty fanning out.
+// ── WHY THIS IS THE SECOND DESIGN ─────────────────────────────────────────
+// The first returned a call's POSITION within the current second and let the
+// caller derive a delay proportional to how far over target it was. That
+// approximates a rate. It cannot guarantee one, and clipping the delay broke
+// it outright: in a second carrying eight legs, the eighth needs a full second
+// of delay to land in the next one, against an agent cap of 200ms. A 200ms
+// shift only crosses a second boundary if the call was already within 200ms of
+// one. It smoothed the shoulders of a burst and left the burst.
 //
-// ── THIS ONLY EVER DELAYS. IT CANNOT REFUSE A DIAL. ────────────────────────
-// That is not a nicety, it is the whole design, and lib/concurrency.ts records
-// why. A previous guard COULD say no: it counted `duration = 0` as "in flight",
-// which is the permanent resting value of every unanswered call, so within
-// about five minutes of a session it was refusing every dial while the carrier
-// still had capacity. Its own epitaph: "a guard that is wrong in the
-// restrictive direction is worse than no guard."
+// A leaky bucket does not approximate. Every origination is handed the next
+// free slot at FIXED spacing — at 4/second, one slot every 250ms — and waits
+// for it. Verified against the RPC: a burst of eight returns 0, 247, 496, 746,
+// 996, 1246, 1496, 1746ms. Eight arrivals drain across 1.75 seconds at exactly
+// the target, because the slots were never available faster.
 //
-// So the worst case here is milliseconds. If the RPC is slow, wrong, or gone,
-// the dial proceeds immediately — every failure path returns rather than
-// throws, and the caller is never told to stop.
+// The bucket is pulled forward to now whenever the platform has been idle, so
+// quiet time banks no credit that would release as a burst later — which is
+// what a token bucket does, and exactly what the carrier bills for.
 //
-// ── WHY THE AGENT NEVER FEELS IT ──────────────────────────────────────────
-// An agent-initiated dial is capped far tighter than a fan-out line, because
-// somebody is watching the first and nobody is waiting on the second. At the
-// caps below an agent can lose at most a fifth of a second, and only when the
-// platform is already placing more calls in that second than the free tier
-// allows — which on today's traffic essentially never happens.
+// ── IT STILL CANNOT REFUSE A DIAL ─────────────────────────────────────────
+// lib/concurrency.ts records what happened the last time anything on this path
+// could say no: a guard counting `duration = 0` as "in flight" — the permanent
+// resting value of every unanswered call — refused every dial about five
+// minutes into a session while the carrier still had capacity. Its epitaph is
+// "a guard that is wrong in the restrictive direction is worse than no guard."
+//
+// So every failure path here returns and the dial proceeds: a slow claim, a
+// missing config, an unreadable row, a thrown error. The worst this can do is
+// wait, and the wait is capped.
 // =============================================================================
 
 /**
- * Originations per second we aim to stay under.
+ * Originations per second the bucket drains at.
  *
  * Four rather than five: the free tier is 5 CPS and the billing metric is a
- * percentile of peaks, so sitting exactly on the line means half the hours
- * round the wrong way. One slot of headroom is cheaper than one billed CPS.
+ * percentile of peaks, so sitting exactly on the line rounds the wrong way
+ * half the time. One slot of headroom is cheaper than one billed CPS.
  */
 const CPS_TARGET = 4
 
 /**
- * How long each kind of origination may be held back.
+ * How long an origination may be held back before the bucket gives up on it.
  *
- * A fan-out line is placed by the server with nobody attached and nobody
- * watching, so it can absorb a real delay. An agent pressing dial is watching
- * the screen, and 200ms is under the threshold where a UI feels sluggish.
+ * THESE ARE GENEROUS ON PURPOSE, and that is the correction over the first
+ * version. A cap below the spacing the bucket needs does not make the pacing
+ * gentler — it disables it, silently, exactly when a burst is happening.
+ *
+ * What that costs in practice, measured against real traffic after predictive
+ * was withdrawn: only 7 seconds out of 404 carried more than four legs. A cap
+ * this size is reached on a fraction of dials, and only while the platform is
+ * genuinely placing more calls than the free tier allows — which is precisely
+ * when pacing is worth something.
+ *
+ * Fan-out is placed by the server with nobody watching, so it can absorb more.
+ * Beyond either figure the call goes and the peak is accepted: an unbounded
+ * queue in front of a phone call is worse than a billing tier.
  */
 const MAX_DELAY_MS = {
-  fanout: 1_500,
-  agent: 200,
+  fanout: 5_000,
+  agent: 2_000,
 } as const
 
 export type OriginationKind = keyof typeof MAX_DELAY_MS
 
-/**
- * How long the slot claim itself may take before the dial goes ahead unpaced.
- *
- * THE GOVERNOR MUST NEVER BE ABLE TO SLOW A DIAL BY MORE THAN IT SAVES. The
- * claim is a single-row update in the same region as this function, normally
- * ten to fifteen milliseconds — but "normally" is not a guarantee, and a
- * database under load, a cold connection or a network hiccup must not turn
- * into a hesitation the agent can feel. Past this budget the answer stops
- * being worth waiting for and the call goes.
- *
- * With the caps below, the absolute worst case for an agent-initiated dial is
- * this plus MAX_DELAY_MS.agent — a quarter of a second, and only when the
- * platform is genuinely placing more calls that second than the free tier
- * allows. The typical case is the round trip and no delay at all.
- */
+/** Budget for the claim itself, after which the dial goes unpaced. */
 const CLAIM_TIMEOUT_MS = 50
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
@@ -93,17 +94,21 @@ async function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T | null> 
 }
 
 /**
- * Hold this origination back far enough that the current second stays under
- * target. Resolves when it is this call's turn, or immediately on any problem.
+ * Hold this origination until the bucket has a slot for it.
  *
- * Returns the milliseconds actually waited, for logging. Never throws.
+ * Returns the milliseconds actually waited, for logging. Never throws, never
+ * refuses, and never waits longer than this kind's cap.
  */
 export async function paceOrigination(kind: OriginationKind): Promise<number> {
   try {
-    // Raced, not awaited. A slow claim is abandoned rather than waited on —
-    // the dial is worth more than the measurement. The update still lands and
-    // still counts toward the second; we simply stop waiting to hear about it.
-    const res = await withTimeout(supabase.rpc('claim_cps_slot'), CLAIM_TIMEOUT_MS)
+    // The claim is raced, not awaited. A slow database must not become a
+    // hesitation an agent can feel — the dial is worth more than the
+    // measurement. The row still advances, so the slot is still consumed;
+    // we simply stop waiting to hear which one it was.
+    const res = await withTimeout(
+      supabase.rpc('claim_cps_slot_ms', { p_rate: CPS_TARGET }),
+      CLAIM_TIMEOUT_MS
+    )
     if (res === null) {
       console.warn('[cps] slot claim exceeded its budget, proceeding unpaced')
       return 0
@@ -111,28 +116,19 @@ export async function paceOrigination(kind: OriginationKind): Promise<number> {
 
     const { data, error } = res
     if (error || typeof data !== 'number') {
-      // Fail open, loudly enough to notice but without touching the dial.
       if (error) console.warn('[cps] slot claim failed, proceeding unpaced:', error.message)
       return 0
     }
 
-    const position = data
-    if (position <= CPS_TARGET) return 0
+    const waitMs = Math.min(Math.max(0, data), MAX_DELAY_MS[kind])
+    if (waitMs <= 0) return 0
 
-    // How far into the future this call belongs if the second were evenly
-    // filled. Position 9 against a target of 4 is one full second of backlog,
-    // so it waits a second — unless its cap says otherwise.
-    const idealMs = ((position - CPS_TARGET) / CPS_TARGET) * 1000
-    const waitMs = Math.min(idealMs, MAX_DELAY_MS[kind])
-
-    // Jittered, and this matters more than it looks. Delaying every backlogged
-    // call by the SAME amount rebuilds the spike one second later — the burst
-    // is moved, not flattened. A uniform spread over the window is what
-    // actually lowers the peak.
-    const jittered = waitMs * (0.5 + Math.random() * 0.5)
-
-    await sleep(jittered)
-    return Math.round(jittered)
+    // No jitter, and its absence is deliberate. The first design needed it
+    // because equal delays rebuilt the spike one second later. Fixed spacing
+    // already produces a uniform distribution — adding noise on top would only
+    // let two calls collide inside a slot that was reserved for one.
+    await sleep(waitMs)
+    return waitMs
   } catch (err) {
     console.warn('[cps] governor threw, proceeding unpaced:', err)
     return 0
@@ -155,3 +151,4 @@ export async function cpsPeak(): Promise<{ peak: number; at: string | null } | n
 }
 
 export const CPS_GOVERNOR_TARGET = CPS_TARGET
+export const CPS_MAX_DELAY_MS = MAX_DELAY_MS
