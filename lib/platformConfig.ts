@@ -120,6 +120,19 @@ export interface PlatformConfig {
    */
   voicemail_streak_limit: number
   /**
+   * Consecutive AGENT_LEG_FAILED dials after which an agent is told to reload.
+   *
+   * A dead browser socket does not stop dialing on its own — 14 Sept had one
+   * agent make 41 failed dials in an hour at 1.4s each while a healthy agent
+   * in the same window failed 2.7%. Each one rings a lead for a second and is
+   * an abandoned call for surcharge purposes. See lib/agentSocketBreaker.ts.
+   *
+   * Values below 3 are ignored as too twitchy; 0 disables. This is the only
+   * guard on the dial path that refuses rather than delays, which is why the
+   * off switch is configuration rather than a deploy.
+   */
+  agent_leg_failure_limit: number
+  /**
    * Seconds the LEAD's leg stays up after a call would otherwise end early —
    * an AMD machine verdict, or an agent skipping under the threshold — once
    * the agent has already advanced to the next lead.
@@ -202,6 +215,9 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   // One below the 6-dial attempt cap: an always-machine number gives up two
   // dials early while still getting a fourth chance. Set 3 for more, 0 for off.
   voicemail_streak_limit: 4,
+  // Five. At the healthy 2.7% failure rate that is 1 in 700 million; at the
+  // broken 70% rate it fires on the fifth dial instead of the forty-first.
+  agent_leg_failure_limit: 5,
   // ── FAILS TOWARD COMPLIANCE, NOT AWAY FROM IT ────────────────────────────
   // This was 0, on the reasoning that a fallback which silently held live calls
   // open would be the worst possible default. That reasoning was backwards for
@@ -270,7 +286,8 @@ const CONFIG_COLUMNS =
   'amd_in_preview, amd_hangup_when_bridged, amd_max_seconds_after_answer, ' +
   'amd_greeting_duration_ms, amd_max_words, amd_initial_silence_ms, ' +
   'amd_hold_seconds_after_machine, dial_agent_on_answer, connecting_message, ' +
-  'max_destination_rate, max_rate_min_samples, voicemail_streak_limit'
+  'max_destination_rate, max_rate_min_samples, voicemail_streak_limit, ' +
+  'agent_leg_failure_limit'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few

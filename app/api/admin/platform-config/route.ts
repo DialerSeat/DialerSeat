@@ -135,6 +135,9 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   // cap itself -- a limit above it could never be reached and would read as
   // enabled while doing nothing. 0 disables, which is why the floor is 0.
   voicemail_streak_limit: v => intInRange(v, 0, MAX_DIALS_PER_NUMBER),
+  // 0 = off. 1 and 2 are accepted here but ignored by the guard, which treats
+  // anything under 3 as off rather than letting ordinary noise stop an agent.
+  agent_leg_failure_limit: v => intInRange(v, 0, 50),
 }
 
 function intInRange(v: unknown, min: number, max: number): number | null {

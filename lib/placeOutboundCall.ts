@@ -12,6 +12,7 @@ import { checkSuppression } from '@/lib/suppression'
 import { logCallEvent } from '@/lib/callEvents'
 import { paceOrigination } from '@/lib/cpsGovernor'
 import { checkDestinationRate } from '@/lib/destinationRates'
+import { checkAgentSocket, agentSocketMessage } from '@/lib/agentSocketBreaker'
 
 /**
  * The only answering-machine detector allowed out of this file.
@@ -286,6 +287,42 @@ export async function placeOutboundCall(
     }
   }
 
+
+  // ── THE AGENT'S BROWSER IS NOT ANSWERING ITS OWN LEG ─────────────────────
+  // When an agent's SIP socket dies, Telnyx accepts the agent-leg dial and
+  // only gives up ~1.2s later; the lead's leg dies with it. The lead gets a
+  // second of ringing and nothing else, and the next dial does it again. On
+  // 14 Sept one agent made 41 such dials in an hour while another, in the
+  // same window, failed 2.7% of 112. It is bimodal — a healthy session or a
+  // dead one — and nothing stopped the dead one.
+  //
+  // This is the ONLY guard on this path that refuses rather than delays, and
+  // the case for it is that it refuses dials which cannot succeed: a dead
+  // socket does not place calls, so this removes ringing, not conversations.
+  // Five consecutive failures at the healthy rate is 1 in 700 million; one
+  // successful dial clears it; the window is ten minutes; every failure path
+  // inside permits the dial. lib/agentSocketBreaker.ts carries the argument.
+  //
+  // user_dial only. A fan-out line has no single agent whose socket could be
+  // the cause, and its own agent leg is placed separately.
+  if (source === 'user_dial') {
+    const socket = await checkAgentSocket(userId)
+    if (socket.broken) {
+      console.warn(
+        `[placeOutboundCall:${source}] BLOCKED, ${socket.consecutive} consecutive ` +
+        `AGENT_LEG_FAILED for user ${userId} (limit ${socket.limit}) — their browser ` +
+        `is not answering its SIP leg, so no lead was rung`
+      )
+      return {
+        success: false,
+        error: agentSocketMessage(socket),
+        detail:
+          `${socket.consecutive} consecutive agent-leg failures in the last 10 minutes. ` +
+          `Set platform_config.agent_leg_failure_limit to 0 to disable this check.`,
+        httpStatus: 409,
+      }
+    }
+  }
 
   // ── MANUAL DIAL BYPASS (unchanged from prior version) ───────────────────
   const isManualDial = !leadId && !campaignId
