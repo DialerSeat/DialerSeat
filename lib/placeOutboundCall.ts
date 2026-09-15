@@ -14,6 +14,11 @@ import { paceOrigination } from '@/lib/cpsGovernor'
 import { checkDestinationRate } from '@/lib/destinationRates'
 import { checkAgentSocket, agentSocketMessage } from '@/lib/agentSocketBreaker'
 import { noteDialOutage } from '@/lib/dialOutageAlert'
+import {
+  awaitDialBackoff,
+  noteCapacityFailure,
+  noteDialSuccess,
+} from '@/lib/dialOutageBackoff'
 
 /**
  * The only answering-machine detector allowed out of this file.
@@ -289,6 +294,22 @@ export async function placeOutboundCall(
   }
 
 
+  // ── EVERY DIAL IS FAILING FOR AN ACCOUNT-LEVEL REASON ──────────────────
+  // A blocked account or an empty pool fails every dial for every agent. On 11
+  // Sept that ran for ten hours and 4,341 attempts. This slows the hammering;
+  // lib/dialOutageAlert.ts is what actually tells somebody.
+  //
+  // DELAY ONLY — there is no branch here that can refuse a call. Worst case on
+  // a wrong reading is a slow dial, and the first success clears it outright.
+  // Same shape as the CPS governor, for the same reason (§10 carrier doc).
+  const outageWaitMs = await awaitDialBackoff()
+  if (outageWaitMs > 0) {
+    console.warn(
+      `[placeOutboundCall:${source}] waited ${outageWaitMs}ms — recent dials have been ` +
+      `failing for an account-level reason (no usable number, or Telnyx has blocked the account)`
+    )
+  }
+
   // ── THE AGENT'S BROWSER IS NOT ANSWERING ITS OWN LEG ─────────────────────
   // When an agent's SIP socket dies, Telnyx accepts the agent-leg dial and
   // only gives up ~1.2s later; the lead's leg dies with it. The lead gets a
@@ -486,6 +507,7 @@ export async function placeOutboundCall(
     // Real-time, because the cron that watches this runs at most daily on
     // Hobby. On 11 Sept this exact condition ran for ten hours and 4,341
     // attempts with nothing said. See lib/dialOutageAlert.ts.
+    noteCapacityFailure()
     noteDialOutage('the caller-ID pool has no usable number.', { source, userId })
     return {
       success: false,
@@ -1261,6 +1283,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       /account.*blocked/i.test(rawDetail) || rawDetail.includes('D17')
 
     if (isAccountBlocked) {
+      noteCapacityFailure()
       noteDialOutage(
         'Telnyx has blocked this account (D17) — usually a spent balance.',
         { source: p.source, userId: p.userId }
@@ -1283,6 +1306,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // means there was nothing to swap in: the account owns no usable number,
     // or every owned number is at its daily cap.
     if (isUnverifiedOriginationError(leadData.errors)) {
+      noteCapacityFailure()
       noteDialOutage(
         `Telnyx refused ${p.fromNumber} as a caller ID (D51) and the pool had no replacement.`,
         { source: p.source, userId: p.userId }
@@ -1310,6 +1334,12 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       httpStatus: 500,
     }
   }
+
+  // Telnyx accepted the lead leg, so whatever was refusing every dial is over.
+  // One success clears the backoff outright — the conditions it guards against
+  // (no usable number, blocked account) are total, so when they lift they lift
+  // for everyone at once and there is nothing to ease back into.
+  noteDialSuccess()
 
   const leadCallControlId = leadData.data.call_control_id
   const leadCallLegId = leadData.data.call_leg_id

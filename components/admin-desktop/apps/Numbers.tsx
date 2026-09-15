@@ -694,6 +694,46 @@ export default function NumbersApp() {
     }
   }
 
+  // ── THE TWO RATIOS TELNYX BILLS ON ──────────────────────────────────────
+  // Short duration (>15% of CONNECTED calls at <=6s) and abandoned (>20% of
+  // TOTAL OUTBOUND dropped before answer). Different denominators, both
+  // month-long, and crossing either charges EVERY qualifying call that month.
+  //
+  // September breached both at 20.8% and 21.6% -- about $3.53 against a $28.29
+  // usage bill -- and nothing on this platform showed it. This is also the
+  // go/no-go gate for dial_agent_on_answer. See docs/COST-FINDINGS.md §1i.
+  const handleSurcharge = async () => {
+    if (auditing) return
+    setAuditing(true)
+    try {
+      const res = await fetch('/api/admin/surcharge-exposure')
+      const d = await res.json()
+      if (!d.success) {
+        alert(`Surcharge check failed: ${d.error}`)
+        return
+      }
+      const m = d.month_to_date
+      const pc = (n: number) => `${(n * 100).toFixed(1)}%`
+      alert([
+        `SURCHARGE EXPOSURE — month to date`,
+        '',
+        `Outbound calls   ${m.totalOutbound}`,
+        `Connected        ${m.totalConnected}`,
+        '—',
+        `Short duration   ${pc(m.shortDurationPct)} of connected  (limit 15%)  ${m.shortDurationOver ? 'OVER' : 'ok'}`,
+        `Abandoned        ${pc(m.abandonedPct)} of outbound   (limit 20%)  ${m.abandonedOver ? 'OVER' : 'ok'}`,
+        '—',
+        `EXPOSURE         $${m.totalFeeUsd}`,
+        '',
+        ...d.notes,
+      ].join('\n'))
+    } catch (e: any) {
+      alert(`Surcharge error: ${e.message}`)
+    } finally {
+      setAuditing(false)
+    }
+  }
+
   const handleRelease = async (id: string) => {
     setReleasing(id)
     try {
@@ -1208,6 +1248,16 @@ export default function NumbersApp() {
             title="What each number costs on Telnyx: E911, rental, and which free settings are unset"
           >
             {auditing ? '$ AUDITING...' : '$ AUDIT'}
+          </button>
+          {/* Both surcharges were breached in September and invisible. This is
+              also the gate on dial_agent_on_answer. */}
+          <button
+            className="pool-btn"
+            onClick={handleSurcharge}
+            disabled={auditing}
+            title="Short-duration and abandoned-call ratios against Telnyx's limits, month to date"
+          >
+            ⚠ SURCHARGE
           </button>
           <button
             className="pool-btn"
