@@ -271,7 +271,25 @@ async function handleNextLead(req: Request) {
       // lib/queueDiagnosis — reporting only the first reason is how a queue of
       // broken phone numbers came to be described as "outside calling hours".
       const diagnosis = new QueueDiagnosisBuilder()
-      const attempts = await loadAttemptCounts(scopedCampaignIds)
+      // ── THE BUDGET SPANS THE TEAM, THE CLAIM DOES NOT ────────────────────
+      // scopedCampaignIds is what we CLAIM from — one campaign when the agent
+      // picked one, the whole team's when they are on All Active. That is
+      // correct for claiming and wrong for counting.
+      //
+      // Counting against it meant a number appearing in two lists got a fresh
+      // six attempts in each, purely because an agent selected a list. 4,974
+      // numbers on this platform sit in more than one campaign — 81.8% of all
+      // lead rows — so the budget was sound only while somebody happened to be
+      // dialing every list at once.
+      //
+      // Widened to the TEAM's campaigns, not globally: another team that bought
+      // the same lead must not have its budget spent by ours. The person on the
+      // other end does not care which of our lists they are on, but they are
+      // not shared between tenants either.
+      const budgetCampaignIds = Array.from(
+        new Set([...scopedCampaignIds, ...teamCampaignIds])
+      )
+      const attempts = await loadAttemptCounts(budgetCampaignIds)
 
       for (const c of orderedCandidates) {
         if (callable) { toRelease.push(c.id); continue }
@@ -412,9 +430,19 @@ async function handleNextLead(req: Request) {
     // in memory. The panel's earliest rows live in the first chunk, so the
     // common case now answers from one small query and stops.
     // ── ATTEMPTS SPENT, PER NUMBER, ACROSS EVERY CAMPAIGN ────────────────────
-// Scoped to the CAMPAIGNS in play rather than to the agent: a number in two
+// Scoped to the CAMPAIGNS passed in rather than to the agent: a number in two
 // lists must share one budget however many people are dialing it. Scoping per
 // agent would let a teammate on the other list spend the budget again.
+//
+// CALLERS MUST PASS THE TEAM'S CAMPAIGNS, not just the one being dialed. That
+// distinction was the bug: when an agent selected a single campaign the budget
+// collapsed to it, and a number appearing in two lists got a fresh six
+// attempts in each. 4,974 numbers here sit in more than one campaign -- 81.8%
+// of all lead rows -- so the cap held only while somebody happened to be
+// dialing every list at once.
+//
+// Not global, deliberately. Another team that bought the same lead must not
+// have its budget spent by ours.
 //
 // One query per request against an indexed column. The alternative — asking
 // per candidate — is 150 round trips to answer the same question.
