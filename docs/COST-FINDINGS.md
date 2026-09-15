@@ -21,7 +21,7 @@ Everything found, ordered by what it is worth. Detail in the numbered sections.
 | 3 | **Admin → Numbers → `$ AUDIT`** | settles **$0–$19.50/month** of E911 in one click | §1o, §1u |
 | 4 | **Send `docs/telnyx-questions.md`** (5 questions) | **~$2.56/agent/day** if 2 and 3 land | §1a–c, §1g |
 | 5 | **Ledger → CAPTURE NOW** | 1 of 19 record types has ever been captured | §1d |
-| 6 | Check the portal's abandoned-call pie chart | carrier's own count of the §1i breach | §1i |
+| 6 | **Admin → Numbers → `⚠ SURCHARGE`** | both ratios month-to-date; portal pie chart still outranks it | §1i |
 | 7 | **Admin → Numbers → `SET CNAM`** | free; landlines only, no answer-rate claim | §1t |
 | 8 | Register the pool at `freecallerregistry.com` | free; First Orion + TNS + Hiya in one form | §1f |
 
@@ -35,13 +35,14 @@ Everything found, ordered by what it is worth. Detail in the numbered sections.
 | Billing model validated against Telnyx | **184 of 192 legs predicted exactly** |
 | **Number audit** (`$ AUDIT` / `SET CNAM`) | answers E911 and sets CNAM without Mission Control |
 | **Real-time outage alert + D17 detection** | 11 Sept ran **ten hours** unseen; the cron is daily on Hobby |
+| **Surcharge exposure screen** (`⚠ SURCHARGE`) | the $3.53 breach was invisible; also the gate on `dial_agent_on_answer` |
+| **Platform-failure backoff** | ~7 attempts/min → under 1; delay-only, first success clears it |
 
 ### Built or designed, deliberately not on
 
 | what | gate |
 |---|---|
 | `dial_agent_on_answer` (−$0.68/agent/day) | **abandonment must measure under 20% first** — §1i |
-| Platform-failure **backoff** (§1n) | the **alert** half shipped; the growing-delay half touches dial timing and wants a session where it is the only thing moving |
 | Voicemail drop into the prepaid 49 seconds (§1j) | playback billing unverified **and** prerecorded-voice consent is counsel's call |
 
 ### Rejected — do not re-check
