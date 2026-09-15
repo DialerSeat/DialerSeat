@@ -1032,6 +1032,39 @@ function CheckoutForm({
     if (error) {
       setErrorMsg(error.message || 'Payment failed')
       setSubmitting(false)
+
+      // ── RECORD WHY, BECAUSE NOTHING ELSE CAN ───────────────────────
+      // Stripe hands back a precise reason here — card_declined,
+      // insufficient_funds, authentication_failure, expired_card — and this
+      // branch used to render it and drop it. That made every failed signup
+      // undiagnosable.
+      //
+      // 19 of 34 users have tried to subscribe and never succeeded, across 27
+      // attempts. Split by how long the attempt survived: 7 died inside a
+      // minute (an instant decline, nothing to do with us) and 14 expired
+      // hours later having never been completed. Telling those two apart
+      // decides whether the fix is "nothing" or "our payment step is losing
+      // people", and until now the data could not.
+      //
+      // Fire-and-forget: the customer is already looking at the real error,
+      // and a failed diagnostic must never make a failed payment worse.
+      void fetch('/api/stripe/checkout-failed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: error.code,
+          decline_code: (error as { decline_code?: string }).decline_code,
+          type: error.type,
+          message: error.message,
+          payment_intent_status: error.payment_intent?.status,
+          plan,
+          // Which confirm path was taken. A failure under 'setup' is a card
+          // being saved for a team seat; under 'payment' it is a first
+          // charge. Different flows, different fixes.
+          confirm_mode: confirmMode,
+          team_member_id: teamMemberId,
+        }),
+      }).catch(() => {})
     }
   }
 
