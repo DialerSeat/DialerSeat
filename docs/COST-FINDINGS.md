@@ -103,6 +103,77 @@ a column we populate as though it were the carrier's state — see §1m.
 
 ---
 
+## SCALE READINESS — what breaks, at how many agents
+
+Marketing means volume, and volume multiplies every remaining weakness. These
+are the ceilings, in agents, at 800 dials/agent/day.
+
+| constraint | breaks at | why |
+|---|---|---|
+| **Vercel Hobby — commercial use** | **immediately** | Hobby is non-commercial. Enforced by **account suspension**. You take payment today |
+| **Number pool at a healthy intensity** | **0.7 agents** | 13 numbers × 40 dials/day = 520/day |
+| **Number pool at `daily_cap` 200** | **3.2 agents** | 13 × 200 = 2,600/day — but see below |
+| Vercel Hobby — invocation ceiling | 7 agents | polling alone, before a single dial (§1x) |
+| Telnyx real-time CPS | far out | 20 CPS per credential; the governor paces it |
+
+### The binding constraint is the number pool, and it is not about cost
+
+It is about **answer rate**, which is the product.
+
+| dials per number per day | answer rate |
+|---|---|
+| **under 40** | **38.8%** |
+| over 120 | **21.6%** |
+
+Running 13 numbers at `daily_cap` 200 gets you to 3.2 agents — **at 21.6%**.
+That is not a capacity problem, it is **44% fewer conversations from the same
+dials**, and it is what a customer would experience as "this dialer doesn't
+work."
+
+### What the pool actually has to be
+
+| agents | dials/day | numbers at a healthy 40/day | DID $/month |
+|---|---|---|---|
+| 5 | 4,000 | 100 | $100 |
+| 10 | 8,000 | 200 | $200 |
+| 25 | 20,000 | 500 | $500 |
+| **100** | **80,000** | **2,000** | **$2,000** |
+
+**At 100 agents the DID bill is ~$2,000/month against ~$6,300 of carrier usage.**
+Number rental becomes **24% of carrier spend** — far larger than any per-minute
+optimisation in this document, and it is the line that has to be budgeted rather
+than engineered away.
+
+> This is not a software bottleneck and numbers are cheap to buy. It is named
+> here because **pool size sets answer rate, and answer rate is the product** —
+> so it belongs in the pricing model, not in the backlog.
+
+### Before a single paying customer
+
+| | |
+|---|---|
+| **Vercel Pro — $20/mo** | Hobby forbids commercial use. This is a ToS violation **today**, not at scale |
+| **Point the SMS opt-out webhook** | TCPA exposure scales **linearly with volume**, at $500–$1,500 per call, no safe harbour (§1ac) |
+
+### Before marketing hard
+
+| | |
+|---|---|
+| **Size the pool to the agent count** | at 40 dials/number/day, not 200 — it is the difference between 38.8% and 21.6% |
+| **Send the Telnyx letter** | the unit economics you would advertise are unconfirmed. Q1 alone is 55.6% |
+
+### Known, bounded, and honest to say out loud
+
+- **Predictive is capped at 1 line** until a TSR-compliant no-agent message
+  exists (§1y). **Do not market "predictive dialing" above one line until it
+  does** — the cap is legal, not technical.
+- **FCC Form 499-A** may apply around 100 subscribers (§1h). Compliance, not
+  cost, and it wants an advisor before the count grows.
+- **Two thirds of calls do not write back to their lead** (§4). A backstop is in
+  place; the write path is still the real fix.
+
+---
+
 ## 0. COST PER DIAL — the only unit that survives a change in volume
 
 **This section used to project a day from an agent-hour measured on leaky
