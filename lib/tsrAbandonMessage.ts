@@ -11,10 +11,26 @@
 //    that states the name and telephone number of the seller on whose behalf
 //    the call was placed."
 //
-// That clause is the whole mechanism. Without it every surplus line that
-// answers with no agent behind it is an ABANDONED call counted against the 3%
-// ceiling; with it, the call is compliant and is not counted. It is why real
-// predictive dialers can run 1.5-2 lines per agent and this one could not.
+// ── WHAT THE MESSAGE DOES AND DOES NOT DO ──────────────────────────
+// An earlier version of this comment said that with the message "the call is
+// compliant and is not counted". That is WRONG, and wrong in the expensive
+// direction: it invites the reading that once the message exists, abandonment
+// stops mattering.
+//
+// A call where a person answers and no rep is connected within two seconds IS
+// an abandoned call, and it counts toward the 3% whether or not the message
+// plays. The message does not decrement anything.
+//
+// 310.4(b)(4) is a SAFE HARBOR with FOUR conditions, all of which must hold
+// together: (i) no more than 3% of person-answered calls abandoned, measured
+// per campaign over 30 days; (ii) ring at least 15 seconds or four rings;
+// (iii) this message; (iv) records kept to prove it. Breaking any one forfeits
+// the whole harbor.
+//
+// So the message is necessary and not sufficient. Without it, abandoned calls
+// are straight violations of 310.4(b)(1)(iv) rather than protected ones. With
+// it, they are protected only while the 3% still holds. That is why the line
+// ceiling and the abandon throttle exist ALONGSIDE this, not instead of it.
 //
 // ── WHY IT IS PER CAMPAIGN AND NOT PER PLATFORM ─────────────────────────────
 // The rule names "the seller on whose behalf the call was placed". DialerSeat

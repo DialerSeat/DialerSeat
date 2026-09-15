@@ -463,11 +463,20 @@ async function runPredictiveControllerInner(
   }
 
   // ── A SECOND LINE REQUIRES A SELLER TO ANNOUNCE ─────────────────────
-  // Every surplus line that answers with no agent behind it is an ABANDONED
-  // call under 16 CFR 310.4(b)(1)(iv) — UNLESS 310.4(b)(4)(iii) is satisfied by
-  // promptly playing a message naming the seller and its phone number. That
-  // clause is the only thing that makes multi-line predictive lawful, which is
-  // why one line was the ceiling until the message existed.
+  // A surplus line that answers with no agent behind it is an ABANDONED call
+  // under 16 CFR 310.4(b)(1)(iv), and it counts toward the 3% ceiling whether
+  // or not the seller message plays. The message does not excuse the call and
+  // does not decrement the count — an earlier version of this comment said it
+  // did, which is wrong.
+  //
+  // What the message does is keep the 310.4(b)(4) SAFE HARBOR available. That
+  // harbor needs all four of: under 3% abandonment per campaign over 30 days,
+  // a 15-second or four-ring minimum, this message, and records proving it.
+  // Without the message the harbor is forfeit entirely, so every abandoned
+  // call is a bare violation instead of a protected one.
+  //
+  // Necessary, not sufficient. The ceiling and the abandon throttle below are
+  // what hold the 3%; this is what holds the harbor around it.
   //
   // So the check is structural, not advisory: a campaign that cannot announce
   // its seller gets ONE line, where there is no surplus and therefore no
