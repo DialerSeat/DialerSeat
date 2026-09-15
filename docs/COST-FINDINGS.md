@@ -151,6 +151,12 @@ outbound be reduced to match it?* Two facts they hold, no accusation.
 
 ### 1b. STIR/SHAKEN attestation level
 
+> **§1s largely answers this.** Telnyx: *“Every outbound call with a valid U.S.
+> Caller ID that originates on the Telnyx platform receives attestation at no
+> additional charge.”* Our numbers qualify, and the trace below was an agent leg
+> — a SIP URI with no caller ID — so it was never evidence of a problem. What
+> remains is confirming the *level*.
+
 A SIP trace from this account carried `verstat=No-TN-Validation`. That was an
 agent leg so it does not prove the outbound attestation is missing, but it is
 worth one question. Industry reporting puts A-level attestation at 60%+ connect
@@ -767,6 +773,57 @@ before reading another balance drop as an overcharge.
   International daily spent limit reached D39”*. Not near it; it exists.
 - **No refunds** on consumed pay-as-you-go services, or on any payment 180+ days
   old. Money in the account is spent money.
+
+---
+
+## 1s. CHECKED AND CLEAR — four things that are not leaks
+
+Recorded so nobody spends a second night on them.
+
+### Inbound costs about three cents a day
+
+Inbound still answers, speaks and hangs up — the `reject` attempt that would have
+stopped it took the whole dialer down (§8 carrier doc) and was reverted. Measured
+over the two days of ledger we hold: **20 legs, 11 billed minutes, $0.0572.**
+
+**About $0.03/day, call it $0.90 a month.** The instruction *“I don't want inbound
+callbacks active or chargable”* was right in principle, and the charge is real —
+but it is a rounding error against a $46–$66 monthly bill, and the attempt to
+remove it cost a dialing day. **Leave it.**
+
+### STIR/SHAKEN attestation is free and automatic
+
+> *“Every outbound call with a valid U.S. Caller ID that originates on the Telnyx
+> platform receives attestation at no additional charge.”*
+
+Our numbers are Telnyx numbers, so they qualify. **And the
+`verstat=No-TN-Validation` that raised this was on an agent leg** — a SIP URI to
+a browser, which has no US caller ID and is not a PSTN origination. Expected, not
+a fault. §1b overstated it.
+
+Worth still asking which *level* (A, B or C) is being applied, since the article
+says “attestation” without naming a level and A-level is what drives connect
+rates. But there is no missing purchase here and nothing to buy.
+
+### Caribbean and territory numbers are already blocked
+
+**173 leads** sit in NPAs that look domestic — all `+1` — but are international
+destinations at international rates: 787, 784, 868, 268, 264, 473, 869, 242, 809,
+284 and others. Telnyx rejected 172 Guam (`671`) attempts in September as
+*“country not whitelisted”*.
+
+**`lib/areaCode.ts` already classifies them** (`OTHER_NANP`) and
+`lib/callingWindow.ts` returns `allowed: false, code: 'international'`. **Zero
+calls to any of these NPAs in 90 days.** The leak is sealed; the 173 leads simply
+sit unreachable, which is correct.
+
+### The 412 held calls are the compliance hold
+
+`call.hold` fired 412 times in eight days, averaging 8.4 seconds. **276 of them
+are on `machine` verdicts** — that is `park_after_unbridge: 'self'` parking the
+lead leg for the 9-second AMD hold after the agent is released. Working as
+designed, and free inside the 60-second minimum. The 36 on human verdicts are
+agents using hold normally.
 
 ---
 
