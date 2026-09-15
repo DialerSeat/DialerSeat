@@ -9,6 +9,7 @@ import {
 import { recordAmdResult, markCallAbandoned } from '@/lib/dialerPacing'
 import { logCallEvent } from '@/lib/callEvents'
 import { checkDailySpend } from '@/lib/dailySpendAlarm'
+import { buildTsrAbandonMessage } from '@/lib/tsrAbandonMessage'
 import { sampleBalanceAfterCall } from '@/lib/telnyxBalance'
 import {
   hangupCallControlId, bridgeCallControlIds, buildClientState, parseClientState,
@@ -554,9 +555,48 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
   try {
     const { data: row } = await supabaseAdmin
       .from('calls')
-      .select('id, dial_source, dial_group_id, agent_call_control_id, bridged_at, user_id, pool_number_id')
+      // campaign_id carries the seller identity for the TSR no-agent message.
+      .select('id, dial_source, dial_group_id, agent_call_control_id, bridged_at, user_id, pool_number_id, campaign_id')
       .eq('call_control_id', callControlId)
       .maybeSingle()
+
+    // ── A PREDICTIVE SURPLUS LINE ANSWERED WITH NOBODY BEHIND IT ──────────
+    // THE case 16 CFR 310.4(b)(4)(iii) exists for, and the one that gates
+    // multi-line predictive.
+    //
+    // Fan-out places one agent leg PER LINE, all INVITEing the same browser.
+    // The browser can answer exactly one. When two lines answer, the second
+    // line's agent leg is never picked up — Telnyx still bridges it via
+    // link_to, so the prospect is joined to a leg that is merely ringing. That
+    // is silence, and an abandoned call.
+    //
+    // Detected by asking whether the agent leg has an `answered` event of its
+    // own. It is not a timer: if the browser had taken the leg, the event
+    // exists by the time the LEAD's answer webhook is being processed, because
+    // the agent leg has been ringing since before the lead's phone did.
+    //
+    // Measured today at a ceiling of one line this never fires — 137 of 137
+    // answered fan-out legs had their agent leg answered. It exists so the
+    // ceiling CAN be raised.
+    if (row && row.dial_source === 'controller_fanout' && row.agent_call_control_id) {
+      const { data: agentAnswered } = await supabaseAdmin
+        .from('call_events')
+        .select('id')
+        .eq('call_control_id', row.agent_call_control_id)
+        .eq('event_type', 'answered')
+        .limit(1)
+
+      if (!agentAnswered || agentAnswered.length === 0) {
+        console.warn(
+          `[calls/events] fan-out line ${callControlId} answered but its agent leg ` +
+          `${row.agent_call_control_id} was never picked up — playing the TSR ` +
+          `no-agent message rather than bridging into a ringing leg`
+        )
+        await speakTsrAbandonMessage(callControlId, row.campaign_id)
+        await hangupCallControlId(callControlId).catch(() => {})
+        return
+      }
+    }
 
     // ── THE LEAD JUST ANSWERED AND HAS NO AGENT LEG YET ────────────────────
     // Only possible with dial_agent_on_answer on, because every other path
@@ -665,6 +705,18 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
         },
       })
 
+      // ── NOBODY IS COMING: SAY WHO CALLED ────────────────────────────
+      // No agent session, or a heartbeat older than 15s, means this answered
+      // line has no representative and will not get one. Until now it heard
+      // silence and died, which is an abandoned call under 310.4(b)(1)(iv).
+      //
+      // 310.4(b)(4)(iii) turns that same call into a compliant one, and it is
+      // the clause that lets predictive run above a single line at all.
+      if (!session || !beatFresh) {
+        await speakTsrAbandonMessage(callControlId, row.campaign_id)
+        await hangupCallControlId(callControlId).catch(() => {})
+      }
+
       if (session && beatFresh) {
         // Same atomic claim the verdict path uses: only one answered line can
         // take a given agent, so a second simultaneous pickup loses the race
@@ -692,6 +744,12 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
               this_call_row: row.id,
             },
           })
+
+          // The classic predictive over-dial: two lines answered, one agent.
+          // THIS is the call 310.4(b)(4)(iii) exists for — the person said
+          // hello and there is genuinely nobody to hand them to.
+          await speakTsrAbandonMessage(callControlId, row.campaign_id)
+          await hangupCallControlId(callControlId).catch(() => {})
         }
 
         if (claim.data) {
@@ -703,6 +761,10 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
               .from('agent_sessions')
               .update({ current_call_id: null, state: 'ready' })
               .eq('id', session.id)
+
+            // And the prospect is still on the line with nobody coming.
+            await speakTsrAbandonMessage(callControlId, row.campaign_id)
+            await hangupCallControlId(callControlId).catch(() => {})
           }
         }
       }
@@ -796,6 +858,78 @@ async function callControlAction(
 const INBOUND_MESSAGE =
   'Thank you for calling. This number does not accept incoming calls. ' +
   'Please call back the number that contacted you, or visit dialerseat dot com for support. Goodbye.'
+
+/**
+ * No agent could be attached to an answered predictive line. Say who called.
+ *
+ * 16 CFR 310.4(b)(4)(iii): whenever a representative is not available within
+ * two seconds of the person's completed greeting, "promptly play a recorded
+ * message that states the name and telephone number of the seller on whose
+ * behalf the call was placed."
+ *
+ * THIS IS WHAT LETS PREDICTIVE RUN ABOVE ONE LINE. Without it every surplus
+ * line that answers into silence is an ABANDONED call against the 3% ceiling,
+ * which is why the line ceiling was 1 — and one line is progressive with extra
+ * steps. With it, the call is compliant and is not counted.
+ *
+ * Returns true only if the message was actually queued. A campaign with no
+ * seller name or callback number gets NOTHING spoken and is logged loudly:
+ * lib/predictiveController.ts refuses to give such a campaign a second line in
+ * the first place, so reaching here with an unbuildable message means the
+ * config was cleared mid-run.
+ */
+async function speakTsrAbandonMessage(
+  callControlId: string,
+  campaignId: string | null | undefined
+): Promise<boolean> {
+  try {
+    if (!campaignId) return false
+    const { data: camp } = await supabaseAdmin
+      .from('campaigns')
+      .select('tsr_seller_name, tsr_callback_number')
+      .eq('id', campaignId)
+      .maybeSingle()
+
+    const msg = buildTsrAbandonMessage({
+      name: camp?.tsr_seller_name,
+      callbackNumber: camp?.tsr_callback_number,
+    })
+
+    if (!msg.ok || !msg.text) {
+      console.error(
+        `[calls/events] TSR ABANDON MESSAGE NOT PLAYED for ${callControlId}: ${msg.reason}. ` +
+        `This call is an abandoned call under 310.4(b)(1)(iv).`
+      )
+      void logCallEvent({
+        event_type: 'tsr_abandon_message',
+        call_control_id: callControlId,
+        source: 'webhook',
+        status: 'not_configured',
+        detail: { campaign_id: campaignId ?? null, reason: msg.reason ?? null },
+      })
+      return false
+    }
+
+    // Queued first so it begins while anything else is still in flight. Telnyx
+    // runs commands on a call in order, so the hangup below waits for speak.
+    const spoke = await callControlAction(callControlId, 'speak', {
+      payload: msg.text,
+      voice: 'female',
+    })
+
+    void logCallEvent({
+      event_type: 'tsr_abandon_message',
+      call_control_id: callControlId,
+      source: 'webhook',
+      status: spoke ? 'played' : 'speak_failed',
+      detail: { campaign_id: campaignId ?? null },
+    })
+    return spoke
+  } catch (err) {
+    console.error('[calls/events] TSR abandon message threw', callControlId, err)
+    return false
+  }
+}
 
 async function handleInboundCallInitiated(callControlId: string): Promise<void> {
   await callControlAction(callControlId, 'answer')

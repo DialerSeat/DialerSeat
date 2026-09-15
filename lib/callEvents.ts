@@ -41,6 +41,11 @@ export type CallEventType =
   // no webhook anywhere in the app to hear it and zero rows in
   // suppression_list. `status` is 'opt_out' when it suppressed the sender.
   | 'sms_inbound'
+  // The no-agent message required by 16 CFR 310.4(b)(4)(iii), played when a
+  // predictive line answers and no representative can be attached. `status` is
+  // 'played', 'speak_failed', or 'not_configured' -- the last meaning the call
+  // IS an abandoned call under 310.4(b)(1)(iv) and counts against the 3%.
+  | 'tsr_abandon_message'
   // The agent's browser never answered its own leg, so the lead leg died
   // before the lead's phone rang. OUR failure, not a no-answer, and recorded
   // as its own type so it can be counted rather than hidden inside NO_ANSWER.

@@ -3,6 +3,7 @@ import { placeOutboundCall, hangupCallControlId } from '@/lib/placeOutboundCall'
 import { logCallEvent } from '@/lib/callEvents'
 import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
 import { getPlatformConfig } from '@/lib/platformConfig'
+import { canRunMultiLine } from '@/lib/tsrAbandonMessage'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -359,7 +360,9 @@ async function runPredictiveControllerInner(
 
   const { data: campaignRows } = await supabase
     .from('campaigns')
-    .select('id, dialer_mode, predictive_lines_per_agent, predictive_lines_max')
+    // tsr_* carry the seller identity 310.4(b)(4)(iii) requires before this
+    // campaign may be given a second line. See the clamp below.
+    .select('id, dialer_mode, predictive_lines_per_agent, predictive_lines_max, tsr_seller_name, tsr_callback_number')
     .in('id', campaignIds)
 
   const campaignsById = new Map((campaignRows || []).map(c => [c.id, c]))
@@ -459,8 +462,33 @@ async function runPredictiveControllerInner(
     platformCeiling = 1
   }
 
+  // ── A SECOND LINE REQUIRES A SELLER TO ANNOUNCE ─────────────────────
+  // Every surplus line that answers with no agent behind it is an ABANDONED
+  // call under 16 CFR 310.4(b)(1)(iv) — UNLESS 310.4(b)(4)(iii) is satisfied by
+  // promptly playing a message naming the seller and its phone number. That
+  // clause is the only thing that makes multi-line predictive lawful, which is
+  // why one line was the ceiling until the message existed.
+  //
+  // So the check is structural, not advisory: a campaign that cannot announce
+  // its seller gets ONE line, where there is no surplus and therefore no
+  // abandoned call to excuse. Compliance that depends on somebody reading a
+  // warning is not compliance.
+  const tsrOk = canRunMultiLine({
+    name: campaign.tsr_seller_name,
+    callbackNumber: campaign.tsr_callback_number,
+  })
+
   let effectiveLines = agentPref ?? campaignDefault
   effectiveLines = Math.max(1, Math.min(effectiveLines, campaignMax, platformCeiling))
+
+  if (!tsrOk && effectiveLines > 1) {
+    console.log(
+      `[controller] campaign ${campaign.id} clamped ${effectiveLines} → 1 line: no ` +
+      `tsr_seller_name / tsr_callback_number, so a surplus line answering with no ` +
+      `agent would be an abandoned call under 16 CFR 310.4(b)(1)(iv)`
+    )
+    effectiveLines = 1
+  }
 
   if ((agentPref ?? campaignDefault) > platformCeiling) {
     console.log(
