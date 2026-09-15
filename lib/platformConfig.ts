@@ -133,6 +133,23 @@ export interface PlatformConfig {
    */
   agent_leg_failure_limit: number
   /**
+   * Alert when ONE agent's carrier spend crosses this in a single day, USD.
+   *
+   * Not a cost control — it stops nothing. It is a smoke alarm, and the number
+   * is arithmetic rather than caution: at the rates this account should be on a
+   * dial is about $0.003 (docs/COST-FINDINGS.md §0), so $3 from one agent in one
+   * day is roughly a thousand calls. Nobody dials a thousand times in a day, so
+   * reaching it almost certainly means a fault.
+   *
+   * Every fault this platform has had looked like this before anyone noticed:
+   * the parked agent leg at $8.17/agent-hour for weeks, 4,341 dials in ten hours
+   * against a blocked account, 41 failed dials in an hour from one dead socket.
+   *
+   * Re-alerts at 2x, 4x and 8x, because the failure mode is that it keeps going.
+   * 0 disables.
+   */
+  daily_spend_alert_usd: number
+  /**
    * Seconds the LEAD's leg stays up after a call would otherwise end early —
    * an AMD machine verdict, or an agent skipping under the threshold — once
    * the agent has already advanced to the next lead.
@@ -218,6 +235,8 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   // Five. At the healthy 2.7% failure rate that is 1 in 700 million; at the
   // broken 70% rate it fires on the fifth dial instead of the forty-first.
   agent_leg_failure_limit: 5,
+  // $3. His number, and the arithmetic supports it: ~1,000 dials at $0.003.
+  daily_spend_alert_usd: 3.0,
   // ── FAILS TOWARD COMPLIANCE, NOT AWAY FROM IT ────────────────────────────
   // This was 0, on the reasoning that a fallback which silently held live calls
   // open would be the worst possible default. That reasoning was backwards for
@@ -287,7 +306,7 @@ const CONFIG_COLUMNS =
   'amd_greeting_duration_ms, amd_max_words, amd_initial_silence_ms, ' +
   'amd_hold_seconds_after_machine, dial_agent_on_answer, connecting_message, ' +
   'max_destination_rate, max_rate_min_samples, voicemail_streak_limit, ' +
-  'agent_leg_failure_limit'
+  'agent_leg_failure_limit, daily_spend_alert_usd'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few

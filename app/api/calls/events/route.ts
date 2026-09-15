@@ -8,6 +8,7 @@ import {
 } from '@/lib/telnyxIdempotency'
 import { recordAmdResult, markCallAbandoned } from '@/lib/dialerPacing'
 import { logCallEvent } from '@/lib/callEvents'
+import { checkDailySpend } from '@/lib/dailySpendAlarm'
 import { sampleBalanceAfterCall } from '@/lib/telnyxBalance'
 import {
   hangupCallControlId, bridgeCallControlIds, buildClientState, parseClientState,
@@ -1663,9 +1664,17 @@ async function handleCallCost(
     // of learning rates from traffic rather than from a rate deck.
     const { data: costRow } = await supabaseAdmin
       .from('calls')
-      .select('phone_number')
+      .select('phone_number, user_id')
       .eq('call_control_id', callControlId)
       .maybeSingle()
+
+    // ── THE SMOKE ALARM ────────────────────────────────────────
+    // Checked HERE because this is the moment the carrier's own figure arrives.
+    // Every runaway this platform has had was invisible until somebody happened
+    // to look at a balance: $8.17/agent-hour for weeks, 4,341 dials in ten hours,
+    // 41 failed dials in an hour. Fire and forget; it cannot delay or fail this
+    // handler, and it stops nothing. See lib/dailySpendAlarm.ts.
+    checkDailySpend(costRow?.user_id)
 
     const phone = costRow?.phone_number
     if (phone) {

@@ -138,6 +138,11 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   // 0 = off. 1 and 2 are accepted here but ignored by the guard, which treats
   // anything under 3 as off rather than letting ordinary noise stop an agent.
   agent_leg_failure_limit: v => intInRange(v, 0, 50),
+  // 0 disables the alarm. Capped at $500 so a typo cannot silence it for a day.
+  daily_spend_alert_usd: v => {
+    const n = typeof v === 'number' ? v : Number(v)
+    return Number.isFinite(n) && n >= 0 && n <= 500 ? n : null
+  },
 }
 
 function intInRange(v: unknown, min: number, max: number): number | null {

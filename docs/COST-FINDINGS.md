@@ -165,6 +165,71 @@ business metric; cost per *dial* is the leak detector.
 
 ---
 
+## 0a. WHAT ENGINEERING ALONE GETS TO, and the alarm at $3
+
+### The honest per-dial figure, from Telnyx's own billing
+
+Not modelled. Every billing record attributed to the dial that caused it:
+
+| | measured |
+|---|---|
+| an **unanswered** dial | **$0.00237** — entirely the agent leg ringing. The lead leg bills $0 |
+| an **answered** dial | **$0.01345** — 60s minimum × two components, + AMD, + agent leg |
+
+Cost per dial is therefore **a function of answer rate**, which is why a single
+figure kept being wrong:
+
+| answer rate | cost per dial today |
+|---|---|
+| 27.8% *(the real 7-day rate)* | **$0.0055** |
+| 67.1% *(one good session)* | $0.0098 |
+
+### Where engineering alone lands — no Telnyx agreement needed
+
+The **whole** $0.00237 of an unanswered dial is the agent leg. It does not have
+to exist: `dial_agent_on_answer` places it only once a lead answers.
+
+| | cost per dial @ 27.8% |
+|---|---|
+| today | **$0.0055** |
+| **+ `dial_agent_on_answer`** (built, flag OFF) | **~$0.0036** |
+| + Telnyx Q1 (PSTN 6/6) and Q3 (agent leg) | **~$0.0015** |
+
+**Engineering alone gets to about $0.0036 a dial.** That is a **35% cut** and it
+is the last lever that does not require Telnyx to answer a letter. At that rate
+**$3/day is ~830 dials per agent.**
+
+### So the alarm is arithmetic, not caution
+
+At ~$0.003 a dial, **$3 from one agent in one day is roughly a thousand calls.**
+Nobody dials a thousand times in a day. Reaching it almost certainly means a
+fault — and every fault here has looked exactly like that first:
+
+| | |
+|---|---|
+| the parked agent leg | **$8.17 per agent-hour, for weeks** |
+| the blocked-account loop | **4,341 dials in ten hours**, nothing said |
+| the dead browser socket | **41 failed dials in one hour**, one agent |
+
+**In every one of those the money was gone before a person read a number.**
+
+### Shipped: `lib/dailySpendAlarm.ts`
+
+- Checked in the `call.cost` webhook — **the moment the carrier's own figure
+  lands.** No cron, no dashboard, no month-end invoice.
+- `platform_config.daily_spend_alert_usd`, default **$3.00**. 0 disables.
+- **Re-alerts at 2×, 4× and 8×.** One alert then silence is the wrong shape —
+  the failure mode is that a runaway keeps running. $3 says look, $6 says it did
+  not stop, $12 says nobody has intervened.
+- Compares **lead-leg `telnyx_cost` only**; the agent leg and twin bill
+  separately, so the alarm is **conservative** — real spend is always higher
+  than the figure that tripped it.
+- **It alerts and nothing else.** It cannot refuse, delay or alter a call. A
+  spend guard that could halt dialing would be a more expensive failure than the
+  one it guards against.
+
+---
+
 ## 0b. The road to $3 a day
 
 The target is **$3 per agent per day**. Here is the arithmetic, measured rather
