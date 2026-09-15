@@ -48,41 +48,61 @@ export const HARD_LINE_CAP = 5
 /**
  * How many times the dialer may work through a lead before retiring it.
  *
- * 0 MEANS UNLIMITED, and 0 is the setting. A lead is never retired for having
- * been dialed too often; it keeps cycling back into rotation and the agent
- * decides when it is done by dispositioning it.
+ * 0 means unlimited. It is no longer the setting — see below.
  *
- * This was 3. The effect of a lifetime cap is that a list quietly shrinks
- * while an agent is working it, and leads vanish for a reason nothing on
- * screen explains. Retiring a lead is a judgement about a person, and the
- * person holding that judgement is the agent, not a counter.
+ * ── THE CAP IS BACK, AT NINE ──────────────────────────────────────
+ * This was 0, meaning unlimited, and that was a deliberate product decision:
+ * "Retiring a lead is a judgement about a person, and the person holding that
+ * judgement is the agent, not a counter."
  *
- * The ways a lead genuinely leaves rotation are unchanged and all of them are
- * decisions: DNC, closed, appointment, or an agent marking it done. See
- * TERMINAL_STATUSES in lib/dialableLead.ts.
+ * Reversed by the owner on 15 Sept, with the evidence behind it. Over 30 days,
+ * split by how many times a lead had already been tried:
+ *
+ *     attempt      dials   conversations   per 100 dials   cost each
+ *     1st          1,340        40             2.99          $0.093
+ *     2nd            562         8             1.42          $0.067
+ *     3rd            102         3             2.94          $0.042
+ *     4th or later   153         1             0.65          $0.196
+ *
+ * A hundred and fifty-three dials — 9% of everything dialled — for one
+ * conversation, at twice the cost of a first attempt. The counter is not
+ * replacing the agent's judgement; it is stopping the queue handing the same
+ * unreachable person back for a tenth time.
+ *
+ * NINE, flat. Every campaign on this account is set to 1x, so the old ladder
+ * (1x=3, 2x=6, 3x=9) would have capped them at three, which is far stricter
+ * than asked for. MAX_LIFETIME_ATTEMPTS is therefore a ceiling applied on top
+ * of the ladder rather than a replacement for it: the per-pass arithmetic still
+ * scales, and nothing ever exceeds nine.
  */
-export const DIAL_PASSES = 0
+export const DIAL_PASSES = 9
+
+/**
+ * Hard ceiling on lifetime attempts, whatever the per-pass arithmetic says.
+ *
+ * Enforced in THREE places, deliberately, because relying on one has already
+ * failed: lifetimeAttemptCap (what dispose/update write), isDialableLead (what
+ * the queue panel shows and the dialer picks), and the status 'maxed' those
+ * two produce. On 15 Sept ZERO leads in the table had ever reached 'maxed'
+ * while 62 sat past three attempts still dialable — because the cap was
+ * infinite AND /api/leads/update never bumped the counter. A rule with one
+ * enforcement point is a rule that silently stops existing.
+ */
+export const MAX_LIFETIME_ATTEMPTS = 9
 
 /** Returned when there is no lifetime cap, so `attempts >= cap` is never true. */
 export const UNLIMITED_ATTEMPTS = Number.POSITIVE_INFINITY
 
 /**
- * Total attempts a lead gets across its whole life, derived from the
- * campaign's per-pass repeat setting.
+ * Total attempts a lead gets across its whole life.
  *
- * With DIAL_PASSES at 0 this is UNLIMITED_ATTEMPTS for every campaign. The
- * per-pass arithmetic is kept rather than deleted because dial_repeat_count
- * still governs back-to-back dialing within one pass, which is a separate and
- * still-live setting, and because restoring a cap should be changing one
- * number here rather than rewriting this.
- *
- *   passes 0 -> unlimited
- *   passes 3 -> 1x = 3 total, 2x = 6, 3x = 9
+ *   passes 0 -> unlimited (kept so the cap can be switched off again)
+ *   passes 9 -> 1x = 9, and 2x/3x clamp to MAX_LIFETIME_ATTEMPTS
  */
 export function lifetimeAttemptCap(dialRepeatCount?: number | null): number {
   if (DIAL_PASSES <= 0) return UNLIMITED_ATTEMPTS
   const perPass = Math.max(1, Math.min(3, dialRepeatCount ?? 1))
-  return perPass * DIAL_PASSES
+  return Math.min(perPass * DIAL_PASSES, MAX_LIFETIME_ATTEMPTS)
 }
 
 

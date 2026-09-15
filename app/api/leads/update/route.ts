@@ -4,6 +4,7 @@ import { apiError } from '@/lib/apiError'
 import { auth } from '@clerk/nextjs/server'
 import { addSuppression, DNC_DISPOSITION_SCOPE } from '@/lib/suppression'
 import { canonical } from '@/lib/dispositions'
+import { lifetimeAttemptCap } from '@/lib/dialerConstants'
 
 const supabase = getServiceClient('leads/update')
 
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
     // Verify ownership
     const { data: existing, error: fetchErr } = await supabase
       .from('leads')
-      .select('id, user_id, disposition, phone, campaign_id')
+      .select('id, user_id, disposition, phone, campaign_id, dial_attempts')
       .eq('id', lead_id)
       .single()
 
@@ -39,6 +40,55 @@ export async function POST(req: NextRequest) {
     const updates: Record<string, any> = {}
     if (disposition !== undefined) updates.disposition = disposition || null
     if (notes !== undefined) updates.notes = notes
+
+    // ── A DISPOSITION IS AN ATTEMPT, AND ATTEMPTS ARE CAPPED ─────────────
+    // /api/leads/dispose bumps dial_attempts and retires a lead as 'maxed'
+    // once it passes the campaign's lifetime cap. This route did neither, and
+    // this is the route that gets used — api/leads/bulk-update's own comment
+    // sends readers here for dispositions.
+    //
+    // The cap has therefore never fired once. Measured 15 Sept: ZERO leads in
+    // the entire table have status 'maxed', while 62 sit past three attempts
+    // and still dialable, the worst on eighteen. The setting was decorative.
+    //
+    // What it cost: over 30 days, 4th-and-later attempts were 153 dials — 9%
+    // of everything dialled — and produced ONE conversation. First attempts
+    // return 2.99 conversations per 100 dials; 4th+ return 0.65, at twice the
+    // cost each.
+    //
+    // Only when a disposition is actually being set. Editing notes alone is
+    // not an attempt and must not consume one.
+    if (disposition !== undefined && disposition) {
+      const currentAttempts = existing.dial_attempts || 0
+      const newAttempts = currentAttempts + 1
+
+      // LIFETIME cap, not the per-pass 1x/2x/3x repeat count — the same
+      // lifetimeAttemptCap() dispose uses, so the two routes cannot disagree
+      // about when a lead is finished. 1x -> 3, 2x -> 6, 3x -> 9.
+      let attemptCap = lifetimeAttemptCap(1)
+      if (existing.campaign_id) {
+        const { data: campaign } = await supabase
+          .from('campaigns')
+          .select('dial_repeat_count')
+          .eq('id', existing.campaign_id)
+          .maybeSingle()
+        attemptCap = lifetimeAttemptCap(campaign?.dial_repeat_count)
+      }
+
+      updates.dial_attempts = newAttempts
+      updates.last_called_at = new Date().toISOString()
+
+      // Terminal outcomes win over the cap: somebody who closed or booked is
+      // not 'maxed', whatever their attempt count. Mirrors dispose exactly.
+      const d = canonical(disposition)
+      if (d === 'DO NOT CALL') updates.status = 'dnc'
+      else if (d === 'CLOSED') updates.status = 'closed'
+      else if (d === 'APPOINTMENT') updates.status = 'appointment'
+      else if (d === 'NOT INTERESTED') updates.status = 'called'
+      else if (d === 'SKIPPED') updates.status = newAttempts >= attemptCap ? 'maxed' : 'uncalled'
+      else if (d === 'NO_ANSWER') updates.status = newAttempts >= attemptCap ? 'maxed' : 'no_answer'
+      else updates.status = newAttempts >= attemptCap ? 'maxed' : 'called'
+    }
 
     // ── DO NOT CALL HAS TO REACH THE SUPPRESSION LIST FROM HERE TOO ────────
     // /api/leads/dispose already did this and this route did not — and this

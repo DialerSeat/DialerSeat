@@ -1,3 +1,4 @@
+import { MAX_LIFETIME_ATTEMPTS } from '@/lib/dialerConstants'
 // =============================================================================
 // DIALABILITY — the single definition of "can this lead be dialed right now"
 // =============================================================================
@@ -72,6 +73,8 @@ export interface DialabilityInput {
   status?: string | null
   disposition?: string | null
   phone?: string | null
+  /** Lifetime attempts. At MAX_LIFETIME_ATTEMPTS the lead is finished. */
+  dial_attempts?: number | null
 }
 
 /**
@@ -96,6 +99,19 @@ export function isDialableLead(lead: DialabilityInput): boolean {
   // attributed to the dial rather than to the data.
   const phone = (lead.phone || '').trim()
   if (!phone) return false
+
+  // ── NINE ATTEMPTS AND THE LEAD IS DONE ───────────────────────────
+  // Checked HERE, on the counter itself, rather than trusting status 'maxed'
+  // to have been written. That trust was misplaced: on 15 Sept not one lead
+  // in the table had ever reached 'maxed', while 62 sat past three attempts
+  // and still dialable and one was on eighteen. Two separate failures caused
+  // it -- the cap was Infinity, and /api/leads/update never bumped the
+  // counter -- and either alone was enough to make the status meaningless.
+  //
+  // Reading dial_attempts directly means the queue panel and the dialer agree
+  // even if the status write is missed again. Undefined is treated as zero so
+  // a caller that does not select the column is never silently blocked.
+  if ((lead.dial_attempts ?? 0) >= MAX_LIFETIME_ATTEMPTS) return false
 
   return true
 }
