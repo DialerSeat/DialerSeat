@@ -48,11 +48,21 @@ yourself into a number you cannot hit:
 | 2 | destination rate guard (**shipped**) | $5.37 |
 | 3 | **60-second minimum reduced** — Telnyx Q1/Q2 | $3.15 |
 | 4 | **agent legs rated on-net** — Telnyx Q3 | $2.81 |
-| — | **+ DID rental** ($13/mo ÷ 2 agents, §4) | **$3.02** |
+| — | + DID rental ($13/mo ÷ 2 agents, §4) | $3.02 |
+| — | **× 1.03 if topping up by card** (§1q) | $3.11 |
+| — | **+ E911 IF enabled** ($1.50 × 13 numbers, §1o) | **$3.55** |
 
-The last row is not a lever, it is a line that was missing from the model.
-Number rental does not care how much you dial, so it survives every per-minute
-saving above and then sits on top of the result.
+The last three rows are not levers, they are lines that were missing from the
+model. Number rental does not care how much you dial, so it survives every
+per-minute saving above and then sits on the result. The card fee **multiplies**
+everything — and switching to ACH removes it outright, which makes it the
+cheapest row in this table to fix. E911 is unverified and may be $0; it is shown
+because at $19.50/month it would be the second-largest line on the account and
+nobody has looked.
+
+> **The surcharges (§1i) are not in this table** because they are month-level
+> ratios rather than per-dial costs. September carries $3.53 of them, and the
+> socket breaker shipped tonight is what stops that recurring.
 
 ### The honest conclusion
 
@@ -73,8 +83,8 @@ Ledger → CAPTURE NOW has run (§1d). Note it is also the one line worth
 *keeping*: $0.88 a week of AMD buys back **2.15 agent-hours** a week of not
 listening to voicemail greetings. Costing it is not the same as cutting it.
 
-> **$3.02 is the floor this architecture reaches** — $2.81 of dialing plus
-> $0.21 of rent. Going under it means paying
+> **$3.02 is the dialing floor; $3.11 on a card; $3.55 if E911 is on.** Only
+> the first of those is engineering. Going under it means paying
 > for fewer answered minutes, not cheaper ones — which is list quality, time of
 > day (§4) and number burn (§1f), not carrier engineering. Those are also the
 > only levers that make the day *more* valuable rather than just cheaper.
