@@ -151,13 +151,20 @@ which is worth more.
 
 ### 1c. Month-to-date CPS tier
 
-CPS is billed on the 95th percentile of hourly peaks and **never appears in the
-balance** — it is assessed monthly and lands on the invoice. P95 measured 15 CPS
-before predictive was withdrawn, against a free tier of 5: **$60–120/month**,
-against a month-to-date usage bill of $28.29.
+> **§1p supersedes this.** Three sources scope the CPS surcharge to Elastic SIP
+> Trunking, a product we do not use. The $60–120/month below is almost certainly
+> not owed. Kept because the question is still worth asking in writing, and
+> because the reasoning error is worth not repeating.
 
-Ask before month end. The percentile is computed across the whole month, so
-flattening peaks now still pulls the final figure down.
+CPS is billed on the 95th percentile of hourly peaks and never appears in the
+balance — assessed monthly, landing on the invoice. P95 measured 15 CPS before
+predictive was withdrawn, against a free tier of 5. Priced off the published
+tiers that would give **$60–120/month** — **on a tier table belonging to a
+different product.**
+
+The real, product-independent constraint is the **20 CPS ceiling per IP or SIP
+username**, which rejects calls rather than billing for them. That is what
+`lib/cpsGovernor.ts` actually protects.
 
 ---
 
@@ -271,16 +278,20 @@ leg is only up for the conversation.
 That is exactly what `dial_agent_on_answer` removes, and it is the strongest
 argument yet for turning it on (§3).
 
-### The fourth question for Telnyx
+### It is a published line, not a billing error — corrected
 
-> An on-net leg from my own Call Control application to my own credential
-> connection, with `sip-trunking` explicitly rated at $0, is billed $0.002/min
-> on each connection. Can on-net legs between two connections on the same
-> account be zero-rated, or billed once?
+The second charge is almost certainly **“Browser/app calling — $0.002 per
+minute”** on Telnyx's Voice API price list (or the identically-priced “SIP
+interface” line). An earlier draft of this section, and of the letter, framed it
+as double billing. **It is not.** Two published line items apply to one leg:
+`call-control` at $0.002/min and browser calling at $0.002/min.
 
-Worth ~25% of the remaining bill, and it is the only question of the four where
-their own record already concedes the premise: they wrote `$0` in the rate
-field themselves.
+What remains true and worth asking is narrower: the leg never touches a carrier,
+Telnyx confirms that by rating its `sip-trunking` part at **$0**, and it still
+costs **77% of what reaching a real phone costs**. So the question is *“which
+line is this, and is an on-net leg between two connections on one account rated
+differently?”* — not *“why am I charged twice.”* Asking the second version
+invites a one-line answer quoting the price list, and ends the conversation.
 
 ---
 
@@ -683,6 +694,88 @@ the next one.
 > resolved, and the standing instruction for tonight was *“don't break any
 > audio.”* The design above is complete and the failure signatures are known;
 > it wants a session where it is the only thing moving.
+
+---
+
+## 1o. THE PUBLISHED FEE LIST, CHECKED LINE BY LINE
+
+From `telnyx.com/pricing/voice-api` and `/pricing/elastic-sip`. Every line, and
+whether this platform touches it.
+
+| line | price | us |
+|---|---|---|
+| Voice API (call control) | $0.002/min | **yes** — both legs |
+| SIP trunking outbound | $0.005/min | **yes** — lead leg carriage |
+| SIP trunking inbound | $0.0032/min | yes — inbound callbacks |
+| **Browser/app calling** | **$0.002/min** | **yes — this is the agent leg's second charge** |
+| SIP interface | $0.002/min | same rate, same leg — one of these two |
+| Standard AMD | $0.002/call | **yes** |
+| Premium AMD | $0.0065/call | no — deliberately (§6 carrier doc) |
+| Call recording | $0.002/min | yes, human-confirmed only |
+| **Recording storage** | **free** | — confirms no storage cost |
+| **Call transfer** | **$0.10 per invocation** | **no** — nothing in the codebase calls it |
+| Noise suppression | $0.002/leg/min | **no** — not enabled |
+| Media streaming (WebSockets) | $0.0035/min | no |
+| Conference | $0.002/participant/min | no — we bridge, not conference |
+| Deepfake detection | $0.01 per invocation | no |
+| Conversation Relay | $0.05/min | no |
+| Speech-to-text | $0.0015–$0.027/min | no |
+| Text-to-speech | per character | inbound `speak` only |
+| **Emergency calling (E911)** | **$1.50/month/number** | **UNKNOWN — see below** |
+
+**Call transfer at $0.10 an invocation is the one to never reach for casually.**
+It is 8× the cost of an entire dial. Nothing uses it today; anything that adds
+warm transfer should price it first.
+
+### E911 is the largest unchecked line on the account
+
+**$1.50 per month per number.** Thirteen numbers is **$19.50/month** — more than
+the $13 DID rental and half the entire $28.29 usage bill.
+
+Nothing in this codebase enables it; it is set per number on Telnyx's side,
+often at provisioning. We cannot see it from here. **Check Mission Control →
+Numbers → each number → Emergency settings, or look for an E911 line on the last
+invoice.**
+
+> **The monthly bill is probably not $28.29.** Usage $28.29 + DID rental $13 +
+> surcharges $3.53 (§1i) + E911 $0–$19.50 + tax. That is **$46 to $66**, and
+> only the first number has ever been looked at. This is the arithmetic behind
+> the original instinct that the bill was bigger than the dialing.
+
+---
+
+## 1p. THE CPS SURCHARGE PROBABLY DOES NOT APPLY TO US
+
+**Correction.** §1c estimated **$60–120/month** of CPS surcharge and it drove a
+night of work on `lib/cpsGovernor.ts`. Three independent sources say the
+surcharge is scoped to a product we do not use:
+
+- Their knowledge base: *“CPS surcharges apply only to SIP trunking traffic (not
+  programmable voice).”*
+- `/pricing/elastic-sip`: the surcharge is named there, applying to **outbound
+  SIP trunking** calls.
+- `/pricing/voice-api`: **no mention of a CPS surcharge at all.**
+
+We are on Programmable Voice — the `call-control` cost part exists only on that
+product. The `sip-trunking` component inside our bill is not the Elastic SIP
+Trunking *product*; the Voice API pricing page lists *“SIP Trunking (outbound):
+$0.005/min”* as one of its own line items.
+
+### What this changes, and what it does not
+
+**Changes:** the $60–120/month is almost certainly not owed, and the CPS
+question in the letter drops from “urgent before month end” to “confirm in
+writing.”
+
+**Does not change:** the **20 CPS real-time limit per IP or SIP username** is
+real and product-independent — exceed it and calls are rejected outright, which
+is an outage rather than a bill. `lib/cpsGovernor.ts` still earns its place
+protecting that, and it only ever delays. Nothing to remove.
+
+> Worth stating plainly: a night of engineering was justified on a surcharge
+> that probably never applied. The governor is still correct and still useful,
+> but the *reason* given for it was wrong, and the number quoted was invented
+> from a tier table for someone else's product.
 
 ---
 

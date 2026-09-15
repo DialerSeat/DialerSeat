@@ -50,15 +50,24 @@ records, one per connection, each at $0.002/min. Example from a single
 | credential connection | `80101afa-…` | 2058s | $0.0686 | `sip-trunking @ 0.00200` |
 | Call Control application | `7fe7e45e-…` | 2058s | $0.0686 | `call-control @ 0.00200`, `sip-trunking @ 0` |
 
-Identical duration, identical charge, one agent leg.
+Identical duration, identical charge, one agent leg. I assume the second record
+is the published “Browser/app calling” line (or “SIP interface” — both $0.002/min
+on your Voice API price list); **please confirm which**, so I can model it.
 
-Your SIP URI Calling article says this $0.002/min *“is charged to the owner of
-the connection that receives the call”* and applies to calls **from sources
-Telnyx cannot identify** — and that *“if the source matches a Telnyx SIP
-Connection, the call is treated as an On-Net call and billed according to your
-Telnyx rate deck.”* My source is a Telnyx SIP Connection: my own Call Control
-application, on this same account. Should these legs be rated On-Net? This is
-roughly a quarter of my bill.
+Two questions on it:
+
+1. Your SIP URI Calling article says this $0.002/min *“is charged to the owner
+   of the connection that receives the call”* and applies to calls **from sources
+   Telnyx cannot identify**, and that *“if the source matches a Telnyx SIP
+   Connection, the call is treated as an On-Net call and billed according to your
+   Telnyx rate deck.”* My source is my own Call Control application on this same
+   account. Is an on-net leg between two connections on one account rated
+   differently?
+2. The leg never touches the PSTN — your own `call.cost` rates its
+   `sip-trunking` part at **$0** — yet at $0.004/min combined it costs 77% of
+   what it costs me to ring a real phone. Is that the intended relationship?
+
+This is roughly a quarter of my bill.
 
 **4. Does audio playback bill separately?** If I use the Call Control
 `playback_start` endpoint to play an audio URL on a leg that is already
@@ -71,9 +80,11 @@ than assume.
 
 - What STIR/SHAKEN attestation level are my outbound calls receiving? A SIP
   trace on my account showed `verstat=No-TN-Validation`.
-- What is my month-to-date 95th-percentile CPS and which surcharge tier does it
-  fall in? I'd like to know before month end rather than on the invoice, since
-  the percentile is computed across the whole month and I can still act on it.
+- Please confirm in writing that the CPS surcharge does **not** apply to my
+  account. My reading is that it is scoped to Elastic SIP Trunking and that I am
+  on Programmable Voice — my `call.cost` records carry a `call-control`
+  component — but I would rather have it confirmed than assumed. If it does
+  apply, what is my month-to-date 95th-percentile CPS and tier?
 
 Thanks.
 
@@ -102,10 +113,12 @@ you are overcharging me.”
 > Do not send any version carrying those numbers: they are wrong, they
 > understate the case, and a figure they can disprove costs more than it buys.
 
-**The on-net question is the one they have already conceded.** Every other
-question asks them to change a rate. This one only asks why a leg they
-themselves rated at $0 is charged twice at $0.002/min. It is worth ~25% of
-the bill and it is the strongest of the five.
+**The agent-leg question was rewritten and is weaker than it first looked.** An
+earlier draft called it double billing. It is not: “Browser/app calling” is a
+published $0.002/min line, so two published charges legitimately apply to one
+leg. Asking “why am I charged twice” invites a one-line reply quoting the price
+list and ends the conversation. Asking *which* line it is, and whether on-net is
+rated differently, keeps it open. Still ~25% of the bill.
 
 **Attestation changes conversations per dial**, not cents per call — which is
 worth more. Industry reporting puts A-level attestation at 60%+ connect
@@ -117,9 +130,12 @@ it. Whether the other 49 can carry audio at no extra charge decides whether
 that is dead cost or usable inventory. Asking is free; assuming is how
 `detect_beep` killed AMD twice.
 
-**CPS never appears in the balance.** It is assessed monthly and lands on the
-invoice. P95 measured 15 CPS against a free tier of 5 before predictive was
-withdrawn — $60–120/month against a $28.29 usage bill.
+**The CPS question changed from urgent to housekeeping.** Three sources scope
+that surcharge to Elastic SIP Trunking — their knowledge base says it outright,
+and the Voice API price page never mentions it. We are on Programmable Voice, so
+the $60–120/month an earlier draft warned about is almost certainly not owed. It
+is still worth one line in writing, because the whole point of this letter is to
+stop guessing.
 
 ## What not to send
 
