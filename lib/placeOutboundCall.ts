@@ -525,18 +525,32 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // directions. See buildClientState / parseClientState below.
   const clientState = buildClientState({ u: p.userId, s: p.source })
 
-  // ── RING FOR WHAT YOU HAVE ALREADY PAID FOR ───────────────────────────────
-  // Telnyx bills this account a 30-SECOND MINIMUM on every outbound leg, then
-  // in 6-second increments (evidenced in lib/telephonyCosts.ts against the
-  // August invoice). A leg that rings out at 20 seconds bills 30. A leg that
-  // rings 30 seconds bills 30. The last ten seconds are already bought.
+  // ── RING LONGER, BECAUSE RINGING IS FREE ─────────────────────────────────
+  // This block used to argue that a 30-second minimum meant the last ten
+  // seconds of ring were "already bought". That premise was wrong, and the
+  // truth is better for the same conclusion.
+  //
+  // From 1,490 of Telnyx's own call.cost records: an UNANSWERED lead leg bills
+  // ZERO. Ninety-four of them, every one at zero seconds. Ring time is not
+  // charged at all, so there is no minimum to recover — there is simply no
+  // cost to ringing longer. The 60-second minimum that does exist applies only
+  // once somebody ANSWERS, which is the moment ringing has already ended.
+  //
+  // So the case for a generous timeout is stronger than the one it replaces:
+  // every extra second of ring is free and some of them are answered.
   //
   // Measured over 90 days: 42 answers landed between 21 and 30 seconds — 5.9%
   // on top of the 707 that arrive inside 21. Progressive was hanging up on
   // every one of them to save money it was being charged anyway.
   //
   // Same shape as amd_hold_seconds_after_machine: read what the carrier
-  // actually bills and stop leaving paid time on the table.
+  // actually bills rather than what its documentation says.
+  //
+  // WORTH REVISITING WITH dial_agent_on_answer ON. Today the agent's leg is
+  // live throughout the ring, so a longer timeout costs agent-leg minutes even
+  // though the lead's ring is free. Once the agent leg is only placed at
+  // answer, ring time becomes free on BOTH legs and a longer timeout is pure
+  // upside — more answers, no carrier cost, nobody waiting.
   //
   // TSR is a FLOOR, not a ceiling — 16 CFR 310.4(b)(4) asks for at least 15
   // seconds or 4 rings before abandoning, so 30 is more compliant than 20, not

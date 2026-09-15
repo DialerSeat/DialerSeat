@@ -9,7 +9,9 @@ import {
 import { recordAmdResult, markCallAbandoned } from '@/lib/dialerPacing'
 import { logCallEvent } from '@/lib/callEvents'
 import { sampleBalanceAfterCall } from '@/lib/telnyxBalance'
-import { hangupCallControlId, bridgeCallControlIds } from '@/lib/placeOutboundCall'
+import {
+  hangupCallControlId, bridgeCallControlIds, buildClientState, parseClientState,
+} from '@/lib/placeOutboundCall'
 import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
 import { abortSiblingFanoutLines } from '@/lib/predictiveController'
 import { startTelnyxRecording } from '@/lib/telnyxRecording'
@@ -377,6 +379,15 @@ async function placeAgentLegForAnsweredLead(
       },
       body: JSON.stringify({
         connection_id: env.connectionId,
+        // STAMPED AS OURS, and it matters twice. /api/dialer/abort finds legs
+        // to hang up by client_state, so an unstamped agent leg is invisible
+        // to the kill switch — the fan-out path carries exactly that bug and
+        // says so. And parseClientState is what lets the inbound handler tell
+        // one of our own legs from a stranger's call, which is the gate the
+        // reverted inbound rejection should have used instead of `direction`.
+        client_state: buildClientState({
+          u: callRow.user_id, s: 'deferred_agent_leg',
+        }),
         to: agentSipUri,
         from: fromNumber,
         webhook_url: env.webhookUrl,
