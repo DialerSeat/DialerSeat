@@ -29,7 +29,7 @@ Everything found, ordered by what it is worth. Detail in the numbered sections.
 
 | # | action | why |
 |---|---|---|
-| 9 | **Full structural audit of everything shipped** | typecheck, tests, and a deliberate hunt for leaks *created* while closing old ones |
+| 9 | ~~Full structural audit of everything shipped~~ | **DONE — §1v.** Found 3 defects: 2 created tonight, 1 worth 4.7× |
 
 Nine changes landed on or beside the dial path in one night, several of them
 interacting: a guard that can refuse, a guard that delays, a new failure branch,
@@ -1054,6 +1054,92 @@ protecting that, and it only ever delays. Nothing to remove.
 > that probably never applied. The governor is still correct and still useful,
 > but the *reason* given for it was wrong, and the number quoted was invented
 > from a tier table for someone else's product.
+
+---
+
+## 1v. THE AUDIT — what nine interacting changes did to each other
+
+Item 9 on the list. **It found three real defects, two of them created the same
+night while closing older ones.** That is the argument for doing it at all.
+
+### Created tonight, and fixed
+
+**1. The number audit read the wrong endpoint and would have answered the E911
+question confidently wrong.** It took `emergency_enabled` and
+`cnam_listing_enabled` as flat fields off `GET /phone_numbers`. **Neither exists
+there.** Verified against Telnyx's reference: both are **nested**, under
+`emergency` and `cnam_listing`, on `GET /phone_numbers/voice` — a different
+resource, which in turn does not carry the phone number.
+
+Every flag came back `undefined`, so every number read E911 **OFF**, and the
+tool built to settle *“is this $0 or $19.50 a month”* would have said **$0
+without ever looking.** Now fetches both lists and joins on `id`; rows carry
+`settings_unknown` so a failed lookup can never read as “off”; and the bulk CNAM
+write skips those numbers rather than overwrite a listing nobody saw.
+
+**2. The D17 matcher would have widened per-lead failures into account
+outages.** The first draft used `/account.*blocked/i` and `includes('D17')`.
+The first also matches *“the destination account has blocked calls from this
+number”* — one callee refusing us. The second matches `D17` appearing by chance
+inside a `call_control_id` like `v3:QimHtanc0pXZ…`.
+
+Either would classify a **per-lead** failure as `capacity`, which stops a whole
+predictive tick **and** starts the outage backoff shipped hours earlier — a
+dialer slowed down over one unreachable prospect. Now a pure matcher in
+`lib/telnyxErrors.ts` anchored on Telnyx's observed wording, with 8 tests
+covering the real 11 September string and every near-miss.
+
+### Not created tonight, and much worse
+
+**3. Unit economics was reporting a fifth of real cost, so margin was fiction.**
+
+`billableSeconds` — the model that reproduces Telnyx's own
+`billed_duration_secs` on **184 of 192 legs** — was used in exactly **one**
+place. Every other cost figure went through `computeCost`, which counted the
+lead leg only and was fed **raw talk seconds**.
+
+| over 30 days, 2,261 calls | |
+|---|---|
+| unit economics said | **$1.79** |
+| the validated model says | **$7.15** + $1.30 AMD |
+
+**4.7× understated.** Both causes were already written down elsewhere in this
+document and neither had been applied here: the 60-second floor (a voicemail
+talks 11 seconds and bills 60) and the agent leg (billed on two connections,
+carrying *more* billed time than the lead leg). An earlier fix on that page had
+corrected ring time *out* of the minutes and stopped — which is why it looked
+deliberate and was easy to walk past.
+
+`computeCost` now takes `agentLegSeconds` and returns `agentUsd`.
+`balance-ledger`, `telnyx-bill` and `telnyx-reconcile` deliberately still pass
+raw seconds: they compare our model against what Telnyx actually charged, so
+changing the model changes what *“unexplained”* means on those screens. That
+wants its own pass.
+
+### Checked and clean
+
+| what could have gone wrong | result |
+|---|---|
+| backoff serialising a predictive tick | **no** — fan-out uses `Promise.allSettled`, one wait not three |
+| socket breaker firing on a blocked account, telling agents to reload | **no** — zero `AGENT_LEG_FAILED` rows on 09-10/11/12 |
+| the breaker's new per-dial query adding latency | **no** — index scan, **0.117ms** |
+| the CNAM write hitting the wrong shape | **correct** — `PATCH /phone_numbers/{id}/voice`, verified |
+| the corrected agent-leg rate breaking a figure | only `balance-reconcile` consumes it |
+
+**Typecheck clean across the project. 220 of 221 tests pass** — the one failure
+is `siteIndexing.test.ts`, another agent's marketing work, untouched by any of
+this. `next build` cannot complete in this environment at all (no
+`SUPABASE_URL`, so `/api/admin/billing` fails to collect page data regardless);
+its TypeScript phase does pass.
+
+### Noted, not fixed
+
+**Two duplicate index pairs on `calls`**, the hottest table:
+`calls_user_created_idx` and `idx_calls_user_id_created_at` are both
+`(user_id, created_at DESC)`; `calls_campaign_created_idx` and
+`idx_calls_campaign_id_created_at` are both `(campaign_id, created_at DESC)`.
+Every insert maintains both halves of each pair. Pre-existing, small, and not
+worth dropping an index on a live dialer at the end of a long night.
 
 ---
 
