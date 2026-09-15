@@ -2220,8 +2220,30 @@ place, but it is a backstop — the real fix is on the write path.
 for 136 of 137 answered fan-out legs. The path works; only its telemetry was
 missing, and that is now stamped from the carrier's event.
 
-**88% of calls carry no `dial_source`.** Most call history cannot be attributed
-to a lead, campaign or mode, which is why the write-back gap stayed invisible.
+**~~88% of calls carry no `dial_source`~~ — CLOSED, it was the outage.**
+Re-measured 15 Sept over six days, counting only rows that actually reached
+Telnyx: `dial_source` is NULL on **zero** of them, every single day. The 88%
+was the 11 Sept outage — 4,244 rows that never placed a call — dominating a
+denominator that included them. Attribution on real calls is intact.
+
+**The write-back gap is real but far smaller than stated.** "Two thirds of
+calls never write back" was measured over the outage window too. Re-measured
+over the last three days: of **975** leads dialed, **46 (4.7%)** are
+undercounted on their own row, and the average gap across all of them is
+*negative* (−0.50) — the lead row generally says more, not fewer, which is the
+safe direction. 28 leads took 4+ dials and 5 took 8+, worst case 18, all under
+the runaway breaker at 25. Still worth fixing on the write path; no longer an
+emergency.
+
+**AGENT_LEG_FAILED is down but not gone: 24.5% on 14 Sept, 10.3% on 15 Sept.**
+And it is no longer the dead socket — the longest consecutive run last night
+was **4**, against a breaker that fires at 5, so the breaker correctly held.
+The bursts are tight (4 dials in 22 seconds, 3 in 9 seconds), which points at
+dialing faster than the browser can answer its leg rather than a socket that
+has died. **Do not lower the breaker to 4 to catch these** — the limit of 5
+came from a clean gap in the run-length distribution (1,2,3,4 … 12,28) and 4 is
+on the wrong side of it; it would start refusing healthy sessions. This wants
+pacing on the agent leg, not a tighter breaker.
 
 **321 calls outside 8am–9pm ET** in 30 days. Some legitimate across time zones,
 some possibly not.
