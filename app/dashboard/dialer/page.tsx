@@ -253,11 +253,30 @@ function agentSafeLine(line: string): string | null {
   return OPERATOR_ONLY.some(re => re.test(line)) ? null : line
 }
 
+// ── PREDICTIVE IS NOT OFFERED TO AGENTS ──────────────────────────────────
+// It was here with a caution beside it. A caution is the wrong instrument:
+// the server already coerces predictive to progressive (see the withdrawal in
+// app/api/dialer/heartbeat), so an agent who picked it would be told to
+// "proceed with caution" and then quietly handed a different mode. Warning
+// somebody about a choice they are not actually making is worse than not
+// offering the choice.
+//
+// Why it is withdrawn at all: a fan-out line is placed with nobody attached,
+// and the bridge that connects an agent to it was unreachable — 14 Sept, 138
+// fan-out calls, 35 answered, 7 human, ZERO bridged. Seven people answered
+// their phone to silence. The bridge is fixed but UNVERIFIED, because no
+// fan-out call can reach it while the mode is withdrawn.
+//
+// The operator can still set a campaign to predictive through the admin
+// dialer-mode route, which is how the fix gets tested on one campaign under
+// supervision rather than by an agent discovering it mid-shift.
+//
+// RESTORE THIS LINE once a fan-out call has been observed reaching
+// call.bridged, and remove the coercion in the heartbeat at the same time.
 const MODE_OPTIONS: { value: DialerMode; label: string; color: string }[] = [
   { value: 'preview', label: 'PREVIEW', color: '#5a5e6a' },
   { value: 'power', label: 'POWER', color: '#2a4a8a' },
   { value: 'progressive', label: 'PROGRESSIVE', color: '#1a6a1a' },
-  { value: 'predictive', label: 'PREDICTIVE', color: '#8a1a1a' },
 ]
 
 const HEARTBEAT_INTERVAL_MS = 5_000
@@ -4691,22 +4710,11 @@ function DialerPageInner() {
       return
     }
 
-    // ── SAID ON THE WAY IN, NOT LEFT SITTING ON THE MENU ─────────────────
-    // A caution parked permanently under the option is read once and then
-    // becomes furniture. This fires at the moment of the decision and only
-    // then, which is the only moment it can change one.
-    //
-    // Worded to clear OPERATOR_ONLY above: "PREDICTIVE ENGINE" is filtered
-    // out of an agent's log as engine lifecycle chatter, so this must not
-    // contain that phrase, nor "FAILED". It is advice, not an error.
-    if (newMode === 'predictive') {
-      setAmdActivity(prev => [
-        '⚠ BETA (IT IS RECOMMENDED YOU USE PROGRESSIVE '
-        + 'AS WE TUNE PREDICTIVE TO OUR STANDARDS)',
-        ...prev,
-      ].slice(0, 5))
-    }
-
+    // A beta caution used to be pushed into the activity log here. It is gone
+    // with the option itself: predictive is no longer offered (see
+    // MODE_OPTIONS), so there is no moment at which an agent chooses it and
+    // nothing left to warn them about. The log was also the wrong place — it
+    // scrolls, and a line that scrolls is not a warning.
     if (isAllActive) {
       // ── PREDICTIVE FROM "ALL ACTIVE" ─────────────────────────────────────
       // Predictive genuinely cannot run across every campaign at once: the
