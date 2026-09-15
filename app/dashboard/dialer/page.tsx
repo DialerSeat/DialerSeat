@@ -4701,8 +4701,8 @@ function DialerPageInner() {
     // contain that phrase, nor "FAILED". It is advice, not an error.
     if (newMode === 'predictive') {
       setAmdActivity(prev => [
-        '⚠ PREDICTIVE IS IN BETA AND NOT YET FINE TUNED. '
-        + 'PROGRESSIVE IS RECOMMENDED — PROCEED WITH CAUTION',
+        '⚠ BETA (IT IS RECOMMENDED YOU USE PROGRESSIVE '
+        + 'AS WE TUNE PREDICTIVE TO OUR STANDARDS)',
         ...prev,
       ].slice(0, 5))
     }
