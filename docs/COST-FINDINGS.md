@@ -246,58 +246,100 @@ field themselves.
 
 ---
 
-## 1f. NUMBER BURN — the largest effect measured, and it is free to fix
+## 1f. NUMBER BURN — CHECKED AND NOT SUPPORTED
 
-Answer rate tracks lifetime usage almost perfectly:
+**This section previously claimed the opposite. It was wrong and it is worth
+keeping the wrong version visible, because the error is a trap anyone would
+fall into again.**
 
-| number | lifetime calls | 30d dials | answer rate |
-|---|---|---|---|
-| +1 830 283 2151 (TX) | **639** | 353 | **18.4%** |
-| +1 409 345 0167 (TX) | **637** | 344 | **20.6%** |
-| +1 415 862 7515 (CA) | 545 | 542 | 28.2% |
-| +1 314 350 0389 (MO) | 501 | 169 | 29.0% |
-| +1 727 558 4174 (FL) | 715 | 213 | 29.1% |
-| +1 984 369 0844 (NC) | 594 | 113 | 44.2% |
-| **+1 361 217 1881 (TX)** | **13** | 13 | **53.8%** |
-| **+1 210 742 5406 (TX)** | **13** | 13 | **61.5%** |
+### What it said
 
-**The two newest numbers answer at roughly 3× the rate of the two most used.**
-The same effect shows per-day: numbers under 40 dials/day answer at 38.8%,
-over 120 at 21.6%.
+Answer rate over 30 days tracked lifetime usage almost perfectly: the two most
+used numbers (~640 lifetime calls) answered at 18.4% and 20.6%, the two newest
+(13 calls) at 53.8% and 61.5%. Roughly 3×. It read as textbook number burn and
+it was written up as the largest effect measured.
 
-### Why this outranks everything else in this document
+### Why it was wrong
 
-At 18.4% an agent needs **5.4 dials per answer**. At 55% they need **1.8**.
-That is 3× the conversations from the same seat-hour — larger than every carrier
-saving found in a night of looking, and it costs nothing to act on.
+**The window was the variable, not the number.** A number's lifetime count is
+mostly a record of *when* it was in service. The heavily-used numbers
+accumulated their volume in early September; the new ones only ever dialled on
+the 14th. Comparing them compares two periods, not two numbers.
 
-It also cuts the other way from cost intuition: more answers means *more*
-carrier spend, and that is the correct direction. Cost per conversation is what
-matters, and a flagged number makes it three times worse.
+Re-run over one window, where the period cannot confound it:
 
-### What to do, in order
+| lifetime calls | dials in window | answer % |
+|---|---|---|
+| 594 | 13 | 61.5% |
+| **545** | **200** | **64.5%** |
+| 501 | 100 | 24.0% |
+| 420 | 13 | 69.2% |
+| 388 | 12 | 33.3% |
+| 388 | 12 | 58.3% |
+| **140** | 36 | **19.4%** |
 
-1. **Check the two worst for spam labels.** `armorhq.com` places real test calls
-   across Verizon, AT&T and T-Mobile and returns screenshots of exactly how the
-   number displays. Number Verifier offers the same with a free trial. Start
-   with **+1 830 283 2151** and **+1 409 345 0167**.
-2. **Register every number at `freecallerregistry.com`** — still live, still
-   free, one form covering First Orion (T-Mobile's analytics engine), TNS
-   (Verizon's) and Hiya. Email verification only. Note it is for businesses
-   registering **their own** numbers; third-party registration is not permitted,
-   so this is the operator's task, not something the platform can automate.
-3. **Report and request remediation** where a label is confirmed: Verizon via
-   `voicespamfeedback.com/vsf/`, T-Mobile via their Call Reporting site,
-   NoMoRobo at `reports@nomorobo.com`.
-4. **The soft cap already shipped** (§11 of CARRIER-ENGINEERING) slows future
-   burn by demoting a number past 60 dials/day out of its local tier. It does
-   not un-flag anything already flagged.
+**The correlation is gone.** The number with 545 lifetime calls took 200 dials
+and answered at 64.5%; the one with 140 answered at 19.4%. If anything it now
+runs the wrong way.
 
-> **The pool is not a fixed asset, it is a consumable.** These numbers lose
-> roughly two thirds of their answer rate over ~600 lifetime calls. Budget for
-> replacement the way you budget for minutes, and note that buying a fresh
-> number ($1) buys back more conversations than any optimisation in this
-> document.
+Also: the two numbers held up as proof answered 13 calls each. **A conclusion
+built on a sample of 13.**
+
+### What is actually there
+
+Pool-wide, by day:
+
+| day | numbers | dials | pool answer % | worst → best number |
+|---|---|---|---|---|
+| 09-08 | 3 | 250 | 17.2% | 14.4 → 21.1 |
+| 09-09 | 3 | 218 | 13.3% | 5.7 → 27.7 |
+| 09-10 | 8 | 209 | 28.7% | 19.6 → 47.4 |
+| 09-12 | 11 | 857 | **16.2%** | 4.5 → 42.4 |
+| 09-14 | 13 | 533 | **51.6%** | 24.0 → 69.2 |
+
+**Between-day variance dwarfs between-number variance.** The pool swings
+16.2% → 51.6% across two days while the spread between numbers on any given day
+is narrower. The same number answered 4.5% on the 12th and **64.5%** on the
+14th. It was not rehabilitated in between — the day changed.
+
+One relationship does survive, and it is about *daily intensity*, not lifetime:
+
+| dials per number that day | pool answer % |
+|---|---|
+| 21 | 90.5% |
+| 26 | 28.7% |
+| **41** | **51.6%** |
+| 73 | 13.3% |
+| 78 | 16.2% |
+| 83 | 17.2% |
+
+Monotone apart from one day, and it points at the **soft cap already shipped**
+(§11 of CARRIER-ENGINEERING), which demotes a number past 60 dials/day. Six
+days, heavily confounded with list and hour — a direction, not a result.
+
+### The number-health cron is sound, and was worth checking
+
+It rests numbers on a rolling 3-day window against the **pool median**, not a
+fixed threshold. That is exactly the right comparison given the above: it
+controls for the day by construction. `+14158627515` was rested for 4.5% on a
+day the pool median was ~16% — a correct relative judgement, and one that
+simply did not predict the 14th. Nothing to fix.
+
+### What NOT to do
+
+**Do not pay for spam-label testing on `+18302832151` or `+14093450167`.** The
+previous version of this section named them, and they are ordinary.
+
+Registering the pool at `freecallerregistry.com` is still worth doing — it is
+free, it is one form covering First Orion, TNS and Hiya, and A-attestation is
+a separate question (§1b). Just not on the evidence that was in this section.
+
+### The rule this earns
+
+> **A per-entity rate computed over a window the entities did not share is a
+> statement about the window.** Before believing any ranking of numbers,
+> agents, lists or campaigns, re-run it inside one window all of them were
+> present for. If the ranking does not survive that, it was never about them.
 
 ---
 
@@ -365,10 +407,26 @@ from platform_config;
 
 ## 4. Open
 
-**10 numbers marked `released` on 29 Aug still carry Telnyx ids.** Run
-`/api/admin/pool/sync`. Retires them → already gone. **Reactivates them → Telnyx
-has been billing $1/month each since August**, and you gain the headroom to drop
-`daily_cap` from 200 toward the industry guidance of 70.
+**DID rental is ~31% of the Telnyx bill, and it is the one line that does not
+care how much you dial.** 13 numbers owned (12 active, 1 resting) at $1/month =
+**$13/month** against $28.29 month-to-date usage. Every per-minute saving in
+this document is fighting for a share of the other 69%.
+
+At two agents that is **$0.22 per agent per day** — 6% of the $3.51 floor in
+§0, sitting there whether anyone dials or not. It is also the cheapest thing
+here to *increase* deliberately: §1f says daily intensity per number is the one
+thing that still correlates with answer rate, and more numbers is how you lower
+it. **This is a line to spend on, not to cut** — it just needs to be in the
+model, and it was not.
+
+> **The 10 `released` numbers are NOT being billed — an earlier version of this
+> section said they were.** They carry a `provider_number_id`, which is what
+> that claim rested on, but their `flag_reason` reads *“Not owned on Telnyx —
+> retired automatically by number pool sync.”* The sync already ran, already
+> found Telnyx does not own them, and retired them; it just never cleared the
+> stale local id. There is no $10/month to recover and no reason to run
+> `/api/admin/pool/sync` for it. **A local id is not proof of a remote
+> resource.**
 
 **Two thirds of calls never write back to their lead.** 206 leads were
 undercounted by 481 attempts before the backfill; one was dialed 18 times in 28
