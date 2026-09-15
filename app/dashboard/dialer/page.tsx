@@ -273,10 +273,34 @@ function agentSafeLine(line: string): string | null {
 //
 // RESTORE THIS LINE once a fan-out call has been observed reaching
 // call.bridged, and remove the coercion in the heartbeat at the same time.
+// ── PREDICTIVE IS BACK, AND WHAT CHANGED IS NOT THE AUDIO ──────────────────
+// It was withdrawn from this list after prospects answered into silence. That
+// failure is real history, and it is fixed — measured 15 Sept over its last
+// four running days:
+//
+//   136 of 137 answered fan-out legs reached Telnyx's call.bridged
+//   median dead air between answer and bridge: 0.19s (worst 0.8s)
+//   100% had the AGENT's own leg answered before the bridge — progressive
+//   manages 94.2%, so predictive is the cleaner of the two on this measure
+//
+// What actually constrains it is the ABANDONED-CALL SURCHARGE. Every surplus
+// line is cancelled when a sibling answers, and a call cancelled before answer
+// is an abandoned call: $0.005 on every one once the account is over 20%,
+// retroactive for the month. Against 14 September's traffic, 3 lines puts
+// total abandonment at ~29% and 5 lines at ~45%. Two fits, at ~17.5%.
+//
+// So platform_config.predictive_line_ceiling is 2, and as of 15 Sept
+// lib/predictiveController.ts actually enforces it on every tick — previously
+// it was applied only when the LINES selector saved, and older prefs rows of 3
+// and 5 went straight past it.
+//
+// Watch Admin → Numbers → SURCHARGE while this runs. If abandonment approaches
+// 20%, drop the ceiling to 1 (progressive parity) rather than debating it.
 const MODE_OPTIONS: { value: DialerMode; label: string; color: string }[] = [
   { value: 'preview', label: 'PREVIEW', color: '#5a5e6a' },
   { value: 'power', label: 'POWER', color: '#2a4a8a' },
   { value: 'progressive', label: 'PROGRESSIVE', color: '#1a6a1a' },
+  { value: 'predictive', label: 'PREDICTIVE', color: '#7a3a9a' },
 ]
 
 const HEARTBEAT_INTERVAL_MS = 5_000

@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { placeOutboundCall, hangupCallControlId } from '@/lib/placeOutboundCall'
 import { logCallEvent } from '@/lib/callEvents'
 import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
+import { getPlatformConfig } from '@/lib/platformConfig'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -396,8 +397,50 @@ async function runPredictiveControllerInner(
     console.error('[controller] pref lookup failed', prefErr)
   }
 
+  // ── THE PLATFORM CEILING, WHICH USED NOT TO REACH HERE ────────────────
+  // platform_config.predictive_line_ceiling was only ever applied by
+  // /api/predictive/prefs — it limited what the selector could SAVE, and
+  // nothing re-checked it here. Rows saved before the ceiling changed sailed
+  // straight past it: agent_predictive_prefs currently holds preferred_lines
+  // of 3 and 5 against a ceiling of 2.
+  //
+  // It matters because every surplus line is a CANCELLED call, and a call
+  // cancelled before answer is an abandoned call in Telnyx's definition —
+  // $0.005 on every abandoned call once the account is over 20%, applied
+  // retroactively for the whole month. Measured against 14 September's
+  // progressive traffic:
+  //
+  //     lines   total abandoned rate
+  //       1              0.8%
+  //       2             17.5%   <- the most that fits under the limit
+  //       3             29.4%   OVER
+  //       5             45.1%   OVER
+  //
+  // So the ceiling is not a preference, it is a compliance bound, and it has
+  // to be enforced where the dialing decision is actually made.
+  let platformCeiling = HARD_LINE_CAP
+  try {
+    const { predictive_line_ceiling } = await getPlatformConfig()
+    if (Number.isFinite(predictive_line_ceiling) && predictive_line_ceiling > 0) {
+      platformCeiling = Math.min(HARD_LINE_CAP, predictive_line_ceiling)
+    }
+  } catch (cfgErr) {
+    // Fail toward the SAFE end. An unreadable config must not hand out five
+    // lines; one line is progressive parity, which is never a compliance
+    // problem and never a silent one either — it is logged below.
+    console.error('[controller] line-ceiling lookup failed, holding at 1', cfgErr)
+    platformCeiling = 1
+  }
+
   let effectiveLines = agentPref ?? campaignDefault
-  effectiveLines = Math.max(1, Math.min(effectiveLines, campaignMax))
+  effectiveLines = Math.max(1, Math.min(effectiveLines, campaignMax, platformCeiling))
+
+  if ((agentPref ?? campaignDefault) > platformCeiling) {
+    console.log(
+      `[controller] lines clamped ${agentPref ?? campaignDefault} → ${effectiveLines} ` +
+      `by platform_config.predictive_line_ceiling (${platformCeiling})`
+    )
+  }
 
   
   // ── THE ABANDON THROTTLE IS PER CAMPAIGN, BECAUSE THE RULE IS ───────────
