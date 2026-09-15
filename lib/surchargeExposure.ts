@@ -28,10 +28,10 @@
 // and §1m is the standing reminder that a column we populate is not the
 // carrier's state.
 //
-// The abandoned side is the approximation. We cannot see Telnyx's own
-// disconnect attribution, so it is inferred from the shapes we know are ours:
-// surplus fan-out lines cancelled when a sibling answers, agent-leg failures
-// that hang up a ringing lead, and unallocated-number causes.
+// The abandoned side USED to be an inference from call shape. It is now taken
+// from Telnyx's own `hangup_cause`, which is the nearest thing to their
+// attribution we hold -- see isAbandoned. The remaining gap is only that we
+// count OUR records of their causes, not their ledger.
 
 /** Telnyx thresholds. Crossing them applies the charge retroactively for the month. */
 export const SHORT_DURATION_LIMIT = 0.15
@@ -41,11 +41,22 @@ export const ABANDONED_FEE_USD = 0.005
 /** A connected call of this many seconds or fewer is a Short Duration Call. */
 export const SHORT_DURATION_SECONDS = 6
 
+/**
+ * Telnyx's own cause for "the originating side cleared this call".
+ *
+ * An UNANSWERED leg with `normal_clearing` is us hanging up. A leg nobody
+ * answered that simply rang out carries `timeout`; a busy one carries
+ * `user_busy`; a dead number carries `not_found`. Only `normal_clearing`
+ * means somebody chose to end it, and on an unanswered leg that somebody is us.
+ */
+export const WE_CANCELLED_CAUSE = 'normal_clearing'
+
 /** Hangup causes Telnyx counts as reaching a disconnected number. */
 export const DISCONNECTED_NUMBER_CAUSES = [
   'unallocated_number',
   'invalid_number_format',
   'no_route_destination',
+  'not_found',
 ]
 
 export interface ExposureRow {
@@ -56,6 +67,7 @@ export interface ExposureRow {
   talkSeconds: number
   dialSource: string | null
   disposition: string | null
+  /** Telnyx's cause. This is the signal, not our own inference. */
   hangupCause: string | null
 }
 
@@ -76,19 +88,27 @@ export interface Exposure {
 /**
  * A call we ended before the other side answered.
  *
- * Deliberately narrow. A lead that simply rang out is NOT abandoned — nobody
- * hung up on it, the timeout expired. Counting those would put every dialer
- * permanently over the line and make the number useless.
+ * ── THIS USED TO BE A PROXY, AND THE PROXY WAS WRONG BOTH WAYS ──────────────
+ * It inferred abandonment from shape: any unanswered fan-out leg, plus
+ * AGENT_LEG_FAILED, plus disconnected-number causes. Checked against Telnyx's
+ * own `hangup_cause` on 14 September:
+ *
+ *     the proxy said   180 of 533   33.8%
+ *     hangup_cause says 118 of 533   22.1%
+ *
+ * It OVERSTATED by counting fan-out lines that simply rang out — those carry
+ * `timeout`, nobody cancelled them — and UNDERSTATED by missing 857 legs across
+ * 8-12 Sept that died at ZERO seconds with `normal_clearing` and were
+ * dispositioned NO_ANSWER, the undetected half of the dead-socket failure.
+ *
+ * So use the carrier's own word for it. §1m of docs/COST-FINDINGS.md is the
+ * standing rule this violated: a column we populate is not the carrier's state.
  */
 export function isAbandoned(r: ExposureRow): boolean {
   if (!r.placed || r.answered) return false
-  return (
-    // Surplus predictive lines, cancelled the moment a sibling line answered.
-    r.dialSource === 'controller_fanout' ||
-    // The agent's browser never took its own leg, so we hung up a ringing lead.
-    r.disposition === 'AGENT_LEG_FAILED' ||
-    DISCONNECTED_NUMBER_CAUSES.includes(r.hangupCause || '')
-  )
+  // Telnyx's definition also explicitly includes calls to disconnected numbers.
+  if (DISCONNECTED_NUMBER_CAUSES.includes(r.hangupCause || '')) return true
+  return r.hangupCause === WE_CANCELLED_CAUSE
 }
 
 export function isShortDuration(r: ExposureRow): boolean {
@@ -132,10 +152,12 @@ export function computeExposure(rows: ExposureRow[]): Exposure {
  * Both ratios span the whole month and the bad calls are already in the
  * numerator, so they cannot be removed — only diluted. **Dilution only works
  * when the recent rate is already under the limit**; if it is not, dialing more
- * makes it worse. September's clean day ran 33.8% abandoned as it actually
- * happened, so this returned "impossible" until the socket breaker took it to
- * 15.4%. Returning null rather than a number is the honest answer there, and
- * the reason an earlier draft of §1i was wrong.
+ * makes it worse, and returning null rather than a number is the honest answer.
+ *
+ * On 14 September, measured from hangup_cause: 118 of 533 cancelled, 22.1%,
+ * still over the 20% line. 98 of those 118 were AGENT_LEG_FAILED, so the agent
+ * socket breaker alone takes that day to 20 of 533 — 3.8%, and comfortably
+ * under. Before the breaker there was no volume that could dilute it.
  */
 export function callsToClear(
   bad: number,

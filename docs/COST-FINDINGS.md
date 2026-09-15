@@ -1444,6 +1444,68 @@ Telnyx for any earlier inbound messages the platform never saw.
 
 ---
 
+## 1ad. ABANDONMENT, FROM THE CARRIER'S OWN WORD — and the proxy was wrong both ways
+
+I had been inferring abandonment from call **shape**. Telnyx tells us directly,
+in `hangup_cause`, and the two disagree badly.
+
+| an unanswered leg with… | means |
+|---|---|
+| `timeout` | it rang out. **Nobody abandoned it** |
+| `user_busy` | the callee's network refused |
+| `not_found` | disconnected number — Telnyx counts this as abandoned |
+| **`normal_clearing`** | **somebody chose to end it. On an unanswered leg, that is us** |
+
+`originator_cancel` — which `dial_performance_daily.abandoned_by_us` is built on
+— **never appears once.** That column is structurally always zero.
+
+### The proxy was wrong in both directions
+
+| 14 September | abandoned | rate |
+|---|---|---|
+| my shape proxy | 180 of 533 | **33.8%** |
+| **Telnyx's `hangup_cause`** | **118 of 533** | **22.1%** |
+
+- **Overstated** by counting every unanswered fan-out leg. Most carry `timeout`
+  — they rang the full window and nobody cancelled them.
+- **Understated** by missing **857 legs** across 8–12 Sept that died at **zero
+  seconds** with `normal_clearing`, dispositioned `NO_ANSWER`. That is the
+  *undetected half* of the dead-socket failure — `AGENT_LEG_FAILED` only fires
+  when the agent leg's hangup evidence is available, and these had none.
+
+### The zero-second failure was enormous, and it is already gone
+
+| day | placed | died at 0s | |
+|---|---|---|---|
+| 09-08 | 271 | 154 | **56.8%** |
+| 09-09 | 238 | 162 | **68.1%** |
+| 09-12 | 857 | 535 | **62.4%** |
+| 09-10 / 09-13 / **09-14** | — | **0** | **stopped completely** |
+
+**On three days, roughly 60% of every dial died before the phone could ring.**
+It ended between the 12th and the 14th. September's month-to-date abandonment of
+**50%** is almost entirely those three days.
+
+### Where it actually stands, and what fixes it
+
+| 14 September | abandoned | rate |
+|---|---|---|
+| as it ran | 118 of 533 | **22.1%** — over the 20% line |
+| **98 of those 118 are `AGENT_LEG_FAILED`** | | |
+| **with the socket breaker** | **20 of 533** | **3.8%** — comfortably under |
+
+**The agent socket breaker shipped last night is the single fix that clears the
+abandoned-call surcharge.** Not dilution, not volume, not the fan-out cap — that
+one guard.
+
+### Fixed in code
+
+`isAbandoned()` now reads `hangup_cause`. `§1m`'s rule is what the old version
+broke: *a column we populate is not the carrier's state.* I wrote that rule and
+then inferred abandonment from `dial_source` and `disposition` anyway.
+
+---
+
 ## 1aa. HOW MANY TIMES IS ONE CALL CHARGED? Three records, and two are the same leg
 
 The direct question, answered from 364 call sessions.

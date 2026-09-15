@@ -35,9 +35,12 @@ function row(p: Partial<ExposureRow>): ExposureRow {
 
 const connectedShort = row({ answered: true, talkSeconds: 3 })
 const connectedLong = row({ answered: true, talkSeconds: 90 })
-const rangOut = row({ answered: false, disposition: 'NO_ANSWER' })
-const agentLegFailed = row({ answered: false, disposition: 'AGENT_LEG_FAILED' })
-const fanoutCancelled = row({ answered: false, dialSource: 'controller_fanout' })
+// Telnyx's own causes. A leg that rang out carries `timeout`; one WE ended
+// carries `normal_clearing`. That distinction is the whole metric.
+const rangOut = row({ answered: false, disposition: 'NO_ANSWER', hangupCause: 'timeout' })
+const agentLegFailed = row({ answered: false, disposition: 'AGENT_LEG_FAILED', hangupCause: 'normal_clearing' })
+const fanoutCancelled = row({ answered: false, dialSource: 'controller_fanout', hangupCause: 'normal_clearing' })
+const fanoutRangOut = row({ answered: false, dialSource: 'controller_fanout', hangupCause: 'timeout' })
 
 describe('the denominators are different, and that is the whole point', () => {
   it('measures short duration against CONNECTED calls, not total outbound', () => {
@@ -75,7 +78,11 @@ describe('what counts as abandoned', () => {
     expect(isAbandoned(rangOut)).toBe(false)
   })
 
-  it('counts a surplus fan-out line cancelled when a sibling answered', () => {
+  it('does NOT count a fan-out line that rang out, only one we cancelled', () => {
+    // The old proxy counted EVERY unanswered fan-out leg. On 14 Sept that
+    // overstated abandonment as 33.8% when hangup_cause said 22.1%. A surplus
+    // line that rang the full timeout was not abandoned by anyone.
+    expect(isAbandoned(fanoutRangOut)).toBe(false)
     expect(isAbandoned(fanoutCancelled)).toBe(true)
   })
 
@@ -87,6 +94,22 @@ describe('what counts as abandoned', () => {
     // Telnyx's definition says so explicitly: abandoned "includes calls to
     // disconnected numbers".
     expect(isAbandoned(row({ hangupCause: 'unallocated_number' }))).toBe(true)
+    expect(isAbandoned(row({ hangupCause: 'not_found' }))).toBe(true)
+  })
+
+  it('catches the zero-second failures the proxy missed entirely', () => {
+    // 857 legs across 8-12 Sept died at ZERO seconds with normal_clearing and
+    // were dispositioned NO_ANSWER -- the undetected half of the dead-socket
+    // failure. The shape-based proxy saw none of them.
+    expect(isAbandoned(row({
+      answered: false, disposition: 'NO_ANSWER',
+      hangupCause: 'normal_clearing', talkSeconds: 0,
+    }))).toBe(true)
+  })
+
+  it('does not count a busy signal', () => {
+    // user_busy is the callee's network refusing. Nobody abandoned anything.
+    expect(isAbandoned(row({ hangupCause: 'user_busy' }))).toBe(false)
   })
 
   it('never counts an answered call as abandoned', () => {
