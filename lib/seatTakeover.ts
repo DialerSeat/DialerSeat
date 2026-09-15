@@ -150,13 +150,16 @@ export async function takeOverAgentPaidSeats(agentClerkId: string): Promise<Take
       continue
     }
 
-    // The agent's own cancellation may have deactivated their campaign access
-    // on the way through. The whole point of this is that they keep dialing.
-    await supabaseAdmin
-      .from('team_campaign_access')
-      .update({ is_active: true, revoked_at: null })
-      .eq('team_member_id', m.id)
-      .eq('is_active', false)
+    // ── ACCESS IS RESTORED AFTER THE MONEY MOVES, NOT BEFORE ───────────
+    // This used to sit HERE, above the charge, with the comment "the whole
+    // point of this is that they keep dialing". It meant a takeover whose
+    // charge then failed had actively switched the agent's access back ON and
+    // nothing switched it off again.
+    //
+    // 15 Sept: an agent cancelled their own plan, the owner's card was never
+    // successfully charged, and she dialed 169 calls that day on the
+    // platform's Telnyx balance with no subscription behind any of them. The
+    // re-grant is now in the success branch below.
 
     const { data: chargeRow, error: chargeErr } = await supabaseAdmin
       .from('team_seat_charges')
@@ -202,22 +205,62 @@ export async function takeOverAgentPaidSeats(agentClerkId: string): Promise<Take
           discount_percent: sub.discountPercent ?? null,
         })
         .eq('id', chargeRow.id)
+
+      // Now, and only now. The owner is paying, so the agent keeps dialing —
+      // which is what the takeover is for. Their own cancellation may have
+      // deactivated campaign access on the way through.
+      await supabaseAdmin
+        .from('team_campaign_access')
+        .update({ is_active: true, revoked_at: null })
+        .eq('team_member_id', m.id)
+        .eq('is_active', false)
+
+      result.takenOver.push({
+        teamId: team.id,
+        teamName: team.name,
+        ownerId: team.owner_id,
+        memberId: m.id,
+      })
     } catch (err: any) {
       const reason = isSeatBillingError(err) ? `${err.code}: ${err.message}` : (err?.message || 'unknown')
       console.error(`[seatTakeover] seat charge failed for member ${m.id}: ${reason}`)
+
+      // ── WRITE DOWN WHY ─────────────────────────────────────────
+      // `reason` was computed, logged to the console, and then dropped — the
+      // row kept failure_reason NULL. When this was investigated on 15 Sept
+      // the only copy of why a charge failed was a Vercel log line from that
+      // morning, and the question "was the card declined, or did our own code
+      // throw?" could not be answered from the database at all.
       await supabaseAdmin
         .from('team_seat_charges')
-        .update({ status: 'failed' })
+        .update({
+          status: 'failed',
+          failure_reason: reason.slice(0, 1000),
+          last_attempt_at: new Date().toISOString(),
+        })
         .eq('id', chargeRow.id)
+
+      // ── NOBODY IS PAYING, SO NOBODY IS DIALING ───────────────────────
+      // The agent has just cancelled their own plan and the owner's card did
+      // not take the seat. Waiting for cron/seat-billing-enforcement is not
+      // good enough: that job runs daily, and until 15 Sept its filter could
+      // not see this row for a week. Suspend here, at the moment the money
+      // fails, and let the owner's payment un-suspend it.
+      const failedAt = new Date().toISOString()
+      await supabaseAdmin
+        .from('team_members')
+        .update({ seat_suspended_at: failedAt, seat_suspend_reason: 'unpaid' })
+        .eq('id', m.id)
+        .is('seat_suspended_at', null)
+
+      await supabaseAdmin
+        .from('team_campaign_access')
+        .update({ is_active: false, revoked_at: failedAt })
+        .eq('team_member_id', m.id)
+        .eq('is_active', true)
+
       result.billingFailed.push({ memberId: m.id, reason })
     }
-
-    result.takenOver.push({
-      teamId: team.id,
-      teamName: team.name,
-      ownerId: team.owner_id,
-      memberId: m.id,
-    })
   }
 
   if (result.takenOver.length > 0) {

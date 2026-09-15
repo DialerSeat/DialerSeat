@@ -144,6 +144,22 @@ export async function GET(req: Request) {
     // failed seconds ago, mid-run, is picked up on the next pass rather than
     // racing the retry that is about to rescue it. The retry pass runs FIRST
     // in this job for the same reason.
+    // The cutoff is compared against period_START, not period_end. Changing
+    // the cutoff itself never removed the wait, because the wait was not in
+    // the cutoff -- it was in the column. period_end is the end of the week
+    // the charge was meant to buy, so `period_end < now` means "wait out the
+    // period they did not pay for": on a 7-day seat, 7 days of free dialing
+    // after the card fails.
+    //
+    // 15 Sept: a seat charge failed at 05:58 with period_end 22 Sept. This job
+    // ran at 13:00 and could not see the row. The agent dialed 169 calls that
+    // day, 100 answered, on the platform's own Telnyx balance, with nobody
+    // paying for the seat. The two other failed charges in the table were both
+    // enforced correctly -- and both had period_end already in the past.
+    //
+    // period_start is the period being CONSUMED. Unpaid and already started is
+    // the condition that should stop access. When the subscription ends, it
+    // ends.
     const cutoff = new Date().toISOString()
 
     // ── WHY THIS PAGES, AND WHY IT MARKS ─────────────────────────────────
@@ -179,7 +195,7 @@ export async function GET(req: Request) {
         .eq('status', 'failed')
         .is('enforced_at', null)
         .not('team_member_id', 'is', null)
-        .lt('period_end', cutoff)
+        .lt('period_start', cutoff)
         .order('period_end', { ascending: true })
         .limit(PAGE_SIZE)
 
@@ -287,7 +303,7 @@ export async function GET(req: Request) {
       .select('id', { count: 'exact', head: true })
       .eq('status', 'failed')
       .is('enforced_at', null)
-      .lt('period_end', cutoff)
+      .lt('period_start', cutoff)
 
     if (suspendedTotal > 0) {
       console.log(
