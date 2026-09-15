@@ -45,11 +45,23 @@ const FREE_FAILURES = 2
 const BASE_DELAY_MS = 500
 
 /**
- * Ceiling. Ten seconds is long enough to turn 7 attempts a minute into well
- * under one, and short enough that a recovered account is dialing again almost
- * immediately rather than waiting out a long backoff.
+ * Ceiling. **This must stay well under the serverless function timeout.**
+ *
+ * It was 10,000ms, which is EXACTLY Vercel Hobby's default function duration
+ * (10s), and neither `/api/calls/outbound` nor `/api/dialer/heartbeat` declares
+ * a `maxDuration`, so both inherit it. At full backoff the function would be
+ * killed with no budget left — and if the kill landed AFTER Telnyx accepted the
+ * agent leg but before we recorded it, that is a leg placed and billed with no
+ * `calls` row pointing at it. An orphan charge, created by the thing meant to
+ * reduce charges.
+ *
+ * 2.5s leaves 7.5s of headroom for the dial itself and still does the job: the
+ * burst this exists to damp ran 1,827 attempts in one hour on 11 September —
+ * one every two seconds — so a 2.5s floor between attempts more than halves it.
+ * The ten-hour average of 7.2/minute was never the shape worth fixing; the
+ * bursts were.
  */
-const MAX_DELAY_MS = 10_000
+const MAX_DELAY_MS = 2_500
 
 /**
  * A failure older than this is not evidence about now. An agent who comes back
@@ -92,10 +104,13 @@ export function noteDialSuccess(): void {
 /**
  * Milliseconds the next dial should wait. Never throws, never refuses.
  *
- * 0 for the first two failures, then 500ms doubling to a 10s ceiling:
+ * 0 for the first two failures, then 500ms doubling to the 2.5s ceiling:
  *
- *     failure   3      4      5      6      7      8+
- *     delay   500ms  1.0s   2.0s   4.0s   8.0s   10.0s
+ *     failure   3      4      5      6+
+ *     delay   500ms  1.0s   2.0s   2.5s
+ *
+ * The ceiling is set by the function timeout, not by what would damp best —
+ * see MAX_DELAY_MS.
  */
 export function backoffDelayMs(): number {
   if (consecutive <= FREE_FAILURES) return 0

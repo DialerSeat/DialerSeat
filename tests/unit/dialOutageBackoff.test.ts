@@ -48,22 +48,38 @@ describe('it ramps, and it stops ramping', () => {
       noteCapacityFailure()
       seen.push(backoffDelayMs())
     }
-    // failures 1-2 free, then 500, 1000, 2000, 4000, 8000, then the ceiling.
-    expect(seen).toEqual([0, 0, 500, 1000, 2000, 4000, 8000, 10000])
+    // failures 1-2 free, then 500, 1000, 2000, then the ceiling.
+    expect(seen).toEqual([0, 0, 500, 1000, 2000, 2500, 2500, 2500])
+  })
+
+  it('NEVER approaches the serverless function timeout', () => {
+    // The ceiling was 10,000ms, which is EXACTLY Vercel Hobby's default
+    // function duration -- and neither /api/calls/outbound nor
+    // /api/dialer/heartbeat declares a maxDuration, so both inherit it.
+    //
+    // At full backoff the function would be killed with no budget left to
+    // dial. If that kill landed after Telnyx accepted the agent leg but
+    // before we recorded it, the result is a leg placed and BILLED with no
+    // calls row pointing at it -- an orphan charge created by the thing meant
+    // to reduce charges.
+    const HOBBY_FUNCTION_TIMEOUT_MS = 10_000
+    for (let i = 0; i < 5000; i++) noteCapacityFailure()
+    expect(backoffDelayMs()).toBeLessThanOrEqual(HOBBY_FUNCTION_TIMEOUT_MS / 3)
   })
 
   it('never exceeds the ceiling however long the outage runs', () => {
     // Ten hours of 11 September would be thousands of failures. The delay must
     // not grow into something that looks like a hang.
     for (let i = 0; i < 5000; i++) noteCapacityFailure()
-    expect(backoffDelayMs()).toBe(10_000)
+    expect(backoffDelayMs()).toBe(2_500)
   })
 
-  it('turns a runaway into a trickle', () => {
-    // 11 Sept ran ~7 attempts a minute for ten hours. At the ceiling that is
-    // one attempt per 10s -- six a minute becomes well under one.
+  it('damps the burst that actually happened', () => {
+    // The ten-hour average of ~7/minute was never the shape worth fixing. The
+    // BURST was: 1,827 attempts in the 16:00 hour of 11 September, roughly one
+    // every two seconds. The ceiling must put a floor under that.
     for (let i = 0; i < 10; i++) noteCapacityFailure()
-    const perMinuteAtCeiling = 60_000 / backoffDelayMs()
-    expect(perMinuteAtCeiling).toBeLessThanOrEqual(6)
+    const observedBurstIntervalMs = 2_000
+    expect(backoffDelayMs()).toBeGreaterThan(observedBurstIntervalMs)
   })
 })
