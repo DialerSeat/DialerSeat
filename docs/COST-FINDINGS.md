@@ -24,6 +24,7 @@ Everything found, ordered by what it is worth. Detail in the numbered sections.
 | 6 | **Admin → Numbers → `⚠ SURCHARGE`** | both ratios month-to-date; portal pie chart still outranks it | §1i |
 | 7 | **Admin → Numbers → `SET CNAM`** | free; landlines only, no answer-rate claim | §1t |
 | 8 | Register the pool at `freecallerregistry.com` | free; First Orion + TNS + Hiya in one form | §1f |
+| **10** | **Point Telnyx's inbound SMS webhook at `/api/webhooks/telnyx-sms`**, and hand-suppress the two people who already texted in | **somebody texted STOP and nothing heard it. $500–$1,500 per call, no safe harbour** | **§1ac** |
 | **0** | **Upgrade Vercel to Pro ($20/mo)** | **two agents already use ~35–40% of Hobby's invocation cap; it PAUSES for 30 days, and Hobby forbids commercial use** | **§1x** |
 
 ### Last, once the rest is done
@@ -1170,6 +1171,71 @@ its TypeScript phase does pass.
 `idx_calls_campaign_id_created_at` are both `(campaign_id, created_at DESC)`.
 Every insert maintains both halves of each pair. Pre-existing, small, and not
 worth dropping an index on a live dialer at the end of a long night.
+
+---
+
+## 1ac. SOMEBODY TEXTED STOP AND NOTHING WAS LISTENING
+
+**The most serious finding in this document, and it is not about money.**
+
+It was hiding in the `messaging` record type — three rows at $0.00, which is
+exactly why nobody had opened it.
+
+| | |
+|---|---|
+| **02:36:24** | we called **+1 650 290 0972** |
+| **02:37:26** | they texted **STOP** to the number that had just called them |
+
+**Sixty-two seconds.** Telnyx received it and auto-responded
+(`"autoresponse_type": "STOP"`). DialerSeat never saw it — **the only webhook
+route in the entire application was `webhooks/clerk`.**
+
+At the moment of the finding:
+
+| | |
+|---|---|
+| that person, suppressed? | **no** |
+| still in the lead list | **3 times** |
+| **total rows in `suppression_list`** | **0. It has never held a single entry.** |
+
+### The enforcement was always fine. Nothing ever wrote the opt-out down.
+
+`checkSuppression` runs on every dial and would have refused. `lib/suppression.ts`
+is well built. The gap was purely ingestion — `suppression_list` is written only
+by a manual admin action, and no inbound message ever reached it.
+
+### Why this outranks everything else here
+
+Every other finding in this document is measured in cents per agent-day.
+**Calling somebody who has revoked consent is $500–$1,500 per call**, and unlike
+the FTC abandonment rules (§1y) there is **no safe harbour** for not having
+built the listener.
+
+### Shipped
+
+- `app/api/webhooks/telnyx-sms` — the inbound route that did not exist
+- `lib/smsOptOut.ts` — matches the six carrier keywords **and** the phrases
+  people actually type (*“stop calling me”*, *“take me off”*, *“don't call”*),
+  which carriers do **not** honour. Deliberately generous: a false positive
+  costs one lead, a false negative costs a claim. 9 tests.
+- Suppression is written at **platform** scope, not user scope — several agents
+  share the pool and the person is asking the business to stop, not one seat.
+- Every inbound message is recorded as a `sms_inbound` event, opt-out or not.
+  The platform previously had no trace that inbound SMS existed at all.
+
+> **IT RECEIVES NOTHING UNTIL TELNYX IS POINTED AT IT.**
+> Mission Control → Messaging → your messaging profile → Inbound Settings →
+> Webhook URL: `https://<your-domain>/api/webhooks/telnyx-sms`
+>
+> Deploying the route changes nothing on its own. **This is now item 10 on the
+> list, and it is above every cost item.**
+
+### And the two people who already texted in
+
+`+1 650 290 0972` (texted STOP) and `+1 323 603 7154` are each in the lead list
+**three times** and were never suppressed. The webhook only catches what arrives
+from now on — **those two should be added by hand**, and it is worth asking
+Telnyx for any earlier inbound messages the platform never saw.
 
 ---
 

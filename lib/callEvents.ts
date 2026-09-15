@@ -36,6 +36,11 @@ export type CallEventType =
   | 'hangup_failed'
   // A voicemail drop was played into a lead's answering machine at the beep.
   | 'voicemail_dropped'
+  // An inbound SMS reached one of our numbers. Added 15 Sept after the ledger
+  // capture showed somebody texting STOP 62 seconds after we called them, with
+  // no webhook anywhere in the app to hear it and zero rows in
+  // suppression_list. `status` is 'opt_out' when it suppressed the sender.
+  | 'sms_inbound'
   // The agent's browser never answered its own leg, so the lead leg died
   // before the lead's phone rang. OUR failure, not a no-answer, and recorded
   // as its own type so it can be counted rather than hidden inside NO_ANSWER.
