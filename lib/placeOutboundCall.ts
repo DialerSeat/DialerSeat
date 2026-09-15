@@ -13,6 +13,7 @@ import { logCallEvent } from '@/lib/callEvents'
 import { paceOrigination } from '@/lib/cpsGovernor'
 import { checkDestinationRate } from '@/lib/destinationRates'
 import { checkAgentSocket, agentSocketMessage } from '@/lib/agentSocketBreaker'
+import { noteDialOutage } from '@/lib/dialOutageAlert'
 
 /**
  * The only answering-machine detector allowed out of this file.
@@ -482,6 +483,10 @@ export async function placeOutboundCall(
   const fromNumber = poolNumber?.phone_number || process.env.TELNYX_PHONE_NUMBER
 
   if (!fromNumber) {
+    // Real-time, because the cron that watches this runs at most daily on
+    // Hobby. On 11 Sept this exact condition ran for ten hours and 4,341
+    // attempts with nothing said. See lib/dialOutageAlert.ts.
+    noteDialOutage('the caller-ID pool has no usable number.', { source, userId })
     return {
       success: false,
       error: 'No phone numbers available in pool. Contact admin.',
@@ -1240,11 +1245,48 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       }
     }
 
+    // ── THE ACCOUNT ITSELF IS BLOCKED ────────────────────────────────────
+    // Telnyx D17: "Account is disabled. The Account used to place the
+    // termination call is blocked." It fired 227 times on 11 September when
+    // the balance ran out, and NOTHING in this codebase recognised it — not
+    // the dial path, not ops-health, which only watches pool capacity. So the
+    // dialer treated a dead account as a per-lead failure and moved to the
+    // next lead, 4,341 times over ten hours.
+    //
+    // 'capacity', not 'transient': the next lead fails identically, which is
+    // exactly what that classification means, and it is what stops a
+    // predictive tick from working through the whole batch one at a time.
+    const isAccountBlocked =
+      /account is disabled/i.test(rawTitle) || /account is disabled/i.test(rawDetail) ||
+      /account.*blocked/i.test(rawDetail) || rawDetail.includes('D17')
+
+    if (isAccountBlocked) {
+      noteDialOutage(
+        'Telnyx has blocked this account (D17) — usually a spent balance.',
+        { source: p.source, userId: p.userId }
+      )
+      return {
+        success: false,
+        error: 'Telnyx has blocked this account',
+        failureKind: 'capacity' as const,
+        detail:
+          `Telnyx returned "account is disabled" (D17), which blocks every outbound call on the ` +
+          `account regardless of lead or caller ID. This is almost always a spent balance. Top up ` +
+          `in Telnyx Mission Control — and note that a negative balance left for a month abolishes ` +
+          `the account and DELETES EVERY NUMBER on it.`,
+        httpStatus: 503,
+      }
+    }
+
     // D51 — the caller ID isn't a number this Telnyx account owns. The
     // self-heal above already tried reconciling the pool, so reaching here
     // means there was nothing to swap in: the account owns no usable number,
     // or every owned number is at its daily cap.
     if (isUnverifiedOriginationError(leadData.errors)) {
+      noteDialOutage(
+        `Telnyx refused ${p.fromNumber} as a caller ID (D51) and the pool had no replacement.`,
+        { source: p.source, userId: p.userId }
+      )
       return {
         success: false,
         error: 'Caller ID is not a Telnyx number',
