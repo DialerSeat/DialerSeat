@@ -8,9 +8,71 @@ about 40% of what you pay for an answered call is a minimum you never used.**
 
 ---
 
-## 1. Ask Telnyx these three questions first
+## 0. The road to $3 a day
 
-No engineering. Between them they are worth more than everything shipped so far.
+The target is **$3 per agent per day**. Here is the arithmetic, measured rather
+than modelled, and it ends somewhere specific.
+
+### Where it stands
+
+The cleanest window we have — the hour after the teardown fix, two agents, both
+at ~100% utilisation, which makes it a *worst* case for cost per hour:
+
+| | |
+|---|---|
+| seat time | **1.96 agent-hours** (0.999 + 0.963) |
+| dials | 148 (113 + 35) |
+| answered | 109 |
+| carrier spend | $1.8138 captured **+ $0.218 AMD** = **$2.03** |
+| **cost per agent-hour** | **$1.04** |
+| **projected 6-hour day** | **$6.22** |
+
+Composition of that $2.03:
+
+| | | share |
+|---|---|---|
+| lead legs (real PSTN) | $1.315 | **64.7%** |
+| agent legs (both connections, §1g) | $0.447 | **22.0%** |
+| AMD (invisible to the webhook, §1d) | $0.218 | **10.7%** |
+| everything else | $0.052 | 2.6% |
+
+### What closes the gap
+
+Compounded in order, not summed — they overlap, and summing them is how you talk
+yourself into a number you cannot hit:
+
+| step | lever | day |
+|---|---|---|
+| — | today | **$6.22** |
+| 1 | defer the agent leg (`dial_agent_on_answer`, **built, OFF**) | $5.53 |
+| 2 | destination rate guard (**shipped**) | $5.37 |
+| 3 | **60-second minimum reduced** — Telnyx Q1/Q2 | $3.86 |
+| 4 | **agent legs rated on-net** — Telnyx Q3 | **$3.51** |
+
+### The honest conclusion
+
+**Engineering alone gets to $5.37. The letter gets to $3.51.**
+
+Steps 1 and 2 are ours and they are worth $0.85 a day. Steps 3 and 4 are
+Telnyx's to grant and they are worth $1.86 — **more than twice as much.** That
+is the whole result of the night in one line: *the remaining money is not in the
+code, it is in four questions.* Send `docs/telnyx-questions.md`.
+
+And at $3.51, AMD is suddenly **19%** of what is left — the third-largest line,
+still invisible to every webhook we capture. It is next, and it is not reachable
+until Ledger → CAPTURE NOW has run (§1d).
+
+> **$3.51 is the floor this architecture reaches.** Going under it means paying
+> for fewer answered minutes, not cheaper ones — which is list quality, time of
+> day (§4) and number burn (§1f), not carrier engineering. Those are also the
+> only levers that make the day *more* valuable rather than just cheaper.
+
+---
+
+## 1. Ask Telnyx these four questions first
+
+No engineering. Between them they are worth **more than twice** everything
+shipped so far — see §0 for the arithmetic.
 
 ### 1a. The 60-second minimum — worth ~20% of the bill
 
