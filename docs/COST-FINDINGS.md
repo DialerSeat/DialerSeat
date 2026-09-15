@@ -1143,6 +1143,83 @@ worth dropping an index on a live dialer at the end of a long night.
 
 ---
 
+## 1w. THE OTHER VENDORS — Stripe and the database
+
+A night on Telnyx, and the bill has other names on it.
+
+### Weekly seat billing costs $1,200/year at 100 seats, in fixed fees alone
+
+Stripe is **2.9% + $0.30** per charge, plus **0.7%** for the Billing layer on
+subscriptions. The percentages do not care how often you bill. **The 30¢ does.**
+
+| per seat, per year, on $35/week | |
+|---|---|
+| billed **weekly** (52 charges) | **$81.12** — 4.46% of revenue |
+| billed **monthly** (12 charges) | **$69.12** — 3.80% of revenue |
+| **difference** | **$12.00/seat/year**, all of it the fixed 30¢ |
+
+| seats | extra per year |
+|---|---|
+| 10 | $120 |
+| 50 | $600 |
+| **100** | **$1,200** |
+
+**Weekly billing is a product decision, not a bug** — lower barrier, faster cash,
+easier to cancel — so this is a price tag, not a recommendation. But it had no
+price tag before. If a monthly option is ever offered, it is **0.66 points of
+revenue cheaper to serve** and could carry a discount and still win.
+
+Also worth knowing it exists: the **0.7% Stripe Billing layer** is $12.74 per
+seat per year and is easy to not realise you are paying.
+
+### `call_events` is 44% of the database, and 6.1 MB of it was a fossil — FIXED
+
+`sync_call_control_id`, a trigger on `calls` and on **every** `call_events`
+partition, mirrors `call_control_id` into `signalwire_call_id` on insert and
+update. It was the compatibility shim for the SignalWire → Telnyx move.
+
+So every event row stores the same 54-byte Telnyx id **twice**
+(`v3:fROSyDPZWURY5x-z3ifEcI5Y8rox…` in both columns), and `idx_call_events_sid`
+indexed the duplicate across 14 partitions.
+
+| | |
+|---|---|
+| cost | **6.1 MB of index**, maintained on ~2,500 inserts a day |
+| benefit | **3 index scans. Ever.** |
+| readers in the codebase | **none** — repo-wide grep over `.ts`/`.tsx` is empty |
+
+**Dropped.** `call_events` went **38 MB → 33 MB**.
+
+> The equivalent indexes on `calls` were **deliberately left**: they show 12,241
+> scans, because `idx_calls_answered_at` is a *partial* index
+> (`WHERE answered_at IS NOT NULL`) the planner uses to find answered calls
+> regardless of which column it is on. Dropping those would be a real
+> regression. The trigger and the column itself are defensible follow-ups — one
+> writes NULLs, the other rewrites a 38 MB table — and neither is something to
+> do to a live dialer at the end of a long night.
+
+### 465 rows a day of our own compliance hold — FIXED
+
+`call.hold` and `call.unhold` were landing in the `unhandled` bucket. They are
+**our own 9-second AMD hold echoed back**: when AMD says `machine`, the agent's
+leg is released and `park_after_unbridge: 'self'` parks the lead leg. 412 hold
+periods in eight days, averaging 8.4 seconds, 276 on machine verdicts (§1s).
+
+Now handled and not stored. **Silencing a known event is not the blindness that
+made `detect_beep` undiagnosable** — that was *unknown* events vanishing, and
+anything still unrecognised lands in `unhandled` exactly as before.
+
+With `call.bridged` also now handled (§1m), `unhandled` drops from **20.5% of
+the table** by roughly three quarters.
+
+### While in there: `call.cost` used to be unhandled too
+
+7,061 rows of it, **stopping 14 September** — the day it got a handler. That is
+why `telnyx_ledger_records` only holds two days of cost data, and it is a second
+reason Ledger → CAPTURE NOW matters (§1d).
+
+---
+
 ## 1f. NUMBER BURN — CHECKED AND NOT SUPPORTED
 
 **This section previously claimed the opposite. It was wrong and it is worth

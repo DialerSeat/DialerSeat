@@ -230,6 +230,26 @@ export async function POST(req: Request) {
         )
         break
 
+      // ── KNOWN, UNDERSTOOD, AND DELIBERATELY NOT STORED ─────────────────
+      // These are OUR OWN compliance hold, echoed back at us. When AMD returns
+      // `machine` the agent's leg is released and `park_after_unbridge: 'self'`
+      // parks the lead leg for amd_hold_seconds_after_machine; Telnyx reports
+      // that as call.hold, then call.unhold when it ends.
+      //
+      // Measured before silencing them: 412 hold periods in eight days,
+      // averaging 8.4 seconds, 276 of them on machine verdicts — which is the
+      // 9-second hold, working exactly as designed. See COST-FINDINGS §1s.
+      //
+      // 465 rows a day between them, in a table that is already 44% of the
+      // database. The `default` branch below exists to catch events nobody has
+      // looked at yet; these have been looked at. Silencing a KNOWN event is
+      // not the same as the blindness that made detect_beep undiagnosable —
+      // that was unknown events vanishing. Anything still unrecognised keeps
+      // landing in `unhandled` exactly as before.
+      case 'call.hold':
+      case 'call.unhold':
+        break
+
       default:
         // ── RECORDED, NOT DISCARDED ──────────────────────────────────────
         // These used to vanish silently, and that blindness is exactly why
