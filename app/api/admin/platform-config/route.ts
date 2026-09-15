@@ -8,6 +8,7 @@ import {
   PLATFORM_CONFIG_DEFAULTS,
   type PlatformConfig,
 } from '@/lib/platformConfig'
+import { MAX_DIALS_PER_NUMBER } from '@/lib/recentDialSuppression'
 
 export const dynamic = 'force-dynamic'
 
@@ -129,6 +130,11 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   // How many observations before an exchange is trusted enough to refuse on.
   // Minimum 1; a guard that fires on zero samples would be firing on nothing.
   max_rate_min_samples: v => intInRange(v, 1, 50),
+
+  // Consecutive machines before a number is retired. Ceiling is the attempt
+  // cap itself -- a limit above it could never be reached and would read as
+  // enabled while doing nothing. 0 disables, which is why the floor is 0.
+  voicemail_streak_limit: v => intInRange(v, 0, MAX_DIALS_PER_NUMBER),
 }
 
 function intInRange(v: unknown, min: number, max: number): number | null {

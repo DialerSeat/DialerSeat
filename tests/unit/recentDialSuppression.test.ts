@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   dialKey, attemptsByNumber, isExhausted, markDead, deadKeysFrom,
+  voicemailStreakKeys,
   MAX_DIALS_PER_NUMBER, ATTEMPT_WINDOW_DAYS,
 } from '@/lib/recentDialSuppression'
 
@@ -242,5 +243,120 @@ describe('dials our own plumbing killed', () => {
       hangup_cause: i % 2 === 0 ? 'normal_clearing' : null,
     }))
     expect(attemptsByNumber(outage).size).toBe(0)
+  })
+})
+
+// =============================================================================
+// VOICEMAIL STREAKS
+// =============================================================================
+// Every answered call bills a 60-second minimum on both halves plus AMD,
+// whoever picks up, and 54% of everything that answers is a machine. A number
+// that only ever reaches an answerphone is pure cost, and the floor cannot be
+// avoided once the line is answered -- only by not dialing again.
+//
+// The THRESHOLD is deliberately not asserted here, because it is configuration
+// and the data behind it is thin (205/82/54 observations, plateauing near 70%
+// with a band of roughly +/-12%). What is asserted is the mechanism: that a
+// streak is read newest-first, that a human breaks it, and that unanswered
+// dials are invisible to it. Those properties must hold at any threshold.
+// =============================================================================
+
+const at = (iso: string) => ({ created_at: iso, answered_at: iso })
+
+describe('voicemailStreakKeys', () => {
+  const machine = (phone: string, iso: string) => ({
+    phone_number: phone, ...at(iso), amd_result: 'machine', disposition: 'VOICEMAIL',
+  })
+  const human = (phone: string, iso: string) => ({
+    phone_number: phone, ...at(iso), amd_result: 'human', disposition: 'SKIPPED',
+  })
+  const rang_out = (phone: string, iso: string) => ({
+    phone_number: phone, created_at: iso, answered_at: null,
+    amd_result: null, disposition: 'NO_ANSWER',
+  })
+
+  it('retires a number whose last three answered dials were all machines', () => {
+    const rows = [
+      machine('+15551230001', '2026-09-10T15:00:00Z'),
+      machine('+15551230001', '2026-09-11T15:00:00Z'),
+      machine('+15551230001', '2026-09-12T15:00:00Z'),
+    ]
+    expect(voicemailStreakKeys(rows, 3)).toEqual(['5551230001'])
+  })
+
+  it('does not retire below the limit', () => {
+    const rows = [
+      machine('+15551230002', '2026-09-11T15:00:00Z'),
+      machine('+15551230002', '2026-09-12T15:00:00Z'),
+    ]
+    expect(voicemailStreakKeys(rows, 3)).toEqual([])
+  })
+
+  it('A HUMAN BREAKS THE STREAK, even with machines on either side', () => {
+    // The whole point: this number has proved it can reach a person. Retiring
+    // it would be discarding a live lead to save a fraction of a cent.
+    const rows = [
+      machine('+15551230003', '2026-09-09T15:00:00Z'),
+      machine('+15551230003', '2026-09-10T15:00:00Z'),
+      human(  '+15551230003', '2026-09-11T15:00:00Z'),
+      machine('+15551230003', '2026-09-12T15:00:00Z'),
+    ]
+    expect(voicemailStreakKeys(rows, 3)).toEqual([])
+  })
+
+  it('reads newest-first regardless of the order rows arrive in', () => {
+    // A streak read backwards is not a streak. Shuffled input, human most
+    // recent: must NOT retire.
+    const rows = [
+      machine('+15551230004', '2026-09-10T15:00:00Z'),
+      human(  '+15551230004', '2026-09-13T15:00:00Z'),
+      machine('+15551230004', '2026-09-11T15:00:00Z'),
+      machine('+15551230004', '2026-09-12T15:00:00Z'),
+    ]
+    expect(voicemailStreakKeys(rows, 3)).toEqual([])
+  })
+
+  it('ignores unanswered dials entirely', () => {
+    // A ring-out is not evidence either way. If it broke a streak, a number
+    // alternating ring-out and voicemail would never accumulate one.
+    const rows = [
+      machine( '+15551230005', '2026-09-09T15:00:00Z'),
+      rang_out('+15551230005', '2026-09-10T15:00:00Z'),
+      machine( '+15551230005', '2026-09-11T15:00:00Z'),
+      rang_out('+15551230005', '2026-09-12T15:00:00Z'),
+      machine( '+15551230005', '2026-09-13T15:00:00Z'),
+    ]
+    expect(voicemailStreakKeys(rows, 3)).toEqual(['5551230005'])
+  })
+
+  it('accepts a VOICEMAIL disposition without an AMD verdict', () => {
+    // 31.5% of answered calls carry no verdict -- the agent skipped before
+    // detection reported. The disposition still says what happened.
+    const rows = Array.from({ length: 3 }, (_, i) => ({
+      phone_number: '+15551230006',
+      ...at(`2026-09-1${i + 1}T15:00:00Z`),
+      amd_result: null, disposition: 'VOICEMAIL',
+    }))
+    expect(voicemailStreakKeys(rows, 3)).toEqual(['5551230006'])
+  })
+
+  it('IS DISABLED BY A LIMIT OF ZERO OR LESS', () => {
+    const rows = Array.from({ length: 9 }, (_, i) =>
+      machine('+15551230007', `2026-09-0${i + 1}T15:00:00Z`))
+    expect(voicemailStreakKeys(rows, 0)).toEqual([])
+    expect(voicemailStreakKeys(rows, -1)).toEqual([])
+    expect(voicemailStreakKeys(rows, NaN)).toEqual([])
+  })
+
+  it('never retires a number it cannot key', () => {
+    const rows = Array.from({ length: 4 }, (_, i) =>
+      machine('abc', `2026-09-1${i}T15:00:00Z`))
+    expect(voicemailStreakKeys(rows, 3)).toEqual([])
+  })
+
+  it('folds into the attempt budget through markDead', () => {
+    const attempts = attemptsByNumber([])
+    markDead(attempts, ['5551230008'])
+    expect(isExhausted({ phone: '+15551230008' }, attempts)).toBe(true)
   })
 })

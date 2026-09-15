@@ -151,6 +151,90 @@ export function markDead(
   return attempts
 }
 
+// ── A NUMBER THAT ONLY EVER ANSWERS AS A MACHINE ─────────────────────────
+// Every answered call bills a 60-second minimum on BOTH halves plus AMD,
+// whether a person picks up or an answerphone does. 54% of everything that
+// answers here is a machine, so roughly a quarter of all carrier spend buys
+// voicemail greetings. The floor fires at the instant of answer and nothing
+// afterwards reduces it — not the AMD verdict at 3.3 seconds, not the
+// compliance hold dropping the call at 9. The only prevention is not dialing
+// the number again.
+//
+// WHAT THE EARLY DATA SAYS, AND WHY THE THRESHOLD IS NOT HARDCODED. Measured
+// to 15 Sept, the chance the next answered dial is also a machine ran 65.9%
+// after one, 70.7% after two, 70.4% after three — it plateaus rather than
+// climbing toward certainty. Those samples are 205, 82 and 54, which puts a
+// band of roughly ±12% on the last one, from well under a day of real dialing.
+// That is enough to justify the mechanism and nowhere near enough to fix its
+// threshold, so the limit lives in platform_config and is tuned from volume.
+//
+// COUNTED FROM THE MOST RECENT ANSWERED DIAL BACKWARDS, and broken by any
+// answered dial that reached a person. A number that reached a human three
+// months ago and machines since is still a number that reaches machines; one
+// that reached machines and then a human has proved it can.
+//
+// Unanswered dials are invisible here. They are not evidence either way — the
+// phone simply rang out — and letting them break a streak would mean a number
+// that alternates ring-out and voicemail never accumulates one.
+
+/** A dial the streak logic can read. Ordered newest-first by the caller. */
+export interface AnsweredOutcomeRow {
+  phone_number: string | null
+  created_at?: string | null
+  answered_at?: string | null
+  amd_result?: string | null
+  disposition?: string | null
+}
+
+/** Did this dial reach an answerphone rather than a person? */
+function reachedMachine(r: AnsweredOutcomeRow): boolean {
+  return r.amd_result === 'machine' || r.disposition === 'VOICEMAIL'
+}
+
+/**
+ * Numbers whose most recent `limit` answered dials were ALL machines.
+ *
+ * Rows may arrive in any order; they are sorted here rather than trusting the
+ * caller, because a streak read backwards is not a streak.
+ *
+ * A limit of 0 or less disables the rule and returns nothing — the switch has
+ * to be expressible, and it is the first thing to reach for if this ever
+ * starts retiring numbers that were converting.
+ */
+export function voicemailStreakKeys(
+  rows: AnsweredOutcomeRow[],
+  limit: number
+): string[] {
+  if (!Number.isFinite(limit) || limit <= 0) return []
+
+  // Answered dials only, newest first, grouped by number.
+  const byKey = new Map<string, AnsweredOutcomeRow[]>()
+  for (const r of rows) {
+    if (!r.answered_at) continue
+    const k = dialKey(r.phone_number)
+    if (!k) continue
+    const list = byKey.get(k)
+    if (list) list.push(r)
+    else byKey.set(k, [r])
+  }
+
+  const out: string[] = []
+  for (const [k, list] of byKey) {
+    if (list.length < limit) continue
+    list.sort((a, b) =>
+      Date.parse(b.created_at ?? '') - Date.parse(a.created_at ?? ''))
+
+    let streak = 0
+    for (const r of list) {
+      if (!reachedMachine(r)) break
+      streak++
+      if (streak >= limit) break
+    }
+    if (streak >= limit) out.push(k)
+  }
+  return out
+}
+
 /** Keys for numbers the carrier says do not exist. */
 export function deadKeysFrom(rows: Array<{ phone_number: string | null }>): string[] {
   const out: string[] = []

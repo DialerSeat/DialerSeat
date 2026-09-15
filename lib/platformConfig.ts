@@ -106,6 +106,20 @@ export interface PlatformConfig {
   /** Times an exchange must be seen at a high rate before it is refused. */
   max_rate_min_samples: number
   /**
+   * Consecutive machine-answered dials after which a number is retired.
+   *
+   * Every answered call bills a 60-second minimum on both halves plus AMD,
+   * whoever picks up. 54% of everything that answers here is a machine, so
+   * about a quarter of carrier spend buys voicemail greetings, and the floor
+   * fires at answer — nothing afterwards reduces it.
+   *
+   * The threshold is configuration rather than a constant on purpose. Early
+   * data (205/82/54 samples) puts the chance of another machine at 66%, 71%,
+   * 70% — it plateaus, and a ±12% band on the last figure is far too loose to
+   * hardcode. Tune from real volume. 0 disables.
+   */
+  voicemail_streak_limit: number
+  /**
    * Seconds the LEAD's leg stays up after a call would otherwise end early —
    * an AMD machine verdict, or an agent skipping under the threshold — once
    * the agent has already advanced to the next lead.
@@ -185,6 +199,9 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   // so a settings outage should not hand back the $0.07 exchanges.
   max_destination_rate: 0.01,
   max_rate_min_samples: 2,
+  // One below the 6-dial attempt cap: an always-machine number gives up two
+  // dials early while still getting a fourth chance. Set 3 for more, 0 for off.
+  voicemail_streak_limit: 4,
   // ── FAILS TOWARD COMPLIANCE, NOT AWAY FROM IT ────────────────────────────
   // This was 0, on the reasoning that a fallback which silently held live calls
   // open would be the worst possible default. That reasoning was backwards for
@@ -253,7 +270,7 @@ const CONFIG_COLUMNS =
   'amd_in_preview, amd_hangup_when_bridged, amd_max_seconds_after_answer, ' +
   'amd_greeting_duration_ms, amd_max_words, amd_initial_silence_ms, ' +
   'amd_hold_seconds_after_machine, dial_agent_on_answer, connecting_message, ' +
-  'max_destination_rate, max_rate_min_samples'
+  'max_destination_rate, max_rate_min_samples, voicemail_streak_limit'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few

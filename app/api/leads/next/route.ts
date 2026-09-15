@@ -3,8 +3,10 @@ import { NextResponse } from 'next/server'
 import { isCallableNow } from '@/lib/callingWindow'
 import {
   ATTEMPT_WINDOW_DAYS, attemptsByNumber, isExhausted, markDead, deadKeysFrom,
-  type DialedRow,
+  voicemailStreakKeys,
+  type DialedRow, type AnsweredOutcomeRow,
 } from '@/lib/recentDialSuppression'
+import { getPlatformConfig } from '@/lib/platformConfig'
 import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
@@ -425,7 +427,10 @@ async function loadAttemptCounts(campaignIds: string[]): Promise<Map<string, num
     .from('calls')
     // disposition and hangup_cause are needed to tell a dial the prospect
     // rejected from one our own SIP registration killed.
-    .select('phone_number, answered_at, duration, disposition, hangup_cause')
+    // created_at and amd_result are here for the voicemail-streak rule below:
+    // a streak has to be read in time order, and the verdict is what says a
+    // machine answered rather than a person.
+    .select('phone_number, answered_at, duration, disposition, hangup_cause, created_at, amd_result')
     .in('campaign_id', campaignIds)
     .gte('created_at', since)
     .limit(50000)
@@ -436,6 +441,46 @@ async function loadAttemptCounts(campaignIds: string[]): Promise<Map<string, num
     return new Map()
   }
   const attempts = attemptsByNumber((data || []) as DialedRow[])
+
+  // ── NUMBERS THAT ONLY EVER REACH AN ANSWERPHONE ────────────────────────
+  // Every answered call bills a 60-second minimum on both halves plus AMD,
+  // whoever picks up, and 54% of everything that answers here is a machine.
+  // The floor fires at the instant of answer — the AMD verdict at 3.3s and the
+  // compliance hold dropping the call at 9s change nothing about the bill. The
+  // only prevention is not dialing the number again.
+  //
+  // Folded into the attempt budget rather than added as a second gate, so the
+  // call site keeps asking one question. Same reasoning as markDead above.
+  //
+  // Scoped to these campaigns and this window, unlike the dead-number lookup
+  // which is deliberately global. A disconnected number is disconnected
+  // everywhere; a number that reaches an answerphone during one campaign's
+  // calling hours may well reach a person during another's. Being wrong here
+  // costs a lead, so it stays conservative.
+  //
+  // Threshold is configuration, not a constant: the early sample (205/82/54
+  // observations) puts the chance of another machine at 66%, 71%, 70% — it
+  // plateaus, and a band that wide cannot fix a threshold. 0 disables.
+  try {
+    const { voicemail_streak_limit: streakLimit } = await getPlatformConfig()
+    if (streakLimit > 0) {
+      const streakKeys = voicemailStreakKeys(
+        (data || []) as AnsweredOutcomeRow[],
+        streakLimit
+      )
+      if (streakKeys.length > 0) {
+        console.log(
+          `[leads/next] ${streakKeys.length} number(s) retired on a ` +
+          `${streakLimit}-deep voicemail streak`
+        )
+        markDead(attempts, streakKeys)
+      }
+    }
+  } catch (err) {
+    // Never block dialing on this. An unreadable config or a bad row means the
+    // budget simply is not tightened this request.
+    console.error('[leads/next] voicemail-streak check failed, dialing on', err)
+  }
 
   // ── AND THE ONES THAT DO NOT EXIST ─────────────────────────────────────
   // Deliberately NOT scoped to these campaigns or to the window above. A
