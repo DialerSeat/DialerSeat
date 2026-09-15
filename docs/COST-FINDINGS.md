@@ -1290,6 +1290,59 @@ not be compared against anything.
 
 ---
 
+## 1ab. PREDICTIVE, COSTED FROM THE LEDGER — 51% more per dial, for nothing
+
+§1y is the legal case. This is the money, from the same ledger window, same
+pool, same days.
+
+| | dials | answered | human | **conversations** | billed | **cost/dial** |
+|---|---|---|---|---|---|---|
+| `user_dial` | 246 | 165 — **67%** | 27 | **7** | $2.079 | **$0.00845** |
+| `controller_fanout` | 115 | 27 — **23%** | 6 | **0** | $1.470 | **$0.01278** |
+
+**Predictive costs 51% more per dial, answers at a third of the rate, and
+produced zero conversations for $1.47 in this window.**
+
+Across its whole history it is 596 legs → **3 conversations**. Progressive does
+better than that in a single day.
+
+### Why the per-dial cost is higher — it is the agent side
+
+| source | share of spend that is the AGENT side |
+|---|---|
+| `user_dial` | **16.0%** |
+| `controller_fanout` | **81.9%** |
+
+**Five times.** Fan-out places one agent leg **per line**, and each of those legs
+runs for the whole ring of every line — then gets billed twice (§1aa). A 3-line
+burst is 3 lead legs + 3 agent legs + 3 twins = **nine billing records to have
+one conversation.**
+
+And the 23% answer rate is not bad luck: it is the design. Surplus lines are
+cancelled before they can answer, which is the same mechanism that violates the
+TSR 15-second floor (§1y).
+
+### The conclusion
+
+Predictive as built:
+
+- costs **51% more per dial**
+- puts **82% of spend** on legs that never touch a carrier
+- has produced **3 conversations in 596 legs**
+- **cannot legally exceed one line** without a TSR-compliant no-agent message
+  that does not exist
+
+**At a ceiling of 1 it is progressive with extra steps** — which is exactly where
+it is set, and the honest description of it.
+
+> It is not broken and the audio is genuinely fine (136/137 bridged, 0.19s dead
+> air, 100% agent-answered). It is simply **not earning its complexity**, and
+> the thing that would make it earn it — lines above 1 — is the thing that is
+> unlawful without the recorded message. Build that message first, or leave this
+> at 1 and spend the effort on answer rate instead (§1f, §4).
+
+---
+
 ## 1y. PREDICTIVE: WHY IT IS CAPPED AT ONE LINE, AND WHAT THE REGULATION ACTUALLY SAYS
 
 **The binding constraint on predictive is not the carrier bill. It is 16 CFR
