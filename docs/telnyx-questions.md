@@ -19,12 +19,24 @@ record is 6 seconds. Can you confirm which increment applies to my account, so I
 can model costs accurately?
 
 **2. The minimum on answered outbound.** Separately from the increment, answered
-outbound legs appear to carry a 60-second minimum. Across 290 machine-answered
-calls averaging 26.2 seconds of actual duration, every one billed 60 seconds.
-Across all answered calls I show 32,100 billed seconds against 19,446 that the
-6-second increment alone would produce — 39.4% of billed time. Given that the
-6-second increment already applies, can the minimum on answered outbound be
-reduced to match it?
+outbound legs carry a 60-second minimum. Over the last 30 days, across 648
+answered legs:
+
+| answered by | legs | avg seconds **after answer** | your billed seconds |
+|---|---|---|---|
+| answering machine | 377 | **10.9** | **60.0** |
+| a person | 99 | 111.4 | 150.5 |
+
+**49,656 seconds billed against 21,048 that the 6-second increment alone would
+produce — 57.6% of billed time.**
+
+So I can be precise about the rule rather than guessing at it: modelling
+post-answer duration, rounded up to 6 seconds, floored at 60, reproduces your
+own `billed_duration_secs` **exactly on 184 of the 192 legs** where I hold both,
+with an average error of 1.8 seconds and 98.8% of total billed time.
+
+Given the 6-second increment already applies on this account, can the minimum on
+answered outbound be reduced to match it?
 
 **3. On-net legs billed on both connections.** My agent-side legs are SIP URI
 calls from my own Call Control application to my own credential connection —
@@ -67,10 +79,21 @@ rather than "you are wrong" because the discrepancy favours *us* — the account
 gets better terms than the documentation promises. Asking it first establishes
 that the numbers are real before the second question arrives.
 
-**The minimum is ~20% of the bill.** 211 minutes of the 535 billed on answered
-calls is minimum rather than conversation, and 51.6% of machine-answered billed
-seconds buy nothing. It is a reasonable ask precisely because the fine-grained
-increment already exists on the account.
+**The minimum is the single biggest line in the bill.** 476.8 minutes of the 827
+billed on answered calls is minimum rather than conversation — **57.6%**. A
+voicemail holds the line for 10.9 seconds and bills 60, so **78.3% of
+machine-answered billed seconds buy nothing.** It is a reasonable ask precisely
+because the fine-grained increment already exists on the account.
+
+**Lead with the model validation.** 184 of 192 legs predicted exactly is the
+sentence that makes this a reconciliation rather than a complaint — it says
+“I know what your rule is, I am asking you to change it” instead of “I think
+you are overcharging me.”
+
+> **An earlier draft of this letter said 26.2 seconds and 39.4%.** Those came
+> from a duration column that includes the ring, and billing starts at answer.
+> Do not send any version carrying those numbers: they are wrong, they
+> understate the case, and a figure they can disprove costs more than it buys.
 
 **The on-net question is the one they have already conceded.** Every other
 question asks them to change a rate. This one only asks why a leg they

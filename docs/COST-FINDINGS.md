@@ -88,16 +88,42 @@ multiples of 6 and *not* 60 — observed values include 6, 12, 18, 24, 30, 36, 4
 billing increments"* and *"we no longer offer 6 second billing increments."*
 
 But the **answered lead leg carries a 60-second minimum** on top of that
-increment:
+increment.
 
-| who answered | records | avg actual | avg billed | wasted on the minimum |
-|---|---|---|---|---|
-| **machine** | 290 | **26.2s** | **60.0s** | **51.6%** |
-| human | 87 | 110.7s | 145.5s | 22.2% |
-| no verdict | 30 | 37.1s | 68.0s | 42.4% |
+> **These figures were revised upward on 15 Sept.** The earlier version measured
+> `calls.duration`, which **includes the ring** — 10.5s of it on average.
+> Billing starts at answer, so ring seconds were never billable and counting
+> them inflated “actual duration” by about double. Everything below is
+> post-answer only, over 30 days.
 
-**32,100 seconds billed against 19,446 that 6-second increments alone would
-produce. 211 minutes — 39.4% — is minimum, not conversation.**
+| who answered | legs | avg **post-answer** | 6s increment alone | with the 60s minimum | wasted |
+|---|---|---|---|---|---|
+| **machine** | 377 | **10.9s** | 13.1s | **60.0s** | **78.3%** |
+| no verdict | 166 | 23.7s | 28.1s | 70.9s | 60.4% |
+| human | 99 | 111.4s | 114.8s | 150.5s | 23.7% |
+| not_sure | 6 | 12.8s | 16.0s | 60.0s | 73.3% |
+
+**648 answered legs. 49,656 seconds billed against 21,048 that the 6-second
+increment alone would produce. 476.8 minutes — 57.6% — is minimum, not
+conversation.** The old figure was 39.4%; it was understated because the ring
+was counted as talk.
+
+**A voicemail occupies the line for 10.9 seconds and bills 60.**
+
+### The model reproduces their billing exactly, which is what makes it an ask
+
+Post-answer duration → 6-second increments → 60-second floor, run against
+Telnyx's own `billed_duration_secs` on every leg where both exist:
+
+| | |
+|---|---|
+| legs matched | 192 |
+| **exact matches** | **184 (95.8%)** |
+| average absolute error | **1.8 seconds** |
+| total predicted vs billed | 14,766s vs 14,940s — **98.8%** |
+
+There is no dispute available about what the rule is. The only question is
+whether the floor can come down to meet the increment.
 
 The ask: *the 6-second increment already applies; can the minimum on answered
 outbound be reduced to match it?* Two facts they hold, no accusation.

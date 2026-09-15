@@ -187,20 +187,39 @@ So the 60 is **a minimum on the answered lead leg**, not the increment — and i
 sits on top of an increment that is already fine-grained. That distinction is
 what turns it into an answerable question rather than a complaint:
 
-| who answered | records | avg actual | avg billed | wasted on the minimum |
-|---|---|---|---|---|
-| **machine** | 290 | **26.2s** | **60.0s** | **51.6%** |
-| human | 87 | 110.7s | 145.5s | 22.2% |
-| no verdict | 30 | 37.1s | 68.0s | 42.4% |
+> **`calls.duration` INCLUDES THE RING.** 10.5 seconds of it on average, 49.6%
+> of the column on a machine-answered call. **Billing starts at answer**, so
+> ring seconds are never billable and any “actual duration” taken from that
+> column is roughly double the truth. An earlier version of this table made
+> exactly that mistake. Post-answer seconds are
+> `duration - (answered_at - created_at)`.
 
-**32,100 seconds billed against 19,446 that the increment alone would produce.
-211 minutes — 39.4% — is minimum rather than conversation.** See
-`docs/COST-FINDINGS.md` for the exact wording of the ask.
+| who answered | legs | avg **post-answer** | 6s increment | with 60s floor | wasted |
+|---|---|---|---|---|---|
+| **machine** | 377 | **10.9s** | 13.1s | **60.0s** | **78.3%** |
+| no verdict | 166 | 23.7s | 28.1s | 70.9s | 60.4% |
+| human | 99 | 111.4s | 114.8s | 150.5s | 23.7% |
+| not_sure | 6 | 12.8s | 16.0s | 60.0s | 73.3% |
+
+**648 answered legs over 30 days. 49,656 seconds billed against 21,048 the
+increment alone would produce. 476.8 minutes — 57.6% — is minimum rather than
+conversation.** A voicemail holds the line for 10.9 seconds and bills 60.
+
+**The model is exact.** Post-answer → 6s increment → 60s floor, checked against
+Telnyx's own `billed_duration_secs`: **184 of 192 legs predicted exactly**,
+average absolute error 1.8 seconds, 98.8% of total billed seconds. `lib/
+telephonyCosts.ts` implements it; `tests/unit/telephonyCosts.test.ts` pins it.
+See `docs/telnyx-questions.md` for the exact wording of the ask.
 
 > If the minimum is ever reduced, **the 9-second compliance hold stops being
 > free** (§9). It costs nothing today because a voicemail bills 60 seconds
 > whatever happens; at a 6-second minimum it becomes real money and wants
 > re-tuning.
+
+> **The 9-second hold is working precisely, and this is the proof.** Machine
+> legs run 10.9 seconds after answer: ~2s for AMD to report and hang up, plus
+> the 9-second `amd_hold_seconds_after_machine`. The 10–45s spread in raw
+> `duration` is ring time, not drift. Nothing to tune.
 
 Two consequences that drive everything else:
 
