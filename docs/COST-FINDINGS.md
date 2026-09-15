@@ -602,6 +602,77 @@ missing, for any source. Additive only — it issues no commands.
 
 ---
 
+## 1n. THE DIALER RETRIES A BLOCKED ACCOUNT IN A HOT LOOP
+
+On 11 September the Telnyx account was **blocked** and the number pool was
+**empty**. Both conditions fail every dial for every agent. The dialer did not
+notice:
+
+| hour ET | rows written | actually placed | distinct leads | **attempts per lead** |
+|---|---|---|---|---|
+| 11:00 | 542 | 0 | — | — |
+| 12:00 | 1,776 | **0** | 210 | 8.5 |
+| **16:00** | **1,827** | **0** | **44** | **41.5** |
+| 17:00 | 64 | 0 | 21 | 3.0 |
+
+**4,341 attempts over ten hours. Not one reached Telnyx.** One lead was
+attempted 41 times in a single hour. Agents sat at their desks the whole time.
+
+The carrier's own diagnostics recorded exactly why, 555 times:
+
+- `"No phone numbers available in pool. Contact admin."` — 328
+- `"Account is disabled D17. The Account used to place the termination call is
+  blocked."` — 227
+
+Both are **platform-level**: they cannot be fixed by trying a different lead,
+which is precisely what the dialer did, 4,341 times.
+
+### The phantom rows this creates — and the correction to an earlier claim
+
+Each failed attempt is auto-dispositioned, and `/api/leads/dispose` has a
+fallback that inserts a `calls` row when no call row exists. So every failure
+writes a row with no `call_control_id`, no pool number, no cost.
+
+**An earlier note in this document implied ~66% of the calls table is phantom.
+That was one day dominating a month.** Day by day:
+
+| day | rows | real calls | **% phantom** |
+|---|---|---|---|
+| 09-08 | 279 | 271 | 2.9% |
+| 09-10 | 212 | 209 | 1.4% |
+| **09-11** | **4,368** | **27** | **99.4%** |
+| 09-12 | 870 | 857 | 1.5% |
+| 09-14 | 596 | 533 | 10.6% |
+
+Normally 1–3%. **Reporting is fine except on exactly the days you most need to
+understand.** Anything counting calls should filter `call_control_id is not
+null`; every figure in this document already does.
+
+### The fix, and why it is not shipped tonight
+
+There is no automatic breaker. `dialer_down_status` is a **manual maintenance
+banner**, admin-set, unrelated.
+
+The right shape is the one `lib/cpsGovernor.ts` already uses and
+`docs/CARRIER-ENGINEERING.md` §10 insists on: **delay, never refuse.** After N
+consecutive *platform-class* failures — 503 no-numbers, Telnyx account blocked —
+each subsequent attempt waits, growing to a ceiling, and the first success
+clears it. That turns 4,341 attempts into a slow poll without ever preventing a
+dial that could have worked, so it cannot cause an outage even if its detection
+is wrong.
+
+Per-lead refusals (calling window, destination rate, suppression) must **not**
+count toward it. They are correct outcomes for that lead and will not repeat on
+the next one.
+
+> **Not shipped tonight, deliberately.** This would be the third call-path
+> change in one session, its triggering condition (an unfunded account) is
+> resolved, and the standing instruction for tonight was *“don't break any
+> audio.”* The design above is complete and the failure signatures are known;
+> it wants a session where it is the only thing moving.
+
+---
+
 ## 1f. NUMBER BURN — CHECKED AND NOT SUPPORTED
 
 **This section previously claimed the opposite. It was wrong and it is worth
