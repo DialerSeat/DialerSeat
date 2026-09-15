@@ -204,6 +204,27 @@ export async function approvePendingMember(params: {
         if (isSeatBillingError(err) && err.code === 'requires_action') {
           actionUrl = err.actionUrl ?? null
         }
+        // ── AGENT-FUNDED IS NOT A BILLING PROBLEM ────────────────────
+        // createSeatSubscription refuses when the seat is funded by the agent
+        // rather than the owner — an agent-pays code, or their own live
+        // subscription. Nobody was meant to be billed, so approval must still
+        // succeed. Setting billingIssue here would return ok:false and block
+        // the owner from approving their own recruits on their own
+        // agent-pays code, which is the normal case for that code.
+        if (isSeatBillingError(err) && err.code === 'agent_funded') {
+          await supabaseAdmin
+            .from('team_seat_charges')
+            .update({
+              status: 'voided',
+              void_reason: 'Seat is agent-funded; the owner is not billed for it.',
+            })
+            .eq('id', pendingCharge.id)
+          await supabaseAdmin
+            .from('team_members')
+            .update({ billing_override: 'free' })
+            .eq('id', memberId)
+          console.log(`[approveTeamMember] seat ${memberId} is agent-funded; no owner charge raised.`)
+        } else {
         console.error(`[approveTeamMember] seat charge failed for member ${memberId}: ${reason}`)
         await supabaseAdmin
           .from('team_seat_charges')
@@ -214,6 +235,7 @@ export async function approvePendingMember(params: {
           })
           .eq('id', pendingCharge.id)
         billingIssue = reason
+        }
       }
     }
   }

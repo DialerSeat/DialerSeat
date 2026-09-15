@@ -1246,6 +1246,30 @@ function DialerPageInner() {
     try { localStorage.setItem(`${LS_ALL_ACTIVE_MODE}:${user.id}`, allActiveOverrideMode) } catch {}
   }, [allActiveOverrideMode, user])
 
+  // ── TEAM SCOPES HAVE TO REFRESH, NOT JUST LOAD ONCE ──────────────────
+  // This ran once, on [user, isActive], and neither of those changes when
+  // somebody's TEAM MEMBERSHIP changes. So an owner adding an agent to a team
+  // mid-shift was invisible to that agent until they happened to reload: the
+  // campaign dropdown kept whatever it held when the page first opened.
+  //
+  // 15 Sept: an owner removed an agent at 15:48 and re-added her at 15:49.
+  // Every server-side check was correct — membership active, campaign attached
+  // to the team with open access, a grant on her row, and the claim RPC handing
+  // back 25 leads — and she still could not find the campaign in the dropdown,
+  // because her page had been open since before any of it happened.
+  //
+  // Refetched on focus, which is exactly when this goes stale in practice: the
+  // agent is told "you're added now", tabs back, and expects it to be there.
+  // `refreshKey` also lets anything else in this page force a reload.
+  const [scopeRefreshKey, setScopeRefreshKey] = useState(0)
+
+  useEffect(() => {
+    if (!user || !isActive) return
+    const onFocus = () => setScopeRefreshKey(k => k + 1)
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [user, isActive])
+
   useEffect(() => {
     if (!user || !isActive) return
     let cancelled = false
@@ -1293,7 +1317,7 @@ function DialerPageInner() {
         if (!cancelled) setScopesLoaded(true)
       })
     return () => { cancelled = true }
-  }, [user, isActive])
+  }, [user, isActive, scopeRefreshKey])
 
   useEffect(() => {
     if (!user || !campaignsLoaded || !scopesLoaded || lsRestoredRef.current) return

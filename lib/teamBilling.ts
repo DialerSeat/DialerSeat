@@ -23,7 +23,7 @@ export interface CreateSeatParams {
 }
 
 export interface SeatBillingError {
-  code: 'no_customer' | 'no_card' | 'requires_action' | 'stripe_error' | 'unknown'
+  code: 'no_customer' | 'no_card' | 'requires_action' | 'stripe_error' | 'unknown' | 'agent_funded'
   message: string
   /** requires_action only: where the owner goes to authenticate the payment.
    *  Stripe's hosted invoice page handles the 3DS challenge itself, so this is
@@ -174,10 +174,87 @@ async function createSubscriptionOrExplainAction(
   }
 }
 
+/**
+ * Is this seat funded by the AGENT rather than the team owner?
+ *
+ * ── AN OWNER ON AN AGENT-PAYS CODE IS NEVER BILLED FOR AN AGENT ─────────
+ * `team_codes.payer = 'agent'` is the owner stating, at the moment they create
+ * the code, that recruits joining on it fund themselves. That is the entire
+ * purpose of an agent-pays recruiting code: build a roster without buying it.
+ *
+ * It has to be enforced HERE rather than at each call site. There are four
+ * places that open a seat subscription — redeem, approve, access/grant and the
+ * billing-enforcement retry — and one of them getting it wrong is a charge on
+ * somebody who explicitly said they would not be paying. lib/seatTakeover was
+ * that one: it read payer 'agent', the flag meaning "not your bill", and used
+ * it as the trigger to bill the owner. A fifth call site added later would
+ * have to rediscover the rule; this way it cannot.
+ *
+ * Precedence is the vocabulary documented at the top of lib/seatTakeover:
+ *
+ *   billing_override 'owner'  → chargeable. Somebody explicitly decided this
+ *                               seat is the owner's, which is what happens
+ *                               when an owner adds a member directly.
+ *   billing_override 'agent'  → the agent pays. NOT chargeable.
+ *   billing_override 'free'   → costs the owner nothing, either because the
+ *                               agent self-funds or another seat already
+ *                               covers them. NOT chargeable.
+ *   null                      → the join decides: an agent-pays code is not
+ *                               chargeable; an owner-pays code, or no code at
+ *                               all (added by hand), is.
+ *
+ * Fails CLOSED. If the membership cannot be read, nobody is charged — a seat
+ * that opens late is recoverable, a charge on the wrong person is not.
+ */
+async function seatIsAgentFunded(teamMemberId: string): Promise<boolean> {
+  const { data: member, error } = await supabaseAdmin
+    .from('team_members')
+    .select('billing_override, joined_via_code')
+    .eq('id', teamMemberId)
+    .maybeSingle()
+
+  if (error || !member) {
+    console.error(
+      `[teamBilling] could not read membership ${teamMemberId} to decide who pays; ` +
+      `refusing to charge the owner`, error
+    )
+    return true
+  }
+
+  if (member.billing_override === 'owner') return false
+  if (member.billing_override === 'agent') return true
+  if (member.billing_override === 'free') return true
+
+  if (!member.joined_via_code) return false
+
+  const { data: code } = await supabaseAdmin
+    .from('team_codes')
+    .select('payer')
+    .eq('code', member.joined_via_code)
+    .maybeSingle()
+
+  return code?.payer === 'agent'
+}
+
 export async function createSeatSubscription(
   params: CreateSeatParams
 ): Promise<SeatBillingSuccess> {
   const description = `Seat: ${params.agentEmail} on ${params.teamName}`
+
+  // Before anything touches Stripe. See seatIsAgentFunded: an owner who issued
+  // an agent-pays code has already said they are not paying for these seats,
+  // and no path through this function may overrule that.
+  if (await seatIsAgentFunded(params.teamMemberId)) {
+    const seatErr: SeatBillingError = {
+      code: 'agent_funded',
+      message:
+        'This seat is funded by the agent, not the team owner — either by their ' +
+        'own subscription or by the agent-pays code they joined with. The owner ' +
+        'is not billed for it. Nothing was charged.',
+      actionUrl: null,
+    }
+    throw seatErr
+  }
 
   // ── THE VOLUME DISCOUNT, ON THE ACTUAL CHARGE ─────────────────────────
   // Computed from the same rule the Teams page prints, so what an owner is

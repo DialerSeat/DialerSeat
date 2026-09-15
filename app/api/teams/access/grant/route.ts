@@ -216,6 +216,27 @@ export async function POST(req: Request) {
       })
     } catch (stripeErr: any) {
 
+      // ── AGENT-FUNDED: KEEP THE GRANT, DROP THE CHARGE ────────────────
+      // createSeatSubscription refuses when the seat is the agent's own to
+      // fund. That is not a failure to roll back: the access is legitimate and
+      // it simply costs the owner nothing. Deleting `granted` here would take
+      // campaign access away from every agent on an agent-pays code.
+      if (isSeatBillingError(stripeErr) && stripeErr.code === 'agent_funded') {
+        await supabaseAdmin
+          .from('team_seat_charges')
+          .update({
+            status: 'voided',
+            void_reason: 'Seat is agent-funded; the owner is not billed for it.',
+          })
+          .eq('id', seatCharge.id)
+        return NextResponse.json({
+          success: true,
+          access: granted,
+          stripeChargeCreated: false,
+          agentFunded: true,
+        })
+      }
+
       await supabaseAdmin.from('team_seat_charges').delete().eq('id', seatCharge.id)
       await supabaseAdmin.from('team_campaign_access').delete().eq('id', granted.id)
 

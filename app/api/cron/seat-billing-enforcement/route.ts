@@ -478,6 +478,29 @@ async function retryFailedSeatCharges(
       summary.recovered++
     } catch (err: any) {
       const reason = isSeatBillingError(err) ? err.code : (err?.message || 'unknown')
+
+      // Agent-funded is not a card that keeps declining, it is a seat the
+      // owner was never meant to be billed for. Void the debt and lift the
+      // suspension it caused, rather than retrying it daily forever and
+      // leaving the agent locked out over a charge that should not exist.
+      if (isSeatBillingError(err) && err.code === 'agent_funded') {
+        await supabase
+          .from('team_seat_charges')
+          .update({
+            status: 'voided',
+            void_reason: 'Seat is agent-funded; the owner is not billed for it.',
+            enforced_at: new Date().toISOString(),
+          })
+          .eq('id', c.id)
+        await supabase
+          .from('team_members')
+          .update({ seat_suspended_at: null, seat_suspend_reason: null })
+          .eq('id', c.team_member_id)
+          .eq('seat_suspend_reason', 'unpaid')
+        console.log(`[seat-enforcement] charge ${c.id} voided: seat is agent-funded.`)
+        continue
+      }
+
       console.log(`[seat-enforcement] retry still failing for charge ${c.id}: ${reason}`)
       summary.stillFailing++
     }

@@ -365,10 +365,29 @@ export async function POST(req: Request) {
         } catch (err: any) {
 
           const reason = isSeatBillingError(err) ? `${err.code}: ${err.message}` : (err?.message || 'unknown')
+
+          // ── NOT EVERY THROW IS A PAYMENT FAILURE ─────────────────────
+          // createSeatSubscription refuses outright when the seat is funded by
+          // the AGENT — an agent-pays code, or their own subscription. Nobody
+          // was supposed to be billed, so there is nothing here to demote
+          // anybody over. Treating it as a decline would demote every
+          // instant-join recruit on an agent-pays code to 'pending' and leave
+          // a charge row reading as though the owner's card was declined.
+          if (isSeatBillingError(err) && err.code === 'agent_funded') {
+            await supabaseAdmin
+              .from('team_seat_charges')
+              .update({
+                status: 'voided',
+                void_reason: 'Seat is agent-funded; the owner is not billed for it.',
+              })
+              .eq('id', chargeRow.id)
+            console.log(`[redeem] seat ${memberRow.id} is agent-funded; no owner charge raised.`)
+          } else {
+
           console.error(`[redeem] single-use seat charge failed for member ${memberRow.id}: ${reason}`)
           await supabaseAdmin
             .from('team_seat_charges')
-            .update({ status: 'failed' })
+            .update({ status: 'failed', failure_reason: reason, last_attempt_at: new Date().toISOString() })
             .eq('id', chargeRow.id)
 
           // ── AN INSTANT SEAT IS STILL A PAID SEAT ────────────────────────
@@ -387,6 +406,7 @@ export async function POST(req: Request) {
 
           memberRow = { ...memberRow, status: 'pending' } as typeof memberRow
           seatChargeFailedLocal = reason
+          }
         }
       } else if (memberRow.status === 'pending') {
 
