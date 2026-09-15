@@ -345,57 +345,73 @@ is the only way any of the above gets measured rather than inferred.
 
 ---
 
-## 1i. SEPTEMBER IS OVER BOTH SURCHARGE THRESHOLDS — and the fix is to dial MORE
+## 1i. ABANDONED CALLS — over the threshold, and the cause is our own bug
 
-Two surcharges nobody had measured. Both are assessed as a **percentage of
-connected calls across the month**, and September month-to-date breaches both:
+**Both figures in the first version of this section were wrong**, because both
+denominators were. Telnyx's actual definitions, from their own pages:
 
-| window | connected | ≤6s **(limit 15%)** | never bridged **(limit 20%)** |
+- **Short duration**: a call of **6 seconds or less**. Surcharge $0.01/call once
+  short calls are **15% or more of OUTBOUND TRAFFIC** — not of connected calls.
+- **Abandoned**: *“dropped by the originating side before being answered”*,
+  during ringing or setup. Surcharge $0.005 once **more than 20% of outbound
+  calls**, and *“the surcharge will apply to all the abandoned calls and not
+  just those that exceeded the threshold.”* Live since 1 Nov 2025.
+
+The earlier version measured short calls against *connected* calls, and used
+“answered but never bridged” for abandonment — which is a different thing
+entirely from a call dropped before answer.
+
+### Where we actually are
+
+Counting only calls Telnyx saw (`call_control_id` present), September:
+
+| | measured | limit | |
 |---|---|---|---|
-| **September month-to-date** | 586 | **20.8%** ⚠ | **27.5%** ⚠ |
-| excluding 09-11 and 09-12 | 425 | 10.8% ✓ | 18.8% ✓ |
-| **the clean day, 09-14** | **275** | **6.9%** ✓ | **12.7%** ✓ |
+| short duration (≤6s) | **5.7%** | 15% | ✓ comfortable |
+| **abandoned** | **21.6%** | 20% | **✗ over** |
 
-**Two days cause the entire breach.** 11 and 12 September — the broken-bridge
-days, when the fan-out answered leads into silence. 09-11 ran 68.2% short;
-09-12 ran 43.9% short and 56.1% unbridged on 139 connected calls. Remove those
-two days and both metrics are compliant.
+Short duration was never a problem. Abandonment is, and on the *clean* day —
+14 September — it was **33.8%**, worse than the month.
 
-The cause is identified and **already fixed**. The clean day is less than half
-of either limit.
+### What it is made of, on the clean day (533 dials)
 
-### The counterintuitive part
+| | legs | avg life | share of dials |
+|---|---|---|---|
+| **`AGENT_LEG_FAILED`** | **98** | **2–4s** | **18.4%** |
+| fan-out cancellations | 78 | 17.0s | 14.6% |
 
-The metric is a **ratio over the whole month**, and the bad days are already in
-the numerator. They cannot be removed — but they can be **diluted**:
+**Our own bug is the larger half.** When an agent's browser SIP socket dies,
+Telnyx accepts the agent-leg dial and gives up ~1.2s later; the lead's leg dies
+with it. The lead gets a second of ringing. And nothing stopped the next dial —
+one agent made 41 such dials in an hour.
 
-| to clear | connected calls needed at 09-14 quality |
-|---|---|
-| the 15% short-duration limit | 420 |
-| the 20% abandonment limit | **603** |
+**Removing `AGENT_LEG_FAILED` takes the clean day from 33.8% to 15.4%, under the
+threshold.** That is the whole fix; the fan-out remainder is within limits.
 
-**603 more connected calls at the 14th's quality clears both.** At a 51.6%
-answer rate that is ~1,167 dials — **about 2.2 days at the 14th's pace.**
+### Shipped tonight
 
-> **Dialing more is the remedy, not the risk.** Stopping now locks September in
-> at 20.8% and 27.5%. Two normal days at current quality takes it under both.
-> This is the one place in this document where the cheap-looking option — dial
-> less — is the expensive one.
+`lib/agentSocketBreaker.ts` — after N consecutive agent-leg failures the agent
+is told to reload instead of dialing more leads. The default of 5 is argued
+from the real distribution rather than a probability:
+
+| run length | 1 | 2 | 3 | 4 | 5–11 | 12 | 28 |
+|---|---|---|---|---|---|---|---|
+| times seen in 30 days | 15 | 3 | 3 | 1 | **0** | 1 | 1 |
+
+**Runs are either ≤4 or ≥12, never between.** A limit of 5 sits in an empty gap:
+it would have fired twice in a month, both times on a genuinely dead socket, and
+never on noise. `agent_leg_failure_limit = 0` turns it off with no deploy.
 
 ### This is also the go/no-go gate for `dial_agent_on_answer`
 
-Deferring the agent leg means the lead is already answered when the agent's leg
-is placed. **Every failure path then hangs up a connected call within a second
-or two** — which is precisely a short-duration *and* an abandoned call. The
-flag is built and OFF (§3), and this is the number to watch when it goes on:
+Deferring the agent leg means the lead is **already answered** when the agent's
+leg is placed, so every agent-leg failure becomes a hangup on a live connected
+call — a short-duration call *and* an abandoned one, on a base that is already
+over the line.
 
-| | baseline (09-14) | limit | headroom |
-|---|---|---|---|
-| connected ≤6s | 6.9% | 15% | 8.1 points |
-| never bridged | 12.7% | 20% | 7.3 points |
-
-Turn it on, dial a session, re-run this table. If either figure moves more than
-~4 points, turn it back off — the surcharge is worth more than the saving.
+> **Do not enable `dial_agent_on_answer` until a session runs with the breaker
+> on and abandonment measured under 20%.** The saving is $0.68/agent/day. The
+> surcharge is $0.005 on *every* abandoned call, retroactive across the month.
 
 ---
 
@@ -541,18 +557,24 @@ exceptional and is *why* it cost what it did.
 | Voicemail-streak retirement | scales with volume | tunable, `voicemail_streak_limit` |
 | Team-wide attempt budget | latent | was per-list; 81.8% of leads are cross-list duplicates |
 | Pool rotation soft cap | deliverability | one number took 176 of 234 dials |
-| Deferred agent leg | −17% to −23% | **built, flag OFF** |
+| Deferred agent leg | −17% to −23% | **built, flag OFF — gated on §1i** |
+| **Agent socket breaker** | **abandonment 33.8% → 15.4%** | run lengths never fall between 4 and 12 |
 
 ### The flags
 
 ```sql
--- the deferred agent leg. Watch abandoned calls when you turn it on.
+-- the deferred agent leg. DO NOT turn this on until abandonment is under
+-- 20% with the socket breaker running -- see 1i. It is currently 21.6%.
 update platform_config set dial_agent_on_answer = true;
+
+-- the socket breaker's kill switch, if it ever stops a working agent.
+update platform_config set agent_leg_failure_limit = 0;
 
 -- everything tunable without a deploy
 select dial_agent_on_answer, connecting_message,
        max_destination_rate, max_rate_min_samples,
-       voicemail_streak_limit, amd_hold_seconds_after_machine
+       voicemail_streak_limit, amd_hold_seconds_after_machine,
+       agent_leg_failure_limit
 from platform_config;
 ```
 

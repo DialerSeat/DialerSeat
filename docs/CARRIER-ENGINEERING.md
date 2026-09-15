@@ -618,6 +618,63 @@ cap held only while somebody happened to be dialing every list at once.
 
 ---
 
+## 11e. The agent's socket dies, and the dialer keeps going
+
+The agent leg is a SIP URI to the browser's registration (§5). When that socket
+dies, Telnyx **accepts** the dial — 200 OK, `call_control_id` returned — and
+only gives up ~1.2s later when the browser never answers. The lead's leg dies
+~0.4s after that, having rung for about a second.
+
+`app/api/calls/events` already handles the aftermath correctly: it writes
+`AGENT_LEG_FAILED` and releases the lead **without spending a dial attempt**,
+because the lead was never really called. That is not the problem.
+
+**The problem is that nothing stopped the next dial.** 14 September, share of
+each agent's dials ending `AGENT_LEG_FAILED`, by hour:
+
+| hour | agent | dials | failed | |
+|---|---|---|---|---|
+| 22:00 | A | 112 | 3 | **2.7%** — healthy |
+| 17:00 | C | 120 | 25 | 20.8% |
+| 12:00 | B | 58 | 41 | **70.7%** — dead socket |
+| 20:00 | D | 13 | 10 | **76.9%** — dead socket |
+
+Bimodal. A session is healthy at ~3% or broken at 70%+, and a broken one stays
+broken until the agent reloads. Agent B rang 41 leads while believing they were
+working.
+
+### Why it is worth blocking rather than logging
+
+Telnyx surcharges accounts where **more than 20% of outbound calls are dropped
+by the originating side before being answered** — $0.005 on *every* abandoned
+call once over, not just the excess. `AGENT_LEG_FAILED` alone was **18.4% of all
+dials** on the 14th; removing it takes that day's abandonment from 33.8% to
+15.4%, under the line. See `docs/COST-FINDINGS.md` §1i.
+
+### The default is argued from the distribution, not from a probability
+
+`lib/agentSocketBreaker.ts` stops an agent after N consecutive failures and
+tells them to reload. Every run of consecutive `AGENT_LEG_FAILED` over 30 days:
+
+| run length | 1 | 2 | 3 | 4 | 5–11 | 12 | 28 |
+|---|---|---|---|---|---|---|---|
+| times seen | 15 | 3 | 3 | 1 | **0** | 1 | 1 |
+
+**Runs are either ≤4 or ≥12. Never between.** A limit of 5 sits in an empty
+gap — it would have fired twice in a month, both correctly, never on noise.
+The per-dial arithmetic (2.7% ⇒ 1 in 700 million) was never the argument, since
+failures cluster; the gap is.
+
+> **This is the only guard on the dial path that refuses.** §10 says such a
+> guard is one bad measurement from an outage, so: it refuses only dials that
+> cannot succeed; one good dial clears it; the window is ten minutes; a NULL
+> disposition ends the run because in-flight means the socket is alive; every
+> failure path — no config, no rows, a query error, a thrown exception —
+> permits the dial; and `agent_leg_failure_limit = 0` disables it without a
+> deploy. Pure logic lives in `lib/agentSocketHealth.ts` under 14 tests.
+
+---
+
 ## 12. Rules of thumb
 
 - **A dial is two legs; a connected call is four billed records.** Double any
