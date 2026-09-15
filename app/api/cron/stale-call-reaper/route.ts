@@ -15,14 +15,21 @@ const SESSION_DEAD_HEARTBEAT_MIN = 5  // heartbeat is ~5s; 5min silence = gone
 // and a wedged agent session blocks that agent from dialing until it's reaped.
 // Daily means someone can be stuck for up to 24 hours.
 //
-// It runs DAILY anyway because Vercel's Hobby plan rejects any sub-daily cron
-// at DEPLOY time — "Hobby accounts are limited to daily cron jobs" — which
-// fails the whole deployment, not just the cron. A */10 here once blocked a
-// release containing everything else.
+// It now DOES, at */10. The project moved to Vercel Pro on 14 Sept 2026, which
+// allows minute granularity; Hobby rejected any sub-daily cron at DEPLOY time
+// — "Hobby accounts are limited to daily cron jobs" — failing the whole
+// deployment rather than just the cron. A */10 here once blocked a release
+// containing everything else, which is why this warning existed.
 //
-// To get the real cadence back, either move the project to Pro (which allows
-// minute granularity) or hit this endpoint from an external scheduler with the
-// CRON_SECRET bearer token. Do not reintroduce */10 here while on Hobby.
+// IF THE ACCOUNT EVER RETURNS TO HOBBY, this must go back to a daily
+// expression before the next deploy or nothing ships. The alternative is an
+// external scheduler hitting this endpoint with the CRON_SECRET bearer token.
+//
+// BATCH_LIMIT stays at 500. Reaping un-wedges a session, so the selection set
+// drains rather than accumulating, and at ten-minute intervals the batch will
+// never be near full. It was near full on Hobby: 990 calls were awaiting a
+// disposition when the cadence changed, which at one 500-row pass a day is two
+// days of backlog.
 // ────────────────────────────────────────────────────────────────────────────
 const BATCH_LIMIT = 500
 

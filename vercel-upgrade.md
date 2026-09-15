@@ -1,8 +1,37 @@
 # Vercel Pro — the upgrade play
 
-**Status: NOT YET APPLIED.** Everything here is blocked on the Vercel account
-being on Pro. Applying any of it while still on Hobby breaks the deployment —
-see the warning below.
+**Status: APPLIED 14 Sept 2026.** The account is on Pro and Changes 1 and 3 are
+done. Change 2 was deliberately NOT applied — see below.
+
+Limits re-verified against Vercel's docs on the day of application: Pro allows
+**once per minute** with per-minute precision, Hobby **once per day** at ±59
+minutes, 100 cron jobs per project on every plan. Unchanged from the 2026-08-20
+reading.
+
+**What was applied**
+
+| | |
+|---|---|
+| `stale-call-reaper` | `0 4 * * *` → `*/10 * * * *` |
+| `ops-health` | `0 12 * * *` → `0 * * * *` (hourly, not `*/15` — see Change 1) |
+| `maxDuration` | **left at 300** — the evidence check came back clean |
+| invocations | no change, as specified |
+
+`maxDuration` was left alone because the documented condition was not met:
+`seat-billing-enforcement` has 9 live subscriptions to process and
+`billing-retry` has 3 charges, both finishing in seconds against a 240s budget.
+Raising a limit nothing is reaching would have been change for its own sake.
+**Re-run that check before raising it later** — the condition is workload, not
+plan.
+
+**If the account ever returns to Hobby**, both changed expressions must go back
+to daily *before the next deploy*, or the deployment fails outright with
+`Hobby accounts are limited to daily cron jobs` and nothing ships — including
+whatever else was in that release. The warnings in both route files say so.
+
+---
+
+## Original brief
 
 **To run this:** tell Claude *"Vercel is on Pro — run vercel-upgrade.md"*.
 

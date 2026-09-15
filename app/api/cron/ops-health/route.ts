@@ -45,12 +45,20 @@ const supabase = getServiceClient('cron/ops-health')
 // on a daily schedule — a webhook outage found 20 hours later is not an alert,
 // it's a post-mortem. The intended cadence is every 15 minutes.
 //
-// It runs daily because Vercel's Hobby plan rejects sub-daily crons at DEPLOY
-// time, failing the entire deployment. A */15 here silently blocked releases.
+// It now runs HOURLY. The project moved to Vercel Pro on 14 Sept 2026; Hobby
+// rejected sub-daily crons at DEPLOY time, failing the entire deployment, and
+// a */15 here once silently blocked releases.
 //
-// Pro allows minute granularity; alternatively drive this from an external
-// scheduler using the CRON_SECRET bearer token. The COOLDOWN_MINUTES
-// de-duplication below already makes frequent invocation safe.
+// HOURLY RATHER THAN THE INTENDED FIFTEEN MINUTES, deliberately. COOLDOWN_MINUTES
+// below is 60, so an ongoing condition alerts once an hour however often this
+// runs — at */15 the extra three passes would find the same problem and say
+// nothing, which is three times the invocations for no additional warning.
+// If this ever goes below hourly, lower the cooldown with it or the extra runs
+// are purely decorative.
+//
+// IF THE ACCOUNT EVER RETURNS TO HOBBY, this must go back to a daily
+// expression before the next deploy or nothing ships. The alternative is an
+// external scheduler hitting this endpoint with the CRON_SECRET bearer token.
 // ────────────────────────────────────────────────────────────────────────────
 
 /** How long before the same alert may fire again. */

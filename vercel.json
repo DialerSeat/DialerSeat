@@ -17,7 +17,7 @@
     },
     {
       "path": "/api/cron/stale-call-reaper",
-      "schedule": "0 4 * * *"
+      "schedule": "*/10 * * * *"
     },
     {
       "path": "/api/cron/dial-performance",
@@ -29,7 +29,7 @@
     },
     {
       "path": "/api/cron/ops-health",
-      "schedule": "0 12 * * *"
+      "schedule": "0 * * * *"
     },
     {
       "path": "/api/cron/seat-billing-enforcement",
