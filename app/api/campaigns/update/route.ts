@@ -6,31 +6,41 @@ import { apiError } from '@/lib/apiError'
 const VALID_MODES = ['preview', 'power', 'progressive', 'predictive'] as const
 const VALID_STATUSES = ['active', 'inactive'] as const
 
-// ── PREDICTIVE IS WITHDRAWN UNTIL IT BRIDGES ─────────────────────────────
-// Predictive does not connect anybody. A fan-out line is placed with nobody
-// attached, and the only code that would bridge an agent onto it —
-// bridgeAgentOntoLead, called from the AMD verdict in app/api/calls/events —
-// sits inside `if (!callRow.dial_group_id)`. A fan-out call is DEFINED by
-// having a dial_group_id, so that branch excludes every call that needs it.
+// ── PREDICTIVE IS RESTORED. THE WITHDRAWAL WAS BASED ON A BAD QUERY ───────
+// It was withdrawn on this finding: "138 fan-out calls, 35 answered, 7 of them
+// human, ZERO bridged — by our own bridged_at and by Telnyx's call.bridged
+// webhook alike. Every one of those humans answered and heard silence."
 //
-// Measured 14 Sept: 138 fan-out calls, 35 answered, 7 of them human, ZERO
-// bridged — by our own bridged_at and by Telnyx's call.bridged webhook alike,
-// against 80 of 80 for agent-attended dials. Every one of those humans
-// answered and heard silence for about nineteen seconds. An operator
-// independently reported the same thing as "goes silent on pickup".
+// The first half was true and the second half was not. `bridged_at` really was
+// never written for fan-out. But the check for Telnyx's own webhook only
+// looked at call_events.event_type, and this route files an unrecognised event
+// under event_type 'unhandled' with the REAL Telnyx type in `status`. Every
+// call.bridged for a fan-out leg was sitting in that column, invisible to the
+// query that declared them missing.
 //
-// That is an abandoned call in the sense the FTC means it, it burns the lead,
-// and it is the fastest way to get a number marked as spam — which costs
-// answer rate on every other number in the pool.
+// Read from the right column, over 30 days of fan-out:
 //
-// Blocked here rather than in the dialer because this is where it gets
-// chosen. A subscriber selected it nine minutes after signing up, was moved
-// off it, and selected it again thirty-five seconds later; no amount of
-// changing the data holds while the menu still offers it.
+//     answered fan-out calls                       137
+//     with a Telnyx call.bridged                   136
+//     with an agent leg attached                   136
+//     talk seconds, median / mean / max        11 / 12.1 / 69
+//     answered with zero talk time                   0
 //
-// DELETE THIS AND RESTORE THE MODE once the bridge is fixed and a fan-out
-// call has been observed reaching call.bridged.
-const WITHDRAWN_MODES = new Set(['predictive'])
+// Nobody heard nineteen seconds of silence. The bridge worked; only our record
+// of it was missing. §1m again — a column we populate is not the carrier's
+// state — except this time the mistake ran the other way and withdrew a
+// working feature for a week.
+//
+// ── WHAT IS ACTUALLY WRONG WITH PREDICTIVE IS THE COST, NOT THE AUDIO ────
+// Every fan-out line places its OWN agent leg: 525 lines over 30 days produced
+// 525 distinct agent legs. The agent leg bills on two connections, so a
+// predictive connect costs about double an agent-attended one, and N lines
+// means N agent legs rather than one the agent already holds.
+//
+// That is the next fix and it is a real one, but it is a cost problem on a
+// working feature, not a reason to keep the menu item hidden. See
+// docs/COST-FINDINGS.md §1ae.
+const WITHDRAWN_MODES = new Set<string>([])
 
 const ALLOWED_FIELDS = [
   'name',
@@ -49,6 +59,12 @@ const ALLOWED_FIELDS = [
   'mask_lead_numbers',
   // Workflow only — the stored dialer_mode still governs the call path.
   'agent_picks_mode',
+  // 16 CFR 310.4(b)(4)(iii). Without BOTH of these a campaign cannot lawfully
+  // run more than one predictive line, and lib/predictiveController holds it
+  // at one. They are per campaign because the rule names "the seller on whose
+  // behalf the call was placed", and DialerSeat is not the seller.
+  'tsr_seller_name',
+  'tsr_callback_number',
   'conversion_dispositions',
 ] as const
 
@@ -128,6 +144,20 @@ export async function POST(req: Request) {
           // See lib/predictiveController.ts for why a fraction here meant
           // predictive quietly ran at one line.
           updates.predictive_lines_per_agent = Math.max(1, Math.min(5, Math.round(v)))
+          break
+        }
+        case 'tsr_seller_name': {
+          if (v !== null && typeof v !== 'string') continue
+          updates.tsr_seller_name = (v || '').trim() || null
+          break
+        }
+        case 'tsr_callback_number': {
+          if (v !== null && typeof v !== 'string') continue
+          // Stored as typed. buildTsrAbandonMessage does the normalising and
+          // REFUSES anything short of ten digits, so a half-entered number
+          // holds the campaign at one line rather than being silently
+          // rounded into something that announces the wrong callback.
+          updates.tsr_callback_number = (v || '').trim() || null
           break
         }
         case 'dial_repeat_count': {

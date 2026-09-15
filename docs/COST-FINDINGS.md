@@ -1680,6 +1680,135 @@ it is set, and the honest description of it.
 
 ---
 
+## 1ae. PREDICTIVE WAS NEVER BROKEN. THE QUERY THAT CONDEMNED IT WAS.
+
+15 Sept. Predictive was withdrawn from the mode menu on this finding:
+
+> 138 fan-out calls, 35 answered, 7 of them human, ZERO bridged — by our own
+> `bridged_at` and by Telnyx's `call.bridged` webhook alike. Every one of those
+> humans answered and heard silence for about nineteen seconds.
+
+The first half was true. `bridged_at` was never written for fan-out. **The
+second half was false, and it was false because of how the check was written.**
+
+`app/api/calls/events` files an unrecognised webhook under
+`event_type = 'unhandled'` and puts the REAL Telnyx type in `status`. The query
+that declared the bridges missing looked only at `event_type`:
+
+```sql
+where e.event_type in ('bridged','call.bridged')   -- finds nothing
+```
+
+Read from the right column instead, over 30 days of fan-out traffic:
+
+| | |
+|---|---|
+| answered fan-out calls | 137 |
+| with a Telnyx `call.bridged` | **136** |
+| with an agent leg attached | 136 |
+| talk seconds — median / mean / max | **11 / 12.1 / 69** |
+| answered with zero talk time | **0** |
+
+Nobody heard nineteen seconds of silence. The audio bridged 136 times out of
+137. Only our record of it was missing.
+
+This is §1m again — *a column we populate is not the carrier's state* — but
+running the other way. The usual failure is trusting our own column over the
+carrier's. This time our column was correctly distrusted and then the carrier's
+own record was searched in the wrong place, and the conclusion was worse than
+either: a working feature was pulled for a week, and a note was written into
+three files saying real people had heard silence.
+
+**Restored.** `WITHDRAWN_MODES` is empty, `bridged_at` is backfilled from
+Telnyx's events (user_dial 99.8%, fan-out 99.3% of answered calls now show a
+bridge), and `case 'call.bridged'` writes it going forward.
+
+**The rule this leaves behind:** when a query returns zero and zero is the
+answer you were expecting, go and find a row of the thing you are counting
+before you act on it. A count of zero and a column that does not hold what you
+think look identical.
+
+---
+
+## 1af. THE AGENT LEG IS BILLED TWICE. IT IS 60% OF THE BILL. IT IS NOT THREE TIMES.
+
+The direct answer to *"confirm it's not being triple charged for agent leg and
+lead leg and whatever else."*
+
+Every `call.cost` event Telnyx sent in 30 days, grouped by which leg it belongs
+to and which connection carried it:
+
+| Leg | Connection | Cost events | 30-day USD | Share |
+|---|---|---|---|---|
+| **Lead leg** | Call Control `…3010874004966737730` | 360 | **$2.01** | 38.7% |
+| **Agent leg** | Call Control `…3010874004966737730` | 361 | $1.54 | 29.7% |
+| **Agent leg twin** | Credential `…3010785211936933233` | 362 | $1.58 | 30.4% |
+| stray | Call Control | 20 | $0.06 | 1.2% |
+| | | | **$5.19** | |
+
+**361 and 362.** Those are the same legs counted on two different connections.
+The agent's leg is originated on the Call Control connection and terminates on
+the credential connection where the browser is registered, and Telnyx bills
+both ends of the on-net call.
+
+So: **twice, not three times.** But twice on the leg that should be the cheap
+one, and the two halves together are **60.1% of all carrier spend**. The lead
+leg — the only part of this that is an actual phone call to an actual prospect
+— is 38.7%.
+
+The twin is the reason a third of the ledger looked UNATTRIBUTED: it carries a
+`call_control_id` that appears in no `calls` row, because we never made that
+leg, Telnyx did, as the other end of ours.
+
+### What actually fixes it
+
+Not a billing argument — a design change. **Stop placing a new agent leg per
+dial.** Today the agent's browser is called fresh for every single dial and
+torn down after. One persistent agent leg per SESSION, with leads bridged into
+it, pays for that leg once an hour instead of once a call. Everything else here
+is fractions of a penny; this one is 60% of the bill.
+
+---
+
+## 1ag. PREDICTIVE'S COST IS THE AGENT LEG, AND THE RATIO IS INVERTED
+
+Same 30 days, same cost events, split by dial source:
+
+| | avg per lead leg | avg per agent leg | ratio |
+|---|---|---|---|
+| `user_dial` (preview/power/progressive) | $0.00710 | $0.00135 | lead costs **5.2×** the agent |
+| `controller_fanout` (predictive) | $0.00233 | **$0.01047** | agent costs **4.5×** the lead |
+
+On an agent-attended dial the shape is what you would expect: the PSTN call to
+the prospect is the expensive part, and the on-net leg to the browser is
+rounding error. **On predictive it is upside down.**
+
+A predictive agent leg costs **7.8×** what an agent-attended one costs
+($0.01047 vs $0.00135). The reason is in the sequencing: the agent leg is
+placed when the fan-out STARTS and is billed for the whole time every line is
+ringing, while each lead leg is short because most of them are cancelled.
+
+And there is no sharing. Over 30 days, **525 fan-out lines produced 525
+distinct agent legs** — one per line, every line, both dial groups:
+
+| lines in group | distinct agent legs | answered |
+|---|---|---|
+| 115 | 115 | 27 |
+| 410 | 410 | 110 |
+
+A real predictive dialer holds ONE agent leg up and bridges answered leads into
+it. This one dials the agent's browser again for every line it opens. That is
+what "so many legs" was.
+
+Per dial, all legs counted: predictive **$0.0129**, agent-attended **$0.0085**.
+Predictive costs about **1.5× per dial**, and 82% of that is the agent side.
+
+**This is the same fix as §1af.** A persistent agent leg removes the double
+billing AND removes the per-line duplication in one change. Until it is done,
+predictive above 2 lines is buying contacts with agent-leg minutes.
+
+---
+
 ## 1y. PREDICTIVE: WHY IT IS CAPPED AT ONE LINE, AND WHAT THE REGULATION ACTUALLY SAYS
 
 **The binding constraint on predictive is not the carrier bill. It is 16 CFR
