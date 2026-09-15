@@ -697,6 +697,69 @@ the next one.
 
 ---
 
+## 1q. A 3% FEE ON EVERY DOLLAR THAT ENTERS THE ACCOUNT
+
+> *“Credit Card and PayPal payments will incur an additional 3% transaction fee.”*
+> *“Making payments through ACH Direct Debit incurs no fee to our customers.”*
+
+**This is not a per-call optimisation. It is 3% off the top of everything ever
+spent with Telnyx, forever, and it is fixed by changing a payment method.**
+
+Measured from the balance snapshots (two days, all we hold): six top-ups,
+**$23.86**, of which **$0.72** was fee if paid by card.
+
+It scales exactly linearly, which is what makes it worth more than anything else
+in this document at the scale being planned for:
+
+| | monthly spend | 3% card fee |
+|---|---|---|
+| today | ~$50 | ~$1.50 |
+| 10 agents at the §0 floor | ~$664 | **~$20** |
+| **100 agents at the §0 floor** | **~$6,644** | **~$199/month** |
+
+**Action: switch the Telnyx payment method to ACH Direct Debit.** Keep a card on
+file as emergency backup — auto-recharge on a card still carries the 3%, so the
+card should be the fallback, not the default. Auto-recharge is capped at **10
+times per 24 hours** and that cap cannot be lifted; minimum payment is **$10**.
+
+---
+
+## 1r. THE ACCOUNT DELETION RULE, AND WHY IT IS NOT THEORETICAL
+
+> **“Negative balance for 1 month” → account abolished → “all numbers are deleted
+> from the account.”**
+
+On **11 September** Telnyx returned *“Account is disabled D17. The Account used to
+place the termination call is blocked”* 227 times. The account has already been
+in the state this rule starts from.
+
+**Losing the numbers is not losing $13 of rental.** It is losing every number's
+accumulated answer history and local presence, and §1f says the pool is a
+consumable whose value is its history. A month of inattention on a negative
+balance deletes the asset, and the dialer's response to that state is to retry
+4,341 times over ten hours (§1n) rather than to say anything.
+
+**Action:** ACH auto-recharge with a card as fallback covers this and the 3% in
+one change.
+
+### While here — the balance mystery has a mundane answer
+
+> *“Taxes are calculated and applied **daily**, deducted from the balance on the
+> following calendar day.”*
+
+Balance moves that never matched call costs were partly this: tax is a separate
+daily debit, landing a day late, unrelated to any individual call. Worth knowing
+before reading another balance drop as an overcharge.
+
+### Two more, recorded so nobody re-derives them
+
+- **International spend limit $700/day**, resetting 00:00 UTC, error *“403
+  International daily spent limit reached D39”*. Not near it; it exists.
+- **No refunds** on consumed pay-as-you-go services, or on any payment 180+ days
+  old. Money in the account is spent money.
+
+---
+
 ## 1o. THE PUBLISHED FEE LIST, CHECKED LINE BY LINE
 
 From `telnyx.com/pricing/voice-api` and `/pricing/elastic-sip`. Every line, and
