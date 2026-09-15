@@ -4,7 +4,8 @@ import { getTelnyxBalance } from '@/lib/telnyxBalance'
 import { requireAdmin } from '@/lib/admin'
 import { apiError } from '@/lib/apiError'
 import {
-  computeCost, SEAT_PRICE_WEEKLY_USD, MANAGER_PLUS_WEEKLY_USD, COST_ASSUMPTIONS_NOTE,
+  computeCost, billableSeconds,
+  SEAT_PRICE_WEEKLY_USD, MANAGER_PLUS_WEEKLY_USD, COST_ASSUMPTIONS_NOTE,
   COST_PER_MINUTE_USD, COST_PER_AMD_LEG_USD,
 } from '@/lib/telephonyCosts'
 
@@ -63,7 +64,10 @@ export async function GET(req: NextRequest) {
         .select('clerk_id, email, first_name, last_name, exclude_from_analytics, created_at'),
       supabase
         .from('calls')
-        .select('user_id, talk_seconds, amd_requested, amd_result, recording_duration')
+        // answered_at and duration are for the BILLED span: the 60-second
+        // floor fires per answered lead leg, and the agent leg bills on its own
+        // wall time. Without both, cost reads about a fifth of the truth.
+        .select('user_id, talk_seconds, answered_at, duration, amd_requested, amd_result, recording_duration')
         .gte('created_at', sinceIso)
         .limit(200000),
       supabase
@@ -105,10 +109,10 @@ export async function GET(req: NextRequest) {
     if (usersRes.error) return apiError(usersRes.error, { route: 'admin/unit-economics' })
 
     // Sum activity per user in one pass.
-    const activity = new Map<string, { calls: number; talkSeconds: number; amdLegs: number; recordedSeconds: number }>()
+    const activity = new Map<string, { calls: number; talkSeconds: number; billedLeadSeconds: number; billedAgentSeconds: number; amdLegs: number; recordedSeconds: number }>()
     for (const c of callsRes.data || []) {
       if (!c.user_id) continue
-      const a = activity.get(c.user_id) || { calls: 0, talkSeconds: 0, amdLegs: 0, recordedSeconds: 0 }
+      const a = activity.get(c.user_id) || { calls: 0, talkSeconds: 0, billedLeadSeconds: 0, billedAgentSeconds: 0, amdLegs: 0, recordedSeconds: 0 }
       a.calls++
       // ── MINUTES ARE BILLED FROM ANSWER, NOT FROM DIAL ──────────────────
       // This added `duration`, which is wall clock from the dial and includes
@@ -124,6 +128,32 @@ export async function GET(req: NextRequest) {
       a.talkSeconds += typeof c.talk_seconds === 'number'
         ? Math.max(0, c.talk_seconds)
         : 0
+
+      // ── TALK TIME IS NOT BILLED TIME ─────────────────────────────────
+      // The fix above corrected ring time out of the minutes, and stopped
+      // there. Two things were still missing, and together they made this page
+      // report about a FIFTH of real cost — measured over 30 days and 2,261
+      // calls: $1.79 here against $7.15 from the model that reproduces Telnyx's
+      // own billed_duration_secs on 184 of 192 legs.
+      //
+      //   the 60-second floor   an answered lead leg bills a full minute
+      //                         however short it was. A voicemail talks for
+      //                         11 seconds and bills 60.
+      //   the agent leg         billed on TWO connections at $0.002 each, and
+      //                         it carries MORE billed time than the lead leg
+      //                         because it is up for the ring as well.
+      //
+      // billableSeconds is applied PER CALL, never to a sum — flooring a total
+      // would erase the per-call minimum this exists to capture.
+      const answered = !!c.answered_at
+      a.billedLeadSeconds += billableSeconds(
+        typeof c.talk_seconds === 'number' ? Math.max(0, c.talk_seconds) : 0,
+        { leadLeg: true, answered }
+      )
+      a.billedAgentSeconds += billableSeconds(
+        typeof c.duration === 'number' ? Math.max(0, c.duration) : 0,
+        { leadLeg: false, answered }
+      )
       // ── AMD IS BILLED PER LEG IT RAN AGAINST, NOT PER VERDICT ──────────
       // This counted calls that came BACK with a result. AMD is charged for
       // running, and a call torn down before detection finishes has still been
@@ -189,7 +219,12 @@ export async function GET(req: NextRequest) {
       const seatPayer = coveredBy.get(u.clerk_id) ?? null
 
       const cost = a
-        ? computeCost({ talkSeconds: a.talkSeconds, amdLegs: a.amdLegs, recordedSeconds: a.recordedSeconds })
+        ? computeCost({
+            talkSeconds: a.billedLeadSeconds,
+            agentLegSeconds: a.billedAgentSeconds,
+            amdLegs: a.amdLegs,
+            recordedSeconds: a.recordedSeconds,
+          })
         : null
 
       // Revenue over the SAME window the cost covers, so the two are
@@ -218,7 +253,7 @@ export async function GET(req: NextRequest) {
         amdLegs: a?.amdLegs ?? 0,
         costUsd: cost?.totalUsd ?? 0,
         costBreakdown: cost
-          ? { minutes: cost.minutesUsd, amd: cost.amdUsd, recording: cost.recordingUsd }
+          ? { minutes: cost.minutesUsd, agentLeg: cost.agentUsd, amd: cost.amdUsd, recording: cost.recordingUsd }
           : null,
         revenueUsd,
         marginUsd: revenueUsd - (cost?.totalUsd ?? 0),

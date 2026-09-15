@@ -270,30 +270,53 @@ export const SEAT_PRICE_WEEKLY_USD = 35
 export const MANAGER_PLUS_WEEKLY_USD = 75
 
 export interface CostInputs {
-  /** Total connected seconds. */
+  /**
+   * BILLED lead-leg seconds — not raw talk time.
+   *
+   * Sum `billableSeconds()` PER CALL and pass the total. Never apply the floor
+   * to an aggregate: the 60-second minimum is charged per answered call, so
+   * flooring a sum erases the very thing it exists to capture.
+   *
+   * Passing raw talk seconds here understates badly. Measured over 30 days and
+   * 2,261 calls: raw talk gave $1.79 where the validated model gives $7.15,
+   * because a voicemail talks for 11 seconds and bills 60.
+   */
   talkSeconds: number
   /** Call legs AMD ran against. */
   amdLegs: number
   /** Seconds of audio recorded. */
   recordedSeconds: number
+  /**
+   * BILLED agent-leg seconds. Optional only so existing callers keep compiling.
+   *
+   * Omitting it understates by roughly 22% — the agent leg is billed on TWO
+   * connections at $0.002 each and carries MORE billed time than the lead leg,
+   * because it is up for the ring as well as the conversation. See
+   * COST_PER_AGENT_LEG_MINUTE_USD.
+   */
+  agentLegSeconds?: number
 }
 
 export interface CostBreakdown {
   minutesUsd: number
   amdUsd: number
   recordingUsd: number
+  /** The agent's own leg. 0 when the caller did not supply agentLegSeconds. */
+  agentUsd: number
   totalUsd: number
 }
 
 export function computeCost(input: CostInputs): CostBreakdown {
   const minutesUsd = (input.talkSeconds / 60) * COST_PER_MINUTE_USD
+  const agentUsd = ((input.agentLegSeconds ?? 0) / 60) * COST_PER_AGENT_LEG_MINUTE_USD
   const amdUsd = input.amdLegs * COST_PER_AMD_LEG_USD
   const recordingUsd = (input.recordedSeconds / 60) * COST_PER_RECORDED_MINUTE_USD
   return {
     minutesUsd,
     amdUsd,
     recordingUsd,
-    totalUsd: minutesUsd + amdUsd + recordingUsd,
+    agentUsd,
+    totalUsd: minutesUsd + agentUsd + amdUsd + recordingUsd,
   }
 }
 

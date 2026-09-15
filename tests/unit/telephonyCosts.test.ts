@@ -4,6 +4,8 @@ import {
   LEAD_ANSWERED_MINIMUM_SECONDS,
   BILLING_INCREMENT_SECONDS,
   COST_PER_AGENT_LEG_MINUTE_USD,
+  COST_PER_MINUTE_USD,
+  computeCost,
 } from '@/lib/telephonyCosts'
 
 // =============================================================================
@@ -115,6 +117,48 @@ describe('billableSeconds', () => {
 
     it('costs a minimum of a minute the moment they answer', () => {
       expect(billableSeconds(4, lead(true))).toBe(60)
+    })
+  })
+
+  // ===========================================================================
+  // computeCost MUST COUNT BOTH LEGS
+  // ===========================================================================
+  // Every cost figure on the platform funnels through this. It counted the lead
+  // leg only, and its callers passed RAW talk seconds rather than billed ones --
+  // so over 30 days and 2,261 calls it reported $1.79 where the validated model
+  // gives $7.15. A voicemail talks for 11 seconds and bills 60, and the agent
+  // leg carries more billed time than the lead leg.
+  describe('computeCost', () => {
+    it('adds the agent leg to the total', () => {
+      const withAgent = computeCost({
+        talkSeconds: 600, agentLegSeconds: 600, amdLegs: 0, recordedSeconds: 0,
+      })
+      const withoutAgent = computeCost({
+        talkSeconds: 600, amdLegs: 0, recordedSeconds: 0,
+      })
+      expect(withAgent.agentUsd).toBeCloseTo(10 * COST_PER_AGENT_LEG_MINUTE_USD, 6)
+      expect(withAgent.totalUsd).toBeGreaterThan(withoutAgent.totalUsd)
+      expect(withAgent.totalUsd - withoutAgent.totalUsd).toBeCloseTo(withAgent.agentUsd, 6)
+    })
+
+    it('stays backward compatible when the agent leg is omitted', () => {
+      // Three reconciliation routes still call it without one. They understate,
+      // which is documented -- but they must not break.
+      const c = computeCost({ talkSeconds: 600, amdLegs: 0, recordedSeconds: 0 })
+      expect(c.agentUsd).toBe(0)
+      expect(c.totalUsd).toBeCloseTo(10 * COST_PER_MINUTE_USD, 6)
+    })
+
+    it('shows why passing raw talk seconds understates', () => {
+      // One voicemail: 11 seconds of talk, 60 billed. Same call, two inputs.
+      const raw = computeCost({ talkSeconds: 11, amdLegs: 1, recordedSeconds: 0 })
+      const billed = computeCost({
+        talkSeconds: billableSeconds(11, { leadLeg: true, answered: true }),
+        agentLegSeconds: billableSeconds(22, { leadLeg: false, answered: true }),
+        amdLegs: 1,
+        recordedSeconds: 0,
+      })
+      expect(billed.totalUsd).toBeGreaterThan(raw.totalUsd * 1.5)
     })
   })
 
