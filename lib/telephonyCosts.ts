@@ -62,46 +62,90 @@ export const COST_PER_MINUTE_USD = 0.0056
  */
 export const COST_PER_AGENT_LEG_MINUTE_USD = 0.002
 
-// ── THE 30-SECOND MINIMUM, AND WHY IT IS THE WHOLE STORY ──────────────────
-// The August ledger billed 52,692 termination seconds. Our own legs for that
-// month total 14,843 seconds of actual duration. Four billing models were
-// tested against that target:
+// ── THE BILLING RULES, DERIVED FROM 1,103 OF THEIR OWN COST RECORDS ───────
+// This block previously described a 30-second minimum on EVERY outbound leg,
+// fitted by testing four candidate models against one August invoice line
+// (52,692 termination seconds). 30s+6s landed within 9% and was adopted.
 //
-//   actual duration, no minimum      14,843
-//   6-second increments only         20,400
-//   30s minimum, then 6s             48,096   <- within 9%
-//   60s minimum, then 6s             90,522
+// It was wrong, and it was wrong in a way a single aggregate could never
+// reveal: it over-counted agent legs, which have no floor at all, and
+// under-counted answered lead legs, whose floor is twice what was assumed.
+// The two errors very nearly cancel, which is exactly why the fit looked good.
 //
-// Only one is close. This account bills a 30-SECOND MINIMUM on every outbound
-// leg, then in 6-second increments.
+// call.cost webhooks now give the per-leg truth. Across 1,103 billed records:
 //
-// WHAT THAT MEANS, AND IT IS NOT SMALL. A dial costs half a minute of
-// termination whether it is answered, rings out, or is torn down after two
-// seconds. At $0.0056 a minute that is $0.0028 a dial before anybody says
-// hello, and with detection on top every dial has a floor near half a cent
-// regardless of outcome.
+//   ANSWERED LEAD LEG    60-second floor. 183 of 192 billed EXACTLY 60,
+//                        and not one billed under it. Applies to both halves
+//                        (sip-trunking and call-control) independently.
+//   AGENT LEG            NO floor. Minimum observed 6 seconds; 185 of 192
+//                        billed under 60.
+//   RECORDING            60-second floor. 18 of 23 billed exactly 60.
+//   UNANSWERED LEAD LEG  FREE. 94 of them billed zero seconds.
+//   EVERYTHING           6-second increments. 1,103 of 1,103 are multiples
+//                        of 6, with no exceptions in any category.
 //
-// It also explains why a floor's bill barely moves with TALK time and moves
-// hard with DIAL COUNT — and why the old model, which costed only answered
-// minutes, read a bill three times lower than the one that arrived.
+// WHAT THAT CHANGES, AND IT IS NOT SMALL. Dialing is nearly free — an
+// unanswered lead leg costs nothing, so dial VOLUME is not the cost driver
+// the old model made it. ANSWERING is the charge, and it arrives a whole
+// minute at a time. A voicemail identified by AMD at 3.3 seconds and dropped
+// by the compliance hold at 9 still bills 60 seconds on both halves, and 54%
+// of everything that answers is a voicemail.
+//
+// The practical consequence: the only way to avoid the floor is not to dial
+// the number. See lib/recentDialSuppression.ts.
 
-/** Seconds every outbound leg bills at minimum, answered or not. */
-export const BILLING_MINIMUM_SECONDS = 30
+/** Seconds an ANSWERED lead leg bills at minimum. Agent legs have no floor. */
+export const LEAD_ANSWERED_MINIMUM_SECONDS = 60
 
-/** Increment above the minimum. A 31-second call bills 36. */
+/** Seconds a recording bills at minimum, once one is made at all. */
+export const RECORDING_MINIMUM_SECONDS = 60
+
+/** Increment on everything. A 61-second call bills 66. */
 export const BILLING_INCREMENT_SECONDS = 6
 
 /**
- * What a leg of `seconds` actually bills at, under this account's 30/6 terms.
+ * Deprecated alias for the old flat floor, kept so nothing breaks silently.
  *
- * Use this rather than raw duration anywhere a cost is derived, or the figure
- * will be the one that has been wrong all along.
+ * There is no single "billing minimum" on this account — it depends on which
+ * leg and whether it answered. Anything still reading this constant is using
+ * a rule that does not exist; use billableSeconds with its options instead.
  */
-export function billableSeconds(seconds: number | null | undefined): number {
+export const BILLING_MINIMUM_SECONDS = LEAD_ANSWERED_MINIMUM_SECONDS
+
+export interface BillableOptions {
+  /** True for the lead's leg, false for the agent's. */
+  leadLeg: boolean
+  /** Did the LEAD answer? The floor and the charge both hang on this. */
+  answered: boolean
+}
+
+/**
+ * What a leg of `seconds` actually bills at.
+ *
+ * Use this rather than raw duration anywhere a cost is derived — and pass the
+ * options honestly, because the three cases differ by more than rounding:
+ * an unanswered lead leg is free, an answered one costs a minute whatever its
+ * length, and an agent leg costs exactly what it used.
+ */
+export function billableSeconds(
+  seconds: number | null | undefined,
+  opts: BillableOptions
+): number {
   const s = Math.max(0, seconds ?? 0)
+
+  // An unanswered lead leg is not billed at all — ring time is free. Measured
+  // across 94 of them, every one at zero seconds. The old model charged these
+  // 30 seconds each, which is where most of its error lived.
+  if (opts.leadLeg && !opts.answered) return 0
+
   if (s <= 0) return 0
   const rounded = Math.ceil(s / BILLING_INCREMENT_SECONDS) * BILLING_INCREMENT_SECONDS
-  return Math.max(BILLING_MINIMUM_SECONDS, rounded)
+
+  // The floor is the lead leg's alone. An agent leg bills what it used, down
+  // to a single 6-second increment.
+  return opts.leadLeg
+    ? Math.max(LEAD_ANSWERED_MINIMUM_SECONDS, rounded)
+    : rounded
 }
 
 

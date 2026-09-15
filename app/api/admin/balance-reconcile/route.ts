@@ -128,10 +128,22 @@ export async function GET(req: NextRequest) {
         return t > a.at && t <= b.at
       })
 
-      // OUR MODEL. billableSeconds per leg, never on a summed duration -- the
-      // 30-second minimum is charged per call, and applying it to a total
-      // would erase the very thing it exists to capture.
-      const billedSec = gapCalls.reduce((n, c) => n + billableSeconds(c.duration), 0)
+      // OUR MODEL. billableSeconds per leg, never on a summed duration — the
+      // floor is charged per call, and applying it to a total would erase the
+      // very thing it exists to capture.
+      //
+      // Counted as TWO legs per dial, because that is what the carrier sees:
+      // the lead's leg, free unless answered and a full minute when it is, and
+      // the agent's leg, which has no floor and bills roughly the same wall
+      // time. Summing only the lead leg was the omission that made an earlier
+      // version of this screen report 87% of spend as unexplained.
+      const billedSec = gapCalls.reduce(
+        (n, c) =>
+          n
+          + billableSeconds(c.duration, { leadLeg: true, answered: !!c.answered_at })
+          + billableSeconds(c.duration, { leadLeg: false, answered: !!c.answered_at }),
+        0
+      )
       const amdLegs = gapCalls.filter(c => c.amd_result).length
       const recordedSec = gapCalls
         .filter(c => c.recording_url)
