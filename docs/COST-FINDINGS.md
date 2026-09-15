@@ -284,6 +284,67 @@ field themselves.
 
 ---
 
+## 1h. USF is real, it is rising fast, and at scale it stops being a cost question
+
+**Checked because `TAX_RATE = 0.058` looked like an assumption. It is not** — it
+was measured from a real August invoice: three codes (`TAX-CHARGES`,
+`TAX-CHARGES-USF`, `TAX-CHARGES-TRS`) totalling $1.27 against $21.90 of charges.
+Nothing hidden. But two things follow that are not in any forecast.
+
+### The contribution factor is climbing steeply
+
+The FCC sets it quarterly, as a percentage of interstate end-user revenue:
+
+| quarter 2026 | factor |
+|---|---|
+| Q1 | 37.6% |
+| Q2 | 37.0% |
+| Q3 | 38.8% |
+| **Q4** | **42.0%** — a record |
+
+Telnyx passes it through: *“USF will be applied to telecom and/or VoIP
+consumption and Programmable Voice (US Outbound & Inbound) services. Only the
+Interconnected VoIP portion of these products will be subject to USF.”*
+
+That 5.8% blended rate was struck when the factor was ~38%. At 42% the same
+assessable base gives roughly **6.3%**. Small in absolute terms — about $0.02 a
+day per agent at the §0 floor — but it is a line that rises on its own, and it
+is the only one here that does.
+
+### The exemption exists and is probably the wrong door
+
+Telnyx: companies that *“file the FCC Form 499-A and make USF contributions
+directly as a provider of telecommunications”* may apply for exemption via
+`tax@telnyx.com`, renewed annually.
+
+**Do not chase this as a saving.** Claiming it means becoming a direct
+contributor, which means owing USF on **your own** end-user revenue — the seat
+subscriptions — at that same 42% against whatever share is deemed
+telecommunications. That trade is only favourable if almost all revenue is
+classed as software, and that classification is not ours to assert.
+
+### The part that actually matters
+
+> **At 100 subscribers, reselling voice, a Form 499-A obligation may exist
+> whether or not anyone claims an exemption.** That is a compliance question,
+> not a cost question, and it arrives at exactly the scale being planned for —
+> not at today's two agents.
+>
+> **Get a telecom regulatory advisor before the subscriber count grows, not
+> after.** This is well outside what can be settled from invoices and help
+> articles, and it is the one item in this document that is worth paying a
+> professional to answer.
+
+### While here: the ledger has still only ever captured one record type
+
+`telnyx_ledger_records` holds **1,103 rows, all `call.cost`**, spanning 14–15
+September. No tax records, no DID records, no AMD records — `call.cost` does not
+carry any of them. `/api/admin/telnyx-charges` queries nineteen types.
+**Ledger → CAPTURE NOW remains the highest-value click available** (§1d), and it
+is the only way any of the above gets measured rather than inferred.
+
+---
+
 ## 1f. NUMBER BURN — CHECKED AND NOT SUPPORTED
 
 **This section previously claimed the opposite. It was wrong and it is worth
