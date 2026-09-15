@@ -16,7 +16,9 @@ import { startTelnyxRecording } from '@/lib/telnyxRecording'
 import { remainingHoldMs, HOLD_SPREAD_SECONDS } from '@/lib/complianceHold'
 import { lifetimeAttemptCap } from '@/lib/dialerConstants'
 import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
-import { agentSipUriForUserId, resolveCredentialConnectionId } from '@/lib/agentSipCredentials'
+import {
+  agentSipUriForUserId, agentSipUriForClerkId, resolveCredentialConnectionId,
+} from '@/lib/agentSipCredentials'
 import { ensureSipUriCallingEnabled, isSipUriRejection } from '@/lib/telnyxSipUriCalling'
 import { getPlatformConfig } from '@/lib/platformConfig'
 import { recordDestinationRate } from '@/lib/destinationRates'
@@ -296,6 +298,120 @@ async function bridgeAgentOntoLead(
   return 'bridged'
 }
 
+// ── DEFERRED AGENT LEG: PLACED WHEN THE LEAD ANSWERS ──────────────────────
+// Normally both legs go out together and Telnyx bridges them at pickup, which
+// is what makes an answered call open without dead air. The price is an agent
+// leg live for the entire time the lead's phone rings, on every dial including
+// the ones nobody answers — 317 such legs, 176 billed minutes, 17% of a clean
+// session's carrier spend on 14 Sept, buying nothing.
+//
+// With platform_config.dial_agent_on_answer on, the lead is dialed alone and
+// this places the agent's leg the moment they pick up. The browser auto-answers
+// in about 0.4 seconds; the configured line covers that gap.
+//
+// THE TRADE, STATED PLAINLY: this moves where failure lands. Today a dead agent
+// socket fails BEFORE the lead's phone rings and nobody is disturbed. Here the
+// lead answers first and the agent is discovered unreachable afterwards — an
+// abandoned call in the sense the FTC means it. Agent-leg failure ran 10-20%
+// during the socket problems on 14 Sept. Abandoned sits at 2.9% against a 20%
+// threshold, so there is room, but this is the change that spends it. Every
+// failure path below therefore ENDS THE LEAD'S CALL rather than leaving a
+// person listening to nothing.
+//
+// user_dial only. Fan-out has its own agent-leg path which is already marked
+// unverified in this file, and wiring a second deferral through it would be
+// changing two things at once on the code that had seven people hearing
+// silence.
+async function placeAgentLegForAnsweredLead(
+  leadCallControlId: string,
+  callRow: { id: string; user_id: string | null; pool_number_id: string | null }
+): Promise<void> {
+  const env = resolveTelnyxConfigOrLog('placeAgentLegForAnsweredLead')
+  if (!env || !callRow.user_id) {
+    console.error(
+      `[calls/events] cannot place deferred agent leg for ${leadCallControlId} ` +
+      `(env=${!!env}, user=${callRow.user_id}); hanging up rather than leaving dead air`
+    )
+    await hangupCallControlId(leadCallControlId)
+    return
+  }
+
+  // Said BEFORE the agent leg is dialled, not after. The speak command is
+  // queued on the lead's call and starts playing while the dial is in flight,
+  // so the two overlap instead of adding up. Empty message plays nothing.
+  const { connecting_message: connectingMessage } = await getPlatformConfig()
+  if (connectingMessage && connectingMessage.trim().length > 0) {
+    void callControlAction(leadCallControlId, 'speak', {
+      payload: connectingMessage,
+      voice: 'female',
+    })
+  }
+
+  // The caller ID the lead already sees, so the agent's screen and the
+  // prospect's handset agree. Falls back to the platform number.
+  let fromNumber = process.env.TELNYX_PHONE_NUMBER || ''
+  if (callRow.pool_number_id) {
+    const { data: poolRow } = await supabaseAdmin
+      .from('phone_numbers')
+      .select('phone_number')
+      .eq('id', callRow.pool_number_id)
+      .maybeSingle()
+    if (poolRow?.phone_number) fromNumber = poolRow.phone_number
+  }
+
+  const agentSipUri = await agentSipUriForClerkId(callRow.user_id, env)
+  if (!agentSipUri || !fromNumber) {
+    console.error(
+      `[calls/events] no agent SIP URI or caller id for ${leadCallControlId}; hanging up`
+    )
+    await hangupCallControlId(leadCallControlId)
+    return
+  }
+
+  try {
+    const res = await fetch('https://api.telnyx.com/v2/calls', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        connection_id: env.connectionId,
+        to: agentSipUri,
+        from: fromNumber,
+        webhook_url: env.webhookUrl,
+        // Short on purpose. The browser auto-answers in ~0.4s, so anything
+        // past a few seconds means it is not going to — and every one of
+        // those seconds is a person holding a silent line.
+        timeout_secs: 12,
+      }),
+    })
+    const body = await res.json()
+    const agentLegId: string | undefined = body?.data?.call_control_id
+
+    if (!res.ok || !agentLegId) {
+      console.error(
+        `[calls/events] deferred agent leg dial FAILED for ${leadCallControlId}:`,
+        JSON.stringify(body).slice(0, 300)
+      )
+      await hangupCallControlId(leadCallControlId)
+      return
+    }
+
+    // Written before the bridge so the agent leg's own call.answered webhook —
+    // which can arrive within a few hundred milliseconds — can find its lead.
+    await supabaseAdmin
+      .from('calls')
+      .update({ agent_call_control_id: agentLegId })
+      .eq('id', callRow.id)
+
+    console.log(`[calls/events] deferred agent leg ${agentLegId} placed for ${leadCallControlId}`)
+  } catch (err) {
+    console.error('[calls/events] deferred agent leg threw:', err)
+    await hangupCallControlId(leadCallControlId)
+  }
+}
+
 async function handleCallAnswered(callControlId: string): Promise<void> {
   void logCallEvent({
     event_type: 'answered',
@@ -351,12 +467,65 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
   // Only fan-out lines reach this. user_dial is already bridged by
   // bridge_on_answer, and re-bridging a live call would drop the audio the
   // agent is using.
+  // ── IS THIS THE DEFERRED AGENT LEG ANSWERING? ──────────────────────────
+  // When dial_agent_on_answer is on there is no bridge_on_answer, so the two
+  // legs are connected here, explicitly, the moment the agent's browser picks
+  // up. Checked FIRST and by agent_call_control_id, because an agent leg has
+  // no calls row of its own — the lookup below would find nothing and return.
+  //
+  // bridged_at is claimed inside bridgeAgentOntoLead with `.is(null)`, so a
+  // duplicate or redelivered webhook cannot bridge twice.
+  try {
+    const { data: asAgentLeg } = await supabaseAdmin
+      .from('calls')
+      .select('id, call_control_id, bridged_at, answered_at')
+      .eq('agent_call_control_id', callControlId)
+      .maybeSingle()
+
+    if (asAgentLeg?.call_control_id && !asAgentLeg.bridged_at) {
+      const outcome = await bridgeAgentOntoLead(
+        asAgentLeg.call_control_id,
+        'deferred agent leg answered'
+      )
+      if (outcome === 'failed' || outcome === 'no-agent') {
+        console.error(
+          `[calls/events] deferred bridge ${outcome} for lead ` +
+          `${asAgentLeg.call_control_id}; hanging up rather than leaving dead air`
+        )
+        await hangupCallControlId(asAgentLeg.call_control_id)
+      }
+      return
+    }
+  } catch (err) {
+    console.error('[calls/events] deferred agent-leg bridge check failed:', err)
+  }
+
   try {
     const { data: row } = await supabaseAdmin
       .from('calls')
-      .select('id, dial_source, dial_group_id, agent_call_control_id, bridged_at')
+      .select('id, dial_source, dial_group_id, agent_call_control_id, bridged_at, user_id, pool_number_id')
       .eq('call_control_id', callControlId)
       .maybeSingle()
+
+    // ── THE LEAD JUST ANSWERED AND HAS NO AGENT LEG YET ────────────────────
+    // Only possible with dial_agent_on_answer on, because every other path
+    // dials both legs together. This is the moment the agent is summoned —
+    // the prospect is on the line and the clock is running, which is why the
+    // spoken line goes out first and the dial overlaps it.
+    //
+    // Guarded on dial_source so a fan-out line, whose agent leg is placed by a
+    // different and still-unverified path, can never fall in here.
+    if (row && !row.agent_call_control_id && row.dial_source === 'user_dial') {
+      const { dial_agent_on_answer: deferred } = await getPlatformConfig()
+      if (deferred) {
+        await placeAgentLegForAnsweredLead(callControlId, {
+          id: row.id,
+          user_id: row.user_id as string | null,
+          pool_number_id: row.pool_number_id as string | null,
+        })
+        return
+      }
+    }
 
     // ── CONNECT THE LEGS AT ANSWER, NOT AT THE VERDICT ──────────────────────
     // The dial already asks for this: bridge_on_answer is set whenever there
@@ -1509,6 +1678,42 @@ async function handleHangup(
         `sets it automatically, or set "Receive SIP URI calls" to "Only from my Connections" in ` +
         `Telnyx Mission Control.`
       )
+    }
+
+    // ── THE AGENT NEVER ARRIVED, SO DO NOT LEAVE THE LEAD HOLDING ─────────
+    // Only reachable with dial_agent_on_answer on. The lead answered, the
+    // agent's leg was dialled, and it ended without ever bridging — the
+    // browser did not pick up inside its 12-second timeout, or the socket was
+    // dead. Without this the prospect sits on an open line listening to
+    // nothing until they hang up, which is both the worst version of this
+    // feature and an abandoned call on the carrier's books.
+    //
+    // No calls row for this id means it is an agent leg; the lead is found by
+    // agent_call_control_id. Restricted to UNBRIDGED calls: if the two were
+    // connected and the agent simply hung up, the existing machine-verdict and
+    // compliance-hold paths own what happens next and must not be second-
+    // guessed here.
+    if (!callRow) {
+      try {
+        const { data: strandedLead } = await supabaseAdmin
+          .from('calls')
+          .select('call_control_id, bridged_at, answered_at, duration')
+          .eq('agent_call_control_id', callControlId)
+          .is('bridged_at', null)
+          .maybeSingle()
+
+        if (strandedLead?.call_control_id
+            && strandedLead.answered_at
+            && !strandedLead.duration) {
+          console.error(
+            `[calls/events] deferred agent leg ${callControlId} ended without bridging; ` +
+            `hanging up lead ${strandedLead.call_control_id} rather than leaving them on a dead line`
+          )
+          await hangupCallControlId(strandedLead.call_control_id)
+        }
+      } catch (err) {
+        console.error('[calls/events] stranded-lead check failed:', err)
+      }
     }
 
     // ── THE AGENT LEG GOES WHEN ITS CALL DOES ────────────────────────────

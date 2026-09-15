@@ -593,22 +593,31 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // agentCallControlId means no link_to and no bridge_on_answer below, which is
   // the whole mechanism; nothing else here has to know.
   //
-  // ── THE FLAG IS NOT HONOURED HERE YET, DELIBERATELY ──────────────────────
-  // platform_config.dial_agent_on_answer exists and this is where it would be
-  // read. It is NOT read, because the other half — placing the agent leg from
-  // the call.answered handler, covering the gap with speech, and bridging — is
-  // not written.
+  // ── WHEN THE AGENT'S LEG IS PLACED ───────────────────────────────────────
+  // Normally: now, alongside the lead, so Telnyx's bridge_on_answer connects
+  // them at pickup with no dead air. The price is an agent leg live for the
+  // whole time the lead's phone rings — on every dial, including the ones
+  // nobody answers. Measured 14 Sept on a clean session: 317 such legs, 176
+  // billed minutes, 17% of that session's carrier spend, buying nothing.
   //
-  // Half of it is worse than none of it. Skipping the agent leg here without
-  // that handler means the lead answers and hears nothing at all, which is
-  // precisely the fault that had seven people saying "hello?" into silence on
-  // 14 Sept. A flag an operator can flip into that state is a trap, not a
-  // feature.
+  // With dial_agent_on_answer on, this is skipped and the agent's leg is
+  // placed from the call.answered handler instead. No agentCallControlId
+  // means no link_to and no bridge_on_answer below, which is the whole
+  // mechanism — nothing else in this function has to know.
   //
-  // WHEN THE ANSWER-SIDE HANDLER EXISTS: read the config here and gate the
-  // block below on it. Both halves ship together or neither does.
+  // FAN-OUT IS EXCLUDED FROM THE DEFERRAL. A fan-out line is already placed
+  // with nobody attached and its bridge lives on a different, still-unverified
+  // path; wiring a second deferral through it would be changing two things at
+  // once on the code that had seven people listening to silence.
+  //
+  // Read rather than passed in: getPlatformConfig is memoised for 30 seconds
+  // and already consulted on this path, so this is a map lookup.
+  const dialCfg = await getPlatformConfig()
+  const deferAgentLeg =
+    dialCfg.dial_agent_on_answer === true && p.source === 'user_dial'
+
   let agentCallControlId: string | undefined
-  if (p.source === 'user_dial' || p.source === 'controller_fanout') {
+  if (!deferAgentLeg && (p.source === 'user_dial' || p.source === 'controller_fanout')) {
     // THIS agent's own SIP endpoint — not a shared one. p.userId is the
     // Clerk id of the person who clicked dial, and agentSipUriForClerkId
     // resolves it to the credential their browser registered with, so the
