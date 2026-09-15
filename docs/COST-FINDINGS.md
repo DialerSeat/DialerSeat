@@ -61,6 +61,59 @@ flattening peaks now still pulls the final figure down.
 
 ---
 
+## 1d. AMD is billed and INVISIBLE to the webhook — every figure here is ~13% low
+
+`call.cost` reports exactly three components: `sip-trunking`, `call-control`
+and `call-recording`. **AMD is not one of them.** The evening session carried
+149 AMD verdicts — $0.298 at $0.002 each — none of which appear in any captured
+record.
+
+So the measured $2.32 was really about **$2.62**. Per dial $0.0121 not $0.0108;
+per conversation **$0.125 not $0.111**.
+
+**We have captured exactly ONE record type.** `/api/admin/telnyx-charges`
+queries nineteen. AMD is provably billed and provably absent from the webhook,
+which means anything else billed outside `call.cost` is equally absent.
+
+> **Ledger → CAPTURE NOW is the highest-value click available.** It reads
+> `GET /v2/detail_records` across all nineteen types and stores them
+> append-only. It is admin-authed, so it needs a human. Until it is run, the
+> honest statement is not "we know what we are charged" — it is "we know what
+> one webhook reports."
+
+---
+
+## 1e. Options checked and rejected, so nobody re-checks them
+
+**Channel billing — inbound only.** A flat MRC per concurrent channel with calls
+at $0: US pricing is $12/channel (0–10), $11 (10–50), $9 (50–250), $8 (250+).
+It applies *only to inbound*. Peak concurrency here is 12 with an average of 1.4
+when active, so twelve channels would be $144/month against a $28 usage bill —
+worse, and it would not touch outbound anyway.
+
+**Pre-answer voicemail detection — not on this stack.** Screening automated
+announcements during *early media*, before a call is billable, is a real
+technique. But at SIP signalling level a human answer and a voicemail answer are
+structurally identical (`INVITE → 100 → 183 → 200 OK`); the difference exists
+only in the media. Telnyx Call Control does not expose pre-answer media without
+paid media streaming. Worth remembering only if a different stack is ever
+evaluated.
+
+**Leaving Call Control for plain SIP trunking — loses AMD.** The platform fee is
+**39.7% of the entire bill** ($2.06 across 1,028 billed minutes, on essentially
+the same seconds as sip-trunking's 1,048) and is documented as *"$0.002/minute
+plus the SIP Trunking fee"*. But AMD is a Programmable Voice feature and is not
+offered on standalone Elastic SIP Trunking, and AMD is what skips 54% of
+everything that answers. The 40% is the price of the platform, and the place to
+attack it is the Committed tier's *"discounted rates across everything you
+use"*, not an architecture change.
+
+**Their contract has a dispute clause.** *"The Parties shall negotiate in good
+faith to resolve any billing dispute for a period of thirty (30) days."* Should
+not be needed for requests for information, but it exists.
+
+---
+
 ## 2. Where the money actually goes
 
 Clean session, after the agent-leg teardown fix:
@@ -79,12 +132,15 @@ people, by a factor of 1.6.
 Unit economics on that session: 216 dials, 142 answered, **21 conversations**,
 $2.32.
 
-| | |
-|---|---|
-| per dial | $0.0108 |
-| per answered call | $0.0164 |
-| **per conversation** | **$0.111** |
-| projected 6-hour day | $9.94 |
+| | measured | **with AMD (§1d)** |
+|---|---|---|
+| per dial | $0.0108 | **$0.0121** |
+| per answered call | $0.0164 | $0.0184 |
+| **per conversation** | $0.111 | **$0.125** |
+| projected 6-hour day | $9.94 | **$11.21** |
+
+The right-hand column is the honest one. Everything measured from `call.cost`
+alone understates by roughly 13%, and possibly more — see §1d.
 
 **Judge the platform on cost per conversation, not cost per day.** A cheap day
 is a day nobody picked up: that session ran at a 65.7% answer rate, which is
