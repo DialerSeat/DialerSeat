@@ -246,7 +246,11 @@ export async function placeOutboundCall(
   //
   // One indexed exact-match lookup, and it fails open (see lib/suppression.ts)
   // so an unavailable table cannot stop a legitimate business dialing.
-  const suppressed = await checkSuppression(toFormatted, userId)
+  // campaignId matters: DNC is scoped per campaign, because a campaign is one
+  // opt-in form and another campaign is a separate form the same person filled
+  // out. Without it here, a campaign-scoped suppression row can never match
+  // and the whole scope is inert.
+  const suppressed = await checkSuppression(toFormatted, userId, campaignId)
   if (suppressed) {
     console.warn(
       `[placeOutboundCall:${source}] BLOCKED, ${toFormatted} is on the ` +

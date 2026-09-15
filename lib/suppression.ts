@@ -25,11 +25,29 @@ import { normalizeToE164 } from '@/lib/phoneNormalize'
 
 const supabase = getServiceClient('suppression')
 
+export type SuppressionScope = 'campaign' | 'user' | 'platform'
+
 export interface SuppressionHit {
-  scope: 'user' | 'platform'
+  scope: SuppressionScope
   reason: string | null
   source: string
 }
+
+/**
+ * How widely an agent's DO NOT CALL disposition suppresses a number.
+ *
+ * 'campaign' by product decision: a campaign is one opt-in form, so another
+ * campaign is a separate form the person filled out and a separate permission.
+ * Suppressing everywhere on the strength of one campaign throws away a lead
+ * they asked for.
+ *
+ * Isolated to a constant on purpose. A person saying "stop calling me" is a
+ * company-specific do-not-call request under 16 CFR 310.4(b)(1)(iii)(A), which
+ * attaches to the SELLER rather than to one form — so if that reading is ever
+ * preferred, changing this single value to 'user' widens every DNC write
+ * without touching any of the plumbing around it.
+ */
+export const DNC_DISPOSITION_SCOPE: SuppressionScope = 'campaign'
 
 /**
  * Whether this number is suppressed for this caller.
@@ -44,7 +62,8 @@ export interface SuppressionHit {
  */
 export async function checkSuppression(
   phone: string,
-  userId: string | null | undefined
+  userId: string | null | undefined,
+  campaignId?: string | null
 ): Promise<SuppressionHit | null> {
   const e164 = normalizeToE164(phone)
   if (!e164) return null
@@ -54,15 +73,18 @@ export async function checkSuppression(
     // caller's own rows. `.or` keeps it to a single index-backed query.
     let query = supabase
       .from('suppression_list')
-      .select('scope, reason, source, user_id')
+      .select('scope, reason, source, user_id, campaign_id')
       .eq('phone_e164', e164)
       .limit(5)
 
-    if (userId) {
-      query = query.or(`scope.eq.platform,and(scope.eq.user,user_id.eq.${userId})`)
-    } else {
-      query = query.eq('scope', 'platform')
-    }
+    // Three scopes, one query. platform matches everyone; user matches this
+    // caller's own rows; campaign matches only the campaign being dialled —
+    // which is the whole point, since a DNC on one form says nothing about
+    // another form the same person filled out.
+    const clauses = ['scope.eq.platform']
+    if (userId) clauses.push(`and(scope.eq.user,user_id.eq.${userId})`)
+    if (campaignId) clauses.push(`and(scope.eq.campaign,campaign_id.eq.${campaignId})`)
+    query = query.or(clauses.join(','))
 
     const { data, error } = await query
     if (error) {
@@ -93,7 +115,8 @@ export async function checkSuppression(
 export async function addSuppression(params: {
   phone: string
   userId?: string | null
-  scope?: 'user' | 'platform'
+  campaignId?: string | null
+  scope?: SuppressionScope
   reason?: string | null
   source?: string
 }): Promise<{ ok: boolean; error?: string }> {
@@ -104,6 +127,11 @@ export async function addSuppression(params: {
   if (scope === 'user' && !params.userId) {
     return { ok: false, error: 'user-scope suppression requires a user' }
   }
+  // A campaign-scoped row with no campaign would silently suppress nothing:
+  // every lookup filters on campaign_id, so the row could never match.
+  if (scope === 'campaign' && !params.campaignId) {
+    return { ok: false, error: 'campaign-scope suppression requires a campaign' }
+  }
 
   const { error } = await supabase
     .from('suppression_list')
@@ -111,11 +139,18 @@ export async function addSuppression(params: {
       {
         scope,
         user_id: scope === 'user' ? params.userId : null,
+        campaign_id: scope === 'campaign' ? params.campaignId : null,
         phone_e164: e164,
         reason: params.reason ?? null,
         source: params.source ?? 'manual',
       },
-      { onConflict: scope === 'platform' ? 'phone_e164' : 'user_id,phone_e164', ignoreDuplicates: true }
+      {
+        onConflict:
+          scope === 'platform' ? 'phone_e164'
+          : scope === 'campaign' ? 'campaign_id,phone_e164'
+          : 'user_id,phone_e164',
+        ignoreDuplicates: true,
+      }
     )
 
   if (error) {

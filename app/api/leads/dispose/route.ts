@@ -4,7 +4,8 @@ import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
 import { lifetimeAttemptCap } from '@/lib/dialerConstants'
-import { addSuppression } from '@/lib/suppression'
+import { addSuppression, DNC_DISPOSITION_SCOPE } from '@/lib/suppression'
+import { canonical as canonicalDisp } from '@/lib/dispositions'
 
 export async function POST(req: Request) {
   try {
@@ -68,11 +69,17 @@ export async function POST(req: Request) {
     // Awaited but non-fatal — if this write fails the lead is still marked,
     // and the alternative (failing the disposition) would leave the agent
     // stuck on a lead they've already handled.
-    if (disposition === 'DO NOT CALL' && lead.phone) {
+    // Scope comes from DNC_DISPOSITION_SCOPE so this route and
+    // /api/leads/update cannot disagree about how far a DNC reaches. It used
+    // to be hard-coded 'user' here, which is broader than the product rule:
+    // a campaign is one opt-in form, and another campaign is a separate form
+    // the same person filled out.
+    if (canonicalDisp(disposition) === 'DO NOT CALL' && lead.phone) {
       const result = await addSuppression({
         phone: lead.phone,
         userId: user_id,
-        scope: 'user',
+        campaignId: lead.campaign_id ?? null,
+        scope: lead.campaign_id ? DNC_DISPOSITION_SCOPE : 'user',
         reason: 'Agent marked DO NOT CALL',
         source: 'disposition',
       })
