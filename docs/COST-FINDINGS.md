@@ -110,11 +110,16 @@ are the ceilings, in agents, at 800 dials/agent/day.
 
 | constraint | breaks at | why |
 |---|---|---|
-| **Vercel Hobby — commercial use** | **immediately** | Hobby is non-commercial. Enforced by **account suspension**. You take payment today |
 | **Number pool at a healthy intensity** | **0.7 agents** | 13 numbers × 40 dials/day = 520/day |
 | **Number pool at `daily_cap` 200** | **3.2 agents** | 13 × 200 = 2,600/day — but see below |
-| Vercel Hobby — invocation ceiling | 7 agents | polling alone, before a single dial (§1x) |
 | Telnyx real-time CPS | far out | 20 CPS per credential; the governor paces it |
+| ~~Vercel~~ | **not a constraint** | **the account is on PRO.** Commercial use is fine, crons already run sub-daily, and invocations are **$0.60/million** — ~$8.55/month at 100 agents |
+
+> **An earlier version of this table listed two Vercel ceilings, including
+> “breaks immediately — commercial use forbidden.” Both were wrong**: they came
+> from a stale note saying the account was on Hobby. `vercel.json` already runs
+> `stale-call-reaper` every 10 minutes and `ops-health` hourly, which Hobby
+> cannot do — the evidence was in the repo the whole time.
 
 ### The binding constraint is the number pool, and it is not about cost
 
@@ -152,8 +157,10 @@ than engineered away.
 
 | | |
 |---|---|
-| **Vercel Pro — $20/mo** | Hobby forbids commercial use. This is a ToS violation **today**, not at scale |
 | **Point the SMS opt-out webhook** | TCPA exposure scales **linearly with volume**, at $500–$1,500 per call, no safe harbour (§1ac) |
+
+*(Vercel Pro was listed here and should not have been — the account is already
+on it.)*
 
 ### Before marketing hard
 
@@ -1700,67 +1707,51 @@ one line — not before, because at a ceiling of 1 it cannot bite.
 
 ---
 
-## 1x. THE HARD CEILING IS VERCEL, NOT TELNYX — and it pauses rather than bills
+## 1x. ~~THE HARD CEILING IS VERCEL~~ — RETRACTED, and what the alerting really did
 
-**The one finding in this document that is not about money.** It is about the
-dialer stopping.
+**This section claimed Vercel Hobby was the binding constraint: a seven-agent
+invocation ceiling, a thirty-day feature pause, and commercial use forbidden
+outright. Every part of it was wrong.**
 
-Vercel **Hobby is 1,000,000 function invocations a month**, and the enforcement
-is not an invoice: *“exceeding a Hobby limit doesn't trigger a bill; it pauses
-that feature for roughly 30 days.”*
+**The account is on Vercel Pro**, and has been. So:
 
-### The dialer polls, and polling is invocations
+| claimed | actually |
+|---|---|
+| commercial use forbidden, suspension risk | **permitted.** Pro is the commercial plan |
+| 1M invocations then a 30-day pause | **no cap** — $0.60/million against the bundled credit. 100 agents ≈ **$8.55/month** |
+| “crons run at most daily on Hobby” | **per-minute cadence allowed**, and already in use |
 
-| poll | interval | per agent / month |
+**The evidence was in the repo the whole time.** `vercel.json` runs
+`stale-call-reaper` at `*/10 * * * *` and `ops-health` **hourly** — schedules
+Hobby rejects at deploy time. A stale memory note was asserted instead of
+checked.
+
+### And the alerting worked, which §1n also got wrong
+
+§1n said 11 September *“ran for ten hours and nothing said anything.”*
+`ops_alert_log` says otherwise:
+
+| alert | fired | first |
 |---|---|---|
-| session heartbeat | 5s (**1.5s in predictive**) | 95,040 |
-| pacing | 10s | 47,520 |
-| incoming route (**predictive only**) | 2s | 237,600 |
+| `pool_capacity` | **5 times** | 11 Sept **14:35 ET** — *“The caller-ID pool has NO active numbers.”* |
+| `webhook_silence` | 1 | 11 Sept 17:14 ET — *“176 call(s) placed in the last 20m but ZERO webhook events received.”* |
 
-Six hours a day, 22 days:
+**The monitoring caught it and said so, repeatedly.** What was genuinely missing
+is narrower and still true: **nothing watched for a blocked account (D17)**, and
+nothing stopped the retry loop. Both now exist (§1n).
 
-| mode | per agent / month | **agents to saturate Hobby** |
-|---|---|---|
-| **progressive** (all 26 campaigns) | 142,560 | **7.0** |
-| **predictive** | 601,920 | **1.7** |
+### What this cost was a real finding
 
-**Today, two agents on progressive burn 285,120 — 29% of the entire Hobby
-allowance — before a single dial, webhook or page load.** Telnyx webhooks alone
-added ~2,500 a day last week, another ~7.5%. Call it **35–40% used, on two
-agents.**
-
-And on 11 September the dialer made **4,341 dial attempts in ten hours** against
-a blocked account (§1n). Every one an invocation.
-
-### There is a second, separate problem with being on Hobby
-
-> Hobby is **non-commercial use only**, and the enforcement is **account
-> suspension**. DialerSeat takes payment. That is a violation the day
-> monetisation is switched on, independent of any limit.
-
-### Do NOT engineer around this
-
-The heartbeat is 67% of the progressive budget and could go from 5s to 10s —
-`STALE_HEARTBEAT_MS` is 15s, so two beats still land inside the stale window,
-and it would double the ceiling to 14 agents.
-
-**That is the wrong trade and it should not be made.** It is a liveness-critical
-change to the dial path, to avoid a **$20/month** bill, while planning for 100
-agents. Vercel **Pro is $20/month**, removes the ToS exposure, and removes a
-ceiling that is otherwise five agents away.
-
-> **This is the cheapest item in the entire document and the only one whose
-> failure mode is “the product stops for thirty days.”** Every per-minute saving
-> in §0 is measured in cents per agent-day. This is $20 a month to remove a
-> cliff at seven agents and a suspension risk that already applies.
-
-Once on Pro, the polling profile stops being a ceiling and becomes a line item:
-at 100 agents progressive that is ~14.2M invocations a month, which is an
-overage worth pricing but not one that stops anything.
+Chasing a phantom ceiling produced one thing worth keeping: the **polling
+profile** is now measured — 142,560 invocations per agent per month on
+progressive, 601,920 on predictive, driven by a 5s heartbeat (1.5s in
+predictive), a 10s pacing poll and a 2s incoming poll. On Pro that is a rounding
+error. It would matter on a per-invocation platform, and it is worth knowing
+before anyone proposes one.
 
 ---
 
-## 1w. THE OTHER VENDORS — Stripe and the database
+## 1w. THE OTHER VENDORS## 1w. THE OTHER VENDORS — Stripe and the database
 
 A night on Telnyx, and the bill has other names on it.
 
