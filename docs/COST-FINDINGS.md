@@ -8,6 +8,69 @@ about 40% of what you pay for an answered call is a minimum you never used.**
 
 ---
 
+## THE LIST
+
+Everything found, ordered by what it is worth. Detail in the numbered sections.
+
+### Do these — no engineering, and the top two are the biggest items in the file
+
+| # | action | worth | where |
+|---|---|---|---|
+| 1 | **Switch Telnyx payment to ACH Direct Debit** | 3% of every dollar, forever — **~$199/mo at 100 agents** | §1q |
+| 2 | **Turn on ACH auto-recharge, card as fallback only** | prevents *“negative balance 1 month → all numbers deleted”* | §1r |
+| 3 | **Check last invoice for “emergency services” under MRC** | settles **$0–$19.50/month** of E911 | §1o, §1u |
+| 4 | **Send `docs/telnyx-questions.md`** (5 questions) | **~$2.56/agent/day** if 2 and 3 land | §1a–c, §1g |
+| 5 | **Ledger → CAPTURE NOW** | 1 of 19 record types has ever been captured | §1d |
+| 6 | Check the portal's abandoned-call pie chart | carrier's own count of the §1i breach | §1i |
+| 7 | Set outbound CNAM on all 13 numbers | free; landlines only, no answer-rate claim | §1t |
+| 8 | Register the pool at `freecallerregistry.com` | free; First Orion + TNS + Hiya in one form | §1f |
+
+### Shipped tonight
+
+| what | worth |
+|---|---|
+| Agent socket breaker | abandonment **33.8% → 15.4%**, under the surcharge line |
+| `call.bridged` recorded from the carrier's event | proved predictive works; unblocked it |
+| Agent-leg rate corrected $0.002 → $0.004 | reconciler was ~40% wrong on that half |
+| Billing model validated against Telnyx | **184 of 192 legs predicted exactly** |
+
+### Built or designed, deliberately not on
+
+| what | gate |
+|---|---|
+| `dial_agent_on_answer` (−$0.68/agent/day) | **abandonment must measure under 20% first** — §1i |
+| Platform-failure backoff (§1n) | wants a session where it is the only thing moving |
+| Voicemail drop into the prepaid 49 seconds (§1j) | playback billing unverified **and** prerecorded-voice consent is counsel's call |
+
+### Rejected — do not re-check
+
+Branded Calling ($0.075/call, 6× a whole dial) · calling bundles (Operator
+Connect/Zoom only, and Programmable Voice does not consume them) · channel
+billing (inbound only, $144/mo against a $28 bill) · leaving Call Control (loses
+AMD, which skips 54% of answers) · inbound `reject` (took the dialer down; inbound
+costs **$0.90/month**) · changing the ring timeout (both directions lose) ·
+lowering `voicemail_streak_limit` (curve is flat) · spam-label testing the two
+numbers §1f originally named · inbound CNAM lookup · pre-answer AMD (not on this
+stack) · call transfer anywhere ($0.10 per invocation).
+
+### Still unknown
+
+1. Is **E911** enabled? — $0 or $19.50/month. **Invoice answers it.**
+2. What **attestation level** are we getting? Free and automatic, level unnamed.
+3. Which price-list line is the agent leg's **second $0.002/min**?
+4. Does **`playback_start`** bill separately?
+5. Does the **CPS surcharge** apply at all? (§1p says almost certainly not.)
+
+### The corrections, kept visible on purpose
+
+Five claims of mine did not survive checking: number burn (window artifact),
+voicemail retirement (6× → 1.5×), predictive “never bridging” (telemetry gap), the
+CPS surcharge (**priced off another product's tier table**), and the agent leg
+being “double billed” (it is a published line). Four of the five came from reading
+a column we populate as though it were the carrier's state — see §1m.
+
+---
+
 ## 0. The road to $3 a day
 
 The target is **$3 per agent per day**. Here is the arithmetic, measured rather
