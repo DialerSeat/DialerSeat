@@ -7,6 +7,7 @@ import { stripe } from '@/lib/stripe'
 import { activatePendingTeamMember, deactivateTeamMember } from '@/lib/teamMembership'
 import { sendAdminPush } from '@/lib/pushNotify'
 import { takeOverAgentPaidSeats } from '@/lib/seatTakeover'
+import { extractStripeFailureDetail, summariseStripeFailure } from '@/lib/stripeFailureDetail'
 import { logBillingEvent } from '@/lib/billingEvents'
 import { assembleAndSaveDisputeEvidence, recordDisputeClosed } from '@/lib/disputeEvidence'
 import {
@@ -131,9 +132,45 @@ export async function POST(req: Request) {
               if (subRow?.user_id) {
                 const { name } = await lookupNameAndEmail(subRow.user_id)
                 const amount = ((invoice.amount_due ?? 0) / 100).toFixed(2)
+
+                // ── SAY WHY, NOT JUST THAT ───────────────────────────
+                // This said "payment failed" and nothing else, which tells
+                // whoever reads it to go and look it up in Stripe. The
+                // invoice's own payment intent carries the reason, and the
+                // charge carries Stripe's seller_message -- the sentence
+                // written for the merchant rather than the cardholder.
+                //
+                // Best effort on purpose: a renewal failure is recoverable
+                // and the notification matters more than the detail, so a
+                // lookup that fails still sends the original message.
+                let why = ''
+                try {
+                  const piId = (invoice as unknown as { payment_intent?: string }).payment_intent
+                  if (typeof piId === 'string') {
+                    const intent = await stripe.paymentIntents.retrieve(piId)
+                    const chId = (intent as unknown as { latest_charge?: string }).latest_charge
+                    const charge = typeof chId === 'string' ? await stripe.charges.retrieve(chId) : null
+                    const detail = extractStripeFailureDetail(intent, charge)
+                    why = ` ${summariseStripeFailure(detail)}`
+                    await supabase.from('billing_events').insert({
+                      clerk_id: subRow.user_id,
+                      event_type: 'payment_failed',
+                      plan: null,
+                      amount_cents: invoice.amount_due ?? 0,
+                      stripe_subscription_id: subscriptionId,
+                      user_name: name,
+                      user_email: null,
+                      detail: { ...detail, summary: why.trim(), source: 'invoice.payment_failed' },
+                    })
+                  }
+                } catch (e) {
+                  console.error('[stripe/webhook] could not resolve invoice failure reason', e)
+                }
+
                 await sendAdminPush(
                   'payment_failed',
-                  `${name}'s payment of $${amount} failed. Subscription is past due, recoverable if you reach them.`
+                  `${name}'s payment of $${amount} failed.${why} ` +
+                  `Subscription is past due, recoverable if you reach them.`
                 )
               }
             } catch (e) {
@@ -141,6 +178,101 @@ export async function POST(req: Request) {
               // retry the whole event and re-run everything above it.
               console.error('[stripe/webhook] payment_failed notification failed', e)
             }
+          }
+        }
+        break
+      }
+
+      // ── STRIPE EXPLAINING, IN ITS OWN WORDS, WHY A PAYMENT FAILED ───────
+      // Nothing listened for this, and it is the event that carries the real
+      // story. invoice.payment_failed above says THAT a payment failed and
+      // pushes a notification; this says WHY, with detail that never reaches
+      // the browser:
+      //
+      //   charge.outcome.seller_message   Stripe's explanation written FOR
+      //                                   THE MERCHANT, e.g. "The bank
+      //                                   returned the decline code
+      //                                   insufficient_funds."
+      //   charge.outcome.network_status   declined_by_network means the bank
+      //                                   refused. not_sent_to_network means
+      //                                   WE blocked it before it ever left.
+      //                                   Identical to the cardholder,
+      //                                   opposite remedies.
+      //   last_payment_error              code, decline_code, and the card
+      //                                   that was tried -- brand, last4,
+      //                                   funding, issuing country.
+      //
+      // Why this matters here: 19 of 34 users have tried to subscribe and
+      // never succeeded, and until now not one of those failures left a
+      // record of its cause anywhere.
+      case 'payment_intent.payment_failed': {
+        const intent = event.data.object as Stripe.PaymentIntent
+
+        // The charge holds `outcome`, which is the half worth having. A
+        // payment blocked before reaching the network has no charge at all,
+        // and that absence is itself the answer -- so a missing charge
+        // produces partial detail rather than an aborted handler.
+        let charge: Stripe.Charge | null = null
+        try {
+          const chargeId = (intent as unknown as { latest_charge?: string | Stripe.Charge }).latest_charge
+          if (typeof chargeId === 'string') {
+            charge = await stripe.charges.retrieve(chargeId)
+          } else if (chargeId && typeof chargeId === 'object') {
+            charge = chargeId
+          }
+        } catch (e) {
+          console.error('[stripe/webhook] could not retrieve charge for outcome', e)
+        }
+
+        const detail = extractStripeFailureDetail(intent, charge)
+        const summary = summariseStripeFailure(detail)
+
+        // Who this was, resolved from the customer rather than trusted from
+        // metadata, so the row is attributable even on an intent we did not
+        // create ourselves.
+        let clerkId: string | null =
+          (intent.metadata?.clerk_id as string | undefined) ?? null
+        if (!clerkId && typeof intent.customer === 'string') {
+          const { data: byCustomer } = await supabase
+            .from('users')
+            .select('clerk_id')
+            .eq('stripe_customer_id', intent.customer)
+            .maybeSingle()
+          clerkId = byCustomer?.clerk_id ?? null
+        }
+
+        console.error(
+          `[stripe/webhook] payment_intent.payment_failed ${intent.id} ` +
+          `(${clerkId ?? 'unknown user'}): ${summary}`
+        )
+
+        if (clerkId) {
+          const { name, email } = await lookupNameAndEmail(clerkId)
+          try {
+            await supabase.from('billing_events').insert({
+              clerk_id: clerkId,
+              event_type: 'checkout_failed',
+              plan: null,
+              amount_cents: intent.amount ?? 0,
+              stripe_subscription_id: null,
+              user_name: name,
+              user_email: email,
+              detail: { ...detail, summary, source: 'webhook', payment_intent: intent.id },
+            })
+          } catch (e) {
+            console.error('[stripe/webhook] failed to record checkout failure', e)
+          }
+
+          try {
+            await sendAdminPush(
+              'payment_failed',
+              `${name} could not pay. ${summary}`,
+              { title: 'Signup payment failed', url: '/dashboard/admin/desktop' }
+            )
+          } catch (e) {
+            // Never let a notification failure fail the webhook -- Stripe
+            // would retry the whole event and re-run everything above it.
+            console.error('[stripe/webhook] payment-failed push failed', e)
           }
         }
         break
