@@ -24,6 +24,7 @@ Everything found, ordered by what it is worth. Detail in the numbered sections.
 | 6 | **Admin → Numbers → `⚠ SURCHARGE`** | both ratios month-to-date; portal pie chart still outranks it | §1i |
 | 7 | **Admin → Numbers → `SET CNAM`** | free; landlines only, no answer-rate claim | §1t |
 | 8 | Register the pool at `freecallerregistry.com` | free; First Orion + TNS + Hiya in one form | §1f |
+| **0** | **Upgrade Vercel to Pro ($20/mo)** | **two agents already use ~35–40% of Hobby's invocation cap; it PAUSES for 30 days, and Hobby forbids commercial use** | **§1x** |
 
 ### Last, once the rest is done
 
@@ -1140,6 +1141,66 @@ its TypeScript phase does pass.
 `idx_calls_campaign_id_created_at` are both `(campaign_id, created_at DESC)`.
 Every insert maintains both halves of each pair. Pre-existing, small, and not
 worth dropping an index on a live dialer at the end of a long night.
+
+---
+
+## 1x. THE HARD CEILING IS VERCEL, NOT TELNYX — and it pauses rather than bills
+
+**The one finding in this document that is not about money.** It is about the
+dialer stopping.
+
+Vercel **Hobby is 1,000,000 function invocations a month**, and the enforcement
+is not an invoice: *“exceeding a Hobby limit doesn't trigger a bill; it pauses
+that feature for roughly 30 days.”*
+
+### The dialer polls, and polling is invocations
+
+| poll | interval | per agent / month |
+|---|---|---|
+| session heartbeat | 5s (**1.5s in predictive**) | 95,040 |
+| pacing | 10s | 47,520 |
+| incoming route (**predictive only**) | 2s | 237,600 |
+
+Six hours a day, 22 days:
+
+| mode | per agent / month | **agents to saturate Hobby** |
+|---|---|---|
+| **progressive** (all 26 campaigns) | 142,560 | **7.0** |
+| **predictive** | 601,920 | **1.7** |
+
+**Today, two agents on progressive burn 285,120 — 29% of the entire Hobby
+allowance — before a single dial, webhook or page load.** Telnyx webhooks alone
+added ~2,500 a day last week, another ~7.5%. Call it **35–40% used, on two
+agents.**
+
+And on 11 September the dialer made **4,341 dial attempts in ten hours** against
+a blocked account (§1n). Every one an invocation.
+
+### There is a second, separate problem with being on Hobby
+
+> Hobby is **non-commercial use only**, and the enforcement is **account
+> suspension**. DialerSeat takes payment. That is a violation the day
+> monetisation is switched on, independent of any limit.
+
+### Do NOT engineer around this
+
+The heartbeat is 67% of the progressive budget and could go from 5s to 10s —
+`STALE_HEARTBEAT_MS` is 15s, so two beats still land inside the stale window,
+and it would double the ceiling to 14 agents.
+
+**That is the wrong trade and it should not be made.** It is a liveness-critical
+change to the dial path, to avoid a **$20/month** bill, while planning for 100
+agents. Vercel **Pro is $20/month**, removes the ToS exposure, and removes a
+ceiling that is otherwise five agents away.
+
+> **This is the cheapest item in the entire document and the only one whose
+> failure mode is “the product stops for thirty days.”** Every per-minute saving
+> in §0 is measured in cents per agent-day. This is $20 a month to remove a
+> cliff at seven agents and a suspension risk that already applies.
+
+Once on Pro, the polling profile stops being a ceiling and becomes a line item:
+at 100 agents progressive that is ~14.2M invocations a month, which is an
+overage worth pricing but not one that stops anything.
 
 ---
 
