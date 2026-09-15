@@ -345,73 +345,86 @@ is the only way any of the above gets measured rather than inferred.
 
 ---
 
-## 1i. ABANDONED CALLS — over the threshold, and the cause is our own bug
+## 1i. BOTH SURCHARGES ARE BREACHED — $3.53 in September, 12.5% of the bill
 
-**Both figures in the first version of this section were wrong**, because both
-denominators were. Telnyx's actual definitions, from their own pages:
+**The definitions, verbatim from Telnyx, because this section changed twice
+before they were read properly.**
 
-- **Short duration**: a call of **6 seconds or less**. Surcharge $0.01/call once
-  short calls are **15% or more of OUTBOUND TRAFFIC** — not of connected calls.
-- **Abandoned**: *“dropped by the originating side before being answered”*,
-  during ringing or setup. Surcharge $0.005 once **more than 20% of outbound
-  calls**, and *“the surcharge will apply to all the abandoned calls and not
-  just those that exceeded the threshold.”* Live since 1 Nov 2025.
+> **Short duration:** *“Short Duration Calls (SDCs) are outbound calls that are
+> 6 seconds or less in duration.”* Ratio is *“Count of short duration calls
+> connected / Total count of connected calls.”* Limit 15%. *“The penalty will be
+> applied to ALL Short Duration calls made that month and not only those above
+> the 15% mark”* — $0.01 each. Domestic **and** international; international
+> was added 1 January 2024.
 
-The earlier version measured short calls against *connected* calls, and used
-“answered but never bridged” for abandonment — which is a different thing
-entirely from a call dropped before answer.
+> **Abandoned:** *“the originating user initiates the call disconnection during
+> the ringing/call set-up process”*, **including calls to disconnected
+> numbers**. Ratio is abandoned outbound / **total outbound**. Limit 20%,
+> $0.005 each, *“applied to all the abandoned calls and not just those that
+> exceeded the threshold.”* Live since 1 November 2025.
 
-### Where we actually are
+**The two ratios have different denominators.** Short duration is over
+*connected* calls; abandonment is over *total outbound*. An earlier draft
+“corrected” short duration onto total outbound and reported a comfortable 5.7%.
+That was wrong — the original figure was right.
 
-Counting only calls Telnyx saw (`call_control_id` present), September:
+### Where September actually stands
 
-| | measured | limit | |
+| | measured | limit | exposure |
 |---|---|---|---|
-| short duration (≤6s) | **5.7%** | 15% | ✓ comfortable |
-| **abandoned** | **21.6%** | 20% | **✗ over** |
+| short duration (122 of 586 connected) | **20.8%** | 15% | 122 × $0.01 = **$1.22** |
+| abandoned (462 of 2,139 outbound) | **21.6%** | 20% | 462 × $0.005 = **$2.31** |
+| | | | **$3.53 — 12.5% of the $28.29 usage bill** |
 
-Short duration was never a problem. Abandonment is, and on the *clean* day —
-14 September — it was **33.8%**, worse than the month.
+**Verify this rather than trust it.** The Telnyx portal shows the abandoned rate
+as a pie chart on the dashboard, and the advanced usage reports carry both.
+That is the carrier's own count and it outranks this table (§1m).
 
-### What it is made of, on the clean day (533 dials)
+### Dilution works for one of them and not the other
 
-| | legs | avg life | share of dials |
+Both are month-long ratios, so clean volume pulls them down — **but only if the
+clean rate is under the limit.** It is not:
+
+| 14 September | abandoned |
+|---|---|
+| as it ran | **33.8%** |
+| with the socket breaker (§1i below) | **15.4%** |
+
+**Dialing more at the 14th's actual rate makes abandonment worse, not better.**
+An earlier draft said two normal days would clear it; that used
+“answered-but-unbridged”, which is not what abandoned means.
+
+**The socket breaker is what makes dilution possible at all.** With it on:
+
+| to clear September | needs |
+|---|---|
+| short duration | 421 more connected calls ≈ **816 dials** |
+| abandoned | **741 more dials** |
+| **binding** | **816 dials — about 1.5 days at the 14th's pace** |
+
+### What the abandonment is made of, on the clean day (533 dials)
+
+| | legs | avg life | share |
 |---|---|---|---|
 | **`AGENT_LEG_FAILED`** | **98** | **2–4s** | **18.4%** |
 | fan-out cancellations | 78 | 17.0s | 14.6% |
+| other | 4 | 3.0s | 0.8% |
 
-**Our own bug is the larger half.** When an agent's browser SIP socket dies,
-Telnyx accepts the agent-leg dial and gives up ~1.2s later; the lead's leg dies
-with it. The lead gets a second of ringing. And nothing stopped the next dial —
-one agent made 41 such dials in an hour.
+**Our own bug is the larger half**, and it is the half that is now fixed.
+`lib/agentSocketBreaker.ts` stops an agent after 5 consecutive agent-leg
+failures instead of letting a dead browser socket ring leads at 41 an hour. Run
+lengths over 30 days were 1, 2, 3, 4 — then 12 and 28, nothing between — so 5
+sits in an empty gap.
 
-**Removing `AGENT_LEG_FAILED` takes the clean day from 33.8% to 15.4%, under the
-threshold.** That is the whole fix; the fan-out remainder is within limits.
+The fan-out remainder is inherent to multi-line dialing and is within limits on
+its own.
 
-### Shipped tonight
-
-`lib/agentSocketBreaker.ts` — after N consecutive agent-leg failures the agent
-is told to reload instead of dialing more leads. The default of 5 is argued
-from the real distribution rather than a probability:
-
-| run length | 1 | 2 | 3 | 4 | 5–11 | 12 | 28 |
-|---|---|---|---|---|---|---|---|
-| times seen in 30 days | 15 | 3 | 3 | 1 | **0** | 1 | 1 |
-
-**Runs are either ≤4 or ≥12, never between.** A limit of 5 sits in an empty gap:
-it would have fired twice in a month, both times on a genuinely dead socket, and
-never on noise. `agent_leg_failure_limit = 0` turns it off with no deploy.
-
-### This is also the go/no-go gate for `dial_agent_on_answer`
-
-Deferring the agent leg means the lead is **already answered** when the agent's
-leg is placed, so every agent-leg failure becomes a hangup on a live connected
-call — a short-duration call *and* an abandoned one, on a base that is already
-over the line.
-
-> **Do not enable `dial_agent_on_answer` until a session runs with the breaker
-> on and abandonment measured under 20%.** The saving is $0.68/agent/day. The
-> surcharge is $0.005 on *every* abandoned call, retroactive across the month.
+> **`dial_agent_on_answer` stays OFF until this is measured under 20%.**
+> Deferring the agent leg means the lead is **already answered** when the agent
+> leg is placed, so every agent-leg failure becomes a hangup on a live connected
+> call — a short-duration call *and* an abandoned one, on a base already over
+> both lines. The saving is $0.68/agent/day; the surcharge is retroactive across
+> the month.
 
 ---
 
