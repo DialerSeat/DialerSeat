@@ -103,7 +103,69 @@ a column we populate as though it were the carrier's state — see §1m.
 
 ---
 
-## 0. The road to $3 a day
+## 0. COST PER DIAL — the only unit that survives a change in volume
+
+**This section used to project a day from an agent-hour measured on leaky
+history. That was the wrong unit and it produced numbers that were wrong by
+3–4×.** An agent-hour bundles pace, answer rate and a session's particular
+mix; a *dial* does not. Build it from the published rates instead.
+
+| component | rate | applies to |
+|---|---|---|
+| lead leg, PSTN carriage | $0.005/min | answered dials only — unanswered legs bill $0 |
+| lead leg, platform | $0.002/min | answered dials only |
+| **agent leg** | **$0.004/min** | **EVERY dial**, answered or not, billed on two connections (§1aa) |
+| AMD | $0.002 | per answered leg |
+
+At the measured 67.1% answer rate and 21s mean post-answer duration:
+
+| | cost per dial | $3/day is |
+|---|---|---|
+| **today** — 60/60 billing, agent leg billed twice | **$0.0077** *(measured $0.0098)* | 389 dials |
+| if the agent leg were not double-charged — **Telnyx Q3** | $0.0060 | 500 dials |
+| if PSTN billed 6/6 — **Telnyx Q1** | $0.0049 | 612 dials |
+| **both asks landed** | **$0.0032** | **931 dials** |
+
+**$0.0032 is the number to hold them to.** Everything between today and it is the
+two unsent questions — not engineering.
+
+### What a day actually costs
+
+| dials/agent/day | today | both asks landed |
+|---|---|---|
+| 200 | $1.54 | $0.64 |
+| 300 | $2.31 | $0.97 |
+| **500** | **$3.85** | **$1.61** |
+| 800 | $6.16 | $2.58 |
+| **1000** | $7.71 | **$3.22** |
+
+**At the rates the account should be on, $3/day per agent is roughly 930 dials.
+That is a very big day, not a normal one.**
+
+### The one engineering lever left on this
+
+`dial_agent_on_answer` (built, flag **OFF**) removes the agent leg from the
+~33% of dials nobody answers, and removes the ring from the rest. That is the
+$0.0077 → ~$0.0060 row **without needing Telnyx to agree to anything**. It is
+gated on abandonment (§1i, §1y), not on doubt about the saving.
+
+### How to tell a leak from a normal day
+
+Judge **cost per dial**, not cost per hour or per day:
+
+| | |
+|---|---|
+| **≤ $0.010/dial** | normal at today's rates |
+| **> $0.020/dial** | something is wrong — that is predictive's rate (§1ab) |
+| **> $0.050/dial** | a leak. The parked-leg bug ran here |
+
+A day that costs little because nobody answered is not a good day — unanswered
+legs are free, so **cheap days are empty days**. Cost per *conversation* is the
+business metric; cost per *dial* is the leak detector.
+
+---
+
+## 0b. The road to $3 a day
 
 The target is **$3 per agent per day**. Here is the arithmetic, measured rather
 than modelled, and it ends somewhere specific.
