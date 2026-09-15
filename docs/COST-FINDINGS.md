@@ -25,6 +25,24 @@ Everything found, ordered by what it is worth. Detail in the numbered sections.
 | 7 | **Admin → Numbers → `SET CNAM`** | free; landlines only, no answer-rate claim | §1t |
 | 8 | Register the pool at `freecallerregistry.com` | free; First Orion + TNS + Hiya in one form | §1f |
 
+### Last, once the rest is done
+
+| # | action | why |
+|---|---|---|
+| 9 | **Full structural audit of everything shipped** | typecheck, tests, and a deliberate hunt for leaks *created* while closing old ones |
+
+Nine changes landed on or beside the dial path in one night, several of them
+interacting: a guard that can refuse, a guard that delays, a new failure branch,
+a new webhook handler, and a changed cost constant. **The risk is no longer any
+one of them — it is the combination.** Specifically worth proving:
+
+- a dial cannot be delayed *and then* refused into something pathological;
+- the backoff cannot serialise a predictive tick's parallel lines;
+- the socket breaker's new per-dial query has not put latency on the happy path;
+- the D17 regex cannot false-positive onto an unrelated Telnyx error;
+- the CNAM write hits the endpoint and body shape Telnyx actually documents;
+- the corrected agent-leg rate has not broken a figure elsewhere.
+
 ### Shipped tonight
 
 | what | worth |
