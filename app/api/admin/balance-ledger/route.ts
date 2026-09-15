@@ -298,6 +298,26 @@ export async function GET(req: NextRequest) {
       balanceNow: snaps.length > 0 ? Number(snaps[snaps.length - 1].available_credit) : null,
       currency: 'USD',
       totals: {
+        // ── READ netOutUsd, NOT outUsd ───────────────────────────────
+        // outUsd is the sum of every DOWNWARD movement, and on its own it
+        // overstates spend — badly. Telnyx deducts against the balance as
+        // calls run and then SETTLES AT THE TOP OF THE HOUR, returning
+        // whatever it over-reserved. Those settlements come back as balance
+        // increases, so counting only the decreases bills you for the
+        // reservation and ignores the refund.
+        //
+        // The pattern is unmistakable once you look at the timestamps of the
+        // increases over 14-15 Sept: 15:01, 17:00 (three of them), 18:00,
+        // 21:00, 22:01, 02:00, 03:00, 16:00. Nearly every one lands in the
+        // first sixty seconds of an hour. The two that do not are the genuine
+        // top-ups, and they are round numbers: +$5.00 and +$10.00.
+        //
+        // Measured: sum-of-decreases said $16.80 for 14 Sept. Net, after the
+        // known $5.00 top-up, was about $9.54. Telnyx's own call.cost webhooks
+        // for that day totalled $2.86 of call charges, with the remainder
+        // being fees that never reach our tables. The $16.80 figure is not
+        // a smaller version of the truth, it is a different number entirely.
+        netOutUsd: Math.max(0, totalOut - totalCredited),
         outUsd: totalOut,
         // Kept under the old key so nothing reading this breaks, but it is
         // credits observed, not deposits confirmed.
@@ -305,9 +325,14 @@ export async function GET(req: NextRequest) {
         unverifiedCreditsUsd: totalCredited,
         creditNote:
           'Balance increases are reported as observed, not as confirmed top-ups. '
-          + 'Telnyx posts corrections and occasional spurious credits that settle '
-          + 'back out, so a rise here is not proof money was added. Net spend '
-          + 'computed from this ledger will be wrong by the size of any glitch.',
+          + 'MOST are Telnyx settling at the top of the hour and returning what it '
+          + 'over-reserved while calls were running — on 14-15 Sept nearly every '
+          + 'increase landed in the first sixty seconds of an hour, and the only two '
+          + 'that did not were round-number deposits. So outUsd counts reservations '
+          + 'and ignores the refunds: use netOutUsd for spend. For what was actually '
+          + 'charged per call, Telnyx call.cost webhooks are itemised and are the '
+          + 'better source; this ledger exists to catch the fees those never show '
+          + '— number rentals, E911, taxes, regulatory surcharges.',
         explainedUsd: totalExplained,
         unexplainedUsd: Math.max(0, totalOut - totalExplained),
       },

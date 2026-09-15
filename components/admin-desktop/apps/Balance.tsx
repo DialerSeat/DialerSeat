@@ -100,7 +100,7 @@ interface Ledger {
   snapshots: number
   watchingSince: string | null
   balanceNow: number | null
-  totals: { outUsd: number; inUsd: number; explainedUsd: number; unexplainedUsd: number
+  totals: { netOutUsd: number; outUsd: number; inUsd: number; explainedUsd: number; unexplainedUsd: number
             unverifiedCreditsUsd?: number; creditNote?: string }
   entries: Entry[]
   charges: Charge[]
@@ -358,13 +358,22 @@ export default function BalanceApp() {
               ['BALANCE NOW', data.balanceNow === null ? '-' : usd(data.balanceNow),
                 data.balanceNow === null ? T.muted
                   : data.balanceNow < 10 ? T.red : data.balanceNow < 25 ? T.amber : T.green],
-              ['OUT', data.covered ? usd(data.totals.outUsd) : '-', T.red],
+              // ── NET, BECAUSE TELNYX SETTLES ON THE HOUR ────────────────
+              // This tile used to show outUsd, the sum of every downward
+              // movement, and that roughly DOUBLES the real figure. Telnyx
+              // deducts as calls run and settles at the top of the hour,
+              // handing back whatever it over-reserved; counting only the
+              // decreases charges you for the reservation and drops the
+              // refund. Sum-of-decreases said $16.80 for 14 Sept against a
+              // real net of about $9.54.
+              ['NET OUT', data.covered ? usd(data.totals.netOutUsd) : '-', T.red],
               // Not "IN". We observe the balance rising; we never observe a
-              // payment. Telnyx posts corrections and occasional spurious
-              // credits that settle back out -- this account saw +$1.04 at
-              // 11:01 on 14 Sept followed by a $0.92 debit six minutes later,
-              // during a window with zero calls. Calling that "IN" turns a
-              // glitch into a deposit.
+              // payment. MOST of this is the hourly settlement above rather
+              // than money arriving -- the +$1.04 at 11:01 on 14 Sept followed
+              // by a $0.92 debit is that pattern, not a glitch, and nearly
+              // every increase on record lands in the first sixty seconds of
+              // an hour. The genuine deposits are the round numbers. Calling
+              // any of it "IN" turns a reservation refund into a top-up.
               ['CREDITED', data.covered ? usd(data.totals.inUsd) : '-', T.green],
               // The whole reason the app exists, so it gets a tile rather than
               // a footnote.
