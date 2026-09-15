@@ -440,10 +440,10 @@ export default function OpsMap() {
     return () => clearInterval(t)
   }, [hasRunningCall])
 
-  // Counted off the same predicate the rows use. Recomputed per render rather
-  // than stored, because it changes with the clock and not with the payload.
-  const liveCount = (data?.feed ?? []).reduce(
-    (n, f) => n + (liveSeconds(f, nowMs) !== null ? 1 : 0), 0)
+  // liveCount used to be computed here for the ACTIVE button's badge. The
+  // badge is gone (see the feed strip below) and nothing else read it: the
+  // ACTIVE filter itself calls liveSeconds directly per row, so this was dead
+  // the moment the badge was removed.
 
   useEffect(() => {
     const t = setInterval(() => { load(false) }, SYNC_MS)
@@ -1762,15 +1762,22 @@ export default function OpsMap() {
                         ['all', 'ALL'], ['live', 'ACTIVE'], ['answered', 'ANSWERED'],
                         ['missed', 'MISSED'], ['human', 'HUMAN'], ['machine', 'MACHINE'],
                       ] as const).map(([id, lbl]) => (
+                        // ACTIVE is a FILTER, not a status light. It used to
+                        // paint itself green and append a running count
+                        // whenever liveCount > 0, which made one button in a
+                        // row of six behave like an alarm and pulled the eye
+                        // to it constantly during a normal dialing day.
+                        //
+                        // Removed at the owner's request. The FILTER still
+                        // works — it calls liveSeconds per row — so picking
+                        // ACTIVE still narrows the feed to calls in progress.
+                        // Only the advertisement is gone. If a live-call count
+                        // is wanted again, the HUD at the top of this screen is
+                        // where a number belongs: it already has a LIVE key and
+                        // is the thing people look at for status.
                         <button key={id} className="om-mini" data-on={callFilter === id}
-                                onClick={() => setCallFilter(id)}
-                                // Green only while something is actually up, so
-                                // the strip reads as a status light rather than
-                                // one more filter nobody looks at.
-                                style={id === 'live' && liveCount > 0
-                                  ? { color: GREEN, borderColor: GREEN }
-                                  : undefined}>
-                          {lbl}{id === 'live' && liveCount > 0 ? ` ${liveCount}` : ''}
+                                onClick={() => setCallFilter(id)}>
+                          {lbl}
                         </button>
                       ))}
                       {/* How deep the feed goes. A funnel rather than chips for
