@@ -126,21 +126,81 @@ It is **awaited, not fired and forgotten**. A dangling promise on this runtime i
 frozen when the response returns, which is exactly how a teardown silently never
 happens.
 
+### Placing it at answer instead — `dial_agent_on_answer`
+
+Even released promptly, the agent leg is live for the whole time the lead's
+phone rings, on every dial including the ones nobody answers: 317 such legs,
+176 billed minutes, **17% of a clean session's spend**, buying nothing.
+
+With `platform_config.dial_agent_on_answer` on, the lead is dialled alone and
+the agent's leg is placed the instant they pick up. The browser auto-answers in
+~0.4s and `connecting_message` covers the gap. Worth −17% at a 66% answer rate
+and nearer −23% at a normal one, because the win is legs on calls nobody
+answered.
+
+**It moves where failure lands, which is why it is a switch and why it ships
+off.** Today a dead agent socket fails BEFORE the lead's phone rings and nobody
+is disturbed. With this on, the lead answers first and the agent is discovered
+unreachable afterwards — an abandoned call in the sense the FTC means it. Agent
+leg failure ran 10–20% during the socket problems on 14 Sept, against an
+abandoned rate of 2.9% and a 20% threshold. There is room; this is the change
+that spends it.
+
+So every failure path **ends the lead's call** rather than leaving somebody
+listening to nothing — no env, no user, no SIP URI, a dial that errors, a dial
+returning no id, a bridge that fails — plus a guard in `handleHangup` for the
+case none of those cover: the agent leg that simply never answers inside its
+12-second timeout. That guard is restricted to **unbridged** calls, so a normal
+hangup after a real conversation still belongs to the machine-verdict and
+compliance-hold paths.
+
+`user_dial` only. Fan-out's agent-leg path is separately unverified (§2), and
+wiring a second deferral through it would be changing two things at once on the
+code that produced the silence.
+
 ---
 
 ## 6. What the carrier actually charges
 
-Measured from captured `call.cost` webhooks, not from a rate card.
+Measured from 1,490 captured `call.cost` records, not from a rate card — and
+the rate card is wrong about this account.
 
 | event | billed |
 |---|---|
 | **unanswered lead leg** | **$0.00 — free** |
 | answered lead leg | **60-second minimum**, then 6-second increments |
-| agent leg | actual duration, 6-second increments, no visible floor |
+| agent leg | actual duration, 6-second increments, **no floor** |
+| recording | **60-second minimum**, $0.002/minute |
 | both halves of a bridged pair | billed separately |
 | AMD | $0.002 per answered leg |
-| recording | $0.002/minute |
 | DID | $1.00 once, $1.00/month (day-prorated in the first month) |
+
+### The published increments are not the increments you get
+
+Telnyx's billing documentation states **"60/60 billing increments"** and
+explicitly *"we no longer offer 6 second billing increments."* This account
+gets 6-second billing anyway: **1,033 of 1,490 billed records are multiples of
+6 and not 60**, with observed values of 6, 12, 18, 24, 30, 36, 42, 48, 54, 66,
+72, 90 and 108 seconds. The smallest billed duration on record is 6 seconds.
+
+So the 60 is **a minimum on the answered lead leg**, not the increment — and it
+sits on top of an increment that is already fine-grained. That distinction is
+what turns it into an answerable question rather than a complaint:
+
+| who answered | records | avg actual | avg billed | wasted on the minimum |
+|---|---|---|---|---|
+| **machine** | 290 | **26.2s** | **60.0s** | **51.6%** |
+| human | 87 | 110.7s | 145.5s | 22.2% |
+| no verdict | 30 | 37.1s | 68.0s | 42.4% |
+
+**32,100 seconds billed against 19,446 that the increment alone would produce.
+211 minutes — 39.4% — is minimum rather than conversation.** See
+`docs/COST-FINDINGS.md` for the exact wording of the ask.
+
+> If the minimum is ever reduced, **the 9-second compliance hold stops being
+> free** (§9). It costs nothing today because a voicemail bills 60 seconds
+> whatever happens; at a 6-second minimum it becomes real money and wants
+> re-tuning.
 
 Two consequences that drive everything else:
 
@@ -208,23 +268,52 @@ that a restated figure can be *detected* rather than silently absorbed.
 
 ---
 
-## 8. Inbound is rejected, never answered
+## 8. Inbound is answered — and the attempt to stop that took the floor down
 
 Every owned number is reachable, so something must happen when a lead calls
-back. We used to **answer** and read a text-to-speech apology.
+back. We **answer** and read a short text-to-speech apology.
 
-Answering is the exact moment a call becomes billable. That courtesy cost the
-60-second minimum plus TTS by the character, per caller, to say "this number
-does not accept incoming calls".
+Answering is the exact moment a call becomes billable, so that courtesy costs
+the 60-second minimum plus TTS by the character — roughly $10/month at ~68
+inbound callbacks a day — to say "this number does not accept incoming calls".
 
-Now rejected at `call.initiated`, before answer, with **`CALL_REJECTED`**
-(Q.850 cause 21) rather than `USER_BUSY` (cause 17) — busy invites the caller's
-carrier to retry, and a retry is another call to refuse. An unconnected call has
-no minutes to round up and no TTS to bill.
+### The rejection that was shipped and reverted the same day
 
-The trade is real and was made deliberately: a lead who rings back gets an
-intercept tone instead of an explanation. Every alternative that says anything
-at all has to answer first.
+It was replaced with `reject` at `call.initiated`, before answer, using
+`CALL_REJECTED` (Q.850 cause 21). Within hours dialing collapsed: 16 dials, 10
+`AGENT_LEG_FAILED`, 1 bridged. The browser console named it exactly:
+
+```
+CANCEL sip:...  Reason: Q.850;cause=21;text="CALL_REJECTED"
+```
+
+cancelling an **agent leg** the browser had already accepted. That cause string
+appears nowhere else in the codebase.
+
+**Why the reasoning failed, because the reasoning is the part worth keeping.**
+It was argued that an agent leg cannot carry `direction: 'incoming'`, since
+otherwise agents would have been hearing the inbound apology for years and
+nobody had reported it. That does not follow. The old branch issued `answer`,
+which is **inert** on a leg the browser is already answering — so a
+misclassified agent leg passed through it invisibly for as long as the code had
+existed. `reject` is not inert. The same misclassification that cost nothing
+became fatal the moment the action changed.
+
+> **The general form: an inference from the ABSENCE of a symptom is only as
+> strong as the old code's ability to produce one.** That path was silent, so it
+> proved nothing, and silence was read as evidence.
+
+### What it would take to do it safely
+
+Not `direction`. Gate on a **positive identification of our own legs**:
+`parseClientState` returns null for anything we did not place, and every
+agent-attended leg carries one. The deferred agent leg is now stamped for this
+reason as well as for the kill switch.
+
+**The prerequisite is that fan-out legs get stamped too.** They currently carry
+no `client_state` — their own comment says so — so under a client_state gate
+they would read as strangers and be rejected: the same outage by a different
+route. Roughly $10/month is not worth that until fan-out is fixed.
 
 ---
 
@@ -324,6 +413,146 @@ Reputation is protected mainly by not generating dead-air calls (§2) and by the
 attempt budget: **6 attempts per number per 30 days**, with plumbing failures
 not counted against the budget.
 
+### Local presence is a preference, not an override
+
+`claim_pool_number` ranked the match tier FIRST and used `daily_call_count` only
+to break ties inside it. So when a campaign dials mostly one area code, the
+single number matching it absorbed everything until it hit `daily_cap` (200)
+while the rest of the pool sat idle: **15 Sept, 234 dials across 11 available
+numbers, 176 of them on ONE number.** 12 Sept, 201 of 859.
+
+That is a deliverability problem before it is a fairness one. This platform's
+own traffic says so:
+
+| dials/day on one number | answer rate |
+|---|---|
+| under 40 | **38.8%** |
+| 41–70 | 20.1% |
+| 71–120 | 26.0% |
+| over 120 | 21.6% |
+
+Industry guidance is ~70 dials per number per day. A `p_soft_cap` (default 60)
+now **demotes** a number past it behind every number that is not, however local
+it is; local presence still wins while a number has room, because local numbers
+answer 3–4× better and that is the point of the pool. It degrades safely: if
+every number is past the cap they all score equal, the term cancels, and
+selection falls through to the previous behaviour. `daily_cap` remains the hard
+stop.
+
+> **Adding the parameter created an OVERLOAD rather than replacing the
+> function**, and every caller passes three named arguments, which matched both.
+> Postgres resolves that as "function is not unique" and every dial fails. The
+> old signature had to be dropped explicitly. This codebase has been bitten by
+> the same thing before — see the `team_code_use_count` ambiguity fix.
+
+---
+
+## 11b. Calls per second, and the meter nobody sees
+
+CPS is billed on the **95th percentile of hourly peaks**: first 5 free, then
+$12/CPS to 25, $16 to 200, $24 to 250, $30 beyond. Their own worked example is a
+peak of 163 CPS costing $2,448/month.
+
+**It never touches the balance.** It is assessed monthly and lands on the
+invoice, which is why it went unnoticed through a whole day of watching
+per-minute usage reconcile. Measured here: P95 of **15 CPS** before predictive
+was withdrawn, against a free tier of 5 — $60–120/month, against a usage bill of
+$28.29. Withdrawing predictive alone took P95 to 7.3.
+
+**Two meters, and only one is per credential.** The real-time 20 CPS limit that
+*rejects* calls is per source IP or SIP username, so individual credentials
+genuinely protect each agent — 100 agents at 100 dials/hour is 0.06 CPS each and
+no credential comes close. The **surcharge is account-level**, explicitly *"not
+by IP address or SIP username"*. A hundred agents each placing one call in the
+same second is 100 CPS on the meter and 1 CPS per credential. Every credential
+looks innocent; the account looks like a burst.
+
+### The governor is a leaky bucket, and the first version was not
+
+The first design returned a call's position within the current second and
+derived a delay proportional to how far over target it was. That approximates a
+rate and cannot guarantee one — and clipping the delay broke it outright: in a
+second carrying eight legs the eighth needs a full second of delay, against an
+agent cap of 200ms. A 200ms shift only crosses a second boundary if the call was
+already within 200ms of one. It smoothed the shoulders of a burst and left the
+burst.
+
+A leaky bucket hands every origination the next free slot at fixed spacing.
+Verified: a burst of eight returns **0, 247, 496, 746, 996, 1246, 1496,
+1746ms** — exact 250ms spacing, draining at precisely 4/second. `next_slot_at`
+is monotonic and pulled forward when idle, so quiet time banks no credit that
+releases later as a burst.
+
+Verified against every second on record: after predictive was withdrawn, **zero
+of 404 seconds exceed either cap**, so every burst the platform now produces is
+absorbed completely.
+
+Caps are generous on purpose (2s agent, 5s fan-out). A cap below the spacing the
+bucket needs does not pace more gently — it disables pacing silently at the exact
+moment a burst is happening. Beyond the cap the call goes and the peak is
+accepted: an unbounded queue in front of a phone call is worse than a billing
+tier.
+
+---
+
+## 11c. Not every destination costs the same
+
+From the carrier's own records: **71.5% of spend at the $0.002 base rate, 23.7%
+at $0.005, and 4.1% at $0.07** — thirty-five times base, from two exchanges
+across five calls. One voicemail to a 209 number cost **fourteen cents**.
+
+That is rural high-cost termination: certain rural LECs levy inflated access
+fees and the carrier passes them through legitimately. Rate decks are built per
+NPA-NXX and OCN precisely because of it, which is why `destination_rates` keys
+on the six-digit exchange rather than the area code — an area code spans dozens
+of carriers and averaging across them buries exactly the expensive ones.
+
+**Learned, not configured.** Every `call.cost` webhook carries the rate its
+seconds billed at, so the table builds itself from traffic that already
+happened. The honest limit: it can never protect the FIRST call to an exchange,
+only the second. A guess that refuses a dial is worse than a fact that arrives
+one call late.
+
+Worst rate ever seen is kept rather than a mean — an exchange that charged $0.07
+once will do it again, and an average against a cheap majority would bury it.
+Blast radius measured before shipping: **4 of 16,204 uncalled leads, 0.025%.**
+
+---
+
+## 11d. The lead row is not the source of truth, and that cost 18 calls
+
+`claim_next_leads_for_campaign` selected on `status IN ('uncalled','no_answer')`
+with a 30-second claim expiry and **never capped on `dial_attempts`** — it only
+*ordered* by it, `ASC NULLS FIRST`.
+
+So a lead whose call ended without a disposition stayed claimable forever **and
+was promoted to the front of the queue**, because a counter nobody increments
+sorts first. Not merely uncapped: prioritised.
+
+On 12 Sept one lead was dialled **18 times in 28 minutes**, every 62 seconds,
+every call `user_busy` at ~5 seconds, every one undispositioned. Its row read
+`dial_attempts: 0, status: uncalled, last_called_at: null`. Eighteen calls, and
+the record said it had never been touched. Two others took 15 and 8 in the same
+window.
+
+That is a compliance exposure before it is a cost one.
+
+**Two thirds of calls never write back to their lead**, and 88% carry no
+`dial_source` at all — which is why the gap stayed invisible. 206 leads were
+undercounted by 481 attempts before a backfill from the calls table.
+
+The breaker now sits at **25 attempts, and it is a runaway breaker, not policy**:
+`DIAL_PASSES = 0` means lifetime attempts are deliberately uncapped, and the
+real enforcement is six per NUMBER per 30 DAYS against the calls table. A cap of
+6 on the lead row would be a different policy wearing the same number — and it
+would not have caught this bug anyway, since the counter stayed at zero
+throughout. **The real fix is on the write path and is still open.**
+
+Separately: the attempt budget was counted against *the campaigns being dialled*
+rather than the team's, so a number in two lists got a fresh six attempts in
+each. 4,974 numbers sit in more than one campaign — 81.8% of lead rows — so the
+cap held only while somebody happened to be dialing every list at once.
+
 ---
 
 ## 12. Rules of thumb
@@ -340,3 +569,19 @@ not counted against the budget.
   rather than observed.
 - **Two independent measurements or none.** A model that disagrees with the
   carrier is a hypothesis, not a finding.
+- **Measure per leg, never per aggregate.** The 30-second minimum this document
+  used to assert was fitted against one invoice line and landed within 9%
+  because it over-counted agent legs, which have no floor, and under-counted the
+  lead minimum, which is twice what it assumed. The errors cancelled. No
+  aggregate could have exposed that; per-leg records did immediately.
+- **An inference from the ABSENCE of a symptom is only as strong as the old
+  code's ability to produce one** (§8). Silence is not evidence.
+- **A guard that can refuse is one bad measurement from an outage.** Every cost
+  control here delays or demotes; none can say no. `lib/concurrency.ts` is the
+  cautionary tale and is worth reading before adding another.
+- **Thin data argues against hardcoding a threshold, not against building the
+  mechanism.** Voicemail-streak retirement was nearly dropped on 54 samples; it
+  shipped with the threshold in config instead.
+- **Adding a parameter to an RPC creates an overload, not a replacement.** Every
+  caller passing named arguments then matches both, and Postgres refuses the
+  call as ambiguous. Drop the old signature in the same migration.
