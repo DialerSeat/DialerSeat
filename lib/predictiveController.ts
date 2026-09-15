@@ -149,6 +149,30 @@ export async function abortSiblingFanoutLines(params: {
 }): Promise<number> {
   const { sessionId, keepCallControlId } = params
 
+  // ── THE FIFTEEN-SECOND FLOOR IS A REGULATION, NOT A PREFERENCE ────────
+  // FTC Telemarketing Sales Rule § 310.4(b)(4)(ii) requires a telemarketer to
+  // "allow the telephone to ring for at least fifteen (15) seconds or four (4)
+  // rings before disconnecting an unanswered call."
+  //
+  // This function hung up every still-ringing sibling the instant another line
+  // was picked up, with no floor at all. Measured across the four days
+  // predictive has ever run: 160 legs rang and were cancelled UNDER fifteen
+  // seconds, averaging 4.7s, shortest 1s, hangup cause `normal_clearing` —
+  // which is us. 222 others ran the full 20s and were fine.
+  //
+  // Breaking any ONE of the four safe-harbor conditions in § 310.4(b)(4)
+  // forfeits the whole safe harbor, which is what caps exposure at 3%
+  // abandonment. So this is not a rounding detail: at $500-$1,500 per
+  // violating call it is the most expensive line in the controller.
+  //
+  // A leg that has not yet rung 15 seconds is LEFT TO RING OUT rather than
+  // cancelled. It costs nothing at the carrier — an unanswered lead leg bills
+  // $0 (docs/CARRIER-ENGINEERING §6) — so the only price is that it may answer
+  // with nobody there, which is exactly why predictive_line_ceiling is 1 until
+  // a TSR-compliant no-agent message exists. See docs/COST-FINDINGS.md §1y.
+  const TSR_MIN_RING_SECONDS = 15
+  const cancellableBefore = new Date(Date.now() - TSR_MIN_RING_SECONDS * 1000).toISOString()
+
   const { data: siblings, error } = await supabase
     .from('calls')
     .select('call_control_id, lead_id')
@@ -158,6 +182,8 @@ export async function abortSiblingFanoutLines(params: {
     .is('answered_at', null)
     .is('disposition', null)
     .gte('created_at', new Date(Date.now() - ABORT_LOOKBACK_MS).toISOString())
+    // Only legs that have ALREADY rung the statutory minimum.
+    .lte('created_at', cancellableBefore)
     .neq('call_control_id', keepCallControlId)
 
   if (error) {
@@ -201,7 +227,8 @@ export async function abortSiblingFanoutLines(params: {
 
   console.log(
     `[controller] pickup on ${keepCallControlId} aborted ${aborted} still-ringing ` +
-    `line(s) and released ${leadIds.length} claim(s)`
+    `line(s) past the ${TSR_MIN_RING_SECONDS}s TSR floor and released ` +
+    `${leadIds.length} claim(s). Younger siblings were left to ring out.`
   )
   return aborted
 }

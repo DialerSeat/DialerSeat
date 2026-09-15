@@ -1144,6 +1144,99 @@ worth dropping an index on a live dialer at the end of a long night.
 
 ---
 
+## 1y. PREDICTIVE: WHY IT IS CAPPED AT ONE LINE, AND WHAT THE REGULATION ACTUALLY SAYS
+
+**The binding constraint on predictive is not the carrier bill. It is 16 CFR
+310.4(b)(4), and it is $500–$1,500 per violating call.**
+
+### The safe harbor is four conditions, and you need all four
+
+> **(i)** abandonment ≤ **3%** of calls answered by a person, per campaign, per
+> rolling 30 days
+> **(ii)** ring **at least 15 seconds or 4 rings** before disconnecting an
+> **unanswered** call
+> **(iii)** when no representative is available within **2 seconds** of the
+> person's completed greeting, **promptly play a recorded message stating the
+> name and telephone number of the seller**
+
+Break one and the whole safe harbor is forfeit — including the 3% protection.
+
+### Measured against the four days predictive has ever run
+
+| condition | result |
+|---|---|
+| **(i)** ≤ 3% abandoned | **PASSES** — 136 of 137 answered legs bridged, ~0.7% |
+| **(ii)** ring ≥ 15s before dropping | **FAILED** — **160 legs** rang and were cancelled **under 15s**, averaging **4.7s**, cause `normal_clearing` — us |
+| **(iii)** no-agent recorded message | **DOES NOT EXIST** |
+
+`abortSiblingFanoutLines` hung up every still-ringing sibling the instant
+another line was picked up, with no floor at all. **Fixed** — a leg that has not
+yet rung 15 seconds is now left to ring out.
+
+`connecting_message` is *“One moment, connecting you now.”* — no seller name, no
+phone number, and it plays on the deferred-agent path where an agent **is**
+coming. It is not condition (iii) and cannot be made into it by editing the
+string.
+
+### The part nobody tells you: (i) and (ii) fight each other
+
+**Cancelling surplus lines early is what kept abandonment at 0.7% — and early
+cancellation is exactly what violates (ii).**
+
+Let them ring the lawful 15 seconds instead and roughly a quarter answer with no
+agent behind them. At 2 lines that is **~50% abandonment against a 3% ceiling**.
+
+| lines | (ii) satisfied? | resulting abandonment | (i) satisfied? |
+|---|---|---|---|
+| 1 | trivially — no surplus | ~0% | yes |
+| 2, cancelling early | **no** | 0.7% | yes, but harbor already forfeit |
+| 2, ringing 15s | yes | **~50%** | **no** |
+
+**There is no line count above 1 that satisfies both — which is precisely why
+condition (iii) exists in the regulation.** The recorded message is the only
+thing that resolves the tension: it converts a surplus answer from an abandoned
+call into a compliant one. That is how every lawful predictive dialer works, and
+it is the piece this platform does not have.
+
+### So: `predictive_line_ceiling = 1`
+
+At one line there is no surplus, so neither condition is stressed. Predictive
+degrades to progressive pacing with better lead claiming — a real but modest
+product, and a lawful one.
+
+> **Raise it only after** a TSR-compliant no-agent message exists (seller name +
+> telephone number, played within 2 seconds of the greeting), **and** Admin →
+> Numbers → `⚠ SURCHARGE` shows headroom on the separate Telnyx 20% line.
+
+### Two definitions of “abandoned”, and they are not the same
+
+This caused real confusion and is worth pinning:
+
+| | FTC TSR | Telnyx surcharge |
+|---|---|---|
+| **what counts** | person **answers**, no agent within 2s | originator drops **before answer** |
+| **denominator** | calls answered by a person | total outbound |
+| **limit** | **3%** | 20% |
+| **penalty** | $500–$1,500 per call | $0.005 per call |
+
+§1i is entirely about the second one. This section is about the first. **A
+change that improves one can worsen the other**, which is exactly what the
+15-second fix does.
+
+### And the industry number nobody publishes
+
+Enterprise predictive dialers pace at **1.2–1.5 calls per available agent**, not
+3 and not 5. `campaigns.predictive_lines_per_agent` defaults to **1.5** — which
+was right — but `lib/predictiveController.ts` does `Math.round()` on it per
+agent and falls back to **3** when unset.
+
+That is the wrong shape: **the ratio is a pool-level quantity.** Four agents at
+1.5 means dial six lines, not “each agent gets 2”. Rounding per agent throws the
+fraction away and always rounds *up*. Worth fixing when predictive goes above
+one line — not before, because at a ceiling of 1 it cannot bite.
+
+---
+
 ## 1x. THE HARD CEILING IS VERCEL, NOT TELNYX — and it pauses rather than bills
 
 **The one finding in this document that is not about money.** It is about the
