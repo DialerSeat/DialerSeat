@@ -2113,6 +2113,67 @@ async function handleHangup(
         }
       }
 
+      // ── IF WE DIALED IT, STAMP IT. THE QUEUE ROTATES ON THIS COLUMN. ─────
+      // The lead queue panel sorts by last_called_at ascending, NULLS FIRST.
+      // That is what makes a dialed lead sink and the next one come up. So a
+      // lead we called that still has last_called_at NULL is pinned to the top
+      // of the queue and gets dialed again the moment the panel advances.
+      //
+      // Every disposition path writes this column. The gap is the calls that
+      // reach NO disposition path at all: the branch above catches an
+      // unanswered leg whose AGENT leg was hung up by the browser
+      // (hangup_source 'callee'), and there was nothing after it. An
+      // unanswered leg that fails any part of that test — no agent leg
+      // recorded, the agent's 'completed' event not written yet, a
+      // hangup_source that is not 'callee' — fell straight through and the
+      // lead was never touched.
+      //
+      // Caught live, 15 Sept 13:01 UTC, mid dialing day. Lead
+      // ef96cbaa was dialed three times in 32 seconds — 13:01:21, 13:01:33,
+      // 13:01:53 — every call dead at 1-2s with normal_clearing and never
+      // answered, and after all three the lead still read status 'uncalled',
+      // dial_attempts 0, last_called_at NULL. The four leads dialed either
+      // side of it were all stamped within 2-4 seconds and rotated normally.
+      //
+      // ── WHY THIS STAMPS last_called_at AND NOT dial_attempts ───────────
+      // They answer two different questions and only one of them is about
+      // rotation:
+      //
+      //   last_called_at   WHEN did we last dial this lead -> queue position.
+      //                    True the moment a call is placed, whether or not
+      //                    the phone ever rang.
+      //   dial_attempts    HOW MANY real attempts has this lead had -> when to
+      //                    set it aside for good. NOT true when the lead's
+      //                    phone never rang, which is exactly why the branch
+      //                    above releases the lead without bumping it.
+      //
+      // Conflating them is what makes this look like a hard choice. It is not:
+      // the lead sinks in the queue and comes back around later, without
+      // moving closer to being retired on an attempt that never reached them.
+      //
+      // Deliberately does NOT touch status, disposition, or the claim. In
+      // preview/power/progressive the agent may be mid-wrap-up on this lead,
+      // and the note on the fan-out release below is the standing reason not
+      // to pull state out from under them. Position is the only thing changed
+      // here, and it is the only thing that was broken.
+      if (
+        callControlId === callRow.call_control_id &&
+        callRow.lead_id &&
+        !callRow.answered_at
+      ) {
+        const { error: stampErr } = await supabaseAdmin
+          .from('leads')
+          .update({ last_called_at: new Date().toISOString() })
+          .eq('id', callRow.lead_id)
+          // Only when it is genuinely unset. A disposition that already ran
+          // holds a stamp from a few seconds ago and re-stamping it would
+          // shuffle a lead the agent is actively working.
+          .is('last_called_at', null)
+        if (stampErr) {
+          console.error('[calls/events] queue-rotation stamp failed', stampErr)
+        }
+      }
+
       // ── A FINISHED FAN-OUT LINE MUST GIVE ITS LEAD BACK ──────────────────
       // This is why predictive dialed once and then sat at "2/2 lines" forever.
       //
