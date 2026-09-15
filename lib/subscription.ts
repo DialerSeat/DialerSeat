@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { ENTITLED_STATUSES } from '@/lib/entitlement'
+import { isOwnerFunded } from '@/lib/seatFunding'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -75,13 +76,28 @@ async function getActiveTeamSeats(clerkId: string): Promise<string[]> {
   // access immediately.
   //
   // The gate that remains is the one that means something: the membership is
-  // active and the seat has not been suspended. Agent-pays members stay
-  // 'pending' until their own checkout succeeds, so they are excluded by the
-  // status filter and this does not open a door for them.
+  // active, the seat has not been suspended, and SOMEBODY IS PAYING FOR IT.
+  //
+  // ── THE TEAM ONLY GRANTS ACCESS WHEN THE OWNER IS PAYING ─────────────
+  // This used to return every active, unsuspended membership, on the reasoning
+  // that "agent-pays members stay 'pending' until their own checkout succeeds,
+  // so they are excluded by the status filter". That is true at JOIN time and
+  // nowhere else. An agent who joined on an agent-pays code, was approved, and
+  // LATER cancelled is 'active' with an unsuspended seat — so the seat kept
+  // handing out access that nobody was paying for.
+  //
+  // 15 Sept: exactly that. An agent cancelled her own plan at 05:58 and dialed
+  // 147 calls that day on the platform's own carrier balance.
+  //
+  // An agent-funded seat is not a billing relationship with the team at all.
+  // That agent's access comes from their OWN subscription, and
+  // checkSelfSubActive has already answered that question before this function
+  // is reached. So excluding them here cannot lock out anybody who is paying —
+  // it only stops a seat granting access on nobody's money.
   void now
   const { data, error } = await supabase
     .from('team_members')
-    .select('team_id, status, seat_suspended_at')
+    .select('team_id, status, seat_suspended_at, billing_override, joined_via_code')
     .eq('user_id', clerkId)
     .eq('status', 'active')
     .is('seat_suspended_at', null)
@@ -93,7 +109,31 @@ async function getActiveTeamSeats(clerkId: string): Promise<string[]> {
 
   if (!data || data.length === 0) return []
 
-  return Array.from(new Set(data.map((r: any) => r.team_id)))
+  // Who-pays needs the codes, because joined_via_code holds the code TEXT
+  // rather than a foreign key.
+  interface SeatRow {
+    team_id: string
+    billing_override: string | null
+    joined_via_code: string | null
+  }
+  const seats = data as SeatRow[]
+
+  const codes = Array.from(
+    new Set(seats.map(r => r.joined_via_code).filter((c): c is string => !!c))
+  )
+  const codePayer = new Map<string, string | null>()
+  if (codes.length > 0) {
+    const { data: codeRows } = await supabase
+      .from('team_codes')
+      .select('code, payer')
+      .in('code', codes)
+    for (const c of codeRows || []) codePayer.set(c.code, c.payer)
+  }
+
+  const ownerFunded = seats.filter(r => isOwnerFunded(r, codePayer))
+  if (ownerFunded.length === 0) return []
+
+  return Array.from(new Set(ownerFunded.map(r => r.team_id)))
 }
 
 export async function getAccessTier(clerkId: string): Promise<AccessTier> {

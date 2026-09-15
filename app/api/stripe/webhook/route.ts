@@ -680,6 +680,47 @@ async function syncPersonalSubscription(
           plan: 'pro', amount_cents: 3500, stripe_subscription_id: subscription.id,
         })
       }
+
+      // ── THEY PAY AGAIN, THEIR SEAT COMES BACK ───────────────────────
+      // The mirror of lib/seatTakeover, and without it that function is a
+      // one-way door. When a self-funding agent's own plan ends, their
+      // agent-funded team seats are suspended with reason 'canceled'. Every
+      // automatic un-suspend elsewhere filters on reason 'unpaid', so a
+      // 'canceled' seat was never restored by anything: the agent could
+      // resubscribe, get their own tier back, dial their OWN campaigns, and
+      // still be permanently locked out of the team campaigns they were
+      // suspended from — fixable only by an owner finding the manual lever.
+      //
+      // Scoped to reason 'canceled' on purpose. 'unpaid' belongs to the
+      // enforcement job, which restores it when the OWNER's charge clears;
+      // 'paused' is an owner's deliberate decision and an agent paying for
+      // themselves must not overturn it.
+      const { data: restored, error: restoreErr } = await supabase
+        .from('team_members')
+        .update({ seat_suspended_at: null, seat_suspend_reason: null })
+        .eq('user_id', clerkId)
+        .eq('status', 'active')
+        .eq('seat_suspend_reason', 'canceled')
+        .select('id')
+
+      if (restoreErr) {
+        console.error('[stripe/webhook] seat restore failed for', clerkId, restoreErr)
+      } else if (restored && restored.length > 0) {
+        // Campaign access was revoked with the seat, so it has to come back
+        // with it — a live seat holding no grants is a seat that does not work.
+        const { error: accessErr } = await supabase
+          .from('team_campaign_access')
+          .update({ is_active: true, revoked_at: null })
+          .in('team_member_id', restored.map(r => r.id))
+          .eq('is_active', false)
+        if (accessErr) {
+          console.error('[stripe/webhook] access restore failed for', clerkId, accessErr)
+        }
+        console.log(
+          `[stripe/webhook] ${clerkId} resubscribed; restored ${restored.length} seat(s) ` +
+          `suspended when their own plan ended.`
+        )
+      }
     }
   } else if (
     eventType === 'invoice.payment_succeeded' &&

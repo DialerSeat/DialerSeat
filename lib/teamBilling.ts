@@ -1,6 +1,7 @@
 import { stripe } from '@/lib/stripe'
 import { supabaseAdmin } from '@/lib/supabase'
 import Stripe from 'stripe'
+import { isOwnerFunded } from '@/lib/seatFunding'
 import {
   ensureSeatCoupon,
   resolveSeatDiscount,
@@ -221,19 +222,19 @@ async function seatIsAgentFunded(teamMemberId: string): Promise<boolean> {
     return true
   }
 
-  if (member.billing_override === 'owner') return false
-  if (member.billing_override === 'agent') return true
-  if (member.billing_override === 'free') return true
+  const codePayer = new Map<string, string | null>()
+  if (member.joined_via_code) {
+    const { data: code } = await supabaseAdmin
+      .from('team_codes')
+      .select('payer')
+      .eq('code', member.joined_via_code)
+      .maybeSingle()
+    codePayer.set(member.joined_via_code, code?.payer ?? null)
+  }
 
-  if (!member.joined_via_code) return false
-
-  const { data: code } = await supabaseAdmin
-    .from('team_codes')
-    .select('payer')
-    .eq('code', member.joined_via_code)
-    .maybeSingle()
-
-  return code?.payer === 'agent'
+  // One definition, shared with the access path in lib/subscription, so
+  // billing and access can never disagree about who is paying.
+  return !isOwnerFunded(member, codePayer)
 }
 
 export async function createSeatSubscription(
