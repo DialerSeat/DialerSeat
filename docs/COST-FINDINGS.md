@@ -48,6 +48,11 @@ yourself into a number you cannot hit:
 | 2 | destination rate guard (**shipped**) | $5.37 |
 | 3 | **60-second minimum reduced** — Telnyx Q1/Q2 | $3.86 |
 | 4 | **agent legs rated on-net** — Telnyx Q3 | **$3.51** |
+| — | **+ DID rental** ($13/mo ÷ 2 agents, §4) | **$3.73** |
+
+The last row is not a lever, it is a line that was missing from the model.
+Number rental does not care how much you dial, so it survives every per-minute
+saving above and then sits on top of the result.
 
 ### The honest conclusion
 
@@ -62,7 +67,8 @@ And at $3.51, AMD is suddenly **19%** of what is left — the third-largest line
 still invisible to every webhook we capture. It is next, and it is not reachable
 until Ledger → CAPTURE NOW has run (§1d).
 
-> **$3.51 is the floor this architecture reaches.** Going under it means paying
+> **$3.73 is the floor this architecture reaches** — $3.51 of dialing plus
+> $0.22 of rent. Going under it means paying
 > for fewer answered minutes, not cheaper ones — which is list quality, time of
 > day (§4) and number burn (§1f), not carrier engineering. Those are also the
 > only levers that make the day *more* valuable rather than just cheaper.
