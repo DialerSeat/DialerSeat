@@ -346,6 +346,7 @@ export default function NumbersApp() {
   const [seedMessage, setSeedMessage] = useState<string | null>(null)
 
   const [syncing, setSyncing] = useState(false)
+  const [auditing, setAuditing] = useState(false)
 
   
   const [registeringIds, setRegisteringIds] = useState<Set<string>>(new Set())
@@ -607,6 +608,89 @@ export default function NumbersApp() {
       alert(`Sync error: ${e.message}`)
     } finally {
       setSyncing(false)
+    }
+  }
+
+  // ── WHAT EACH NUMBER COSTS, ASKED OF TELNYX ────────────────────────────
+  // Two per-number fees live on Telnyx's side and nothing in this app sets
+  // either, so they cannot be answered from our tables:
+  //
+  //   E911   $1.50/month/number. Thirteen numbers is $19.50 — more than the
+  //          rental and half the entire usage bill. Often on from provisioning,
+  //          and it appears on the invoice as "emergency services" under MRC.
+  //   CNAM   Outbound caller ID name. Free, and unset everywhere, so every
+  //          number displays as a bare number.
+  //
+  // The alternative is thirteen pages in Mission Control, re-checked every time
+  // a number is bought. See docs/COST-FINDINGS.md §1o and §1t.
+  const handleAudit = async () => {
+    if (auditing) return
+    setAuditing(true)
+    try {
+      const res = await fetch('/api/admin/pool/audit')
+      const d = await res.json()
+      if (!d.success) {
+        alert(`Audit failed: ${d.error}`)
+        return
+      }
+      const t = d.totals
+      alert([
+        `NUMBER AUDIT — ${t.owned} owned on Telnyx`,
+        '',
+        `Rental          $${t.rental_monthly_usd}/mo`,
+        `E911            $${t.e911_monthly_usd}/mo  (${t.e911_enabled} of ${t.owned} numbers)`,
+        '—',
+        `FIXED MONTHLY   $${t.fixed_monthly_usd}  before a single call`,
+        '',
+        `${t.cnam_missing} number(s) without outbound CNAM (free to set)`,
+        `${t.deletion_unlocked} number(s) without a deletion lock`,
+        '',
+        ...d.notes,
+      ].join('\n'))
+    } catch (e: any) {
+      alert(`Audit error: ${e.message}`)
+    } finally {
+      setAuditing(false)
+    }
+  }
+
+  // Free, per Telnyx, and unset on every number. Fifteen characters, live in
+  // 12-72 hours. Reaches landlines only — wireless carriers generally do not
+  // display CNAM — so this is worth doing because it costs nothing, not because
+  // it will move the answer rate. It is NOT Branded Calling ($0.075/call).
+  const handleSetCnam = async () => {
+    if (auditing) return
+    const name = window.prompt([
+      'Outbound caller ID name (max 15 characters).',
+      '',
+      'Free. Live in 12-72 hours. Note that wireless carriers generally do not',
+      'display CNAM, so this reaches landlines only.',
+    ].join('\n'))
+    if (!name || !name.trim()) return
+    setAuditing(true)
+    try {
+      const res = await fetch('/api/admin/pool/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+      })
+      const d = await res.json()
+      if (!d.success) {
+        alert(`CNAM update failed: ${d.error}`)
+        return
+      }
+      alert([
+        `CNAM set to "${d.name_applied}"`,
+        '',
+        `${d.updated} updated, ${d.already_set} already set` +
+          (d.failed?.length ? `, ${d.failed.length} failed` : ''),
+        '',
+        d.note,
+      ].join('\n'))
+    } catch (e: any) {
+      alert(`CNAM error: ${e.message}`)
+    } finally {
+      setAuditing(false)
     }
   }
 
@@ -1114,6 +1198,24 @@ export default function NumbersApp() {
           <button className="pool-btn" onClick={() => setConfigOpen(true)}>⚙ CONFIG</button>
           <button className="pool-btn" onClick={handleSync} disabled={syncing}>
             {syncing ? '⟳ SYNCING...' : '⟳ SYNC'}
+          </button>
+          {/* E911 is $1.50/month/number and nothing in this app sets it, so it
+              is unknowable from our tables — this asks Telnyx directly. */}
+          <button
+            className="pool-btn"
+            onClick={handleAudit}
+            disabled={auditing}
+            title="What each number costs on Telnyx: E911, rental, and which free settings are unset"
+          >
+            {auditing ? '$ AUDITING...' : '$ AUDIT'}
+          </button>
+          <button
+            className="pool-btn"
+            onClick={handleSetCnam}
+            disabled={auditing}
+            title="Set the outbound caller ID name on every number missing it. Free; landlines only."
+          >
+            ⌘ SET CNAM
           </button>
           {/* The free registration path is a web form, so the software half of
               it is producing the list and remembering the filing. This is the
