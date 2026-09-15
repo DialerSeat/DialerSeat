@@ -55,6 +55,16 @@ export type CallEventType =
   // in `status`. Recorded rather than discarded because silently dropping
   // these is what made detect_beep impossible to diagnose — the events that
   // would have explained the failure were the ones being thrown away.
+  // What the agent leg's media actually measured -- negotiated codec, packet
+  // loss in BOTH directions, jitter, round-trip. Reported by the browser at
+  // the end of a call, because getStats() lives on the RTCPeerConnection and
+  // nothing server-side can see any of it. `status` is 'ok' or 'degraded'.
+  //
+  // Exists because "calls sound kinda crappy" was unfalsifiable: three people
+  // could hold three theories and none could be wrong. A PSTN call is 8 kHz
+  // G.711 in both directions no matter what, so the only useful question is
+  // what is making it WORSE than narrowband -- and that is a number.
+  | 'audio_stats'
   | 'unhandled'
   | 'recording_ready'
   // Agent used the mid-call recording toggle. Distinct from

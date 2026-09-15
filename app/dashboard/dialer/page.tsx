@@ -1999,7 +1999,62 @@ function DialerPageInner() {
     } catch { /* the element is gone, which is the same outcome */ }
   }
 
+  // ── MEASURE WHAT THE CALL SOUNDED LIKE ────────────────────────────
+  // "Calls sound kinda crappy" had no number attached to it, and nothing in
+  // this codebase recorded one. getStats() lives on the RTCPeerConnection, so
+  // the browser is the only place this can be read at all.
+  //
+  // Sampled ONCE, a few seconds in — early enough that short calls (a 13-second
+  // voicemail is the typical call here) are still up, late enough that the
+  // counters mean something. Sampling repeatedly would cost nothing but say
+  // nothing either: loss and jitter on a narrowband leg do not move much.
+  //
+  // Everything here is wrapped and fire-and-forget. This rides on a LIVE call
+  // and must never be able to affect one: no awaits in the call path, no
+  // throw that could escape, and a failed POST is simply a missing diagnostic.
+  const audioSampledRef = useRef<Set<string>>(new Set())
+  const sampleCallAudio = (
+    session: { sessionDescriptionHandler?: { peerConnection?: RTCPeerConnection } } | null,
+    callControlId: string | null,
+  ) => {
+    if (!callControlId) return
+    // attachSIPAudio runs twice per call -- on Established and again right
+    // after accept() -- and one measurement is the point. Sampling twice
+    // would double the rows and tell us nothing the first did not.
+    if (audioSampledRef.current.has(callControlId)) return
+    audioSampledRef.current.add(callControlId)
+    window.setTimeout(async () => {
+      try {
+        const pc = session?.sessionDescriptionHandler?.peerConnection
+        if (!pc || typeof pc.getStats !== 'function') return
+        // Gone already on a short call, which is normal and not worth logging.
+        if (pc.connectionState === 'closed') return
+
+        const report = await pc.getStats()
+        const { extractCallAudioStats } = await import('@/lib/webrtcStats')
+        const stats = extractCallAudioStats(report as unknown as Map<string, Record<string, unknown>>)
+
+        // A call that carried no media at all says nothing useful and would
+        // just add noise to the table — the dead-air problem has its own,
+        // better signals (bridged_at, AGENT_LEG_FAILED).
+        if (stats.inboundSeconds === 0 && stats.inboundLossPct === null) return
+
+        void fetch('/api/calls/audio-stats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ call_control_id: callControlId, stats }),
+        }).catch(() => {})
+      } catch {
+        // A diagnostic that can break a call is worse than no diagnostic.
+      }
+    }, 6000)
+  }
+
   const attachSIPAudio = (session: any) => {
+    // Media quality is measured from here because this is the one place that
+    // already holds the session and runs exactly when media comes up.
+    sampleCallAudio(session, activeCallSidRef.current)
+
     // Ensure the AudioContext is running (autoplay policies can suspend it).
     try {
       if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
