@@ -1,6 +1,6 @@
 # Message to Telnyx support
 
-Three questions, all answerable from records they already hold. No accusation —
+Four questions, all answerable from records they already hold. No accusation —
 every figure below came from their own `call.cost` webhooks. Between them they
 are worth more than every engineering change made this week.
 
@@ -8,7 +8,7 @@ Send as one ticket. Paste the block below.
 
 ---
 
-Hi — three billing questions about my account, all with figures from your own
+Hi — four billing questions about my account, all with figures from your own
 `call.cost` webhooks so they should be quick to check.
 
 **1. Billing increments.** Your documentation states 60/60 increments and says
@@ -26,7 +26,23 @@ Across all answered calls I show 32,100 billed seconds against 19,446 that the
 6-second increment already applies, can the minimum on answered outbound be
 reduced to match it?
 
-**3. Attestation and CPS.** Two quick ones:
+**3. On-net legs billed on both connections.** My agent-side legs are SIP URI
+calls from my own Call Control application to my own credential connection —
+they never touch the PSTN, and your own `call.cost` records confirm that by
+rating `sip-trunking` at **$0** on them. But each one produces two billing
+records, one per connection, each at $0.002/min. Example from a single
+`call_session_id`:
+
+| connection | call_leg_id | billed | cost | cost parts |
+|---|---|---|---|---|
+| credential connection | `80101afa-…` | 2058s | $0.0686 | `sip-trunking @ 0.00200` |
+| Call Control application | `7fe7e45e-…` | 2058s | $0.0686 | `call-control @ 0.00200`, `sip-trunking @ 0` |
+
+Identical duration, identical charge, one agent leg. Can on-net legs between two
+connections on the same account be zero-rated, or billed once rather than on
+both connections? This is roughly a quarter of my bill.
+
+**4. Attestation and CPS.** Two quick ones:
 
 - What STIR/SHAKEN attestation level are my outbound calls receiving? A SIP
   trace on my account showed `verstat=No-TN-Validation`.
@@ -50,6 +66,11 @@ calls is minimum rather than conversation, and 51.6% of machine-answered billed
 seconds buy nothing. It is a reasonable ask precisely because the fine-grained
 increment already exists on the account.
 
+**The on-net question is the one they have already conceded.** Every other
+question asks them to change a rate. This one only asks why a leg they
+themselves rated at $0 is charged twice at $0.002/min. It is worth ~25% of
+the bill and it is the strongest of the four.
+
 **Attestation changes conversations per dial**, not cents per call — which is
 worth more. Industry reporting puts A-level attestation at 60%+ connect
 improvement, and without it calls are spam-flagged regardless of anything else.
@@ -72,5 +93,5 @@ reconcile.
 
 Their own terms carry a dispute clause: *"The Parties shall negotiate in good
 faith to resolve any billing dispute for a period of thirty (30) days."* That is
-the formal route and it exists. It should not be needed for any of the three
+the formal route and it exists. It should not be needed for any of the four
 questions above, which are requests for information rather than disputes.

@@ -114,6 +114,76 @@ not be needed for requests for information, but it exists.
 
 ---
 
+## 1g. THE AGENT LEG IS BILLED TWICE, AND IT NEVER TOUCHES A PHONE NETWORK
+
+The agent's leg is not a phone call. It is a SIP URI dialled from our Call
+Control application to the credential connection the agent's browser registers
+against — entirely inside Telnyx, no carrier, no PSTN. It produces **two
+separate billing records.**
+
+One call session, every record it generated:
+
+| connection | leg id | billed | cost | cost parts | what |
+|---|---|---|---|---|---|
+| `…31936933233` — **credential** | `80101afa` | 2058s | **$0.0686** | `sip-trunking @ $0.00200` | *not linked to any call* |
+| `…04966737730` — **call control** | `7fe7e45e` | 2058s | **$0.0686** | `call-control @ $0.00200`, `sip-trunking @ $0` | **agent leg** |
+| `…04966737730` — call control | `801a750e` | 2040s | $0.2380 | `call-control @ $0.00200`, `sip-trunking @ $0.005` | lead leg |
+
+Identical seconds, identical amounts, different leg ids, different connections.
+Not a duplicate record — a second leg. A call from a Call Control application to
+a SIP URI on your own credential connection traverses two connections, and
+Telnyx meters each traversal.
+
+### What this means
+
+- **The carriage genuinely is free.** `sip-trunking @ $0` on the agent leg is
+  Telnyx confirming there is no carrier involved. **Every cent paid on an agent
+  leg is connection fee**, charged twice at $0.002/min.
+- **Effective agent-leg rate is $0.004/min.** A real PSTN call averages
+  $0.0052/min ($0.00321 termination + $0.002 platform). **An internal
+  browser leg costs 77% of what it costs to ring an actual phone.**
+- This is also why the credential-connection records never matched a call row
+  and read as orphans: they carry their own `call_leg_id` and a
+  `call_control_id` we never issued. They are only identifiable by
+  `call_session_id`, or by their connection.
+
+### It confirms the teardown fix was the biggest thing done all week
+
+Splitting the whole ledger at the fix:
+
+| | legs | billed min | cost | share | avg leg |
+|---|---|---|---|---|---|
+| **before** — agent legs (both records) | 427 | **1,333** | **$2.667** | **79.2%** | 187s |
+| before — lead legs | 212 | 86 | $0.697 | 20.7% | 24s |
+| **after** — agent legs (both records) | 296 | 223 | $0.447 | **24.6%** | 45s |
+| after — lead legs | 148 | 163 | $1.315 | 72.5% | 66s |
+
+Before the fix, **79% of the entire bill was agents' browsers listening to
+ringing.** Lead legs — the actual product — were a fifth of spend.
+
+### Still true after the fix
+
+223 billed minutes on legs that never leave Telnyx, against 163 minutes that
+reach a real phone. **The agent leg still carries more billed time than the
+lead leg**, because it is up for the ring and the conversation while the lead
+leg is only up for the conversation.
+
+That is exactly what `dial_agent_on_answer` removes, and it is the strongest
+argument yet for turning it on (§3).
+
+### The fourth question for Telnyx
+
+> An on-net leg from my own Call Control application to my own credential
+> connection, with `sip-trunking` explicitly rated at $0, is billed $0.002/min
+> on each connection. Can on-net legs between two connections on the same
+> account be zero-rated, or billed once?
+
+Worth ~25% of the remaining bill, and it is the only question of the four where
+their own record already concedes the premise: they wrote `$0` in the rate
+field themselves.
+
+---
+
 ## 1f. NUMBER BURN — the largest effect measured, and it is free to fix
 
 Answer rate tracks lifetime usage almost perfectly:

@@ -237,6 +237,50 @@ always going to be a machine, not handling machines more cheaply.
 > consequence is that AMD metrics undercount, not that money is wasted — the
 > whole row is worth about $0.23 a month.
 
+### The agent leg is billed on two connections
+
+The agent leg never touches the PSTN — it is a SIP URI dialled from our Call
+Control application to the credential connection the agent's browser registered
+against (§5, `lib/agentSipCredentials.ts`). Telnyx confirms there is no carrier
+involved by rating its `sip-trunking` part at **$0**.
+
+It is billed twice anyway, once per connection traversed. One call session:
+
+| connection | `call_leg_id` | billed | cost | cost parts |
+|---|---|---|---|---|
+| credential (`…31936933233`) | `80101afa` | 2058s | $0.0686 | `sip-trunking @ 0.00200` |
+| Call Control (`…04966737730`) | `7fe7e45e` | 2058s | $0.0686 | `call-control @ 0.00200`, `sip-trunking @ 0` |
+| Call Control | `801a750e` | 2040s | $0.2380 | `call-control @ 0.00200`, `sip-trunking @ 0.005` |
+
+The first two are one agent leg. Same seconds, same charge, different leg ids.
+
+**Effective agent-leg rate: $0.004/min, all of it connection fee.** A real PSTN
+call averages $0.0052/min. **Ringing a browser costs 77% of ringing a phone.**
+
+Three things follow, and they matter more than the rate:
+
+1. **The second record is invisible to every join we have.** It carries its own
+   `call_leg_id` and a `call_control_id` we never issued, so it matches neither
+   `calls.call_control_id` nor `calls.agent_call_control_id`. It is reachable
+   only by `call_session_id`, or by its connection id. Anything that costs
+   agent legs by joining on `agent_call_control_id` alone is **half the real
+   figure** — check `app/api/admin/balance-reconcile` before trusting it.
+2. **Agent legs still carry more billed time than lead legs.** Post-teardown:
+   223 billed minutes on legs that never leave Telnyx, against 163 that reach a
+   phone. The agent leg is up for the ring *and* the conversation; the lead leg
+   only for the conversation. That gap is precisely what
+   `dial_agent_on_answer` closes (§5).
+3. **It is worth asking about rather than engineering around.** Their own record
+   writes `$0` in the rate field for the carriage. `docs/telnyx-questions.md`
+   question 3.
+
+> **How much the teardown fix was really worth.** Splitting the ledger at it,
+> counting both records: agent legs were **79.2% of the entire bill** before
+> (427 legs, 1,333 billed minutes, averaging 187s each) and **24.6% after**
+> (296 legs, 223 minutes, 45s each). Lead legs went from a fifth of spend to
+> nearly three quarters — not because they got dearer, but because the bill
+> stopped being mostly agents' browsers listening to ringing.
+
 ---
 
 ## 7. Cost telemetry
