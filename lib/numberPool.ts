@@ -193,6 +193,42 @@ export async function recordUsage(numberId: string): Promise<void> {
   void numberId
 }
 
+/**
+ * Give a claimed slot back, because no phone ever rang.
+ *
+ * claim_pool_number increments BEFORE we know a call was placed — it has to,
+ * so two concurrent dials cannot take the same slot. Some of those claims never
+ * become calls: Telnyx rejects the origination, or the agent's browser socket
+ * is dead and the leg dies in ~1.2s without the lead's phone ringing.
+ *
+ * WHY THAT MATTERS. The daily cap protects the number's reputation with First
+ * Orion, TNS and Hiya, and those engines score what reaches the terminating
+ * network. A call that died before the INVITE went out is invisible to them —
+ * it cannot hurt the number, so it must not spend the budget that protects it.
+ * On 12 September, 535 of 857 dials never rang; every one consumed a slot and
+ * rested numbers early for nothing.
+ *
+ * Counting ATTEMPTS is still correct — a ringing, unanswered call absolutely
+ * counts, since high attempts with a low answer rate IS the spam signature.
+ * This refunds only attempts that never became attempts.
+ *
+ * Fire and forget. A failed refund costs one slot; a refund that threw on the
+ * dial path would cost the call.
+ */
+export async function refundUsage(numberId: string | null | undefined): Promise<void> {
+  if (!numberId) return
+  try {
+    const { error } = await supabase.rpc('refund_pool_number_claim', {
+      p_number_id: numberId,
+    })
+    if (error) {
+      console.warn('[numberPool] slot refund failed', numberId, error.message)
+    }
+  } catch (err) {
+    console.warn('[numberPool] slot refund threw', numberId, err)
+  }
+}
+
 export async function markFlagged(
   numberId: string,
   reason: string = 'unknown'

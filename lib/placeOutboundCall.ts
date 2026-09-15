@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { pickNumberForLead } from '@/lib/numberPool'
+import { pickNumberForLead, refundUsage } from '@/lib/numberPool'
 import { isCallableNow } from '@/lib/callingWindow'
 import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
 import { resolveTelnyxConfigOrLog, type TelnyxConfig } from '@/lib/telnyxConfig'
@@ -575,6 +575,23 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   const authHeader = `Bearer ${p.env.apiKey}`
   const dialUrl = 'https://api.telnyx.com/v2/calls'
 
+  // ── THE SLOT IS ALREADY SPENT BEFORE WE GET HERE ───────────────────
+  // claim_pool_number increments daily_call_count and lifetime_call_count in
+  // the SAME statement that selects the number. It has to — anything less and
+  // two concurrent dials take the same slot. But that means the counter is
+  // spent at claim time, before anybody knows whether a phone ever rang.
+  //
+  // On 12 September, 535 of 857 dials never reached the network, and every one
+  // of them still burned a slot. At 120+ dials a day only 68 of 165 attempts
+  // rang. The cap is there to stop a caller ID being worn out by CALLS; a
+  // number benched by attempts that never dialed is protecting nothing and
+  // costing a whole number's worth of daily capacity.
+  //
+  // So every path below that means NO PHONE RANG gives the slot back. Reading
+  // p.poolNumberId lazily is deliberate: the D51 self-heal reassigns it
+  // mid-flight, and the refund must follow the claim that is actually held.
+  const refundSlot = async () => { await refundUsage(p.poolNumberId) }
+
   // ── WHO OWNS THIS CALL, recorded ON THE CALL ─────────────────────────────
   // Stamped into Telnyx's client_state so a leg can be traced back to its
   // agent from Telnyx's own active-call list, with no database lookup.
@@ -778,6 +795,10 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
           configWarnings: p.env.warnings,
         }
       )
+      // The lead leg is dialed further down; returning here means their phone
+      // was never called at all. This is the path the dead-socket bug took
+      // 535 times in a day.
+      await refundSlot()
       return {
         success: false,
         // "Agent connection" prefix so this is unmistakably distinct from a
@@ -1214,6 +1235,10 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         console.log(
           `[placeOutboundCall:${p.source}] retrying with Telnyx-owned caller ID ${replacement.phone_number}`
         )
+        // Two claims are now held for one call. The first number never
+        // originated anything — Telnyx does not even own it — so give its slot
+        // back before p.poolNumberId starts pointing at the replacement.
+        await refundSlot()
         dialBody.from = replacement.phone_number
         p.fromNumber = replacement.phone_number
         p.poolNumberId = replacement.id
@@ -1237,6 +1262,11 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         console.error('[placeOutboundCall] failed to clean up orphaned agent leg:', err)
       )
     }
+
+    // Telnyx refused to originate, so the lead's phone never rang. Refunded
+    // here, above the branching, rather than on each of the returns below —
+    // a rejection branch added later would otherwise silently skip it.
+    await refundSlot()
 
     // D13 — "403 Dialed Number is not included in whitelisted countries" is
     // Telnyx's documented rejection when the destination's country isn't

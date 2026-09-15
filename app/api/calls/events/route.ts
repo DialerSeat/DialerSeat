@@ -26,6 +26,7 @@ import {
 import { ensureSipUriCallingEnabled, isSipUriRejection } from '@/lib/telnyxSipUriCalling'
 import { getPlatformConfig } from '@/lib/platformConfig'
 import { recordDestinationRate } from '@/lib/destinationRates'
+import { refundUsage } from '@/lib/numberPool'
 
 // =============================================================================
 // UNIFIED CALL CONTROL EVENTS WEBHOOK — replaces status + amd-result
@@ -1901,7 +1902,7 @@ async function handleHangup(
   try {
     const { data: callRow } = await supabaseAdmin
       .from('calls')
-      .select('id, created_at, duration, disposition, answered_at, talk_seconds, lead_id, dial_group_id, dial_source, call_control_id, agent_call_control_id')
+      .select('id, created_at, duration, disposition, answered_at, talk_seconds, lead_id, dial_group_id, dial_source, call_control_id, agent_call_control_id, pool_number_id')
       .eq('call_control_id', callControlId)
       .maybeSingle()
 
@@ -2089,6 +2090,13 @@ async function handleHangup(
             .from('calls')
             .update({ disposition: 'AGENT_LEG_FAILED' })
             .eq('id', callRow.id)
+
+          // Same reasoning, applied to the caller ID rather than the lead:
+          // claim_pool_number spent a slot off this number's daily cap at dial
+          // time, and the phone it was dialing never rang. The cap exists to
+          // stop a number being worn out by CALLS. 1,270 of these over thirty
+          // days benched numbers for calls that did not happen.
+          await refundUsage(callRow.pool_number_id)
 
           // Released WITHOUT bumping dial_attempts. This lead has not been
           // called, so it must not move closer to being set aside.
