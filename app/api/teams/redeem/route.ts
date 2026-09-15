@@ -104,28 +104,61 @@ export async function POST(req: Request) {
       : codeRow.payer === 'owner' ? (joinMode === 'instant' ? 'active' : 'pending')
       : 'active'
 
-    const { data: existingActive } = await supabaseAdmin
+    // ── ONE ROW PER PERSON PER TEAM, WHATEVER ITS STATUS ────────────────
+    // This used to run two lookups, one for status 'active' and one for
+    // 'pending', and treat "neither" as "insert a new row". A REMOVED member
+    // redeeming a code matched neither, so they got a SECOND membership row.
+    //
+    // 15 Sept: an owner removed an agent at 15:48:38; she redeemed the team
+    // code again at 15:49:03 and landed on a fresh row. Her campaign grants,
+    // her seat charges and her status history all hung off the first one, and
+    // she could not reach the campaign. Another team had accumulated FOUR rows
+    // for one person this way since June.
+    //
+    // app/api/teams/members/add already got this right — it revives the prior
+    // row and says why. This path did not.
+    //
+    // A single unfiltered lookup is now also the only correct thing to write:
+    // uq_team_members_one_per_team makes (team_id, user_id) unique regardless
+    // of status, so maybeSingle() cannot see more than one row and the insert
+    // below would fail outright on a removed member.
+    const { data: existing } = await supabaseAdmin
       .from('team_members')
       .select('id, status, joined_via_code, seat_price_override_cents')
       .eq('team_id', team.id)
       .eq('user_id', userId)
-      .eq('status', 'active')
-      .maybeSingle()
-
-    const { data: existingPending } = await supabaseAdmin
-      .from('team_members')
-      .select('id, status, joined_via_code, seat_price_override_cents')
-      .eq('team_id', team.id)
-      .eq('user_id', userId)
-      .eq('status', 'pending')
       .maybeSingle()
 
     let memberRow: any
     let memberWasCreated = false
-    if (existingActive) {
-      memberRow = existingActive
-    } else if (existingPending) {
-      memberRow = existingPending
+    if (existing && (existing.status === 'active' || existing.status === 'pending')) {
+      memberRow = existing
+    } else if (existing) {
+      // Removed once, coming back with a code. Revive the row rather than
+      // inserting beside it: their history, seat charges and campaign grants
+      // all hang off this id. Suspension is cleared because redeeming is a
+      // fresh join — if the seat then goes unpaid, seatTakeover and
+      // cron/seat-billing-enforcement suspend it again on their own terms.
+      const { data: revived, error: revErr } = await supabaseAdmin
+        .from('team_members')
+        .update({
+          status: targetStatus,
+          removed_at: null,
+          decision_seen_at: null,
+          seat_suspended_at: null,
+          seat_suspend_reason: null,
+          joined_via_code: code,
+          accepted_at: targetStatus === 'active' ? new Date().toISOString() : null,
+        })
+        .eq('id', existing.id)
+        .select('id, status, joined_via_code, seat_price_override_cents')
+        .single()
+
+      if (revErr) throw revErr
+      memberRow = revived
+      // Counts as created: this is a join, and the seat/charge bookkeeping
+      // below has to run exactly as it would for a first-time member.
+      memberWasCreated = true
     } else {
       const { data: newMember, error: memErr } = await supabaseAdmin
         .from('team_members')
