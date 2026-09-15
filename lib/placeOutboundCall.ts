@@ -14,6 +14,7 @@ import { paceOrigination } from '@/lib/cpsGovernor'
 import { checkDestinationRate } from '@/lib/destinationRates'
 import { checkAgentSocket, agentSocketMessage } from '@/lib/agentSocketBreaker'
 import { noteDialOutage } from '@/lib/dialOutageAlert'
+import { isAccountBlockedError } from '@/lib/telnyxErrors'
 import {
   awaitDialBackoff,
   noteCapacityFailure,
@@ -1278,9 +1279,11 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // 'capacity', not 'transient': the next lead fails identically, which is
     // exactly what that classification means, and it is what stops a
     // predictive tick from working through the whole batch one at a time.
-    const isAccountBlocked =
-      /account is disabled/i.test(rawTitle) || /account is disabled/i.test(rawDetail) ||
-      /account.*blocked/i.test(rawDetail) || rawDetail.includes('D17')
+    // Pure matcher in lib/telnyxErrors.ts, under test. The first draft of this
+    // used /account.*blocked/i and a bare includes('D17'); both widened a
+    // PER-LEAD failure into an account-level one, which stops a predictive tick
+    // and starts the backoff. See the tests for the exact near-misses.
+    const isAccountBlocked = isAccountBlockedError(rawTitle, rawDetail)
 
     if (isAccountBlocked) {
       noteCapacityFailure()

@@ -30,23 +30,40 @@
 
 const TELNYX_BASE = 'https://api.telnyx.com/v2'
 
-/** Fields we care about. Telnyx returns many more; these are the billable ones. */
-export interface TelnyxNumberSettings {
+/**
+ * `GET /phone_numbers` — identity. Carries the number and its status, and NOT
+ * the billable feature flags.
+ */
+export interface TelnyxNumberIdentity {
   id?: string
   phone_number?: string
   status?: string
-  connection_id?: string | null
   connection_name?: string | null
-  billing_group_id?: string | null
-  /** E911. $1.50/month/number when true. */
-  emergency_enabled?: boolean
-  emergency_status?: string | null
-  emergency_address_id?: string | null
-  /** Outbound caller ID name listing. Free. */
-  cnam_listing_enabled?: boolean
-  caller_id_name_enabled?: boolean
-  /** Blocks accidental deletion of the number. Free. */
   deletion_lock_enabled?: boolean
+}
+
+/**
+ * `GET /phone_numbers/voice` — the billable settings, and NOT the phone number.
+ *
+ * THIS SEPARATION IS THE WHOLE REASON THE FIRST VERSION OF THIS FILE WAS WRONG.
+ * It read `emergency_enabled` and `cnam_listing_enabled` as flat fields off the
+ * plain number list, where neither exists. Both come back `undefined`, so every
+ * number reported E911 OFF and the audit would have confidently answered "$0"
+ * to the one question it was built to settle. Verified against Telnyx's own
+ * reference: they are NESTED, on a DIFFERENT endpoint, which does not carry the
+ * phone number — so both lists are needed and joined on `id`.
+ */
+export interface TelnyxVoiceSettings {
+  id?: string
+  connection_id?: string | null
+  /** E911. $1.50/month/number when enabled. */
+  emergency?: { emergency_enabled?: boolean; emergency_status?: string | null } | null
+  /** Outbound caller ID name listing. Free. */
+  cnam_listing?: { cnam_listing_enabled?: boolean; cnam_listing_details?: string | null } | null
+  /** 'pay-per-minute' or 'channel' — channel billing is inbound-only (§1e). */
+  usage_payment_method?: string | null
+  /** Telnyx: "This feature has an additional per-number monthly cost." */
+  inbound_call_screening?: string | null
 }
 
 export interface NumberAuditRow {
@@ -56,8 +73,13 @@ export interface NumberAuditRow {
   e911_enabled: boolean
   e911_monthly_usd: number
   cnam_enabled: boolean
+  cnam_name: string | null
+  /** Telnyx charges extra per number for this; default 'disabled'. */
+  call_screening: string | null
   deletion_locked: boolean
   connection_name: string | null
+  /** True when the voice-settings lookup did not cover this number. */
+  settings_unknown: boolean
 }
 
 export interface NumberAuditResult {
@@ -72,6 +94,8 @@ export interface NumberAuditResult {
     rental_monthly_usd: number
     cnam_missing: number
     deletion_unlocked: number
+    /** Telnyx charges extra per number for inbound call screening. */
+    call_screening_enabled: number
     /** Rental + E911. The part of the bill that arrives whether or not anyone dials. */
     fixed_monthly_usd: number
   }
@@ -79,74 +103,104 @@ export interface NumberAuditResult {
 
 const E911_MONTHLY_USD = 1.5
 const RENTAL_MONTHLY_USD = 1.0
+const PAGE_SIZE = 250
+const MAX_PAGES = 20
+
+/** Page a Telnyx list endpoint. Returns null on ANY failure, never a partial list. */
+async function fetchAll<T>(path: string, apiKey: string): Promise<T[] | null> {
+  const out: T[] = []
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    try {
+      const sep = path.includes('?') ? '&' : '?'
+      const res = await fetch(
+        `${TELNYX_BASE}${path}${sep}page[number]=${page}&page[size]=${PAGE_SIZE}`,
+        { headers: { Authorization: `Bearer ${apiKey}` }, cache: 'no-store' }
+      )
+      if (!res.ok) {
+        console.error(`[telnyxNumberAudit] ${path} page ${page} → ${res.status}`)
+        return null
+      }
+      const body = (await res.json()) as { data?: T[] }
+      const batch = Array.isArray(body?.data) ? body.data : []
+      out.push(...batch)
+      if (batch.length < PAGE_SIZE) break
+    } catch (err) {
+      console.error(`[telnyxNumberAudit] ${path} page ${page} threw`, err)
+      return null
+    }
+  }
+  return out
+}
 
 /**
  * Every number Telnyx says we own, with the settings that cost money.
  *
- * Returns ok:false rather than throwing or returning a partial list. A
- * half-read page would understate the E911 count, and understating it is the
- * failure mode that matters — the whole reason this exists is that a charge was
- * invisible.
+ * TWO ENDPOINTS, JOINED ON id. `/phone_numbers` has the number and status but
+ * none of the billable flags; `/phone_numbers/voice` has the flags but not the
+ * number. The first version of this read the flags off the wrong list, got
+ * `undefined` for every one, and would have reported "E911 OFF, $0" for an
+ * account where it might be $19.50/month — a confident wrong answer to the only
+ * question it exists to settle.
+ *
+ * Returns ok:false rather than a partial list. Understating the E911 count is
+ * the failure mode that matters here.
  */
 export async function auditTelnyxNumbers(apiKey: string): Promise<NumberAuditResult> {
   const empty: NumberAuditResult['totals'] = {
     owned: 0, e911_enabled: 0, e911_monthly_usd: 0, rental_monthly_usd: 0,
-    cnam_missing: 0, deletion_unlocked: 0, fixed_monthly_usd: 0,
+    cnam_missing: 0, deletion_unlocked: 0, call_screening_enabled: 0, fixed_monthly_usd: 0,
   }
   if (!apiKey) return { ok: false, error: 'TELNYX_API_KEY is not set', numbers: [], totals: empty }
 
-  const owned: TelnyxNumberSettings[] = []
-  const PAGE_SIZE = 250
-  const MAX_PAGES = 20
+  const [identities, voices] = await Promise.all([
+    fetchAll<TelnyxNumberIdentity>('/phone_numbers', apiKey),
+    fetchAll<TelnyxVoiceSettings>('/phone_numbers/voice', apiKey),
+  ])
 
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    try {
-      const res = await fetch(
-        `${TELNYX_BASE}/phone_numbers?page[number]=${page}&page[size]=${PAGE_SIZE}`,
-        { headers: { Authorization: `Bearer ${apiKey}` }, cache: 'no-store' }
-      )
-      if (!res.ok) {
-        const text = await res.text()
-        return {
-          ok: false,
-          error: `Telnyx returned ${res.status}: ${text.slice(0, 300)}`,
-          numbers: [], totals: empty,
-        }
-      }
-      const body = (await res.json()) as { data?: TelnyxNumberSettings[] }
-      const batch = Array.isArray(body?.data) ? body.data : []
-      owned.push(...batch)
-      if (batch.length < PAGE_SIZE) break
-    } catch (err) {
-      return {
-        ok: false,
-        error: `Listing numbers threw: ${err instanceof Error ? err.message : String(err)}`,
-        numbers: [], totals: empty,
-      }
-    }
+  if (!identities) {
+    return { ok: false, error: 'Could not list numbers from Telnyx', numbers: [], totals: empty }
   }
+  // A voice-settings failure is NOT fatal — the rental total is still worth
+  // showing — but every row is marked settings_unknown so nobody reads a
+  // missing flag as "off". That distinction is the entire bug this replaced.
+  const voiceById = new Map<string, TelnyxVoiceSettings>()
+  for (const v of voices || []) if (v.id) voiceById.set(String(v.id), v)
 
-  const numbers: NumberAuditRow[] = owned.map(n => ({
-    phone_number: n.phone_number || '(unknown)',
-    telnyx_id: n.id ?? null,
-    status: n.status ?? null,
-    e911_enabled: n.emergency_enabled === true,
-    e911_monthly_usd: n.emergency_enabled === true ? E911_MONTHLY_USD : 0,
-    // Telnyx exposes two related flags; either being on means a name is listed.
-    cnam_enabled: n.cnam_listing_enabled === true || n.caller_id_name_enabled === true,
-    deletion_locked: n.deletion_lock_enabled === true,
-    connection_name: n.connection_name ?? null,
-  }))
+  const numbers: NumberAuditRow[] = identities.map(n => {
+    const v = n.id ? voiceById.get(String(n.id)) : undefined
+    const unknown = !voices || !v
+    const e911 = v?.emergency?.emergency_enabled === true
+    return {
+      phone_number: n.phone_number || '(unknown)',
+      telnyx_id: n.id ?? null,
+      status: n.status ?? null,
+      e911_enabled: e911,
+      e911_monthly_usd: e911 ? E911_MONTHLY_USD : 0,
+      cnam_enabled: v?.cnam_listing?.cnam_listing_enabled === true,
+      cnam_name: v?.cnam_listing?.cnam_listing_details ?? null,
+      call_screening: v?.inbound_call_screening ?? null,
+      deletion_locked: n.deletion_lock_enabled === true,
+      connection_name: n.connection_name ?? null,
+      settings_unknown: unknown,
+    }
+  })
 
-  const e911 = numbers.filter(n => n.e911_enabled).length
+  const known = numbers.filter(n => !n.settings_unknown)
+  const e911Count = numbers.filter(n => n.e911_enabled).length
   const totals = {
     owned: numbers.length,
-    e911_enabled: e911,
-    e911_monthly_usd: round2(e911 * E911_MONTHLY_USD),
+    e911_enabled: e911Count,
+    e911_monthly_usd: round2(e911Count * E911_MONTHLY_USD),
     rental_monthly_usd: round2(numbers.length * RENTAL_MONTHLY_USD),
-    cnam_missing: numbers.filter(n => !n.cnam_enabled).length,
+    // Counted over numbers we could actually read. An unreadable number is not
+    // a number missing CNAM.
+    cnam_missing: known.filter(n => !n.cnam_enabled).length,
     deletion_unlocked: numbers.filter(n => !n.deletion_locked).length,
-    fixed_monthly_usd: round2(numbers.length * RENTAL_MONTHLY_USD + e911 * E911_MONTHLY_USD),
+    // Telnyx: "This feature has an additional per-number monthly cost."
+    call_screening_enabled: known.filter(
+      n => n.call_screening && n.call_screening !== 'disabled'
+    ).length,
+    fixed_monthly_usd: round2(numbers.length * RENTAL_MONTHLY_USD + e911Count * E911_MONTHLY_USD),
   }
 
   return { ok: true, numbers, totals }

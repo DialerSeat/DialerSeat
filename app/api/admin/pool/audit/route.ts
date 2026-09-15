@@ -61,6 +61,18 @@ export async function GET() {
         result.totals.deletion_unlocked > 0
           ? `${result.totals.deletion_unlocked} number(s) have no deletion lock.`
           : 'Every number has a deletion lock.',
+        // Telnyx: "This feature has an additional per-number monthly cost."
+        result.totals.call_screening_enabled > 0
+          ? `${result.totals.call_screening_enabled} number(s) have inbound call screening on, ` +
+            `which Telnyx charges extra per number per month for.`
+          : 'Inbound call screening is off everywhere (it carries a per-number monthly cost).',
+        // Says so rather than letting a missing flag read as "off" -- that
+        // exact confusion is the bug this route shipped with and had fixed.
+        result.numbers.some(n => n.settings_unknown)
+          ? `WARNING: voice settings could not be read for ` +
+            `${result.numbers.filter(n => n.settings_unknown).length} number(s). Their E911 and ` +
+            `CNAM state is UNKNOWN, not off — re-run before trusting the totals.`
+          : 'Voice settings were read for every number.',
       ],
     })
   } catch (err) {
@@ -102,10 +114,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: audit.error || 'Could not list numbers' }, { status: 502 })
     }
 
-    // Only the ones missing it. Re-PATCHing a number that already has the right
-    // listing is harmless but it is also 13 pointless writes against a rate
-    // limit, and it makes the result read as though work happened.
-    const targets = audit.numbers.filter(n => !n.cnam_enabled && n.telnyx_id)
+    // Only the ones we can SEE are missing it. Two exclusions, and the second
+    // matters more than it looks:
+    //
+    //   already set        re-PATCHing is harmless but it is pointless writes
+    //                      against a rate limit, and it makes the result read
+    //                      as though work happened.
+    //   settings_unknown   a number whose voice settings could not be read has
+    //                      cnam_enabled:false by DEFAULT, not by observation.
+    //                      Writing to it would silently overwrite a listing
+    //                      nobody ever saw. Unknown is not empty.
+    const targets = audit.numbers.filter(
+      n => !n.cnam_enabled && !n.settings_unknown && n.telnyx_id
+    )
+    const skippedUnknown = audit.numbers.filter(n => n.settings_unknown).length
 
     const updated: string[] = []
     const failed: { phone_number: string; error: string }[] = []
@@ -126,9 +148,14 @@ export async function POST(req: NextRequest) {
       updated: updated.length,
       updated_numbers: updated,
       failed,
+      skipped_unreadable: skippedUnknown,
       note:
         'Live in 12-72 hours once the industry databases pick it up. Wireless ' +
-        'carriers generally do not display CNAM, so this reaches landlines only.',
+        'carriers generally do not display CNAM, so this reaches landlines only.' +
+        (skippedUnknown > 0
+          ? ` ${skippedUnknown} number(s) were SKIPPED because their voice settings could not ` +
+            `be read — they may already carry a listing.`
+          : ''),
     })
   } catch (err) {
     console.error('[admin/pool/audit] POST threw', err)
