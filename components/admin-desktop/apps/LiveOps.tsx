@@ -95,6 +95,8 @@ interface OpsData {
     id: string
     phone: string | null
     source: string
+    /** Who placed it. Null when the call has no user attached. */
+    agentName: string | null
     ageSeconds: number
     answered: boolean
     hasAgentLeg: boolean
@@ -269,6 +271,23 @@ export default function LiveOps() {
   // ── LIVE LEGS ─────────────────────────────────────────────────────────
   // Not on the 5s poll. Every refresh is a Telnyx API call, and this list is
   // consulted when somebody suspects a stuck leg rather than continuously.
+  //
+  // ── BUT IT NO LONGER WAITS TO BE ASKED ───────────────────────────
+  // It rendered "Press REFRESH to ask the carrier" until somebody clicked,
+  // which meant a stranded leg -- the exact thing this panel exists to catch
+  // -- was invisible to anyone who opened Live Ops to look for it. You had to
+  // already suspect the problem in order to see the problem.
+  //
+  // 15 Sept: an agent's browser leg dropped two seconds after bridging and
+  // nothing hung up the prospect. They sat on an open, silent, billing line
+  // for minutes while the dialer moved on, and the panel that would have shown
+  // it was sitting on its placeholder.
+  //
+  // Loaded once on open, then every 30 seconds: two carrier calls a minute
+  // rather than twelve, so the reasoning above still holds. Honours the same
+  // `paused` control as the main poll, so a deliberately frozen screen stops
+  // asking.
+  const LEGS_POLL_MS = 30_000
   const [legs, setLegs] = useState<LiveLegsPayload | null>(null)
   const [legsBusy, setLegsBusy] = useState(false)
   const [legsMsg, setLegsMsg] = useState<string | null>(null)
@@ -290,6 +309,20 @@ export default function LiveOps() {
       setLegsBusy(false)
     }
   }, [])
+
+  useEffect(() => {
+    if (paused) return
+    // Scheduled rather than called inline, for the same reason as the main
+    // poll above: loadLegs touches state before it awaits anything, and the
+    // cascading-render rule cannot see through the callback.
+    const tick = () => { void loadLegs() }
+    const first = setTimeout(tick, 0)
+    const id = setInterval(tick, LEGS_POLL_MS)
+    return () => {
+      clearTimeout(first)
+      clearInterval(id)
+    }
+  }, [loadLegs, paused])
 
   // Both kill paths confirm first. The user asked for this button, so the
   // confirm is not second-guessing them — it is that a misclick here hangs up
@@ -483,7 +516,13 @@ export default function LiveOps() {
                     <span style={{ fontFamily: 'monospace', flex: 1, minWidth: 0 }}>
                       {f.phone || '-'}
                     </span>
-                    <span style={{ color: T.muted, fontSize: 10 }}>{f.source}</span>
+                    {/* The person, not the code path. Every row used to
+                        read 'user_dial', which says nothing when the question
+                        is "who is stuck?". Falls back to the source only when
+                        there is genuinely no user attached. */}
+                    <span style={{ color: T.muted, fontSize: 10 }}>
+                      {f.agentName || f.source}
+                    </span>
                     <span style={{
                       fontFamily: 'monospace', fontSize: 10,
                       // Past a couple of minutes a live call is more likely
@@ -543,7 +582,7 @@ export default function LiveOps() {
             )}
 
             {!legs ? (
-              <div style={{ fontSize: 12, color: T.muted }}>Press REFRESH to ask the carrier.</div>
+              <div style={{ fontSize: 12, color: T.muted }}>Asking the carrier…</div>
             ) : !legs.authoritative ? (
               <div style={{ fontSize: 12, color: T.amber }}>
                 Carrier unreachable, so this list is unknown rather than empty.

@@ -103,10 +103,37 @@ export async function GET() {
     ])
 
     // ── in flight ────────────────────────────────────────────────────────
+    // ── WHOSE CALL IT IS, NOT WHICH CODE PATH PLACED IT ────────────────
+    // This panel showed 'user_dial' against every row, which is the dial
+    // SOURCE -- true, and useless when the question being asked is "who is
+    // stuck?". On a floor every row says the same word.
+    //
+    // Resolved here rather than in the component, which has no way to look a
+    // name up and would need a round trip per row. One query for the list.
+    const inFlightUserIds = Array.from(new Set(
+      (inFlightRes.data || []).map(c => c.user_id).filter(Boolean) as string[]
+    ))
+    const nameByClerkId = new Map<string, string>()
+    if (inFlightUserIds.length > 0) {
+      const { data: people } = await supabase
+        .from('users')
+        .select('clerk_id, first_name, last_name, email')
+        .in('clerk_id', inFlightUserIds)
+      for (const p of people || []) {
+        const full = [p.first_name, p.last_name].filter(Boolean).join(' ').trim()
+        // Falls back through email to a truncated id: a row with no name is
+        // still a row somebody has to act on, and "-" tells them nothing.
+        nameByClerkId.set(p.clerk_id, full || p.email || p.clerk_id.slice(0, 12))
+      }
+    }
+
     const inFlight = (inFlightRes.data || []).map(c => ({
       id: c.id,
       phone: c.phone_number,
       source: c.dial_source || 'unknown',
+      // Null when the call has no user at all, which is itself worth seeing:
+      // the component shows the source in that case rather than inventing one.
+      agentName: c.user_id ? (nameByClerkId.get(c.user_id) ?? null) : null,
       ageSeconds: Math.round((now - new Date(c.created_at).getTime()) / 1000),
       answered: !!c.answered_at,
       hasAgentLeg: !!c.agent_call_control_id,
