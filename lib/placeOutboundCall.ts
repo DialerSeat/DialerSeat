@@ -10,6 +10,7 @@ import { getPlatformConfig, resolveWithGlobal } from '@/lib/platformConfig'
 import { normalizeToE164 } from '@/lib/phoneNormalize'
 import { checkSuppression } from '@/lib/suppression'
 import { logCallEvent } from '@/lib/callEvents'
+import { paceOrigination } from '@/lib/cpsGovernor'
 
 /**
  * The only answering-machine detector allowed out of this file.
@@ -563,8 +564,15 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // cannot drift apart.
     const agentSipUri = await agentSipUriForClerkId(p.userId, p.env)
 
-    const dialAgentLeg = () =>
-      fetch(dialUrl, {
+    // ── CPS ──────────────────────────────────────────────────────────────
+    // Both legs of a dial are originations on the same connection, so both
+    // count toward the carrier's calls-per-second. Paced here rather than at
+    // one point per dial for that reason. Delay only, capped, fails open —
+    // see lib/cpsGovernor.ts, and lib/concurrency.ts for what happened the
+    // last time anything on this path could refuse.
+    const dialAgentLeg = async () => {
+      await paceOrigination(p.source === 'controller_fanout' ? 'fanout' : 'agent')
+      return fetch(dialUrl, {
         method: 'POST',
         headers: {
           Authorization: authHeader,
@@ -579,6 +587,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
           timeout_secs: 30, // agent's own device ring timeout — generous but bounded
         }),
       })
+    }
 
     let agentRes = await dialAgentLeg()
     let agentData: TelnyxDialResponse = await agentRes.json()
@@ -1016,8 +1025,13 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     )
   }
 
-  const dialLeadLeg = () =>
-    fetch(dialUrl, {
+  // Paced like the agent leg above: same connection, same CPS meter. The
+  // retries below deliberately go through this function rather than calling
+  // fetch directly, so a self-heal retry is paced too — a burst of retries is
+  // exactly the shape that produces a billable peak.
+  const dialLeadLeg = async () => {
+    await paceOrigination(p.source === 'controller_fanout' ? 'fanout' : 'agent')
+    return fetch(dialUrl, {
       method: 'POST',
       headers: {
         Authorization: authHeader,
@@ -1025,6 +1039,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       },
       body: JSON.stringify(dialBody),
     })
+  }
 
   let leadRes = await dialLeadLeg()
   let leadData: TelnyxDialResponse = await leadRes.json()
