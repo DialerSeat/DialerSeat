@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin'
 import { apiError } from '@/lib/apiError'
+import { fetchDetailRecords, truncationNote } from '@/lib/telnyxDetailRecords'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -35,6 +36,7 @@ export const maxDuration = 120
 // =============================================================================
 
 const TELNYX_API = 'https://api.telnyx.com/v2'
+
 
 /**
  * Every billable record type the platform exposes.
@@ -118,57 +120,61 @@ export async function GET(req: NextRequest) {
     const types = only ? [only] : [...RECORD_TYPES]
     const charges: Charge[] = []
 
+    // Budget shared across every type, so a 19-type sweep cannot be killed by
+    // the 10s Hobby function timeout partway through with nothing to show.
+    const started = Date.now()
+    const OVERALL_BUDGET_MS = 7_000
+    const truncations: string[] = []
+
     for (const recordType of types) {
-      const qs = new URLSearchParams()
-      qs.set('filter[record_type]', recordType)
-      if (from && to) {
-        qs.set('filter[created_at][gte]', from)
-        qs.set('filter[created_at][lt]', to)
-      } else {
-        qs.set('filter[date_range]', dateRange)
-      }
-      qs.set('page[size]', '250')
-      qs.set('page[number]', '1')
-
-      try {
-        const res = await fetch(`${TELNYX_API}/detail_records?${qs.toString()}`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-          cache: 'no-store',
-        })
-
-        if (!res.ok) {
-          const body = await res.text()
-          // A record type this account has never used commonly 404s or 422s.
-          // Reported rather than swallowed: "we did not check" and "there was
-          // nothing there" are different answers.
-          charges.push({
-            recordType, count: 0, totalCost: 0, currency: 'USD', largest: [],
-            error: `HTTP ${res.status}: ${body.slice(0, 200)}`,
-          })
-          continue
-        }
-
-        const json = await res.json()
-        const rows = Array.isArray(json?.data) ? json.data as Array<Record<string, unknown>> : []
-        const total = rows.reduce((n, r) => n + costOf(r), 0)
-
-        charges.push({
-          recordType,
-          count: typeof json?.meta?.total_results === 'number' ? json.meta.total_results : rows.length,
-          totalCost: Math.round(total * 10000) / 10000,
-          currency: String(rows[0]?.currency ?? 'USD'),
-          largest: rows
-            .slice()
-            .sort((a, b) => costOf(b) - costOf(a))
-            .slice(0, 5)
-            .filter(r => costOf(r) > 0),
-        })
-      } catch (err) {
+      const remaining = OVERALL_BUDGET_MS - (Date.now() - started)
+      if (remaining < 500) {
         charges.push({
           recordType, count: 0, totalCost: 0, currency: 'USD', largest: [],
-          error: err instanceof Error ? err.message : 'request failed',
+          error: 'skipped: overall time budget spent. Narrow the range or use ?type=',
         })
+        continue
       }
+
+      // ── PAGED, BECAUSE ONE PAGE IS 50 ROWS ───────────────────────────
+      // This used to set page[number]=1 and stop. Telnyx caps a page at 50
+      // however large a page[size] you ask for, so a full day of sip-trunking
+      // came back as SEVEN MINUTES of it — while `count` below reported
+      // meta.total_results, the true figure. An accurate count beside a cost
+      // summed from one page reads as authoritative and is wrong by ~200x.
+      const page = await fetchDetailRecords({
+        apiKey, recordType, dateRange, from, to, budgetMs: remaining,
+      })
+
+      if (page.error && page.rows.length === 0) {
+        // A record type this account has never used commonly 404s or 422s.
+        // Reported rather than swallowed: "we did not check" and "there was
+        // nothing there" are different answers.
+        charges.push({
+          recordType, count: 0, totalCost: 0, currency: 'USD', largest: [],
+          error: page.error,
+        })
+        continue
+      }
+
+      const note = truncationNote(page, recordType)
+      if (note) truncations.push(note)
+
+      const total = page.rows.reduce((n, r) => n + costOf(r), 0)
+      charges.push({
+        recordType,
+        // Telnyx's own total when we have it, so the gap against what we
+        // actually summed is visible rather than hidden.
+        count: page.totalResults ?? page.rows.length,
+        totalCost: Math.round(total * 10000) / 10000,
+        currency: String(page.rows[0]?.currency ?? 'USD'),
+        largest: page.rows
+          .slice()
+          .sort((a, b) => costOf(b) - costOf(a))
+          .slice(0, 5)
+          .filter(r => costOf(r) > 0),
+        ...(note ? { error: note } : {}),
+      })
     }
 
     const withCharges = charges.filter(c => c.totalCost > 0)

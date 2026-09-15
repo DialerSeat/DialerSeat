@@ -3,6 +3,7 @@ import { createHash } from 'crypto'
 import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
 import { apiError } from '@/lib/apiError'
+import { fetchDetailRecords } from '@/lib/telnyxDetailRecords'
 
 const supabase = getServiceClient('admin/telnyx-ledger')
 
@@ -169,49 +170,67 @@ export async function POST(req: NextRequest) {
     let revised = 0
     const perType: Array<{ type: string; fetched: number; stored: number; error?: string }> = []
 
+    // Shared budget: Vercel Hobby kills a function at 10s and this route does
+    // not declare a maxDuration. A 19-type sweep that gets killed mid-walk
+    // stores nothing and says nothing, which is how a capture silently becomes
+    // seven minutes of data (see lib/telnyxDetailRecords.ts).
+    const started = Date.now()
+    const OVERALL_BUDGET_MS = 7_000
+    const truncated: string[] = []
+
     for (const recordType of types) {
-      const qs = new URLSearchParams()
-      qs.set('filter[record_type]', recordType)
-      qs.set('filter[date_range]', range)
-      qs.set('page[size]', '250')
-      qs.set('page[number]', '1')
+      const remaining = OVERALL_BUDGET_MS - (Date.now() - started)
+      if (remaining < 500) {
+        perType.push({ type: recordType, fetched: 0, stored: 0, error: 'skipped: time budget spent' })
+        continue
+      }
 
       try {
-        const res = await fetch(`${TELNYX_API}/detail_records?${qs}`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-          cache: 'no-store',
+        const page = await fetchDetailRecords({
+          apiKey, recordType, dateRange: range, budgetMs: remaining,
         })
-        if (!res.ok) {
-          perType.push({
-            type: recordType, fetched: 0, stored: 0,
-            error: `HTTP ${res.status}: ${(await res.text()).slice(0, 160)}`,
-          })
+        if (page.error && page.rows.length === 0) {
+          perType.push({ type: recordType, fetched: 0, stored: 0, error: page.error })
           continue
         }
+        if (page.truncated) {
+          truncated.push(
+            `${recordType}: stored ${page.rows.length} of ${page.totalResults ?? '?'} ` +
+            `(stopped by ${page.stoppedBecause})`
+          )
+        }
 
-        const json = await res.json()
-        const rows = Array.isArray(json?.data) ? json.data as Row[] : []
+        const rows = page.rows as Row[]
         let storedHere = 0
 
+        // ── ONE DEDUPE QUERY PER TYPE, NOT ONE PER ROW ──────────────────
+        // This used to SELECT inside the row loop. At one page of 50 that was
+        // 50 queries and survivable; paging properly makes it thousands, and
+        // the function dies at 10 seconds long before it finishes. Fixing the
+        // pagination without fixing this would have turned a silently
+        // truncated capture into one that simply times out.
+        const ids = rows.map(r => idOf(r) ?? '').filter(Boolean)
+        const seenByIdHash = new Set<string>()
+        const seenIds = new Set<string>()
+        if (ids.length > 0) {
+          const { data: existing } = await supabase
+            .from('telnyx_ledger_records')
+            .select('telnyx_id, payload_hash')
+            .eq('record_type', recordType)
+            .in('telnyx_id', ids)
+          for (const e of (existing || []) as Array<{ telnyx_id: string; payload_hash: string }>) {
+            seenIds.add(e.telnyx_id)
+            seenByIdHash.add(`${e.telnyx_id}::${e.payload_hash}`)
+          }
+        }
+
+        const toInsert: Array<Record<string, unknown>> = []
         for (const r of rows) {
           const telnyxId = idOf(r)
           const payloadHash = hashOf(r)
-
-          // Was this exact content already stored? The unique index would
-          // catch it, but asking first keeps the revision count honest —
-          // an upsert conflict cannot tell "identical" from "changed".
-          const { data: existing } = await supabase
-            .from('telnyx_ledger_records')
-            .select('id, payload_hash')
-            .eq('record_type', recordType)
-            .eq('telnyx_id', telnyxId ?? '')
-            .limit(5)
-
-          const seen = (existing || []) as Array<{ payload_hash: string }>
-          if (seen.some(e => e.payload_hash === payloadHash)) { unchanged++; continue }
-          if (seen.length > 0) revised++   // same record, different content
-
-          const { error } = await supabase.from('telnyx_ledger_records').insert({
+          if (seenByIdHash.has(`${telnyxId ?? ''}::${payloadHash}`)) { unchanged++; continue }
+          if (seenIds.has(telnyxId ?? '')) revised++   // same record, different content
+          toInsert.push({
             record_type: recordType,
             telnyx_id: telnyxId,
             occurred_at: occurredAt(r),
@@ -223,9 +242,15 @@ export async function POST(req: NextRequest) {
             payload_hash: payloadHash,
             capture_window: range,
           })
-          // A duplicate is not an error worth failing the run for — two
-          // captures racing is normal and the index is doing its job.
-          if (!error) { captured++; storedHere++ }
+        }
+
+        // Chunked bulk insert. A duplicate is not an error worth failing the
+        // run for — two captures racing is normal and the unique index is
+        // doing its job — so a failed chunk is counted, not thrown.
+        for (let i = 0; i < toInsert.length; i += 500) {
+          const chunk = toInsert.slice(i, i + 500)
+          const { error } = await supabase.from('telnyx_ledger_records').insert(chunk)
+          if (!error) { captured += chunk.length; storedHere += chunk.length }
         }
 
         perType.push({ type: recordType, fetched: rows.length, stored: storedHere })
@@ -246,9 +271,22 @@ export async function POST(req: NextRequest) {
       // record differently than they reported it before.
       revised,
       perType: perType.filter(p => p.fetched > 0 || p.error),
-      note: revised > 0
-        ? `${revised} record(s) came back different from a previous capture. See GET revisions.`
-        : 'No record changed since it was last captured.',
+      // ── SAY WHEN THE CAPTURE IS NOT THE WHOLE WINDOW ─────────────────
+      // The 15 Sept capture stored exactly 50 records of every type and said
+      // nothing about it — seven minutes of sip-trunking presented as a
+      // ledger. Silence here is the thing that made a truncated capture look
+      // like a complete one, so truncation now comes back as data.
+      truncated,
+      complete: truncated.length === 0,
+      note: [
+        revised > 0
+          ? `${revised} record(s) came back different from a previous capture. See GET revisions.`
+          : 'No record changed since it was last captured.',
+        truncated.length > 0
+          ? `INCOMPLETE: ${truncated.length} type(s) were cut short — re-run, or narrow the range. ` +
+            `Stored totals for those types are PARTIAL.`
+          : 'Every requested type was read to the end of the window.',
+      ].join(' '),
     })
   } catch (err) {
     return apiError(err, { route: 'admin/telnyx-ledger' })
