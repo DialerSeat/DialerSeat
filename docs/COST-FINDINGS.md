@@ -114,6 +114,61 @@ not be needed for requests for information, but it exists.
 
 ---
 
+## 1f. NUMBER BURN — the largest effect measured, and it is free to fix
+
+Answer rate tracks lifetime usage almost perfectly:
+
+| number | lifetime calls | 30d dials | answer rate |
+|---|---|---|---|
+| +1 830 283 2151 (TX) | **639** | 353 | **18.4%** |
+| +1 409 345 0167 (TX) | **637** | 344 | **20.6%** |
+| +1 415 862 7515 (CA) | 545 | 542 | 28.2% |
+| +1 314 350 0389 (MO) | 501 | 169 | 29.0% |
+| +1 727 558 4174 (FL) | 715 | 213 | 29.1% |
+| +1 984 369 0844 (NC) | 594 | 113 | 44.2% |
+| **+1 361 217 1881 (TX)** | **13** | 13 | **53.8%** |
+| **+1 210 742 5406 (TX)** | **13** | 13 | **61.5%** |
+
+**The two newest numbers answer at roughly 3× the rate of the two most used.**
+The same effect shows per-day: numbers under 40 dials/day answer at 38.8%,
+over 120 at 21.6%.
+
+### Why this outranks everything else in this document
+
+At 18.4% an agent needs **5.4 dials per answer**. At 55% they need **1.8**.
+That is 3× the conversations from the same seat-hour — larger than every carrier
+saving found in a night of looking, and it costs nothing to act on.
+
+It also cuts the other way from cost intuition: more answers means *more*
+carrier spend, and that is the correct direction. Cost per conversation is what
+matters, and a flagged number makes it three times worse.
+
+### What to do, in order
+
+1. **Check the two worst for spam labels.** `armorhq.com` places real test calls
+   across Verizon, AT&T and T-Mobile and returns screenshots of exactly how the
+   number displays. Number Verifier offers the same with a free trial. Start
+   with **+1 830 283 2151** and **+1 409 345 0167**.
+2. **Register every number at `freecallerregistry.com`** — still live, still
+   free, one form covering First Orion (T-Mobile's analytics engine), TNS
+   (Verizon's) and Hiya. Email verification only. Note it is for businesses
+   registering **their own** numbers; third-party registration is not permitted,
+   so this is the operator's task, not something the platform can automate.
+3. **Report and request remediation** where a label is confirmed: Verizon via
+   `voicespamfeedback.com/vsf/`, T-Mobile via their Call Reporting site,
+   NoMoRobo at `reports@nomorobo.com`.
+4. **The soft cap already shipped** (§11 of CARRIER-ENGINEERING) slows future
+   burn by demoting a number past 60 dials/day out of its local tier. It does
+   not un-flag anything already flagged.
+
+> **The pool is not a fixed asset, it is a consumable.** These numbers lose
+> roughly two thirds of their answer rate over ~600 lifetime calls. Budget for
+> replacement the way you budget for minutes, and note that buying a fresh
+> number ($1) buys back more conversations than any optimisation in this
+> document.
+
+---
+
 ## 2. Where the money actually goes
 
 Clean session, after the agent-leg teardown fix:
