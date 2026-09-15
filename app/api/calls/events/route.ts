@@ -542,19 +542,56 @@ async function callControlAction(
   return true
 }
 
+// ── REVERTED 14 Sept 2026, THE SAME EVENING IT SHIPPED ──────────────────────
+// This issued `reject` with cause CALL_REJECTED instead of answering, to avoid
+// paying the 60-second minimum plus TTS to tell a caller we do not take their
+// call. It broke dialing within hours, and the browser console said so exactly:
+//
+//   CANCEL sip:...  Reason: Q.850;cause=21;text="CALL_REJECTED"
+//
+// cancelling an AGENT leg the browser had already accepted — a leg that had
+// reached `Established` a moment earlier. CALL_REJECTED appears nowhere else in
+// this codebase, so the call came from here.
+//
+// WHY THE ORIGINAL REASONING WAS WRONG. It was argued that an agent leg cannot
+// carry direction 'incoming', because the previous code would then have read
+// the inbound apology to agents and nobody ever reported hearing it. That does
+// not follow. The old branch issued `answer`, which is inert on a leg the
+// browser is already answering, so a misclassified agent leg passed through it
+// invisibly. `reject` is not inert. The same misclassification that cost
+// nothing for a year became fatal the moment the action changed.
+//
+// The lesson is narrower than "don't reject": an inference from the ABSENCE of
+// a symptom is only as strong as the old code's ability to produce one. That
+// path was silent, so it proved nothing.
+//
+// Answering costs roughly $0.0052 plus TTS per callback. Dialing is the
+// business. Do not attempt this again without first proving, from a captured
+// webhook payload, what `direction` an agent leg actually carries — and if it
+// is ever rejected again, gate it on something positive (a client_state we set
+// on our own legs) rather than on direction alone.
+// ────────────────────────────────────────────────────────────────────────────
+
+const INBOUND_MESSAGE =
+  'Thank you for calling. This number does not accept incoming calls. ' +
+  'Please call back the number that contacted you, or visit dialerseat dot com for support. Goodbye.'
+
 async function handleInboundCallInitiated(callControlId: string): Promise<void> {
-  // Before answer, which is the whole point. `cause` is required by the API.
-  await callControlAction(callControlId, 'reject', { cause: 'CALL_REJECTED' })
+  await callControlAction(callControlId, 'answer')
 }
 
-// Defensive only. A leg rejected at call.initiated should never reach
-// answered — but a reject that failed to send, or the two webhooks racing,
-// would otherwise leave a live inbound call sitting on the meter with nothing
-// driving it. Hang up at once. Do not speak: speak keeps the call up for the
-// length of the sentence, which is the cost this change exists to remove.
 async function handleInboundCallAnswered(callControlId: string): Promise<void> {
-  console.warn(`[calls/events] inbound call answered despite reject: ${callControlId}`)
+  const spoke = await callControlAction(callControlId, 'speak', {
+    payload: INBOUND_MESSAGE,
+    voice: 'female',
+  })
+  // Queued behind the speak command — Telnyx runs commands on a call in order,
+  // so the hangup executes once speak completes. If speak failed to even queue,
+  // hang up anyway rather than leaving the caller in silence.
   await callControlAction(callControlId, 'hangup')
+  if (!spoke) {
+    console.warn(`[calls/events] inbound speak failed, hung up bare: ${callControlId}`)
+  }
 }
 
 // ── WHAT COUNTS AS A ROBOT ─────────────────────────────────────────────────
