@@ -736,9 +736,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             borderBottom: '1px solid #78350f', color: '#ffaa3e',
             fontSize: 13, lineHeight: 1.5,
           }}>
-            {seatLapsed.map(t => t.teamName).join(', ')} is no longer paying for your seat.
-            {' '}Your account and all your data are still here, subscribe on your own plan
-            to keep dialing.
+            {/* ── SAY WHAT ACTUALLY HAPPENED ─────────────────────────
+                `reason` has always been sent from /api/stripe/status and was
+                never read here, so every lapsed seat was told "your team
+                stopped paying for you" — including self-funded agents whose
+                own subscription simply ended, and whose owner was never
+                paying for them at all. That is a false accusation against the
+                owner and it points the agent at the wrong person to ask. */}
+            {seatLapsed.every(t => t.reason === 'canceled') ? (
+              <>
+                Your subscription has ended, so dialing is paused.
+                {' '}Your account, leads, recordings and dispositions are all still here —
+                subscribe again to pick up where you left off.
+              </>
+            ) : seatLapsed.some(t => t.reason === 'paused') ? (
+              <>
+                {seatLapsed.filter(t => t.reason === 'paused').map(t => t.teamName).join(', ')}
+                {' '}paused your seat, so dialing is paused.
+                {' '}Your account and all your data are still here — ask them to resume it,
+                or subscribe on your own plan to keep dialing.
+              </>
+            ) : (
+              <>
+                {seatLapsed.map(t => t.teamName).join(', ')} is no longer paying for your seat.
+                {' '}Your account and all your data are still here, subscribe on your own plan
+                to keep dialing.
+              </>
+            )}
             <Link
               href="/billing"
               style={{ color: '#ffd96a', marginLeft: 8, textDecoration: 'underline' }}

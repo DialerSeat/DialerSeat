@@ -1,91 +1,109 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { createSeatSubscription, isSeatBillingError, agentPaysForThemselves } from '@/lib/teamBilling'
 
-// ─────────────────────────────────────────────────────────────────────────
-// WHEN AN AGENT STOPS PAYING, THE OWNER CATCHES THE SEAT
+// ────────────────────────────────────────────────────────────────────────
+// WHO PAYS FOR A SEAT — THE ONE PLACE IT IS WRITTEN DOWN
 //
-// An agent on a self-funded seat cancels their own subscription. Without this,
-// their seat evaporates: campaign access is cut, they stop dialing, and the
-// first the owner hears about it is an empty chair mid-shift. On a floor of
-// fifty that is a hole in the day nobody chose.
+// Three columns carry this and they had drifted into contradicting each other.
+// The vocabulary, in precedence order, highest first:
 //
-// So the owner picks the seat up automatically and the agent keeps working,
-// until the owner decides otherwise by pausing the seat or removing them from
-// the team. Continuity is the default; ending it is a deliberate act.
+//   team_members.billing_override   The decision, once one has been made.
+//     'owner'   the team owner is paying for this seat
+//     'agent'   the agent is paying for their own seat
+//     'free'    this seat costs the OWNER nothing — either the agent funds
+//               themselves, or another seat of the same owner already covers
+//               them. NOT "free of charge to everybody".
+//     null      no decision recorded; fall through to the code below.
 //
-// THIS SPENDS SOMEBODY'S MONEY WITHOUT THEM CLICKING ANYTHING, which is the
-// part that has to be handled carefully:
+//     The check constraint also permits 'agency_pays' and 'agent_pays_self'.
+//     Nothing in this codebase reads or writes either, and no row holds one.
+//     They are dead vocabulary — do not start using them without deciding how
+//     they differ from 'owner' and 'free', which is exactly the ambiguity this
+//     block exists to end.
 //
-//   - It is recorded on the membership (billing_takeover_at) rather than
-//     silently changing billing_override, so every surface can say "you picked
-//     this up automatically" instead of showing a seat the owner does not
-//     remember agreeing to.
-//   - The owner is told, in-app, on every page, with a link to the lever.
-//   - If their card fails, the charge lands 'failed' and the existing grace
-//     period applies — the agent is not thrown out over it either.
+//   team_members.seat_suspend_reason   Why a seat stopped. Constrained to
+//     'paused'    a person paused it deliberately
+//     'canceled'  the agent's own subscription ended
+//     'unpaid'    a seat charge failed
+//     Anything else is rejected by team_members_seat_suspend_reason_check,
+//     so a new reason needs a migration, not just a string literal.
 //
-// Owner-funded seats are skipped: nothing changes for a seat the owner was
-// already paying for. Suspended seats are skipped too — the owner has already
-// said no to that one, and quietly resuming it would overturn their decision.
-// ─────────────────────────────────────────────────────────────────────────
+//   team_codes.payer                What the JOIN said, for members with a
+//                                   joined_via_code and no override.
+//     'agent'   whoever redeems this code pays for their own seat
+//     'owner'   the owner is offering to pay
+//
+//   team_members.billing_takeover_at / _reason
+//                                   Audit of the owner CHOOSING to pick up a
+//                                   seat they were not originally paying for.
+//                                   Never set by anything automatic.
+//
+// ── WHY THIS FILE NO LONGER MOVES MONEY ─────────────────────────────
+// It used to do this: when an agent on a self-funded seat cancelled their own
+// subscription, the OWNER was automatically charged $35/week to keep that seat
+// alive, on the reasoning that continuity beats an empty chair mid-shift.
+//
+// The premise was inverted. The condition it selected on was
+// `team_codes.payer === 'agent'` — which is the flag that says THE OWNER IS
+// NOT PAYING FOR THIS SEAT. It read the setting meaning "not your bill" and
+// used it as the trigger to send the owner a bill. An owner who deliberately
+// issued an agent-pays recruiting code, precisely so that recruits fund
+// themselves, was signed up for every one of them the moment they lapsed.
+//
+// 15 Sept: an agent on recruiting code S66XJ9XG (payer 'agent') cancelled her
+// own plan at 05:58. The owner was charged for her seat four seconds later
+// without being asked. That charge failed, nothing suspended the seat, and she
+// dialed 169 calls that day on the platform's own carrier balance. She was
+// also the only member in the entire table holding the contradiction this
+// produced: billing_override 'owner' on a payer 'agent' seat.
+//
+// The rule is now the plain one: WHEN THE SUBSCRIPTION ENDS, THE SEAT ENDS.
+// An agent-funded seat whose funding stops is suspended, not transferred. The
+// owner is told and can pick it up deliberately — that is what
+// billing_takeover_at records, and it is now only ever written by a person
+// choosing it.
+//
+// Owner-funded seats are untouched: nothing about an agent's personal
+// subscription changes a seat the owner was already paying for. Suspended
+// seats are skipped, because the owner has already said no to those.
+// ────────────────────────────────────────────────────────────────────────
 
-const DEFAULT_SEAT_CENTS = 3500
-
+/**
+ * What happened to this agent's self-funded seats when their own plan ended.
+ *
+ * `suspended` replaces the old `takenOver`. Nothing is taken over automatically
+ * any more — see the header for why that was inverted — so the outcome of this
+ * function is now always "the seat stopped", never "somebody else was billed".
+ */
 export interface TakeoverResult {
   membershipsChecked: number
-  takenOver: Array<{ teamId: string; teamName: string; ownerId: string; memberId: string }>
-  billingFailed: Array<{ memberId: string; reason: string }>
+  /** Agent-funded seats suspended because the funding stopped. */
+  suspended: Array<{ teamId: string; teamName: string; ownerId: string; memberId: string }>
 }
 
+/**
+ * An agent's own subscription ended. Suspend the seats THEY were funding.
+ *
+ * Deliberately does not charge anybody. An owner who wants to keep this agent
+ * dialing picks the seat up themselves, which stamps billing_takeover_at.
+ */
 export async function takeOverAgentPaidSeats(agentClerkId: string): Promise<TakeoverResult> {
-  const result: TakeoverResult = {
-    membershipsChecked: 0,
-    takenOver: [],
-    billingFailed: [],
-  }
+  const result: TakeoverResult = { membershipsChecked: 0, suspended: [] }
 
-  // ── THE OPERATOR CAN TURN THIS OFF ──────────────────────────────────────
-  // This spends an owner's money without them clicking anything, which is
-  // defensible as a default and indefensible as something with no switch.
-  // platform_config.seat_takeover_enabled; off means the seat lapses and the
-  // owner decides for themselves whether to re-open it.
-  try {
-    const { getPlatformConfig } = await import('@/lib/platformConfig')
-    const cfg = await getPlatformConfig()
-    if (cfg?.seat_takeover_enabled === false) {
-      console.log('[seatTakeover] disabled in platform config, leaving seats to lapse')
-      return result
-    }
-  } catch {
-    // Unreadable config keeps the historical behaviour: take the seat over,
-    // because an agent losing access mid-shift is the worse failure.
-  }
-
-  // One person can hold more than one subscription over time. If any is still
-  // active they are not actually leaving, and picking up their seats would bill
-  // owners for access the agent is still funding.
-  if (await agentPaysForThemselves(agentClerkId)) return result
-
-  const { data: memberships, error } = await supabaseAdmin
+  const { data: rows } = await supabaseAdmin
     .from('team_members')
-    .select('id, team_id, user_id, status, billing_override, joined_via_code, seat_suspended_at, seat_price_override_cents, billing_takeover_at')
+    .select('id, team_id, user_id, status, billing_override, joined_via_code, seat_suspended_at')
     .eq('user_id', agentClerkId)
     .eq('status', 'active')
     .is('seat_suspended_at', null)
 
-  if (error) {
-    console.error('[seatTakeover] membership lookup failed', error)
-    return result
-  }
-
-  const rows = memberships || []
-  result.membershipsChecked = rows.length
-  if (rows.length === 0) return result
+  const memberRows = rows || []
+  result.membershipsChecked = memberRows.length
+  if (memberRows.length === 0) return result
 
   // joined_via_code holds the code TEXT, not a foreign key, so who-pays has to
-  // be looked up rather than embedded.
+  // be looked up rather than joined.
   const codes = Array.from(
-    new Set(rows.map(r => r.joined_via_code).filter((c): c is string => !!c))
+    new Set(memberRows.map(r => r.joined_via_code).filter((c): c is string => !!c))
   )
   const codePayer = new Map<string, string>()
   if (codes.length > 0) {
@@ -96,11 +114,18 @@ export async function takeOverAgentPaidSeats(agentClerkId: string): Promise<Take
     for (const c of codeRows || []) codePayer.set(c.code, c.payer)
   }
 
-  const agentFunded = rows.filter(r => {
-    // Already taken over on a previous run — idempotent by design, since a
-    // cancellation can produce more than one webhook.
-    if (r.billing_takeover_at) return false
+  // Seats this agent was funding. Precedence is the one written in the header:
+  // an explicit override wins, otherwise the code they joined with decides.
+  //
+  // 'free' is NOT included. It means the seat costs the OWNER nothing, which
+  // covers both "the agent funds themselves" and "another seat of the same
+  // owner already covers them" — and suspending the second kind would cut off
+  // somebody whose seat was never in question. A self-funder on 'free' who
+  // genuinely lapses is caught by requireActive(), which checks for a live
+  // subscription rather than inferring one from this column.
+  const agentFunded = memberRows.filter(r => {
     if (r.billing_override === 'owner') return false
+    if (r.billing_override === 'free') return false
     if (r.billing_override === 'agent') return true
     return r.joined_via_code ? codePayer.get(r.joined_via_code) === 'agent' : false
   })
@@ -112,161 +137,56 @@ export async function takeOverAgentPaidSeats(agentClerkId: string): Promise<Take
     .from('teams')
     .select('id, name, owner_id')
     .in('id', teamIds)
-  const teamById = new Map((teams || []).map((t: any) => [t.id, t]))
-
-  const { data: agentUser } = await supabaseAdmin
-    .from('users')
-    .select('email')
-    .eq('clerk_id', agentClerkId)
-    .maybeSingle()
-  const agentEmail = agentUser?.email || agentClerkId
+  interface TeamRow { id: string; name: string; owner_id: string }
+  const teamById = new Map<string, TeamRow>(
+    ((teams || []) as TeamRow[]).map(t => [t.id, t])
+  )
 
   const now = new Date().toISOString()
+  const memberIds = agentFunded.map(m => m.id)
+
+  // The seat stops. No charge is raised against anyone: the owner never agreed
+  // to fund this seat, and an agent-pays code is the owner saying so out loud.
+  const { error: suspendErr } = await supabaseAdmin
+    .from('team_members')
+    .update({ seat_suspended_at: now, seat_suspend_reason: 'canceled' })
+    .in('id', memberIds)
+    .is('seat_suspended_at', null)
+
+  if (suspendErr) {
+    console.error('[seatTakeover] suspend failed', suspendErr)
+    return result
+  }
+
+  // Campaign access goes with the seat, exactly as it does in
+  // cron/seat-billing-enforcement. A suspended seat holding live access rows
+  // is a seat that is not really suspended.
+  const { error: accessErr } = await supabaseAdmin
+    .from('team_campaign_access')
+    .update({ is_active: false, revoked_at: now })
+    .in('team_member_id', memberIds)
+    .eq('is_active', true)
+
+  if (accessErr) {
+    console.error('[seatTakeover] access revoke failed', accessErr)
+  }
 
   for (const m of agentFunded) {
     const team = teamById.get(m.team_id)
     if (!team) continue
-
-    const amount =
-      typeof m.seat_price_override_cents === 'number'
-        ? m.seat_price_override_cents
-        : DEFAULT_SEAT_CENTS
-
-    // Mark the takeover BEFORE attempting the charge. If billing fails the seat
-    // is still the owner's responsibility and the grace period governs what
-    // happens next — leaving it unmarked would make the next webhook try again
-    // and stack duplicate subscriptions on the owner's card.
-    const { error: markErr } = await supabaseAdmin
-      .from('team_members')
-      .update({
-        billing_override: 'owner',
-        billing_takeover_at: now,
-        billing_takeover_reason: 'agent_subscription_ended',
-      })
-      .eq('id', m.id)
-
-    if (markErr) {
-      console.error(`[seatTakeover] could not mark member ${m.id}`, markErr)
-      continue
-    }
-
-    // ── ACCESS IS RESTORED AFTER THE MONEY MOVES, NOT BEFORE ───────────
-    // This used to sit HERE, above the charge, with the comment "the whole
-    // point of this is that they keep dialing". It meant a takeover whose
-    // charge then failed had actively switched the agent's access back ON and
-    // nothing switched it off again.
-    //
-    // 15 Sept: an agent cancelled their own plan, the owner's card was never
-    // successfully charged, and she dialed 169 calls that day on the
-    // platform's Telnyx balance with no subscription behind any of them. The
-    // re-grant is now in the success branch below.
-
-    const { data: chargeRow, error: chargeErr } = await supabaseAdmin
-      .from('team_seat_charges')
-      .insert({
-        team_id: team.id,
-        owner_id: team.owner_id,
-        agent_id: agentClerkId,
-        team_member_id: m.id,
-        amount_cents: amount,
-        status: 'pending',
-        period_start: now,
-        period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      })
-      .select('id')
-      .single()
-
-    if (chargeErr || !chargeRow) {
-      console.error(`[seatTakeover] charge insert failed for member ${m.id}`, chargeErr)
-      result.billingFailed.push({ memberId: m.id, reason: 'charge_insert_failed' })
-      continue
-    }
-
-    try {
-      const sub = await createSeatSubscription({
-        ownerId: team.owner_id,
-        agentId: agentClerkId,
-        agentEmail,
-        teamId: team.id,
-        teamName: team.name,
-        seatChargeId: chargeRow.id,
-        teamMemberId: m.id,
-      })
-
-      await supabaseAdmin
-        .from('team_seat_charges')
-        .update({
-          stripe_subscription_item_id: sub.stripeSubscriptionId,
-          status: 'paid',
-          period_start: sub.currentPeriodStart,
-          period_end: sub.currentPeriodEnd,
-          // The invoiced amount, not the list price.
-          charged_cents: sub.chargedCents ?? null,
-          discount_percent: sub.discountPercent ?? null,
-        })
-        .eq('id', chargeRow.id)
-
-      // Now, and only now. The owner is paying, so the agent keeps dialing —
-      // which is what the takeover is for. Their own cancellation may have
-      // deactivated campaign access on the way through.
-      await supabaseAdmin
-        .from('team_campaign_access')
-        .update({ is_active: true, revoked_at: null })
-        .eq('team_member_id', m.id)
-        .eq('is_active', false)
-
-      result.takenOver.push({
-        teamId: team.id,
-        teamName: team.name,
-        ownerId: team.owner_id,
-        memberId: m.id,
-      })
-    } catch (err: any) {
-      const reason = isSeatBillingError(err) ? `${err.code}: ${err.message}` : (err?.message || 'unknown')
-      console.error(`[seatTakeover] seat charge failed for member ${m.id}: ${reason}`)
-
-      // ── WRITE DOWN WHY ─────────────────────────────────────────
-      // `reason` was computed, logged to the console, and then dropped — the
-      // row kept failure_reason NULL. When this was investigated on 15 Sept
-      // the only copy of why a charge failed was a Vercel log line from that
-      // morning, and the question "was the card declined, or did our own code
-      // throw?" could not be answered from the database at all.
-      await supabaseAdmin
-        .from('team_seat_charges')
-        .update({
-          status: 'failed',
-          failure_reason: reason.slice(0, 1000),
-          last_attempt_at: new Date().toISOString(),
-        })
-        .eq('id', chargeRow.id)
-
-      // ── NOBODY IS PAYING, SO NOBODY IS DIALING ───────────────────────
-      // The agent has just cancelled their own plan and the owner's card did
-      // not take the seat. Waiting for cron/seat-billing-enforcement is not
-      // good enough: that job runs daily, and until 15 Sept its filter could
-      // not see this row for a week. Suspend here, at the moment the money
-      // fails, and let the owner's payment un-suspend it.
-      const failedAt = new Date().toISOString()
-      await supabaseAdmin
-        .from('team_members')
-        .update({ seat_suspended_at: failedAt, seat_suspend_reason: 'unpaid' })
-        .eq('id', m.id)
-        .is('seat_suspended_at', null)
-
-      await supabaseAdmin
-        .from('team_campaign_access')
-        .update({ is_active: false, revoked_at: failedAt })
-        .eq('team_member_id', m.id)
-        .eq('is_active', true)
-
-      result.billingFailed.push({ memberId: m.id, reason })
-    }
+    result.suspended.push({
+      teamId: team.id,
+      teamName: team.name,
+      ownerId: team.owner_id,
+      memberId: m.id,
+    })
   }
 
-  if (result.takenOver.length > 0) {
+  if (result.suspended.length > 0) {
     console.log(
-      `[seatTakeover] ${agentClerkId} cancelled their own plan, ` +
-      `${result.takenOver.length} seat(s) picked up by owners`
+      `[seatTakeover] ${agentClerkId} cancelled their own plan; suspended ` +
+      `${result.suspended.length} self-funded seat(s). No owner was charged — ` +
+      `these seats were agent-funded and an owner picks one up deliberately or not at all.`
     )
   }
 
