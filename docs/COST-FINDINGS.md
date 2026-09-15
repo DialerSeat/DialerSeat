@@ -415,6 +415,120 @@ over the line.
 
 ---
 
+## 1j. THE 60-SECOND FLOOR IS PREPAID INVENTORY, AND WE THROW IT AWAY
+
+The floor fires at answer and nothing afterwards reduces it. That is usually
+stated as a reason not to rush a call. Turned around, it says something else:
+
+**Every answered call buys 60 seconds of line. A voicemail uses 10.8.**
+
+| verdict | legs | seconds used | prepaid seconds discarded |
+|---|---|---|---|
+| machine | 376 | 10.8 | **308.6 min** |
+| no verdict | 147 | 7.0 | 129.7 min |
+| human (under 60s) | 79 | 11.7 | 63.6 min |
+| not_sure | 6 | 12.8 | 4.7 min |
+
+**8.44 hours of line time paid for and discarded in 30 days.** It is already
+bought. Playing audio into it is the obvious use, and **`voicemail_drop_url` is
+null on all 21 campaigns** — the column exists and nothing uses it.
+
+### Two gates, and neither is engineering
+
+1. **Does `playback_start` bill separately?** Not established. Call Control is
+   $0.002/min and we are already inside a minute we paid for, but Telnyx prices
+   features individually and this one is not in the published breakdown.
+   **Added to `docs/telnyx-questions.md`.** Do not build against an assumption
+   here — `detect_beep` was assumed harmless twice and killed AMD both times.
+2. **A prerecorded voice message is regulated on its content, not its
+   delivery.** This is *not* ringless voicemail — the phone rang, a machine
+   answered, we are already connected — so the FCC's 2022 RVM ruling is not the
+   question. The question is prior express written consent for an artificial or
+   prerecorded voice, which is a matter for counsel and for what the lists
+   actually carry. TCPA exposure is $500–$1,500 per call and class actions rose
+   112% year on year. **Not a decision engineering should make quietly.**
+
+---
+
+## 1k. RING LENGTH IS ALREADY RIGHT, AND BOTH INTUITIONS ABOUT IT ARE WRONG
+
+**“Unanswered legs are free, so ring longer.”** Wrong. Late answers are not
+people:
+
+| ring | answers | human | machine | % human | real conversations |
+|---|---|---|---|---|---|
+| under 10s | 384 | 56 | 224 | 14.6% | 10 |
+| **10–20s** | 142 | 35 | 76 | **24.6%** | 7 |
+| 20–30s | 69 | 6 | 43 | 8.7% | 2 |
+| **30s+** | 53 | **2** | 34 | **3.8%** | **1** |
+
+Ringing past 30 seconds buys 34 voicemails at a 60-second floor each to find
+one conversation.
+
+**“So ring shorter.”** Also wrong. Cutting at 25s saves those 53 answers —
+about **$0.42 a month** — and costs the conversation. A conversation is worth
+more than forty cents. **Leave `ringTimeoutSecs` alone.** The peak human band is
+10–20s and the current window already spans it.
+
+> The lesson is the shape of the answer, not the answer: a lever that is free on
+> one side of the ledger is rarely free on the other. Ring time costs nothing at
+> the carrier and costs conversations at the margin.
+
+---
+
+## 1l. THE ONLY LEVER THAT REMOVES THE FLOOR INSTEAD OF SHAVING IT
+
+Everything else in this document shaves the cost of an answered call. Only one
+thing avoids the answer: **not dialing numbers that are never a person.**
+
+And that is predictable — sharply so:
+
+| what we knew last | n | next answer is a machine |
+|---|---|---|
+| nothing (base rate) | 648 | 58.2% |
+| the last answer was a **human** | 32 | 59.4% — **tells you nothing** |
+| the last answer was a **machine** | 16 | **93.8%** |
+| two machines in a row | 2 | 100% |
+
+**One voicemail is highly informative. A human answer carries no signal at all.**
+
+### The trade is not the one `voicemail_streak_limit` assumes
+
+The config reasons about carrier cost: avoiding a machine answer saves about
+$0.0079. Against that, losing a human answer costs a conversation — so on cost
+alone, retiring at any threshold is a bad trade. That is the wrong frame.
+
+**Leads are not the scarce resource. Dial slots are.** 17,142 leads against
+~2,139 dials a month — eight months of inventory. Retiring a lead does not
+forfeit a conversation; it *spends the same dial on a different lead*:
+
+| dial a… | chance the answer is not a machine |
+|---|---|
+| lead with one voicemail on record | **7.1%** |
+| fresh lead | **41.8%** |
+
+**Six times the chance of reaching a person, for the same money.** That is the
+argument for retirement, and it is nothing to do with the carrier bill.
+
+### So the limit is too high, but the evidence is thin — both are true
+
+`voicemail_streak_limit` is **4**. The curve says the signal is there at **1**.
+The gap matters because it is 2–3 wasted dial slots per bad lead.
+
+But n = 14 on the streak-1 cell, and an earlier pass measured 66%/71%/70% for
+streaks 1/2/3 — almost certainly because it asked *“will the next DIAL be a
+machine”* rather than *“will the next ANSWER be”*. Most dials are not answered,
+so that denominator dilutes the signal. **For this decision the answer-based
+figure is the right one**, because both the cost and the value land at answer.
+
+> **Recommended: 2, not 1 and not 4.** One voicemail is a normal touch and
+> people do call back. Two says the line is a machine. The setting is already
+> config — `update platform_config set voicemail_streak_limit = 2;` — and the
+> honest statement is that this is a directional call on 14 observations, worth
+> revisiting after a week of real volume, not a settled result.
+
+---
+
 ## 1f. NUMBER BURN — CHECKED AND NOT SUPPORTED
 
 **This section previously claimed the opposite. It was wrong and it is worth

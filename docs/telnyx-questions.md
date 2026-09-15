@@ -1,6 +1,6 @@
 # Message to Telnyx support
 
-Four questions, all answerable from records they already hold. No accusation —
+Five questions, all answerable from records they already hold. No accusation —
 every figure below came from their own `call.cost` webhooks. Between them they
 are worth more than every engineering change made this week.
 
@@ -8,7 +8,7 @@ Send as one ticket. Paste the block below.
 
 ---
 
-Hi — four billing questions about my account, all with figures from your own
+Hi — five billing questions about my account, all with figures from your own
 `call.cost` webhooks so they should be quick to check.
 
 **1. Billing increments.** Your documentation states 60/60 increments and says
@@ -60,7 +60,14 @@ Telnyx rate deck.”* My source is a Telnyx SIP Connection: my own Call Control
 application, on this same account. Should these legs be rated On-Net? This is
 roughly a quarter of my bill.
 
-**4. Attestation and CPS.** Two quick ones:
+**4. Does audio playback bill separately?** If I use the Call Control
+`playback_start` endpoint to play an audio URL on a leg that is already
+connected and already being billed, is there any charge beyond the
+`call-control` and `sip-trunking` minutes I am already paying for that leg? I
+cannot find playback in the published pricing breakdown and I would rather ask
+than assume.
+
+**5. Attestation and CPS.** Two quick ones:
 
 - What STIR/SHAKEN attestation level are my outbound calls receiving? A SIP
   trace on my account showed `verstat=No-TN-Validation`.
@@ -98,11 +105,17 @@ you are overcharging me.”
 **The on-net question is the one they have already conceded.** Every other
 question asks them to change a rate. This one only asks why a leg they
 themselves rated at $0 is charged twice at $0.002/min. It is worth ~25% of
-the bill and it is the strongest of the four.
+the bill and it is the strongest of the five.
 
 **Attestation changes conversations per dial**, not cents per call — which is
 worth more. Industry reporting puts A-level attestation at 60%+ connect
 improvement, and without it calls are spam-flagged regardless of anything else.
+
+**The playback question unlocks 8.4 hours a month of line we already bought.**
+Every answered call bills a 60-second minimum; a voicemail uses 10.8 seconds of
+it. Whether the other 49 can carry audio at no extra charge decides whether
+that is dead cost or usable inventory. Asking is free; assuming is how
+`detect_beep` killed AMD twice.
 
 **CPS never appears in the balance.** It is assessed monthly and lands on the
 invoice. P95 measured 15 CPS against a free tier of 5 before predictive was
@@ -122,5 +135,5 @@ reconcile.
 
 Their own terms carry a dispute clause: *"The Parties shall negotiate in good
 faith to resolve any billing dispute for a period of thirty (30) days."* That is
-the formal route and it exists. It should not be needed for any of the four
+the formal route and it exists. It should not be needed for any of the five
 questions above, which are requests for information rather than disputes.
