@@ -201,6 +201,25 @@ export async function POST(req: Request) {
         await handleCallCost(callControlId, payload as unknown as Record<string, unknown>)
         break
 
+      // ── TELNYX ALREADY TELLS US WHEN A CALL BRIDGES ────────────────────
+      // This sat in `unhandled` — 3,189 of them in eight days — while
+      // `bridged_at` was inferred instead, in the `user_dial` branch of
+      // handleCallAnswered, from the explicit bridge command we send there.
+      //
+      // Fan-out never runs that branch, so every fan-out bridge was invisible:
+      // 137 answered controller_fanout legs, 0 with bridged_at, and the
+      // obvious reading of that was that predictive answers prospects into
+      // silence. It does not. Telnyx sent call.bridged for 136 of those 137 —
+      // link_to and bridge_on_answer work exactly as intended on that path.
+      //
+      // So stamp it from the carrier's own event rather than from our
+      // inference of it. Purely additive: it writes a timestamp when one is
+      // missing and issues no commands, which is why it is safe on a path
+      // whose behaviour is otherwise untouched.
+      case 'call.bridged':
+        await handleCallBridged(callControlId)
+        break
+
       case 'call.recording.saved':
         await handleRecordingSaved(
           callControlId,
@@ -1520,6 +1539,61 @@ async function startRecordingForCall(
 //
 // Never throws. A bookkeeping row must not be able to fail a webhook that has
 // a call to finish.
+/**
+ * `call.bridged` from Telnyx — the carrier saying two legs are now carrying
+ * audio to each other.
+ *
+ * WHY THIS EXISTS. `bridged_at` was written in one place only: the `user_dial`
+ * branch of handleCallAnswered, after we issue our own bridge command. That
+ * made the column a record of OUR command rather than of the carrier's state,
+ * and the difference was invisible until fan-out was measured:
+ *
+ *     dial_source          answered   bridged_at set   Telnyx call.bridged
+ *     user_dial                 449              425                  805
+ *     controller_fanout         137                0                  136
+ *
+ * Read from the calls table, fan-out looked like it answered 137 prospects and
+ * connected none of them. Read from Telnyx, 136 of 137 bridged. The lead leg
+ * carries link_to and bridge_on_answer whenever an agent leg exists (see
+ * lib/placeOutboundCall.ts), and it does exist on fan-out — so Telnyx bridges
+ * without being asked, and nothing was ever recording that it had.
+ *
+ * Stamped only when missing, so the user_dial path keeps the timestamp it
+ * already sets at answer and a duplicate webhook is a no-op. No commands are
+ * issued from here: this observes, it does not act.
+ */
+async function handleCallBridged(callControlId: string): Promise<void> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('calls')
+      .update({ bridged_at: new Date().toISOString() })
+      .eq('call_control_id', callControlId)
+      .is('bridged_at', null)
+      .select('id, dial_source')
+      .maybeSingle()
+
+    if (error) {
+      console.warn('[calls/events] bridged stamp failed', callControlId, error)
+      return
+    }
+    // No row means the agent leg's own call.bridged (it arrives on both legs),
+    // an already-stamped user_dial call, or a leg we never recorded. None is
+    // a fault, and none is worth a log line at volume.
+    if (!data) return
+
+    void logCallEvent({
+      event_type: 'bridged',
+      call_control_id: callControlId,
+      source: 'webhook',
+      status: 'carrier_confirmed',
+      detail: { dial_source: data.dial_source, call_row: data.id, at: 'call.bridged' },
+    })
+  } catch (err) {
+    // Telemetry must never be able to disturb a live call.
+    console.warn('[calls/events] bridged handler threw', callControlId, err)
+  }
+}
+
 async function handleCallCost(
   callControlId: string,
   payload: Record<string, unknown>
