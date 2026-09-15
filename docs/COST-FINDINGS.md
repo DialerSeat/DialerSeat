@@ -548,6 +548,60 @@ prefer either, and any claim that it does is reading noise.
 
 ---
 
+## 1m. PREDICTIVE IS NOT BROKEN — and the measurement that said it was
+
+**A `calls`-table reading said fan-out answers prospects into silence. It was
+wrong, and it was one step from a recommendation to disable predictive before a
+dialing day.**
+
+What the table said, eight days:
+
+| dial_source | legs | answered | `bridged_at` set |
+|---|---|---|---|
+| user_dial | 1,614 | 449 | 425 |
+| **controller_fanout** | 525 | **137** | **0** |
+
+Zero, across three separate days of use. Every fan-out leg has an agent leg
+(525 of 525), so the obvious reading was that 137 people picked up and got
+nothing — matching a known earlier incident where exactly that happened.
+
+### What Telnyx actually sent
+
+| event, from the carrier | total | on fan-out |
+|---|---|---|
+| **`call.bridged`** | **3,189** | **136** |
+
+**136 of the 137 bridged.** The lead leg carries `link_to` and
+`bridge_on_answer` whenever an agent leg exists, and fan-out places one per
+line, so Telnyx bridges without being asked.
+
+`bridged_at` was never a record of the carrier's state. It was a record of *our
+own bridge command*, written in the `user_dial` branch of `handleCallAnswered`.
+Fan-out never runs that branch, so its bridges were invisible — while 3,189
+`call.bridged` webhooks sat in the `unhandled` bucket saying so.
+
+**Fixed:** `call.bridged` is now handled and stamps `bridged_at` when it is
+missing, for any source. Additive only — it issues no commands.
+
+### The open item this closes
+
+> *“Predictive bridge fix is shipped but UNVERIFIED — must not re-enable until a
+> fan-out call is seen reaching `call.bridged`.”*
+
+**136 have.** The condition is met, from the carrier's own events.
+
+### The rule, and it is the third time tonight
+
+> **Check the carrier's record before concluding anything about the carrier.**
+> `bridged_at` measured our command; `calls.duration` included the ring (§1a);
+> the agent-leg cost was half its real value because the second record carried
+> a `call_control_id` we never issued (§1g). Each time, a derived column was
+> read as though it were the carrier's state. **Every conclusion about what
+> Telnyx did belongs against `call_events` or `telnyx_ledger_records`, not
+> against a column we populate.**
+
+---
+
 ## 1f. NUMBER BURN — CHECKED AND NOT SUPPORTED
 
 **This section previously claimed the opposite. It was wrong and it is worth
@@ -740,6 +794,10 @@ model, and it was not.
 undercounted by 481 attempts before the backfill; one was dialed 18 times in 28
 minutes while its row read `dial_attempts: 0`. A runaway breaker at 25 is in
 place, but it is a backstop — the real fix is on the write path.
+
+**~~Predictive bridge unverified~~ — CLOSED (§1m).** Telnyx sent `call.bridged`
+for 136 of 137 answered fan-out legs. The path works; only its telemetry was
+missing, and that is now stamped from the carrier's event.
 
 **88% of calls carry no `dial_source`.** Most call history cannot be attributed
 to a lead, campaign or mode, which is why the write-back gap stayed invisible.
