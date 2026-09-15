@@ -476,56 +476,75 @@ more than forty cents. **Leave `ringTimeoutSecs` alone.** The peak human band is
 
 ---
 
-## 1l. THE ONLY LEVER THAT REMOVES THE FLOOR INSTEAD OF SHAVING IT
+## 1l. RETIRING DEAD NUMBERS — real, but worth a third of what it first looked
 
 Everything else in this document shaves the cost of an answered call. Only one
-thing avoids the answer: **not dialing numbers that are never a person.**
+thing avoids the answer: not dialing numbers that are never a person.
 
-And that is predictable — sharply so:
+**The first version of this section said 93.8%, recommended dropping
+`voicemail_streak_limit` from 4 to 2, and was wrong.** That figure came from 16
+observations keyed on `lead_id`. The production code keys on **`phone_number`**
+(`voicemailStreakKeys`, `lib/recentDialSuppression.ts`), and on that key with
+seven times the data the answer is different.
 
-| what we knew last | n | next answer is a machine |
-|---|---|---|
-| nothing (base rate) | 648 | 58.2% |
-| the last answer was a **human** | 32 | 59.4% — **tells you nothing** |
-| the last answer was a **machine** | 16 | **93.8%** |
-| two machines in a row | 2 | 100% |
+### The real curve
 
-**One voicemail is highly informative. A human answer carries no signal at all.**
+Answered dials only, keyed by phone number, 90 days — exactly what the code sees:
 
-### The trade is not the one `voicemail_streak_limit` assumes
+| consecutive voicemails | n | machine again | **still reaches a person** |
+|---|---|---|---|
+| 1 | 82 | 61.0% | **39.0%** |
+| 2 | 28 | 71.4% | 28.6% |
+| 3 | 16 | 68.8% | 31.3% |
+| 4 | 11 | 72.7% | **27.3%** |
+| 5 | 8 | 75.0% | 25.0% |
+| 6 | 6 | 66.7% | 33.3% |
+| 7 | 4 | 50.0% | 50.0% |
 
-The config reasons about carrier cost: avoiding a machine answer saves about
-$0.0079. Against that, losing a human answer costs a conversation — so on cost
-alone, retiring at any threshold is a bad trade. That is the wrong frame.
+**It plateaus at ~70% and never climbs.** A number with four voicemails on
+record still reaches a person more than a quarter of the time — and one number
+answered as a human on the sixteenth attempt.
 
-**Leads are not the scarce resource. Dial slots are.** 17,142 leads against
-~2,139 dials a month — eight months of inventory. Retiring a lead does not
-forfeit a conversation; it *spends the same dial on a different lead*:
+> **The existing config comment was right.** It reads: *“the early sample
+> (205/82/54 observations) puts the chance of another machine at 66%, 71%, 70%
+> — it plateaus, and a band that wide cannot fix a threshold.”* This
+> independent 90-day pass gets 61%, 71%, 69%. **Leave `voicemail_streak_limit`
+> at 4.**
 
-| dial a… | chance the answer is not a machine |
+### What is still true
+
+Leads are not the scarce resource — 17,142 of them against ~2,139 dials a month.
+Dial slots are. So retirement never forfeits a conversation; it spends the same
+dial on a different number:
+
+| dial a… | chance of reaching a person |
 |---|---|
-| lead with one voicemail on record | **7.1%** |
-| fresh lead | **41.8%** |
+| number with 4 voicemails on record | 27.3% |
+| fresh number | **41.8%** |
 
-**Six times the chance of reaching a person, for the same money.** That is the
-argument for retirement, and it is nothing to do with the carrier bill.
+**1.5×, not the 6× the bad sample implied.** Still worth having, still the only
+mechanism that avoids the 60-second floor rather than shaving it — but it is a
+modest edge, not the lever that changes the economics.
 
-### So the limit is too high, but the evidence is thin — both are true
+### Why the curve is flat, and what that means for tuning
 
-`voicemail_streak_limit` is **4**. The curve says the signal is there at **1**.
-The gap matters because it is 2–3 wasted dial slots per bad lead.
+If the chance of another machine is ~70% at depth 1 and ~70% at depth 5, then
+**waiting buys no information.** The threshold is therefore not a statistical
+question at all — the data cannot pick it, because every depth says the same
+thing. It is a business preference: how many voicemails to leave before giving
+up on a number, knowing each next one is about 70% likely to be another.
 
-But n = 14 on the streak-1 cell, and an earlier pass measured 66%/71%/70% for
-streaks 1/2/3 — almost certainly because it asked *“will the next DIAL be a
-machine”* rather than *“will the next ANSWER be”*. Most dials are not answered,
-so that denominator dilutes the signal. **For this decision the answer-based
-figure is the right one**, because both the cost and the value land at answer.
+Four is a reasonable answer to that question. So is two. The data does not
+prefer either, and any claim that it does is reading noise.
 
-> **Recommended: 2, not 1 and not 4.** One voicemail is a normal touch and
-> people do call back. Two says the line is a machine. The setting is already
-> config — `update platform_config set voicemail_streak_limit = 2;` — and the
-> honest statement is that this is a directional call on 14 observations, worth
-> revisiting after a week of real volume, not a settled result.
+### The rule this earns
+
+> **Key the analysis the way the code keys the decision.** The same question
+> asked on `lead_id` gave 93.8% and on `phone_number` gave 61% — and only one of
+> those is the key the retirement actually groups by. Before acting on a
+> conditional rate, check that its grouping matches the grouping in the code
+> path it is meant to change. See also §1f, where the window was wrong in the
+> same way the key is wrong here.
 
 ---
 
