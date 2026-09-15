@@ -776,6 +776,70 @@ before reading another balance drop as an overcharge.
 
 ---
 
+## 1t. OUTBOUND CNAM IS FREE, AND NOBODY HAS SET IT
+
+> *“Outbound caller ID name listing is free.”* Up to **15 characters**, pushed to
+> the US industry databases, live in **12–72 hours**.
+
+Thirteen numbers currently display as a bare number. A registered CNAM shows a
+business name instead — **for nothing**, set once per number in Mission Control
+→ Numbers → number settings → CNAM listing.
+
+### The honest caveat, which is most of the value gone
+
+> *“It's up to the receiving carrier of your outbound calls to display CNAM…
+> wireless carriers generally don't use CNAM services.”*
+
+**Mobile phones will not show it.** For a dialer working consumer lists that is
+the majority of the list. What it buys is the landline share, plus a legitimacy
+signal in the databases the analytics engines read — plausible, not proven.
+
+**Still worth doing, because it is free and takes minutes.** Just do not expect
+it to move the answer rate, and do not confuse it with Branded Calling, which
+*does* reach mobile and costs **$0.075 per call** — 6× the entire cost of a dial,
+and arithmetically impossible here (§1e).
+
+Related, and not worth buying: **inbound CNAM lookup is $0.40/month per number**
+— that resolves a *caller's* name on calls coming in. Thirteen numbers would be
+$5.20/month to label inbound callers we already know from the lead record.
+
+---
+
+## 1u. BUNDLES DO NOT APPLY, AND THE INVOICE DECODER
+
+**Calling bundles are not available to us.** *“Bundle offers are currently limited
+to Operator Connect and Zoom Phone users”*, and decisively: *“programmed voice
+calls are charged separately and do not affect the bundle's minutes.”* Every call
+this platform places is Programmable Voice. **Rejected — do not re-check.**
+
+### What can appear on the invoice
+
+Useful for reading the next bill, since only usage has ever been looked at:
+
+| category | what lands there |
+|---|---|
+| **MRC** | number rental, and *“recurring fees for enabled features like inbound channels, CNAM, **emergency services**”* |
+| **One-time** | number purchase, feature activation fees |
+| **Usage** | voice traffic by quantity, average cost, total |
+| **Fees** | port-in and port-out fees, **“3% charge for using credit card or paypal”** |
+| **Adjustments** | top-ups, credits, ledger |
+
+Two things fall out of that table:
+
+1. **The 3% card fee is a named invoice line** — independent confirmation of
+   §1q. It will be visible on the last invoice.
+2. **E911 appears under MRC as “emergency services”** — which is exactly where to
+   look to settle the $0–$19.50 question in §1o. One glance at the previous
+   month's invoice answers it.
+
+**Port-out fees exist.** Worth knowing before any carrier switch: leaving is not
+free, and the numbers carry the answer history that §1f says is the real asset.
+
+Invoices for the previous month appear *“during the first few days of the new
+month”*.
+
+---
+
 ## 1s. CHECKED AND CLEAR — four things that are not leaks
 
 Recorded so nobody spends a second night on them.
