@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
-import { lifetimeAttemptCap } from '@/lib/dialerConstants'
+import { lifetimeAttemptCap, MAX_CLIENT_REPORTED_SECONDS } from '@/lib/dialerConstants'
 import { addSuppression, DNC_DISPOSITION_SCOPE } from '@/lib/suppression'
 import { canonical as canonicalDisp } from '@/lib/dispositions'
 
@@ -163,7 +163,9 @@ export async function POST(req: Request) {
     // ─────────────────────────────────────────────────────────────────────
     const { data: openCall } = await supabaseAdmin
       .from('calls')
-      .select('id')
+      // duration and created_at come back because the client's own elapsed
+      // timer is no longer trusted over them — see the guard below.
+      .select('id, duration, created_at')
       .eq('user_id', user_id)
       .eq('lead_id', lead_id)
       .is('disposition', null)
@@ -172,6 +174,7 @@ export async function POST(req: Request) {
       .maybeSingle()
 
     let resolvedCallId: string | null = null
+    let clampedFrom: number | null = null
     if (openCall?.id) {
       resolvedCallId = openCall.id
       // ── NEVER WRITE duration: 0 OVER A FINISHED CALL ────────────────────
@@ -191,12 +194,46 @@ export async function POST(req: Request) {
       // So duration is only written when the client actually has one. The
       // webhook owns this column otherwise, and it is the only party that
       // knows when the call really stopped.
+      //
+      // ── AND THE MIRROR IMAGE: A HUGE CLIENT VALUE IS JUST AS WRONG ───────
+      // The guard above only ever blocked a client 0. A client value that is
+      // absurdly LARGE sailed straight through and overwrote a correct
+      // webhook duration, which is where every "rogue call" in Live Ops came
+      // from. Measured over seven days, 14 of 1,236 answered calls carried a
+      // duration that disagreed with their own talk_seconds by more than a
+      // minute. The worst read as a 3h 7m call; its real talk time was 12
+      // seconds. One row claimed 53 minutes on a call that was never answered
+      // at all.
+      //
+      // The cause is the agent's tab, not the carrier. duration arrives from
+      // the browser's own elapsed timer, so a disposition modal left open
+      // over lunch posts however long the tab has been sitting there. The
+      // carrier never billed any of it: the longest leg Telnyx actually
+      // charged for across the same week was 34.3 minutes, on a call whose
+      // talk_seconds agreed at 34 minutes. This was always a display bug
+      // sitting on top of correct money — but it is the display the floor
+      // runs on, so a lie here reads as the dialer being broken.
+      //
+      // Two rules now:
+      //   1. If the webhook already closed this call, the client NEVER wins.
+      //      The carrier knows when the call stopped; a browser does not.
+      //   2. If the webhook never closed it, the client's number is the only
+      //      one there is — but it is a guess, so it is capped, and the cap
+      //      is recorded rather than applied silently.
       const callUpdates: Record<string, unknown> = {
         disposition,
         campaign_id, // backfill in case it was missing
       }
-      if (typeof duration === 'number' && duration > 0) {
-        callUpdates.duration = duration
+      const webhookClosed =
+        typeof openCall.duration === 'number' && openCall.duration > 0
+      if (!webhookClosed && typeof duration === 'number' && duration > 0) {
+        const claimed = Math.round(duration)
+        if (claimed > MAX_CLIENT_REPORTED_SECONDS) {
+          clampedFrom = claimed
+          callUpdates.duration = MAX_CLIENT_REPORTED_SECONDS
+        } else {
+          callUpdates.duration = claimed
+        }
       }
       await supabaseAdmin
         .from('calls')
@@ -227,7 +264,12 @@ export async function POST(req: Request) {
       lead_id: lead_id ?? null,
       status: disposition ?? null,
       source: 'dialer',
-      detail: { duration: duration || 0 },
+      // clamped/ignored are here so a suspicious duration is visible in the
+      // forensic trail instead of only in the column it failed to change.
+      detail: {
+        duration: duration || 0,
+        ...(clampedFrom !== null ? { duration_clamped_from: clampedFrom } : {}),
+      },
     })
 
     return NextResponse.json({ success: true })

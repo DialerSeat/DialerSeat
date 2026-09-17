@@ -20,6 +20,28 @@
 
 export const HARD_LINE_CAP = 5
 
+/**
+ * Ceiling on a call duration reported by the AGENT'S BROWSER rather than by
+ * the carrier.
+ *
+ * /api/leads/dispose accepts `duration` from the client's own elapsed timer.
+ * That timer keeps running while a disposition modal sits open, so a tab left
+ * over lunch posts a call that lasted hours. Seven days of traffic contained a
+ * "3h 7m" call whose real talk time was 12 seconds, and a "53 minute" call
+ * that was never answered at all.
+ *
+ * The carrier never billed any of it — the longest leg Telnyx actually
+ * charged for in the same week was 34.3 minutes, and that call was genuinely
+ * 34 minutes. So this protects the READING, which is what the floor and every
+ * cost-per-dial figure are built on.
+ *
+ * One hour. Above the longest real conversation on record here (63 minutes was
+ * carrier-reported, so it never passes through this path) and far below the
+ * forgotten-tab numbers. A clamp is logged in the disposition event as
+ * duration_clamped_from, never applied silently.
+ */
+export const MAX_CLIENT_REPORTED_SECONDS = 3600
+
 // =============================================================================
 // ATTEMPT CAPS — two different limits that were previously one number
 // =============================================================================
