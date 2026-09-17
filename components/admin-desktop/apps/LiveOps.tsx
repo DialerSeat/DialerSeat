@@ -20,7 +20,28 @@ import { useCallback, useEffect, useState } from 'react'
 //   RECORDINGS    Capture sat near zero while every recording played 0:00.
 //
 // It polls rather than streams: this is an operator glancing at a screen, not
-// a trading terminal, and a 5s poll costs one query set against indexed data.
+// a trading terminal, and one poll costs one query set against indexed data.
+//
+// ── WHY 2 SECONDS AND NOT 5, AND WHY NOT "INSTANT" ────────────────────
+// At five seconds a short call could begin and end between two frames, so the
+// screen that exists to show what is in flight could miss a call entirely.
+// Two is inside the shortest thing worth seeing.
+//
+// Going faster is a cost decision, not a capability one, and this account is on
+// Vercel Pro where invocations are a line item rather than a ceiling. A handful
+// of admin screens at 2s is not a number worth optimising.
+//
+// It is NOT instant, and calling it that would be a lie. True push means a
+// Supabase Realtime subscription over a websocket, which needs a browser-side
+// Supabase client, an anon key on this page, and RLS policies letting an admin
+// read `calls` directly — today every byte on this screen arrives through a
+// service-role API route and the browser holds no database credential at all.
+// That is a real change to the security surface and deserves its own pass, not
+// a constant edit at the end of one.
+//
+// The live-legs panel below is deliberately NOT on this timer: every refresh
+// there is a Telnyx API call, and polling a carrier every two seconds is how a
+// diagnostic becomes a rate limit.
 // =============================================================================
 
 const T = {
@@ -37,7 +58,7 @@ const T = {
   amber: '#8a6a1a',
 }
 const FUTURA = "'Futura PT', Futura, 'Trebuchet MS', sans-serif"
-const POLL_MS = 5000
+const POLL_MS = 2000
 
 /** Shared style for the small actions on the live-legs panel. */
 const miniBtn: React.CSSProperties = {
@@ -419,7 +440,7 @@ export default function LiveOps() {
             fontFamily: FUTURA,
           }}
         >
-          {paused ? 'PAUSED' : 'LIVE · 5s'}
+          {paused ? 'PAUSED' : 'LIVE · 2s'}
         </button>
       </div>
 
