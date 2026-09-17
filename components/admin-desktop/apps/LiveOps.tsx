@@ -280,12 +280,28 @@ export default function LiveOps() {
     // guards against cascading renders cannot see through the callback — and
     // scheduling it makes the first tick take the same path as every
     // subsequent one, which is tidier regardless.
+    // ── AND NOTHING AT ALL WHILE HIDDEN ─────────────────────────────────
+    // Same reasoning as the map's sync: a two-second poll is cheap to look at
+    // and expensive to leave running in a tab nobody is looking at. PAUSED is
+    // the operator's switch; this is the one they should not have to think
+    // about. Refetches immediately on return so the board is never stale.
     const tick = () => { void load() }
     const first = setTimeout(tick, 0)
-    const id = paused ? null : setInterval(tick, POLL_MS)
+    let id: ReturnType<typeof setInterval> | null = null
+    const start = () => {
+      if (id || paused) return
+      id = setInterval(tick, POLL_MS)
+    }
+    const stop = () => { if (id) { clearInterval(id); id = null } }
+    const onVis = () => {
+      if (document.visibilityState === 'visible') { if (!paused) void load(); start() } else stop()
+    }
+    onVis()
+    document.addEventListener('visibilitychange', onVis)
     return () => {
       clearTimeout(first)
-      if (id) clearInterval(id)
+      document.removeEventListener('visibilitychange', onVis)
+      stop()
     }
   }, [load, paused])
 

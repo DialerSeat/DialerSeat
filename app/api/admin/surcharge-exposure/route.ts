@@ -94,9 +94,14 @@ export async function GET() {
     // the one the surcharge is actually computed on. A leg billed ZERO never
     // connected and belongs in neither half of "short connected / total
     // connected", so zeros are excluded rather than counted short.
+      // billed_sec, not payload. This used to select the whole JSONB blob --
+      // the entire 9.8 MB column -- to read one integer out of each row.
+      // billed_sec is now materialised from that same field by a trigger and
+      // covered by a partial index, so this is an index-only scan with zero
+      // heap fetches. See the ledger_billed_sec migration.
     const { data: ledger } = await supabase
       .from('telnyx_ledger_records')
-      .select('payload, occurred_at')
+      .select('billed_sec, occurred_at')
       .eq('record_type', 'call.cost')
       .gte('occurred_at', since)
       .limit(100000)
@@ -105,8 +110,8 @@ export async function GET() {
     let carrierShort = 0
     let ledgerFrom: string | null = null
     let ledgerTo: string | null = null
-    for (const r of (ledger || []) as Array<{ payload: Record<string, unknown>; occurred_at: string }>) {
-      const billed = Number(r.payload?.billed_duration_secs)
+    for (const r of (ledger || []) as Array<{ billed_sec: number | null; occurred_at: string }>) {
+      const billed = Number(r.billed_sec)
       if (!Number.isFinite(billed) || billed <= 0) continue
       carrierConnected++
       if (billed <= 6) carrierShort++

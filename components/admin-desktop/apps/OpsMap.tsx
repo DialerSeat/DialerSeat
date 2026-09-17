@@ -562,9 +562,35 @@ export default function OpsMap() {
   // ACTIVE filter itself calls liveSeconds directly per row, so this was dead
   // the moment the badge was removed.
 
+  // ── A HIDDEN TAB POLLS NOTHING ────────────────────────────────────────
+  // Supabase warned this project was depleting its Disk IO budget, hours after
+  // this interval went from 5s to 3s. This payload is the heaviest read in the
+  // admin desktop -- map, feed, compliance, notifications and pulse in one
+  // response -- and it was firing twenty times a minute forever, including in
+  // background tabs and behind other desktop windows, for as long as the app
+  // was open.
+  //
+  // Nobody reads a screen they cannot see. Gating on visibility costs nothing
+  // in responsiveness and removes the entire cost of a console left open on a
+  // second monitor overnight, which is the common case.
+  //
+  // A refresh fires immediately on becoming visible, so coming back to the tab
+  // shows current data rather than whatever was on screen when it was hidden.
+  // That is the part that makes this safe: without it, gating would trade IO
+  // for a stale map, which on an ops console is the worse bug.
   useEffect(() => {
-    const t = setInterval(() => { load(false) }, SYNC_MS)
-    return () => clearInterval(t)
+    let t: ReturnType<typeof setInterval> | null = null
+    const start = () => {
+      if (t) return
+      t = setInterval(() => { load(false) }, SYNC_MS)
+    }
+    const stop = () => { if (t) { clearInterval(t); t = null } }
+    const onVis = () => {
+      if (document.visibilityState === 'visible') { load(false); start() } else stop()
+    }
+    onVis()
+    document.addEventListener('visibilitychange', onVis)
+    return () => { document.removeEventListener('visibilitychange', onVis); stop() }
   }, [load])
 
   // Detail for whichever ping is open, refreshed on the same beat so it never

@@ -114,17 +114,22 @@ export async function GET() {
     //
     // The lead-leg figures below are kept, because the GAP between them is
     // what identifies the agent leg as the thing to fix.
+      // billed_sec, not payload. This used to select the whole JSONB blob --
+      // the entire 9.8 MB column -- to read one integer out of each row.
+      // billed_sec is now materialised from that same field by a trigger and
+      // covered by a partial index, so this is an index-only scan with zero
+      // heap fetches. See the ledger_billed_sec migration.
     const { data: ledgerRows } = await supabase
       .from('telnyx_ledger_records')
-      .select('payload')
+      .select('billed_sec')
       .eq('record_type', 'call.cost')
       .gte('occurred_at', monthStart.toISOString())
       .limit(100000)
 
     let carrierConnected = 0
     let carrierShort = 0
-    for (const r of (ledgerRows || []) as Array<{ payload: Record<string, unknown> }>) {
-      const billed = Number(r.payload?.billed_duration_secs)
+    for (const r of (ledgerRows || []) as Array<{ billed_sec: number | null }>) {
+      const billed = Number(r.billed_sec)
       if (!Number.isFinite(billed) || billed <= 0) continue
       carrierConnected++
       if (billed <= SHORT_CALL_SECONDS) carrierShort++
