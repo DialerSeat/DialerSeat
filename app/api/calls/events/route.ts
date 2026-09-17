@@ -17,7 +17,7 @@ import {
 import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
 import { abortSiblingFanoutLines } from '@/lib/predictiveController'
 import { startTelnyxRecording } from '@/lib/telnyxRecording'
-import { remainingHoldMs, HOLD_SPREAD_SECONDS } from '@/lib/complianceHold'
+import { remainingHoldMs, HOLD_SPREAD_SECONDS, AGENT_LEG_MIN_SECONDS } from '@/lib/complianceHold'
 import { lifetimeAttemptCap } from '@/lib/dialerConstants'
 import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
 import {
@@ -2031,6 +2031,35 @@ async function handleHangup(
     // a teardown silently never happens.
     if (callRow?.agent_call_control_id) {
       try {
+        // ── HOLD IT PAST SIX SECONDS FIRST ────────────────────────────────
+        // Telnyx flagged this account on 16 Sept for short-duration calls,
+        // 18.86% against a 15% limit. Measured against their own billed
+        // seconds, the LEAD legs scored zero of 1,143 — the compliance hold
+        // below does its job. All 869 short calls were this leg.
+        //
+        // It happens when a lead leg fails fast: user_busy and not_found come
+        // back in a second or two, this line released the agent immediately
+        // after, and an on-net leg that lived two seconds bills at the
+        // 6-second minimum. That is Telnyx's definition of a short duration
+        // call, and it counts twice — the call-control and trunk sides of one
+        // leg are billed as two.
+        //
+        // Cheap to fix and expensive not to. Six extra seconds of an on-net
+        // leg is about $0.0001; crossing 15% at month end applies $0.01 to
+        // EVERY short call that month, retroactively, not just the excess.
+        //
+        // Randomised like the lead-leg hold, for the same reason: a teardown
+        // that always lands on exactly the same second is its own signature.
+        const startedMs = callRow.created_at ? new Date(callRow.created_at).getTime() : NaN
+        const elapsedMs = Number.isFinite(startedMs) ? Date.now() - startedMs : 0
+        const waitMs = remainingHoldMs(AGENT_LEG_MIN_SECONDS, elapsedMs)
+        if (waitMs > 0) {
+          console.log(
+            `[calls/events] holding agent leg ${callRow.agent_call_control_id} a further ` +
+            `${Math.round(waitMs)}ms past the 6s short-duration line (elapsed ${Math.round(elapsedMs)}ms)`
+          )
+          await new Promise(resolve => setTimeout(resolve, waitMs))
+        }
         await hangupCallControlId(callRow.agent_call_control_id)
       } catch (err) {
         console.warn('[calls/events] agent leg release failed', callControlId, err)

@@ -73,6 +73,27 @@ export function holdTargetMs(minSeconds: number): number {
  * Returns 0 when the call is already past its target — a call that has run
  * long enough has nothing to correct, and this must never SHORTEN one.
  */
+/**
+ * Floor for the AGENT's leg, which is a different problem with the same shape.
+ *
+ * Telnyx flagged this account on 16 Sept: 18.86% short-duration calls against
+ * a 15% limit. Measured against the carrier's own billed seconds, the lead legs
+ * this file was written to protect scored ZERO of 1,143 — the hold works. Every
+ * single short call was the agent's own WebRTC leg.
+ *
+ * It happens when a lead leg fails FAST. user_busy and not_found come back in
+ * a second or two, the agent's leg is released immediately after, and an
+ * on-net leg that lived two seconds bills at the 6-second minimum — which is
+ * exactly Telnyx's definition of a short duration call. It then counts TWICE,
+ * because the call-control and SIP-trunk sides of the same leg are billed as
+ * separate legs.
+ *
+ * Seven, not eight. This leg bills in SIX-second increments, not sixty, so
+ * clearing 6 only needs one second of margin and the next increment is 12. A
+ * higher floor would buy nothing and hold a line longer.
+ */
+export const AGENT_LEG_MIN_SECONDS = 7
+
 export function remainingHoldMs(minSeconds: number, elapsedMs: number): number {
   const target = holdTargetMs(minSeconds)
   if (target <= 0) return 0
