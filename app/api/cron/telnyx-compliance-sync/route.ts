@@ -66,6 +66,13 @@ const LOOKBACK_HOURS = 36
  */
 const FETCH_BUDGET_MS = 240_000
 
+/**
+ * Stop backfilling with this much budget left, so the run can still write what
+ * it has. A backfill that gets killed mid-walk is worse than one that stops a
+ * day early and says so.
+ */
+const BACKFILL_RESERVE_MS = 45_000
+
 // sip-trunking ONLY. It is the family that carries short_duration_call --
 // call-control rows do not have the field at all, verified across all 1,192 of
 // them -- and pulling types this question cannot use would spend the budget
@@ -110,6 +117,112 @@ function hashOf(r: Row): string {
   return createHash('sha256').update(stable).digest('hex').slice(0, 32)
 }
 
+/**
+ * Fetch one window and store whatever of it we do not already hold.
+ *
+ * Extracted so the recent sweep and the month backfill are literally the same
+ * code. Two capture paths that drifted apart is how this account ended up with
+ * a table holding thirty-seven minutes of one day.
+ */
+async function captureWindow(apiKey: string, from: Date, to: Date, budgetMs: number) {
+  const page = await fetchDetailRecords({
+    apiKey,
+    recordType: RECORD_TYPE,
+    from: from.toISOString(),
+    to: to.toISOString(),
+    budgetMs,
+  })
+
+  if (page.error && page.rows.length === 0) {
+    return { fetched: 0, stored: 0, truncated: true, error: page.error }
+  }
+
+  const rows = page.rows as Row[]
+  const ids = rows.map(r => idOf(r) ?? '').filter(Boolean)
+  const seenIdHash = new Set<string>()
+  for (let i = 0; i < ids.length; i += 500) {
+    const { data: existing } = await supabase
+      .from('telnyx_ledger_records')
+      .select('telnyx_id, payload_hash')
+      .eq('record_type', RECORD_TYPE)
+      .in('telnyx_id', ids.slice(i, i + 500))
+    for (const e of (existing || []) as Array<{ telnyx_id: string; payload_hash: string }>) {
+      seenIdHash.add(`${e.telnyx_id}::${e.payload_hash}`)
+    }
+  }
+
+  const toInsert = rows
+    .filter(r => !seenIdHash.has(`${idOf(r) ?? ''}::${hashOf(r)}`))
+    .map(r => ({
+      record_type: RECORD_TYPE,
+      telnyx_id: idOf(r),
+      occurred_at: occurredAt(r),
+      cost: costOf(r),
+      rate: num(r.rate),
+      billed_sec: num(r.billed_sec) ?? num(r.billed_seconds),
+      currency: typeof r.currency === 'string' ? r.currency : 'USD',
+      payload: r,
+      payload_hash: hashOf(r),
+      capture_window: 'cron:compliance',
+    }))
+
+  let stored = 0
+  for (let i = 0; i < toInsert.length; i += 500) {
+    const { error } = await supabase
+      .from('telnyx_ledger_records')
+      .insert(toInsert.slice(i, i + 500))
+    if (!error) stored += Math.min(500, toInsert.length - i)
+  }
+
+  if (page.truncated) {
+    console.error(
+      `[telnyx-compliance-sync] TRUNCATED ${from.toISOString()}..${to.toISOString()}: ` +
+      `fetched ${rows.length} of ${page.totalResults ?? '?'} (${page.stoppedBecause})`
+    )
+  }
+
+  return { fetched: rows.length, stored, truncated: page.truncated, error: page.error }
+}
+
+/**
+ * UTC days of the current month we have not captured yet, oldest first.
+ *
+ * The surcharge is assessed on the calendar month, so a month-to-date ratio
+ * computed from a partial month is not the number being assessed -- it is a
+ * different number that happens to look like it. Until every day of the month
+ * is held, this route has collected data without answering the question it
+ * exists to answer.
+ *
+ * A day counts as captured once we hold any cron-written row inside it. A day
+ * with genuinely zero traffic never becomes captured and is therefore re-asked
+ * every run -- which costs one page returning zero rows, and is much cheaper
+ * than the alternative of a coverage table to keep in step.
+ */
+async function uncapturedDaysThisMonth(now: Date): Promise<Date[]> {
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+
+  const { data } = await supabase
+    .from('telnyx_ledger_records')
+    .select('occurred_at')
+    .eq('record_type', RECORD_TYPE)
+    .eq('capture_window', 'cron:compliance')
+    .gte('occurred_at', monthStart.toISOString())
+
+  const held = new Set(
+    (data || [])
+      .map(r => (r as { occurred_at: string | null }).occurred_at)
+      .filter((s): s is string => !!s)
+      .map(s => s.slice(0, 10))
+  )
+
+  const days: Date[] = []
+  for (let d = new Date(monthStart); d <= now; d = new Date(d.getTime() + 86400_000)) {
+    const key = d.toISOString().slice(0, 10)
+    if (!held.has(key)) days.push(new Date(d))
+  }
+  return days
+}
+
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -127,94 +240,60 @@ export async function GET(req: Request) {
     )
   }
 
+  const runStarted = Date.now()
+
   try {
+    // ── 1. THE RECENT WINDOW, ALWAYS ──────────────────────────────────────
+    // Longer than the gap between runs on purpose. Detail records are not
+    // instant, so a call ending near a boundary can land minutes later; a
+    // window covering only "since the last run" would drop exactly those rows
+    // on every run, invisibly. Re-reading is free -- the dedupe stores nothing
+    // for a row already held.
     const to = new Date()
     const from = new Date(to.getTime() - LOOKBACK_HOURS * 3600_000)
+    const recent = await captureWindow(apiKey, from, to, FETCH_BUDGET_MS)
 
-    const page = await fetchDetailRecords({
-      apiKey,
-      recordType: RECORD_TYPE,
-      from: from.toISOString(),
-      to: to.toISOString(),
-      budgetMs: FETCH_BUDGET_MS,
-    })
+    // ── 2. THEN FILL IN THE REST OF THE MONTH ─────────────────────────────
+    // The surcharge is assessed on the calendar month. A ratio computed from
+    // the three days we happen to hold is not the number being assessed, and
+    // reporting it as though it were is the mistake this whole investigation
+    // started with.
+    //
+    // Oldest first, so the earliest gap closes first and the month becomes
+    // contiguous from the start rather than growing holes in the middle.
+    const backfilled: Array<{ day: string; fetched: number; stored: number; truncated: boolean }> = []
+    const pending = await uncapturedDaysThisMonth(to)
 
-    if (page.error && page.rows.length === 0) {
-      console.error('[telnyx-compliance-sync] fetch failed', page.error)
-      return NextResponse.json({ success: false, error: page.error }, { status: 502 })
+    for (const day of pending) {
+      const spent = Date.now() - runStarted
+      const remaining = FETCH_BUDGET_MS - spent
+      if (remaining < BACKFILL_RESERVE_MS) break
+
+      const dayEnd = new Date(day.getTime() + 86400_000)
+      const res = await captureWindow(apiKey, day, dayEnd, remaining - BACKFILL_RESERVE_MS)
+      backfilled.push({
+        day: day.toISOString().slice(0, 10),
+        fetched: res.fetched, stored: res.stored, truncated: res.truncated,
+      })
     }
 
-    const rows = page.rows as Row[]
-
-    // One dedupe read for the whole batch. Doing it per row is what made the
-    // admin route die at its time budget once pagination started working.
-    const ids = rows.map(r => idOf(r) ?? '').filter(Boolean)
-    const seenIdHash = new Set<string>()
-    for (let i = 0; i < ids.length; i += 500) {
-      const slice = ids.slice(i, i + 500)
-      const { data: existing } = await supabase
-        .from('telnyx_ledger_records')
-        .select('telnyx_id, payload_hash')
-        .eq('record_type', RECORD_TYPE)
-        .in('telnyx_id', slice)
-      for (const e of (existing || []) as Array<{ telnyx_id: string; payload_hash: string }>) {
-        seenIdHash.add(`${e.telnyx_id}::${e.payload_hash}`)
-      }
-    }
-
-    const toInsert = rows
-      .filter(r => !seenIdHash.has(`${idOf(r) ?? ''}::${hashOf(r)}`))
-      .map(r => ({
-        record_type: RECORD_TYPE,
-        telnyx_id: idOf(r),
-        occurred_at: occurredAt(r),
-        cost: costOf(r),
-        rate: num(r.rate),
-        billed_sec: num(r.billed_sec) ?? num(r.billed_seconds),
-        currency: typeof r.currency === 'string' ? r.currency : 'USD',
-        payload: r,
-        payload_hash: hashOf(r),
-        // Named for what it is, so these rows are distinguishable from the
-        // one-off manual pulls already in the table.
-        capture_window: 'cron:compliance',
-      }))
-
-    let stored = 0
-    for (let i = 0; i < toInsert.length; i += 500) {
-      const chunk = toInsert.slice(i, i + 500)
-      // A duplicate is the unique index doing its job on two overlapping runs,
-      // not a reason to fail the sweep.
-      const { error } = await supabase.from('telnyx_ledger_records').insert(chunk)
-      if (!error) stored += chunk.length
-    }
-
-    // Truncation has to be impossible to miss. A capture that silently covered
-    // thirty-seven minutes of a day is exactly how this account ended up
-    // arguing with the carrier using its own inference instead of their data.
-    if (page.truncated) {
-      console.error(
-        `[telnyx-compliance-sync] TRUNCATED: fetched ${rows.length} of ` +
-        `${page.totalResults ?? '?'} (stopped by ${page.stoppedBecause}). ` +
-        `The window is not fully covered.`
-      )
-    }
+    const stillMissing = pending.length - backfilled.length
 
     console.log(
-      `[telnyx-compliance-sync] ${from.toISOString()} -> ${to.toISOString()}: ` +
-      `fetched ${rows.length}, stored ${stored}, already held ${rows.length - toInsert.length}, ` +
-      `pages ${page.pagesFetched}, truncated ${page.truncated}`
+      `[telnyx-compliance-sync] recent ${from.toISOString()}..${to.toISOString()} ` +
+      `fetched ${recent.fetched} stored ${recent.stored}; ` +
+      `backfilled ${backfilled.length} day(s), ${stillMissing} still missing; ` +
+      `took ${Math.round((Date.now() - runStarted) / 1000)}s`
     )
 
     return NextResponse.json({
       success: true,
-      window: { from: from.toISOString(), to: to.toISOString() },
-      fetched: rows.length,
-      stored,
-      alreadyHeld: rows.length - toInsert.length,
-      totalResults: page.totalResults,
-      pagesFetched: page.pagesFetched,
-      truncated: page.truncated,
-      stoppedBecause: page.stoppedBecause,
+      recent: { from: from.toISOString(), to: to.toISOString(), ...recent },
+      backfilled,
+      // Named plainly: while this is above zero the month-to-date ratio is
+      // computed over an incomplete month and must not be compared to the
+      // carrier's.
+      daysStillMissingThisMonth: stillMissing,
     })
   } catch (err: unknown) {
     console.error('[telnyx-compliance-sync] failed', err)
