@@ -260,8 +260,22 @@ const CONFIG_FIELDS: Array<{ key: keyof PoolConfig, label: string, help: string 
   { key: 'sustained_hours_required', label: 'SUSTAINED HOURS', help: 'Hours util must stay above trigger (1-24)' },
 ]
 
+type UsageRow = {
+  id: string; phoneNumber: string; state: string | null; status: string
+  restedReason: string | null; dials: number; answers: number; machines: number
+  conversations: number; answerPct: number | null; lastCalledAt: string | null
+  dailyCallCount: number; dailyCap: number; healthAnswerRate: number | null
+}
+type UsageData = {
+  window: string; since: string; rows: UsageRow[]
+  summary: {
+    numbers: number; used: number; idle: number
+    totalDials: number; busiestShare: number; avgPerUsedNumber: number
+  }
+}
+
 export default function NumbersApp() {
-  const [view, setView] = useState<'pool' | 'analytics' | 'cycling'>('pool')
+  const [view, setView] = useState<'pool' | 'analytics' | 'usage' | 'cycling'>('pool')
 
   const [cycleData, setCycleData] = useState<any | null>(null)
   const [cycleLoading, setCycleLoading] = useState(false)
@@ -383,6 +397,37 @@ export default function NumbersApp() {
       loadAnalytics()
     }
   }, [view, analytics, analyticsLoading, analyticsError, loadAnalytics])
+
+  // ── WHO IS DOING THE WORK ──────────────────────────────────
+  // daily_call_count resets every morning and lifetime_call_count never
+  // forgets, so neither answers "is the pool being worked evenly this month".
+  // An unevenly worked pool is how one number collects the volume that gets it
+  // flagged while numbers bought to prevent that sit idle.
+  const [usage, setUsage] = useState<UsageData | null>(null)
+  const [usageLoading, setUsageLoading] = useState(false)
+  const [usageError, setUsageError] = useState<string | null>(null)
+  const [usageWindow, setUsageWindow] = useState<'month' | '30d'>('month')
+
+  const loadUsage = useCallback(async (win: 'month' | '30d') => {
+    setUsageLoading(true)
+    setUsageError(null)
+    try {
+      const res = await fetch(`/api/admin/pool/usage?window=${win}`, { cache: 'no-store' })
+      if (res.status === 403) throw new Error('Forbidden, admin only')
+      if (res.status === 401) throw new Error('Not signed in')
+      const d = await res.json()
+      if (d.success) setUsage(d)
+      else setUsageError(d.error || 'Failed to load usage')
+    } catch (err: any) {
+      setUsageError(err.message)
+    } finally {
+      setUsageLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (view === 'usage' && !usage && !usageLoading && !usageError) loadUsage(usageWindow)
+  }, [view, usage, usageLoading, usageError, usageWindow, loadUsage])
 
   const loadCycleLog = useCallback(async () => {
     setCycleLoading(true)
@@ -1320,6 +1365,10 @@ export default function NumbersApp() {
           onClick={() => setView('analytics')}
         >ANALYTICS</button>
         <button
+          className={`pool-view-tab ${view === 'usage' ? 'active' : ''}`}
+          onClick={() => setView('usage')}
+        >USAGE</button>
+        <button
           className={`pool-view-tab ${view === 'cycling' ? 'active' : ''}`}
           onClick={() => setView('cycling')}
         >CYCLING</button>
@@ -1632,6 +1681,145 @@ export default function NumbersApp() {
           </div>
         )}
       </div>
+      )}
+
+      {view === 'usage' && (
+        <div className="pool-content">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <div>
+              <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: T.text }}>
+                MOST USED → LEAST USED
+              </div>
+              <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginTop: 3 }}>
+                Real dials per number. Read volume and answer rate together — high dials at a
+                low answer rate is what carrier filtering looks like before anyone tells you.
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {(['month', '30d'] as const).map(w => (
+                <button key={w} className="pool-btn"
+                        style={usageWindow === w ? { borderColor: T.accent, color: T.accent } : undefined}
+                        onClick={() => { setUsageWindow(w); setUsage(null); loadUsage(w) }}>
+                  {w === 'month' ? 'THIS MONTH' : 'LAST 30D'}
+                </button>
+              ))}
+              <button className="pool-btn" onClick={() => loadUsage(usageWindow)} disabled={usageLoading}>
+                {usageLoading ? '⟳ LOADING...' : '⟳ REFRESH'}
+              </button>
+            </div>
+          </div>
+
+          {usageError && (
+            <div style={{
+              padding: 16, background: '#f8e8e8', border: `1px solid ${T.red}`,
+              borderRadius: 4, fontSize: 11, color: T.red, letterSpacing: 1,
+            }}>{usageError}</div>
+          )}
+
+          {usage && (
+            <>
+              <div className="pool-stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                <div className="pool-stat-card">
+                  <div className="pool-stat-label">DIALS</div>
+                  <div className="pool-stat-value">{usage.summary.totalDials.toLocaleString()}</div>
+                  <div className="pool-stat-sub">
+                    {usage.summary.avgPerUsedNumber.toLocaleString()} AVG PER WORKING NUMBER
+                  </div>
+                </div>
+                <div className="pool-stat-card" style={{ borderTopColor: T.accent }}>
+                  <div className="pool-stat-label">BUSIEST NUMBER</div>
+                  <div className="pool-stat-value" style={{ color: T.accent }}>
+                    {usage.summary.busiestShare}%
+                  </div>
+                  <div className="pool-stat-sub">OF ALL DIALS ON ONE NUMBER</div>
+                </div>
+                <div className="pool-stat-card" style={{ borderTopColor: T.green }}>
+                  <div className="pool-stat-label">WORKING</div>
+                  <div className="pool-stat-value" style={{ color: T.green }}>{usage.summary.used}</div>
+                  <div className="pool-stat-sub">OF {usage.summary.numbers} IN POOL</div>
+                </div>
+                {/* Idle numbers are capacity already paid for. Flagged amber
+                    rather than red: idle is waste, not damage. */}
+                <div className="pool-stat-card" style={{ borderTopColor: usage.summary.idle > 0 ? '#c9871f' : T.green }}>
+                  <div className="pool-stat-label">IDLE</div>
+                  <div className="pool-stat-value" style={{ color: usage.summary.idle > 0 ? '#c9871f' : T.green }}>
+                    {usage.summary.idle}
+                  </div>
+                  <div className="pool-stat-sub">NOT DIALLED THIS WINDOW</div>
+                </div>
+              </div>
+
+              <div className="pool-section" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="an-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>NUMBER</th>
+                        <th>ST</th>
+                        <th>DIALS</th>
+                        <th style={{ minWidth: 110 }}>SHARE</th>
+                        <th>ANSWERED</th>
+                        <th>ANS %</th>
+                        <th>CONVOS</th>
+                        <th>TODAY</th>
+                        <th>STATUS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usage.rows.map((r, i) => {
+                        const share = usage.summary.totalDials > 0
+                          ? (r.dials / usage.summary.totalDials) * 100 : 0
+                        // Only judge an answer rate with enough calls behind it.
+                        // Below 20 dials the percentage is noise, and colouring
+                        // noise red sends people to rest a healthy number.
+                        const judged = r.dials >= 20 && r.answerPct !== null
+                        const ansColour = !judged ? T.muted
+                          : r.answerPct! < 20 ? T.red
+                          : r.answerPct! < 40 ? '#c9871f'
+                          : T.green
+                        return (
+                          <tr key={r.id}>
+                            <td style={{ color: T.muted, fontFamily: 'monospace' }}>{i + 1}</td>
+                            <td style={{ fontFamily: 'monospace' }}>{r.phoneNumber}</td>
+                            <td style={{ color: T.muted }}>{r.state || '-'}</td>
+                            <td style={{ fontWeight: 'bold' }}>{r.dials.toLocaleString()}</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{
+                                  height: 6, borderRadius: 3, background: T.accent,
+                                  width: `${Math.max(share * 2, share > 0 ? 3 : 0)}%`, minWidth: share > 0 ? 3 : 0,
+                                }} />
+                                <span style={{ fontSize: 9.5, color: T.muted, fontFamily: 'monospace' }}>
+                                  {share.toFixed(1)}%
+                                </span>
+                              </div>
+                            </td>
+                            <td>{r.answers.toLocaleString()}</td>
+                            <td style={{ color: ansColour, fontWeight: judged ? 'bold' : 'normal' }}>
+                              {r.answerPct === null ? '-' : `${r.answerPct}%`}
+                            </td>
+                            <td>{r.conversations}</td>
+                            <td style={{ color: T.muted, fontFamily: 'monospace' }}>
+                              {r.dailyCallCount}/{r.dailyCap}
+                            </td>
+                            <td style={{
+                              color: r.status === 'active' ? T.green : '#c9871f',
+                              letterSpacing: 1, fontSize: 9.5,
+                            }}>
+                              {r.status.toUpperCase()}
+                              {r.restedReason ? ` · ${r.restedReason}` : ''}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       )}
 
       {view === 'analytics' && (
