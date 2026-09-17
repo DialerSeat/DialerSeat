@@ -82,13 +82,7 @@ type OmTheme = 'light' | 'dark'
 // a theme switch half-lands.
 const THEME_CSS = `
   [data-om-theme="light"] {
-    /* The map ground is the one large surface on this screen, so pure white
-       made it the brightest thing in the room. Stepped down to a grey that is
-       also slightly DARKER than --om-page, which is what stops the map reading
-       as a hole punched in the page: it is now a surface sitting on the page
-       rather than the absence of one. Cards stay #ffffff, so the panels
-       floating over the map keep their edges. */
-    --om-page:#f4f6fa; --om-void:#ffffff; --om-sea:#eef2f7;
+    --om-page:#f4f6fa; --om-void:#ffffff; --om-sea:#ffffff;
     --om-land:#dbe5f4; --om-coast:#b7c9e2; --om-grat:#e8eef7;
     --om-edge:#e2e7ef; --om-accent:#1d6fe0;
     --om-ink:#16202f; --om-muted:#69748a; --om-dim:#98a3b5;
