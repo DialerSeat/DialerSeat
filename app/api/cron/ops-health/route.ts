@@ -331,6 +331,110 @@ async function checkDatabaseCapacity(): Promise<AlertResult> {
   }
 }
 
+
+// ── 6. A LEG THAT WILL NOT DIE ──────────────────────────────────────────────
+// The failure this is named after: on 17 Sept a leg stayed live for seven
+// hours. Three separate safeguards were in place and all three were silent.
+// The watchdog judged it 148 times and did nothing, because it was disarmed.
+// The kill button reported success, because a 404 from Telnyx is read as
+// "already gone". And nothing anywhere told anyone, so it was found by a human
+// happening to look at a screen.
+//
+// Arming the watchdog fixes the first. Reporting kills honestly fixes the
+// second. Neither fixes the third, and the third is the one that means somebody
+// has to keep watching. A leg surviving every rule built to end it is precisely
+// the case where the automation has failed and a person needs to know.
+//
+// TWO CONDITIONS, ONE ALERT, DIFFERENT WORDS:
+//   outlived  no calls row and still live long past the untracked threshold.
+//             Means the watchdog is off, erroring, or never reaching it.
+//   survived  the watchdog stamped it ended and Telnyx still lists it.
+//             Means the leg cannot be ended through Call Control at all.
+//
+// The second is strictly worse and is reported first, because the operator
+// response differs: one is "check the watchdog", the other is "raise it with
+// the carrier".
+const STUCK_LEG_STILL_LIVE_MINUTES = 5
+const STUCK_LEG_OUTLIVED_MINUTES = 15
+const STUCK_LEG_SURVIVED_KILL_MINUTES = 3
+
+async function checkStuckLegs(): Promise<AlertResult> {
+  const key = 'stuck_leg'
+  const now = Date.now()
+  const stillLive = new Date(now - STUCK_LEG_STILL_LIVE_MINUTES * 60_000).toISOString()
+
+  const { data, error } = await supabase
+    .from('live_leg_sightings')
+    .select('call_control_id, first_seen_at, last_seen_at, times_seen, had_row, ended_at')
+    .gte('last_seen_at', stillLive)
+    .limit(200)
+
+  if (error) {
+    return { key, fired: false, reason: `query failed: ${error.message}` }
+  }
+
+  type Sighting = {
+    call_control_id: string; first_seen_at: string; last_seen_at: string
+    times_seen: number; had_row: boolean; ended_at: string | null
+  }
+
+  const survived: Sighting[] = []
+  const outlived: Sighting[] = []
+
+  for (const rawRow of (data || []) as Sighting[]) {
+    const lastSeen = new Date(rawRow.last_seen_at).getTime()
+
+    if (rawRow.ended_at) {
+      // Killed, and Telnyx is still listing it afterwards.
+      const endedAt = new Date(rawRow.ended_at).getTime()
+      if (lastSeen - endedAt > STUCK_LEG_SURVIVED_KILL_MINUTES * 60_000) survived.push(rawRow)
+      continue
+    }
+
+    // Never killed, no row, and older than every rule meant to catch it.
+    // had_row is deliberately part of this: a long LIVE call with a real row
+    // is a conversation, not a fault, and must never page anybody.
+    const age = now - new Date(rawRow.first_seen_at).getTime()
+    if (!rawRow.had_row && age > STUCK_LEG_OUTLIVED_MINUTES * 60_000) outlived.push(rawRow)
+  }
+
+  if (survived.length === 0 && outlived.length === 0) {
+    return { key, fired: false, reason: 'no stuck legs' }
+  }
+
+  const oldest = [...survived, ...outlived]
+    .sort((a, b) => new Date(a.first_seen_at).getTime() - new Date(b.first_seen_at).getTime())[0]
+  const oldestMins = Math.round((now - new Date(oldest.first_seen_at).getTime()) / 60_000)
+
+  const parts: string[] = []
+  if (survived.length > 0) {
+    parts.push(
+      `${survived.length} leg(s) still listed by Telnyx AFTER being ended — ` +
+      `they cannot be hung up through Call Control`
+    )
+  }
+  if (outlived.length > 0) {
+    parts.push(
+      `${outlived.length} untracked leg(s) alive past ${STUCK_LEG_OUTLIVED_MINUTES}m ` +
+      `with the watchdog not ending them`
+    )
+  }
+
+  const fired = await fireOnce(
+    key,
+    'stuck_leg',
+    `${parts.join('; ')}. Oldest is ${oldestMins}m old ` +
+    `(${oldest.call_control_id.slice(0, 22)}…, seen ${oldest.times_seen}x). ` +
+    `Check Live Ops.`
+  )
+
+  return {
+    key,
+    fired,
+    reason: `${survived.length} survived a kill, ${outlived.length} outlived the watchdog, oldest ${oldestMins}m`,
+  }
+}
+
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -358,6 +462,9 @@ export async function GET(req: Request) {
       })),
       checkDatabaseCapacity().catch(err => ({
         key: 'db_capacity', fired: false, reason: `threw: ${err?.message ?? err}`,
+      })),
+      checkStuckLegs().catch(err => ({
+        key: 'stuck_leg', fired: false, reason: `threw: ${err?.message ?? err}`,
       })),
     ])
 

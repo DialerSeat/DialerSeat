@@ -49,6 +49,9 @@ export type NotifEventType =
   | 'agent_leg_refused'
   | 'pool_capacity'
   | 'webhook_silence'
+  // A live leg that has outlived every rule meant to end it, or that survived
+  // being killed. Silence was the failure this one is named after.
+  | 'stuck_leg'
   // Somebody on /vs or /faq asked a question or left a suggestion. The only
   // event in this union a member of the public triggers directly.
   | 'suggestion'
@@ -104,6 +107,10 @@ const EVENT_COPY: Record<NotifEventType, { title: string; tag: string }> = {
   agent_leg_refused: { title: '⚠ Calls Have No Audio', tag: 'ds-agent-leg-refused' },
   pool_capacity:     { title: '⚠ Number Pool Filling', tag: 'ds-pool-capacity' },
   webhook_silence:   { title: '⚠ Call Webhooks Silent', tag: 'ds-webhook-silence' },
+  // A leg that will not die. This one is named after its own failure mode:
+  // the leg was live for seven hours, the watchdog judged it 148 times, and
+  // the only reason anybody knew was that the owner happened to be looking.
+  stuck_leg:         { title: '⚠ Call Leg Will Not End', tag: 'ds-stuck-leg' },
   // A visitor wrote in from a marketing page. Worth a buzz because it is rare,
   // it is a real person waiting, and it goes stale — an unanswered question is
   // a lost customer in a way an unread renewal notice is not.
@@ -127,6 +134,7 @@ interface AdminNotificationPrefs {
   pool_capacity: boolean
   webhook_silence: boolean
   suggestion: boolean
+  stuck_leg: boolean
 }
 
 async function getPrefs(): Promise<AdminNotificationPrefs> {
@@ -136,7 +144,7 @@ async function getPrefs(): Promise<AdminNotificationPrefs> {
     // team_join was in the type and in the table but never in this list, so
     // prefs.team_join came back undefined and the `if (!prefs[eventType])`
     // guard below suppressed every partner-code notification silently.
-    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel, sub_paused, sub_resumed, agent_online, payment_failed, team_join, agent_leg_refused, pool_capacity, webhook_silence, suggestion')
+    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel, sub_paused, sub_resumed, agent_online, payment_failed, team_join, agent_leg_refused, pool_capacity, webhook_silence, suggestion, stuck_leg')
     .eq('id', 1)
     .maybeSingle()
   if (error) {
@@ -144,7 +152,7 @@ async function getPrefs(): Promise<AdminNotificationPrefs> {
     // A genuine query error (bad connection, RLS issue, etc.) — don't
     // guess, just don't send. Distinct from the "no row" case below,
     // which is a setup gap, not a real signal to suppress everything.
-    return { master_enabled: false, signup: false, account_deleted: false, new_sub: false, resub: false, renewal: false, cancel: false, sub_paused: false, sub_resumed: false, agent_online: false, payment_failed: false, team_join: false, agent_leg_refused: false, pool_capacity: false, webhook_silence: false, suggestion: false }
+    return { master_enabled: false, signup: false, account_deleted: false, new_sub: false, resub: false, renewal: false, cancel: false, sub_paused: false, sub_resumed: false, agent_online: false, payment_failed: false, team_join: false, agent_leg_refused: false, pool_capacity: false, webhook_silence: false, suggestion: false, stuck_leg: false }
   }
   if (!data) {
     // The seed row (migrations/PUSH_NOTIFICATIONS_2026-07-17.sql) never
@@ -157,7 +165,7 @@ async function getPrefs(): Promise<AdminNotificationPrefs> {
     // (see the CREATE TABLE — every boolean defaults to true), and let
     // the admin explicitly turn things off if they actually want that.
     console.warn('[pushNotify] admin_notification_prefs has no row with id=1, defaulting to all notifications ON.')
-    return { master_enabled: true, signup: true, account_deleted: true, new_sub: true, resub: true, renewal: true, cancel: true, sub_paused: true, sub_resumed: true, agent_online: true, payment_failed: true, team_join: true, agent_leg_refused: true, pool_capacity: true, webhook_silence: true, suggestion: true }
+    return { master_enabled: true, signup: true, account_deleted: true, new_sub: true, resub: true, renewal: true, cancel: true, sub_paused: true, sub_resumed: true, agent_online: true, payment_failed: true, team_join: true, agent_leg_refused: true, pool_capacity: true, webhook_silence: true, suggestion: true, stuck_leg: true }
   }
   return data as AdminNotificationPrefs
 }
