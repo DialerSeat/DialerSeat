@@ -639,6 +639,9 @@ function DialerPageInner() {
   // closure. Reset to 1 whenever a genuinely NEW lead starts (see
   // handleDial); incremented on each same-lead redial.
   const leadAttemptCountRef = useRef(1)
+  // When the agent's SIP leg reached Established. Billing starts there, and the
+  // short-duration floor is measured from it -- see releaseAgentLeg.
+  const agentLegAnsweredAtRef = useRef<number | null>(null)
   // Transient per-lead outcome text shown briefly in the queue row right
   // after a dial resolves without connecting (e.g. "Sorry, couldn't
   // answer…"), mirroring the reference UX. Populated ONLY from real dial
@@ -1834,6 +1837,9 @@ function DialerPageInner() {
             try {
               invitation.stateChange.addListener((state: any) => {
                 if (state === SessionState.Established) {
+                  // Billing on this leg starts HERE, not at the INVITE. The
+                  // short-duration floor is measured from this instant.
+                  agentLegAnsweredAtRef.current = Date.now()
                   swCallRef.current = invitation
                   attachSIPAudio(invitation)
                 } else if (state === SessionState.Terminated) {
@@ -2425,7 +2431,7 @@ function DialerPageInner() {
             //
             // Same call progressive makes, at the same point in the flow.
             if (swCallRef.current) {
-              try { swCallRef.current.bye() } catch {}
+              releaseAgentLeg(swCallRef.current)
               swCallRef.current = null
             }
             disarmDialing()
@@ -3005,6 +3011,57 @@ function DialerPageInner() {
   // brief disarm between calls could reject an in-flight human. The explicit
   // kill paths (Stop engine, go offline, page unload) pass force:true after
   // they've already turned the engine off.
+  // ── THE BROWSER MUST NOT END ITS OWN LEG INSIDE SIX SECONDS ────────────
+  // Telnyx flagged this account for short-duration calls, and the entire ratio
+  // is this leg: 0 short out of 1,209 lead legs against 466 of 1,691 agent
+  // legs, counted twice because the same leg bills on two connections.
+  //
+  // A server-side hold was tried first and did nothing, which the ledger said
+  // plainly -- agent legs stayed at exactly 6s billed either side of the
+  // deploy. The reason is here: every teardown path below calls bye() from the
+  // BROWSER, so the leg is already gone before the lead's hangup webhook -- and
+  // the hold that rides on it -- ever reaches the server. The server can only
+  // hold a leg it is the one ending.
+  //
+  // So the delay belongs on this side. Every path now releases through here,
+  // and the leg is kept up until it has been ANSWERED for longer than six
+  // seconds. Answered, not invited: billing starts at answer, and the browser
+  // auto-answers somewhere around 0.8s, so measuring from the invite would
+  // leave a leg a second short of the line it is trying to clear.
+  //
+  // 7.2s, not 7: this leg bills in six-second increments, so anything over 6
+  // lands at 12 and the extra 1.2s is margin against clock skew for about
+  // $0.0001. A leg that misses by a tenth of a second is billed as short and
+  // costs $0.01.
+  //
+  // THE NEXT DIAL IS NOT DELAYED. The ref is cleared immediately and the
+  // session is held only in this closure, so a new dial places a fresh leg
+  // while the old one runs out its floor in silence. Fan-out already points
+  // several silent legs at one browser; this is the same shape.
+  //
+  // force/immediate still ends now. Those are the paths where a person has
+  // stopped -- terminate, offline, unload -- and somebody expecting silence
+  // getting eight more seconds of a live leg is worse than a short call.
+  const AGENT_LEG_FLOOR_MS = 7200
+  const releaseAgentLeg = (session: any, opts?: { immediate?: boolean }) => {
+    if (!session) return
+    const end = () => {
+      try {
+        if (session.bye) session.bye()
+        else if (session.reject) session.reject()
+        else if (session.hangup) session.hangup()
+      } catch { /* already gone */ }
+    }
+    if (opts?.immediate) { end(); return }
+    const answeredAt = agentLegAnsweredAtRef.current
+    // No answer timestamp means the leg was never established, so there is
+    // nothing billable to protect -- end it now.
+    if (!answeredAt) { end(); return }
+    const wait = AGENT_LEG_FLOOR_MS - (Date.now() - answeredAt)
+    if (wait <= 0) { end(); return }
+    setTimeout(end, wait)
+  }
+
   const disarmDialing = (opts?: { force?: boolean }) => {
     const keepForPredictive =
       !opts?.force && isPredictive && predictiveEngineStartedRef.current
@@ -3012,10 +3069,7 @@ function DialerPageInner() {
       // Engine still running — tear down the just-ended leg but stay armed so
       // the next routed human can connect.
       if (swCallRef.current) {
-        try {
-          if (swCallRef.current.bye) swCallRef.current.bye()
-          else if (swCallRef.current.hangup) swCallRef.current.hangup()
-        } catch {}
+        releaseAgentLeg(swCallRef.current)
         swCallRef.current = null
       }
       return
@@ -3030,11 +3084,8 @@ function DialerPageInner() {
     // Proactively tear down any SIP session that may still be up so a lingering
     // leg can't keep audio flowing after the user expects silence.
     if (swCallRef.current) {
-      try {
-        if (swCallRef.current.bye) swCallRef.current.bye()
-        else if (swCallRef.current.reject) swCallRef.current.reject()
-        else if (swCallRef.current.hangup) swCallRef.current.hangup()
-      } catch {}
+      // force = the person stopped; end it now and accept the short call.
+      releaseAgentLeg(swCallRef.current, { immediate: !!opts?.force })
       swCallRef.current = null
     }
   }
@@ -3086,10 +3137,7 @@ function DialerPageInner() {
     // waiting on the lead's leg and the fastest teardown is the right one.
     if (swCallRef.current) {
       if (reason === 'immediate') {
-        try {
-          if (swCallRef.current.bye) await swCallRef.current.bye()
-          else if (swCallRef.current.hangup) await swCallRef.current.hangup()
-        } catch {}
+        releaseAgentLeg(swCallRef.current, { immediate: true })
         swCallRef.current = null
       } else {
         silenceSIPAudio()
@@ -3944,7 +3992,7 @@ function DialerPageInner() {
           activePollRef.current = null
           setActiveCallSid(null)
           if (swCallRef.current) {
-            try { await swCallRef.current.bye() } catch {}
+            releaseAgentLeg(swCallRef.current)
             swCallRef.current = null
           }
           // Call is over. Disarm so nothing can bridge audio to us during wrap-up
