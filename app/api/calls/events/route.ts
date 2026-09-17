@@ -311,6 +311,78 @@ export async function POST(req: Request) {
  * only the first caller gets rows back, and only that caller issues the bridge
  * command, so a duplicate webhook is a no-op rather than a second bridge.
  */
+/**
+ * Hang up the agent's leg, but never before it has lived past six seconds.
+ *
+ * ── WHY THIS IS A FUNCTION AND NOT TWO COPIES OF A COMMENT ───────────────
+ * There were two places that release the agent leg. One of them held the line
+ * past the short-duration threshold and one did not, and the one that did not
+ * was the common path. Measured on 17 Sept, of 127 short agent legs that could
+ * be traced to a call row, 89 -- 70% -- came from the AMD machine branch,
+ * which called hangupCallControlId directly. hangup_source on every one of
+ * them was 'caller': this server, not the agent's browser.
+ *
+ * That matters because the previous fix for this was client-side, and a fix in
+ * the dialer page cannot reach an agent who loaded it hours ago. This one is
+ * server-side, so it applies to every call on the next deploy with nothing to
+ * reload and nobody to ask.
+ *
+ * ── THE ARITHMETIC ──────────────────────────────────────────────────────
+ * The agent leg is on-net and bills in SIX-second increments, so the billed
+ * value is only ever 0, 6, 12, 18... Today's ledger contains exactly those and
+ * nothing between them. A leg billed 6 is any leg under six seconds, and
+ * Telnyx counts precisely that as short duration.
+ *
+ * Machine legs died at a mean of 5.5 seconds from dial -- ring 2.0s, verdict
+ * 3.5s later. They miss the line by half a second. Holding to the floor in
+ * complianceHold puts them at 7-9.5s, which bills 12 and is not short.
+ *
+ * ── WHAT IT COSTS ───────────────────────────────────────────────────────
+ * Six more seconds of an on-net leg is about $0.0001. Crossing 15% at month
+ * end applies $0.01 to EVERY short call that month, retroactively, not just
+ * the ones above the line.
+ *
+ * ── AND WHAT IT DOES NOT COST ───────────────────────────────────────────
+ * Not the agent's time. On the machine path the session is handed back
+ * separately and immediately -- see the agent_sessions update in
+ * handleAmdResult -- so the dialer moves on while this leg finishes dying
+ * behind it. The hold delays a teardown, never an agent.
+ *
+ * @param createdAt the call row's created_at: the agent leg is placed at dial
+ *                  time, so this is when its clock starts.
+ */
+async function releaseAgentLegPastSix(
+  agentCallControlId: string,
+  createdAt: string | null | undefined,
+  reason: string
+): Promise<void> {
+  try {
+    const startedMs = createdAt ? new Date(createdAt).getTime() : NaN
+    // An unparseable timestamp yields elapsed 0, which holds the FULL floor.
+    // Wrong in the safe direction: a leg held too long costs a hundredth of a
+    // cent, a leg released too early costs the surcharge.
+    const elapsedMs = Number.isFinite(startedMs) ? Date.now() - startedMs : 0
+    const waitMs = remainingHoldMs(AGENT_LEG_MIN_SECONDS, elapsedMs)
+    if (waitMs > 0) {
+      console.log(
+        `[calls/events] holding agent leg ${agentCallControlId} a further ` +
+        `${Math.round(waitMs)}ms past the 6s short-duration line ` +
+        `(elapsed ${Math.round(elapsedMs)}ms, ${reason})`
+      )
+      // Awaited deliberately. A dangling promise on this runtime is frozen the
+      // moment the response returns, which is exactly how a teardown silently
+      // never happens.
+      await new Promise(resolve => setTimeout(resolve, waitMs))
+    }
+    await hangupCallControlId(agentCallControlId)
+  } catch (err) {
+    // Never let a failed teardown fail the webhook. hangupCallControlId
+    // already treats 404 and 422 as success, so a leg Telnyx has already torn
+    // down is a no-op, as is a duplicate webhook.
+    console.warn(`[calls/events] agent leg release failed (${reason})`, agentCallControlId, err)
+  }
+}
+
 async function bridgeAgentOntoLead(
   leadCallControlId: string,
   reason: string
@@ -1050,7 +1122,10 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     const [{ data: callRow }, platformConfig] = await Promise.all([
       supabaseAdmin
         .from('calls')
-        .select('id, lead_id, dial_source, agent_call_control_id, answered_at, recording_status')
+        // created_at is the agent leg's clock. It is placed at dial time and
+        // torn down here, so the whole leg is (now - created_at) -- see
+        // releaseAgentLegPastSix.
+        .select('id, lead_id, dial_source, agent_call_control_id, answered_at, recording_status, created_at')
         .eq('call_control_id', callControlId)
         .maybeSingle(),
       getPlatformConfig(),
@@ -1219,17 +1294,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
         })
     }
 
-    // ── THE AGENT COMES OFF FIRST, ALWAYS ─────────────────────────────────
-    // Releasing the agent is the only latency the agent can feel, and it is
-    // correct in both branches below — whether the lead's leg ends now or
-    // stays up to take a voicemail message, the agent is done with this call
-    // either way. Doing it first means the voicemail-drop lookup underneath
-    // costs them nothing.
-    if (agentAlreadyBridged && callRow?.agent_call_control_id) {
-      await hangupCallControlId(callRow.agent_call_control_id)
-    }
-
-    // ── AND GIVE THE AGENT BACK ─────────────────────────────────────────────
+    // ── GIVE THE AGENT BACK FIRST ───────────────────────────────────────────
     // Dropping the agent's leg ends the audio; it does not end the ASSIGNMENT.
     // agent_sessions.current_call_id stayed pointing at the voicemail, with two
     // consequences that together look exactly like "predictive got stuck":
@@ -1241,13 +1306,40 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     //     starts again
     //
     // A machine verdict means the agent is free. The lead's leg carries on
-    // behind them to clear the nine seconds — that part is untouched — but the
-    // session is theirs again immediately.
+    // behind them to clear the hold — that part is untouched — but the session
+    // is theirs again immediately.
+    //
+    // ── THIS MOVED ABOVE THE LEG RELEASE, AND THAT ORDER IS NOW LOAD-BEARING ──
+    // The release below can now block for up to ~4 seconds while it holds the
+    // leg past six. Leaving this underneath it would have pinned the session
+    // for that whole hold and reproduced the exact symptom described above —
+    // the hold would have bought a compliance point and paid for it in agent
+    // throughput. Freeing the session first costs nothing and makes the hold
+    // invisible to the agent.
     if (callRow?.id) {
       await supabaseAdmin
         .from('agent_sessions')
         .update({ current_call_id: null, state: 'ready', updated_at: new Date().toISOString() })
         .eq('current_call_id', callRow.id)
+    }
+
+    // ── THIS IS THE LINE THAT CAUSED THE SURCHARGE ───────────────────────
+    // It called hangupCallControlId directly with no hold, and it is the
+    // busiest agent-leg teardown on the platform. Measured on the agent leg's
+    // OWN completed event over two days: 202 of 252 short agent legs were
+    // ended by 'caller' — this server — against 49 by 'callee', the agent's
+    // browser. A machine verdict lands about 5.5 seconds after dial, which is
+    // half a second inside Telnyx's short-duration line.
+    //
+    // That 80/20 split is why this fix is server-side. The previous attempt
+    // was in the dialer page, and a client fix cannot reach an agent who
+    // loaded the page hours ago — which is why the ratio never moved.
+    if (agentAlreadyBridged && callRow?.agent_call_control_id) {
+      await releaseAgentLegPastSix(
+        callRow.agent_call_control_id,
+        callRow.created_at,
+        'AMD machine'
+      )
     }
 
     // ── VOICEMAIL DROP IS OFF. TESTED TWICE, FAILED TWICE. ────────────────
@@ -2029,41 +2121,15 @@ async function handleHangup(
     // Awaited rather than fired and forgotten, because a dangling promise on
     // this runtime is frozen when the response returns — which is exactly how
     // a teardown silently never happens.
+    // This site always held the line; the AMD branch did not, and that is the
+    // one the traffic actually went through. Both now call the same function
+    // so a third teardown cannot be added without the hold.
     if (callRow?.agent_call_control_id) {
-      try {
-        // ── HOLD IT PAST SIX SECONDS FIRST ────────────────────────────────
-        // Telnyx flagged this account on 16 Sept for short-duration calls,
-        // 18.86% against a 15% limit. Measured against their own billed
-        // seconds, the LEAD legs scored zero of 1,143 — the compliance hold
-        // below does its job. All 869 short calls were this leg.
-        //
-        // It happens when a lead leg fails fast: user_busy and not_found come
-        // back in a second or two, this line released the agent immediately
-        // after, and an on-net leg that lived two seconds bills at the
-        // 6-second minimum. That is Telnyx's definition of a short duration
-        // call, and it counts twice — the call-control and trunk sides of one
-        // leg are billed as two.
-        //
-        // Cheap to fix and expensive not to. Six extra seconds of an on-net
-        // leg is about $0.0001; crossing 15% at month end applies $0.01 to
-        // EVERY short call that month, retroactively, not just the excess.
-        //
-        // Randomised like the lead-leg hold, for the same reason: a teardown
-        // that always lands on exactly the same second is its own signature.
-        const startedMs = callRow.created_at ? new Date(callRow.created_at).getTime() : NaN
-        const elapsedMs = Number.isFinite(startedMs) ? Date.now() - startedMs : 0
-        const waitMs = remainingHoldMs(AGENT_LEG_MIN_SECONDS, elapsedMs)
-        if (waitMs > 0) {
-          console.log(
-            `[calls/events] holding agent leg ${callRow.agent_call_control_id} a further ` +
-            `${Math.round(waitMs)}ms past the 6s short-duration line (elapsed ${Math.round(elapsedMs)}ms)`
-          )
-          await new Promise(resolve => setTimeout(resolve, waitMs))
-        }
-        await hangupCallControlId(callRow.agent_call_control_id)
-      } catch (err) {
-        console.warn('[calls/events] agent leg release failed', callControlId, err)
-      }
+      await releaseAgentLegPastSix(
+        callRow.agent_call_control_id,
+        callRow.created_at,
+        'call ended'
+      )
     }
 
     if (callRow) {
