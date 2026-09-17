@@ -106,6 +106,29 @@ const field: React.CSSProperties = {
   borderRadius: 4, border: `1px solid ${HAIRLINE}`, background: 'var(--teams-inset, #111214)',
   color: TEXT, fontSize: 13.5, fontFamily: 'inherit',
 }
+
+// ── A BOX YOU TYPE IN MUST NOT LOOK LIKE A BOX YOU PICK FROM ──────────
+// `field` is shared with the two <select>s that sit directly above the campaign
+// name on this form. Same height, same border, same fill — so the one control
+// that needs typing was indistinguishable from the two that need choosing.
+// People set the team, set the mode, and walked straight past the only input,
+// then hit a Create button that was disabled for a reason stated nowhere on
+// screen (see nameProblem, which was a button tooltip and nothing else).
+//
+// Everything here exists to say "type here" before the user has read a word:
+// a brighter inset so it reads as a well rather than a raised control, the
+// accent border a focused input would have, a text cursor over the whole box,
+// and more vertical room than its neighbours so it does not scan as one of
+// three identical rows.
+const textField: React.CSSProperties = {
+  ...field,
+  padding: '12px 12px',
+  fontSize: 14.5,
+  cursor: 'text',
+  border: `1px solid ${ACCENT}`,
+  background: 'var(--teams-input, #0b0c0e)',
+  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)',
+}
 const btn: React.CSSProperties = {
   padding: '8px 14px', borderRadius: 4, cursor: 'pointer',
   border: `1px solid ${HAIRLINE}`, background: PANEL, color: TEXT,
@@ -335,14 +358,28 @@ export function CreateCampaignModal({
 
       {mode === 'new' ? (
         <div style={{ marginBottom: 16 }}>
-          <label style={label}>Campaign Name</label>
+          <label style={label}>
+            Campaign Name{' '}
+            <span style={{ color: ACCENT, letterSpacing: 0 }}>— type a name</span>
+          </label>
           <input
             autoFocus
-            style={field}
+            style={textField}
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="Fresh Lead Campaign"
+            placeholder="e.g. September Mortgage Leads"
           />
+          {/* ── SAY WHY THE BUTTON IS OFF, WHERE THE PROBLEM IS ───────────
+              nameProblem already existed and was rendered only as `title` on
+              the disabled Create button — a tooltip, on a control you cannot
+              hover on a tablet, describing a field 200px away. Shown here it
+              is attached to the thing it is about. Held back until something
+              has been typed so an untouched form is not scolding. */}
+          {nameProblem && name.length > 0 && (
+            <div style={{ marginTop: 6, fontSize: 12, color: '#f0a03c', lineHeight: 1.5 }}>
+              {nameProblem}
+            </div>
+          )}
           {/* Only once they have started typing. Telling somebody they have
               not filled in a field they have not reached yet is nagging. */}
           {nameProblem && name.length > 0 && (
