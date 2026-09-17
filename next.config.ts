@@ -3,6 +3,17 @@ import { withSentryConfig } from "@sentry/nextjs"
 
 const nextConfig: NextConfig = {
 
+  // ── WHICH BUILD THE BROWSER IS RUNNING ──────────────────────────────────
+  // VERCEL_GIT_COMMIT_SHA is a SERVER variable. `env` inlines it into the
+  // client bundle at build time, which is what lets a long-lived dialer tab
+  // report the code it is actually running -- see lib/buildId.ts for why that
+  // matters and why NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA was not used instead.
+  //
+  // Empty outside Vercel; buildId.ts turns that into 'dev'.
+  env: {
+    NEXT_PUBLIC_BUILD_SHA: process.env.VERCEL_GIT_COMMIT_SHA || '',
+  },
+
   async headers() {
     return [
       {

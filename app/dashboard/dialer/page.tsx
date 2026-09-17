@@ -8,6 +8,7 @@ import { labelFor } from '@/lib/dispositions'
 import { isDialableLead } from '@/lib/dialableLead'
 import type { QueueDiagnosis } from '@/lib/queueDiagnosis'
 import { phoneToState } from '@/lib/areaCode'
+import { BUILD_SHA } from '@/lib/buildId'
 
 /**
  * Whole seconds since a start timestamp, 0 when never started.
@@ -2306,6 +2307,13 @@ function DialerPageInner() {
             campaign_id: isSpecificCampaign ? selectedCampaign : null,
             dialer_mode: dialerMode,
             current_call_id: activeCallSid || null,
+            // ── WHICH CODE THIS TAB IS ACTUALLY RUNNING ──────────────────
+            // Inlined at build time, so it describes the bundle in memory
+            // rather than whatever is currently deployed. That difference is
+            // the entire point: a tab open since this morning reports this
+            // morning's sha, which is how "Reload all dialers" finally became
+            // something that can be confirmed rather than hoped for.
+            client_build: BUILD_SHA,
             // Server-side ghost guard: the controller only fans out lines when
             // the agent has explicitly started the predictive engine.
             // Read from the ref — see the arming site in handleDial for why

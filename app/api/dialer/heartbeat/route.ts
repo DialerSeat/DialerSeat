@@ -208,6 +208,20 @@ export async function POST(req: NextRequest) {
     // Kept only as a diagnostic now — see below. The value that GATES fan-out
     // is read from the session row, not from this.
     const clientClaimsArmed: boolean = body.predictive_armed === true
+
+    // ── WHICH BUILD THE TAB IS RUNNING ─────────────────────────────────────
+    // Undefined from any tab that loaded before this shipped, and that is a
+    // fact worth keeping rather than papering over: NULL means "predates build
+    // reporting", which is different from "reported an old sha". Both are
+    // stale, but only the second proves the tab can hear a reload request.
+    //
+    // Bounded and typed defensively because it lands in a text column that an
+    // admin screen renders. A sha is 7 characters; 40 is room for the full one
+    // without being a place to put anything else.
+    const clientBuild: string | null =
+      typeof body.client_build === 'string' && body.client_build.trim()
+        ? body.client_build.trim().slice(0, 40)
+        : null
     // Ordered lead ids from the dialer's queue panel (always sent now, not
     // just when filtered/shuffled — see page.tsx). Sent as a comma-separated
     // string (consistent with how /api/leads/next already accepts lead_ids
@@ -353,6 +367,11 @@ export async function POST(req: NextRequest) {
           // Country and region only; city and postcode are not collected.
           country: req.headers.get('x-vercel-ip-country')?.slice(0, 4) || null,
           region: req.headers.get('x-vercel-ip-country-region')?.slice(0, 8) || null,
+          // Omitted rather than nulled when the tab did not send one, for the
+          // same reason current_call_id is: a beat from an old tab must not
+          // erase what a newer one recorded. Once a tab reloads onto current
+          // code it starts reporting and keeps reporting.
+          ...(clientBuild ? { client_build: clientBuild } : {}),
           // ── NEVER NULL A SERVER-ASSIGNED CALL ────────────────────────────
           // In every client-dialed mode this column mirrors what the browser
           // is on. Predictive is the opposite: the fan-out bridge assigns the

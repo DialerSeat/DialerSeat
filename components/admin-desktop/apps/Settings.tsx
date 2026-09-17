@@ -1188,6 +1188,30 @@ function DialerPane({ onBack }: { onBack: () => void }) {
   // it landed without waiting for the config to be refetched.
   const [reloadBusy, setReloadBusy] = useState(false)
   const [reloadPushedAt, setReloadPushedAt] = useState<string | null>(null)
+  // Who is actually on current code. Without this the reload button is a
+  // prayer -- it was pressed for the first time on 17 Sept and there was no
+  // way to tell whether a single tab had heard it. null while unread.
+  const [adoption, setAdoption] = useState<{
+    serving: string
+    online: number
+    current: number
+    stale: number
+    unreachable: number
+  } | null>(null)
+
+  // Re-read after pushing a reload as well as on mount, so the row reports what
+  // the press achieved instead of what was true before it. Stable identity: it
+  // is a dependency of the mount effect.
+  const loadAdoption = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/build-adoption')
+      const json = await res.json()
+      if (typeof json?.online === 'number') setAdoption(json)
+    } catch {
+      // Left null. The row falls back to its plain subtitle rather than
+      // claiming a count it could not read.
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -1215,8 +1239,9 @@ function DialerPane({ onBack }: { onBack: () => void }) {
     }
     load()
     loadPool()
+    loadAdoption()
     return () => { cancelled = true }
-  }, [])
+  }, [loadAdoption])
 
   /**
    * Pause or resume the monthly pool reconcile.
@@ -1445,9 +1470,27 @@ function DialerPane({ onBack }: { onBack: () => void }) {
             <SettingsRow
               title="Reload all dialers"
               subtitle={
-                reloadPushedAt
-                  ? `Last pushed ${new Date(reloadPushedAt).toLocaleString()}. Agents reload between calls, never mid-call.`
-                  : 'Asks every open dialer to reload its code. Applied between calls, never mid-call.'
+                // ── SAY WHAT IS TRUE, IN THE ORDER IT MATTERS ─────────────
+                // "Unreachable" leads because it is the one number the button
+                // cannot change: those tabs predate build reporting, so they
+                // also predate the reload handler and will never hear this.
+                // Only the agent reloading by hand clears them. Reporting them
+                // as merely "behind" would send an admin pressing a button
+                // that provably cannot work on them.
+                adoption
+                  ? [
+                      `${adoption.current}/${adoption.online} dialers on ${adoption.serving}.`,
+                      adoption.unreachable > 0
+                        ? `${adoption.unreachable} too old to hear this — they must refresh by hand.`
+                        : null,
+                      adoption.stale > 0 ? `${adoption.stale} behind and reachable.` : null,
+                      reloadPushedAt
+                        ? `Pushed ${new Date(reloadPushedAt).toLocaleTimeString()}.`
+                        : 'Applied between calls, never mid-call.',
+                    ].filter(Boolean).join(' ')
+                  : reloadPushedAt
+                    ? `Last pushed ${new Date(reloadPushedAt).toLocaleString()}. Agents reload between calls, never mid-call.`
+                    : 'Asks every open dialer to reload its code. Applied between calls, never mid-call.'
               }
               isLast
               right={
@@ -1463,6 +1506,11 @@ function DialerPane({ onBack }: { onBack: () => void }) {
                     try {
                       await patch('client_reload_at', new Date().toISOString())
                       setReloadPushedAt(new Date().toISOString())
+                      // Re-read after a beat or two. A dialer applies the
+                      // signal on its next heartbeat and only when it is off a
+                      // call, so reading immediately would always report zero
+                      // progress and make a working button look broken.
+                      setTimeout(() => { void loadAdoption() }, 12_000)
                     } finally {
                       setReloadBusy(false)
                     }
