@@ -113,6 +113,15 @@ export async function listLiveLegs(
 export interface KillResult {
   callControlId: string
   ended: boolean
+  /**
+   * Telnyx still lists this leg as active after the hangup was accepted.
+   *
+   * Not the same as a failed request: the request succeeded and the leg is
+   * still there. It means either the leg cannot be ended through Call Control,
+   * or Telnyx's active-calls listing is holding a leg that no longer exists.
+   * Either way the operator must not be told it ended.
+   */
+  stillListed?: boolean
 }
 
 /**
@@ -130,5 +139,35 @@ export async function killLegs(callControlIds: string[]): Promise<KillResult[]> 
     // gone, which is the end state being asked for.
     out.push({ callControlId: id, ended: await hangupCallControlId(id) })
   }
+
+  // ── THEN ASK TELNYX WHETHER IT ACTUALLY WENT ──────────────────────────
+  // "Ended" above means the hangup request was accepted OR returned 404/422,
+  // and that second case is an inference: a 404 is read as "already gone".
+  // Usually true. Not always -- on 17 Sept a leg reported ended, stayed in
+  // Telnyx's own active-calls listing, and was still there seven hours later
+  // having never emitted a hangup webhook or a cost record. The operator was
+  // told it ended, saw it again, and reasonably concluded it had come back.
+  // It had never left.
+  //
+  // So the report is now evidence rather than inference: re-read the listing
+  // and say which legs are genuinely gone. A leg still listed is reported
+  // `stillListed`, which is the difference between "this did not work" and
+  // "this keeps happening" -- two problems with completely different causes.
+  //
+  // Best effort. If the re-read fails, every leg keeps whatever the hangup
+  // claimed rather than being marked falsely as surviving.
+  try {
+    const after = await listLiveLegs(new Map())
+    if (after.authoritative) {
+      const stillThere = new Set(after.legs.map(l => l.callControlId))
+      for (const r of out) {
+        if (stillThere.has(r.callControlId)) {
+          r.stillListed = true
+          r.ended = false
+        }
+      }
+    }
+  } catch { /* the hangup result stands */ }
+
   return out
 }
