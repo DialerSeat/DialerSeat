@@ -123,8 +123,36 @@ export const UNLIMITED_ATTEMPTS = Number.POSITIVE_INFINITY
  */
 export function lifetimeAttemptCap(dialRepeatCount?: number | null): number {
   if (DIAL_PASSES <= 0) return UNLIMITED_ATTEMPTS
-  const perPass = Math.max(1, Math.min(3, dialRepeatCount ?? 1))
+  const perPass = backToBackAttempts(dialRepeatCount)
   return Math.min(perPass * DIAL_PASSES, MAX_LIFETIME_ATTEMPTS)
+}
+
+/**
+ * How many times in a row a lead is dialed before the queue moves on.
+ *
+ * ── THIS IS WHY 1x/2x/3x DID NOTHING SERVER-SIDE ──────────────────────────
+ * The only reader of dial_repeat_count on the server was lifetimeAttemptCap,
+ * and with DIAL_PASSES at 9 and MAX_LIFETIME_ATTEMPTS at 9 the ladder it was
+ * meant to produce collapsed:
+ *
+ *     dial_repeat_count 1 -> min(1*9, 9) = 9
+ *     dial_repeat_count 2 -> min(2*9, 9) = 9
+ *     dial_repeat_count 3 -> min(3*9, 9) = 9
+ *
+ * Every setting produced an identical cap, so on predictive the control was
+ * inert no matter what anyone selected. The ladder made sense when DIAL_PASSES
+ * was small; the owner raising it to nine is what flattened it, and nothing
+ * noticed because the two numbers live in different places.
+ *
+ * So the per-pass count gets its own function rather than being inferred from
+ * a lifetime cap. They are different rules: this one says "dial twice before
+ * moving on", the other says "nine attempts and the lead is finished". Both are
+ * real, neither should be able to erase the other.
+ *
+ * Clamped 1-3. Three in a row is the ceiling regardless of what is stored.
+ */
+export function backToBackAttempts(dialRepeatCount?: number | null): number {
+  return Math.max(1, Math.min(3, Math.round(dialRepeatCount ?? 1)))
 }
 
 

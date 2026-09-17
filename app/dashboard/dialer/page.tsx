@@ -5752,6 +5752,32 @@ function DialerPageInner() {
                 MIXED
               </span>
             )}
+            {/* Native title rather than a hand-built popover: it reaches
+                keyboard and screen readers, it cannot be clipped by the panel,
+                and it needs no state. The text says what the setting DOES and
+                what it does not, because the two questions people actually ask
+                are "does voicemail count" and "will it redial someone who
+                already picked up". */}
+            <span
+              title={[
+                'REDIAL: how many times in a row a lead is dialed before the queue moves on.',
+                '',
+                '2x - dial, and if nobody picks up, dial that same lead once more, then move on.',
+                '3x - same, up to three times.',
+                '',
+                'Voicemail COUNTS as not picking up: AMD detects the machine, hangs up, and the lead is dialed again.',
+                '',
+                'A HUMAN answering ends it. The lead is never redialed once somebody picks up, whatever this is set to.',
+                '',
+                'Applies to the campaign, not just this screen - predictive reads it server-side. A lead still stops for good at 9 lifetime attempts.',
+              ].join('\n')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 14, height: 14, borderRadius: '50%', cursor: 'help',
+                border: `1px solid ${terminalBorder}`, color: terminalMuted,
+                fontFamily: FUTURA, fontSize: 9, fontWeight: 'bold', lineHeight: 1,
+              }}
+            >?</span>
           </div>
 
           {isQueueDialingArmed && (
