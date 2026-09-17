@@ -1183,13 +1183,14 @@ export default function OpsMap() {
         }}
       >
         <defs>
-          {/* Bloom kept faint. Glow reads as importance, so when everything
-              glows nothing does — and a filter this cheap applied to hundreds
-              of nodes is also the first thing to cost frames at scale. */}
-          <filter id="om-glow" x="-120%" y="-120%" width="340%" height="340%">
-            <feGaussianBlur stdDeviation="0.7" result="b" />
-            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
+          {/* #om-glow was here. Its own comment warned that a filter applied
+              to hundreds of nodes is the first thing to cost frames at scale,
+              and at the pin sizes this map now draws the bloom was a real
+              share of the apparent dot — so it worked against the decluttering
+              it was asked for and was dropped from both ping layers. Removed
+              with them rather than left defined: a filter nothing references
+              is dead weight, and a comment describing a bloom that no longer
+              exists is worse than no comment. */}
           <radialGradient id="om-halo">
             <stop offset="0%" stopColor={CYAN} stopOpacity="0.22" />
             <stop offset="70%" stopColor={CYAN} stopOpacity="0.03" />
@@ -1243,12 +1244,29 @@ export default function OpsMap() {
           return (
             <g key={t.key} style={{ cursor: 'pointer' }}
                onClick={() => { if (!moved.current) setSelected(on ? null : t.key) }}>
-              <circle cx={x} cy={y} r={r * 4} fill="url(#om-halo-t)" />
-              <circle cx={x} cy={y} r={Math.max(r * 3.5, 6 * k)} fill="transparent" />
-              <circle cx={x} cy={y} r={r} fill={AMBER} fillOpacity={0.9}
-                      filter="url(#om-glow)" pointerEvents="none" />
-              <circle cx={x} cy={y} r={r + (on ? 3 : 1.5) * k} fill="none"
-                      stroke={AMBER} strokeOpacity={on ? 0.95 : 0.4} strokeWidth={(on ? 1.4 : 0.7) * k} />
+              {/* Halo matched to the origin pings at 3.4r. These two layers sit
+                  on the same map and a soft edge on one beside a hard edge on
+                  the other reads as a rendering fault rather than a
+                  distinction. */}
+              <circle cx={x} cy={y} r={r * 3.4} fill="url(#om-halo-t)" />
+              {/* Held in SCREEN pixels, raised to match the origins. The dot
+                  lost its ring, so the thing you can actually hit is now
+                  entirely this invisible circle. */}
+              <circle cx={x} cy={y} r={Math.max(r * 4, 8 * k)} fill="transparent" />
+              {/* No glow filter, same reasoning as the origins: at this size
+                  the bloom was a real share of the apparent dot, and hundreds
+                  of filtered nodes is the first thing to cost frames. */}
+              <circle cx={x} cy={y} r={r} fill={AMBER} fillOpacity={0.9} pointerEvents="none" />
+              {/* Ring on selection only. Drawn around every target at 0.4
+                  opacity it roughly tripled each one's footprint to repeat what
+                  the dot already said, and with one of these per state dialed
+                  into that is the whole country wearing rings. Kept for the
+                  selected one because it is the only thing saying which target
+                  you clicked. */}
+              {on && (
+                <circle cx={x} cy={y} r={r + 3 * k} fill="none"
+                        stroke={AMBER} strokeOpacity={0.95} strokeWidth={1.4 * k} />
+              )}
               {/* Native title: hover answers the small question without a
                   click, and it reaches keyboard and screen readers, which a
                   hand-built floating div would not. */}
