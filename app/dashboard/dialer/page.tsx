@@ -2388,12 +2388,7 @@ function DialerPageInner() {
           // is latched and the reload waits for a moment when nothing is live.
           reloadPendingRef.current = true
           const attempt = () => {
-            const busy =
-              statusRef.current === 'connected'
-              || statusRef.current === 'calling'
-              || !!activeCallSidRef.current
-              || !!swCallRef.current
-            if (busy) { setTimeout(attempt, 3000); return }
+            if (isOnLiveCall()) { setTimeout(attempt, 3000); return }
             try { window.location.reload() } catch { /* nothing else to try */ }
           }
           attempt()
@@ -4343,6 +4338,21 @@ function DialerPageInner() {
    */
   const dialInFlightRef = useRef(false)
 
+  /**
+   * Is this agent on a call right now?
+   *
+   * One definition, because two were already being maintained: the reload
+   * handler had these exact four conditions inline, and the dial path had none
+   * at all. Four sources rather than one because each can be true while the
+   * others are briefly not — `status` lags a render, the sid is set the moment
+   * the leg is out, and swCall is the SIP invitation itself.
+   */
+  const isOnLiveCall = () =>
+    statusRef.current === 'connected'
+    || statusRef.current === 'calling'
+    || !!activeCallSidRef.current
+    || !!swCallRef.current
+
   // Schedules the next auto-chain dial, but tracked so it can be cancelled, and
   // re-checks availability when it fires. Use this everywhere instead of a bare
   // setTimeout(() => handleDial(), n).
@@ -4443,6 +4453,33 @@ function DialerPageInner() {
     // Abort latch: if TERMINATE was just pressed, do not start a new call even
     // if this dial was already in flight when the latch was set.
     if (abortDialingRef.current) return
+
+    // ── ONE CALL AT A TIME, NOT ONE PLACEMENT AT A TIME ────────────────────
+    // dialInFlightRef above collapses clicks landing in the same tick, and its
+    // own comment names what it cannot do: "it spans placing the call, not the
+    // call itself". dialLeadCall returns as soon as the leg is out, so the
+    // latch clears while the call is still up. A second click a few hundred
+    // milliseconds later -- an ordinary double-click -- sails through every
+    // guard, claims a SECOND lead and places a SECOND leg.
+    //
+    // The damage is not just the wasted dial. activeCallSidRef is overwritten
+    // by the newer call, so the older one is no longer referenced by this tab:
+    // ABORT hangs up the one it can see and the orphan has to be caught by the
+    // server sweep, which is why aborting took two presses. Meanwhile a real
+    // person may answer a line nobody is looking at.
+    //
+    // Predictive is exempt because its branch below arms an engine rather than
+    // placing a leg, and an agent on a bridged predictive call pressing this
+    // must still be able to arm.
+    //
+    // Announced rather than silent. If this guard is ever wrong the symptom is
+    // a dead button, and a dead button with no explanation is worse than the
+    // bug it was added to fix.
+    if (dialerModeRef.current !== 'predictive' && isOnLiveCall()) {
+      setAmdActivity(prev =>
+        ['ALREADY ON A CALL — finish or skip it first', ...prev].slice(0, 5))
+      return
+    }
 
     setShowDisposition(false)
     setDisposition('')

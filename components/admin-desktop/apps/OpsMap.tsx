@@ -289,6 +289,8 @@ type Persisted = {
   feedOpen?: boolean; ranksOpen?: boolean; pulseOpen?: boolean
   notisOpen?: boolean; compOpen?: boolean
   notisTab?: 'notis' | 'logs'
+  /** When the mini panel was last opened. The LOGS badge counts past it. */
+  logsSeenAt?: string | null
   theme?: OmTheme
   pulseTab?: 'calls' | 'visitors' | 'income'
   compWindow?: '7d' | 'month' | 'all'
@@ -400,6 +402,15 @@ export default function OpsMap() {
   // saved tab would select nothing and render an empty panel.
   const [notisTab, setNotisTab] = useState<'notis' | 'logs'>(
     saved.notisTab === 'logs' ? 'logs' : 'notis')
+  // Last time this panel was opened. Billing events carry no read state of
+  // their own -- see the badge below for why that is the whole problem -- so
+  // "new" is measured against this.
+  const [logsSeenAt, setLogsSeenAt] = useState<string | null>(saved.logsSeenAt ?? null)
+  // The value from BEFORE the current open, kept so rows can still be marked
+  // new while you are looking at them. Stamping logsSeenAt on open would
+  // otherwise clear the badge and the highlighting in the same instant, and a
+  // badge that says 3 over a list with nothing marked is not worth having.
+  const logsSeenBeforeOpenRef = useRef<string | null>(saved.logsSeenAt ?? null)
   const [pulseTab, setPulseTab] = useState<'calls' | 'visitors' | 'income'>(saved.pulseTab ?? 'calls')
   // 'month' is what Telnyx assess, so it is the default even though it is the
   // least flattering — the box should open on the number that matters.
@@ -662,6 +673,7 @@ export default function OpsMap() {
       window.localStorage.setItem(STORE, JSON.stringify({
         mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView, feedSize,
         notisOpen, compOpen, notisTab, pulseTab, compWindow, theme,
+        logsSeenAt,
         callFilter, peopleFilter, peopleSort,
         selected,
         // Rounded before storing. The view changes on every frame of a drag,
@@ -676,7 +688,7 @@ export default function OpsMap() {
       }))
     } catch { /* nothing here is worth failing a render for */ }
   }, [mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView, feedSize,
-      notisOpen, compOpen, notisTab, pulseTab, compWindow, theme,
+      notisOpen, compOpen, notisTab, pulseTab, compWindow, theme, logsSeenAt,
       callFilter, peopleFilter, peopleSort,
       selected, view])
 
@@ -787,6 +799,26 @@ export default function OpsMap() {
     return rows.slice(0, feedSize)
   }, [data?.feed, data?.logs, feedSize])
 
+  // ── THE BADGE COUNTS LOGS, NOT NOTIFICATIONS ──────────────────────────
+  // It used to count unread notis, and notis are the wrong thing to be nagged
+  // about: they are what got PUSHED, they arrive constantly, and most of them
+  // are things the owner already knows. Logs are what HAPPENED -- a signup, a
+  // payment, a plan change -- and that is the thing worth a number on a
+  // corner of the map.
+  //
+  // Billing events have no read state. The server maps them with `unread`
+  // hardcoded false, because billing_events has no read_at column and giving
+  // it one would mean a migration and a write path for something only this
+  // corner box asks about. So "new" is measured the way a feed measures it:
+  // anything stamped after the last time this panel was opened.
+  //
+  // Notification unread state is untouched and still colours the noti rows;
+  // it simply no longer drives a badge.
+  const newLogs = (data?.logs ?? []).filter(
+    l => !logsSeenAt || l.at > logsSeenAt
+  ).length
+  // Still read, still used -- it decides whether opening the panel is worth a
+  // round trip to mark notifications read. It just no longer draws a badge.
   const unreadNotis = (data?.notis ?? []).filter(n => n.unread).length
 
   // ── OPENING THE BOX IS THE ACT OF READING IT ──────────────────────
@@ -802,14 +834,22 @@ export default function OpsMap() {
   const toggleNotis = useCallback(() => {
     const opening = !notisOpen
     setNotisOpen(opening)
-    if (!opening || unreadNotis === 0) return
+    if (!opening) return
+    // Stamp the badge's watermark, keeping the previous one so the rows it was
+    // counting stay marked while they are being looked at.
+    logsSeenBeforeOpenRef.current = logsSeenAt
+    setLogsSeenAt(new Date().toISOString())
+    // Notifications are still marked read on open. The badge no longer comes
+    // from them, but opening the panel is still the moment they were seen, and
+    // this is what keeps this corner in step with the bell.
+    if (unreadNotis === 0) return
     setData(d => d ? { ...d, notis: (d.notis ?? []).map(n => ({ ...n, unread: false })) } : d)
     void fetch('/api/admin/notifications', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'read_all' }),
     }).catch(() => { /* next sync re-reads the truth */ })
-  }, [notisOpen, unreadNotis])
+  }, [notisOpen, unreadNotis, logsSeenAt])
   // BOTH interleaves by time rather than concatenating, so a payment and the
   // notification about it sit next to each other instead of in two piles.
   const notiStream = (
@@ -1841,11 +1881,11 @@ export default function OpsMap() {
             <div className="om-head" onClick={() => toggleNotis()}>
               MINI NOTIS
               <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-                {unreadNotis > 0 && (
+                {newLogs > 0 && (
                   <span style={{
                     background: GREEN, color: VOID, borderRadius: 8, padding: '0 5px',
                     fontSize: 8.5, fontWeight: 900, letterSpacing: 0.5,
-                  }}>{unreadNotis > 99 ? '99+' : unreadNotis}</span>
+                  }}>{newLogs > 99 ? '99+' : newLogs}</span>
                 )}
                 <span className="om-caret">{notisOpen ? '▼' : '▲'}</span>
               </span>
@@ -1865,14 +1905,24 @@ export default function OpsMap() {
                 {notiStream.length === 0 ? (
                   <div style={{ color: DIM, fontSize: 10.5, padding: '8px 9px' }}>Nothing yet.</div>
                 ) : (
-                  notiStream.map(n => (
+                  notiStream.map(n => {
+                    // What counts as "new" differs by tab, because the two
+                    // halves carry different evidence: a notification knows
+                    // whether it was read, a billing event only knows when it
+                    // happened. Measured against the watermark from BEFORE
+                    // this open, so the rows the badge counted stay marked
+                    // while they are being read.
+                    const fresh = notisTab === 'logs'
+                      ? (!logsSeenBeforeOpenRef.current || n.at > logsSeenBeforeOpenRef.current)
+                      : n.unread
+                    return (
                     <div key={n.id} style={{
                       padding: '5px 9px', borderBottom: `1px solid ${EDGE}`,
-                      borderLeft: `2px solid ${n.unread ? AMBER : 'transparent'}`,
+                      borderLeft: `2px solid ${fresh ? AMBER : 'transparent'}`,
                     }}>
                       <div style={{
                         display: 'flex', justifyContent: 'space-between', gap: 8,
-                        fontSize: 10, color: n.unread ? INK : MUTED, fontWeight: n.unread ? 700 : 400,
+                        fontSize: 10, color: fresh ? INK : MUTED, fontWeight: fresh ? 700 : 400,
                       }}>
                         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {n.title}
@@ -1885,7 +1935,8 @@ export default function OpsMap() {
                         <div style={{ fontSize: 9.5, color: DIM, marginTop: 1, lineHeight: 1.4 }}>{n.body}</div>
                       )}
                     </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
               </>
