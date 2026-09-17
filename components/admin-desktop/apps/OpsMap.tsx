@@ -225,6 +225,10 @@ type Noti = {
 type ComplianceWindow = {
   placed: number; connected: number; measured: number; short: number
   shortPct: number | null; answerPct: number | null; avgBilled: number | null
+  /** Every billed leg, from Telnyx's own seconds. The surcharged ratio. */
+  carrierConnected?: number; carrierShort?: number; carrierShortPct?: number | null
+  /** Days the ledger actually covered, so a partial window cannot pose as whole. */
+  ledgerDays?: number | null
 }
 type Visitor = {
   id: string; label: string; signedUp: boolean
@@ -1870,11 +1874,15 @@ export default function OpsMap() {
             <div className="om-head" onClick={() => setCompOpen(o => !o)}>
               COMPLIANCE
               <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-                {comp && comp.shortPct !== null && compMeta && (
+                {/* The CARRIER's ratio, not ours. This badge read 4.1% on the
+                    day Telnyx sent a 18.86% warning letter, because it counted
+                    lead legs and Telnyx counts every leg. Falls back to the
+                    lead-leg figure only when the ledger has nothing. */}
+                {comp && compMeta && (comp.carrierShortPct ?? comp.shortPct) !== null && (
                   <span style={{
-                    color: comp.shortPct > compMeta.threshold ? RED : GREEN,
+                    color: (comp.carrierShortPct ?? comp.shortPct)! > compMeta.threshold ? RED : GREEN,
                     fontFamily: 'ui-monospace, Menlo, monospace', fontWeight: 800, fontSize: 10,
-                  }}>{comp.shortPct.toFixed(1)}%</span>
+                  }}>{(comp.carrierShortPct ?? comp.shortPct)!.toFixed(1)}%</span>
                 )}
                 <span className="om-caret">{compOpen ? '▼' : '▲'}</span>
               </span>
@@ -1900,10 +1908,23 @@ export default function OpsMap() {
                 {/* The one number Telnyx judge, and the line they judge it
                     against, together — a ratio with no threshold beside it is
                     not actionable. */}
-                <Row k={`SHORT CALLS (<=6s)`}
-                     v={comp.shortPct === null ? '-' : `${comp.shortPct.toFixed(1)}% of ${comp.measured}`}
-                     c={comp.shortPct !== null && comp.shortPct > compMeta.threshold ? RED : GREEN} />
+                {/* ── THE CARRIER'S NUMBER FIRST ──────────────────────────
+                    Telnyx bills EVERY leg and bills the agent's WebRTC leg
+                    twice, as a call-control leg and a trunk leg. We hold one
+                    `calls` row per LEAD leg, so the agent side was in neither
+                    half of the old ratio. That is how this box read 4.1% on the
+                    day a 18.86% warning arrived. */}
+                <Row k="SHORT CALLS (<=6s)"
+                     v={comp.carrierShortPct == null
+                          ? 'not measured'
+                          : `${comp.carrierShortPct.toFixed(1)}% of ${comp.carrierConnected ?? 0}`}
+                     c={comp.carrierShortPct != null && comp.carrierShortPct > compMeta.threshold ? RED : GREEN} />
                 <Row k="THEIR LIMIT" v={`${compMeta.threshold}%`} />
+                {/* Kept beside it because the GAP is the finding: lead legs at
+                    0-4% while the account sits at 19% says the problem is the
+                    agent leg, which is exactly where the fix went. */}
+                <Row k="LEAD LEGS ONLY"
+                     v={comp.shortPct === null ? '-' : `${comp.shortPct.toFixed(1)}% of ${comp.measured}`} />
                 <Row k="ANSWER RATE"
                      v={comp.answerPct === null ? '-' : `${comp.answerPct.toFixed(1)}%`} />
                 <Row k="AVG BILLED"
@@ -1918,9 +1939,17 @@ export default function OpsMap() {
                        v={`${compMeta.resetsInDays} day${compMeta.resetsInDays === 1 ? '' : 's'}`}
                        c={compMeta.resetsInDays <= 3 ? CYAN : undefined} />
                 )}
+                {/* A percentage measured over three days and labelled THIS
+                    MONTH is the same class of confidently-wrong number this
+                    box was just fixed for, so the coverage is stated. */}
+                {comp.carrierShortPct != null && comp.ledgerDays != null && (
+                  <Row k="LEDGER COVERS" v={`${comp.ledgerDays.toFixed(1)} days`}
+                       c={comp.ledgerDays < 7 ? AMBER : undefined} />
+                )}
                 <div style={{ fontSize: 9, color: DIM, marginTop: 5, lineHeight: 1.5 }}>
-                  Billed time is answer to hangup, ring excluded, the span
-                  Telnyx charge for. They assess per calendar month.
+                  Top figure is Telnyx&apos;s own billed seconds across every leg,
+                  agent legs included — the ratio they surcharge. Billed time is
+                  answer to hangup, ring excluded. Assessed per calendar month.
                 </div>
               </div>
               </div>

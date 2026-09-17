@@ -78,6 +78,49 @@ export async function GET() {
     const rows = (data || []).map(toRow)
     const month = computeExposure(rows)
 
+    // ── THE CARRIER'S OWN COUNT, BECAUSE OURS WAS MEASURING LESS ──────────
+    // Everything above is built from `calls`, and a `calls` row is the LEAD
+    // leg. The agent's WebRTC leg has no row of its own -- it is a column on
+    // the lead's row -- so it appeared in neither half of the ratio. Telnyx
+    // bills every leg, and bills the agent leg TWICE: once as call-control,
+    // once as the SIP trunk under it.
+    //
+    // That gap is not academic. On 16 Sept Telnyx warned this account at
+    // 18.86%; this screen said 4.1% the same day. Measured from their billed
+    // seconds the lead legs were 0 of 1,143 and the agent legs were 869 of
+    // 3,258. A screen reading a quarter of the real number is worse than none.
+    //
+    // billed_duration_secs is Telnyx's figure from their call.cost webhook --
+    // the one the surcharge is actually computed on. A leg billed ZERO never
+    // connected and belongs in neither half of "short connected / total
+    // connected", so zeros are excluded rather than counted short.
+    const { data: ledger } = await supabase
+      .from('telnyx_ledger_records')
+      .select('payload, occurred_at')
+      .eq('record_type', 'call.cost')
+      .gte('occurred_at', since)
+      .limit(100000)
+
+    let carrierConnected = 0
+    let carrierShort = 0
+    let ledgerFrom: string | null = null
+    let ledgerTo: string | null = null
+    for (const r of (ledger || []) as Array<{ payload: Record<string, unknown>; occurred_at: string }>) {
+      const billed = Number(r.payload?.billed_duration_secs)
+      if (!Number.isFinite(billed) || billed <= 0) continue
+      carrierConnected++
+      if (billed <= 6) carrierShort++
+      if (!ledgerFrom || r.occurred_at < ledgerFrom) ledgerFrom = r.occurred_at
+      if (!ledgerTo || r.occurred_at > ledgerTo) ledgerTo = r.occurred_at
+    }
+    const carrierPct = carrierConnected > 0 ? carrierShort / carrierConnected : null
+    // The ledger is captured, not complete. A ratio over three days labelled
+    // "month to date" is the same confidently-wrong number this is fixing, so
+    // the coverage travels with the figure.
+    const ledgerDays = ledgerFrom && ledgerTo
+      ? Math.round(((Date.parse(ledgerTo) - Date.parse(ledgerFrom)) / 86400000) * 10) / 10
+      : null
+
     // The dilution rate comes from the last 3 days, not the month — the point
     // is whether TODAY's quality is good enough to dial the month back under.
     const recentSince = Date.now() - 3 * 24 * 60 * 60 * 1000
@@ -98,6 +141,19 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
+      // THE number. Lead-leg figures stay below for contrast, because the gap
+      // between them is what says the agent leg is the problem.
+      carrier: {
+        connected: carrierConnected,
+        short: carrierShort,
+        shortPct: carrierPct === null ? null : Math.round(carrierPct * 1000) / 1000,
+        over: carrierPct !== null && carrierPct > SHORT_DURATION_LIMIT,
+        feeUsd: carrierPct !== null && carrierPct > SHORT_DURATION_LIMIT
+          ? Math.round(carrierShort * 0.01 * 100) / 100
+          : 0,
+        ledgerDays,
+        source: 'telnyx call.cost billed_duration_secs, every leg',
+      },
       month_to_date: month,
       last_3_days: recent,
       limits: { short_duration: SHORT_DURATION_LIMIT, abandoned: ABANDONED_LIMIT },
@@ -108,6 +164,15 @@ export async function GET() {
       // Plain language, so the screen answers rather than needing the surcharge
       // articles open beside it.
       notes: [
+        carrierPct === null
+          ? 'No carrier ledger rows in this window — short duration is NOT MEASURED. The lead-leg figures below are not the ratio Telnyx bills on.'
+          : carrierPct > SHORT_DURATION_LIMIT
+            ? `SHORT DURATION IS OVER, measured on Telnyx's own billed seconds across EVERY leg: ` +
+              `${pct(carrierPct)} of ${carrierConnected} connected legs are 6s or less (limit 15%). ` +
+              `That is $${Math.round(carrierShort * 0.01 * 100) / 100} — charged on ALL ${carrierShort}, not just the excess.` +
+              (ledgerDays !== null && ledgerDays < 7 ? ` Ledger covers ${ledgerDays} days, so this is a sample rather than the full month.` : '')
+            : `Short duration ${pct(carrierPct)} of ${carrierConnected} billed legs, under the 15% limit.`,
+        `Lead legs alone are ${pct(month.shortDurationPct)} — the difference is the agent's own WebRTC leg, which Telnyx bills twice and we hold no row for.`,
         month.shortDurationOver
           ? `SHORT DURATION IS OVER: ${pct(month.shortDurationPct)} of connected calls are 6s or less ` +
             `(limit 15%). That is $${month.shortDurationFeeUsd} — charged on ALL ${month.shortDurationCalls} ` +

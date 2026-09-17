@@ -96,7 +96,47 @@ export async function GET() {
       .filter(c => c.billed !== null)
     const short = measured.filter(c => (c.billed ?? 0) <= SHORT_CALL_SECONDS)
 
-    const shortPct = measured.length > 0
+    // ── THE CARRIER COUNTS EVERY LEG; THIS TABLE HOLDS ONLY ONE ──────────
+    // `calls` rows are LEAD legs. The agent's WebRTC leg is a column on the
+    // lead's row, not a row of its own, so it was in neither half of this
+    // ratio -- while Telnyx bills it, and bills it TWICE, as a call-control
+    // leg and the SIP trunk beneath it.
+    //
+    // On 16 Sept Telnyx warned this account at 18.86%. This screen said 4.1%
+    // the same day. From their own billed seconds: lead legs 0 short of 1,143,
+    // agent legs 869 short of 3,258. The agent leg was the entire ratio.
+    //
+    // So the headline is recomputed from telnyx_ledger_records, which holds one
+    // row per BILLED LEG with the carrier's own billed_duration_secs. A leg
+    // billed ZERO never connected and is excluded rather than counted short --
+    // counting zeros put 517 unanswered lead legs in the numerator and made it
+    // look as though the compliance hold had failed when it had not.
+    //
+    // The lead-leg figures below are kept, because the GAP between them is
+    // what identifies the agent leg as the thing to fix.
+    const { data: ledgerRows } = await supabase
+      .from('telnyx_ledger_records')
+      .select('payload')
+      .eq('record_type', 'call.cost')
+      .gte('occurred_at', monthStart.toISOString())
+      .limit(100000)
+
+    let carrierConnected = 0
+    let carrierShort = 0
+    for (const r of (ledgerRows || []) as Array<{ payload: Record<string, unknown> }>) {
+      const billed = Number(r.payload?.billed_duration_secs)
+      if (!Number.isFinite(billed) || billed <= 0) continue
+      carrierConnected++
+      if (billed <= SHORT_CALL_SECONDS) carrierShort++
+    }
+    // Null, never zero, when the ledger has nothing for this window. "Not
+    // measured" and "measured at 0%" are opposite facts and a compliance
+    // screen must not render them the same.
+    const carrierShortPct = carrierConnected > 0
+      ? (carrierShort / carrierConnected) * 100
+      : null
+
+    const leadShortPct = measured.length > 0
       ? (short.length / measured.length) * 100
       : null
     const answerRatePct = placed > 0 ? (connected.length / placed) * 100 : null
@@ -167,14 +207,20 @@ export async function GET() {
           key: 'short_calls',
           label: 'Short-duration calls',
           expects: `At or below ${SHORT_CALL_THRESHOLD_PCT}% of connected calls`,
-          detail: `Telnyx counts any connected call of ${SHORT_CALL_SECONDS}s or less of BILLED time: answer to hangup, ring excluded. Above ${SHORT_CALL_THRESHOLD_PCT}% they may surcharge every short call on the account.`,
-          value: shortPct,
+          detail: `Telnyx counts any connected call of ${SHORT_CALL_SECONDS}s or less of BILLED time: answer to hangup, ring excluded. Above ${SHORT_CALL_THRESHOLD_PCT}% they may surcharge every short call on the account. Measured across EVERY billed leg, agent legs included — the lead-leg-only figure is ${leadShortPct === null ? 'n/a' : leadShortPct.toFixed(1) + '%'}, and the gap between the two is the agent's own WebRTC leg, which Telnyx bills twice.`,
+          // The CARRIER's ratio. This read 4.1% on the day a 18.86% warning
+          // letter arrived, because it counted lead legs and Telnyx counts
+          // every leg. Falls back to lead legs only if the ledger is empty,
+          // and null means NOT MEASURED rather than zero.
+          value: carrierShortPct ?? leadShortPct,
           unit: '%',
           threshold: SHORT_CALL_THRESHOLD_PCT,
           // Lower is better here; every other check is higher-is-better.
           direction: 'below' as const,
-          passing: shortPct === null ? null : shortPct <= SHORT_CALL_THRESHOLD_PCT,
-          sample: measured.length,
+          passing: (carrierShortPct ?? leadShortPct) === null
+            ? null
+            : (carrierShortPct ?? leadShortPct)! <= SHORT_CALL_THRESHOLD_PCT,
+          sample: carrierConnected > 0 ? carrierConnected : measured.length,
         },
         {
           key: 'answer_rate',

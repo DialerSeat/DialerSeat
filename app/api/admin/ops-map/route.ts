@@ -514,6 +514,11 @@ export async function GET(req: NextRequest) {
     const compliance: Record<string, {
       placed: number; connected: number; measured: number; short: number
       shortPct: number | null; answerPct: number | null; avgBilled: number | null
+      // Carrier-sourced, every billed leg. This is the ratio that gets
+      // surcharged; shortPct above is lead legs only and is kept beside it
+      // because the gap between the two IS the finding.
+      carrierConnected: number; carrierShort: number; carrierShortPct: number | null
+      ledgerDays: number | null
     }> = {}
     for (const row of (compRes.data || []) as Array<Record<string, string | number | null>>) {
       compliance[String(row.period)] = {
@@ -524,6 +529,10 @@ export async function GET(req: NextRequest) {
         shortPct: row.short_pct == null ? null : Number(row.short_pct),
         answerPct: row.answer_pct == null ? null : Number(row.answer_pct),
         avgBilled: row.avg_billed == null ? null : Number(row.avg_billed),
+        carrierConnected: Number(row.carrier_connected) || 0,
+        carrierShort: Number(row.carrier_short) || 0,
+        carrierShortPct: row.carrier_short_pct == null ? null : Number(row.carrier_short_pct),
+        ledgerDays: row.ledger_days == null ? null : Number(row.ledger_days),
       }
     }
 
