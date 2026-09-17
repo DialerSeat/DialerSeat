@@ -1215,7 +1215,9 @@ export default function OpsMap() {
                    padding:2.5px 9px; font-size:10.5px; overflow:hidden;
                    font-family: ui-monospace, Menlo, Consolas, monospace; }
         .om-rank:hover { background: var(--om-hover); }
-        @keyframes om-ping { 0%{opacity:.65;transform:scale(1)} 70%{opacity:0;transform:scale(3.2)} 100%{opacity:0;transform:scale(3.2)} }
+        /* om-ping removed with the live ring it drove. A keyframe nothing
+           references is dead weight, and this file has been bitten before by a
+           comment describing an effect that no longer exists. */
         /* A ticker that changes silently is indistinguishable from a frozen
            one. New rows land lit and cool over a second, so a glance tells you
            the feed is alive without watching the clock. */
@@ -1413,10 +1415,18 @@ export default function OpsMap() {
                   you can at least count, but soft glow from six neighbours
                   sums into one bright smear with no countable centres. */}
               <circle cx={x} cy={y} r={r * 3.4} fill={live ? 'url(#om-halo-hot)' : 'url(#om-halo)'} />
-              {live && (
-                <circle cx={x} cy={y} r={r} fill="none" stroke={GREEN} strokeWidth={1.1 * k}
-                        style={{ transformOrigin: `${x}px ${y}px`, animation: 'om-ping 2.4s ease-out infinite' }} />
-              )}
+              {/* ── ONLINE IS A COLOUR, NOT A SHAPE ──────────────────────
+                  A live ping used to carry an expanding ring animating out to
+                  3.2x every 2.4 seconds. That was the last decoration left on
+                  this map after the resting rings came off the origins and the
+                  CALLS MADE pings, and it was the worst of them: a static ring
+                  is a hard edge you can count, but a dozen rings breathing out
+                  of a busy city is motion with no countable centres, and it
+                  pulled the eye to wherever happened to be dialing rather than
+                  to whatever was being looked for.
+                  Online now renders exactly like every other ping -- same
+                  halo, same dot, same selection ring -- and says "live" the
+                  way the rest of this map says everything, with colour. */}
               {/* The visible dot is a few pixels across and shrinking it
                   further made it almost unhittable, especially on a phone.
                   This invisible circle is the actual target: sized in SCREEN
