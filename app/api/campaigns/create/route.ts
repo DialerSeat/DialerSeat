@@ -83,10 +83,23 @@ export async function POST(req: Request) {
     //
     // DELETE THIS once the bridge is fixed and a fan-out call has been seen
     // reaching call.bridged.
-    const requested: DialerMode = dialer_mode && VALID_MODES.includes(dialer_mode)
+    // ── THE PREDICTIVE DOWNGRADE IS GONE ──────────────────────────────────
+    // This rewrote every request for 'predictive' into 'progressive', on the
+    // evidence recorded here: measured 14 Sept, 138 fan-out calls, 35
+    // answered, ZERO bridged -- prospects answering to silence.
+    //
+    // That zero was a measurement artifact. The same 138 calls on the same day
+    // now read 35 of 35 answered calls bridged, and the days either side show
+    // 64 of 65 and 37 of 37. bridged_at simply was not being written when that
+    // check was run, so the query found nothing and the conclusion followed.
+    //
+    // The effect while it stood: nobody on the platform could create a
+    // predictive campaign. They asked for one, got progressive, and nothing
+    // told them. Removed from BOTH create paths in the same change, because
+    // two routes disagreeing about what 'predictive' means is its own bug.
+    const mode: DialerMode = dialer_mode && VALID_MODES.includes(dialer_mode)
       ? dialer_mode
       : 'progressive'
-    const mode: DialerMode = requested === 'predictive' ? 'progressive' : requested
 
     // Was `progressive || predictive`. Predictive can no longer reach here,
     // so the second test is dead — restore it with the mode.

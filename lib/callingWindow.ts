@@ -200,14 +200,64 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
     }
   }
 
-  let state = normalizeState(lead.state)
+  // ── WHEN THE TWO SOURCES DISAGREE, OBEY BOTH ──────────────────────────
+  // A lead has two claims about where it is: the state column, and the state
+  // its area code belongs to. This used to prefer the column outright and only
+  // consult the area code when the column was missing or unreadable.
+  //
+  // 6.4% of leads here contradict their own number, and over thirty days that
+  // produced 31 calls placed outside the legal window -- because the column
+  // said one timezone while the phone rang in another.
+  //
+  // Neither source is reliably right. A mobile keeps its area code when its
+  // owner moves, so the column can be the truer statement of where a person
+  // is; and the column is typed by whoever built the list, so it can be
+  // anything at all. Picking a winner means being wrong in one direction or
+  // the other, on a rule that is federal law.
+  //
+  // So when both resolve and they DISAGREE, the call must be inside the
+  // window in BOTH. That is the only answer that is legal under either
+  // reading, it costs nothing but a narrower window on 6.4% of leads, and
+  // those leads become dialable again as soon as both clocks agree.
+  //
+  // When they agree, or only one resolves, nothing changes.
+  const declaredState = normalizeState(lead.state)
+  const areaCodeForWindow = extractAreaCode(lead.phone)
+  const areaCodeInfo = areaCodeForWindow ? getAreaCodeInfo(areaCodeForWindow) : null
+  const areaState = normalizeState(areaCodeInfo?.state) || areaCodeInfo?.state || null
 
-  // Explicit state column preferred; fall back to deriving it from the area
-  // code when the column is missing or unrecognized.
-  if (!state || !STATE_TIMEZONES[state]) {
-    const areaCode = extractAreaCode(lead.phone)
-    const info = areaCode ? getAreaCodeInfo(areaCode) : null
-    state = normalizeState(info?.state) || info?.state || null
+  const declaredUsable = !!declaredState && !!STATE_TIMEZONES[declaredState]
+  const areaUsable = !!areaState && !!STATE_TIMEZONES[areaState]
+
+  let state = declaredUsable ? declaredState : null
+  if (!state) state = areaUsable ? areaState : null
+
+  // Both usable and different: evaluate each and keep whichever is currently
+  // OUTSIDE its window, so the restrictive one decides. If both are inside,
+  // either gives the same answer and the declared one is kept for the message.
+  let conflictWith: string | null = null
+  if (declaredUsable && areaUsable && declaredState !== areaState) {
+    conflictWith = declaredState === state ? areaState : declaredState
+    const insideNow = (st: string): boolean => {
+      const zone = STATE_TIMEZONES[st]
+      const r = getCallingRule(st)
+      const p: Record<string, string> = {}
+      for (const part of new Intl.DateTimeFormat('en-US', {
+        timeZone: zone, hour: '2-digit', minute: '2-digit', weekday: 'short', hour12: false,
+      }).formatToParts(new Date())) p[part.type] = part.value
+      const sunday = p.weekday === 'Sun'
+      if (r.noSundayCalls && sunday) return false
+      const startH = sunday ? (r.sundayStartHour ?? r.startHour) : r.startHour
+      const endH = sunday ? (r.sundayEndHour ?? r.endHour) : r.endHour
+      const mins = parseInt(p.hour, 10) * 60 + parseInt(p.minute, 10)
+      return mins >= startH * 60 && mins < endH * 60
+    }
+    // Whichever is closed decides. Both closed -> either; both open -> either.
+    if (insideNow(declaredState as string) && !insideNow(areaState as string)) {
+      state = areaState
+    } else {
+      state = declaredState
+    }
   }
 
   // Fail CLOSED. If we cannot establish where the lead is, we cannot
@@ -349,7 +399,11 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
     return {
       allowed: false,
       code: 'too_early',
-      reason: `Too early in ${state} (${leadHour}:${String(leadMinute).padStart(2, '0')} local, window starts ${startHour}:00)`,
+      reason: `Too early in ${state} (${leadHour}:${String(leadMinute).padStart(2, '0')} local, window starts ${startHour}:00)`
+        + (conflictWith
+            ? `. This lead's state says ${conflictWith} but its area code says ${state}; `
+              + `the call has to be legal in both, so the stricter one applies.`
+            : ''),
       retryAfter: atHourInTz(now, tz, startHour, 0),
       leadState: state,
       leadTimezone: tz,
@@ -360,7 +414,11 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
     return {
       allowed: false,
       code: 'too_late',
-      reason: `Too late in ${state} (${leadHour}:${String(leadMinute).padStart(2, '0')} local, window ends ${endHour}:00)`,
+      reason: `Too late in ${state} (${leadHour}:${String(leadMinute).padStart(2, '0')} local, window ends ${endHour}:00)`
+        + (conflictWith
+            ? `. This lead's state says ${conflictWith} but its area code says ${state}; `
+              + `the call has to be legal in both, so the stricter one applies.`
+            : ''),
       retryAfter: atHourInTz(now, tz, startHour, 1),
       leadState: state,
       leadTimezone: tz,

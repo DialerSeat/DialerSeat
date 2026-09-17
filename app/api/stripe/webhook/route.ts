@@ -626,10 +626,32 @@ async function markWhitelabelCanceled(subscription: Stripe.Subscription) {
       .update({ is_active: false })
       .eq('owner_clerk_id', clerkId)
 
-    await supabase
-      .from('users')
-      .update({ subscription_status: 'canceled' })
-      .eq('clerk_id', clerkId)
+    // ── ONLY IF THEY HAVE NOTHING ELSE ────────────────────────────────────
+    // This set the user to 'canceled' unconditionally. Somebody who cancels
+    // white-label while keeping an active Pro subscription would have been
+    // marked cancelled on a plan they are still paying for, and locked out of
+    // it. Found on a real account on 17 Sept: one owner, wl cancelled, pro
+    // active, and the row said canceled.
+    //
+    // The subscription that just ended is already 'canceled' by the update
+    // above, so anything still 'active' here is a DIFFERENT, live plan.
+    const { count: stillActive } = await supabase
+      .from('subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', clerkId)
+      .eq('status', 'active')
+
+    if (!stillActive) {
+      await supabase
+        .from('users')
+        .update({ subscription_status: 'canceled' })
+        .eq('clerk_id', clerkId)
+    } else {
+      console.warn(
+        `[whitelabel-cancel] ${clerkId} keeps ${stillActive} active subscription(s); ` +
+        `tenant deactivated but account left active`
+      )
+    }
 
     const { name, email } = await lookupNameAndEmail(clerkId)
     await sendAdminPush('cancel', `${name} cancelled Manager+ subscription.`)

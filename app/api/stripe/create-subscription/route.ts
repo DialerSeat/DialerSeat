@@ -331,6 +331,49 @@ export async function POST(req: Request) {
     const invoice = subscription.latest_invoice as any
     const confirmationSecret = invoice?.confirmation_secret?.client_secret
 
+    // ── SOMEBODY REACHED THE PAYMENT FORM ─────────────────────────────────
+    // /api/stripe/checkout-failed records WHY a payment failed, and after four
+    // days it held zero rows against three signups stuck at 'incomplete'. It
+    // was not broken: it fires from stripe.confirmPayment's error branch, and
+    // those three never produced an error because they never submitted. They
+    // reached the form and left.
+    //
+    // So the missing signal was never the failure, it was the ARRIVAL. With
+    // this, a stalled signup is finally readable:
+    //
+    //   started, then active            converted
+    //   started, then checkout_failed   a real decline, reason on file
+    //   started, then nothing           abandoned at the form -- OUR problem
+    //
+    // That last row is the one that could not be told from the second, and
+    // they have opposite fixes: one is somebody's bank, the other is our
+    // payment step losing people.
+    //
+    // Server-side on purpose. An abandonment cannot be reported by a page the
+    // person has already closed, so a beforeunload beacon would miss exactly
+    // the case it exists for. This fires the moment Stripe hands back a
+    // payable invoice, which is the last instant we are certain they got that
+    // far.
+    //
+    // Fire-and-forget, and NOT awaited: a diagnostic must never delay or fail
+    // a checkout. amount_cents is NOT NULL on this table and no money has
+    // moved yet, so it records the invoice total as the intended amount.
+    void supabase.from('billing_events').insert({
+      clerk_id: userId,
+      event_type: 'checkout_started',
+      plan: typeof plan === 'string' ? plan.slice(0, 40) : null,
+      amount_cents: typeof invoice?.total === 'number' ? invoice.total : 0,
+      stripe_subscription_id: subscription.id,
+      detail: {
+        subscription_status: subscription.status,
+        has_confirmation_secret: !!confirmationSecret,
+        invoice_id: invoice?.id ?? null,
+        at: new Date().toISOString(),
+      },
+    }).then(({ error }) => {
+      if (error) console.error('[create-subscription] checkout_started insert failed:', error.message)
+    })
+
     // The actual, Stripe-computed amounts for THIS invoice — always derived
     // from the real invoice, never from a hardcoded plan price. This is what
     // the billing page now displays instead of a static "$35/$75" label that
