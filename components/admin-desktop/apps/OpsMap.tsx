@@ -405,12 +405,31 @@ export default function OpsMap() {
   // Last time this panel was opened. Billing events carry no read state of
   // their own -- see the badge below for why that is the whole problem -- so
   // "new" is measured against this.
-  const [logsSeenAt, setLogsSeenAt] = useState<string | null>(saved.logsSeenAt ?? null)
+  // ── A MISSING WATERMARK MEANS "SEEN", NOT "ALL NEW" ────────────────────
+  // Defaulting this to null made every log count as new, and the endpoint
+  // returns its 40-row limit -- so a first load after this shipped showed a
+  // badge of 40. That is exactly the permanent green 40 this panel was
+  // changed to get rid of.
+  //
+  // There is nothing for a first-ever load to be new RELATIVE TO, so the
+  // honest starting point is now. The badge then counts only what arrives
+  // after you first opened the map, which is what it claims to count.
+  const [logsSeenAt, setLogsSeenAt] = useState<string | null>(
+    () => saved.logsSeenAt ?? new Date().toISOString()
+  )
+  // Mirror for effects that must read the current value without depending on
+  // it -- see the stamping effect below, which would otherwise re-run itself.
+  const logsSeenAtRef = useRef<string | null>(logsSeenAt)
+  useEffect(() => { logsSeenAtRef.current = logsSeenAt }, [logsSeenAt])
   // The value from BEFORE the current open, kept so rows can still be marked
   // new while you are looking at them. Stamping logsSeenAt on open would
   // otherwise clear the badge and the highlighting in the same instant, and a
   // badge that says 3 over a list with nothing marked is not worth having.
-  const logsSeenBeforeOpenRef = useRef<string | null>(saved.logsSeenAt ?? null)
+  // Seeded from the state's own initial value, not from `saved` directly: on a
+  // first-ever load those differ, and a null here would highlight all forty
+  // rows amber the first time the panel was opened -- the badge's bug wearing
+  // a different colour.
+  const logsSeenBeforeOpenRef = useRef<string | null>(logsSeenAt)
   const [pulseTab, setPulseTab] = useState<'calls' | 'visitors' | 'income'>(saved.pulseTab ?? 'calls')
   // 'month' is what Telnyx assess, so it is the default even though it is the
   // least flattering — the box should open on the number that matters.
@@ -835,10 +854,10 @@ export default function OpsMap() {
     const opening = !notisOpen
     setNotisOpen(opening)
     if (!opening) return
-    // Stamp the badge's watermark, keeping the previous one so the rows it was
-    // counting stay marked while they are being looked at.
-    logsSeenBeforeOpenRef.current = logsSeenAt
-    setLogsSeenAt(new Date().toISOString())
+    // The log watermark is NOT stamped here. It follows the panel being open
+    // rather than being clicked -- see the effect below for why that
+    // distinction was a bug.
+    //
     // Notifications are still marked read on open. The badge no longer comes
     // from them, but opening the panel is still the moment they were seen, and
     // this is what keeps this corner in step with the bell.
@@ -849,7 +868,32 @@ export default function OpsMap() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'read_all' }),
     }).catch(() => { /* next sync re-reads the truth */ })
-  }, [notisOpen, unreadNotis, logsSeenAt])
+  }, [notisOpen, unreadNotis])
+
+  // ── THE WATERMARK FOLLOWS THE PANEL BEING OPEN, NOT BEING CLICKED ──────
+  // It was stamped inside toggleNotis, which only fires on a CLICK. The panel
+  // remembers being open across reloads, so an already-open panel renders
+  // without anyone toggling it -- the stamp never ran, and the badge sat there
+  // counting every log forever. Refreshing made it reappear every time.
+  //
+  // Driven off data as well as notisOpen so the count stays at zero while the
+  // panel is open and rows keep arriving. You cannot have unseen logs on a
+  // list you are looking at.
+  const panelWasOpenRef = useRef(false)
+  useEffect(() => {
+    if (notisOpen) {
+      // Freeze the highlight watermark on the way IN only, so the rows the
+      // badge was counting stay marked amber while they are being read rather
+      // than clearing on the next five-second sync.
+      if (!panelWasOpenRef.current) {
+        logsSeenBeforeOpenRef.current = logsSeenAtRef.current
+      }
+      setLogsSeenAt(new Date().toISOString())
+    }
+    panelWasOpenRef.current = notisOpen
+    // logsSeenAt is read through its ref precisely so it is not a dependency;
+    // including it would make this effect re-trigger itself forever.
+  }, [notisOpen, data?.logs])
   // BOTH interleaves by time rather than concatenating, so a payment and the
   // notification about it sit next to each other instead of in two piles.
   const notiStream = (
