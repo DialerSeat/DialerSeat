@@ -161,6 +161,68 @@ export async function addSuppression(params: {
 }
 
 /**
+ * Undo a suppression this platform created from a DISPOSITION.
+ *
+ * ── WHY THIS HAD TO EXIST ──────────────────────────────────────────────────
+ * addSuppression had no counterpart, so "mark DO NOT CALL" was a one-way door
+ * with no handle on the other side. Changing the lead's disposition back moved
+ * status and disposition and looked like a restore -- the row left the DNC
+ * filter, went dialable again on paper -- while checkSuppression still matched
+ * the number and refused the dial. A lead that reads as restored and cannot be
+ * called is worse than one that plainly reads as DNC.
+ *
+ * ── IT ONLY REMOVES WHAT A DISPOSITION PUT THERE ───────────────────────────
+ * Narrowed to source='disposition' deliberately. The same table holds rows
+ * from an uploaded scrub list, a platform-wide block, and an inbound STOP
+ * text. Those are somebody exercising a right, and an agent re-dispositioning
+ * a lead must never be able to delete them by accident -- so this can only
+ * lift the suppression that this platform wrote from this action.
+ *
+ * Scope must match too. A campaign DNC lifts the campaign row; it leaves a
+ * user- or platform-scoped block exactly where it is.
+ */
+export async function removeSuppression(params: {
+  phone: string
+  userId?: string | null
+  campaignId?: string | null
+  scope?: SuppressionScope
+}): Promise<{ ok: boolean; removed: number; error?: string }> {
+  const e164 = normalizeToE164(params.phone)
+  if (!e164) return { ok: false, removed: 0, error: 'Not a dialable number' }
+
+  const scope = params.scope ?? 'user'
+  if (scope === 'campaign' && !params.campaignId) {
+    return { ok: false, removed: 0, error: 'campaign-scope removal requires a campaign' }
+  }
+  if (scope === 'user' && !params.userId) {
+    return { ok: false, removed: 0, error: 'user-scope removal requires a user' }
+  }
+  // Platform scope is not removable here at all. A platform block is an
+  // operator decision and has no business being lifted by a disposition.
+  if (scope === 'platform') {
+    return { ok: false, removed: 0, error: 'platform suppressions are not lifted by a disposition' }
+  }
+
+  let q = supabase
+    .from('suppression_list')
+    .delete({ count: 'exact' })
+    .eq('phone_e164', e164)
+    .eq('scope', scope)
+    .eq('source', 'disposition')
+
+  q = scope === 'campaign'
+    ? q.eq('campaign_id', params.campaignId as string)
+    : q.eq('user_id', params.userId as string)
+
+  const { error, count } = await q
+  if (error) {
+    console.error('[suppression] remove failed:', error.message)
+    return { ok: false, removed: 0, error: error.message }
+  }
+  return { ok: true, removed: count ?? 0 }
+}
+
+/**
  * Bulk-add, for CSV uploads. Numbers that don't normalize are reported rather
  * than silently dropped — a customer uploading a scrub list needs to know
  * which rows didn't take, or they'll believe they're covered when they aren't.

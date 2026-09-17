@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { auth } from '@clerk/nextjs/server'
-import { addSuppression, DNC_DISPOSITION_SCOPE } from '@/lib/suppression'
+import { addSuppression, removeSuppression, DNC_DISPOSITION_SCOPE } from '@/lib/suppression'
 import { canonical } from '@/lib/dispositions'
 import { lifetimeAttemptCap } from '@/lib/dialerConstants'
 
@@ -119,6 +119,37 @@ export async function POST(req: NextRequest) {
       })
       if (!result.ok) {
         console.error('[leads/update] suppression write failed:', result.error)
+      }
+    }
+
+    // ── AND MOVING OFF DO NOT CALL HAS TO LIFT IT AGAIN ────────────────────
+    // Marking DNC was a one-way door: addSuppression had no counterpart, so
+    // re-dispositioning the lead moved its status and disposition -- it left
+    // the DNC filter and read as dialable -- while checkSuppression still
+    // matched the number and refused the dial. Restored on the screen,
+    // blocked at the carrier, with nothing saying so.
+    //
+    // Only lifts what a disposition wrote (source='disposition'), at the same
+    // scope. A scrub-list upload, a platform block and an inbound STOP all
+    // live in the same table and are somebody exercising a right; no agent
+    // re-tagging a lead should be able to delete those by accident.
+    if (existing.disposition
+        && canonical(existing.disposition) === 'DO NOT CALL'
+        && canonical(disposition) !== 'DO NOT CALL'
+        && existing.phone) {
+      const lifted = await removeSuppression({
+        phone: existing.phone,
+        userId,
+        campaignId: existing.campaign_id,
+        scope: existing.campaign_id ? DNC_DISPOSITION_SCOPE : 'user',
+      })
+      if (!lifted.ok) {
+        console.error('[leads/update] suppression lift failed:', lifted.error)
+      } else if (lifted.removed > 0) {
+        console.warn(
+          `[leads/update] lifted DNC suppression for lead ${lead_id} ` +
+          `(${lifted.removed} row) — disposition moved to ${disposition}`
+        )
       }
     }
 
