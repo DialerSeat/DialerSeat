@@ -164,6 +164,15 @@ export interface PlatformConfig {
    */
   amd_hold_seconds_after_machine: number
   /**
+   * Telnyx time_limit_secs on the outbound LEAD leg. 0 omits it.
+   *
+   * The only ceiling on this platform the carrier enforces rather than our own
+   * code. Everything else -- watchdog, reaper, alerts -- is code that can be
+   * disarmed, fail to run, or never be told. See the note in
+   * lib/placeOutboundCall.ts for why this is never set on the agent SIP leg.
+   */
+  lead_leg_time_limit_secs: number
+  /**
    * How long after answer a machine verdict is still believed, in seconds.
    *
    * The call is bridged at pickup, so a late verdict is describing a live
@@ -294,6 +303,7 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   // margin over the six-second short-duration threshold, which is the only
   // number in here that costs money if it is crossed.
   amd_hold_seconds_after_machine: 8,
+  lead_leg_time_limit_secs: 7200,
   // A floor, not the final value: handleAmdResult raises this to at least
   // total_analysis_time + 3s so a verdict is never thrown away for arriving
   // exactly when the detector was told to produce it.
@@ -375,6 +385,7 @@ const CONFIG_COLUMNS =
   'leg_watchdog_enabled, leg_watchdog_runaway_seconds, ' +
   'leg_watchdog_untracked_seconds, leg_watchdog_finished_seconds, ' +
   'pool_experiment_pct, pool_experiment_arm, pool_default_strategy, ' +
+  'lead_leg_time_limit_secs, ' +
   'client_reload_at'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD

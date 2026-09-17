@@ -887,6 +887,34 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     timeout_secs: ringTimeoutSecs,
   }
 
+  // ── THE ONE CEILING WE DO NOT ENFORCE OURSELVES ────────────────────────
+  // On 17 Sept a leg stayed live for seven hours. The watchdog judged it 148
+  // times and did nothing because it was disarmed; the hangup API answered 404
+  // and the leg stayed listed; nothing alerted. Every safeguard in the path was
+  // our own code, and our own code is what failed.
+  //
+  // time_limit_secs is enforced by Telnyx. It survives the watchdog being off,
+  // the cron not running, a webhook never arriving and the hangup endpoint
+  // refusing. It is the difference between detecting a runaway leg and making
+  // one impossible.
+  //
+  // ── LEAD LEG ONLY. THIS IS THE ENTIRE LESSON OF THE LAST ATTEMPT ───────
+  // See the reverted note near the top of this file: setting it on BOTH dials
+  // broke live dialing outright -- every leg completed in ~200ms with
+  // hangup_cause 'unspecified' and hangup_source 'unknown', a rejected dial
+  // rather than a hung-up call. That note prescribed the retry in as many
+  // words: the lead leg alone bounds the orphan case without touching the
+  // agent's own SIP leg. Tonight's evidence says why it broke, too -- the agent
+  // leg lives on the SIP credential connection, which is also why Call Control
+  // answers 404 when asked to hang one up.
+  //
+  // Configurable, and 0 omits it entirely. A change that has broken dialing
+  // once must be reversible without a deploy.
+  const timeLimit = dialCfg.lead_leg_time_limit_secs
+  if (typeof timeLimit === 'number' && timeLimit >= 30 && timeLimit <= 14400) {
+    dialBody.time_limit_secs = timeLimit
+  }
+
   // ── RECORDING TOGGLE ──────────────────────────────────────────────────
   // Only set record/record_channels when the campaign has recording
   // turned on. Omitting these entirely (not just setting record: 'false')

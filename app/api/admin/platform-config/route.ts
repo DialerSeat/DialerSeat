@@ -108,6 +108,12 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   leg_watchdog_runaway_seconds: v => intInRange(v, 900, 86400),
   leg_watchdog_untracked_seconds: v => intInRange(v, 120, 86400),
   leg_watchdog_finished_seconds: v => intInRange(v, 30, 3600),
+  // Telnyx's own range is 30-14400; 0 means omit the parameter entirely, which
+  // is the escape hatch. Nothing between 1 and 29 is expressible at the
+  // carrier, so it is rejected here rather than being silently dropped at dial
+  // time and looking like the ceiling simply did not work.
+  lead_leg_time_limit_secs: v =>
+    v === 0 ? 0 : intInRange(v, 30, 14400),
   // 0-100 only. The strategies are checked against the real list rather than
   // "is a string", because an unrecognised value would silently disable the
   // experiment and look like it was running.
