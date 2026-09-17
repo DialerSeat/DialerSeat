@@ -860,6 +860,9 @@ function DialerPageInner() {
   // Progressive is the platform default: every campaign runs it, and this is
   // what an agent gets under All Active until they choose otherwise.
   const [allActiveOverrideMode, setAllActiveOverrideMode] = useState<DialerMode>('progressive')
+  // True when the campaigns this selection covers do not all share one redial
+  // count, so the control can say so rather than pick one and look definite.
+  const [dialRepeatMixed, setDialRepeatMixed] = useState(false)
 
   const [scriptIdx, setScriptIdx] = useState(0)
   // Draggable script-tab ordering. Holds a custom order of tab keys (campaign
@@ -1121,13 +1124,27 @@ function DialerPageInner() {
   useEffect(() => {
     if (isSpecificCampaign && currentCampaign) {
       const persisted = currentCampaign.dial_repeat_count
-      if (persisted === 1 || persisted === 2 || persisted === 3) {
-        setDialRepeatCount(persisted)
-      } else {
-        setDialRepeatCount(1)
-      }
+      setDialRepeatCount(persisted === 2 || persisted === 3 ? persisted : 1)
+      return
     }
-  }, [isSpecificCampaign, currentCampaign?.id, currentCampaign?.dial_repeat_count])
+    // ── ALL ACTIVE READS FROM ALL OF THEM ─────────────────────────────────
+    // This branch is why the control was pulled: it did not exist, so on ALL
+    // ACTIVE the selector sat at whatever was last shown while the campaigns
+    // underneath kept their own values. A control that reports a number it is
+    // not describing is worse than no control, which is exactly what the
+    // removal note said.
+    //
+    // Now it reads every active campaign. They agree -> show it. They differ
+    // -> show the LOWEST, because that is the only value true of all of them,
+    // and flag it mixed so the number is never claiming more than it means.
+    const active = campaigns.filter(c => c.status === 'active')
+    if (active.length === 0) return
+    const vals = active.map(c => (c.dial_repeat_count === 2 || c.dial_repeat_count === 3)
+      ? c.dial_repeat_count : 1)
+    const lowest = Math.min(...vals) as 1 | 2 | 3
+    setDialRepeatCount(lowest)
+    setDialRepeatMixed(vals.some(v => v !== lowest))
+  }, [isSpecificCampaign, currentCampaign?.id, currentCampaign?.dial_repeat_count, campaigns])
 
   const isPredictive = dialerMode === 'predictive'
   const isProgressive = dialerMode === 'progressive'
@@ -4946,20 +4963,35 @@ function DialerPageInner() {
   // here too keeps the selector consistent across a page reload and across
   // modes for the same campaign.
   const handleDialRepeatChange = async (n: 1 | 2 | 3) => {
-    setDialRepeatCount(n) // update immediately — don't block the UI on the network round trip
-    if (!currentCampaign) return // "All Active Campaigns" has no single campaign to persist to
+    setDialRepeatCount(n) // update immediately — don't block the UI on the round trip
+    // ── ALL ACTIVE WRITES TO ALL OF THEM ──────────────────────────────────
+    // This used to `return` here when there was no single campaign, so on ALL
+    // ACTIVE the selector moved and nothing else did. Predictive resolves
+    // redials server-side from the LEAD's own campaign row, so a value that
+    // never reached the row was a setting that did not exist.
+    //
+    // The targets are the campaigns the current selection actually dials: one
+    // when a campaign is picked, every active one otherwise.
+    const targets = currentCampaign
+      ? [currentCampaign]
+      : campaigns.filter(c => c.status === 'active')
+    if (targets.length === 0) return
     try {
-      await fetch('/api/campaigns/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: currentCampaign.id,
-          dial_repeat_count: n,
-        }),
-      })
-      setCampaigns(prev => prev.map(c =>
-        c.id === currentCampaign.id ? { ...c, dial_repeat_count: n } : c
+      const results = await Promise.all(targets.map(c =>
+        fetch('/api/campaigns/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: c.id, dial_repeat_count: n }),
+        }).then(r => ({ id: c.id, ok: r.ok })).catch(() => ({ id: c.id, ok: false }))
       ))
+      const saved = new Set(results.filter(r => r.ok).map(r => r.id))
+      // Only the rows that actually saved. Optimistically marking a campaign
+      // the server refused — a team campaign this agent cannot edit — would
+      // put the UI back to claiming a setting that is not there.
+      setCampaigns(prev => prev.map(c =>
+        saved.has(c.id) ? { ...c, dial_repeat_count: n } : c
+      ))
+      setDialRepeatMixed(saved.size !== targets.length)
     } catch (err) {
       console.error('Dial repeat count change failed:', err)
     }
@@ -5675,13 +5707,52 @@ function DialerPageInner() {
               Beta
             </span>
           )}
-          {/* The 1x/2x/3x repeat selector and its ? tooltip lived here and were
-              removed. They never worked correctly — the count only synced when
-              a specific campaign was selected, so All Active silently sat at 1
-              — and a control that claims to do something it does not is worse
-              than no control. Leads that do not connect come back around when
-              the queue rotates, which is the behaviour people actually wanted
-              from it. */}
+          {/* ── REDIAL COUNT, BACK AND ACTUALLY WIRED ────────────────────
+              This was removed once, for a good reason recorded at the time:
+              the count only synced when a specific campaign was selected, so
+              ALL ACTIVE silently sat at 1 while the campaigns underneath kept
+              their own values. A control that claims to do something it does
+              not is worse than no control.
+
+              That is fixed rather than reintroduced. It now READS every active
+              campaign (agreeing -> that value; differing -> the lowest, marked
+              mixed, because the lowest is the only number true of all of them)
+              and WRITES to every campaign the current selection dials, marking
+              only the rows the server actually accepted.
+
+              2x means: if they do not pick up the first time, dial once more,
+              then move on. Predictive enforces this server-side from the
+              LEAD's own campaign row, which is exactly why the value has to
+              reach the row and not just this selector. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 9, letterSpacing: 1.2, color: terminalMuted, fontFamily: FUTURA }}>
+              REDIAL
+            </span>
+            {([1, 2, 3] as const).map(n => (
+              <button
+                key={n}
+                className="dialer-queue-btn"
+                onClick={() => handleDialRepeatChange(n)}
+                title={n === 1
+                  ? 'Dial each lead once, then move on'
+                  : `Dial each lead up to ${n} times if they do not pick up, then move on`}
+                style={{
+                  border: `1px solid ${dialRepeatCount === n ? terminalAccent : terminalBorder}`,
+                  color: dialRepeatCount === n ? terminalAccent : terminalText,
+                  background: dialRepeatCount === n ? 'rgba(42, 74, 138, 0.08)' : 'transparent',
+                  fontSize: 9, padding: '5px 8px', fontWeight: dialRepeatCount === n ? 'bold' : 'normal',
+                }}
+              >
+                {n}x
+              </button>
+            ))}
+            {dialRepeatMixed && (
+              <span title="The active campaigns do not all share this setting. Picking a value applies it to every one of them."
+                    style={{ fontSize: 9, letterSpacing: 0.5, color: terminalMuted, fontFamily: FUTURA, cursor: 'help' }}>
+                MIXED
+              </span>
+            )}
+          </div>
 
           {isQueueDialingArmed && (
             <span style={{
