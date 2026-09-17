@@ -5,26 +5,49 @@ import { LAND, BORDERS, MAP_W, MAP_H, project } from '@/lib/worldMap'
 
 // ── PALETTE ─────────────────────────────────────────────────────────────
 // Deliberately NOT the admin desktop's chrome. This app is meant to read as
-// its own console rather than a window in a suite, so the panels take the
-// map's own black instead of the surrounding UI's slate, and the only bright
-// colour in the whole thing is data.
-const VOID = '#04060a'        // page + panel background, one colour on purpose
-const SEA = '#060910'
-const LAND_FILL = '#0d141f'
-const LAND_EDGE = '#27384f'
-const GRAT = '#0d1522'
-const EDGE = '#12508a'        // panel borders — dim until something glows on them
-const EDGE_HOT = '#2f8fd8'
-const INK = '#dbe6f5'
-const MUTED = '#7b8ba3'
-const DIM = '#4a5a72'
+// its own console rather than a window in a suite.
+//
+// ── LIGHT, AS OF 17 SEPT ───────────────────────────────────────
+// This was a black terminal with neon data on it. It is now a white console,
+// rebuilt to a reference the owner supplied. The STRUCTURE did not move — the
+// same panels, the same dock, the same tables — only the palette, because
+// every colour in this file already came from the constants below and the
+// component never hardcoded one. That is the whole reason a theme swap was a
+// palette edit rather than a rewrite.
+//
+// Two rules the dark version could take for granted and this one cannot:
+//
+//   CONTRAST RUNS THE OTHER WAY. Neon on black reads at any weight; the same
+//   hues on white are washed out and illegible. Every data colour here is the
+//   darker, more saturated cousin of what it replaced — #3cff9e became
+//   #15934f — chosen to clear 4.5:1 on white rather than to glow.
+//
+//   GLOW IS NOT A LIGHT-THEME DEVICE. The old panels leaned on box-shadow
+//   halos and text-shadow to separate themselves from the void. On white that
+//   reads as smudge, so separation now comes from a hairline border and a
+//   shadow with real geometry.
+//
+// PAGE is the ground the cards sit on; VOID is the cards themselves. The dark
+// theme used one colour for both on purpose, and a light one cannot — white
+// cards on a white page have no edges.
+const PAGE = '#f4f6fa'        // the ground behind every card
+const VOID = '#ffffff'        // card + panel background
+const SEA = '#ffffff'         // map ground, deliberately the same as a card
+const LAND_FILL = '#dbe5f4'   // landmasses
+const LAND_EDGE = '#b7c9e2'   // coastlines
+const GRAT = '#e8eef7'        // graticule
+const EDGE = '#e2e7ef'        // panel borders and hairlines
+const EDGE_HOT = '#1d6fe0'    // the accent: active chips, focused edges
+const INK = '#16202f'         // primary text
+const MUTED = '#69748a'       // secondary text
+const DIM = '#98a3b5'         // tertiary text
 
-const CYAN = '#5fd8ff'
-const GREEN = '#3cff9e'
-const AMBER = '#ffae3c'
-const PINK = '#ff6ec7'
-const RED = '#ff5c5c'
-const VIOLET = '#a98cff'
+const CYAN = '#1d6fe0'        // accent / active state
+const GREEN = '#15934f'       // agents, money, human
+const AMBER = '#c2760a'       // dialed numbers, warnings
+const PINK = '#be2a86'
+const RED = '#cf3434'
+const VIOLET = '#6d45cf'      // voicemail, machine
 
 const MODES = [
   { id: 'visitors', label: 'VISITORS', hint: 'Unique visitors: strangers, not accounts' },
@@ -895,7 +918,7 @@ export default function OpsMap() {
       tabIndex={0}
       onKeyDown={onKeyDown}
       style={{
-        height: '100%', position: 'relative', background: VOID, color: INK,
+        height: '100%', position: 'relative', background: PAGE, color: INK,
         fontFamily: 'ui-sans-serif, system-ui, sans-serif', overflow: 'hidden',
         outline: 'none',
       }}
@@ -905,16 +928,15 @@ export default function OpsMap() {
           background: ${VOID};
           border: 1px solid ${EDGE};
           border-radius: 5px;
-          box-shadow: 0 0 0 1px rgba(18,80,138,0.18), 0 0 10px rgba(18,80,138,0.16), inset 0 0 30px rgba(8,30,54,0.4);
+          box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 4px 12px rgba(16,24,40,0.06);
           display: flex; flex-direction: column; min-height: 0;
         }
         .om-head {
           display:flex; align-items:center; justify-content:center; gap:8px;
           padding:6px 10px; cursor:pointer; user-select:none; position:relative;
           border-bottom:1px solid ${EDGE};
-          background: linear-gradient(180deg, rgba(20,72,124,0.35), rgba(4,6,10,0));
+          background: ${PAGE};
           font-size:10.5px; letter-spacing:3px; font-weight:800; color:${INK};
-          text-shadow: 0 0 6px rgba(95,216,255,0.25);
           flex-shrink:0;
         }
         .om-caret {
@@ -929,21 +951,21 @@ export default function OpsMap() {
           color:${MUTED}; padding:4px 8px; border-bottom:1px solid ${EDGE};
           position:sticky; top:0; background:${VOID}; z-index:1; white-space:nowrap;
         }
-        .om-t td { padding:2.5px 8px; white-space:nowrap; border-bottom:1px solid rgba(18,80,138,0.10); }
-        .om-t tr:hover td { background: rgba(18,80,138,0.14); }
+        .om-t td { padding:2.5px 8px; white-space:nowrap; border-bottom:1px solid rgba(16,24,40,0.05); }
+        .om-t tr:hover td { background: rgba(29,111,224,0.05); }
         .om-scroll { overflow:auto; min-height:0; }
         .om-scroll::-webkit-scrollbar { width:7px; height:7px; }
-        .om-scroll::-webkit-scrollbar-thumb { background:${EDGE}; border-radius:4px; }
+        .om-scroll::-webkit-scrollbar-thumb { background:${DIM}; border-radius:4px; }
         .om-scroll::-webkit-scrollbar-track { background:transparent; }
         .om-chip {
-          background: rgba(4,6,10,0.82); border:1px solid ${EDGE}; color:${MUTED};
+          background: ${VOID}; border:1px solid ${EDGE}; color:${MUTED};
           border-radius:3px; padding:5px 9px; font-size:9.5px; letter-spacing:1.6px;
           font-weight:800; cursor:pointer; white-space:nowrap;
         }
         .om-switch { display:inline-flex; align-items:center; gap:6px; }
         .om-track {
           width:20px; height:10px; border-radius:6px; flex-shrink:0;
-          border:1px solid ${EDGE}; background:rgba(0,0,0,0.5);
+          border:1px solid ${EDGE}; background:rgba(16,24,40,0.06);
           display:inline-flex; align-items:center; padding:0 1px;
           transition: background .12s, border-color .12s;
         }
@@ -951,11 +973,13 @@ export default function OpsMap() {
           width:6px; height:6px; border-radius:50%; background:${DIM};
           transform:translateX(0); transition: transform .12s, background .12s;
         }
-        .om-switch[data-on="true"] .om-track { border-color:${AMBER}; background:rgba(255,174,60,0.2); }
+        .om-switch[data-on="true"] .om-track { border-color:${AMBER}; background:rgba(194,118,10,0.18); }
         .om-switch[data-on="true"] .om-knob { transform:translateX(9px); background:${AMBER}; }
+        /* The active chip is a SOLID accent, not a tinted outline. On black a
+           glow was enough to say "this one"; on white only fill carries it. */
         .om-chip[data-on="true"] {
-          border-color:${EDGE_HOT}; color:${CYAN}; background:rgba(18,80,138,0.28);
-          box-shadow:0 0 7px rgba(47,143,216,0.25);
+          border-color:${EDGE_HOT}; color:#ffffff; background:${EDGE_HOT};
+          box-shadow:0 1px 2px rgba(29,111,224,0.30);
         }
         /* position:relative is load-bearing, the magnitude bar inside each row
            is absolutely positioned, and without it every bar escapes to the
@@ -963,7 +987,7 @@ export default function OpsMap() {
         .om-subbar {
           display:flex; align-items:center; gap:4px; flex-wrap:wrap;
           padding:4px 8px; border-bottom:1px solid ${EDGE};
-          background: rgba(18,80,138,0.07); flex-shrink:0;
+          background: ${PAGE}; flex-shrink:0;
         }
         .om-mini {
           background:transparent; border:1px solid transparent; color:${DIM};
@@ -971,12 +995,12 @@ export default function OpsMap() {
           font-weight:800; cursor:pointer; white-space:nowrap;
         }
         .om-mini:hover { color:${MUTED}; }
-        .om-mini[data-on="true"] { color:${CYAN}; border-color:${EDGE}; background:rgba(18,80,138,0.25); }
+        .om-mini[data-on="true"] { color:${CYAN}; border-color:rgba(29,111,224,0.28); background:rgba(29,111,224,0.08); }
         .om-sep { width:1px; height:11px; background:${EDGE}; margin:0 3px; }
         .om-funnel {
           display:inline-flex; align-items:center; gap:4px; cursor:pointer;
           border:1px solid ${EDGE}; border-radius:3px; padding:1px 5px 1px 6px;
-          background:rgba(18,80,138,0.18); color:${CYAN};
+          background:rgba(29,111,224,0.08); color:${CYAN};
           font-size:8.5px; letter-spacing:1.1px; font-weight:800;
         }
         .om-funnel select {
@@ -987,13 +1011,13 @@ export default function OpsMap() {
         .om-rank { position:relative; display:flex; align-items:center; gap:7px;
                    padding:2.5px 9px; font-size:10.5px; overflow:hidden;
                    font-family: ui-monospace, Menlo, Consolas, monospace; }
-        .om-rank:hover { background: rgba(18,80,138,0.14); }
+        .om-rank:hover { background: rgba(29,111,224,0.05); }
         @keyframes om-ping { 0%{opacity:.65;transform:scale(1)} 70%{opacity:0;transform:scale(3.2)} 100%{opacity:0;transform:scale(3.2)} }
         /* A ticker that changes silently is indistinguishable from a frozen
            one. New rows land lit and cool over a second, so a glance tells you
            the feed is alive without watching the clock. */
         @keyframes om-fresh {
-          0%   { background: rgba(60,255,158,0.22); box-shadow: inset 2px 0 0 ${GREEN}; }
+          0%   { background: rgba(21,147,79,0.13); box-shadow: inset 2px 0 0 ${GREEN}; }
           100% { background: transparent;           box-shadow: inset 2px 0 0 transparent; }
         }
         .om-t tr[data-fresh="1"] td { animation: om-fresh 1.6s ease-out; }
@@ -1013,14 +1037,15 @@ export default function OpsMap() {
            the thing the map is for. */
         .om-hud {
           display:flex; align-items:baseline; gap:5px;
-          background:rgba(6,8,12,0.72); border:1px solid rgba(255,255,255,0.10);
+          background:${VOID}; border:1px solid ${EDGE};
           border-radius:4px; padding:4px 8px;
+          box-shadow:0 1px 2px rgba(16,24,40,0.05);
           font-family:ui-monospace, Menlo, monospace; white-space:nowrap;
         }
         .om-hud-k { font-size:8.5px; letter-spacing:1.4px; color:${DIM}; }
         .om-hud-v { font-size:12px; font-weight:800; color:${INK}; }
         .om-hud-u { font-size:8.5px; letter-spacing:1px; color:${DIM}; }
-        .om-hud-sep { width:1px; height:9px; background:rgba(255,255,255,0.14); }
+        .om-hud-sep { width:1px; height:9px; background:${EDGE}; }
 
         /* The balance reads at a glance from across a room, which the other
            chips do not need to. It is the one number on this screen that stops
@@ -1197,7 +1222,10 @@ export default function OpsMap() {
       <div style={{
         position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
         background:
-          'radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.45) 78%, rgba(0,0,0,0.78) 100%)',
+          // The vignette was there to sink a black map into a black page.
+          // On white it reads as dirt, so it is gone rather than inverted:
+          // there is nothing to hide the edge of any more.
+          'none',
       }} />
 
       {/* ── TOP BAR ─────────────────────────────────────────────────────────
@@ -1404,7 +1432,7 @@ export default function OpsMap() {
                     {detail.people.map((p, i) => (
                       <div key={i} style={{
                         border: `1px solid ${EDGE}`, borderRadius: 3, padding: '6px 7px',
-                        marginBottom: 5, background: 'rgba(18,80,138,0.08)',
+                        marginBottom: 5, background: 'rgba(29,111,224,0.06)',
                       }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: p.online ? GREEN : INK }}>
                           {p.online ? '● ' : ''}{p.label}
@@ -1443,7 +1471,11 @@ export default function OpsMap() {
           style={{
             position: 'absolute', inset: 0, zIndex: 40, display: 'grid',
             placeItems: 'center', padding: 16,
-            background: 'rgba(4,6,10,0.72)', backdropFilter: 'blur(2px)',
+            // A scrim stays dark in a light theme — it is dimming the page,
+            // not matching it — but 0.72 was tuned against black and reads as
+            // a blackout over white. Enough to push the map back, not enough
+            // to lose it.
+            background: 'rgba(16,24,40,0.38)', backdropFilter: 'blur(2px)',
           }}
         >
           <div
@@ -1521,7 +1553,7 @@ export default function OpsMap() {
                     {personCalls.calls.map(c => (
                       <div key={c.id} style={{
                         display: 'flex', alignItems: 'baseline', gap: 8,
-                        padding: '4px 4px', borderBottom: `1px solid ${'rgba(0,0,0,0.06)'}`,
+                        padding: '4px 4px', borderBottom: `1px solid ${EDGE}`,
                         fontSize: 10, whiteSpace: 'nowrap',
                       }}>
                         <span style={{ color: MUTED, flexShrink: 0, width: 84 }}>
