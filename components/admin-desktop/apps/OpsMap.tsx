@@ -1257,15 +1257,27 @@ export default function OpsMap() {
         {/* Origins — people. */}
         {points.map(p => {
           const { x, y } = project(p.lat, p.lon, MAP_W, MAP_H)
-          // Sized for a map with hundreds of these on it, not four.
-          const r = (0.6 + Math.sqrt(p.users / maxUsers) * 1.3) * pingK
+          // ── SIZED FOR A CROWD ─────────────────────────────────
+          // Roughly 40% down from where this started, both ends of the scale.
+          // The old numbers were tuned when a busy map held a dozen pings; at
+          // real volume neighbouring cities merged into one blob and the map
+          // stopped answering the only question it exists for, which is WHERE.
+          //
+          // The floor matters more than the ceiling. Every ping gets at least
+          // 0.35, so a city with one person is still findable, and the sqrt
+          // keeps a city with four hundred from being ten times the size of it.
+          const r = (0.35 + Math.sqrt(p.users / maxUsers) * 0.75) * pingK
           const live = p.online > 0
           const c = live ? GREEN : CYAN
           const on = selected === p.key
           return (
             <g key={p.key} style={{ cursor: 'pointer' }}
                onClick={() => { if (!moved.current) setSelected(on ? null : p.key) }}>
-              <circle cx={x} cy={y} r={r * 5} fill={live ? 'url(#om-halo-hot)' : 'url(#om-halo)'} />
+              {/* The halo shrank with the dot AND lost a multiplier. It is the
+                  quiet half of the clustering problem: a ring is a hard edge
+                  you can at least count, but soft glow from six neighbours
+                  sums into one bright smear with no countable centres. */}
+              <circle cx={x} cy={y} r={r * 3.4} fill={live ? 'url(#om-halo-hot)' : 'url(#om-halo)'} />
               {live && (
                 <circle cx={x} cy={y} r={r} fill="none" stroke={GREEN} strokeWidth={1.1 * k}
                         style={{ transformOrigin: `${x}px ${y}px`, animation: 'om-ping 2.4s ease-out infinite' }} />
@@ -1275,11 +1287,29 @@ export default function OpsMap() {
                   This invisible circle is the actual target: sized in SCREEN
                   pixels via k, so it stays a comfortable tap however small the
                   ping is drawn or however far out the map is zoomed. */}
-              <circle cx={x} cy={y} r={Math.max(r * 3, 7 * k)} fill="transparent" />
-              <circle cx={x} cy={y} r={r} fill={c} fillOpacity={0.95}
-                      filter="url(#om-glow)" pointerEvents="none" />
-              <circle cx={x} cy={y} r={r + (on ? 3.4 : 1.6) * k} fill="none"
-                      stroke={c} strokeOpacity={on ? 1 : 0.55} strokeWidth={(on ? 1.6 : 0.8) * k} />
+              {/* Unchanged in SCREEN pixels, so shrinking the dot did not
+                  shrink the tap target with it — the 8k floor is now doing
+                  almost all the work, which is the point of it being a floor. */}
+              <circle cx={x} cy={y} r={Math.max(r * 4, 8 * k)} fill="transparent" />
+              {/* No glow filter any more. At this size the bloom was a
+                  meaningful share of the apparent dot, so it fought the very
+                  thing that was asked for, and the comment on #om-glow already
+                  warned that hundreds of filtered nodes is the first thing to
+                  cost frames. A crisp dot is smaller AND cheaper. */}
+              <circle cx={x} cy={y} r={r} fill={c} fillOpacity={0.95} pointerEvents="none" />
+              {/* ── THE RING IS NOW SELECTION ONLY ────────────────────────
+                  It used to be drawn around every ping at 0.55 opacity, which
+                  roughly tripled each one's footprint for no information: the
+                  dot already said "someone is here". Dropping it for the
+                  resting state is most of the decluttering.
+                  It stays for the SELECTED ping, because that is the only
+                  thing on the map telling you which one you clicked, and
+                  removing it outright would have traded clutter for a
+                  selection you cannot see. */}
+              {on && (
+                <circle cx={x} cy={y} r={r + 3.4 * k} fill="none"
+                        stroke={c} strokeOpacity={1} strokeWidth={1.6 * k} />
+              )}
               <title>
                 {`${p.label}, ${p.users} ${isVisitors ? 'visitor' : 'person'}${p.users === 1 ? '' : 's'}` +
                  (p.online ? `, ${p.online} dialing now` : '')}
