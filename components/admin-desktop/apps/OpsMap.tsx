@@ -40,7 +40,7 @@ type Mode = (typeof MODES)[number]['id']
 const RANGES = ['12h', '24h', '7d', '30d', '90d', 'all'] as const
 type Range = (typeof RANGES)[number]
 
-const SYNC_MS = 5000
+const SYNC_MS = 3000
 
 /** Feed sizes offered in the dock. The route clamps to 1000 regardless. */
 const FEED_SIZES = [80, 250, 500, 1000]
@@ -396,9 +396,14 @@ export default function OpsMap() {
   const moved = useRef(false)
 
   // ── SYNC ──────────────────────────────────────────────────────────────
-  // Five seconds, and never a spinner after the first paint. A console that
-  // blanks itself every five seconds is unreadable — the refresh has to be
+  // Three seconds, and never a spinner after the first paint. A console that
+  // blanks itself on every refresh is unreadable — the refresh has to be
   // invisible, so `firstLoad` gates the loading state and nothing else does.
+  //
+  // Slower than LiveOps' two seconds on purpose. This payload carries the map,
+  // the feed, compliance and notifications in one response, so it is the
+  // heaviest read in the admin desktop; LiveOps asks a narrower question and
+  // can afford to ask it more often.
   const load = useCallback(async (quiet: boolean) => {
     try {
       const res = await fetch(`/api/admin/ops-map?mode=${mode}&range=${range}&feed=${feedSize}`)
@@ -645,6 +650,28 @@ export default function OpsMap() {
   }, [data?.feed, data?.logs, feedSize])
 
   const unreadNotis = (data?.notis ?? []).filter(n => n.unread).length
+
+  // ── OPENING THE BOX IS THE ACT OF READING IT ──────────────────────
+  // The count used to sit there permanently — a green 40 that was 40 yesterday
+  // and 40 today, which is not a badge, it is decoration. A number nobody can
+  // clear stops being read at all, and then a real 3 looks like the same 40.
+  //
+  // So it clears on open, which is the only moment we know for certain the
+  // notifications were looked at. Optimistic: the badge goes immediately and
+  // the server catches up, because waiting on a round trip to dismiss a badge
+  // is how a box feels broken. If the write fails the next five-second sync
+  // restores the truth, which is the correct direction for this to fail in.
+  const toggleNotis = useCallback(() => {
+    const opening = !notisOpen
+    setNotisOpen(opening)
+    if (!opening || unreadNotis === 0) return
+    setData(d => d ? { ...d, notis: (d.notis ?? []).map(n => ({ ...n, unread: false })) } : d)
+    void fetch('/api/admin/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'read_all' }),
+    }).catch(() => { /* next sync re-reads the truth */ })
+  }, [notisOpen, unreadNotis])
   // BOTH interleaves by time rather than concatenating, so a payment and the
   // notification about it sit next to each other instead of in two piles.
   const notiStream = (
@@ -1564,14 +1591,14 @@ export default function OpsMap() {
             with the Compliance app. */}
         <div className="om-corner-row">
           <div className="om-panel om-corner">
-            <div className="om-head" onClick={() => setNotisOpen(o => !o)}>
+            <div className="om-head" onClick={() => toggleNotis()}>
               MINI NOTIS
               <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {unreadNotis > 0 && (
                   <span style={{
                     background: GREEN, color: VOID, borderRadius: 8, padding: '0 5px',
                     fontSize: 8.5, fontWeight: 900, letterSpacing: 0.5,
-                  }}>{unreadNotis}</span>
+                  }}>{unreadNotis > 99 ? '99+' : unreadNotis}</span>
                 )}
                 <span className="om-caret">{notisOpen ? '▼' : '▲'}</span>
               </span>
