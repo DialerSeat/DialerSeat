@@ -673,7 +673,7 @@ export async function POST(req: NextRequest) {
       // held to clear the carrier's short-duration threshold, which is the
       // whole point of the compliance hold. But the agent was released the
       // moment the verdict landed and must go straight back to the queue
-      // panel — leaving them on the lead profile for the full nine seconds is
+      // panel — leaving them on the lead profile for the whole hold is
       // exactly the "stuck watching a voicemail" this is meant to avoid.
       //
       // Same rule /api/calls/check already applies for every other mode:

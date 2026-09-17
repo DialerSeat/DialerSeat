@@ -6,32 +6,51 @@
 // the one hanging up — a machine verdict, an agent skipping — it holds the
 // line past that threshold rather than dropping it at two seconds.
 //
-// WHY THE NUMBER IS NOT FIXED. A hold of exactly nine seconds produces calls
-// that end at 9.0s, every time, forever. That is a signature: a carrier
+// WHY THE NUMBER IS NOT FIXED. A hold of exactly eight seconds produces calls
+// that end at 8.0s, every time, forever. That is a signature: a carrier
 // looking at duration distributions sees a spike on one value that no human
-// conversation would ever produce, and a spike sitting three seconds above
+// conversation would ever produce, and a spike sitting two seconds above
 // their own short-call threshold is not a subtle one. The point of the hold is
 // to stop being flagged, and a mechanical tell is its own kind of flag.
 //
 // Real call lengths are continuous, so this is too. Each hold picks a fresh
-// target between the configured minimum and three seconds above it, uniformly
-// and at sub-second resolution. Durations land across 9, 10, 11 and 12 with no
-// mode, which is what an ordinary spread of short calls looks like.
+// target between the configured minimum and two and a half seconds above it,
+// uniformly and at sub-second resolution. Durations land across 8, 9 and 10
+// with no mode, which is what an ordinary spread of short calls looks like.
 //
 // THE MINIMUM IS A FLOOR, NOT A TARGET. Nothing here ever returns less than
 // the configured seconds — the whole reason the hold exists is that below it
 // the call is billable as short. Randomness only ever adds.
+//
+// ── WHY THE RANGE CAME DOWN FROM 9-12 ON 17 SEPT ─────────────────────
+// Owner's call, and it is free in both directions: under Telnyx's 60/60 PSTN
+// billing a held leg bills a full minute whether it runs eight seconds or
+// twelve. So this range governs how the traffic LOOKS and how long a line is
+// occupied, not what it costs. Eight still clears the six-second threshold,
+// with two seconds of margin rather than three.
+//
+// What it does buy is occupancy: every held second is a concurrency slot and a
+// pool number that cannot be dialling. Mean hold drops 10.75s -> 9.25s.
+//
+// EXPECT THE OPS TABLE TO READ ONE SECOND HIGHER THAN THIS RANGE. Measured
+// across 595 machine legs on the old floor of 9, talk_seconds landed on
+// 10/11/12/13 in almost exactly the proportions a [9, 12.5) target predicts
+// for 9/10/11/12. That extra second is teardown plus webhook latency, timed
+// against our clock rather than the carrier's — not drift in the hold.
+//
+// The floor is NOT dropped further to cancel that second out. Seven would sit
+// one second off a threshold whose whole purpose is margin.
 // =============================================================================
 
 /**
  * How far above the configured minimum a hold may run.
  *
- * 3.5 rather than 3 so that twelve-second calls actually occur. A uniform
- * spread of 3 over a floor of 9 produces durations in [9, 12), which after
- * truncation to whole billed seconds is only ever 9, 10 or 11 — the top of the
- * intended range never appears, and "sometimes 12" quietly means never.
+ * 2.5 rather than 2 so that ten-second calls actually occur. A uniform spread
+ * of 2 over a floor of 8 produces durations in [8, 10), which after truncation
+ * to whole billed seconds is only ever 8 or 9 — the top of the intended range
+ * never appears, and "sometimes 10" quietly means never.
  */
-export const HOLD_SPREAD_SECONDS = 3.5
+export const HOLD_SPREAD_SECONDS = 2.5
 
 /**
  * Milliseconds a call should live, measured from ANSWER.

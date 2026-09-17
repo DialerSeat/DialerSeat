@@ -1263,7 +1263,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // Detection wins over delivery. See AMD.md for what would need to be true
     // before this is attempted a third time.
 
-    // ── THE 9-SECOND COMPLIANCE HOLD ──────────────────────────────────────
+    // ── THE COMPLIANCE HOLD ────────────────────────────────────────────
     // Telnyx counts a connected call of 6s or less as short duration and
     // surcharges above 15% of connected calls. A machine verdict lands at
     // ~3.8s, so nearly every voicemail falls under their line purely because
@@ -1277,25 +1277,25 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // machine records after the beep, so overrunning it would leave a blank
     // voicemail on every lead. That is the most-reported robocall pattern
     // there is and would cost far more in carrier reputation than the
-    // surcharge saves. Nine seconds is deep inside a greeting.
+    // surcharge saves. Eight to ten seconds is deep inside a greeting.
     //
     // 0 disables, and 0 is the default. Full rule in AMD.md.
     // ── ADVANCE THE QUEUE BEFORE HOLDING, NOT AFTER ───────────────────────
     // This ran after the hold, which meant the lead was only released back
     // into rotation once the hold expired — so the agent sat on a muted line
-    // for the full nine seconds and the next lead came up only when it ended.
+    // for the whole hold and the next lead came up only when it ended.
     //
     // Nothing about advancing depends on the lead's leg being down. The agent
     // was released at the verdict; the parked leg is billing housekeeping
     // running behind them.
     await autoAdvanceLeadNoDisposition(callControlId)
 
-    // `?? 9`, not `?? 0` — the second of two fail-open paths that could switch
+    // `?? 8`, not `?? 0` — the second of two fail-open paths that could switch
     // the compliance hold off without anything saying so. The shipped default
     // in lib/platformConfig.ts is the first; see the note there for why this
     // value has to fail toward holding rather than away from it. An explicit 0
     // in platform_config still disables the feature, because 0 is not nullish.
-    const holdSeconds = platformConfig.amd_hold_seconds_after_machine ?? 9
+    const holdSeconds = platformConfig.amd_hold_seconds_after_machine ?? 8
     if (holdSeconds > 0) {
       // ── A MISSING TIMESTAMP MUST NOT DISABLE THE FEATURE ────────────────
       // This used to require callRow.answered_at and silently do nothing
@@ -1326,9 +1326,9 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
         ? Date.now() - answeredAt
         : 4000
 
-      // Randomised between the floor and three seconds above it — see
-      // lib/complianceHold.ts. A hold that always lands on exactly nine
-      // seconds is a signature, and the point of holding at all is to stop
+      // Randomised between the floor and HOLD_SPREAD_SECONDS above it — see
+      // lib/complianceHold.ts. A hold that always lands on exactly the same
+      // second is a signature, and the point of holding at all is to stop
       // looking like a pattern.
       const remainingMs = remainingHoldMs(holdSeconds, elapsedMs)
       // Only ever extends a call that would otherwise be short. A call already

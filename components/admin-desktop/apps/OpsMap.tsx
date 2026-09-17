@@ -1938,14 +1938,14 @@ export default function OpsMap() {
                             <td className="om-hide-sm" style={{ color: MUTED }}>{f.agentPlace || '-'}</td>
                             <td style={{ color: AMBER }}>{prettyPhone(f.phone)}</td>
                             <td className="om-hide-sm" style={{ color: MUTED }}>{f.targetPlace || 'unknown'}</td>
-                            {/* Nine seconds is the compliance floor, so a short
-                                call is worth seeing without reading the number.
-                                Neither bound applies to a call that is still up
-                                or was never placed. */}
+                            {/* Eight seconds is the compliance floor, so a
+                                short call is worth seeing without reading the
+                                number. Neither bound applies to a call that is
+                                still up or was never placed. */}
                             <td className="om-hide-sm" style={{
                               color: live !== null ? GREEN
                                 : neverPlaced ? DIM
-                                : f.duration >= 9 ? INK : RED,
+                                : f.duration >= 8 ? INK : RED,
                             }}>
                               {live !== null ? mmss(live)
                                 : neverPlaced ? '-'

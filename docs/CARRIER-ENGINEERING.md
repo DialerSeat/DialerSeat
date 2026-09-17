@@ -216,10 +216,13 @@ See `docs/telnyx-questions.md` for the exact wording of the ask.
 > whatever happens; at a 6-second minimum it becomes real money and wants
 > re-tuning.
 
-> **The 9-second hold is working precisely, and this is the proof.** Machine
-> legs run 10.9 seconds after answer: ~2s for AMD to report and hang up, plus
-> the 9-second `amd_hold_seconds_after_machine`. The 10–45s spread in raw
+> **The hold is working precisely, and this is the proof.** On the old floor of
+> 9, machine legs ran 10.9 seconds after answer: ~2s for AMD to report and hang
+> up, plus `amd_hold_seconds_after_machine`. The 10–45s spread in raw
 > `duration` is ring time, not drift. Nothing to tune.
+>
+> **Floor lowered to 8 on 17 Sept** (spread 2.5, so 8/9/10 and never 11). Free
+> in both directions under 60/60 — it buys back line occupancy, not money.
 
 Two consequences that drive everything else:
 
@@ -417,8 +420,8 @@ a mechanical tell is its own kind of flag.
 So each hold picks a fresh target uniformly between the floor and **3.5 seconds**
 above it, at sub-second resolution. Durations land across 9, 10, 11 and 12 with
 no mode — an ordinary spread of short calls. The spread is 3.5 rather than 3
-because a uniform 3 over a floor of 9 yields [9, 12), which truncates to only
-9, 10 or 11: "sometimes twelve" would have quietly meant never.
+because a uniform 2 over a floor of 8 yields [8, 10), which truncates to only
+8 or 9: "sometimes ten" would have quietly meant never.
 
 **Measured from ANSWER, not from dial.** Ring time is neither billed nor counted
 toward the short-call ratio, so holding from dial would both overshoot and vary

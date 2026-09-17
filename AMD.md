@@ -254,8 +254,11 @@ legs count toward the cap. At current volume this is negligible. On a
 predictive floor running several lines per agent it is worth watching against
 the 100 limit.
 
-Config lives in `platform_config.amd_hold_seconds_after_machine`. **0 disables
-it**, which is the default, so it can be turned off instantly without a deploy.
+Config lives in `platform_config.amd_hold_seconds_after_machine`, floor **8**
+since 17 Sept, randomised up to 2.5s above it so held legs land on 8, 9 or 10
+and never 11. **0 disables it**, so it can be turned off instantly without a
+deploy — but note the shipped fallback is 8, not 0: a failed config read must
+not silently switch compliance off.
 
 ## KNOWN-GOOD CONFIG
 

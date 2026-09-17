@@ -252,11 +252,18 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   //
   // The two failure modes are not symmetric. A missed hold is a short-duration
   // call billed against the carrier ratio at $0.01 each. An unwanted hold is
-  // nine seconds of a line nobody is on. Defaulting to the value the platform
+  // a few seconds of a line nobody is on. Defaulting to the value the platform
   // actually runs means a config blip can no longer quietly switch compliance
   // off. Setting it to 0 in platform_config still disables the feature — this
   // changes only what happens when the setting cannot be read.
-  amd_hold_seconds_after_machine: 9,
+  //
+  // EIGHT, not nine, from 17 Sept — owner's call. With HOLD_SPREAD_SECONDS at
+  // 2.5 the hold lands on 8, 9 or 10 and never 11. It saves nothing: 60/60 PSTN
+  // billing charges a full minute for any of them. It shortens how long a pool
+  // number and a concurrency slot are tied up, and it keeps two seconds of
+  // margin over the six-second short-duration threshold, which is the only
+  // number in here that costs money if it is crossed.
+  amd_hold_seconds_after_machine: 8,
   // A floor, not the final value: handleAmdResult raises this to at least
   // total_analysis_time + 3s so a verdict is never thrown away for arriving
   // exactly when the detector was told to produce it.
