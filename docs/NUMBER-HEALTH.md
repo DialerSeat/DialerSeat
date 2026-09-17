@@ -54,23 +54,93 @@ unregistered numbers the selector was actively holding back.
 
 ## 2. How a number actually gets flagged
 
-Three analytics engines decide what US carriers display:
+Three private analytics engines score every outbound call in the US and decide
+what the carrier displays. A number with many short calls and a low answer rate
+looks like a robocaller, because that is what a robocaller looks like.
 
-| engine | primary carrier |
+This is why the compliance work and the number work are the same work. The
+[short-duration surcharge](./CARRIER-ENGINEERING.md) was a Telnyx billing
+event, but the underlying signal — a pile of sub-6-second connected calls — is
+also scored by at least one of these engines. Same behaviour, two bills.
+
+Researched 17 Sept 2026. **No vendor publishes numeric thresholds** — all
+three treat their algorithms as proprietary — so everything below is a
+weighting, not a number. Anyone quoting you "keep calls above X seconds" is
+inferring, and this file will not.
+
+### Who feeds which carrier
+
+| engine | carriers |
 |---|---|
-| **Hiya** | AT&T (powers ActiveArmor) |
-| **First Orion** | T-Mobile |
-| **TNS** | Verizon |
+| **Hiya** | AT&T, Cricket, and Samsung's native Android dialer |
+| **TNS Call Guardian** | Verizon, US Cellular |
+| **First Orion** | T-Mobile, Metro, Boost |
 
-They score on call patterns — volume, call duration distribution, answer rate,
-complaint rate, how many distinct numbers you dial, whether people call back.
-A number with many short calls and a low answer rate looks like a robocaller,
-because that is what a robocaller looks like.
+That mapping matters operationally: a number labelled on Verizon and clean on
+AT&T is a **TNS** problem, and remediating with Hiya will not touch it.
 
-This is why the compliance work and the number work are the same work. Our
-[short-duration surcharge incident](./CARRIER-ENGINEERING.md) was Telnyx
-billing, but the underlying signal — a pile of sub-6-second connected calls —
-is also exactly what an analytics engine scores against.
+### What each one weights
+
+- **Hiya** — consumer feedback loops, call-pattern anomalies (burst dialing,
+  24/7 activity), CNAM consistency, caller enrollment status.
+- **TNS** — origination-network reputation, completion rates,
+  **short-duration-hangup ratios**, STIR/SHAKEN attestation, and **number
+  age**.
+- **First Orion** — direct complaint volume, call-behaviour fingerprints with
+  **heavy weighting on hangup-before-ring patterns**, number-neighbourhood
+  reputation, branded-calling enrollment.
+
+### Three of those land directly on things we already measure
+
+1. **TNS weights short-duration-hangup ratios.** That is the same signal
+   Telnyx surcharged us for on 16 Sept. The billing problem and the Verizon
+   spam-label problem are **one problem**, and fixing the agent leg addressed
+   both. Industry commentary also cites average call duration under 30 seconds
+   as a blocking trigger; treat that figure as indicative, not published.
+
+2. **First Orion heavily weights hangup-before-ring.** Our `AGENT_LEG_FAILED`
+   path tears the lead leg down at roughly 1.2 seconds, which is exactly that
+   shape. It ran at 16.4% of dials on 14 Sept and 5.4% on 17 Sept. This is a
+   T-Mobile reputation risk, not only an agent-experience bug.
+
+3. **TNS weights number age.** Consistent with what we measured on 15 Sept:
+   brand-new numbers answered at **20.5%** while numbers rested 8+ days came
+   back at **16.4%**. Resting does not restore age or history.
+
+### Attestation is not our problem, and would not fix it anyway
+
+Telnyx confirms that **customers who buy numbers from Telnyx should expect A
+attestation**, applied automatically, with no action required and no
+notification. Every number in our pool is Telnyx-purchased, so we are already
+at the strongest signal available.
+
+More importantly, **attestation and spam labelling are separate systems**.
+Bandwidth puts it plainly: *"Attestation is not the same as call blocking or
+spam identification. Those are features within the terminating service
+provider's network."* A call signed A can still be labelled, because the
+analytics engine scores behaviour, not authentication. Anyone selling
+STIR/SHAKEN as a cure for "Spam Likely" is selling the wrong thing.
+
+Telnyx does expose attestation in Call Detail Records. We do not currently
+capture it — `call.cost` payloads carry no attestation field — so confirming
+our real-world attestation would mean pulling CDRs. Worth doing once, to close
+the question with evidence rather than a vendor statement.
+
+### Remediation is slow
+
+Registration and remediation run **2–6 weeks per vendor** from clean
+submission to active status, and each vendor requires separate business
+verification through its own portal: **Hiya Connect** (fastest), **First
+Orion INFORM**, **TNS Enterprise Branded Calling** (slowest).
+
+Two consequences worth planning around:
+
+- **Remediation is not a same-week fix.** A number flagged today is not
+  recovered this month. Buying a replacement number is faster than rescuing a
+  burned one — and at ~$1/month, usually cheaper than the lost connects.
+- **Register before you need it.** Enrollment is itself a positive signal for
+  Hiya and First Orion, so registering a clean number is worth more than
+  registering a flagged one.
 
 ---
 
@@ -199,7 +269,16 @@ Ordered by evidence behind them here.
    while brand-new numbers answered at 20.5%. Resting is a load-shedding tool,
    not a cure.
 6. **Buy numbers rather than working a small pool harder.** Numbers are ~$1/mo
-   and the pool is not a scaling constraint.
+   and the pool is not a scaling constraint. This is also the faster remedy
+   for a flagged number: remediation runs 2-6 weeks per vendor, a replacement
+   runs minutes.
+7. **Keep `AGENT_LEG_FAILED` near zero.** It tears the lead leg down at about
+   1.2 seconds, which is the hangup-before-ring fingerprint First Orion weights
+   most heavily. It was 16.4% of dials on 14 Sept. Treat it as a T-Mobile
+   reputation risk, not only an agent-experience bug.
+8. **Do not buy STIR/SHAKEN as a fix.** Telnyx-purchased numbers already get A
+   attestation automatically, and attestation does not stop spam labelling --
+   the two are separate systems. See section 2.
 
 ---
 
@@ -211,3 +290,33 @@ Ordered by evidence behind them here.
 - **Is the registration tie-break correct?** It concentrates volume on
   registered numbers, and the best answer rates belonged to unregistered ones.
   It may be optimising the wrong thing.
+- **What attestation do our calls actually carry?** Telnyx says A for numbers
+  bought from them, and every pool number qualifies -- but that is a vendor
+  statement, not a measurement. Attestation appears in Telnyx CDRs and not in
+  the `call.cost` payloads we capture, so confirming it means pulling CDRs
+  once.
+- **Which engine is labelling us, if any?** Answer rate cannot tell an AT&T
+  problem from a Verizon one, and they remediate through different portals on
+  different timelines. This is the single question a reputation product answers
+  that nothing free does.
+
+---
+
+## Sources
+
+Vendor documentation, which is authoritative:
+
+- [Telnyx — Number Reputation pricing](https://developers.telnyx.com/docs/number-reputation/pricing)
+- [Telnyx — Number Reputation overview](https://developers.telnyx.com/docs/number-reputation/overview)
+- [Telnyx — Branded Calling pricing](https://telnyx.com/pricing/branded-calling)
+- [Telnyx — Branded Calling display requirements](https://support.telnyx.com/en/articles/16296358-branded-calling-display-requirements)
+- [Telnyx — STIR/SHAKEN with Telnyx](https://support.telnyx.com/en/articles/5402969-stir-shaken-with-telnyx)
+- [Telnyx — Short duration calls](https://support.telnyx.com/en/articles/1130707-what-are-short-duration-calls)
+- [Bandwidth — The ABCs of attestation and analytics](https://www.bandwidth.com/blog/abcs-of-attestation-and-analytics/)
+- [Apple — Allow or silence notifications for a Focus](https://support.apple.com/guide/iphone/allow-or-silence-notifications-for-a-focus-iph21d43af5b/ios)
+
+Industry commentary, used for the engine weightings because the vendors
+publish none themselves. Directionally useful, not authoritative -- nothing
+here should be treated as a threshold:
+
+- [Hiya, TNS, First Orion: who flags your calls](https://lineshield.theidudes.com/blog/hiya-tns-firstorion-spam-labels)

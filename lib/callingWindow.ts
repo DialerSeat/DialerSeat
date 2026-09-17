@@ -235,9 +235,13 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
   // Both usable and different: evaluate each and keep whichever is currently
   // OUTSIDE its window, so the restrictive one decides. If both are inside,
   // either gives the same answer and the declared one is kept for the message.
-  let conflictWith: string | null = null
+  // Null unless the two sources genuinely disagree. Holds the pair verbatim
+  // rather than "the other one": the message names which source said what, and
+  // deriving that from whichever state won is how it ends up printing "state
+  // says TX but area code says TX".
+  let conflict: { declared: string; area: string } | null = null
   if (declaredUsable && areaUsable && declaredState !== areaState) {
-    conflictWith = declaredState === state ? areaState : declaredState
+    conflict = { declared: declaredState as string, area: areaState as string }
     const insideNow = (st: string): boolean => {
       const zone = STATE_TIMEZONES[st]
       const r = getCallingRule(st)
@@ -400,9 +404,9 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
       allowed: false,
       code: 'too_early',
       reason: `Too early in ${state} (${leadHour}:${String(leadMinute).padStart(2, '0')} local, window starts ${startHour}:00)`
-        + (conflictWith
-            ? `. This lead's state says ${conflictWith} but its area code says ${state}; `
-              + `the call has to be legal in both, so the stricter one applies.`
+        + (conflict
+            ? `. This lead's state column says ${conflict.declared} and its area code says `
+              + `${conflict.area}; the call has to be legal in both, so the stricter one applies.`
             : ''),
       retryAfter: atHourInTz(now, tz, startHour, 0),
       leadState: state,
@@ -415,9 +419,9 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
       allowed: false,
       code: 'too_late',
       reason: `Too late in ${state} (${leadHour}:${String(leadMinute).padStart(2, '0')} local, window ends ${endHour}:00)`
-        + (conflictWith
-            ? `. This lead's state says ${conflictWith} but its area code says ${state}; `
-              + `the call has to be legal in both, so the stricter one applies.`
+        + (conflict
+            ? `. This lead's state column says ${conflict.declared} and its area code says `
+              + `${conflict.area}; the call has to be legal in both, so the stricter one applies.`
             : ''),
       retryAfter: atHourInTz(now, tz, startHour, 1),
       leadState: state,

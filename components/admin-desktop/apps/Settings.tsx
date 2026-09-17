@@ -675,6 +675,8 @@ function Sidebar({
 interface PlatformConfigShape {
   /** Set to now() to ask every open dialer to reload its own code. */
   client_reload_at: string | null
+  /** Gates the leg watchdog's HANGUP. False still observes and logs. */
+  leg_watchdog_enabled: boolean
   amd_enabled_global: boolean
   recording_enabled_global: boolean
   number_buying_frozen: boolean
@@ -1375,6 +1377,53 @@ function DialerPane({ onBack }: { onBack: () => void }) {
                 }
               />
             )}
+          </GroupedCard>
+
+          <GroupLabel>Runaway calls</GroupLabel>
+          <GroupedCard>
+            {/* ── THE WATCHDOG STARTS AT THE CARRIER, NOT AT OUR TABLE ─────
+                cron/leg-watchdog asks Telnyx what is actually up every two
+                minutes and ends what should not be. It exists because the
+                stale-call reaper starts from OUR rows and structurally cannot
+                see the expensive case: a leg the carrier has live whose row we
+                already closed, or never wrote. Those bill by the minute and no
+                query over `calls` can find them.
+
+                OFF is the shipped default and this switch gates the HANGUP
+                ONLY. Sightings are recorded and verdicts computed either way,
+                so the dry run accumulates real evidence -- "here is what I
+                would have ended" -- before anything is torn down. A cron that
+                hangs up phone calls should earn its way on.
+
+                Its three rules, in lib/legWatchdog.ts: our row says the call
+                ended but the leg is up; no calls row at all after two separate
+                sightings; or past an absolute 90-minute ceiling. Every one had
+                to survive "could this end a real conversation?" */}
+            <SettingsRow
+              title="Leg watchdog"
+              subtitle={
+                config.leg_watchdog_enabled
+                  ? 'ARMED, ends runaway and untracked legs at the carrier'
+                  : 'Observing only, logs what it would have ended and touches nothing'
+              }
+              isLast
+              right={
+                <IOSSwitch
+                  on={config.leg_watchdog_enabled}
+                  onChange={v => {
+                    // Asymmetric: arming it lets a background job hang up live
+                    // phone calls, and disarming it is always safe. Only the
+                    // dangerous direction asks.
+                    if (v && !window.confirm(
+                      'Arm the leg watchdog? It will hang up legs it judges runaway or untracked. '
+                      + 'Check the dry-run log first.'
+                    )) return
+                    patch('leg_watchdog_enabled', v)
+                  }}
+                  label="Leg watchdog"
+                />
+              }
+            />
           </GroupedCard>
 
           <GroupLabel>Agent browsers</GroupLabel>

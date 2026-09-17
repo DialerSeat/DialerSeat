@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { isCallableNow, isImpossibleUsNumber } from '@/lib/callingWindow'
 
 // =============================================================================
@@ -246,5 +246,71 @@ describe('isImpossibleUsNumber: lenient, but realistic', () => {
     expect(r.allowed).toBe(false)
     expect(r.code).toBe('impossible_number')
     expect(r.reason).toContain('not a dialable US number')
+  })
+})
+
+// =============================================================================
+// WHEN THE STATE COLUMN AND THE AREA CODE DISAGREE
+// =============================================================================
+// 6.4% of leads here contradict their own number, and over thirty days that
+// produced 31 calls placed outside the legal window. The rule preferred the
+// state column outright, so a lead marked CA carrying a New York number was
+// dialed on California hours while the phone rang in New York.
+//
+// Neither source is reliably right -- a mobile keeps its area code when its
+// owner moves, and the column is typed by whoever built the list -- so the call
+// now has to be inside the window in BOTH.
+//
+// The clock is faked rather than injected: isCallableNow deliberately takes no
+// `now`, and adding one purely so a test can reach it would put a parameter in
+// the production signature that nothing in production uses.
+describe('a lead whose state column fights its area code', () => {
+  // 212 is New York (Eastern), 213 is Los Angeles (Pacific). Three hours apart,
+  // the widest ordinary gap in the lower 48 and the one most likely to put a
+  // real call outside the window.
+  const NY_NUMBER = '2125550142'
+  const CA_NUMBER = '2135550142'
+
+  beforeEach(() => { vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('still allows the call when both clocks are inside the window', () => {
+    // 15:00 ET is 12:00 PT on a Wednesday: legal in both.
+    vi.setSystemTime(new Date('2026-09-16T19:00:00Z'))
+    expect(isCallableNow({ phone: NY_NUMBER, state: 'CA' }).allowed).toBe(true)
+  })
+
+  it('refuses when only ONE of the two is outside its window', () => {
+    // 08:30 ET is 05:30 PT. Legal in New York, illegal in California, so the
+    // call must not go out. This is the whole point of obeying both.
+    vi.setSystemTime(new Date('2026-09-16T12:30:00Z'))
+    expect(isCallableNow({ phone: NY_NUMBER, state: 'CA' }).allowed).toBe(false)
+  })
+
+  it('names BOTH sources in the reason, never the same state twice', () => {
+    // The regression this block exists for: the first version derived the pair
+    // from whichever state had won, so it printed "state says CA but area code
+    // says CA" and read as a bug to anyone debugging a hold.
+    vi.setSystemTime(new Date('2026-09-16T12:30:00Z'))
+    const r = isCallableNow({ phone: NY_NUMBER, state: 'CA' })
+    expect(r.allowed).toBe(false)
+    expect(r.reason).toContain('state column says CA')
+    expect(r.reason).toContain('area code says NY')
+  })
+
+  it('says nothing about a conflict when the two agree', () => {
+    vi.setSystemTime(new Date('2026-09-16T19:00:00Z'))
+    const r = isCallableNow({ phone: CA_NUMBER, state: 'CA' })
+    expect(r.allowed).toBe(true)
+    expect(r.reason ?? '').not.toContain('state column says')
+  })
+
+  it('falls back to the area code when the column is unusable', () => {
+    // A blank or nonsense state must not make a lead undialable; the number
+    // still says where it rings.
+    vi.setSystemTime(new Date('2026-09-16T19:00:00Z'))
+    for (const bad of ['', '  ', 'N/A', 'Mexico']) {
+      expect(isCallableNow({ phone: CA_NUMBER, state: bad }).allowed).toBe(true)
+    }
   })
 })
