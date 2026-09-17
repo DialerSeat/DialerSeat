@@ -173,6 +173,18 @@ const COMPARISONS: HubItem[] = [
     keywords: 'real estate investor podio',
   },
   {
+    // Shipped 3 Sept and linked from nowhere until 17 Sept. The test that was
+    // supposed to catch exactly this could not: its matcher looked for the bare
+    // slug in quotes, which never appears here because every entry carries the
+    // full path. It failed on all 25 pages, so the one real orphan among them
+    // was indistinguishable from the noise.
+    href: '/vs/hookedcrm',
+    label: 'VS Hooked CRM',
+    note: 'Dialing built in, not an add-on to a CRM',
+    added: '2026-09-03',
+    keywords: 'crm all in one inbound tacklebox ai',
+  },
+  {
     href: '/vs/aloware',
     label: 'VS Aloware',
     note: 'Where the dialing actually lives',

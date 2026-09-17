@@ -60,10 +60,19 @@ describe('every /vs page is discoverable', () => {
     // An orphan page has no internal links pointing at it, which is close to
     // the worst state a page can be in — it exists, it costs, and no crawler
     // has a reason to reach it.
+    // ── MATCH THE HREF, NOT A BARE SLUG ────────────────────────────────
+    // This looked for `'readymode'` and the index writes `'/vs/readymode'`, so
+    // the quote before the slug never lined up and all 25 pages failed. A test
+    // that fails on everything says nothing about anything: it ran red for
+    // weeks while one page, hookedcrm, was genuinely orphaned, and that page
+    // was invisible among twenty-four false positives.
+    //
+    // Matching on the path with its closing quote is both correct and
+    // stricter -- it cannot be satisfied by the slug appearing in prose.
     const missing = vsRouteSlugs()
       // teams is a distinct landing page with its own navigation entry.
       .filter(slug => slug !== 'teams')
-      .filter(slug => !vsIndexSource.includes(`'${slug}'`))
+      .filter(slug => !vsIndexSource.includes(`/vs/${slug}'`))
     expect(missing, 'these /vs pages are linked from nowhere').toEqual([])
   })
 

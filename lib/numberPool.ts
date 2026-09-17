@@ -129,8 +129,46 @@ export interface PoolNumber {
 export async function pickNumberForLead(
   leadPhone: string,
   dialerMode?: string,
-  leadState?: string | null
+  leadState?: string | null,
+  /**
+   * The number the PREVIOUS attempt on this lead used, for a back-to-back
+   * redial. See the block below for why this matters more than locality does
+   * for those few seconds.
+   */
+  preferNumberId?: string | null
 ): Promise<PoolNumber | null> {
+  // ── A REDIAL SHOULD RING FROM THE SAME NUMBER ─────────────────────────
+  // Apple's Focus and Do Not Disturb let a call through when it is the SECOND
+  // call FROM THE SAME NUMBER within three minutes. That is documented
+  // behaviour and it is most of what 2x/3x is for: reaching somebody whose
+  // phone is sending everything to voicemail.
+  //
+  // The pool defeats it by design. claim_pool_number orders by least-used, so
+  // the first dial raises that number's count and the redial usually draws a
+  // different one. Measured over seven days: of 344 redials inside three
+  // minutes, only 150 rang from the same number. The other 194 arrived as a
+  // brand new caller ID and were screened exactly like a first call.
+  //
+  // Locality is deliberately skipped in this branch. It is the strongest
+  // answer-rate factor we have and it still governs every FIRST dial -- but on
+  // a redial the prospect has already seen this number seconds ago, and being
+  // recognised beats being local.
+  //
+  // Falls through silently when the number is capped, resting or locked by
+  // another dial. A redial from a different number is worth far more than no
+  // redial, so this can never be the reason a call does not go out.
+  if (preferNumberId) {
+    try {
+      const { data, error } = await supabase.rpc('claim_specific_pool_number', { p_id: preferNumberId })
+      if (!error) {
+        const same = ((data ?? []) as PoolNumber[])[0]
+        if (same) return { ...same, selected_by: null }
+      }
+    } catch (err) {
+      console.warn('[numberPool] same-number redial unavailable, falling back:', err)
+    }
+  }
+
   // ── PREDICTIVE MATCHES GEOGRAPHY LIKE EVERYTHING ELSE ────────────────────
   // This used to exclude predictive, on the reasoning that fanning out across
   // many leads at once makes matching a caller ID to "any single lead's

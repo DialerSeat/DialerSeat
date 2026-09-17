@@ -505,7 +505,32 @@ export async function placeOutboundCall(
   }
   recordingEnabled = resolveWithGlobal(recordingEnabled, platform.recording_enabled_global)
 
-  const poolNumber = await pickNumberForLead(toFormatted, dialerMode, leadStateForTcpa)
+  // ── IS THIS A BACK-TO-BACK REDIAL? ────────────────────────────────────
+  // Three minutes, because that is the window Apple's repeated-call rule uses.
+  // Outside it there is nothing to be recognised by and ordinary locality
+  // selection is the better answer, so the lookup is scoped rather than
+  // unbounded -- it must not quietly pin a lead to one number forever.
+  //
+  // Best-effort. A failed lookup means an ordinary dial, never a failed one.
+  let preferNumberId: string | null = null
+  if (leadId) {
+    try {
+      const { data: prior } = await supabase
+        .from('calls')
+        .select('pool_number_id, created_at')
+        .eq('lead_id', leadId)
+        .not('pool_number_id', 'is', null)
+        .gte('created_at', new Date(Date.now() - 3 * 60_000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      preferNumberId = prior?.pool_number_id ?? null
+    } catch { /* ordinary selection is the fallback */ }
+  }
+
+  const poolNumber = await pickNumberForLead(
+    toFormatted, dialerMode, leadStateForTcpa, preferNumberId
+  )
   const fromNumber = poolNumber?.phone_number || process.env.TELNYX_PHONE_NUMBER
 
   if (!fromNumber) {
