@@ -30,24 +30,102 @@ import { LAND, BORDERS, MAP_W, MAP_H, project } from '@/lib/worldMap'
 // PAGE is the ground the cards sit on; VOID is the cards themselves. The dark
 // theme used one colour for both on purpose, and a light one cannot — white
 // cards on a white page have no edges.
-const PAGE = '#f4f6fa'        // the ground behind every card
-const VOID = '#ffffff'        // card + panel background
-const SEA = '#ffffff'         // map ground, deliberately the same as a card
-const LAND_FILL = '#dbe5f4'   // landmasses
-const LAND_EDGE = '#b7c9e2'   // coastlines
-const GRAT = '#e8eef7'        // graticule
-const EDGE = '#e2e7ef'        // panel borders and hairlines
-const EDGE_HOT = '#1d6fe0'    // the accent: active chips, focused edges
-const INK = '#16202f'         // primary text
-const MUTED = '#69748a'       // secondary text
-const DIM = '#98a3b5'         // tertiary text
+// ── TWO THEMES, ONE SET OF NAMES ─────────────────────────────────
+// These are CSS variables rather than hex, and that choice is the difference
+// between a theme switch and a rewrite.
+//
+// The obvious approach is a theme object threaded through the component. It
+// does not work here without gutting the file: these colours are read by
+// module-level helpers (dispColour, amdColour, statusColour) and by six
+// sibling components (LineChart, Pulse, VisitorPulse, IncomeSummary, RankList,
+// Row) that have no access to any React state. Threading a palette through all
+// of them is a 2,500-line refactor of working code to change some colours.
+//
+// A CSS variable needs none of that. It resolves wherever a colour is used —
+// inline styles, template strings in the <style> block, and SVG presentation
+// attributes alike. That last one was the risk, because `fill="var(--x)"` is an
+// attribute rather than a CSS declaration; it was tested in the browser before
+// this was written, and it resolves. Every call site below is unchanged.
+//
+// The palettes live in THEME_CSS at the bottom of this file. The light one is
+// the reference the owner supplied; the dark one is its companion, and is NOT
+// the neon terminal this screen used to be — it is the same console at night.
+const PAGE = 'var(--om-page)'        // the ground behind every card
+const VOID = 'var(--om-void)'        // card + panel background
+const SEA = 'var(--om-sea)'          // map ground
+const LAND_FILL = 'var(--om-land)'   // landmasses
+const LAND_EDGE = 'var(--om-coast)'  // coastlines
+const GRAT = 'var(--om-grat)'        // graticule
+const EDGE = 'var(--om-edge)'        // panel borders and hairlines
+const EDGE_HOT = 'var(--om-accent)'  // the accent: active chips, focused edges
+const INK = 'var(--om-ink)'          // primary text
+const MUTED = 'var(--om-muted)'      // secondary text
+const DIM = 'var(--om-dim)'          // tertiary text
 
-const CYAN = '#1d6fe0'        // accent / active state
-const GREEN = '#15934f'       // agents, money, human
-const AMBER = '#c2760a'       // dialed numbers, warnings
-const PINK = '#be2a86'
-const RED = '#cf3434'
-const VIOLET = '#6d45cf'      // voicemail, machine
+const CYAN = 'var(--om-accent)'      // accent / active state
+const GREEN = 'var(--om-green)'      // agents, money, human
+const AMBER = 'var(--om-amber)'      // dialed numbers, warnings
+const PINK = 'var(--om-pink)'
+const RED = 'var(--om-red)'
+const VIOLET = 'var(--om-violet)'    // voicemail, machine
+
+type OmTheme = 'light' | 'dark'
+
+// ── BOTH PALETTES ───────────────────────────────────────────
+// Scoped to [data-om-theme] on this screen's own root rather than to :root, so
+// the map cannot repaint the admin desktop around it. The attribute is always
+// written, so there is no unstamped state to design for.
+//
+// The values that are NOT simple colours — shadows, hovers, scrims — are
+// variables too. A shadow tuned for white is invisible on black, and a hover
+// tint that works on black is a smear on white; leaving those hardcoded is how
+// a theme switch half-lands.
+const THEME_CSS = `
+  [data-om-theme="light"] {
+    --om-page:#f4f6fa; --om-void:#ffffff; --om-sea:#ffffff;
+    --om-land:#dbe5f4; --om-coast:#b7c9e2; --om-grat:#e8eef7;
+    --om-edge:#e2e7ef; --om-accent:#1d6fe0;
+    --om-ink:#16202f; --om-muted:#69748a; --om-dim:#98a3b5;
+    --om-green:#15934f; --om-amber:#c2760a; --om-pink:#be2a86;
+    --om-red:#cf3434; --om-violet:#6d45cf;
+    /* Composites */
+    --om-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 4px 12px rgba(16,24,40,0.06);
+    --om-hover: rgba(29,111,224,0.05);
+    --om-row-border: rgba(16,24,40,0.05);
+    --om-track: rgba(16,24,40,0.06);
+    --om-accent-soft: rgba(29,111,224,0.08);
+    --om-accent-line: rgba(29,111,224,0.28);
+    --om-fresh: rgba(21,147,79,0.13);
+    --om-scrim: rgba(16,24,40,0.38);
+    --om-amber-soft: rgba(194,118,10,0.18);
+    /* The active chip is solid accent on light — on white, only fill reads. */
+    --om-chip-on-bg:#1d6fe0; --om-chip-on-fg:#ffffff; --om-chip-on-edge:#1d6fe0;
+    --om-chip-on-shadow: 0 1px 2px rgba(29,111,224,0.30);
+  }
+  [data-om-theme="dark"] {
+    --om-page:#0c1016; --om-void:#161c26; --om-sea:#12171f;
+    --om-land:#39414e; --om-coast:#4d5766; --om-grat:#1c232e;
+    --om-edge:#262d38; --om-accent:#388bfd;
+    --om-ink:#e6edf3; --om-muted:#8b949e; --om-dim:#6b7481;
+    --om-green:#3fb950; --om-amber:#d29922; --om-pink:#db61a2;
+    --om-red:#f85149; --om-violet:#a371f7;
+    /* Composites */
+    --om-shadow: 0 1px 2px rgba(0,0,0,0.40), 0 4px 14px rgba(0,0,0,0.30);
+    --om-hover: rgba(56,139,253,0.09);
+    --om-row-border: rgba(255,255,255,0.05);
+    --om-track: rgba(255,255,255,0.08);
+    --om-accent-soft: rgba(56,139,253,0.14);
+    --om-accent-line: rgba(56,139,253,0.34);
+    --om-fresh: rgba(63,185,80,0.16);
+    --om-scrim: rgba(0,0,0,0.62);
+    --om-amber-soft: rgba(210,153,34,0.20);
+    /* On dark the active chip is a RAISED surface, not a blue slab: the accent
+       is already doing work as link and data colour, and a solid blue pill in a
+       row of grey ones reads as an alert rather than a selection. */
+    --om-chip-on-bg:#2d3540; --om-chip-on-fg:#e6edf3; --om-chip-on-edge:#3d4754;
+    --om-chip-on-shadow: none;
+  }
+`
 
 const MODES = [
   { id: 'visitors', label: 'VISITORS', hint: 'Unique visitors: strangers, not accounts' },
@@ -204,6 +282,7 @@ type Persisted = {
   feedOpen?: boolean; ranksOpen?: boolean; pulseOpen?: boolean
   notisOpen?: boolean; compOpen?: boolean
   notisTab?: 'notis' | 'logs'
+  theme?: OmTheme
   pulseTab?: 'calls' | 'visitors' | 'income'
   compWindow?: '7d' | 'month' | 'all'
   showTargets?: boolean; feedView?: 'calls' | 'people' | 'logs'
@@ -306,6 +385,9 @@ export default function OpsMap() {
   const [ranksOpen, setRanksOpen] = useState(saved.ranksOpen ?? true)
   const [pulseOpen, setPulseOpen] = useState(saved.pulseOpen ?? true)
   const [notisOpen, setNotisOpen] = useState(saved.notisOpen ?? false)
+  // Defaults to the light console the owner specified. Remembered per browser
+  // like every other preference on this screen, so it survives a reload.
+  const [theme, setTheme] = useState<OmTheme>(saved.theme ?? 'light')
   // Coerced, not trusted: 'both' and 'visitors' were valid until now and are
   // still in localStorage for anyone who used this before. An unrecognised
   // saved tab would select nothing and render an empty panel.
@@ -546,7 +628,7 @@ export default function OpsMap() {
     try {
       window.localStorage.setItem(STORE, JSON.stringify({
         mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView, feedSize,
-        notisOpen, compOpen, notisTab, pulseTab, compWindow,
+        notisOpen, compOpen, notisTab, pulseTab, compWindow, theme,
         callFilter, peopleFilter, peopleSort,
         selected,
         // Rounded before storing. The view changes on every frame of a drag,
@@ -561,7 +643,7 @@ export default function OpsMap() {
       }))
     } catch { /* nothing here is worth failing a render for */ }
   }, [mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView, feedSize,
-      notisOpen, compOpen, notisTab, pulseTab, compWindow,
+      notisOpen, compOpen, notisTab, pulseTab, compWindow, theme,
       callFilter, peopleFilter, peopleSort,
       selected, view])
 
@@ -917,6 +999,9 @@ export default function OpsMap() {
       ref={rootRef}
       tabIndex={0}
       onKeyDown={onKeyDown}
+      // Every variable in THEME_CSS hangs off this attribute. Always written,
+      // so there is no third, unstamped state for anything to fall through to.
+      data-om-theme={theme}
       style={{
         height: '100%', position: 'relative', background: PAGE, color: INK,
         fontFamily: 'ui-sans-serif, system-ui, sans-serif', overflow: 'hidden',
@@ -924,11 +1009,12 @@ export default function OpsMap() {
       }}
     >
       <style>{`
+        ${THEME_CSS}
         .om-panel {
           background: ${VOID};
           border: 1px solid ${EDGE};
           border-radius: 5px;
-          box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 4px 12px rgba(16,24,40,0.06);
+          box-shadow: var(--om-shadow);
           display: flex; flex-direction: column; min-height: 0;
         }
         .om-head {
@@ -951,8 +1037,8 @@ export default function OpsMap() {
           color:${MUTED}; padding:4px 8px; border-bottom:1px solid ${EDGE};
           position:sticky; top:0; background:${VOID}; z-index:1; white-space:nowrap;
         }
-        .om-t td { padding:2.5px 8px; white-space:nowrap; border-bottom:1px solid rgba(16,24,40,0.05); }
-        .om-t tr:hover td { background: rgba(29,111,224,0.05); }
+        .om-t td { padding:2.5px 8px; white-space:nowrap; border-bottom:1px solid var(--om-row-border); }
+        .om-t tr:hover td { background: var(--om-hover); }
         .om-scroll { overflow:auto; min-height:0; }
         .om-scroll::-webkit-scrollbar { width:7px; height:7px; }
         .om-scroll::-webkit-scrollbar-thumb { background:${DIM}; border-radius:4px; }
@@ -965,7 +1051,7 @@ export default function OpsMap() {
         .om-switch { display:inline-flex; align-items:center; gap:6px; }
         .om-track {
           width:20px; height:10px; border-radius:6px; flex-shrink:0;
-          border:1px solid ${EDGE}; background:rgba(16,24,40,0.06);
+          border:1px solid ${EDGE}; background:var(--om-track);
           display:inline-flex; align-items:center; padding:0 1px;
           transition: background .12s, border-color .12s;
         }
@@ -973,13 +1059,13 @@ export default function OpsMap() {
           width:6px; height:6px; border-radius:50%; background:${DIM};
           transform:translateX(0); transition: transform .12s, background .12s;
         }
-        .om-switch[data-on="true"] .om-track { border-color:${AMBER}; background:rgba(194,118,10,0.18); }
+        .om-switch[data-on="true"] .om-track { border-color:${AMBER}; background:var(--om-amber-soft); }
         .om-switch[data-on="true"] .om-knob { transform:translateX(9px); background:${AMBER}; }
         /* The active chip is a SOLID accent, not a tinted outline. On black a
            glow was enough to say "this one"; on white only fill carries it. */
         .om-chip[data-on="true"] {
-          border-color:${EDGE_HOT}; color:#ffffff; background:${EDGE_HOT};
-          box-shadow:0 1px 2px rgba(29,111,224,0.30);
+          border-color:var(--om-chip-on-edge); color:var(--om-chip-on-fg);
+          background:var(--om-chip-on-bg); box-shadow:var(--om-chip-on-shadow);
         }
         /* position:relative is load-bearing, the magnitude bar inside each row
            is absolutely positioned, and without it every bar escapes to the
@@ -995,12 +1081,12 @@ export default function OpsMap() {
           font-weight:800; cursor:pointer; white-space:nowrap;
         }
         .om-mini:hover { color:${MUTED}; }
-        .om-mini[data-on="true"] { color:${CYAN}; border-color:rgba(29,111,224,0.28); background:rgba(29,111,224,0.08); }
+        .om-mini[data-on="true"] { color:${CYAN}; border-color:var(--om-accent-line); background:var(--om-accent-soft); }
         .om-sep { width:1px; height:11px; background:${EDGE}; margin:0 3px; }
         .om-funnel {
           display:inline-flex; align-items:center; gap:4px; cursor:pointer;
           border:1px solid ${EDGE}; border-radius:3px; padding:1px 5px 1px 6px;
-          background:rgba(29,111,224,0.08); color:${CYAN};
+          background:var(--om-accent-soft); color:${CYAN};
           font-size:8.5px; letter-spacing:1.1px; font-weight:800;
         }
         .om-funnel select {
@@ -1011,13 +1097,13 @@ export default function OpsMap() {
         .om-rank { position:relative; display:flex; align-items:center; gap:7px;
                    padding:2.5px 9px; font-size:10.5px; overflow:hidden;
                    font-family: ui-monospace, Menlo, Consolas, monospace; }
-        .om-rank:hover { background: rgba(29,111,224,0.05); }
+        .om-rank:hover { background: var(--om-hover); }
         @keyframes om-ping { 0%{opacity:.65;transform:scale(1)} 70%{opacity:0;transform:scale(3.2)} 100%{opacity:0;transform:scale(3.2)} }
         /* A ticker that changes silently is indistinguishable from a frozen
            one. New rows land lit and cool over a second, so a glance tells you
            the feed is alive without watching the clock. */
         @keyframes om-fresh {
-          0%   { background: rgba(21,147,79,0.13); box-shadow: inset 2px 0 0 ${GREEN}; }
+          0%   { background: var(--om-fresh); box-shadow: inset 2px 0 0 ${GREEN}; }
           100% { background: transparent;           box-shadow: inset 2px 0 0 transparent; }
         }
         .om-t tr[data-fresh="1"] td { animation: om-fresh 1.6s ease-out; }
@@ -1039,7 +1125,7 @@ export default function OpsMap() {
           display:flex; align-items:baseline; gap:5px;
           background:${VOID}; border:1px solid ${EDGE};
           border-radius:4px; padding:4px 8px;
-          box-shadow:0 1px 2px rgba(16,24,40,0.05);
+          box-shadow:var(--om-shadow);
           font-family:ui-monospace, Menlo, monospace; white-space:nowrap;
         }
         .om-hud-k { font-size:8.5px; letter-spacing:1.4px; color:${DIM}; }
@@ -1256,6 +1342,31 @@ export default function OpsMap() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: 5, pointerEvents: 'auto', marginLeft: 'auto' }}>
+          {/* ── SUN / MOON, NO WORDS ───────────────────────────────
+              Shows the icon for the theme it will SWITCH TO, not the one in
+              use — a toggle is a button, and a button should say what happens
+              when it is pressed. The title carries the words this has none of,
+              which is also what a screen reader reads.
+              Deliberately not data-on: it is never "active", it just flips. */}
+          <button className="om-chip" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+                  title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+                  aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                  style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 8px' }}>
+            {theme === 'dark' ? (
+              // Sun: pressing this returns to light.
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <circle cx="12" cy="12" r="4.2" />
+                <path d="M12 1.8v2.6M12 19.6v2.6M4.0 4.0l1.9 1.9M18.1 18.1l1.9 1.9M1.8 12h2.6M19.6 12h2.6M4.0 20.0l1.9-1.9M18.1 5.9l1.9-1.9" />
+              </svg>
+            ) : (
+              // Moon: pressing this goes to dark.
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.5 14.3A8.6 8.6 0 1 1 9.7 3.5a6.9 6.9 0 0 0 10.8 10.8z" />
+              </svg>
+            )}
+          </button>
           {/* A switch rather than a chip: this hides a whole layer of the
               map, and a toggle that looks like the mode buttons beside it
               invites being read as another mode. */}
@@ -1432,7 +1543,7 @@ export default function OpsMap() {
                     {detail.people.map((p, i) => (
                       <div key={i} style={{
                         border: `1px solid ${EDGE}`, borderRadius: 3, padding: '6px 7px',
-                        marginBottom: 5, background: 'rgba(29,111,224,0.06)',
+                        marginBottom: 5, background: 'var(--om-accent-soft)',
                       }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: p.online ? GREEN : INK }}>
                           {p.online ? '● ' : ''}{p.label}
@@ -1475,7 +1586,7 @@ export default function OpsMap() {
             // not matching it — but 0.72 was tuned against black and reads as
             // a blackout over white. Enough to push the map back, not enough
             // to lose it.
-            background: 'rgba(16,24,40,0.38)', backdropFilter: 'blur(2px)',
+            background: 'var(--om-scrim)', backdropFilter: 'blur(2px)',
           }}
         >
           <div
