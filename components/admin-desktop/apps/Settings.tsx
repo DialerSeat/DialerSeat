@@ -673,6 +673,8 @@ function Sidebar({
 // =============================================================================
 
 interface PlatformConfigShape {
+  /** Set to now() to ask every open dialer to reload its own code. */
+  client_reload_at: string | null
   amd_enabled_global: boolean
   recording_enabled_global: boolean
   number_buying_frozen: boolean
@@ -1180,6 +1182,10 @@ function DialerPane({ onBack }: { onBack: () => void }) {
   // false, because showing a pause switch in the wrong position is worse than
   // showing no switch at all.
   const [cycling, setCycling] = useState<boolean | null>(null)
+  // Pushing a reload to every open dialer. Held locally so the row can confirm
+  // it landed without waiting for the config to be refetched.
+  const [reloadBusy, setReloadBusy] = useState(false)
+  const [reloadPushedAt, setReloadPushedAt] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -1243,7 +1249,7 @@ function DialerPane({ onBack }: { onBack: () => void }) {
     }
   }
 
-  const patch = async (key: keyof PlatformConfigShape, value: boolean | number) => {
+  const patch = async (key: keyof PlatformConfigShape, value: boolean | number | string | null) => {
     if (!config) return
     const previous = config
     // Optimistic: a toggle that waits on a round trip before moving feels
@@ -1369,6 +1375,57 @@ function DialerPane({ onBack }: { onBack: () => void }) {
                 }
               />
             )}
+          </GroupedCard>
+
+          <GroupLabel>Agent browsers</GroupLabel>
+          <GroupedCard>
+            {/* ── PUSH A DEPLOY TO PEOPLE ALREADY DIALING ──────────────────
+                The dialer is a long-lived page, so a client-side fix does not
+                reach an agent on shift: they keep running the JavaScript they
+                loaded hours ago. On 17 Sept a fix for the short-duration
+                surcharge shipped and changed nothing for that reason, and the
+                only remedy was asking each agent to hard-refresh -- which does
+                not scale and cannot be asked of a customer.
+
+                MANUAL on purpose. Wiring this to every deploy would interrupt
+                agents for releases that change nothing they care about, and a
+                reload is never free: it drops the SIP registration and
+                re-establishes it. A human decides the fix is worth it.
+
+                Each dialer applies it BETWEEN calls, never mid-call. */}
+            <SettingsRow
+              title="Reload all dialers"
+              subtitle={
+                reloadPushedAt
+                  ? `Last pushed ${new Date(reloadPushedAt).toLocaleString()}. Agents reload between calls, never mid-call.`
+                  : 'Asks every open dialer to reload its code. Applied between calls, never mid-call.'
+              }
+              isLast
+              right={
+                <button
+                  type="button"
+                  disabled={reloadBusy}
+                  onClick={async () => {
+                    // Typed confirm rather than a plain one: this touches every
+                    // agent on the platform at once, and the cost of a stray
+                    // click is a floor-wide interruption.
+                    if (!window.confirm('Ask every open dialer to reload? Agents mid-call finish first.')) return
+                    setReloadBusy(true)
+                    try {
+                      await patch('client_reload_at', new Date().toISOString())
+                      setReloadPushedAt(new Date().toISOString())
+                    } finally {
+                      setReloadBusy(false)
+                    }
+                  }}
+                  style={{
+                    padding: '7px 14px', borderRadius: 8, cursor: reloadBusy ? 'wait' : 'pointer',
+                    border: `1px solid ${SEPARATOR}`, background: 'transparent',
+                    color: LABEL_SECONDARY, fontSize: 13, fontWeight: 500,
+                  }}
+                >{reloadBusy ? 'Pushing…' : 'Reload all'}</button>
+              }
+            />
           </GroupedCard>
 
           <GroupLabel>Predictive</GroupLabel>

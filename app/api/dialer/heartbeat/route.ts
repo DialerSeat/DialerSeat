@@ -7,6 +7,7 @@ import { sendAdminPush } from '@/lib/pushNotify'
 import { deviceFrom } from '@/lib/device'
 import { logCallEvent } from '@/lib/callEvents'
 import { shouldMaskCampaign, maskLeadRow } from '@/lib/leadMasking'
+import { getPlatformConfig } from '@/lib/platformConfig'
 
 const supabase = getServiceClient('dialer/heartbeat')
 
@@ -464,6 +465,13 @@ export async function POST(req: NextRequest) {
 
     const sessionId = upserted.id
 
+    // Best-effort, and deliberately not awaited alongside anything that can
+    // fail the request. See client_reload_at in the response below.
+    let reloadAt: string | null = null
+    try {
+      reloadAt = (await getPlatformConfig()).client_reload_at ?? null
+    } catch { /* a heartbeat is worth more than a reload hint */ }
+
     // ── THE GATE READS THE ROW, NOT THE WIRE ──────────────────────────────
     // Written once by POST /api/dialer/arm when the agent starts the sequence.
     // Nothing between that click and this line can lose it: no render, no
@@ -760,6 +768,18 @@ export async function POST(req: NextRequest) {
       last_lead_added_at: lastLeadAddedAt,
       should_yield: shouldYield,
       stale_window_seconds: STALE_HEARTBEAT_SECONDS,
+      // ── "YOUR CODE IS STALE, RELOAD" ────────────────────────────────────
+      // The dialer is a long-lived page, so a client-side fix does not reach
+      // an agent already on shift -- a change shipped on 17 Sept reached
+      // nobody, and the only remedy was asking people to hard-refresh. This
+      // heartbeat already runs every few seconds and already talks to the
+      // server, so it is the natural carrier: the browser compares this to the
+      // value it booted with, and anything newer means reload.
+      //
+      // Read best-effort. A config read that throws must never break a
+      // heartbeat -- presence and the predictive controller matter more than a
+      // reload hint, and null simply means "no request".
+      client_reload_at: reloadAt,
       controller_invoked: controllerInvoked,
       controller: controllerSummary,
       controller_skipped_reason: controllerSkippedReason,

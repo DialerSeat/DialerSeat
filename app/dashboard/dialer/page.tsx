@@ -642,6 +642,10 @@ function DialerPageInner() {
   // When the agent's SIP leg reached Established. Billing starts there, and the
   // short-duration floor is measured from it -- see releaseAgentLeg.
   const agentLegAnsweredAtRef = useRef<number | null>(null)
+  // The client_reload_at this tab booted with. Anything NEWER from the
+  // heartbeat means an admin has pushed a reload -- see the handler below.
+  const bootReloadAtRef = useRef<string | null | undefined>(undefined)
+  const reloadPendingRef = useRef(false)
   // Transient per-lead outcome text shown briefly in the queue row right
   // after a dial resolves without connecting (e.g. "Sorry, couldn't
   // answer…"), mirroring the reference UX. Populated ONLY from real dial
@@ -2348,6 +2352,43 @@ function DialerPageInner() {
         const data = await res.json()
         if (typeof data.should_yield === 'boolean') {
           setShouldYield(data.should_yield)
+        }
+
+        // ── AN ADMIN PUSHED A RELOAD ────────────────────────────────────────
+        // The dialer is a long-lived page. A client-side fix shipped on 17
+        // Sept reached nobody already on shift, and the only remedy was asking
+        // every agent to hard-refresh -- which does not scale and cannot be
+        // asked of a customer. This is the channel that replaces that ask.
+        //
+        // The FIRST heartbeat only records the value. A tab that has just
+        // loaded is by definition running current code, so treating its first
+        // sighting as a signal would reload every dialer the moment this
+        // shipped, which is the opposite of the point.
+        const seen: string | null = data.client_reload_at ?? null
+        if (bootReloadAtRef.current === undefined) {
+          bootReloadAtRef.current = seen
+        } else if (
+          seen
+          && seen !== bootReloadAtRef.current
+          && (!bootReloadAtRef.current || seen > bootReloadAtRef.current)
+          && !reloadPendingRef.current
+        ) {
+          // ── NEVER MID-CALL ────────────────────────────────────────────────
+          // Reloading drops the SIP registration. Doing that while somebody is
+          // talking to a prospect would cut the call dead, which is a far worse
+          // outcome than running stale code for another minute. So the signal
+          // is latched and the reload waits for a moment when nothing is live.
+          reloadPendingRef.current = true
+          const attempt = () => {
+            const busy =
+              statusRef.current === 'connected'
+              || statusRef.current === 'calling'
+              || !!activeCallSidRef.current
+              || !!swCallRef.current
+            if (busy) { setTimeout(attempt, 3000); return }
+            try { window.location.reload() } catch { /* nothing else to try */ }
+          }
+          attempt()
         }
 
         // ── LEADS DRIPPED IN WHILE THIS SESSION WAS RUNNING ─────────────────

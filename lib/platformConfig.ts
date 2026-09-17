@@ -198,6 +198,15 @@ export interface PlatformConfig {
   pool_experiment_arm: string
   /** Strategy every other dial uses. 'locality' is what has always run here. */
   pool_default_strategy: string
+
+  /**
+   * Set to now() to ask every live dialer to reload its own code.
+   *
+   * The dialer is a long-lived page, so a client-side fix does not reach an
+   * agent who is already on shift. This is how one gets pushed. Null means
+   * nothing has ever been requested.
+   */
+  client_reload_at: string | null
 }
 
 export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
@@ -346,6 +355,9 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   pool_experiment_pct: 0,
   pool_experiment_arm: 'rotate',
   pool_default_strategy: 'locality',
+  // Null, not a date. A fallback with a timestamp in it would ask every dialer
+  // on the platform to reload the moment a config read failed.
+  client_reload_at: null,
 }
 
 const CONFIG_COLUMNS =
@@ -362,7 +374,8 @@ const CONFIG_COLUMNS =
   'agent_leg_failure_limit, daily_spend_alert_usd, ' +
   'leg_watchdog_enabled, leg_watchdog_runaway_seconds, ' +
   'leg_watchdog_untracked_seconds, leg_watchdog_finished_seconds, ' +
-  'pool_experiment_pct, pool_experiment_arm, pool_default_strategy'
+  'pool_experiment_pct, pool_experiment_arm, pool_default_strategy, ' +
+  'client_reload_at'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few

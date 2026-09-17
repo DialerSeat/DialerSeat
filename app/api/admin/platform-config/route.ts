@@ -114,6 +114,23 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   pool_experiment_pct: v => intInRange(v, 0, 100),
   pool_experiment_arm: v => typeof v === 'string' && ['locality', 'balanced', 'rotate'].includes(v),
   pool_default_strategy: v => typeof v === 'string' && ['locality', 'balanced', 'rotate'].includes(v),
+  // ── A FUTURE TIMESTAMP HERE IS A RELOAD LOOP ──────────────────────────
+  // Clients reload when this is NEWER than the value they booted with. A date
+  // set in the future stays newer than every boot that follows it, so every
+  // dialer would reload, boot, see it is still newer, and reload again --
+  // forever, across the whole platform, with no way to stop it from the same
+  // screen because that screen would be reloading too.
+  //
+  // So anything beyond a minute ahead is refused. A minute of slack absorbs
+  // ordinary clock skew between a browser and the database; nothing legitimate
+  // needs more, because the only correct value is "now".
+  client_reload_at: v => {
+    if (v === null) return true
+    if (typeof v !== 'string') return false
+    const t = Date.parse(v)
+    if (!Number.isFinite(t)) return false
+    return t <= Date.now() + 60_000
+  },
 
   // ── COST CONTROLS ──────────────────────────────────────────────────────
   // Place the agent's leg when the lead answers rather than alongside the
