@@ -64,6 +64,7 @@ interface Campaign {
   called_leads: number
   created_at: string
   dialer_mode: string
+  recording_enabled?: boolean
   amd_enabled: boolean
   predictive_lines_per_agent: number
   enable_appointments_sub: boolean
@@ -199,6 +200,19 @@ export default function ExplorerApp() {
   // is not refetched on every keystroke.
   const [savingMode, setSavingMode] = useState(false)
   const [modeError, setModeError] = useState<string | null>(null)
+
+  // Recording, and creating a campaign on someone's behalf. Held locally for
+  // the same reason as the mode above: these lists are not refetched on every
+  // action, so the control has to reflect the change itself.
+  const [savingRec, setSavingRec] = useState(false)
+  const [recError, setRecError] = useState<string | null>(null)
+  const [newCampaignOpen, setNewCampaignOpen] = useState(false)
+  const [newCampaignName, setNewCampaignName] = useState('')
+  const [newCampaignMode, setNewCampaignMode] = useState('progressive')
+  const [newCampaignRec, setNewCampaignRec] = useState(true)
+  const [creatingCampaign, setCreatingCampaign] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [createNote, setCreateNote] = useState<string | null>(null)
 
   const [deleteLeadTarget, setDeleteLeadTarget] = useState<Lead | null>(null)
   const [deletingLead, setDeletingLead] = useState(false)
@@ -389,6 +403,71 @@ export default function ExplorerApp() {
     }
   }
 
+  // ── RECORDING, FOR SOMEBODY ELSE ────────────────────────────────────────
+  // The one setting here where being wrong is unrecoverable: a call that was
+  // not recorded cannot be recorded afterwards. Worth reaching from the screen
+  // support is already on.
+  async function toggleRecording(next: boolean) {
+    if (!selectedCampaign || savingRec) return
+    setSavingRec(true)
+    setRecError(null)
+    try {
+      const res = await fetch('/api/admin/user-data/campaigns/recording', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId: selectedCampaign.id, recordingEnabled: next }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Could not change recording')
+      // Detail object AND the row behind it, so going back to the list does
+      // not show the old value.
+      setSelectedCampaign(prev => (prev ? { ...prev, recording_enabled: next } : prev))
+      setCampaigns(prev =>
+        prev.map(c => (c.id === selectedCampaign.id ? { ...c, recording_enabled: next } : c))
+      )
+    } catch (err: any) {
+      setRecError(err?.message || 'Could not change recording')
+    } finally {
+      setSavingRec(false)
+    }
+  }
+
+  async function createCampaign() {
+    if (!selectedUser || creatingCampaign) return
+    setCreatingCampaign(true)
+    setCreateError(null)
+    setCreateNote(null)
+    try {
+      const res = await fetch('/api/admin/user-data/campaigns/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedUser.clerk_id,
+          name: newCampaignName,
+          dialerMode: newCampaignMode,
+          recordingEnabled: newCampaignRec,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Could not create the campaign')
+      // Prepended rather than refetched: the list is ordered newest first, so
+      // this puts it exactly where a reload would.
+      if (data.campaign) setCampaigns(prev => [data.campaign, ...prev])
+      // The server downgrades predictive to progressive. Said out loud here
+      // rather than left for the operator to notice later.
+      if (data.downgradedFrom) {
+        setCreateNote(`Created as PROGRESSIVE — ${String(data.downgradedFrom).toUpperCase()} is currently downgraded on create.`)
+      } else {
+        setNewCampaignOpen(false)
+      }
+      setNewCampaignName('')
+    } catch (err: any) {
+      setCreateError(err?.message || 'Could not create the campaign')
+    } finally {
+      setCreatingCampaign(false)
+    }
+  }
+
   const filteredUsers = users.filter(u => {
     if (!userSearch.trim()) return true
     const q = userSearch.trim().toLowerCase()
@@ -452,6 +531,28 @@ export default function ExplorerApp() {
             </select>
             {modeError && (
               <span style={{ color: '#ff6b6b', fontSize: 11 }}>{modeError}</span>
+            )}
+            {/* A button rather than a checkbox: it shows the CURRENT state and
+                changes it on click, and at this size a checkbox plus its label
+                is two targets for one decision. Undefined means the list was
+                loaded before this field existed on the route, so it reads as
+                the column default rather than as OFF. */}
+            <span style={{ color: T.muted, fontSize: 11, letterSpacing: 1 }}>RECORDING</span>
+            <button
+              onClick={() => toggleRecording(!(selectedCampaign.recording_enabled ?? true))}
+              disabled={savingRec}
+              title={recError || 'Recording also runs AMD on every dial from this campaign, billed per leg'}
+              style={{
+                ...toolbarBtnStyle,
+                cursor: savingRec ? 'wait' : 'pointer',
+                color: (selectedCampaign.recording_enabled ?? true) ? T.green : T.muted,
+                borderColor: (selectedCampaign.recording_enabled ?? true) ? T.green : undefined,
+              }}
+            >
+              {savingRec ? '…' : (selectedCampaign.recording_enabled ?? true) ? '● ON' : '○ OFF'}
+            </button>
+            {recError && (
+              <span style={{ color: '#ff6b6b', fontSize: 11 }}>{recError}</span>
             )}
             <input
               value={leadSearch}
@@ -649,6 +750,69 @@ export default function ExplorerApp() {
           )
         )}
 
+        {/* ── BUILD ONE FOR THEM ──────────────────────────────────────────
+            Sits ABOVE the grid and outside the empty check on purpose: a user
+            with no campaigns is exactly the person this exists for, and
+            hiding the button behind "THIS USER HAS NO CAMPAIGNS" would put it
+            everywhere except the screen that needs it. A new subscriber
+            staring at an empty dialer is the likeliest person to give up. */}
+        {view === 'user' && userTab === 'campaigns' && !campaignsLoading && !campaignsError && (
+          <div style={{ marginBottom: 14 }}>
+            {!newCampaignOpen ? (
+              <button onClick={() => { setNewCampaignOpen(true); setCreateError(null); setCreateNote(null) }}
+                      style={toolbarBtnStyle}>
+                + NEW CAMPAIGN FOR THIS USER
+              </button>
+            ) : (
+              <div style={{
+                border: `1px solid ${T.border}`, borderRadius: 6, padding: 12,
+                display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center',
+              }}>
+                <input
+                  autoFocus
+                  value={newCampaignName}
+                  onChange={e => setNewCampaignName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') createCampaign() }}
+                  placeholder="CAMPAIGN NAME"
+                  style={{ ...searchInputStyle, minWidth: 220 }}
+                />
+                <select value={newCampaignMode} onChange={e => setNewCampaignMode(e.target.value)}
+                        style={{ ...searchInputStyle, width: 'auto', cursor: 'pointer' }}>
+                  {['preview', 'power', 'progressive', 'predictive'].map(m => (
+                    <option key={m} value={m}>{m.toUpperCase()}</option>
+                  ))}
+                </select>
+                <button onClick={() => setNewCampaignRec(v => !v)}
+                        title="Recording also runs AMD on every dial, billed per leg"
+                        style={{
+                          ...toolbarBtnStyle,
+                          color: newCampaignRec ? T.green : T.muted,
+                          borderColor: newCampaignRec ? T.green : undefined,
+                        }}>
+                  REC {newCampaignRec ? '● ON' : '○ OFF'}
+                </button>
+                <button onClick={createCampaign}
+                        disabled={creatingCampaign || !newCampaignName.trim()}
+                        style={{
+                          ...toolbarBtnStyle,
+                          opacity: creatingCampaign || !newCampaignName.trim() ? 0.5 : 1,
+                          cursor: creatingCampaign ? 'wait' : 'pointer',
+                        }}>
+                  {creatingCampaign ? 'CREATING…' : 'CREATE'}
+                </button>
+                <button onClick={() => { setNewCampaignOpen(false); setCreateError(null); setCreateNote(null) }}
+                        style={toolbarBtnStyle}>CANCEL</button>
+                {createError && (
+                  <span style={{ color: T.red, fontSize: 11, flexBasis: '100%' }}>{createError}</span>
+                )}
+                {createNote && (
+                  <span style={{ color: T.amber, fontSize: 11, flexBasis: '100%' }}>{createNote}</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {view === 'user' && userTab === 'campaigns' && (
           campaignsLoading ? (
             <div style={emptyStyle}>LOADING CAMPAIGNS…</div>
@@ -668,10 +832,21 @@ export default function ExplorerApp() {
                       <span className="dx-card-pin" style={{ color: isActive ? T.green : T.muted }}>
                         {isActive ? '● ACTIVE' : '○ INACTIVE'}
                       </span>
-                      {(c.enable_appointments_sub || c.enable_not_interested_sub) && (
+                      {(c.enable_appointments_sub || c.enable_not_interested_sub
+                        || c.recording_enabled === false) && (
                         <div className="dx-card-sub-pins">
                           {c.enable_appointments_sub && <span className="dx-card-sub-pin">+ CALL BACKS</span>}
                           {c.enable_not_interested_sub && <span className="dx-card-sub-pin">+ NOT INT</span>}
+                          {/* Shown only when recording is OFF, never when on.
+                              It defaults on, so ON is not news — OFF is, and it
+                              is the one state you cannot fix after the fact:
+                              those calls are already unrecorded. Strict
+                              === false so a row loaded before the list route
+                              returned this field stays quiet rather than
+                              claiming recording is off. */}
+                          {c.recording_enabled === false && (
+                            <span className="dx-card-sub-pin" style={{ color: T.red }}>REC OFF</span>
+                          )}
                         </div>
                       )}
                       <LeadPreviewThumb leads={c.preview_leads} />

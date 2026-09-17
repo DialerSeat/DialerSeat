@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const { data: campaigns, error } = await supabase
     .from('campaigns')
     .select(
-      'id, name, status, total_leads, called_leads, created_at, dialer_mode, amd_enabled, predictive_lines_per_agent, enable_appointments_sub, enable_not_interested_sub'
+      'id, name, status, total_leads, called_leads, created_at, dialer_mode, amd_enabled, recording_enabled, predictive_lines_per_agent, enable_appointments_sub, enable_not_interested_sub'
     )
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
