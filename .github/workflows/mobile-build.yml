@@ -1,0 +1,120 @@
+# =============================================================================
+# BUILD THE MOBILE SHELLS WITHOUT INSTALLING ANYTHING
+# =============================================================================
+# The shells wrap the existing PWA (see capacitor.config.ts). Building them
+# normally means a JDK and the Android SDK for one, and macOS with Xcode for
+# the other -- roughly 5GB of tooling, and a Mac that this project does not
+# have. GitHub's runners already carry all of it.
+#
+# So this is the build machine. It also becomes the release pipeline later,
+# which is why it is a workflow rather than a set of instructions somebody
+# follows by hand.
+#
+# ── WHAT EACH JOB IS FOR ───────────────────────────────────────────────────
+# android  produces a real, installable debug APK. Sideload it on any Android
+#          phone -- no developer account, no store, no signing. This is the
+#          fastest route to the one open question in this whole plan: does an
+#          in-progress WebRTC call survive the phone locking?
+#
+# ios      compiles for the SIMULATOR, which needs no Apple Developer account
+#          and no certificates. It cannot be installed on a real iPhone, and it
+#          is not meant to be. Its job is to prove the project builds before
+#          anybody pays $99 -- a compile failure found here costs nothing,
+#          found after signing it costs an afternoon.
+#
+# Neither job touches the web app. Nothing in app/, components/ or lib/ is
+# read, built or deployed by this file.
+#
+# ── WHY NOTHING IS SIGNED ──────────────────────────────────────────────────
+# Signing needs an Apple Developer Program membership and a keystore, and both
+# are decisions with money and identity attached. Adding them before anyone has
+# held the app is the wrong order. When they exist they become repository
+# secrets and this file gains a release job; until then it stays honest about
+# producing test artifacts rather than shippable ones.
+
+name: Mobile shells
+
+on:
+  # Manual on purpose. These shells change a few times a year -- a permission,
+  # an icon, a Capacitor bump -- while the web app deploys many times a day and
+  # reaches mobile users with no build at all, because the app IS the website.
+  # Building on every push would spend runner minutes producing identical
+  # artifacts nobody asked for.
+  workflow_dispatch:
+  push:
+    paths:
+      - 'capacitor.config.ts'
+      - 'android/**'
+      - 'ios/**'
+      - '.github/workflows/mobile-build.yml'
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      # --no-audit --no-fund: this job needs the Capacitor CLI, not a security
+      # report, and npm's advisory output is noise in a build log.
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      # Copies capacitor.config.ts into the native project. Without it the APK
+      # is built against whatever config was committed last, which is exactly
+      # the class of bug where the app points at the wrong origin.
+      - name: Sync Capacitor config into the native project
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dialerseat-android-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          # Long enough to test over a weekend, short enough that unsigned
+          # debug builds do not accumulate in the repository forever.
+          retention-days: 14
+
+  ios:
+    name: iOS (simulator compile check)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Sync Capacitor config into the native project
+        run: npx cap sync ios
+
+      # CODE_SIGNING_ALLOWED=NO is what lets this run with no Apple account at
+      # all. A simulator build needs no certificate, no provisioning profile
+      # and no team id -- it proves the project compiles and nothing more.
+      - name: Compile for simulator
+        working-directory: ios/App
+        run: |
+          xcodebuild \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
