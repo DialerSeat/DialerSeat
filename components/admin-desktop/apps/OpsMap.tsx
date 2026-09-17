@@ -1940,7 +1940,21 @@ export default function OpsMap() {
                     `calls` row per LEAD leg, so the agent side was in neither
                     half of the old ratio. That is how this box read 4.1% on the
                     day a 18.86% warning arrived. */}
-                <Row k="SHORT CALLS (<=6s)"
+                {/* ── THE LABEL HAS TO MATCH THE WINDOW ────────────────────
+                    telnyx_ledger_records holds a ROLLING 72 HOURS -- its oldest
+                    and newest rows are exactly three days apart -- so a figure
+                    computed under the THIS MONTH tab is a three-day figure
+                    wearing a month's label. That is the same mistake that let
+                    this box read 4.1% while Telnyx billed 18.86%, and it is not
+                    worth repeating one screen over.
+                    So the row names its own window. Telnyx assess a calendar
+                    month; only their portal can show where the month actually
+                    stands. */}
+                <Row k={comp.carrierShortPct == null
+                          ? 'SHORT CALLS (<=6s)'
+                          : comp.ledgerDays != null && compWindow !== '7d' && comp.ledgerDays < 6.5
+                            ? `SHORT CALLS, LAST ${comp.ledgerDays.toFixed(1)}D`
+                            : 'SHORT CALLS (<=6s)'}
                      v={comp.carrierShortPct == null
                           ? 'not measured'
                           : `${comp.carrierShortPct.toFixed(1)}% of ${comp.carrierConnected ?? 0}`}
