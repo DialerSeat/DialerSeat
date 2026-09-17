@@ -206,6 +206,9 @@ type PlacePerson = {
 }
 type PlaceDetail = {
   people: PlacePerson[]
+  /** Accounts placed here in total, whatever the range. Lets the panel say
+   *  "2 of 3" rather than showing a short list that reads as missing data. */
+  peopleTotal?: number
   traffic: {
     visitors: number; views: number; authed: number
     firstSeen: string | null; lastSeen: string | null
@@ -1568,8 +1571,31 @@ export default function OpsMap() {
                   </Section>
                 )}
 
+                {/* Nobody active in this window is a FINDING, not an empty
+                    state: the place has accounts, none of them showed up. The
+                    old code rendered nothing at all here, which is
+                    indistinguishable from the section failing to load. */}
+                {Array.isArray(detail?.people) && detail.people.length === 0
+                  && (detail?.peopleTotal ?? 0) > 0 && (
+                  <Section title={`PEOPLE · 0 OF ${detail.peopleTotal} ACTIVE`}>
+                    <div style={{ fontSize: 10.5, color: DIM, padding: '4px 2px', lineHeight: 1.5 }}>
+                      No account here was active in this window. Widen the range
+                      to see who is placed in this location.
+                    </div>
+                  </Section>
+                )}
+                {/* The count is "active in the selected range, out of everyone
+                    placed here". Showing only the first number was how the old
+                    behaviour hid itself: a 12H view listing every account who
+                    has ever been in Texas looked authoritative, and a filtered
+                    list showing fewer looks broken unless it says what it is
+                    filtered to. */}
                 {Array.isArray(detail?.people) && detail.people.length > 0 && (
-                  <Section title={`PEOPLE · ${detail.people.length}`}>
+                  <Section title={
+                    detail.peopleTotal && detail.peopleTotal > detail.people.length
+                      ? `PEOPLE · ${detail.people.length} OF ${detail.peopleTotal} ACTIVE`
+                      : `PEOPLE · ${detail.people.length}`
+                  }>
                     {detail.people.map((p, i) => (
                       <div key={i} style={{
                         border: `1px solid ${EDGE}`, borderRadius: 3, padding: '6px 7px',
