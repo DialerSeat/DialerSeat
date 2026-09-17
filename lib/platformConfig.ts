@@ -177,6 +177,19 @@ export interface PlatformConfig {
   amd_max_words: number
   /** Telnyx initial_silence_millis — silence before speech longer than this is a machine. */
   amd_initial_silence_ms: number
+
+  // ── LEG WATCHDOG (cron/leg-watchdog) ──────────────────────────────────
+  /**
+   * Gates the HANGUP, not the observation. False still records sightings and
+   * still computes verdicts, so a dry run produces real evidence.
+   */
+  leg_watchdog_enabled: boolean
+  /** Absolute ceiling past which any live leg is ended, whatever its row says. */
+  leg_watchdog_runaway_seconds: number
+  /** How long a leg with no calls row must be observed before it is ended. */
+  leg_watchdog_untracked_seconds: number
+  /** Grace after our row says the call ended, before ending its still-live leg. */
+  leg_watchdog_finished_seconds: number
 }
 
 export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
@@ -300,6 +313,23 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   amd_greeting_duration_ms: 3000,
   amd_max_words: 8,
   amd_initial_silence_ms: 3000,
+
+  // ── SHIPS OFF, AND THE FALLBACK IS ALSO OFF ───────────────────────────
+  // The opposite direction to amd_hold_seconds_after_machine, deliberately.
+  // A failed config read there meant compliance silently stopped; a failed
+  // config read HERE would mean something starts hanging up phone calls with
+  // nobody having asked it to. Fail toward doing nothing.
+  leg_watchdog_enabled: false,
+  // 90 minutes. The longest genuinely real call on this account is 63 minutes,
+  // carrier-confirmed, so this clears reality by half an hour. It is a
+  // backstop for runaways, not a policy on call length.
+  leg_watchdog_runaway_seconds: 5400,
+  // 10 minutes with no calls row anywhere in a 12-hour window. Nothing on our
+  // side can disposition it, no agent screen is pointed at it.
+  leg_watchdog_untracked_seconds: 600,
+  // 2 minutes after our own row says the call is over. Absorbs webhook
+  // ordering without letting a stranded leg bill for long.
+  leg_watchdog_finished_seconds: 120,
 }
 
 const CONFIG_COLUMNS =
@@ -313,7 +343,9 @@ const CONFIG_COLUMNS =
   'amd_greeting_duration_ms, amd_max_words, amd_initial_silence_ms, ' +
   'amd_hold_seconds_after_machine, dial_agent_on_answer, connecting_message, ' +
   'max_destination_rate, max_rate_min_samples, voicemail_streak_limit, ' +
-  'agent_leg_failure_limit, daily_spend_alert_usd'
+  'agent_leg_failure_limit, daily_spend_alert_usd, ' +
+  'leg_watchdog_enabled, leg_watchdog_runaway_seconds, ' +
+  'leg_watchdog_untracked_seconds, leg_watchdog_finished_seconds'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few

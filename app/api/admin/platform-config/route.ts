@@ -101,6 +101,13 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   // above ~12 is buying nothing, because a 20s call and a 7s call count
   // identically to them, while getting closer to the beep every second.
   amd_hold_seconds_after_machine: v => intInRange(v, 0, 15),
+  leg_watchdog_enabled: v => typeof v === 'boolean',
+  // Floors matter more than ceilings here. A runaway ceiling below the longest
+  // real conversation would hang up live calls on a schedule, so 15 minutes is
+  // the lowest this may be set to by hand.
+  leg_watchdog_runaway_seconds: v => intInRange(v, 900, 86400),
+  leg_watchdog_untracked_seconds: v => intInRange(v, 120, 86400),
+  leg_watchdog_finished_seconds: v => intInRange(v, 30, 3600),
 
   // ── COST CONTROLS ──────────────────────────────────────────────────────
   // Place the agent's leg when the lead answers rather than alongside the
