@@ -7,6 +7,11 @@ import {
 } from './areaCode'
 import { normalizeState } from './normalizeState'
 import {
+  chooseStrategy,
+  DEFAULT_POOL_STRATEGY,
+  type PoolStrategy,
+} from './poolStrategy'
+import {
   acquireNumberByAreaCode,
   releaseNumber as telnyxReleaseNumber,
 } from './telnyxProvision'
@@ -68,6 +73,13 @@ export interface PoolNumber {
   daily_cap: number
   lifetime_call_count: number
   last_called_at: string | null
+  /**
+   * Which claim_pool_number arm chose this number, when the selection
+   * experiment is running. Not a database column on phone_numbers — attached
+   * by pickNumberForLead so the caller can stamp it on the calls row, which is
+   * where it has to live for any comparison to be possible later.
+   */
+  selected_by?: PoolStrategy | null
 }
 
 
@@ -186,10 +198,35 @@ export async function pickNumberForLead(
     }
   }
 
+  // ── WHICH ARM PICKS THIS ONE ───────────────────────────────
+  // Defaults to 'locality', which is the ordering that has always run here, and
+  // stays there unless somebody sets pool_experiment_pct above zero. See
+  // lib/poolStrategy.ts for why the test is a percentage split rather than a
+  // switch: comparing across days cannot separate number burn from the pool
+  // correctly matching geography, because the list and the hour move too.
+  //
+  // Fails toward the default. A config read that throws leaves dialing exactly
+  // as it is rather than taking an experiment arm nobody asked for.
+  let strategy: PoolStrategy = DEFAULT_POOL_STRATEGY
+  let inExperiment = false
+  try {
+    const cfg = await getPlatformConfig()
+    const choice = chooseStrategy({
+      pct: cfg.pool_experiment_pct,
+      arm: cfg.pool_experiment_arm,
+      defaultStrategy: cfg.pool_default_strategy,
+    }, Math.random())
+    strategy = choice.strategy
+    inExperiment = choice.inExperiment
+  } catch (err) {
+    console.warn('[numberPool] strategy config unreadable, using default:', err)
+  }
+
   const { data, error } = await supabase.rpc('claim_pool_number', {
     p_area_code: areaCode,
     p_state: state,
     p_region: region,
+    p_strategy: strategy,
   })
 
   if (error) {
@@ -198,7 +235,15 @@ export async function pickNumberForLead(
   }
 
   const rows = (data ?? []) as PoolNumber[]
-  return rows[0] ?? null
+  const picked = rows[0] ?? null
+  if (!picked) return null
+
+  // Null when no experiment is running, deliberately. "locality because the
+  // split sent it there" and "locality because there is no split" are
+  // different facts, and recording them the same way would put untagged
+  // everyday traffic into the control group of an analysis it was never part
+  // of.
+  return { ...picked, selected_by: inExperiment ? strategy : null }
 }
 
 /**

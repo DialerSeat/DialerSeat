@@ -190,6 +190,14 @@ export interface PlatformConfig {
   leg_watchdog_untracked_seconds: number
   /** Grace after our row says the call ended, before ending its still-live leg. */
   leg_watchdog_finished_seconds: number
+
+  // ── POOL SELECTION EXPERIMENT (lib/poolStrategy.ts) ────────────────
+  /** Percent of dials routed to pool_experiment_arm. 0 disables it entirely. */
+  pool_experiment_pct: number
+  /** Strategy the experiment slice uses: rotate | balanced | locality. */
+  pool_experiment_arm: string
+  /** Strategy every other dial uses. 'locality' is what has always run here. */
+  pool_default_strategy: string
 }
 
 export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
@@ -330,6 +338,14 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   // 2 minutes after our own row says the call is over. Absorbs webhook
   // ordering without letting a stranded leg bill for long.
   leg_watchdog_finished_seconds: 120,
+
+  // ── OFF, AND THE FALLBACK IS ALSO OFF ─────────────────────────
+  // A failed config read must not silently start running an experiment on live
+  // dials, so 0 here means an unreadable settings table produces exactly the
+  // caller-ID selection that has always run.
+  pool_experiment_pct: 0,
+  pool_experiment_arm: 'rotate',
+  pool_default_strategy: 'locality',
 }
 
 const CONFIG_COLUMNS =
@@ -345,7 +361,8 @@ const CONFIG_COLUMNS =
   'max_destination_rate, max_rate_min_samples, voicemail_streak_limit, ' +
   'agent_leg_failure_limit, daily_spend_alert_usd, ' +
   'leg_watchdog_enabled, leg_watchdog_runaway_seconds, ' +
-  'leg_watchdog_untracked_seconds, leg_watchdog_finished_seconds'
+  'leg_watchdog_untracked_seconds, leg_watchdog_finished_seconds, ' +
+  'pool_experiment_pct, pool_experiment_arm, pool_default_strategy'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few

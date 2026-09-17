@@ -108,6 +108,12 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   leg_watchdog_runaway_seconds: v => intInRange(v, 900, 86400),
   leg_watchdog_untracked_seconds: v => intInRange(v, 120, 86400),
   leg_watchdog_finished_seconds: v => intInRange(v, 30, 3600),
+  // 0-100 only. The strategies are checked against the real list rather than
+  // "is a string", because an unrecognised value would silently disable the
+  // experiment and look like it was running.
+  pool_experiment_pct: v => intInRange(v, 0, 100),
+  pool_experiment_arm: v => typeof v === 'string' && ['locality', 'balanced', 'rotate'].includes(v),
+  pool_default_strategy: v => typeof v === 'string' && ['locality', 'balanced', 'rotate'].includes(v),
 
   // ── COST CONTROLS ──────────────────────────────────────────────────────
   // Place the agent's leg when the lead answers rather than alongside the

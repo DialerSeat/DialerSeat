@@ -532,6 +532,10 @@ export async function placeOutboundCall(
     toFormatted,
     fromNumber,
     poolNumberId: poolNumber?.id || null,
+    // Null unless the selection experiment is running. Carried alongside the
+    // id because the pool row itself has moved on by the time the calls row is
+    // written — counts and status change on the very next dial.
+    poolStrategy: poolNumber?.selected_by ?? null,
     userId,
     leadId: leadId || null,
     campaignId: campaignId || null,
@@ -552,6 +556,7 @@ interface DoPlaceCallParams {
   toFormatted: string
   fromNumber: string
   poolNumberId: string | null
+  poolStrategy: string | null
   userId: string
   leadId: string | null
   campaignId: string | null
@@ -1246,6 +1251,10 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         dialBody.from = replacement.phone_number
         p.fromNumber = replacement.phone_number
         p.poolNumberId = replacement.id
+        // Swapped with the id, not left pointing at the arm that chose the
+        // number this one replaced. A mislabelled row is worse than an
+        // unlabelled one: it lands in the wrong side of the comparison.
+        p.poolStrategy = replacement.selected_by ?? null
         leadRes = await dialLeadLeg()
         leadData = await leadRes.json()
         console.log(`[placeOutboundCall:${p.source}] Lead leg retry response:`, leadData)
@@ -1481,6 +1490,11 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       duration: 0,
       disposition: null,
       dial_source: p.source,
+      // Which caller-ID selection arm chose this number, and null whenever the
+      // experiment is not running. Stamped here rather than inferred later
+      // because the pool's state has already moved on by the time anyone reads
+      // this row — the number's counts and status change on the next dial.
+      ...(p.poolStrategy ? { pool_strategy: p.poolStrategy } : {}),
       ...(p.source === 'controller_fanout' && p.agentSessionId
         ? { dial_group_id: p.agentSessionId }
         : {}),
