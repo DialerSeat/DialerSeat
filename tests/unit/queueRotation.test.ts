@@ -3,6 +3,7 @@ import {
   rotationKey,
   sinkDialedLeads,
   recordDial,
+  pinToTop,
   type DialLog,
 } from '@/lib/queueRotation'
 
@@ -116,5 +117,60 @@ describe('recordDial', () => {
     let log = recordDial({}, 'a', T0)
     log = recordDial(log, 'a', T0 + 800)
     expect(log).toEqual({ a: T0 + 800 })
+  })
+})
+
+describe('pinToTop', () => {
+  it('holds the lead in hand at the top even once it has been dialled', () => {
+    // The 2x case. The server stamps last_called_at itself, so after the first
+    // dial the refetch sank the lead the agent was still working.
+    const log = recordDial({}, 'a', T0)
+    const rotated = sinkDialedLeads([lead('a'), lead('b'), lead('c')], log)
+    expect(rotated.map(l => l.id)).toEqual(['b', 'c', 'a'])
+    expect(pinToTop(rotated, 'a').map(l => l.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('beats a server stamp the client never wrote', () => {
+    const served = [lead('b'), lead('c'), lead('a', new Date(T0).toISOString())]
+    expect(pinToTop(served, 'a').map(l => l.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('releases the lead once the sequence ends and nothing is pinned', () => {
+    const log = recordDial({}, 'a', T0)
+    const rotated = sinkDialedLeads([lead('a'), lead('b'), lead('c')], log)
+    expect(pinToTop(rotated, null).map(l => l.id)).toEqual(['b', 'c', 'a'])
+    expect(pinToTop(rotated, undefined).map(l => l.id)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('is a no-op when the lead is already on top', () => {
+    expect(pinToTop([lead('a'), lead('b')], 'a').map(l => l.id)).toEqual(['a', 'b'])
+  })
+
+  it('ignores a lead that is not in the list', () => {
+    expect(pinToTop([lead('a'), lead('b')], 'zz').map(l => l.id)).toEqual(['a', 'b'])
+  })
+
+  it('does not mutate the list it is given', () => {
+    const order = [lead('a'), lead('b'), lead('c')]
+    pinToTop(order, 'c')
+    expect(order.map(l => l.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('walks a full 2x: top for both dials, then sinks', () => {
+    const queue = [lead('a'), lead('b'), lead('c')]
+    let log: DialLog = {}
+
+    // First dial. Lead is in hand, so it stays on top even though the server
+    // has already stamped it.
+    const afterFirst = [lead('a', new Date(T0).toISOString()), lead('b'), lead('c')]
+    expect(pinToTop(sinkDialedLeads(afterFirst, log), 'a')[0].id).toBe('a')
+
+    // Second dial of the sequence. Still in hand, still on top.
+    expect(pinToTop(sinkDialedLeads(afterFirst, log), 'a')[0].id).toBe('a')
+
+    // Sequence over: the lead is released and recorded, and now it sinks.
+    log = recordDial(log, 'a', T0 + 1000)
+    expect(pinToTop(sinkDialedLeads(queue, log), null).map(l => l.id))
+      .toEqual(['b', 'c', 'a'])
   })
 })

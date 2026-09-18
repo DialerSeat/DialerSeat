@@ -65,3 +65,34 @@ export function sinkDialedLeads<T extends RotatableLead>(
 export function recordDial(log: DialLog, leadId: string, now: number): DialLog {
   return { ...log, [leadId]: now }
 }
+
+/**
+ * Hold one lead at the top, whatever the rotation says.
+ *
+ * A lead being worked must not move until its whole 1x/2x/3x sequence is
+ * over. The client cannot achieve that by simply not stamping it, because the
+ * server stamps leads.last_called_at on its own — see the queue-rotation
+ * stamp and the attempt-release writes in app/api/calls/events/route.ts — so
+ * the next queue refetch sank a lead that was still mid-sequence, between its
+ * first and second dial.
+ *
+ * Pinning states the rule directly instead of racing those writes: whoever is
+ * in the dialer's hands right now is the top row. It is released the moment
+ * the sequence ends and currentLead is cleared, and the ordinary rotation
+ * then applies.
+ *
+ * Display only. The dial order must never pin, or the server would be handed
+ * the same lead as its next pick; in-sequence redials do not consult it
+ * anyway, because they call dialLeadCall directly against the held lead.
+ */
+export function pinToTop<T extends { id: string }>(
+  order: readonly T[],
+  pinnedLeadId?: string | null
+): T[] {
+  if (!pinnedLeadId) return [...order]
+  const index = order.findIndex(lead => lead.id === pinnedLeadId)
+  if (index <= 0) return [...order]
+  const copy = [...order]
+  const [pinned] = copy.splice(index, 1)
+  return [pinned, ...copy]
+}

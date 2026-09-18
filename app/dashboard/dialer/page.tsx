@@ -9,7 +9,7 @@ import { isDialableLead } from '@/lib/dialableLead'
 import type { QueueDiagnosis } from '@/lib/queueDiagnosis'
 import { phoneToState } from '@/lib/areaCode'
 import { BUILD_SHA } from '@/lib/buildId'
-import { rotationKey, sinkDialedLeads, recordDial, type DialLog } from '@/lib/queueRotation'
+import { rotationKey, sinkDialedLeads, recordDial, pinToTop, type DialLog } from '@/lib/queueRotation'
 import { reachedAHuman as didReachAHuman, shouldRedial } from '@/lib/redialDecision'
 
 /**
@@ -876,7 +876,13 @@ function DialerPageInner() {
       (a, b) => rotationKey(a, dialLog) - rotationKey(b, dialLog)
     )
 
-    return rotated.concat(exhausted)
+    // ── THE LEAD IN HAND DOES NOT MOVE ──────────────────────────────────
+    // Held at the top for the whole of its repeat sequence, not just its
+    // first dial. The server stamps last_called_at itself, so on 2x the queue
+    // refetch between the two dials sank the lead the agent was still
+    // working. currentLead is exactly the right signal: it is set for the
+    // whole sequence and cleared the moment it ends.
+    return pinToTop(rotated.concat(exhausted), currentLead?.id)
   })()
 
   // ── THE ORDER AS IT IS *NOW*, NOT AS IT WAS WHEN THE TIMER WAS SET ──────
