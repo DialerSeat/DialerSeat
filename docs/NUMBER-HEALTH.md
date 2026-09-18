@@ -251,6 +251,45 @@ score would have told you the same thing for money.
 
 ## 6. Practices that keep numbers healthy
 
+### What TNS told us directly, 18 September 2026
+
+Their registration confirmation email carries the only unprompted guidance any
+of the three engines has given this account. Quoted rather than paraphrased,
+because it is primary source and it contradicts three things this platform
+does:
+
+> "we recommend that you follow best practices for call origination, including
+> not rotating numbers, using a number for a single purpose when possible, and
+> leaving voicemail messages on the line, in order to minimize any negative
+> labeling"
+
+They also say plainly what registration is and is not:
+
+> "registration does not guarantee positive treatment. If at any time there is
+> substantial negative information about the number ... it is possible they
+> could still be labeled"
+
+**Where we conflict, and how much it matters:**
+
+| Their advice | What we do | Assessment |
+|---|---|---|
+| Don't rotate numbers | A rotating pool, by design | Partly a false conflict. Rotation across a STABLE REGISTERED SET is not what they mean -- burner churn is. What genuinely matches the bad pattern is buying and releasing, which this account did do: 10 SignalWire numbers were retired and deleted on 18 Sept. Going forward the 15 are stable and additive. |
+| One purpose per number | **Every number carries 4-8 different accounts** (measured 18 Sept, 14-day window) | The real conflict, and structural. `claim_pool_number` has no tenant filter, so an insurance agency and a roofer share a caller ID. That is an incoherent calling pattern to a model that scores patterns. |
+| Leave voicemail messages | AMD detects a machine and hangs up; voicemail drop is OFF | Conflicts, and staying that way. Drop was attempted twice and failed both times -- see AMD.md. Leaving messages would also multiply cost per dial by keeping every machine leg alive. |
+
+**None of this is measured against answer rate.** It is one vendor's stated
+preference, covering Verizon and US Cellular only, and it is what they would
+tell any caller. It is recorded because it is the closest thing to a published
+threshold any engine has offered, not because it has been shown to move a
+number here.
+
+The single-purpose one is the only conflict with a plausible remedy: per-tenant
+number pools. At 8 active accounts and 3-5 numbers each that is 24-40 numbers
+against today's 15, or roughly $25-40/month. Worth pricing against retention if
+labelling ever becomes attributable to a specific account's traffic.
+
+---
+
 Ordered by evidence behind them here.
 
 1. **Register every number.** Free, and the selector already prefers
