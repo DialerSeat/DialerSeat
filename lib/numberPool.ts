@@ -12,6 +12,7 @@ import {
   type PoolStrategy,
 } from './poolStrategy'
 import {
+  acquireNumber,
   acquireNumberByAreaCode,
   releaseNumber as telnyxReleaseNumber,
 } from './telnyxProvision'
@@ -419,6 +420,95 @@ export async function releasePoolNumber(numberId: string): Promise<void> {
     .from('phone_numbers')
     .update({ status: 'released' })
     .eq('id', numberId)
+}
+
+/**
+ * Insert a freshly purchased Telnyx number into the pool.
+ *
+ * ── THE AREA CODE COMES FROM THE NUMBER, NOT FROM THE REQUEST ──────────────
+ * addNumberByAreaCode stored the area code that was ASKED for, which was safe
+ * only while a search could never return anything else. With the state
+ * fallback it can and will: ask for 404, get a 470. Storing 404 against a 470
+ * number would put a wrong state and region on the row and quietly corrupt
+ * every locality decision that number is ever part of -- claim_pool_number
+ * matches on area_code first, so it would rank the number for calls it is not
+ * actually local to.
+ */
+async function insertPurchased(
+  purchased: { id: string; phone_number: string }
+): Promise<PoolNumber | null> {
+  const digits = purchased.phone_number.replace(/\D/g, '')
+  const areaCode = digits.length === 11 ? digits.slice(1, 4) : digits.slice(0, 3)
+  const info = getAreaCodeInfo(areaCode)
+
+  const { data, error } = await supabase
+    .from('phone_numbers')
+    .insert({
+      phone_number: purchased.phone_number,
+      area_code: areaCode,
+      state: info?.state ?? null,
+      region: info?.region ?? null,
+      provider_number_id: purchased.id,
+      status: 'active',
+      daily_call_count: 0,
+      daily_cap: DEFAULT_DAILY_CAP,
+      monthly_cost_cents: 100,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('[numberPool] DB insert failed after Telnyx purchase:', error)
+    try {
+      await telnyxReleaseNumber(purchased.id)
+    } catch (releaseErr) {
+      console.error(
+        '[numberPool] CRITICAL: Bought a number we cannot insert AND cannot release:',
+        purchased.id, releaseErr
+      )
+    }
+    return null
+  }
+
+  return data as PoolNumber
+}
+
+export interface AddNumberResult {
+  number: PoolNumber
+  /** Which rung of the search ladder produced it -- see acquireNumber. */
+  via: 'area_code' | 'state' | 'state_best_effort'
+  /** What was asked for, so a caller can report "asked 404, got 470". */
+  requestedAreaCode: string | null
+}
+
+/**
+ * Buy one number for a target, falling back from area code to state.
+ *
+ * The single-area-code version below stays for the four callers that only
+ * know an NPA. This one is what the admin buy uses, because an admin buying
+ * for Atlanta does not care whether the number is a 404 or a 470 -- they care
+ * that it reads as Atlanta, and 404 has no free inventory.
+ */
+export async function addNumberForTarget(
+  target: { areaCodes?: string[]; state?: string }
+): Promise<AddNumberResult | null> {
+  const { number_buying_frozen } = await getPlatformConfig()
+  if (number_buying_frozen) {
+    console.warn('[numberPool] Purchase BLOCKED, number buying is frozen in platform_config.')
+    return null
+  }
+
+  const acquired = await acquireNumber(target)
+  if (!acquired) return null
+
+  const inserted = await insertPurchased(acquired.purchased)
+  if (!inserted) return null
+
+  return {
+    number: inserted,
+    via: acquired.via,
+    requestedAreaCode: acquired.areaCode ?? target.areaCodes?.[0] ?? null,
+  }
 }
 
 export async function addNumberByAreaCode(areaCode: string): Promise<PoolNumber | null> {

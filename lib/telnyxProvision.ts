@@ -53,17 +53,56 @@ export interface PurchasedNumber {
  * Search available US local numbers by area code (NPA / national
  * destination code). Mirrors signalwireProvision.searchAvailableNumbers.
  */
+export interface NumberSearch {
+  /** NPA. Omitted when searching a whole state. */
+  areaCode?: string
+  /** Two-letter state, e.g. 'GA'. Telnyx calls this administrative_area. */
+  state?: string
+  /**
+   * Let Telnyx return approximate matches.
+   *
+   * Last resort only: a best-effort result may be a neighbouring rate centre,
+   * so it is a weaker locality match than an exact one. Better than no number,
+   * worse than the right number -- which is exactly the order the fallback
+   * chain in numberPool tries them in.
+   */
+  bestEffort?: boolean
+  limit?: number
+}
+
+/**
+ * Search available US local numbers.
+ *
+ * ── WHY THIS TAKES A STATE AND NOT JUST AN AREA CODE ───────────────────────
+ * It used to accept an area code only, which made buying fail on exactly the
+ * area codes worth buying. 404 is the clearest case: Atlanta has been overlaid
+ * by 470, 678 and 770 for decades and has essentially no free inventory, so a
+ * request for a 404 returned an empty list and the buy surfaced "No numbers
+ * available in area code 404. Try another."
+ *
+ * Accurate, and useless. Nobody wants a 404 specifically; they want a number
+ * that reads as Atlanta to somebody in Atlanta. Telnyx has always supported
+ * filter[administrative_area] for precisely this and we were not using it.
+ */
 export async function searchAvailableNumbers(
-  areaCode: string,
-  limit = 30
+  search: NumberSearch | string,
+  limitArg = 30
 ): Promise<AvailableNumber[]> {
+  // A bare string keeps the five existing callers working unchanged.
+  const opts: NumberSearch = typeof search === 'string'
+    ? { areaCode: search, limit: limitArg }
+    : search
+  const limit = opts.limit ?? limitArg
+
   const params = new URLSearchParams({
     'filter[country_code]': 'US',
-    'filter[national_destination_code]': areaCode,
     'filter[phone_number_type]': 'local',
     'filter[limit]': String(limit),
     'filter[voice_enabled]': 'true',
   })
+  if (opts.areaCode) params.set('filter[national_destination_code]', opts.areaCode)
+  if (opts.state) params.set('filter[administrative_area]', opts.state)
+  if (opts.bestEffort) params.set('filter[best_effort]', 'true')
 
   const res = await fetch(`${BASE_URL}/available_phone_numbers?${params}`, {
     headers: { Authorization: authHeader },
@@ -166,16 +205,79 @@ export async function releaseNumber(telnyxNumberId: string): Promise<void> {
 export async function acquireNumberByAreaCode(
   areaCode: string
 ): Promise<PurchasedNumber | null> {
-  const available = await searchAvailableNumbers(areaCode, 5)
-  if (available.length === 0) return null
+  const result = await acquireNumber({ areaCodes: [areaCode] })
+  return result?.purchased ?? null
+}
 
-  for (const candidate of available) {
-    try {
-      return await purchaseNumber(candidate.phone_number)
-    } catch (err) {
-      console.warn(`[telnyxProvision] Failed to purchase ${candidate.phone_number}, trying next:`, err)
+export interface AcquireTarget {
+  /** Preferred NPAs, best first. Each is tried before the state fallback. */
+  areaCodes?: string[]
+  /** Two-letter state. The fallback that makes a buy actually succeed. */
+  state?: string
+}
+
+export interface AcquireResult {
+  purchased: PurchasedNumber
+  /** Which rung of the ladder actually produced it. */
+  via: 'area_code' | 'state' | 'state_best_effort'
+  /** The NPA asked for, when via is 'area_code'. */
+  areaCode?: string
+}
+
+/**
+ * Buy one number, trying progressively looser searches until one works.
+ *
+ * ── THE LADDER, AND WHY IT IS IN THIS ORDER ────────────────────────────────
+ *   1. each preferred area code, exact      the number somebody actually wants
+ *   2. anywhere in the state, exact         still a local match to the lead
+ *   3. anywhere in the state, best effort   a neighbouring rate centre
+ *
+ * Every rung is a weaker locality signal than the one above it, and locality
+ * is the whole reason for buying in a particular place. So the ladder is
+ * ordered by how good the number is, and descends only when the rung above
+ * has no inventory.
+ *
+ * Without this, a buy was a single exact search that returned nothing on the
+ * mature area codes -- 404, 323, 313 -- which are mature precisely BECAUSE
+ * they cover the places with the most people in them, which is why they are
+ * the ones worth buying. The failure mode selected against the goal.
+ *
+ * Returns which rung won, so the caller can say "no 404 was free, bought a
+ * 470 in Atlanta instead" rather than reporting a plain success and leaving
+ * somebody to notice the area code later.
+ */
+export async function acquireNumber(target: AcquireTarget): Promise<AcquireResult | null> {
+  const tryBuy = async (candidates: AvailableNumber[]) => {
+    for (const candidate of candidates) {
+      try {
+        return await purchaseNumber(candidate.phone_number)
+      } catch (err) {
+        console.warn(`[telnyxProvision] Failed to purchase ${candidate.phone_number}, trying next:`, err)
+      }
+    }
+    return null
+  }
+
+  for (const areaCode of target.areaCodes ?? []) {
+    const available = await searchAvailableNumbers({ areaCode, limit: 5 })
+    if (available.length === 0) {
+      console.log(`[telnyxProvision] no inventory in ${areaCode}, falling back`)
       continue
     }
+    const purchased = await tryBuy(available)
+    if (purchased) return { purchased, via: 'area_code', areaCode }
+  }
+
+  if (target.state) {
+    const exact = await searchAvailableNumbers({ state: target.state, limit: 10 })
+    const purchased = await tryBuy(exact)
+    if (purchased) return { purchased, via: 'state' }
+
+    const loose = await searchAvailableNumbers({
+      state: target.state, bestEffort: true, limit: 10,
+    })
+    const fallback = await tryBuy(loose)
+    if (fallback) return { purchased: fallback, via: 'state_best_effort' }
   }
 
   return null

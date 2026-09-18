@@ -290,6 +290,9 @@ export default function NumbersApp() {
   const [buyOpen, setBuyOpen] = useState(false)
   const [buyMode, setBuyMode] = useState<'single' | 'random' | 'states'>('single')
   const [buyAreaCode, setBuyAreaCode] = useState('')
+  // Parsed once here so the button's enabled state and the submit handler can
+  // never disagree about what was typed.
+  const buyAreaCodeList = [...new Set(buyAreaCode.split(/[^0-9]+/).filter(Boolean))]
   // ── WHY THIS IS TEXT AND NOT A NUMBER ─────────────────────────────────
   // The input was bound to a number and coerced on every keystroke with
   // `parseInt(value) || 1`. Deleting the last character makes value '',
@@ -507,8 +510,12 @@ export default function NumbersApp() {
 
   
   const handleBuySingle = async () => {
-    if (!/^\d{3}$/.test(buyAreaCode)) {
-      setBuyMessage('Area code must be exactly 3 digits')
+    // ── ONE CODE OR A LIST ────────────────────────────────────────────────
+    // Split on anything that is not a digit so "404, 229" and "404 229" and
+    // "404/229" all work. The server applies the same rule; validating here
+    // too only exists to give an instant answer to an obvious typo.
+    if (buyAreaCodeList.length === 0 || buyAreaCodeList.some(c => !/^\d{3}$/.test(c))) {
+      setBuyMessage('Area codes must be 3 digits. Separate several with commas.')
       return
     }
     setBuying(true)
@@ -520,12 +527,29 @@ export default function NumbersApp() {
         body: JSON.stringify({ areaCode: buyAreaCode }),
       })
       const d = await res.json()
-      if (d.success) {
-        setBuyMessage(`Bought ${d.number.phone_number}`)
-        setBuyAreaCode('')
-        await load(false)
+
+      // ── REPORT EVERY CODE, NOT JUST THE HEADLINE ────────────────────────
+      // A list can partly succeed, and "Bought 3" with no detail leaves the
+      // other three unexplained. Each line says what was asked for and what
+      // actually arrived -- including when the area code substituted, which
+      // is normal on exhausted codes and must not be silent.
+      if (Array.isArray(d.results)) {
+        const lines = d.results.map((r: {
+          requested: string; ok: boolean; phone_number?: string
+          note?: string; error?: string
+        }) => r.ok
+          ? `${r.requested}: ${r.phone_number}${r.note ? ` — ${r.note}` : ''}`
+          : `${r.requested}: ${r.error}`)
+        setBuyMessage([`Bought ${d.bought}/${d.requested}`, ...lines].join(' · '))
+      } else if (d.success) {
+        setBuyMessage(`Bought ${d.number?.phone_number ?? 'a number'}`)
       } else {
         setBuyMessage(`Failed: ${d.error}`)
+      }
+
+      if (d.bought > 0 || d.success) {
+        setBuyAreaCode('')
+        await load(false)
       }
     } catch (err: any) {
       setBuyMessage(`Error: ${err.message}`)
@@ -2148,12 +2172,16 @@ export default function NumbersApp() {
                   Buys ONE number in the specified area code. Counts against daily buy cap
                   ({config.buys_today}/{config.daily_buy_cap} used today).
                 </div>
+                {/* Digits, commas and spaces. The old version stripped every
+                    non-digit and sliced to three characters, so a comma could
+                    not physically be typed -- buying six numbers meant opening
+                    this dialog six times. */}
                 <input
                   className="pool-input"
-                  placeholder="Area code (e.g. 212)"
+                  placeholder="Area codes, e.g. 404, 229, 323"
                   value={buyAreaCode}
-                  onChange={e => setBuyAreaCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                  maxLength={3}
+                  onChange={e => setBuyAreaCode(e.target.value.replace(/[^0-9,\s]/g, '').slice(0, 120))}
+                  maxLength={120}
                   disabled={buying}
                 />
               </>
@@ -2274,7 +2302,8 @@ export default function NumbersApp() {
               {buyMode === 'single' ? (
                 <button
                   className="pool-btn pool-btn-primary"
-                  disabled={buying || buyAreaCode.length !== 3}
+                  disabled={buying || buyAreaCodeList.length === 0
+                    || buyAreaCodeList.some(c => c.length !== 3)}
                   onClick={handleBuySingle}
                 >
                   {buying ? 'BUYING...' : 'BUY'}
