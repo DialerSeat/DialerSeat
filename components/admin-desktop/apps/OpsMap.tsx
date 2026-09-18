@@ -2006,9 +2006,15 @@ export default function OpsMap() {
                       ? (!logsSeenBeforeOpenRef.current || n.at > logsSeenBeforeOpenRef.current)
                       : n.unread
                     return (
+                    // ── NO AMBER RAIL ─────────────────────────────────────
+                    // A 2px amber border down the left of every new row read
+                    // as an orange pill against a dense list, and in a corner
+                    // panel this small it was the loudest thing on the map.
+                    // New rows are still distinguishable -- brighter ink and
+                    // heavier weight, below -- which is enough at this size
+                    // and costs no colour.
                     <div key={n.id} style={{
                       padding: '5px 9px', borderBottom: `1px solid ${EDGE}`,
-                      borderLeft: `2px solid ${fresh ? AMBER : 'transparent'}`,
                     }}>
                       <div style={{
                         display: 'flex', justifyContent: 'space-between', gap: 8,
