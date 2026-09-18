@@ -50,6 +50,7 @@ const ALLOWED_FIELDS = [
   'recording_enabled',
   'predictive_lines_per_agent',
   'dial_repeat_count',
+  'is_test',
   'voicemail_drop_url',
   'enable_appointments_sub',
   'enable_not_interested_sub',
@@ -163,6 +164,15 @@ export async function POST(req: Request) {
         case 'dial_repeat_count': {
           if (typeof v !== 'number') continue
           updates.dial_repeat_count = Math.max(1, Math.min(3, Math.round(v)))
+          break
+        }
+        case 'is_test': {
+          // An operator-owned test list, exempt from the per-number attempt
+          // budget. Booleans only — a truthy string here would quietly take a
+          // real campaign out of a rule that exists to protect the people on
+          // it, which is not something a loose cast should be able to do.
+          if (typeof v !== 'boolean') continue
+          updates.is_test = v
           break
         }
         case 'voicemail_drop_url': {

@@ -36,6 +36,10 @@ export type CallabilityCode =
   | 'too_late'         // after it closes
   | 'sunday'           // state prohibits Sunday telemarketing
   | 'international'    // outside US rules — see internationalCallingWindow
+  // Spent its cross-campaign attempt budget — see lib/recentDialSuppression.
+  // Counted per NUMBER, so this fires on a number, not on a list: it is the
+  // expected answer for a test campaign whose rows all point at one line.
+  | 'number_budget_spent'
   | 'other'
 
 /**

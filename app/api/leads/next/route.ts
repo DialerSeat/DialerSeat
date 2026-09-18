@@ -133,6 +133,30 @@ async function handleNextLead(req: Request) {
     let campaign_id = searchParams.get('campaign_id')
     let team_id = searchParams.get('team_id')
 
+    // ── IS THIS A TEST LIST? ─────────────────────────────────────────────
+    // A test campaign dials numbers the operator owns, normally the same one
+    // on every row. The attempt budget counts per NUMBER across campaigns, so
+    // such a list reads as a single person called dozens of times and stops
+    // dialing at six — correct for real prospects, useless for a test.
+    //
+    // Resolved once here rather than per candidate: it is a property of the
+    // list being worked, and the loops below run per lead.
+    //
+    // Only an explicitly selected campaign can be exempt. Under ALL ACTIVE the
+    // candidates come from every campaign at once and there is no single
+    // answer, so the budget applies in full — which is the safe direction: a
+    // test list dialed under ALL ACTIVE keeps its protection rather than
+    // silently extending an exemption to real prospects alongside it.
+    let isTestCampaign = false
+    if (campaign_id && campaign_id !== 'all') {
+      const { data: testFlag } = await supabaseAdmin
+        .from('campaigns')
+        .select('is_test')
+        .eq('id', campaign_id)
+        .maybeSingle()
+      isTestCampaign = !!testFlag?.is_test
+    }
+
     // ── THE ORDERED ALLOWLIST ────────────────────────────────────────────
     // The dialer's queue panel sends its ENTIRE displayed order here, and the
     // server dials the first entry in it that is actually dialable right now.
@@ -297,7 +321,21 @@ async function handleNextLead(req: Request) {
         // This number has spent its attempts across every campaign it sits
         // in. Released like any other pass so the row returns to the pool
         // rather than staying claimed by a session that will not call it.
-        if (isExhausted(c, attempts)) { toRelease.push(c.id); continue }
+        //
+        // Counted per NUMBER, so a test list whose rows all point at the
+        // operator's own line reads as one person called dozens of times and
+        // goes undialable at six. That is correct for real prospects and
+        // useless for a test, hence the per-campaign exemption.
+        //
+        // Reported now, rather than dropped in silence. Every other reason a
+        // lead is passed over reaches the agent through this builder; this one
+        // did not, so the queue simply went quiet with nothing on screen to
+        // explain it.
+        if (!isTestCampaign && isExhausted(c, attempts)) {
+          diagnosis.add('number_budget_spent', c.phone ?? undefined)
+          toRelease.push(c.id)
+          continue
+        }
         const result = isCallableNow({ phone: c.phone ?? '', state: c.state }, { overrideWindow })
         if (result.allowed) { callable = c; continue }
         if (!blockReason) blockReason = result.reason || null
@@ -643,7 +681,10 @@ const ID_CHUNK_SIZE = 150
       campaign_id && campaign_id !== 'all' ? [campaign_id] : activeCampaignIds
     )
     for (const c of orderedPersonalCandidates) {
-      if (isExhausted(c, personalAttempts)) continue
+      if (!isTestCampaign && isExhausted(c, personalAttempts)) {
+        personalDiagnosis.add('number_budget_spent', c.phone ?? undefined)
+        continue
+      }
       // Belt-and-braces against the status query above: isDialableLead also
       // rejects the retiring dispositions (DO NOT CALL / NOT INTERESTED /
       // CLOSED), which the status filter alone would miss for any row whose

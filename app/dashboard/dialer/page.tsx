@@ -7796,6 +7796,7 @@ const QUEUE_REASON_LABELS: Record<string, string> = {
   too_late: 'past their local calling window',
   sunday: 'state prohibits Sunday calls',
   international: 'outside US calling rules',
+  number_budget_spent: 'this number has used its 6 calls (counted across every campaign)',
   other: 'not dialable right now',
 }
 

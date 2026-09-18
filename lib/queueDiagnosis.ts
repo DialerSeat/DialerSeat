@@ -53,6 +53,10 @@ const LABELS: Record<CallabilityCode, string> = {
   too_late: 'are past their local calling window',
   sunday: 'are in states that prohibit Sunday calls',
   international: 'are outside US calling rules',
+  // Phrased around the NUMBER, because that is what the budget counts. On a
+  // test list whose rows all carry one line this is the expected answer, and
+  // saying "leads" would make it read as a data problem.
+  number_budget_spent: 'are on numbers that have already had their 6 calls across every campaign',
   other: 'cannot be dialed right now',
 }
 
