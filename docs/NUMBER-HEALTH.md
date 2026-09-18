@@ -251,6 +251,59 @@ score would have told you the same thing for money.
 
 ## 6. Practices that keep numbers healthy
 
+### What Hiya actually scores, 18 September 2026
+
+Hiya publishes its methodology, which makes it the most authoritative source
+in this document. It matters twice over: Hiya feeds AT&T, Cricket and Samsung,
+**and Telnyx's Number Reputation product is powered by Hiya** -- so these four
+grades are exactly what the $100/month would show us.
+
+Four factors, graded A to D:
+
+| Grade | Hiya's own wording | What it is |
+|---|---|---|
+| **Maturity** | "Do you use established numbers, without rotating?" | Mature if the number creates higher volume **OR** is seen calling over multiple days/weeks *"even at very low volumes"* |
+| **Connection** | "Do recipients choose to answer your calls?" | Answer rate |
+| **Engagement** | "Are recipients staying on the line after answering?" | Talk time |
+| **Sentiment** | "Do recipients rarely complain about or block your calls?" | Complaints and blocks |
+
+**CALL VELOCITY IS NOT ONE OF THEM.** Not calls per hour, not burst rate, not
+calls per minute. The practitioner advice that circulates -- ">50 calls/hour
+trips carrier algorithms" -- appears in no vendor documentation we can find,
+including Hiya's own.
+
+Three things follow, and they are the most useful conclusions in this file:
+
+1. **Pacing is not a scored variable, so pacing controls are not a lever.**
+   Burst rate can only hurt through its effect on Connection and Engagement.
+   If sixty calls in half an hour do not lower answer rate or talk time, the
+   scoring does not see them. Our own data agrees: holding volume constant,
+   velocity would not separate from volume across 21 days, because there is
+   no independent effect to find.
+
+2. **Two of the four are things we already measure for free.** Connection is
+   answer rate and Engagement is talk time, and `cron/number-health` computes
+   answer rate per number against the pool median on every dial. The free
+   signal maps directly onto half the paid product.
+
+3. **Sentiment is the genuine blind spot.** Complaints and blocks are
+   invisible to us and cannot be inferred. That, not pacing, is what money
+   would buy.
+
+#### And it explains the resting result
+
+§6 records that numbers rested 8+ days came back at a **16.4%** answer rate,
+worse than brand-new numbers at 20.5%, with no explanation for why rest failed
+to heal anything. Maturity is the explanation: a number is mature when it is
+*seen*, and rest is the absence of being seen. Resting does not heal a number,
+it de-matures it.
+
+The soft cap in `claim_pool_number` already does the useful half of resting --
+it demotes a hot number to the back of the queue while leaving it present and
+calling. That keeps Maturity intact in a way that resting cannot.
+
+---
+
 ### What TNS told us directly, 18 September 2026
 
 Their registration confirmation email carries the only unprompted guidance any
