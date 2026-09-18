@@ -571,10 +571,14 @@ function DialerPageInner() {
     created_at?: string | null
     dial_attempts?: number | null
     disposition?: string | null
-    // Already returned by /api/leads/list (it selects *). Typed here because
-    // it drives queue ROTATION — see visibleQueuedLeads. Null means never
-    // dialed, which is what puts fresh leads at the top.
+    // Typed here because it drives queue ROTATION — see visibleQueuedLeads.
+    // Null means never dialed, which is what puts fresh leads at the top.
     last_called_at?: string | null
+    // Required by isDialableLead, which is what splits this queue into the
+    // group rotation sorts and the group it leaves alone. Optional on
+    // DialabilityInput, so leaving it off here compiled cleanly and failed
+    // silently at runtime — every lead undialable, no rotation at all.
+    status?: string | null
   }
   const [queuedLeads, setQueuedLeads] = useState<QueuedLead[]>([])
   const [queuedLeadsLoading, setQueuedLeadsLoading] = useState(false)

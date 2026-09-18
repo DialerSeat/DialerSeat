@@ -92,9 +92,19 @@ export async function GET(req: NextRequest) {
   // added there and forgotten here arrives undefined rather than erroring,
   // which is why the list is written out rather than spread from a constant
   // somebody could edit on one side only.
+  //
+  // `status` is not decoration. isDialableLead refuses any lead whose status
+  // is not 'uncalled' or 'no_answer', so omitting the column made it undefined
+  // and every lead in the queue classified undialable. The dialer's rotation
+  // sorts the dialable group and concatenates the rest untouched, so with that
+  // group empty the panel rendered its original order and the lead the agent
+  // had just worked never moved off the top. Dialing itself still advanced
+  // correctly, because /api/leads/next does its own eligibility check against
+  // full rows server-side — which is what made the fault look like a display
+  // quirk rather than a missing column.
   const QUEUE_FIELDS =
     'id, phone, first_name, last_name, city, state, campaign_id, ' +
-    'created_at, dial_attempts, disposition, last_called_at'
+    'created_at, dial_attempts, disposition, last_called_at, status'
   const narrow = searchParams.get('fields') === 'queue'
 
   let query = supabaseAdmin
