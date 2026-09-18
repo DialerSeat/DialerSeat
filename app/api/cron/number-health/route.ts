@@ -4,6 +4,7 @@ import { apiError } from '@/lib/apiError'
 import { sendAdminPush } from '@/lib/pushNotify'
 import { neverRang } from '@/lib/dialOutcome'
 import { HEALTH_WINDOW_DAYS } from '@/lib/dialerConstants'
+import { DEFAULT_DAILY_CAP } from '@/lib/numberPool'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -22,7 +23,11 @@ export const runtime = 'nodejs'
 //
 // WHAT THIS DOES: computes answered/placed per number over a rolling window,
 // compares each number against the POOL MEDIAN rather than a fixed threshold,
-// and rests the ones that have collapsed relative to their peers.
+// and THROTTLES the ones that have collapsed relative to their peers -- drops
+// their daily cap to 15 while leaving them in the pool -- then restores the
+// cap when they recover. See THROTTLED_DAILY_CAP for why throttling replaced
+// resting on 18 Sept, and why the evidence says the two are opposites rather
+// than degrees of the same thing.
 //
 // WHY A RELATIVE THRESHOLD: absolute answer rates swing enormously by vertical,
 // time of day, and list quality. A 12% rate might be excellent for aged
@@ -31,17 +36,19 @@ export const runtime = 'nodejs'
 // days — that is a property of the number, not the campaign.
 //
 // SAFETY:
-//   - Read-mostly. The only write is status -> 'resting' plus counters. It
-//     never releases or buys a number; a bad heuristic must not be able to
-//     spend money or destroy pool capacity.
-//   - Rested numbers are revived by the existing pool-reset cron, so a false
-//     positive costs one day of that number's capacity, not the number.
+//   - Read-mostly. The only writes are daily_cap and counters. It never
+//     releases or buys a number, and it no longer changes status at all; a bad
+//     heuristic must not be able to spend money or remove pool capacity.
+//   - A false positive now costs a number three quarters of its daily volume
+//     for as long as its answer rate stays down, not its place in the pool.
+//     The same run that throttles restores anything back above threshold, so
+//     the penalty ends on its own.
 //   - Needs a real sample before judging anything (MIN_CALLS_FOR_JUDGEMENT).
-//   - Refuses to act at all if it would rest too much of the pool at once —
+//   - Refuses to act at all if it would throttle too much of the pool at once —
 //     that pattern means something platform-wide is wrong (a webhook outage
 //     leaving answered_at unset would look exactly like every number going
-//     bad simultaneously), and resting the whole pool would turn a metrics
-//     bug into a total outage.
+//     bad simultaneously), and throttling the whole pool would turn a metrics
+//     bug into a capacity outage.
 // =============================================================================
 
 const supabase = getServiceClient('cron/number-health')
@@ -64,8 +71,53 @@ const MIN_CALLS_FOR_JUDGEMENT = 40
  */
 const RELATIVE_FLOOR = 0.4
 
-/** Never rest more than this fraction of active numbers in one run. */
+/** Never throttle more than this fraction of active numbers in one run. */
 const MAX_REST_FRACTION = 0.25
+
+/**
+ * The cap a struggling number is dropped to, instead of being taken out.
+ *
+ * ── WHY THROTTLE AND NOT REST ─────────────────────────────────────────────
+ * This route used to set status = 'resting', removing the number from the
+ * pool until the next daily reset. Research on 18 Sept says that is the wrong
+ * intervention, and this account's own data says so twice, in opposite
+ * directions:
+ *
+ *   rested 8+ days      came back at 16.4%, WORSE than a brand-new number
+ *                       at 20.5%
+ *   volume cut 109->33  answer rate went 34.4% -> 63.1%, within 1-3 days,
+ *                       same number, same lead pool
+ *
+ * Same problem, two responses, opposite outcomes. Hiya publishes the
+ * mechanism: of its four graded factors, Maturity is "do you use established
+ * numbers, without rotating", and a number is mature because it is SEEN
+ * calling. Rest is the absence of the input, so it cannot heal anything --
+ * it just removes the number from view while the old complaints sit there.
+ *
+ * Throttling improves three of the four -- Connection and Engagement recover
+ * as answer rate does, Sentiment recovers because fewer calls mean fewer
+ * complaints -- and protects the fourth, because the number keeps calling.
+ *
+ * 15 rather than 0. High enough to stay visible and keep accruing Maturity,
+ * low enough to be a real reduction from 60.
+ */
+const THROTTLED_DAILY_CAP = 15
+
+/**
+ * Sample needed to let a throttled number back up, as opposed to to condemn it.
+ *
+ * Deliberately far below MIN_CALLS_FOR_JUDGEMENT, and the asymmetry is the
+ * point. The window is 3 days and a throttled number is capped at 15/day, so
+ * it can place at most 45 calls -- barely over the 40 needed to be judged at
+ * all, and under it on any quiet day. Judging restoration by the same bar as
+ * condemnation would mean a throttled number frequently could not qualify to
+ * be un-throttled, and the penalty would quietly become permanent.
+ *
+ * Restoring on weaker evidence is the safe direction. If it was wrong, the
+ * next run is 24 hours away and will throttle it again. Never restoring has
+ * no such correction.
+ */
+const MIN_CALLS_TO_RESTORE = 15
 
 /** Pool median below this is treated as too weak a baseline to compare against. */
 const MIN_MEDIAN_RATE = 0.02
@@ -202,7 +254,7 @@ export async function GET(req: Request) {
         `Pool-wide answer rate is ${(poolMedian * 100).toFixed(1)}% across ${judgeable.length} numbers ` +
         `over ${WINDOW_DAYS}d. That's too low to be a per-number issue, check webhook delivery ` +
         `(answered_at not being written looks identical to nobody answering) or list quality. ` +
-        `No numbers were rested.`
+        `No numbers were throttled.`
       )
       return NextResponse.json({
         success: true, action: 'alerted_pool_wide',
@@ -220,7 +272,7 @@ export async function GET(req: Request) {
         'pool_capacity',
         `${suspect.length} of ${active.length} pool numbers are answering below ${(threshold * 100).toFixed(1)}% ` +
         `(pool median ${(poolMedian * 100).toFixed(1)}%). That's more than ${Math.round(MAX_REST_FRACTION * 100)}% of the pool, ` +
-        `so nothing was rested automatically: this pattern usually means a platform problem, not ${suspect.length} bad numbers.`
+        `so nothing was throttled automatically: this pattern usually means a platform problem, not ${suspect.length} bad numbers.`
       )
       return NextResponse.json({
         success: true, action: 'refused_bulk_rest',
@@ -235,23 +287,49 @@ export async function GET(req: Request) {
       const { error } = await supabase
         .from('phone_numbers')
         .update({
-          status: 'resting',
+          // Throttled, NOT rested. The number stays active and keeps calling.
+          daily_cap: THROTTLED_DAILY_CAP,
           last_flagged_at: new Date().toISOString(),
           flag_reason: `answer rate ${(s.rate * 100).toFixed(1)}% vs pool median ${(poolMedian * 100).toFixed(1)}% over ${WINDOW_DAYS}d`,
-          rested_reason: 'low_answer_rate',
+          rested_reason: 'throttled_low_answer_rate',
         })
         .eq('id', s.id)
-        .eq('status', 'active') // don't fight a concurrent status change
+        .eq('status', 'active')
       if (!error) rested.push(s.phone_number)
+    }
+
+    // ── AND LET THEM BACK UP WHEN THEY RECOVER ──────────────────────────
+    // The cron that throttles is the one that must un-throttle: it is the only
+    // thing computing the health that justified it. pool-reset deliberately
+    // does not touch daily_cap, so without this a throttled number would sit
+    // at 15 forever and the intervention would become a life sentence.
+    // From `stats`, not `judgeable` -- see MIN_CALLS_TO_RESTORE. A throttled
+    // number often cannot clear the judging bar precisely BECAUSE it is
+    // throttled, which is the circularity this avoids.
+    const restored: string[] = []
+    for (const s of stats.filter(x => x.placed >= MIN_CALLS_TO_RESTORE && x.rate >= threshold)) {
+      const { data, error } = await supabase
+        .from('phone_numbers')
+        .update({
+          daily_cap: DEFAULT_DAILY_CAP,
+          rested_reason: null,
+          flag_reason: null,
+        })
+        .eq('id', s.id)
+        .eq('rested_reason', 'throttled_low_answer_rate')
+        .select('phone_number')
+      if (!error && data && data.length > 0) restored.push(s.phone_number)
     }
 
     if (rested.length > 0) {
       await sendAdminPush(
         'pool_capacity',
-        `Rested ${rested.length} pool number(s) answering far below the rest: ${rested.slice(0, 5).join(', ')}` +
+        `Throttled ${rested.length} pool number(s) to ${THROTTLED_DAILY_CAP}/day, answering far below ` +
+        `the rest: ${rested.slice(0, 5).join(', ')}` +
         `${rested.length > 5 ? `, +${rested.length - 5} more` : ''}. ` +
         `Pool median ${(poolMedian * 100).toFixed(1)}%. Likely carrier spam-labelled. ` +
-        `They return to active at the next daily pool reset.`
+        `They keep calling at reduced volume -- that is what recovers them -- and the cap ` +
+        `returns to ${DEFAULT_DAILY_CAP} automatically once answer rate does.`
       )
     }
 
@@ -261,7 +339,11 @@ export async function GET(req: Request) {
       judged: judgeable.length,
       pool_median: Number(poolMedian.toFixed(4)),
       threshold: Number(threshold.toFixed(4)),
-      rested,
+      // Named for what now happens. A run that restores more than it throttles
+      // is the healthy shape, and a response that only reported one half would
+      // hide that.
+      throttled: rested,
+      restored,
     })
   } catch (err) {
     return apiError(err, { route: 'cron/number-health' })
