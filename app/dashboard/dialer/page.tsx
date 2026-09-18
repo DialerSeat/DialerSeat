@@ -3714,8 +3714,29 @@ function DialerPageInner() {
     // via scheduleDial -> setTimeout, so the closure it was created in predates
     // the rotation that just happened — sending that stale order told the
     // server the lead we had only just finished was still top of the list.
-    const currentOrder = visibleQueuedLeadsRef.current
-    const queueReadyForOrderedDial = !(queuedLeadsLoading && currentOrder.length === 0)
+    const rawOrder = visibleQueuedLeadsRef.current
+    const queueReadyForOrderedDial = !(queuedLeadsLoading && rawOrder.length === 0)
+
+    // ── SINK WHAT WE JUST DIALLED, DROP NOTHING ─────────────────────────
+    // Rotation happens by stamping last_called_at, which goes through React
+    // state and is not visible in visibleQueuedLeadsRef for a frame or two.
+    // The next fetch fires 300ms later and was reading the pre-rotation order,
+    // so the lead just finished was still at position 0 and the server handed
+    // it straight back — a redial on 1x, where the rule is one dial and move on.
+    //
+    // This is the same rotation, applied synchronously from the dial ledger so
+    // it is true the instant the call ends. It only ever REORDERS: every lead
+    // stays in the list and stays dialable, so a lead that comes back round
+    // later is dialled again normally. Stable sort, so the panel's own order
+    // survives among leads nothing has been dialled to.
+    const currentOrder = rawOrder
+      .map((l, i) => {
+        const seen = recentDialsByLeadRef.current.get(l.id)
+        const last = seen && seen.length ? seen[seen.length - 1] : 0
+        return { l, i, last }
+      })
+      .sort((a, b) => (a.last - b.last) || (a.i - b.i))
+      .map(x => x.l)
 
     // POSTed, not appended to the query string. The whole visible queue goes
     // to the server — every lead, in the exact displayed order — and a few
@@ -3734,7 +3755,11 @@ function DialerPageInner() {
         // now (a whole region outside its calling window, say), the server
         // falls back to an unconstrained query rather than reporting an empty
         // queue — see app/api/leads/next/route.ts.
-        lead_ids: queueReadyForOrderedDial
+        // `undefined`, not `[]`, when the filter empties the window: an empty
+        // allowlist makes the server report "no leads match" and the chain
+        // stops dead. Handing it nothing to match on lets it pick for itself,
+        // and the gate in dialLeadCall still catches a repeat.
+        lead_ids: queueReadyForOrderedDial && currentOrder.length > 0
           ? currentOrder.slice(0, DIAL_ORDER_WINDOW).map(l => l.id)
           : undefined,
       }),
@@ -3869,36 +3894,21 @@ function DialerPageInner() {
       return
     }
 
-    // ── THE REPEAT RULE, AT THE ONLY GATE EVERY DIAL PASSES ───────────────
-    // 1x means one dial. Enforced here rather than in the branches that
-    // decide to redial, because there are five of those and they have been
-    // wrong three times. See recentDialsByLeadRef.
+    // ── RECORD THE DIAL. DO NOT REFUSE IT. ────────────────────────────────
+    // This used to cap dials per lead and refuse anything over the limit. That
+    // was the wrong mechanism: a refusal here is a dead INITIATE DIAL SEQUENCE
+    // button, and it could not fix the thing it was added for anyway — the
+    // refused dial re-fetched the same unrotated lead and refused it again.
+    //
+    // A lead is never blocked from being dialled. Once its attempts are spent
+    // it moves to the bottom of the queue and the next lead starts; when it
+    // comes back round naturally it is dialable again like any other. The
+    // timestamps are kept only so fetchNextLead can sink a just-dialled lead
+    // synchronously, without waiting on a React state round-trip.
     {
-      const cap = isPreview ? 1 : Math.min(dialRepeatCount, 3)
       const now = Date.now()
       const seen = (recentDialsByLeadRef.current.get(lead.id) ?? [])
         .filter(t => now - t < 10 * 60 * 1000)
-
-      if (seen.length >= cap) {
-        console.warn(
-          `[dialer] dialLeadCall REFUSED: lead ${lead.id} already dialled ` +
-          `${seen.length} time(s) in the last 10 minutes, cap is ${cap}`
-        )
-        // Said out loud. A refusal the agent cannot see is a dialer that
-        // appears to do nothing, which is the other half of what was
-        // reported. Then move on rather than stalling.
-        setAmdActivity(prev =>
-          [`ALREADY DIALLED ${seen.length}x — SKIPPING TO NEXT LEAD`, ...prev].slice(0, 5)
-        )
-        markLeadDialedLocally(lead.id)
-        setCurrentLead(null)
-        leadAttemptCountRef.current = 1
-        redialQueuedRef.current = false
-        setStatus('idle')
-        scheduleDial(600)
-        return
-      }
-
       seen.push(now)
       recentDialsByLeadRef.current.set(lead.id, seen)
 
@@ -4287,7 +4297,7 @@ function DialerPageInner() {
             setStatus('idle')
             setCurrentLead(null)
             leadAttemptCountRef.current = 1; redialQueuedRef.current = false // next lead starts its own count
-            scheduleDial(600)
+            scheduleDial(300) // see the exhausted path below — rotation no longer gates this
             return
           }
 
@@ -4413,12 +4423,30 @@ function DialerPageInner() {
               })
             }
           }
+          // ── ROTATE BEFORE LETTING GO OF THE LEAD ────────────────────────
+          // The two branches above do not both stamp. NO_ANSWER/busy reaches
+          // disposeLead, which rotates; voicemail deliberately writes no
+          // disposition, so it rotated nothing — last_called_at stayed null,
+          // the lead held position 0, and the scheduleDial below re-sent the
+          // same order 800ms later and got the same lead back. On 1x that is
+          // a redial the setting says can never happen.
+          //
+          // The identical hole was already found and fixed in the AMD branch
+          // further up ("rotate it explicitly"); this path was missed. Stamped
+          // here, after both branches, so it covers every ending — including
+          // any added later. Re-stamping an already-stamped lead is harmless.
+          markLeadDialedLocally(ld?.id)
           setStatus('idle')
           setCurrentLead(null)
           disarmDialing() // call ended without a human; next dial re-arms
           leadAttemptCountRef.current = 1; redialQueuedRef.current = false // moving to a new lead next — reset for it
 
-          scheduleDial(800)
+          // 800ms here was buying time for the rotation above to settle into
+          // visibleQueuedLeadsRef before the next fetch read it. The allowlist
+          // filter in fetchNextLead is synchronous and ref-based, so that wait
+          // no longer buys anything. Matched to the skip path's 300, which is
+          // the shortest gap already proven against the SIP re-arm.
+          scheduleDial(300)
         }
       } catch (err) {
         // ── A THROW HERE USED TO END THE SHIFT ──────────────────────────
@@ -6092,7 +6120,10 @@ function DialerPageInner() {
               fontSize: 10, fontWeight: 'bold', letterSpacing: 1.5, fontFamily: FUTURA,
               color: terminalAccent,
             }}>
-              ● DIALING {dialingCount || 1} LINE{dialingCount === 1 || dialingCount === 0 ? '' : 'S'}
+              {/* Only predictive dials more than one line, so only predictive
+                  has a number worth printing. "DIALING 1 LINE" on progressive
+                  states the only thing that was ever possible. */}
+              ● DIALING{isPredictive ? ` ${dialingCount || 1} LINE${dialingCount === 1 || dialingCount === 0 ? '' : 'S'}` : ''}
             </span>
           )}
 
