@@ -75,9 +75,31 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ── SEND THE COLUMNS THE CALLER ACTUALLY RENDERS ───────────────────────
+  // The dialer's queue panel paginates every campaign in scope, 50 rows at a
+  // time, up to its load cap — the single largest read this platform makes.
+  // It was served select('*'): 29 columns averaging 1,053 bytes a row, when
+  // the panel's own QueuedLead type uses 11 of them. The rest included
+  // extra_data (arbitrary jsonb from CSV imports), notes, email, the address
+  // fields and five consent_* columns, none of which the panel can display.
+  //
+  // Supabase warned about egress on 17 Sept. This is bytes over the wire, not
+  // rows in the database: nothing is deleted, no history is lost, and every
+  // other caller still gets the full row. A narrow mode the queue opts into
+  // is the whole change.
+  //
+  // Kept in step with QueuedLead in app/dashboard/dialer/page.tsx. A column
+  // added there and forgotten here arrives undefined rather than erroring,
+  // which is why the list is written out rather than spread from a constant
+  // somebody could edit on one side only.
+  const QUEUE_FIELDS =
+    'id, phone, first_name, last_name, city, state, campaign_id, ' +
+    'created_at, dial_attempts, disposition, last_called_at'
+  const narrow = searchParams.get('fields') === 'queue'
+
   let query = supabaseAdmin
     .from('leads')
-    .select('*', { count: 'exact' })
+    .select(narrow ? QUEUE_FIELDS : '*', { count: 'exact' })
     .eq('user_id', userId)
 
   if (campaignId !== 'all') {

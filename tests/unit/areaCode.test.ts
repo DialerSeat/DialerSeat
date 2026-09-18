@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   classifyAreaCode,
   classifyPhone,
@@ -218,6 +218,22 @@ describe('the end-to-end path: area code to a dialing decision', () => {
   })
 
   it('an explicit state column still wins over the area code', () => {
+    // ── THIS TEST USED TO FAIL EVERY NIGHT ────────────────────────────────
+    // It read the real clock. isCallableNow checks BOTH the declared state and
+    // the area code's state and reports whichever one blocks, so after 9pm
+    // Eastern the 336 area code put this lead outside the NC window and the
+    // function correctly returned leadState 'NC' -- the blocking state, not
+    // the declared one. Green all day, red every evening, for a behaviour that
+    // was right the whole time.
+    //
+    // Pinned to a moment when BOTH states are inside the window, which is the
+    // only condition under which "the declared state wins" is even a
+    // meaningful claim. The dual-state blocking behaviour has its own tests in
+    // callingWindow.test.ts and is not what this one is about.
+    //
+    // 18:00 UTC is 2pm in NC and 11am in CA.
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-17T18:00:00Z'))
     // Someone with a NC cell who moved to California should be timed by the
     // column they set, not by where their number was issued.
     const r = isCallableNow({ phone: '3365551234', state: 'CA' })
@@ -237,4 +253,10 @@ describe('extractAreaCode', () => {
     expect(extractAreaCode('')).toBeNull()
     expect(extractAreaCode(null)).toBeNull()
   })
+})
+
+// Any test that pins the clock must give it back, or every test file that runs
+// after this one in the same worker inherits a frozen September afternoon.
+afterEach(() => {
+  vi.useRealTimers()
 })

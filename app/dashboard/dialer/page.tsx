@@ -3416,6 +3416,17 @@ function DialerPageInner() {
           // every one a chance to fail partway and leave the panel silently
           // short. At 500 the same lists are 2 and 20.
           page_size: '500',
+          // ── ONLY THE COLUMNS THIS PANEL RENDERS ────────────────────────
+          // 500 rows a page of select('*') is about 526KB on the wire, and a
+          // 10,000-lead campaign is twenty of those per queue load, per agent.
+          // Supabase warned about egress on 17 Sept and this is the largest
+          // read the platform makes.
+          //
+          // The narrow set is exactly QueuedLead's fields. Nothing the panel
+          // can display is dropped, nothing is deleted, and every other caller
+          // of /api/leads/list still receives the whole row -- the lead profile
+          // opened from a queue row fetches by id separately and is untouched.
+          fields: 'queue',
         }
         if (queueSearch.trim()) paramEntries.search = queueSearch.trim()
         const params = new URLSearchParams(paramEntries)
