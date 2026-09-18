@@ -9,6 +9,7 @@ import { isDialableLead } from '@/lib/dialableLead'
 import type { QueueDiagnosis } from '@/lib/queueDiagnosis'
 import { phoneToState } from '@/lib/areaCode'
 import { BUILD_SHA } from '@/lib/buildId'
+import { rotationKey, sinkDialedLeads, recordDial, type DialLog } from '@/lib/queueRotation'
 
 /**
  * Whole seconds since a start timestamp, 0 when never started.
@@ -679,7 +680,20 @@ function DialerPageInner() {
    * comfortably inside the allowance; a lead coming round on a later pass is
    * far outside it.
    */
-  const recentDialsByLeadRef = useRef<Map<string, number[]>>(new Map())
+  // ── TWO READERS, TWO COPIES, ONE WRITE ──────────────────────────────────
+  // The panel needs this during render, and a ref read during render does not
+  // re-render when it changes — the rotation would only appear whenever some
+  // other state update happened to repaint. So the display reads state.
+  //
+  // fetchNextLead cannot read that state: it runs from a setTimeout, so the
+  // closure predates the dial that just happened and it would send the server
+  // the pre-rotation order — which is the original bug. So the dial path reads
+  // the ref, which is always current.
+  //
+  // Both are written in the same statement in dialLeadCall; neither is written
+  // anywhere else.
+  const [dialLog, setDialLog] = useState<DialLog>({})
+  const recentDialsByLeadRef = useRef<DialLog>({})
   // When the agent's SIP leg reached Established. Billing starts there, and the
   // short-duration floor is measured from it -- see releaseAgentLeg.
   const agentLegAnsweredAtRef = useRef<number | null>(null)
@@ -839,11 +853,23 @@ function DialerPageInner() {
     // Stable sort, so the incoming order (created_at or an active shuffle) is
     // preserved among leads that share a last_called_at — including all the
     // never-dialed ones.
-    const rotated = [...dialable].sort((a, b) => {
-      const at = a.last_called_at ? Date.parse(a.last_called_at) : 0
-      const bt = b.last_called_at ? Date.parse(b.last_called_at) : 0
-      return at - bt
-    })
+    // ── THE STAMP THE SERVER NEVER WRITES ────────────────────────────────
+    // Sorting on last_called_at alone was not enough to sink a finished lead.
+    // Placing a call writes nothing to the lead row — /api/calls/outbound only
+    // reads it — so last_called_at is set by exactly one thing: disposeLead.
+    // Voicemail deliberately writes no disposition, so it never reaches
+    // disposeLead and the column stays null. markLeadDialedLocally patched it
+    // into local state, but that is optimistic: the next queue refetch (any
+    // dispose triggers one for the whole list) returns the server's null and
+    // the lead the agent just worked jumps back to the top of the panel.
+    //
+    // The dial ledger is the honest record of what this session has dialled,
+    // it is a ref so no refetch can overwrite it, and it is already what the
+    // dial order sinks on. Taking the later of the two means the panel and the
+    // dial order agree, and a refetch can no longer undo the rotation.
+    const rotated = [...dialable].sort(
+      (a, b) => rotationKey(a, dialLog) - rotationKey(b, dialLog)
+    )
 
     return rotated.concat(exhausted)
   })()
@@ -3729,14 +3755,7 @@ function DialerPageInner() {
     // stays in the list and stays dialable, so a lead that comes back round
     // later is dialled again normally. Stable sort, so the panel's own order
     // survives among leads nothing has been dialled to.
-    const currentOrder = rawOrder
-      .map((l, i) => {
-        const seen = recentDialsByLeadRef.current.get(l.id)
-        const last = seen && seen.length ? seen[seen.length - 1] : 0
-        return { l, i, last }
-      })
-      .sort((a, b) => (a.last - b.last) || (a.i - b.i))
-      .map(x => x.l)
+    const currentOrder = sinkDialedLeads(rawOrder, recentDialsByLeadRef.current)
 
     // POSTed, not appended to the query string. The whole visible queue goes
     // to the server — every lead, in the exact displayed order — and a few
@@ -3907,19 +3926,10 @@ function DialerPageInner() {
     // synchronously, without waiting on a React state round-trip.
     {
       const now = Date.now()
-      const seen = (recentDialsByLeadRef.current.get(lead.id) ?? [])
-        .filter(t => now - t < 10 * 60 * 1000)
-      seen.push(now)
-      recentDialsByLeadRef.current.set(lead.id, seen)
-
-      // Keep the map from growing across a long shift.
-      if (recentDialsByLeadRef.current.size > 500) {
-        for (const [id, times] of recentDialsByLeadRef.current) {
-          if (times.every(t => now - t >= 10 * 60 * 1000)) {
-            recentDialsByLeadRef.current.delete(id)
-          }
-        }
-      }
+      // Ref first and synchronously, so a dial chained 300ms from here already
+      // sees it. State second, so the panel repaints with the lead sunk.
+      recentDialsByLeadRef.current = recordDial(recentDialsByLeadRef.current, lead.id, now)
+      setDialLog(prev => recordDial(prev, lead.id, now))
     }
 
     // ── HARD GUARD (final gate before SignalWire) ───────────────────────────
