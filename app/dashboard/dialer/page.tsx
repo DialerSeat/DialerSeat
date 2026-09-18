@@ -4195,10 +4195,54 @@ function DialerPageInner() {
           // agent never saw the row being called. disposeLead and the AMD
           // machine-skip still stamp their own paths; those end the call
           // earlier than this poll notices, and a second stamp is harmless.
+          // ── A LATE MACHINE VERDICT IS STILL A MACHINE ───────────────────
+          // This is where most voicemails actually land. AMD needs a couple of
+          // seconds of greeting before it decides, and startCallPolling hands
+          // off to this poll the moment the far end answers — so the verdict
+          // usually arrives here, after the handoff, not there. The repeat
+          // logic lived only in startCallPolling, so 2x and 3x were bypassed
+          // entirely for the ordinary case and behaved exactly like 1x.
+          //
+          // Asked before the lead is rotated, because a lead with attempts
+          // left must keep its place at the top of the queue.
+          const endingLead = currentLeadRef.current
+          const lateMachine = isNotHuman(d.amd_result)
+          const repeatCap = isPreview ? 1 : Math.min(dialRepeatCount, 3)
+          const attemptsSoFar = leadAttemptCountRef.current
+
+          if (endingLead && lateMachine && shouldRedial({
+            // A machine, however cleanly the media connected.
+            reachedAHuman: false,
+            alreadyQueued: redialQueuedRef.current,
+            attemptsSoFar,
+            maxAttempts: repeatCap,
+          })) {
+            leadAttemptCountRef.current = attemptsSoFar + 1
+            setAmdActivity(prev =>
+              [`VOICEMAIL: REDIALING (${attemptsSoFar + 1} of ${repeatCap})`, ...prev].slice(0, 5)
+            )
+            showQueueOutcome(
+              endingLead.id,
+              `Voicemail, redialing (attempt ${attemptsSoFar + 1} of ${repeatCap})…`
+            )
+            setStatus('idle')
+            // Same lead, same position, no rotation — see above.
+            redialQueuedRef.current = true
+            const lateRedialId = setTimeout(() => {
+              dialChainTimeoutsRef.current.delete(lateRedialId)
+              redialQueuedRef.current = false
+              if (abortDialingRef.current) return
+              if (!availableRef.current) return
+              dialLeadCall(endingLead)
+            }, 800)
+            dialChainTimeoutsRef.current.add(lateRedialId)
+            return
+          }
+
           markLeadDialedLocally(currentLeadRef.current?.id)
 
-          // AMD 'machine' ALWAYS auto-advances, even if the UI had already
-          // flipped to connected.
+          // AMD 'machine' auto-advances once its attempts are spent, even if
+          // the UI had already flipped to connected.
           //
           // The `&& !agentWasOnTheCall` qualifier that used to be here is why
           // a detected voicemail sat on screen looking like a live call: AMD
@@ -4213,13 +4257,16 @@ function DialerPageInner() {
           // straight to the next lead. Human calls still get their sheet:
           // that qualifier still guards the non-AMD branch below, which is
           // what makes TERMINATE on a live call capture an outcome.
-          if (isNotHuman(d.amd_result)) {
+          if (lateMachine) {
             setAmdActivity(prev =>
               [`VOICEMAIL FILTERED LATE, ${d.amd_result}`, ...prev].slice(0, 5)
             )
             setStatus('idle')
             setCurrentLead(null)
-            if (autoChainOnFailure) scheduleDial(600)
+            // The next lead starts its own count.
+            leadAttemptCountRef.current = 1
+            redialQueuedRef.current = false
+            if (autoChainOnFailure) scheduleDial(300)
           } else {
             // Snapshot the final duration before the timer effect resets it,
             // so the disposition sheet can show how long the call lasted. Use
