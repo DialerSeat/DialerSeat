@@ -57,3 +57,54 @@ describe('shouldRedial', () => {
     expect(shouldRedial({ ...base, alreadyQueued: true })).toBe(false)
   })
 })
+
+describe('total dials per mode, on a voicemail every time', () => {
+  /**
+   * Walks the sequence the poll actually walks: dial, get a machine verdict,
+   * ask whether to go again. The count is what the agent sees.
+   *
+   * 1x is the only try. 2x is one more try after the first. 3x is two more
+   * after the first.
+   */
+  function dialsUntilItStops(maxAttempts: number): number {
+    let attempts = 1
+    while (
+      shouldRedial({
+        // A voicemail: connected, but AMD called it a machine.
+        reachedAHuman: reachedAHuman('machine', true, true),
+        alreadyQueued: false,
+        attemptsSoFar: attempts,
+        maxAttempts,
+      })
+    ) {
+      attempts++
+      if (attempts > 10) throw new Error('redial loop did not terminate')
+    }
+    return attempts
+  }
+
+  it('1x dials once', () => {
+    expect(dialsUntilItStops(1)).toBe(1)
+  })
+
+  it('2x dials the same lead twice', () => {
+    expect(dialsUntilItStops(2)).toBe(2)
+  })
+
+  it('3x dials the same lead three times', () => {
+    expect(dialsUntilItStops(3)).toBe(3)
+  })
+
+  it('a person answering ends it after one dial on every mode', () => {
+    for (const maxAttempts of [1, 2, 3]) {
+      expect(
+        shouldRedial({
+          reachedAHuman: reachedAHuman('human', true, false),
+          alreadyQueued: false,
+          attemptsSoFar: 1,
+          maxAttempts,
+        })
+      ).toBe(false)
+    }
+  })
+})
