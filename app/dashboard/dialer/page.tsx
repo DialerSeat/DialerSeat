@@ -3674,6 +3674,24 @@ function DialerPageInner() {
   const markLeadDialedLocally = useCallback((leadId?: string | null) => {
     if (!leadId) return
     const stamp = nowIso()
+    const now = Date.now()
+
+    // ── ROTATION IS RECORDED HERE, WHERE THE SEQUENCE ENDS ───────────────
+    // Not at dial time. A lead being worked has to stay where it is, at the
+    // top and highlighted, for the whole of its 1x/2x/3x sequence — recording
+    // the dial as it was placed dropped the row to the bottom instantly and
+    // the agent never saw the lead they were calling. Every caller of this
+    // function is a point where the lead is finished and the dialer is moving
+    // on, which is exactly when it should sink.
+    //
+    // The ref is written first and synchronously, because the next dial is
+    // chained a few hundred milliseconds from here and reads the ref, not
+    // state; state at that point still predates this stamp, which is what
+    // used to send the server the pre-rotation order and get the same lead
+    // handed straight back. The state copy is what repaints the panel.
+    recentDialsByLeadRef.current = recordDial(recentDialsByLeadRef.current, leadId, now)
+    setDialLog(prev => recordDial(prev, leadId, now))
+
     setQueuedLeads(prev =>
       prev.map(l => (l.id === leadId ? { ...l, last_called_at: stamp } : l))
     )
@@ -3917,24 +3935,19 @@ function DialerPageInner() {
       return
     }
 
-    // ── RECORD THE DIAL. DO NOT REFUSE IT. ────────────────────────────────
-    // This used to cap dials per lead and refuse anything over the limit. That
-    // was the wrong mechanism: a refusal here is a dead INITIATE DIAL SEQUENCE
-    // button, and it could not fix the thing it was added for anyway — the
-    // refused dial re-fetched the same unrotated lead and refused it again.
+    // ── NOTHING IS RECORDED HERE, AND NOTHING IS REFUSED ──────────────────
+    // This used to cap dials per lead and refuse anything over the limit. A
+    // refusal here is a dead INITIATE DIAL SEQUENCE button, and it could not
+    // fix what it was added for anyway: the refused dial re-fetched the same
+    // unrotated lead and refused it again. A lead is never blocked from being
+    // dialled — it is worked, it sinks, and when it comes back round it is
+    // dialable like any other.
     //
-    // A lead is never blocked from being dialled. Once its attempts are spent
-    // it moves to the bottom of the queue and the next lead starts; when it
-    // comes back round naturally it is dialable again like any other. The
-    // timestamps are kept only so fetchNextLead can sink a just-dialled lead
-    // synchronously, without waiting on a React state round-trip.
-    {
-      const now = Date.now()
-      // Ref first and synchronously, so a dial chained 300ms from here already
-      // sees it. State second, so the panel repaints with the lead sunk.
-      recentDialsByLeadRef.current = recordDial(recentDialsByLeadRef.current, lead.id, now)
-      setDialLog(prev => recordDial(prev, lead.id, now))
-    }
+    // Rotation is not recorded here either. Stamping the lead as the call goes
+    // out drops it to the bottom mid-sequence, so a 2x lead leaves the top of
+    // the panel before its second attempt and the agent loses sight of the row
+    // being called. markLeadDialedLocally does it instead, at the points where
+    // the sequence is actually over.
 
     // ── HARD GUARD (final gate before SignalWire) ───────────────────────────
     // This is the last function before the POST to /api/calls/outbound. Even if

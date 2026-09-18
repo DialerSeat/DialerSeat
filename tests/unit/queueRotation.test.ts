@@ -71,6 +71,23 @@ describe('sinkDialedLeads', () => {
       .toEqual(['c', 'a', 'b'])
   })
 
+  it('holds a lead at the top for its whole repeat sequence', () => {
+    // The log is written once, when the sequence ends — never as a call goes
+    // out. A 2x lead is dialled, rings out, and is dialled again, and must
+    // stay on the top row the agent is watching for both attempts. Recording
+    // at dial time dropped it to the bottom between them.
+    const queue = [lead('a'), lead('b'), lead('c')]
+    const midSequence: DialLog = {}
+    expect(sinkDialedLeads(queue, midSequence)[0].id).toBe('a')
+
+    // Second attempt on the same lead: still nothing recorded, still on top.
+    expect(sinkDialedLeads(queue, midSequence)[0].id).toBe('a')
+
+    // Sequence over. Now it sinks and the next lead comes up.
+    const afterSequence = recordDial(midSequence, 'a', T0)
+    expect(sinkDialedLeads(queue, afterSequence).map(l => l.id)).toEqual(['b', 'c', 'a'])
+  })
+
   it('works through a 1x pass over the whole queue without repeating a lead', () => {
     // Walk the queue the way the dialer does: take the top, dial it, sink it.
     let log: DialLog = {}
