@@ -102,16 +102,27 @@ export async function POST(req: Request) {
       // means asking for Atlanta, and Atlanta has no free 404s -- see
       // acquireNumber for the ladder.
       const state = getAreaCodeInfo(areaCode)?.state ?? undefined
-      const bought = await addNumberForTarget({ areaCodes: [areaCode], state })
 
-      if (!bought) {
+      // ── ONE CODE FAILING MUST NEVER END THE BATCH ────────────────────────
+      // The first version let an exception from the Telnyx search escape the
+      // loop, which aborted every remaining code and reported the generic
+      // "something went wrong". Buying five of six and being told which one
+      // failed is the useful outcome; buying none and being told nothing is
+      // not. Each code is now independently survivable.
+      let bought
+      try {
+        bought = await addNumberForTarget({ areaCodes: [areaCode], state })
+      } catch (err) {
         results.push({
           requested: areaCode,
           ok: false,
-          error: state
-            ? `Nothing available in ${areaCode} or anywhere in ${state}.`
-            : `Nothing available in ${areaCode}, and it maps to no known state.`,
+          error: err instanceof Error ? err.message.slice(0, 200) : 'unexpected error',
         })
+        continue
+      }
+
+      if (!bought.ok) {
+        results.push({ requested: areaCode, ok: false, error: bought.reason })
         continue
       }
 

@@ -206,7 +206,7 @@ export async function acquireNumberByAreaCode(
   areaCode: string
 ): Promise<PurchasedNumber | null> {
   const result = await acquireNumber({ areaCodes: [areaCode] })
-  return result?.purchased ?? null
+  return result.ok ? result.purchased : null
 }
 
 export interface AcquireTarget {
@@ -222,7 +222,13 @@ export interface AcquireResult {
   via: 'area_code' | 'state' | 'state_best_effort'
   /** The NPA asked for, when via is 'area_code'. */
   areaCode?: string
+  /** Rungs that errored before this one won, for the log. */
+  warnings?: string[]
 }
+
+export type AcquireOutcome =
+  | ({ ok: true } & AcquireResult)
+  | { ok: false; reason: string }
 
 /**
  * Buy one number, trying progressively looser searches until one works.
@@ -246,39 +252,71 @@ export interface AcquireResult {
  * 470 in Atlanta instead" rather than reporting a plain success and leaving
  * somebody to notice the area code later.
  */
-export async function acquireNumber(target: AcquireTarget): Promise<AcquireResult | null> {
+export async function acquireNumber(target: AcquireTarget): Promise<AcquireOutcome> {
+  // ── EVERY RUNG IS FAULT TOLERANT, AND THAT IS THE POINT ──────────────────
+  // searchAvailableNumbers throws on any non-OK response from Telnyx. The
+  // first version of this ladder did not catch it, so a single rejected
+  // search -- one bad filter, one rate limit, one 5xx -- threw straight past
+  // the loop, aborted the entire batch, and surfaced as the generic "something
+  // went wrong, try again" with no indication of which code or why.
+  //
+  // A ladder whose whole purpose is to keep trying must not be stopped by the
+  // first rung failing. Each rung records why it failed and the next one runs.
+  const warnings: string[] = []
+
+  const why = (err: unknown) =>
+    err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200)
+
+  const search = async (label: string, opts: NumberSearch) => {
+    try {
+      return await searchAvailableNumbers(opts)
+    } catch (err) {
+      const msg = `${label}: ${why(err)}`
+      console.warn(`[telnyxProvision] search failed, ${msg}`)
+      warnings.push(msg)
+      return [] as AvailableNumber[]
+    }
+  }
+
   const tryBuy = async (candidates: AvailableNumber[]) => {
     for (const candidate of candidates) {
       try {
         return await purchaseNumber(candidate.phone_number)
       } catch (err) {
-        console.warn(`[telnyxProvision] Failed to purchase ${candidate.phone_number}, trying next:`, err)
+        const msg = `purchase ${candidate.phone_number}: ${why(err)}`
+        console.warn(`[telnyxProvision] ${msg}`)
+        warnings.push(msg)
       }
     }
     return null
   }
 
   for (const areaCode of target.areaCodes ?? []) {
-    const available = await searchAvailableNumbers({ areaCode, limit: 5 })
-    if (available.length === 0) {
-      console.log(`[telnyxProvision] no inventory in ${areaCode}, falling back`)
-      continue
-    }
+    const available = await search(`search ${areaCode}`, { areaCode, limit: 5 })
+    if (available.length === 0) continue
     const purchased = await tryBuy(available)
-    if (purchased) return { purchased, via: 'area_code', areaCode }
+    if (purchased) return { ok: true, purchased, via: 'area_code', areaCode, warnings }
   }
 
   if (target.state) {
-    const exact = await searchAvailableNumbers({ state: target.state, limit: 10 })
+    const exact = await search(`search ${target.state}`, { state: target.state, limit: 10 })
     const purchased = await tryBuy(exact)
-    if (purchased) return { purchased, via: 'state' }
+    if (purchased) return { ok: true, purchased, via: 'state', warnings }
 
-    const loose = await searchAvailableNumbers({
+    const loose = await search(`search ${target.state} best-effort`, {
       state: target.state, bestEffort: true, limit: 10,
     })
     const fallback = await tryBuy(loose)
-    if (fallback) return { purchased: fallback, via: 'state_best_effort' }
+    if (fallback) return { ok: true, purchased: fallback, via: 'state_best_effort', warnings }
   }
 
-  return null
+  // The reason is the real one from Telnyx where there is one, because "no
+  // numbers available" is a lie when the truth is that the search was refused.
+  return {
+    ok: false,
+    reason: warnings.length > 0
+      ? warnings.join('; ')
+      : `no inventory in ${(target.areaCodes ?? []).join('/') || 'the requested codes'}` +
+        (target.state ? ` or anywhere in ${target.state}` : ''),
+  }
 }

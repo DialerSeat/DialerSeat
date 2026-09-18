@@ -489,22 +489,35 @@ export interface AddNumberResult {
  * for Atlanta does not care whether the number is a 404 or a 470 -- they care
  * that it reads as Atlanta, and 404 has no free inventory.
  */
+export type AddNumberOutcome =
+  | ({ ok: true } & AddNumberResult)
+  | { ok: false; reason: string }
+
 export async function addNumberForTarget(
   target: { areaCodes?: string[]; state?: string }
-): Promise<AddNumberResult | null> {
+): Promise<AddNumberOutcome> {
   const { number_buying_frozen } = await getPlatformConfig()
   if (number_buying_frozen) {
     console.warn('[numberPool] Purchase BLOCKED, number buying is frozen in platform_config.')
-    return null
+    // Named for what it is. "No numbers available" while a freeze is on is the
+    // kind of wrong message that sends somebody hunting Telnyx inventory for
+    // an hour over a switch in their own settings.
+    return { ok: false, reason: 'Number buying is frozen in platform settings.' }
   }
 
   const acquired = await acquireNumber(target)
-  if (!acquired) return null
+  if (!acquired.ok) return { ok: false, reason: acquired.reason }
 
   const inserted = await insertPurchased(acquired.purchased)
-  if (!inserted) return null
+  if (!inserted) {
+    return {
+      ok: false,
+      reason: `Bought ${acquired.purchased.phone_number} but could not save it; it has been released.`,
+    }
+  }
 
   return {
+    ok: true,
     number: inserted,
     via: acquired.via,
     requestedAreaCode: acquired.areaCode ?? target.areaCodes?.[0] ?? null,

@@ -534,13 +534,26 @@ export default function NumbersApp() {
       // actually arrived -- including when the area code substituted, which
       // is normal on exhausted codes and must not be silent.
       if (Array.isArray(d.results)) {
-        const lines = d.results.map((r: {
+        type BuyRow = {
           requested: string; ok: boolean; phone_number?: string
           note?: string; error?: string
-        }) => r.ok
-          ? `${r.requested}: ${r.phone_number}${r.note ? ` — ${r.note}` : ''}`
-          : `${r.requested}: ${r.error}`)
-        setBuyMessage([`Bought ${d.bought}/${d.requested}`, ...lines].join(' · '))
+        }
+        const rows: BuyRow[] = d.results
+        const won = rows.filter(r => r.ok)
+        const lost = rows.filter(r => !r.ok)
+
+        // Headline first, in the shape somebody actually asks the question:
+        // how many landed, and which ones did not.
+        const headline = lost.length === 0
+          ? `${won.length} bought`
+          : `${won.length} bought, ${lost.length} failed (${lost.map(r => r.requested).join(', ')})`
+
+        const detail = [
+          // Only mention a substitution; a plain success needs no explanation.
+          ...won.filter(r => r.note).map(r => `${r.requested} → ${r.phone_number}: ${r.note}`),
+          ...lost.map(r => `${r.requested}: ${r.error}`),
+        ]
+        setBuyMessage([headline, ...detail].join(' · '))
       } else if (d.success) {
         setBuyMessage(`Bought ${d.number?.phone_number ?? 'a number'}`)
       } else {
