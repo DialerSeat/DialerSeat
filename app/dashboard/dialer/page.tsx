@@ -4224,13 +4224,9 @@ function DialerPageInner() {
             maxAttempts: repeatCap,
           })) {
             leadAttemptCountRef.current = attemptsSoFar + 1
-            setAmdActivity(prev =>
-              [`VOICEMAIL: REDIALING (${attemptsSoFar + 1} of ${repeatCap})`, ...prev].slice(0, 5)
-            )
-            showQueueOutcome(
-              endingLead.id,
-              `Voicemail, redialing (attempt ${attemptsSoFar + 1} of ${repeatCap})…`
-            )
+            // Not announced. A redial is the setting doing what it was set to
+            // do, not an event the agent needs narrating — and the lead stays
+            // on the top row throughout, which already shows it.
             setStatus('idle')
             // Same lead, same position, no rotation — see above.
             redialQueuedRef.current = true
@@ -4355,13 +4351,6 @@ function DialerPageInner() {
               maxAttempts: effectiveMax,
             })) {
               leadAttemptCountRef.current = attemptsSoFar + 1
-              setAmdActivity(prev =>
-                [`VOICEMAIL: REDIALING (${attemptsSoFar + 1} of ${effectiveMax})`, ...prev].slice(0, 5)
-              )
-              showQueueOutcome(
-                ld.id,
-                `Voicemail, redialing (attempt ${attemptsSoFar + 1} of ${effectiveMax})…`
-              )
               setActiveCallSid(null)
               disarmDialing()
               setStatus('idle')
@@ -4484,15 +4473,6 @@ function DialerPageInner() {
               // Still have retries left for this same lead — redial it
               // directly instead of dispositioning + fetching a new one.
               leadAttemptCountRef.current = attemptsSoFar + 1
-              const outcomeReason = isAmdHangup
-                ? 'Voicemail'
-                : statusData.status === 'busy'
-                  ? 'Line busy'
-                  : 'No answer'
-              showQueueOutcome(
-                ld.id,
-                `${outcomeReason}, redialing (attempt ${attemptsSoFar + 1} of ${effectiveMax})…`
-              )
               setActiveCallSid(null)
               disarmDialing()
               setStatus('idle')
@@ -4602,9 +4582,6 @@ function DialerPageInner() {
           maxAttempts: effectiveMax,
         })) {
           leadAttemptCountRef.current = attemptsSoFar + 1
-          setAmdActivity(prev =>
-            [`CHECK FAILED: RETRYING (${attemptsSoFar + 1} of ${effectiveMax})`, ...prev].slice(0, 5)
-          )
           redialQueuedRef.current = true
           const retryId = setTimeout(() => {
             dialChainTimeoutsRef.current.delete(retryId)
@@ -6544,7 +6521,7 @@ function DialerPageInner() {
                         fontFamily: FUTURA, fontSize: 12, color: terminalMuted, letterSpacing: 0.2,
                         display: 'flex', alignItems: 'center', gap: 6,
                       }}>
-                        <span>💬</span>{outcome}
+                        {outcome}
                       </div>
                     )}
                   </div>
