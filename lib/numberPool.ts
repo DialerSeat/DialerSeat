@@ -493,16 +493,55 @@ export type AddNumberOutcome =
   | ({ ok: true } & AddNumberResult)
   | { ok: false; reason: string }
 
+/**
+ * Who is asking to spend money.
+ *
+ * 'manual' is a person looking at the screen. 'auto' is everything
+ * unattended: the pool-maintenance utilization top-up, flagged-number
+ * replacement, and ratio cycling.
+ *
+ * The distinction exists because the two were one switch, so turning off the
+ * 2am automation also stopped the owner buying a number by hand. Passing the
+ * trigger keeps the gate at the chokepoint -- every path still goes through
+ * here -- while letting the two be decided separately.
+ */
+export type BuyTrigger = 'manual' | 'auto'
+
+/**
+ * The single gate every purchase passes.
+ *
+ * Checked HERE rather than at each caller on purpose. Five paths buy numbers
+ * today -- the admin buy route, the admin seed route, two branches of
+ * pool-maintenance, and the ratio automation in poolCycling -- and a gate that
+ * has to be re-implemented at each one is a gate the sixth caller silently
+ * ignores.
+ *
+ * Money is the reason it exists: runaway automation at ~$1/mo a number, or a
+ * bad area-code loop, is a bill that grows until somebody notices. Either
+ * switch stops its half in under 30 seconds with no deploy.
+ */
+async function buyingBlockedReason(trigger: BuyTrigger): Promise<string | null> {
+  const cfg = await getPlatformConfig()
+  if (trigger === 'manual' && !cfg.manual_buying_enabled) {
+    return 'Manual number buying is switched off in Settings.'
+  }
+  if (trigger === 'auto' && !cfg.auto_buying_enabled) {
+    return 'Automatic number buying is switched off in Settings.'
+  }
+  return null
+}
+
 export async function addNumberForTarget(
-  target: { areaCodes?: string[]; state?: string }
+  target: { areaCodes?: string[]; state?: string },
+  trigger: BuyTrigger = 'manual'
 ): Promise<AddNumberOutcome> {
-  const { number_buying_frozen } = await getPlatformConfig()
-  if (number_buying_frozen) {
-    console.warn('[numberPool] Purchase BLOCKED, number buying is frozen in platform_config.')
-    // Named for what it is. "No numbers available" while a freeze is on is the
-    // kind of wrong message that sends somebody hunting Telnyx inventory for
-    // an hour over a switch in their own settings.
-    return { ok: false, reason: 'Number buying is frozen in platform settings.' }
+  const blocked = await buyingBlockedReason(trigger)
+  if (blocked) {
+    console.warn(`[numberPool] Purchase BLOCKED (${trigger}): ${blocked}`)
+    // Named for what it is. "No numbers available" while a switch is off is
+    // the kind of wrong message that sends somebody hunting Telnyx inventory
+    // for an hour over a setting of their own.
+    return { ok: false, reason: blocked }
   }
 
   const acquired = await acquireNumber(target)
@@ -524,24 +563,20 @@ export async function addNumberForTarget(
   }
 }
 
-export async function addNumberByAreaCode(areaCode: string): Promise<PoolNumber | null> {
-  // ── BUYING FREEZE ────────────────────────────────────────────────────────
-  // Checked HERE rather than at each caller on purpose. Five paths buy
-  // numbers today — the admin buy route, the admin seed route, two branches
-  // of pool-maintenance, and the ratio automation in poolCycling — and a
-  // freeze that has to be re-implemented at each one is a freeze that the
-  // sixth caller silently ignores. This is the chokepoint they all share, so
-  // the switch holds by construction.
-  //
-  // Money is the reason it exists: runaway ratio automation buying numbers at
-  // ~$1/mo each, or a bad area-code loop, is a bill that keeps growing until
-  // someone notices. This stops it in under 30 seconds with no deploy.
-  const { number_buying_frozen } = await getPlatformConfig()
-  if (number_buying_frozen) {
-    console.warn(
-      `[numberPool] Purchase of an ${areaCode} number BLOCKED, number buying is frozen ` +
-      `in platform_config. Unfreeze in admin settings to resume.`
-    )
+/**
+ * @param trigger defaults to 'auto' deliberately. Every remaining caller of
+ *   this older signature is an unattended one -- pool-maintenance and ratio
+ *   cycling -- so the safe default is the restrictive flag. A new caller that
+ *   forgets to pass it is treated as automation and blocked, rather than
+ *   quietly inheriting the permission a human has.
+ */
+export async function addNumberByAreaCode(
+  areaCode: string,
+  trigger: BuyTrigger = 'auto'
+): Promise<PoolNumber | null> {
+  const blocked = await buyingBlockedReason(trigger)
+  if (blocked) {
+    console.warn(`[numberPool] Purchase of an ${areaCode} number BLOCKED (${trigger}): ${blocked}`)
     return null
   }
 

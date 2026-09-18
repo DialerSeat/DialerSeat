@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       }
 
       try {
-        const purchased = await addNumberByAreaCode(areaCode)
+        const purchased = await addNumberByAreaCode(areaCode, 'manual')
         if (purchased) {
           results.push({
             areaCode,

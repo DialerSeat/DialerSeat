@@ -29,6 +29,24 @@ export interface PlatformConfig {
   /** Global override. false = recording off everywhere regardless of campaign. */
   recording_enabled_global: boolean
   /** true = ratio automation and manual buys refuse to purchase. */
+  /**
+   * Buying a number by hand, from the admin Numbers app.
+   *
+   * Separate from auto_buying_enabled because they are different decisions.
+   * One switch over both meant that stopping the 2am automation also stopped
+   * the owner buying a number while looking at the screen.
+   */
+  manual_buying_enabled: boolean
+  /**
+   * Unattended buying: the pool-maintenance utilization top-up, the
+   * flagged-number replacement, and ratio cycling.
+   *
+   * Defaults OFF. Unattended spending should be opted into rather than
+   * inherited -- the replacement branch in particular has no threshold of its
+   * own and will buy whenever a number is retired.
+   */
+  auto_buying_enabled: boolean
+  /** RETIRED. Read by nothing; kept so the column's history survives. */
   number_buying_frozen: boolean
   /** Ceiling applied on top of each campaign's predictive_lines_per_agent. */
   predictive_line_ceiling: number
@@ -221,6 +239,8 @@ export interface PlatformConfig {
 export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   amd_enabled_global: true,
   recording_enabled_global: true,
+  manual_buying_enabled: true,
+  auto_buying_enabled: false,
   number_buying_frozen: false,
   predictive_line_ceiling: 5,
   // Matches the constants these replaced, so an unreadable config table
@@ -372,6 +392,7 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
 
 const CONFIG_COLUMNS =
   'amd_enabled_global, recording_enabled_global, number_buying_frozen, ' +
+  'manual_buying_enabled, auto_buying_enabled, ' +
   'predictive_line_ceiling, seat_retry_days, seat_takeover_enabled, ' +
   'poll_interval_ms, hangup_poll_interval_ms, ' +
   'pool_capacity_alert_pct, webhook_silence_minutes, agent_leg_refusal_alert_count, ' +

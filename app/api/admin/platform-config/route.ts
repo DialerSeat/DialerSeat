@@ -42,7 +42,12 @@ type Validator = (v: unknown) => boolean | number | string | null
 const FIELDS: Record<keyof PlatformConfig, Validator> = {
   amd_enabled_global:        v => typeof v === 'boolean' ? v : null,
   recording_enabled_global:  v => typeof v === 'boolean' ? v : null,
+  // RETIRED. Still validated so an old client cannot 400, but nothing reads it.
   number_buying_frozen:      v => typeof v === 'boolean' ? v : null,
+  // The two that replaced it. Independent on purpose: stopping unattended
+  // spending must not also stop the owner buying a number by hand.
+  manual_buying_enabled:     v => typeof v === 'boolean' ? v : null,
+  auto_buying_enabled:       v => typeof v === 'boolean' ? v : null,
   // ── TEAM LEVERS ────────────────────────────────────────────────────────
   // How long a failed seat charge keeps being retried. The seat suspends the
   // moment it fails, so a long window is not free access — it is a longer

@@ -679,7 +679,8 @@ interface PlatformConfigShape {
   leg_watchdog_enabled: boolean
   amd_enabled_global: boolean
   recording_enabled_global: boolean
-  number_buying_frozen: boolean
+  manual_buying_enabled: boolean
+  auto_buying_enabled: boolean
   predictive_line_ceiling: number
   seat_retry_days: number
   seat_takeover_enabled: boolean
@@ -1307,7 +1308,7 @@ function DialerPane({ onBack }: { onBack: () => void }) {
 
   const anyOverrideActive = config
     ? !config.amd_enabled_global || !config.recording_enabled_global ||
-      config.number_buying_frozen || cycling === false
+      !config.manual_buying_enabled || config.auto_buying_enabled || cycling === false
     : false
 
   return (
@@ -1363,19 +1364,44 @@ function DialerPane({ onBack }: { onBack: () => void }) {
                 />
               }
             />
+            {/* ── TWO SWITCHES, BECAUSE THEY ARE TWO DECISIONS ─────────────
+                This was one "Freeze number buying" toggle over both, so
+                stopping the 2am automation also stopped the owner buying a
+                number while looking at this screen. "Do not spend money while
+                I am asleep" and "I am spending money right now" are not in
+                tension.
+
+                Stated in the positive too. The old control read "Freeze number
+                buying" and was ON to mean buying was OFF, which is a double
+                negative on a control that spends money. */}
             <SettingsRow
-              title="Freeze number buying"
+              title="Manual number buying"
               subtitle={
-                config.number_buying_frozen
-                  ? 'FROZEN, automation and manual buys both refuse'
-                  : 'Automation and manual buys allowed'
+                config.manual_buying_enabled
+                  ? 'You can buy numbers from the Numbers app'
+                  : 'OFF — the Buy button will refuse'
+              }
+              right={
+                <IOSSwitch
+                  on={config.manual_buying_enabled}
+                  onChange={v => patch('manual_buying_enabled', v)}
+                  label="Manual number buying"
+                />
+              }
+            />
+            <SettingsRow
+              title="Automatic number buying"
+              subtitle={
+                config.auto_buying_enabled
+                  ? 'ON — top-ups, flagged-number replacement and ratio cycling can all spend'
+                  : 'OFF — nothing buys unattended'
               }
               isLast={cycling === null}
               right={
                 <IOSSwitch
-                  on={config.number_buying_frozen}
-                  onChange={v => patch('number_buying_frozen', v)}
-                  label="Freeze number buying"
+                  on={config.auto_buying_enabled}
+                  onChange={v => patch('auto_buying_enabled', v)}
+                  label="Automatic number buying"
                 />
               }
             />

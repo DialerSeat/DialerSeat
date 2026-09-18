@@ -111,7 +111,7 @@ export async function POST(req: Request) {
       // not. Each code is now independently survivable.
       let bought
       try {
-        bought = await addNumberForTarget({ areaCodes: [areaCode], state })
+        bought = await addNumberForTarget({ areaCodes: [areaCode], state }, 'manual')
       } catch (err) {
         results.push({
           requested: areaCode,

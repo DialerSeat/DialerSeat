@@ -65,7 +65,7 @@ export async function GET(req: Request) {
           .neq('status', 'released')).count ?? 0
 
         if (totalActive < config.max_pool_size) {
-          const replacement = await addNumberByAreaCode(num.area_code)
+          const replacement = await addNumberByAreaCode(num.area_code, 'auto')
           if (replacement) {
             replaced++
             await recordBuy()
@@ -106,7 +106,7 @@ export async function GET(req: Request) {
           let bought = 0
           for (const ac of toBuy) {
             try {
-              const result = await addNumberByAreaCode(ac)
+              const result = await addNumberByAreaCode(ac, 'auto')
               if (result) {
                 bought++
                 await recordBuy()

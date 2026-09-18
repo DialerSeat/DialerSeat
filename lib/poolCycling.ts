@@ -251,7 +251,7 @@ async function doReconcile(trigger: string, monthlyOnly: boolean): Promise<Recon
 
       for (const ac of buyPlan) {
         try {
-          const result = await addNumberByAreaCode(ac)
+          const result = await addNumberByAreaCode(ac, 'auto')
           if (result) {
             added++
             await recordBuy()
