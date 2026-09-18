@@ -640,6 +640,24 @@ function DialerPageInner() {
   // closure. Reset to 1 whenever a genuinely NEW lead starts (see
   // handleDial); incremented on each same-lead redial.
   const leadAttemptCountRef = useRef(1)
+  /**
+   * True while a redial is already queued for the current lead.
+   *
+   * ── WHY 1x DIALED FOUR TIMES ────────────────────────────────────────────
+   * Three separate places decide to redial -- the AMD machine branch, the
+   * not-answered branch, and the poll's error recovery -- and each called
+   * dialLeadCall directly, which bypasses the dialInFlightRef guard that
+   * protects the normal dial path. Two branches reaching the same conclusion
+   * about the same call produced two chains, and each chain then redialed
+   * again, so the lead was dialed far more times than any setting allowed.
+   * It was never the counter: Math.min(dialRepeatCount, 3) caps the total at
+   * three, and the floor reported four.
+   *
+   * This is the interlock. The first branch to claim the redial gets it, the
+   * rest are no-ops, and the claim clears when the redial fires or when the
+   * sequence moves to another lead. One outcome, one decision.
+   */
+  const redialQueuedRef = useRef(false)
   // When the agent's SIP leg reached Established. Billing starts there, and the
   // short-duration floor is measured from it -- see releaseAgentLeg.
   const agentLegAnsweredAtRef = useRef<number | null>(null)
@@ -3820,6 +3838,15 @@ function DialerPageInner() {
   }
 
   const dialLeadCall = async (lead: Lead) => {
+    // ── ONE LIVE CALL, WHATEVER PATH GOT HERE ──────────────────────────────
+    // runDial has this guard; the redial paths call straight into here and
+    // skipped it, which is how concurrent chains each placed their own call.
+    // Checked at the last gate so no caller can route around it.
+    if (isOnLiveCall()) {
+      console.warn('[dialer] dialLeadCall refused: a call is already live')
+      return
+    }
+
     // ── HARD GUARD (final gate before SignalWire) ───────────────────────────
     // This is the last function before the POST to /api/calls/outbound. Even if
     // something reached here unexpectedly, refuse to dial unless you are
@@ -4152,7 +4179,7 @@ function DialerPageInner() {
             const effectiveMax = isPreview ? 1 : Math.min(dialRepeatCount, 3)
             const attemptsSoFar = leadAttemptCountRef.current
 
-            if (ld && attemptsSoFar < effectiveMax) {
+            if (ld && !redialQueuedRef.current && attemptsSoFar < effectiveMax) {
               leadAttemptCountRef.current = attemptsSoFar + 1
               setAmdActivity(prev =>
                 [`VOICEMAIL: REDIALING (${attemptsSoFar + 1} of ${effectiveMax})`, ...prev].slice(0, 5)
@@ -4165,8 +4192,10 @@ function DialerPageInner() {
               disarmDialing()
               setStatus('idle')
               // Same lead, same position. No rotation until attempts are gone.
+              redialQueuedRef.current = true
               const redialId = setTimeout(() => {
                 dialChainTimeoutsRef.current.delete(redialId)
+                redialQueuedRef.current = false
                 if (abortDialingRef.current) return
                 if (!availableRef.current) return
                 dialLeadCall(ld)
@@ -4188,7 +4217,7 @@ function DialerPageInner() {
             disarmDialing() // machine — drop the browser leg; next dial re-arms
             setStatus('idle')
             setCurrentLead(null)
-            leadAttemptCountRef.current = 1 // next lead starts its own count
+            leadAttemptCountRef.current = 1; redialQueuedRef.current = false // next lead starts its own count
             scheduleDial(600)
             return
           }
@@ -4248,7 +4277,7 @@ function DialerPageInner() {
             // Voicemail is still never dispositioned (see below) — the
             // silent-skip rule is about not making the agent tag a machine,
             // not about giving that lead fewer attempts than any other.
-            if (attemptsSoFar < effectiveMax) {
+            if (!redialQueuedRef.current && attemptsSoFar < effectiveMax) {
               // Still have retries left for this same lead — redial it
               // directly instead of dispositioning + fetching a new one.
               leadAttemptCountRef.current = attemptsSoFar + 1
@@ -4266,8 +4295,10 @@ function DialerPageInner() {
               setStatus('idle')
               // Same lead object, same id — currentLead/currentLeadRef
               // stay pointed at it, no fetchNextLead involved.
+              redialQueuedRef.current = true
               const redialTimeoutId = setTimeout(() => {
                 dialChainTimeoutsRef.current.delete(redialTimeoutId)
+                redialQueuedRef.current = false
                 if (abortDialingRef.current) return
                 if (!availableRef.current) return
                 dialLeadCall(ld)
@@ -4301,13 +4332,60 @@ function DialerPageInner() {
           setStatus('idle')
           setCurrentLead(null)
           disarmDialing() // call ended without a human; next dial re-arms
-          leadAttemptCountRef.current = 1 // moving to a new lead next — reset for it
+          leadAttemptCountRef.current = 1; redialQueuedRef.current = false // moving to a new lead next — reset for it
 
           scheduleDial(800)
         }
       } catch (err) {
+        // ── A THROW HERE USED TO END THE SHIFT ──────────────────────────
+        // This cleared the interval and scheduled nothing. Any failure in the
+        // loop -- /api/calls/check not answering, a disposeLead 500, a bad
+        // JSON body -- left the dialer holding a lead, status frozen, with no
+        // queued work and no error on screen. The agent sees a row that will
+        // not move and reports "it got stuck", which is exactly what came
+        // back from the floor.
+        //
+        // 2x and 3x made it likelier rather than causing it: the poll runs
+        // once per attempt, so three attempts is three chances to throw.
+        //
+        // A failed poll is an unknown outcome, not a reason to stop. Treat it
+        // as this attempt failing and keep the sequence moving -- redial the
+        // same lead while attempts remain, otherwise advance. The one thing
+        // that must never happen is nothing.
         clearInterval(pollInterval)
         activePollRef.current = null
+        console.error('[dialer] call poll failed, recovering:', err)
+
+        const ld = currentLeadRef.current
+        const effectiveMax = isPreview ? 1 : Math.min(dialRepeatCount, 3)
+        const attemptsSoFar = leadAttemptCountRef.current
+
+        setActiveCallSid(null)
+        disarmDialing()
+        setStatus('idle')
+
+        if (ld && !redialQueuedRef.current && attemptsSoFar < effectiveMax) {
+          leadAttemptCountRef.current = attemptsSoFar + 1
+          setAmdActivity(prev =>
+            [`CHECK FAILED: RETRYING (${attemptsSoFar + 1} of ${effectiveMax})`, ...prev].slice(0, 5)
+          )
+          redialQueuedRef.current = true
+          const retryId = setTimeout(() => {
+            dialChainTimeoutsRef.current.delete(retryId)
+            redialQueuedRef.current = false
+            if (abortDialingRef.current) return
+            if (!availableRef.current) return
+            dialLeadCall(ld)
+          }, 800)
+          dialChainTimeoutsRef.current.add(retryId)
+          return
+        }
+
+        setAmdActivity(prev => ['⚠ CALL STATUS UNAVAILABLE, MOVING ON', ...prev].slice(0, 5))
+        markLeadDialedLocally(ld?.id)
+        setCurrentLead(null)
+        leadAttemptCountRef.current = 1; redialQueuedRef.current = false
+        scheduleDial(800)
       }
     }, 1500)
     activePollRef.current = pollInterval
@@ -4545,7 +4623,7 @@ function DialerPageInner() {
 
     const lead = await fetchNextLead()
     if (!lead) return
-    leadAttemptCountRef.current = 1
+    leadAttemptCountRef.current = 1; redialQueuedRef.current = false
     setCurrentLead(lead)
     // Deliberately NOT rotated here. A lead that is about to be dialed must
     // stay exactly where it is, at the top, highlighted, for as long as the
