@@ -126,7 +126,52 @@ capture it — `call.cost` payloads carry no attestation field — so confirming
 our real-world attestation would mean pulling CDRs. Worth doing once, to close
 the question with evidence rather than a vendor statement.
 
-### Remediation is slow
+### How long a flagged number takes to heal
+
+**There is no "all carriers" answer.** Three databases, three processes,
+three clocks. A number cleared on AT&T can still be labelled on Verizon a
+fortnight later, and clearing one does nothing for the others.
+
+**Active remediation — you submit it:**
+
+| Engine | Carrier | Reported turnaround |
+|---|---|---|
+| Hiya | AT&T | **1–2 weeks** |
+| First Orion | T-Mobile | **1–2 weeks** |
+| TNS | Verizon | **2–4 weeks** |
+
+No expediting exists once submitted. Telnyx additionally rate-limits its own
+remediation product to **one submission per number per 14 days**, so a failed
+attempt costs a fortnight before the next.
+
+**Passive healing — you just stop calling:**
+
+No vendor publishes a decay window, and the consistent industry position is
+that scores do not recover on their own. Hiya's Maturity grade explains the
+mechanism: a number is mature because it is *seen calling*, so silence is the
+absence of the input, not a cure.
+
+Our own evidence, such as it is, agrees and is recorded honestly:
+
+- §6: numbers rested 8+ days returned at **16.4%**, worse than brand-new
+  numbers at 20.5%.
+- A direct before/after on rest episodes attempted 18 Sept found only **three**
+  episodes with 20+ dials on both sides of the gap. Two improved, one did not;
+  pooled, 55.8% before against 45.0% after. **That is far too small to
+  conclude anything from** and is listed so nobody later mistakes it for
+  evidence.
+
+A 30–60 day rolling window appears in practitioner writing and in no vendor
+documentation. If it is real it means bad history ages out over one to two
+months **while the number keeps calling well** — which is the opposite of
+resting it.
+
+**So the operating rule stands: replacing beats healing.** A replacement is
+~$1/month and live in minutes; healing is one to four weeks of degraded answer
+rate per engine, with no guarantee, and the label returns if the behaviour
+that caused it has not changed.
+
+### Registration is separately slow
 
 Registration and remediation run **2–6 weeks per vendor** from clean
 submission to active status, and each vendor requires separate business
