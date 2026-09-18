@@ -658,6 +658,28 @@ function DialerPageInner() {
    * sequence moves to another lead. One outcome, one decision.
    */
   const redialQueuedRef = useRef(false)
+  /**
+   * When each lead was last dialled by THIS tab, for the last ten minutes.
+   *
+   * ── WHY A LEDGER AND NOT ANOTHER GUARD ON THE BRANCHES ──────────────────
+   * 1x produced redials for two days and each diagnosis was wrong: the
+   * attempt counter (unreachable on 1x), racing redial branches (real, fixed,
+   * it continued), the queue ordering (the queue would have served a
+   * different lead), the client's lead_ids override (demoted server-side, and
+   * it continued). Five call sites can place a call and several timers can
+   * reach them, so proving a negative by reading the branches has failed
+   * three times.
+   *
+   * This stops trying. Rather than ask every branch to behave, the one gate
+   * every dial passes through counts what it has already done. A branch can
+   * be wrong; it cannot be wrong twice about the same lead.
+   *
+   * Ten minutes because that is what "in a row" means -- the back-to-back
+   * attempts of one pass. A legitimate 2x/3x redial lands ~800ms later and is
+   * comfortably inside the allowance; a lead coming round on a later pass is
+   * far outside it.
+   */
+  const recentDialsByLeadRef = useRef<Map<string, number[]>>(new Map())
   // When the agent's SIP leg reached Established. Billing starts there, and the
   // short-duration floor is measured from it -- see releaseAgentLeg.
   const agentLegAnsweredAtRef = useRef<number | null>(null)
@@ -3845,6 +3867,49 @@ function DialerPageInner() {
     if (isOnLiveCall()) {
       console.warn('[dialer] dialLeadCall refused: a call is already live')
       return
+    }
+
+    // ── THE REPEAT RULE, AT THE ONLY GATE EVERY DIAL PASSES ───────────────
+    // 1x means one dial. Enforced here rather than in the branches that
+    // decide to redial, because there are five of those and they have been
+    // wrong three times. See recentDialsByLeadRef.
+    {
+      const cap = isPreview ? 1 : Math.min(dialRepeatCount, 3)
+      const now = Date.now()
+      const seen = (recentDialsByLeadRef.current.get(lead.id) ?? [])
+        .filter(t => now - t < 10 * 60 * 1000)
+
+      if (seen.length >= cap) {
+        console.warn(
+          `[dialer] dialLeadCall REFUSED: lead ${lead.id} already dialled ` +
+          `${seen.length} time(s) in the last 10 minutes, cap is ${cap}`
+        )
+        // Said out loud. A refusal the agent cannot see is a dialer that
+        // appears to do nothing, which is the other half of what was
+        // reported. Then move on rather than stalling.
+        setAmdActivity(prev =>
+          [`ALREADY DIALLED ${seen.length}x — SKIPPING TO NEXT LEAD`, ...prev].slice(0, 5)
+        )
+        markLeadDialedLocally(lead.id)
+        setCurrentLead(null)
+        leadAttemptCountRef.current = 1
+        redialQueuedRef.current = false
+        setStatus('idle')
+        scheduleDial(600)
+        return
+      }
+
+      seen.push(now)
+      recentDialsByLeadRef.current.set(lead.id, seen)
+
+      // Keep the map from growing across a long shift.
+      if (recentDialsByLeadRef.current.size > 500) {
+        for (const [id, times] of recentDialsByLeadRef.current) {
+          if (times.every(t => now - t >= 10 * 60 * 1000)) {
+            recentDialsByLeadRef.current.delete(id)
+          }
+        }
+      }
     }
 
     // ── HARD GUARD (final gate before SignalWire) ───────────────────────────
