@@ -66,6 +66,68 @@ export const runtime = 'nodejs'
 
 
 
+/**
+ * The subscription an invoice belongs to, across Stripe API versions.
+ *
+ * ── THIS RETURNED UNDEFINED ON EVERY INVOICE FOR MONTHS ────────────────────
+ * Stripe REMOVED the top-level `subscription` field from the Invoice object at
+ * API version 2025-03-31.basil, replacing it with `parent.subscription_details
+ * .subscription`. This client is pinned to 2026-04-22.dahlia, which is well
+ * past that, so `invoice.subscription` was always undefined.
+ *
+ * The cost was silent and total. 90 invoice.payment_failed events were
+ * received and recorded as "processed" while the guard below them never
+ * opened: no routeSubscription, and no payment_failed notification, ever. A
+ * declined card left a customer past_due with nobody told -- which is the
+ * exact failure the comment inside that branch says it exists to prevent.
+ *
+ * Both shapes are read, new first. The old one is kept because a pinned
+ * version does not protect against this -- Stripe's own changelog notes the
+ * field can be absent on invoices created under the newer billing model
+ * regardless of pinning -- so which shape arrives is not something this code
+ * should assume either way.
+ */
+/**
+ * The payment intent behind an invoice, across API versions.
+ *
+ * `invoice.payment_intent` was removed in the same 2025-03-31.basil change
+ * that took `invoice.subscription`; it now hangs off payments. This only
+ * feeds the human-readable decline reason and the billing_events row, both of
+ * which are best effort -- but "best effort" was quietly returning nothing on
+ * every single invoice, so the reason was never resolved and the row was
+ * never written.
+ */
+function invoicePaymentIntentId(invoice: Stripe.Invoice): string | null {
+  const legacy = (invoice as unknown as { payment_intent?: string | { id?: string } }).payment_intent
+  if (typeof legacy === 'string' && legacy) return legacy
+  if (legacy && typeof legacy === 'object' && legacy.id) return legacy.id
+
+  const payments = (invoice as unknown as {
+    payments?: { data?: Array<{ payment?: { payment_intent?: string | { id?: string } } }> }
+  }).payments?.data
+  for (const p of payments ?? []) {
+    const pi = p?.payment?.payment_intent
+    if (typeof pi === 'string' && pi) return pi
+    if (pi && typeof pi === 'object' && pi.id) return pi.id
+  }
+  return null
+}
+
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const parent = (invoice as unknown as {
+    parent?: { subscription_details?: { subscription?: string | { id?: string } } }
+  }).parent
+  const fromParent = parent?.subscription_details?.subscription
+  if (typeof fromParent === 'string' && fromParent) return fromParent
+  if (fromParent && typeof fromParent === 'object' && fromParent.id) return fromParent.id
+
+  const legacy = (invoice as unknown as { subscription?: string | { id?: string } }).subscription
+  if (typeof legacy === 'string' && legacy) return legacy
+  if (legacy && typeof legacy === 'object' && legacy.id) return legacy.id
+
+  return null
+}
+
 export async function POST(req: Request) {
   const body = await req.text()
   const headersList = await headers()
@@ -104,10 +166,17 @@ export async function POST(req: Request) {
         await routeSubscriptionDeleted(event.data.object as Stripe.Subscription)
         break
 
+      // ── invoice.paid IS THE ONE STRIPE ACTUALLY SENDS ────────────────────
+      // 53 invoice.paid events arrived and were skipped because only
+      // invoice.payment_succeeded was listed here, so `renewal` had never
+      // fired once in the platform's history. Both are handled now; the
+      // idempotency claim upstream stops a double-send if Stripe delivers
+      // both for one invoice.
+      case 'invoice.paid':
       case 'invoice.payment_succeeded':
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
-        const subscriptionId = (invoice as any).subscription as string | null
+        const subscriptionId = invoiceSubscriptionId(invoice)
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId)
           await routeSubscription(subscription, event.type, invoice.billing_reason ?? undefined, event.created)
@@ -145,8 +214,8 @@ export async function POST(req: Request) {
                 // lookup that fails still sends the original message.
                 let why = ''
                 try {
-                  const piId = (invoice as unknown as { payment_intent?: string }).payment_intent
-                  if (typeof piId === 'string') {
+                  const piId = invoicePaymentIntentId(invoice)
+                  if (piId) {
                     const intent = await stripe.paymentIntents.retrieve(piId)
                     const chId = (intent as unknown as { latest_charge?: string }).latest_charge
                     const charge = typeof chId === 'string' ? await stripe.charges.retrieve(chId) : null
@@ -543,7 +612,7 @@ async function routeWhitelabel(
       }
     }
   } else if (
-    eventType === 'invoice.payment_succeeded' &&
+    (eventType === 'invoice.payment_succeeded' || eventType === 'invoice.paid') &&
     billingReason === 'subscription_cycle'
   ) {
     const { name, email } = await lookupNameAndEmail(clerkId)
@@ -877,7 +946,7 @@ async function syncPersonalSubscription(
       }
     }
   } else if (
-    eventType === 'invoice.payment_succeeded' &&
+    (eventType === 'invoice.payment_succeeded' || eventType === 'invoice.paid') &&
     billingReason === 'subscription_cycle'
   ) {
     const { name, email } = await lookupNameAndEmail(clerkId)
