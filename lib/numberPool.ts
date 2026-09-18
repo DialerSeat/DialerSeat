@@ -34,8 +34,13 @@ const supabase = createClient(
  * single number places per day, the faster carriers flag it as spam. Raising
  * it increases capacity per number and increases that risk together.
  */
-// 125 -> 200 on 2026-08-07, then 200 -> 100 on 2026-09-15, both by account-owner
-// decision. The evidence for coming back down, from this account's own 30 days:
+// 125 -> 200 on 2026-08-07, 200 -> 100 on 2026-09-15, 100 -> 60 on 2026-09-18,
+// all by account-owner decision. The last one was asked for as "whatever you
+// recommend for health", with health defined as RETENTION: a number that gets
+// labelled does not cost a fraction of a cent, it costs the answer rate the
+// customer stays for.
+//
+// The evidence for coming down, from this account's own 30 days:
 //
 //     1-25  dials/day on one number    48.7% answered
 //     26-50                            31.1%
@@ -48,7 +53,22 @@ const supabase = createClient(
 // not cost a fraction of a cent, it costs every conversation it would have
 // carried.
 //
-// SCALE BY BUYING NUMBERS, NOT BY RAISING THIS. 2,500 dials/day needs ~25
+// A SECOND, INDEPENDENT 14-DAY CUT ON 18 SEPT AGREED. Answer rate by how many
+// dials that number carried that day: under 20 -> 49.5%, 20-39 -> 67.1%,
+// 40-59 -> 33.6%, 60-79 -> 56.1%, 80+ -> 28.2%. Not monotonic through the
+// middle, but the two largest samples are the two extremes and they are two
+// and a half times apart.
+//
+// SAFE BECAUSE EXHAUSTION DEGRADES, IT DOES NOT STOP. Locality in
+// claim_pool_number is an ORDERING tier, not a filter -- `else 3` still
+// qualifies. Running a state out of numbers falls back to the rest of the pool
+// with a worse geographic match; it never returns nothing. That is what makes
+// a tighter cap a quality trade rather than an availability risk.
+//
+// Capacity at 60 across 15 numbers is 900 a day against a busiest recorded day
+// of 859 through the pool. Thin, and the correct response to thin is numbers.
+//
+// SCALE BY BUYING NUMBERS, NOT BY RAISING THIS. 2,500 dials/day needs ~42
 // active numbers at this cap. Raising it instead trades answer rate for
 // capacity, which is backwards -- the pool is the cheap input and the
 // conversation is the expensive output.
@@ -59,7 +79,25 @@ const supabase = createClient(
 // because all three insert paths (buyNumber here, telnyxNumberSync, and
 // admin/pool/import-existing) pass DEFAULT_DAILY_CAP explicitly and override
 // the default. Changing the data without changing this is changing nothing.
-export const DEFAULT_DAILY_CAP = 100
+export const DEFAULT_DAILY_CAP = 60
+
+/**
+ * Where a number stops being PREFERRED, well before it stops being allowed.
+ *
+ * claim_pool_number has always had this tier -- a number past the soft cap goes
+ * to the back of the queue however good its locality match is -- but nothing
+ * passed it, so it sat on the SQL default of 60 and was invisible from here.
+ * That is the same trap the note above describes: a setting that lives in one
+ * place and is read from another eventually disagrees with itself. It is
+ * passed explicitly now, so this file is the only place either cap is decided.
+ *
+ * 40 rather than 60 because the pool averages ~39 dials a number a day. A soft
+ * cap at the average means load starts spreading across the whole pool before
+ * any single number gets hot, instead of after. The hard cap then only has to
+ * catch the outlier that locality pinned to one number anyway -- which is
+ * exactly what produced an 84 on the sole Missouri number while others idled.
+ */
+export const SOFT_DAILY_CAP = 40
 
 export interface PoolNumber {
   id: string
@@ -264,6 +302,7 @@ export async function pickNumberForLead(
     p_area_code: areaCode,
     p_state: state,
     p_region: region,
+    p_soft_cap: SOFT_DAILY_CAP,
     p_strategy: strategy,
   })
 
