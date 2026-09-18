@@ -211,6 +211,25 @@ export async function GET(req: NextRequest) {
       : rangeParam === '7d' ? 28
       : rangeParam === '90d' ? 45 : 30
 
+    // ── FAST BEAT vs FULL BEAT ────────────────────────────────────────────
+    // This payload is the heaviest read in the admin desktop and it fires
+    // every three seconds. Visibility gating already stopped it running behind
+    // other windows; this stops it re-fetching things that cannot have changed.
+    //
+    // Compliance is a month of ledger aggregated in Postgres. Visitors is 60
+    // stitched individuals. The three pulses bucket a whole range. The balance
+    // is a round trip to TELNYX on every single beat. None of them move
+    // meaningfully inside three seconds, and nobody watches a month-to-date
+    // ratio tick.
+    //
+    // A fast beat therefore skips them and OMITS THEIR KEYS from the response
+    // rather than sending empty ones -- the client spreads the partial payload
+    // over what it already holds, so an omitted key keeps its last good value
+    // and an empty one would blank the panel. That distinction is the whole
+    // reason this is a key-level omission and not a nulled field.
+    const fast = req.nextUrl.searchParams.get('scope') === 'fast'
+    const EMPTY = Promise.resolve({ data: [], error: null })
+
     const [originsRes, extraVisitorsRes, targetsRes, feedRes, balanceRes, concurrencyRes, dayCallsRes, breakdownRes, pulseRes, peopleRes, notisRes, compRes, logsRes, visitorsRes, vPulseRes, incomeRes] = await Promise.all([
       mode === 'visitors'
         ? supabase.rpc('ops_map_visitors', { p_since: since })
@@ -224,7 +243,7 @@ export async function GET(req: NextRequest) {
       mode === 'everything'
         ? supabase.rpc('ops_map_visitors', { p_since: since })
         : Promise.resolve({ data: [], error: null }),
-      supabase.rpc('ops_map_targets', { p_since: since }),
+      fast ? EMPTY : supabase.rpc('ops_map_targets', { p_since: since }),
       supabase.rpc('ops_map_feed', { p_limit: feedLimit }),
       // ── CARRIER STATE, ON THE MAP'S OWN BEAT ─────────────────────────
       // Balance and live legs both come from Telnyx and both already existed
@@ -234,7 +253,14 @@ export async function GET(req: NextRequest) {
       //
       // Both resolve to nulls instead of rejecting, so a carrier outage costs
       // two small panels rather than the whole map.
-      getTelnyxBalance('ops-map'),
+      // Telnyx, not Supabase -- a network round trip to the carrier on every
+      // three-second beat. An account balance does not move that fast.
+      fast
+        ? Promise.resolve({
+            availableCredit: null, balance: null, currency: null,
+            authoritative: false, error: null,
+          } as Awaited<ReturnType<typeof getTelnyxBalance>>)
+        : getTelnyxBalance('ops-map'),
       getConcurrencySnapshot(),
       // Last 24 hours of dials, for the live-ops summary. Two narrow columns,
       // aggregated below rather than in SQL because the same rows answer both
@@ -244,8 +270,8 @@ export async function GET(req: NextRequest) {
         .select('answered_at, duration, created_at')
         .gte('created_at', new Date(Date.now() - 24 * 60 * 60_000).toISOString())
         .limit(50000),
-      supabase.rpc('ops_map_breakdown', { p_since: since }),
-      supabase.rpc('ops_map_pulse', { p_since: since, p_buckets: buckets }),
+      fast ? EMPTY : supabase.rpc('ops_map_breakdown', { p_since: since }),
+      fast ? EMPTY : supabase.rpc('ops_map_pulse', { p_since: since, p_buckets: buckets }),
       // Not filtered by mode or range: this is the dock's PEOPLE view, and its
       // whole point is showing accounts the map cannot place. Narrowing it to
       // the current mode would hide exactly the ones worth looking at.
@@ -262,7 +288,7 @@ export async function GET(req: NextRequest) {
         .limit(40),
       // Same numbers the Compliance app shows, aggregated in Postgres so a
       // corner box does not have to read a month of calls to draw four values.
-      supabase.rpc('ops_map_compliance'),
+      fast ? EMPTY : supabase.rpc('ops_map_compliance'),
       // Billing events — the LOGS half of the mini panel. Notifications are
       // what got pushed; logs are what happened. They overlap but are not the
       // same set, which is why the panel offers both and a merged view rather
@@ -276,10 +302,10 @@ export async function GET(req: NextRequest) {
       // browser's anonymous reading and the account it later became are one
       // person. Reused rather than re-derived so the two screens cannot
       // disagree about who visited.
-      supabase.rpc('pv_individuals', { p_since: since, p_until: null, p_limit: 60 }),
+      fast ? EMPTY : supabase.rpc('pv_individuals', { p_since: since, p_until: null, p_limit: 60 }),
       // New arrivals over time, bucketed to line up with the call pulse.
-      supabase.rpc('ops_map_visitor_pulse', { p_since: since, p_buckets: buckets }),
-      supabase.rpc('ops_map_income_pulse', { p_since: since, p_buckets: buckets }),
+      fast ? EMPTY : supabase.rpc('ops_map_visitor_pulse', { p_since: since, p_buckets: buckets }),
+      fast ? EMPTY : supabase.rpc('ops_map_income_pulse', { p_since: since, p_buckets: buckets }),
     ])
     if (originsRes.error) throw originsRes.error
 
@@ -626,19 +652,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       notis,
-      incomePulse,
-      logs,
-      visitors,
-      visitorPulse,
-      complianceMeta,
-      compliance,
+      // ── OMITTED, NOT EMPTIED, ON A FAST BEAT ──────────────────────────
+      // The client spreads this over what it already holds. An omitted key
+      // keeps its last good value; an empty array would blank the panel and
+      // make a working screen look broken every three seconds.
+      ...(fast ? {} : {
+        incomePulse,
+        logs,
+        visitors,
+        visitorPulse,
+        complianceMeta,
+        compliance,
+      }),
       mode,
       range: rangeParam,
-      pulse,
+      ...(fast ? {} : { pulse }),
       people,
       onlineSeconds: ONLINE_SECONDS,
       points,
-      targets,
+      ...(fast ? {} : { targets }),
       arcs,
       feed,
       // What the feed was actually allowed to hold. Reported because the
@@ -659,13 +691,17 @@ export async function GET(req: NextRequest) {
         // separately from the carrier's because when they disagree, that IS
         // the interesting fact rather than an error to reconcile away.
       },
-      balance: {
-        availableCredit: balanceRes.availableCredit,
-        currency: balanceRes.currency,
-        authoritative: balanceRes.authoritative,
-        error: balanceRes.error,
-      },
-      breakdown,
+      // Same omission rule: a fast beat never asked Telnyx, so it must not
+      // report a null balance as though the carrier had answered with one.
+      ...(fast ? {} : {
+        balance: {
+          availableCredit: balanceRes.availableCredit,
+          currency: balanceRes.currency,
+          authoritative: balanceRes.authoritative,
+          error: balanceRes.error,
+        },
+      }),
+      ...(fast ? {} : { breakdown }),
       totals: {
         total,
         placed: total - unplaced,

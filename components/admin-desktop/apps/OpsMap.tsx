@@ -143,6 +143,16 @@ type Range = (typeof RANGES)[number]
 
 const SYNC_MS = 3000
 
+/**
+ * How many 3-second beats between full payloads. 10 beats = 30 seconds.
+ *
+ * Chosen against what the slow half actually is: a month-to-date compliance
+ * ratio, visitor analytics, bucketed pulses and a carrier balance. Nothing in
+ * that set is read at a glance, and none of it can move enough in thirty
+ * seconds to change a decision.
+ */
+const FULL_SYNC_EVERY = 10
+
 /** Feed sizes offered in the dock. The route clamps to 1000 regardless. */
 const FEED_SIZES = [80, 250, 500, 1000]
 
@@ -546,12 +556,20 @@ export default function OpsMap() {
   // the feed, compliance and notifications in one response, so it is the
   // heaviest read in the admin desktop; LiveOps asks a narrower question and
   // can afford to ask it more often.
-  const load = useCallback(async (quiet: boolean) => {
+  const load = useCallback(async (quiet: boolean, scope: 'fast' | 'full' = 'full') => {
     try {
-      const res = await fetch(`/api/admin/ops-map?mode=${mode}&range=${range}&feed=${feedSize}`)
+      const res = await fetch(
+        `/api/admin/ops-map?mode=${mode}&range=${range}&feed=${feedSize}` +
+        (scope === 'fast' ? '&scope=fast' : '')
+      )
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to load')
-      setData(json)
+      // ── MERGE, DO NOT REPLACE ─────────────────────────────────────────
+      // A fast beat omits the slow half of the payload rather than sending it
+      // empty, so spreading it over what is already held keeps compliance,
+      // visitors, the pulses and the balance on screen between full beats.
+      // setData(json) would have blanked all of them twenty times a minute.
+      setData(prev => (prev ? { ...prev, ...json } : json))
       setErr(null)
       if (!quiet) setBeat(b => b + 1)
     } catch (e) {
@@ -608,15 +626,33 @@ export default function OpsMap() {
   // shows current data rather than whatever was on screen when it was hidden.
   // That is the part that makes this safe: without it, gating would trade IO
   // for a stale map, which on an ops console is the worse bug.
+  //
+  // ── AND A FULL BEAT ONLY EVERY TENTH ONE ──────────────────────────────
+  // Visibility gating removed the cost of a console nobody is looking at.
+  // This removes the cost of re-asking, every three seconds, for things that
+  // cannot have changed: a month of ledger aggregated for the compliance box,
+  // sixty stitched visitors, three bucketed pulses, and a round trip to Telnyx
+  // for the balance.
+  //
+  // The map, the feed, live legs, people and notifications still move on every
+  // beat, so nothing anybody watches gets slower. A full beat also fires
+  // immediately on becoming visible and whenever mode, range or feed size
+  // change, so the slow half is never more than one interaction stale.
   useEffect(() => {
     let t: ReturnType<typeof setInterval> | null = null
+    let beats = 0
     const start = () => {
       if (t) return
-      t = setInterval(() => { load(false) }, SYNC_MS)
+      t = setInterval(() => {
+        beats += 1
+        load(false, beats % FULL_SYNC_EVERY === 0 ? 'full' : 'fast')
+      }, SYNC_MS)
     }
     const stop = () => { if (t) { clearInterval(t); t = null } }
     const onVis = () => {
-      if (document.visibilityState === 'visible') { load(false); start() } else stop()
+      // Always a FULL beat on return: the slow half is the part most likely to
+      // have moved while the tab was hidden.
+      if (document.visibilityState === 'visible') { beats = 0; load(false, 'full'); start() } else stop()
     }
     onVis()
     document.addEventListener('visibilitychange', onVis)
