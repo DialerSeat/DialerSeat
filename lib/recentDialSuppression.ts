@@ -258,3 +258,43 @@ export function isExhausted(
   if (k === null) return false
   return (attempts.get(k) ?? 0) >= cap
 }
+
+// ── WHAT STOPS "TEST CAMPAIGN" BECOMING A WAY OUT OF THE BUDGET ──────────
+// campaigns.is_test exempts a list from the per-number cap above, which is a
+// rule that exists to stop real people being dialled past six times. A plain
+// boolean anyone can set would make that protection opt-out, which is the
+// wrong shape entirely: the exemption has to be something the DATA earns, not
+// something a flag asserts.
+//
+// A genuine test list dials numbers the operator owns — in practice one line
+// repeated, occasionally two or three. A list that dials the public has
+// hundreds or thousands of distinct numbers. So the flag states intent and
+// this states fact, and both must hold.
+//
+// The useful property is that it cannot be gamed or go stale. Add real leads
+// to an exempt campaign and the exemption disappears on the next dial, with
+// no one having to remember to turn it off.
+export const MAX_TEST_CAMPAIGN_NUMBERS = 3
+
+/**
+ * Rows read when checking the above. One more than a test list could sensibly
+ * hold: if the query fills this, the campaign is too big to be a test list and
+ * the question is already answered without reading the rest. Keeps the check
+ * cheap and bounded no matter what the flag is set on.
+ */
+export const TEST_CAMPAIGN_ROW_PROBE = 500
+
+/**
+ * Is this campaign small enough to be a genuine test list?
+ *
+ * Takes the count rather than querying, so the caller decides how to get it
+ * and this stays testable.
+ */
+export function qualifiesAsTestCampaign(
+  isTestFlagged: boolean,
+  distinctNumberCount: number
+): boolean {
+  if (!isTestFlagged) return false
+  if (!Number.isFinite(distinctNumberCount) || distinctNumberCount < 0) return false
+  return distinctNumberCount > 0 && distinctNumberCount <= MAX_TEST_CAMPAIGN_NUMBERS
+}

@@ -1,6 +1,13 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { checkIsAdmin } from '@/lib/requireAdmin'
+import {
+  qualifiesAsTestCampaign,
+  MAX_TEST_CAMPAIGN_NUMBERS,
+  TEST_CAMPAIGN_ROW_PROBE,
+  dialKey,
+} from '@/lib/recentDialSuppression'
 import { apiError } from '@/lib/apiError'
 
 const VALID_MODES = ['preview', 'power', 'progressive', 'predictive'] as const
@@ -50,7 +57,6 @@ const ALLOWED_FIELDS = [
   'recording_enabled',
   'predictive_lines_per_agent',
   'dial_repeat_count',
-  'is_test',
   'voicemail_drop_url',
   'enable_appointments_sub',
   'enable_not_interested_sub',
@@ -166,15 +172,9 @@ export async function POST(req: Request) {
           updates.dial_repeat_count = Math.max(1, Math.min(3, Math.round(v)))
           break
         }
-        case 'is_test': {
-          // An operator-owned test list, exempt from the per-number attempt
-          // budget. Booleans only — a truthy string here would quietly take a
-          // real campaign out of a rule that exists to protect the people on
-          // it, which is not something a loose cast should be able to do.
-          if (typeof v !== 'boolean') continue
-          updates.is_test = v
-          break
-        }
+        // NOTE: is_test is deliberately absent from this loop. It exempts a
+        // campaign from the per-number attempt budget, so it is not an
+        // ordinary campaign setting a tenant can flip — see the block below.
         case 'voicemail_drop_url': {
           if (v !== null && typeof v !== 'string') continue
           updates.voicemail_drop_url = v || null
@@ -196,6 +196,72 @@ export async function POST(req: Request) {
           break
         }
       }
+    }
+
+    // ── is_test: PLATFORM ADMIN ONLY, AND ONLY ON A LIST THAT QUALIFIES ──
+    // This exempts a campaign from the per-number attempt budget, which is
+    // there to stop real people being dialled past six times. Left in the
+    // ordinary field loop it would be an opt-out from a compliance rule that
+    // any tenant could set on their own campaign.
+    //
+    // Two conditions, because either alone is weak. Admin-only stops a tenant
+    // helping themselves; the shape check stops it being set on a list that
+    // dials the public, including by an admin who picked the wrong campaign.
+    // The dialer verifies the same shape on every dial regardless, so this is
+    // about failing loudly here rather than silently doing nothing there.
+    if ('is_test' in body) {
+      const v = (body as Record<string, unknown>).is_test
+      if (typeof v !== 'boolean') {
+        return NextResponse.json(
+          { success: false, error: 'is_test must be true or false' },
+          { status: 400 }
+        )
+      }
+
+      const { isAdmin } = await checkIsAdmin()
+      if (!isAdmin) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'Only a platform administrator can mark a campaign as a test list. '
+              + 'It exempts the campaign from the per-number call budget.',
+          },
+          { status: 403 }
+        )
+      }
+
+      if (v === true) {
+        const { data: probe } = await supabaseAdmin
+          .from('leads')
+          .select('phone')
+          .eq('campaign_id', id)
+          .limit(TEST_CAMPAIGN_ROW_PROBE)
+
+        const rows = probe || []
+        const distinct = new Set(
+          rows.map(r => dialKey(r.phone)).filter((k): k is string => k !== null)
+        )
+        const qualifies =
+          rows.length < TEST_CAMPAIGN_ROW_PROBE &&
+          qualifiesAsTestCampaign(true, distinct.size)
+
+        if (!qualifies) {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                `This campaign has ${distinct.size} distinct phone numbers. A test `
+                + `list dials numbers you own — at most ${MAX_TEST_CAMPAIGN_NUMBERS}. `
+                + 'Marking a list that dials the public as a test would take it out '
+                + 'of the per-number call budget.',
+            },
+            { status: 400 }
+          )
+        }
+      }
+
+      updates.is_test = v
     }
 
     if (Object.keys(updates).length === 0) {

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { isCallableNow } from '@/lib/callingWindow'
 import {
   ATTEMPT_WINDOW_DAYS, attemptsByNumber, isExhausted, markDead, deadKeysFrom,
-  voicemailStreakKeys,
+  voicemailStreakKeys, qualifiesAsTestCampaign, TEST_CAMPAIGN_ROW_PROBE, dialKey,
   type DialedRow, type AnsweredOutcomeRow,
 } from '@/lib/recentDialSuppression'
 import { getPlatformConfig } from '@/lib/platformConfig'
@@ -147,6 +147,17 @@ async function handleNextLead(req: Request) {
     // answer, so the budget applies in full — which is the safe direction: a
     // test list dialed under ALL ACTIVE keeps its protection rather than
     // silently extending an exemption to real prospects alongside it.
+    //
+    // THE FLAG ALONE IS NOT ENOUGH. It exempts a list from a rule that exists
+    // to stop real people being dialled past six times, so it is checked
+    // against the data every time rather than trusted. A genuine test list
+    // dials numbers the operator owns — one line repeated, sometimes two or
+    // three. Anything with more distinct numbers than that is not a test list
+    // whatever it has been flagged as, and the budget applies in full.
+    //
+    // This makes the exemption impossible to leave lying around: add real
+    // leads to a flagged campaign and it lapses on the next dial, with nobody
+    // having to remember to switch it off.
     let isTestCampaign = false
     if (campaign_id && campaign_id !== 'all') {
       const { data: testFlag } = await supabaseAdmin
@@ -154,7 +165,33 @@ async function handleNextLead(req: Request) {
         .select('is_test')
         .eq('id', campaign_id)
         .maybeSingle()
-      isTestCampaign = !!testFlag?.is_test
+
+      if (testFlag?.is_test) {
+        // Bounded on purpose — see TEST_CAMPAIGN_ROW_PROBE. A campaign that
+        // fills the probe is already too big to be a test list, so there is
+        // nothing to gain by reading the rest of it.
+        const { data: probe } = await supabaseAdmin
+          .from('leads')
+          .select('phone')
+          .eq('campaign_id', campaign_id)
+          .limit(TEST_CAMPAIGN_ROW_PROBE)
+
+        const rows = probe || []
+        const distinct = new Set(
+          rows.map(r => dialKey(r.phone)).filter((k): k is string => k !== null)
+        )
+        isTestCampaign =
+          rows.length < TEST_CAMPAIGN_ROW_PROBE &&
+          qualifiesAsTestCampaign(true, distinct.size)
+
+        if (!isTestCampaign) {
+          console.warn(
+            `[leads/next] campaign ${campaign_id} is flagged is_test but does not `
+            + `qualify (${rows.length} rows, ${distinct.size} distinct numbers) `
+            + '— the per-number budget applies'
+          )
+        }
+      }
     }
 
     // ── THE ORDERED ALLOWLIST ────────────────────────────────────────────
