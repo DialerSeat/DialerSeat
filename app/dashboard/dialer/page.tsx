@@ -4179,7 +4179,11 @@ function DialerPageInner() {
             const effectiveMax = isPreview ? 1 : Math.min(dialRepeatCount, 3)
             const attemptsSoFar = leadAttemptCountRef.current
 
-            if (ld && !redialQueuedRef.current && attemptsSoFar < effectiveMax) {
+            // Same rule as the branch above: a call somebody answered is finished,
+        // even if the status check then failed.
+        const reachedAHumanOnError = !!callStartRef.current
+
+        if (ld && !reachedAHumanOnError && !redialQueuedRef.current && attemptsSoFar < effectiveMax) {
               leadAttemptCountRef.current = attemptsSoFar + 1
               setAmdActivity(prev =>
                 [`VOICEMAIL: REDIALING (${attemptsSoFar + 1} of ${effectiveMax})`, ...prev].slice(0, 5)
@@ -4277,7 +4281,22 @@ function DialerPageInner() {
             // Voicemail is still never dispositioned (see below) — the
             // silent-skip rule is about not making the agent tag a machine,
             // not about giving that lead fewer attempts than any other.
-            if (!redialQueuedRef.current && attemptsSoFar < effectiveMax) {
+            // ── ONLY NO-ANSWER AND VOICEMAIL EARN A REDIAL ──────────────
+            // A person picking up ends the attempt sequence, whatever 1x/2x/3x
+            // says. This branch handles every non-connected ending AND the end
+            // of a real conversation, and it did not tell them apart -- so on
+            // 2x or 3x a lead the agent had just spoken to was dialled straight
+            // back. The setting is for chasing people who did not answer, not
+            // for calling someone twice after they did.
+            //
+            // Two signals, either is sufficient: Telnyx said human, or this
+            // client marked the call connected. A call that never reached a
+            // verdict and never connected has amd_result null and no callStart,
+            // which is exactly the no-answer case that should redial.
+            const reachedAHuman =
+              statusData.amd_result === 'human' || !!callStartRef.current
+
+            if (!reachedAHuman && !redialQueuedRef.current && attemptsSoFar < effectiveMax) {
               // Still have retries left for this same lead — redial it
               // directly instead of dispositioning + fetching a new one.
               leadAttemptCountRef.current = attemptsSoFar + 1
