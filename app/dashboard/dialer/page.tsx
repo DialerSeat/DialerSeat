@@ -10,6 +10,7 @@ import type { QueueDiagnosis } from '@/lib/queueDiagnosis'
 import { phoneToState } from '@/lib/areaCode'
 import { BUILD_SHA } from '@/lib/buildId'
 import { rotationKey, sinkDialedLeads, recordDial, type DialLog } from '@/lib/queueRotation'
+import { reachedAHuman as didReachAHuman, shouldRedial } from '@/lib/redialDecision'
 
 /**
  * Whole seconds since a start timestamp, 0 when never started.
@@ -4281,11 +4282,25 @@ function DialerPageInner() {
             const effectiveMax = isPreview ? 1 : Math.min(dialRepeatCount, 3)
             const attemptsSoFar = leadAttemptCountRef.current
 
-            // Same rule as the branch above: a call somebody answered is finished,
-        // even if the status check then failed.
-        const reachedAHumanOnError = !!callStartRef.current
-
-        if (ld && !reachedAHumanOnError && !redialQueuedRef.current && attemptsSoFar < effectiveMax) {
+            // ── A MACHINE IS NOT A PERSON, HOWEVER LONG IT TALKED ─────────
+            // This tested !!callStartRef.current, meaning "the call
+            // connected", as a proxy for somebody having answered. Inside
+            // this branch that is always wrong: a voicemail ANSWERS. The
+            // carrier connects, status flips to connected, callStart is
+            // stamped, and AMD returns its machine verdict only afterwards.
+            // So the proxy was true on every voicemail and the redial below
+            // never ran — 2x and 3x behaved exactly like 1x for the single
+            // outcome they exist to chase.
+            //
+            // Nothing to test for. This branch is reached only when
+            // isNotHuman(amd_result) is true, so a human is impossible here
+            // by construction.
+            if (ld && shouldRedial({
+              reachedAHuman: false,
+              alreadyQueued: redialQueuedRef.current,
+              attemptsSoFar,
+              maxAttempts: effectiveMax,
+            })) {
               leadAttemptCountRef.current = attemptsSoFar + 1
               setAmdActivity(prev =>
                 [`VOICEMAIL: REDIALING (${attemptsSoFar + 1} of ${effectiveMax})`, ...prev].slice(0, 5)
@@ -4395,10 +4410,24 @@ function DialerPageInner() {
             // client marked the call connected. A call that never reached a
             // verdict and never connected has amd_result null and no callStart,
             // which is exactly the no-answer case that should redial.
-            const reachedAHuman =
-              statusData.amd_result === 'human' || !!callStartRef.current
+            //
+            // A machine verdict overrules both. "Connected" only means the far
+            // end picked up, and a voicemail picks up — so without this, every
+            // AMD-detected voicemail looked like a conversation and ended the
+            // sequence after one attempt, which is 2x and 3x silently
+            // behaving like 1x on the outcome they are for.
+            const reachedAHuman = didReachAHuman(
+              statusData.amd_result,
+              !!callStartRef.current,
+              isAmdHangup
+            )
 
-            if (!reachedAHuman && !redialQueuedRef.current && attemptsSoFar < effectiveMax) {
+            if (shouldRedial({
+              reachedAHuman,
+              alreadyQueued: redialQueuedRef.current,
+              attemptsSoFar,
+              maxAttempts: effectiveMax,
+            })) {
               // Still have retries left for this same lead — redial it
               // directly instead of dispositioning + fetching a new one.
               leadAttemptCountRef.current = attemptsSoFar + 1
@@ -4503,7 +4532,22 @@ function DialerPageInner() {
         disarmDialing()
         setStatus('idle')
 
-        if (ld && !redialQueuedRef.current && attemptsSoFar < effectiveMax) {
+        // ── UNKNOWN OUTCOME, SO DO NOT GAMBLE ON A PERSON ────────────────
+        // The poll threw, so there is no AMD verdict to consult — the only
+        // signal left is whether the call connected. This gate had no human
+        // check at all, so a lead the agent had genuinely spoken to was
+        // redialled on 2x or 3x whenever the status check happened to fail.
+        //
+        // Treating "connected" as a person is the cautious reading here: it
+        // can miss a redial on a voicemail whose poll also failed, which
+        // costs one attempt, where the other error calls somebody back who
+        // just finished talking to us.
+        if (ld && shouldRedial({
+          reachedAHuman: didReachAHuman(null, !!callStartRef.current, false),
+          alreadyQueued: redialQueuedRef.current,
+          attemptsSoFar,
+          maxAttempts: effectiveMax,
+        })) {
           leadAttemptCountRef.current = attemptsSoFar + 1
           setAmdActivity(prev =>
             [`CHECK FAILED: RETRYING (${attemptsSoFar + 1} of ${effectiveMax})`, ...prev].slice(0, 5)
