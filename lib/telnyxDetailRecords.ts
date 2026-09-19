@@ -25,7 +25,13 @@ const TELNYX_API = 'https://api.telnyx.com/v2'
 const REQUEST_PAGE_SIZE = 250
 
 /** Hard stop. 200 pages x 50 = 10,000 records, far beyond a normal day. */
-const MAX_PAGES = 200
+// Telnyx serves 50 per page whatever page[size] asks for, so this is a record
+// cap of MAX_PAGES * 50. At 200 it was 10,000, and a calendar month of this
+// account's traffic is roughly 16,000 sip-trunking CDRs — so a 'this_month'
+// walk would have stopped two thirds of the way through and reported a ratio
+// over a partial month, which is the exact failure this capture exists to
+// avoid. The time budget, not this, is meant to be what stops a walk.
+const MAX_PAGES = 600
 
 /**
  * Wall-clock budget. Vercel Hobby kills a function at 10 seconds by default and
@@ -79,12 +85,24 @@ export async function fetchDetailRecords(opts: {
 
     const qs = new URLSearchParams()
     qs.set('filter[record_type]', opts.recordType)
-    if (opts.from && opts.to) {
-      qs.set('filter[created_at][gte]', opts.from)
-      qs.set('filter[created_at][lt]', opts.to)
-    } else {
-      qs.set('filter[date_range]', opts.dateRange || 'today')
-    }
+    // ── DATE_RANGE IS THE ONLY DATE FILTER THIS ENDPOINT HAS ─────────────
+    // This used to send filter[created_at][gte] / [lt] for an explicit
+    // window. /detail_records does not support it. The documented filters are
+    // filter[record_type] and filter[date_range], the latter taking presets:
+    // today, yesterday, this_week, last_week, this_month, last_month, and the
+    // dynamic last_N_days.
+    //
+    // It failed silently rather than erroring, which is why it survived: the
+    // compliance cron ran every six hours for four days and stored nothing,
+    // while the sibling route that happened to pass a preset kept working.
+    // The table held thirty-seven minutes of one day and the month-to-date
+    // ratio computed off it looked plausible.
+    //
+    // An explicit window is now served by asking for the smallest preset that
+    // covers it and trimming the result to the window here. Slightly more
+    // data over the wire; it is the difference between a number and no
+    // number.
+    qs.set('filter[date_range]', coveringRange(opts))
     qs.set('page[size]', String(REQUEST_PAGE_SIZE))
     qs.set('page[number]', String(page))
 
@@ -127,13 +145,71 @@ export async function fetchDetailRecords(opts: {
     if (totalResults !== null && rows.length >= totalResults) break
   }
 
+  // Trimmed to the requested window, because the preset above is a superset
+  // of it. totalResults stays as Telnyx reported it for the preset, so
+  // `truncated` still answers "did we see everything the preset held".
+  const windowed = (opts.from && opts.to)
+    ? rows.filter(r => withinWindow(r, opts.from as string, opts.to as string))
+    : rows
+
   return {
-    rows,
+    rows: windowed,
     totalResults,
     pagesFetched,
     truncated: totalResults !== null && rows.length < totalResults,
     stoppedBecause: pagesFetched >= MAX_PAGES ? 'page_cap' : 'exhausted',
   }
+}
+
+/**
+ * The smallest documented preset that contains the caller's window.
+ *
+ * An explicit dateRange always wins — a caller that named one meant it.
+ */
+export function coveringRange(opts: { dateRange?: string; from?: string | null; to?: string | null }): string {
+  if (opts.dateRange) return opts.dateRange
+  if (!opts.from) return 'today'
+
+  const fromMs = Date.parse(opts.from)
+  if (!Number.isFinite(fromMs)) return 'today'
+
+  const startOfTodayUtc = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z')
+  if (fromMs >= startOfTodayUtc) return 'today'
+
+  // Whole days back from the start of today, inclusive of the day `from`
+  // lands in. last_N_days is the documented dynamic preset.
+  const daysBack = Math.ceil((startOfTodayUtc - fromMs) / 86_400_000) + 1
+  return `last_${Math.min(Math.max(daysBack, 2), 90)}_days`
+}
+
+/** Every timestamp field Telnyx uses across the record types we capture. */
+const TIME_KEYS = ['created_at', 'started_at', 'occurred_at', 'completed_at', 'finished_at']
+
+export function rowTimeMs(r: Record<string, unknown>): number | null {
+  for (const k of TIME_KEYS) {
+    const v = r[k]
+    if (typeof v === 'string' && v.length > 0) {
+      const t = Date.parse(v)
+      if (Number.isFinite(t)) return t
+    }
+  }
+  return null
+}
+
+/**
+ * Half-open [from, to), matching the filter this replaced.
+ *
+ * A row carrying no readable timestamp is KEPT. Dropping it would silently
+ * lose records over a formatting difference, and the caller dedupes anyway —
+ * a stray row outside the window is far cheaper than a missing one inside it.
+ */
+export function withinWindow(r: Record<string, unknown>, from: string, to: string): boolean {
+  const t = rowTimeMs(r)
+  if (t === null) return true
+  const fromMs = Date.parse(from)
+  const toMs = Date.parse(to)
+  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs)) return true
+  return t >= fromMs && t < toMs
 }
 
 /** One line a human can read to know whether to trust the number beside it. */

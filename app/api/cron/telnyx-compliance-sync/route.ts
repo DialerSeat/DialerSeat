@@ -125,13 +125,26 @@ function hashOf(r: Row): string {
  * a table holding thirty-seven minutes of one day.
  */
 async function captureWindow(apiKey: string, from: Date, to: Date, budgetMs: number) {
-  const page = await fetchDetailRecords({
+  return captureFrom(await fetchDetailRecords({
     apiKey,
     recordType: RECORD_TYPE,
     from: from.toISOString(),
     to: to.toISOString(),
     budgetMs,
-  })
+  }), `${from.toISOString()}..${to.toISOString()}`)
+}
+
+/** The same capture, asked for by one of Telnyx's date_range presets. */
+async function captureRange(apiKey: string, dateRange: string, budgetMs: number) {
+  return captureFrom(await fetchDetailRecords({
+    apiKey,
+    recordType: RECORD_TYPE,
+    dateRange,
+    budgetMs,
+  }), dateRange)
+}
+
+async function captureFrom(page: Awaited<ReturnType<typeof fetchDetailRecords>>, label: string) {
 
   if (page.error && page.rows.length === 0) {
     return { fetched: 0, stored: 0, truncated: true, error: page.error }
@@ -176,7 +189,7 @@ async function captureWindow(apiKey: string, from: Date, to: Date, budgetMs: num
 
   if (page.truncated) {
     console.error(
-      `[telnyx-compliance-sync] TRUNCATED ${from.toISOString()}..${to.toISOString()}: ` +
+      `[telnyx-compliance-sync] TRUNCATED ${label}: ` +
       `fetched ${rows.length} of ${page.totalResults ?? '?'} (${page.stoppedBecause})`
     )
   }
@@ -261,28 +274,34 @@ export async function GET(req: Request) {
     //
     // Oldest first, so the earliest gap closes first and the month becomes
     // contiguous from the start rather than growing holes in the middle.
-    const backfilled: Array<{ day: string; fetched: number; stored: number; truncated: boolean }> = []
-    const pending = await uncapturedDaysThisMonth(to)
+    // ── ONE REQUEST FOR THE MONTH, NOT ONE PER DAY ────────────────────
+    // /detail_records filters by date_range preset, and 'this_month' is
+    // precisely the period the surcharge is assessed over. Walking it a day
+    // at a time meant each day asking for a widening last_N_days span and
+    // discarding almost all of it — the same month fetched over and over,
+    // and on the older days a page cap or the time budget would end the run
+    // before it reached them.
+    const pendingBefore = (await uncapturedDaysThisMonth(to)).length
+    const monthSpent = Date.now() - runStarted
+    const monthBudget = FETCH_BUDGET_MS - monthSpent - BACKFILL_RESERVE_MS
+    const month = monthBudget > 0
+      ? await captureRange(apiKey, 'this_month', monthBudget)
+      : { fetched: 0, stored: 0, truncated: true, error: 'no budget left after the recent window' }
 
-    for (const day of pending) {
-      const spent = Date.now() - runStarted
-      const remaining = FETCH_BUDGET_MS - spent
-      if (remaining < BACKFILL_RESERVE_MS) break
-
-      const dayEnd = new Date(day.getTime() + 86400_000)
-      const res = await captureWindow(apiKey, day, dayEnd, remaining - BACKFILL_RESERVE_MS)
-      backfilled.push({
-        day: day.toISOString().slice(0, 10),
-        fetched: res.fetched, stored: res.stored, truncated: res.truncated,
-      })
-    }
-
-    const stillMissing = pending.length - backfilled.length
+    const stillMissing = (await uncapturedDaysThisMonth(new Date())).length
+    const backfilled = [{
+      range: 'this_month',
+      fetched: month.fetched,
+      stored: month.stored,
+      truncated: month.truncated,
+      daysMissingBefore: pendingBefore,
+    }]
 
     console.log(
       `[telnyx-compliance-sync] recent ${from.toISOString()}..${to.toISOString()} ` +
       `fetched ${recent.fetched} stored ${recent.stored}; ` +
-      `backfilled ${backfilled.length} day(s), ${stillMissing} still missing; ` +
+      `month fetched ${month.fetched} stored ${month.stored}` +
+      `${month.truncated ? ' (TRUNCATED)' : ''}, ${stillMissing} day(s) still missing; ` +
       `took ${Math.round((Date.now() - runStarted) / 1000)}s`
     )
 
