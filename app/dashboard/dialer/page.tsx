@@ -7064,7 +7064,7 @@ function DialerPageInner() {
               fontSize: '12px', outline: 'none',
               fontFamily: FUTURA, cursor: 'pointer',
             }}>
-              <option value="">, SELECT A CAMPAIGN, </option>
+              <option value="">SELECT A CAMPAIGN</option>
               {activeCampaignsCount > 0 && (
                 <option value={ALL_ACTIVE}>ALL ACTIVE CAMPAIGNS ({activeCampaignsCount})</option>
               )}

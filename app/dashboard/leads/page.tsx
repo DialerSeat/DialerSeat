@@ -1219,7 +1219,7 @@ export default function LeadsPage() {
                   onChange={e => setNewLead(l => ({ ...l, campaign_id: e.target.value }))}
                   disabled={adding}
                 >
-                  <option value="">, Select a campaign, </option>
+                  <option value="">Select a campaign</option>
                   {campaigns.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
