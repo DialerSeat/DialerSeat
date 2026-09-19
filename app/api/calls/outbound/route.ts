@@ -3,13 +3,26 @@ import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 import { shouldMaskCampaign } from '@/lib/leadMasking'
 import { supabaseAdmin } from '@/lib/supabase'
-import { placeOutboundCall, hangupCallControlId } from '@/lib/placeOutboundCall'
+import { placeOutboundCall } from '@/lib/placeOutboundCall'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
 
 // =============================================================================
 // OUTBOUND CALL — user-initiated dial
 // =============================================================================
+
+// ── HOW LONG A FINISHED CALL IS ALLOWED TO LOOK OPEN ────────────────────
+// A call is not closed the moment the agent leaves it. The lead's leg is held
+// for AGENT_LEG_MIN_SECONDS to clear the short-duration threshold, and the
+// hangup webhook writes the row after that, so an ended call reads as open for
+// roughly ten seconds. Anything inside that is the tail of the previous call,
+// not a second one.
+//
+// Above it, an open row means a call that is genuinely still up: a dial placed
+// while actually on a call arrives well after the hold has expired. Below it,
+// the client's own one-call-at-a-time guard and the in-flight latch cover the
+// double-click case, and the leg-watchdog sweeps anything they both miss.
+const CONCURRENT_CALL_GRACE_MS = 20_000
 
 export async function POST(req: Request) {
   try {
@@ -88,64 +101,41 @@ export async function POST(req: Request) {
     }
 
     if (modeForConcurrency !== 'predictive') {
-      const { data: openCalls } = await supabaseAdmin
+      // ── ONLY A CALL THAT IS GENUINELY STILL UP ────────────────────────
+      // This first shipped refusing on ANY open row, which broke ordinary
+      // dialing within the hour: a call is not closed the instant the agent
+      // skips it. The compliance hold keeps the leg for AGENT_LEG_MIN_SECONDS
+      // and the hangup webhook lands after that, so a row sits open for
+      // roughly ten seconds into its own teardown — and the next dial, 300ms
+      // later, was being refused by the corpse of the call it followed. The
+      // agent saw leads skipped without being tried.
+      //
+      // It was also hanging those legs up, which on a call still inside its
+      // hold is worse than the bug it was added for: that hold exists to keep
+      // calls off the short-duration surcharge.
+      //
+      // So the bar is now age. A dial placed while genuinely on a call comes
+      // well after the hold has expired; the tail of a finished call never
+      // does. Nothing is hung up and nothing is rewritten here — the
+      // leg-watchdog owns that, and unlike this request it holds an
+      // authoritative list of what Telnyx actually has up.
+      const staleBefore = new Date(Date.now() - CONCURRENT_CALL_GRACE_MS).toISOString()
+      const { count: liveCount } = await supabaseAdmin
         .from('calls')
-        .select('id, call_control_id, agent_call_control_id')
+        .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
         .is('hangup_cause', null)
         .or('duration.is.null,duration.eq.0')
-        // Bounded so a permanently stuck row cannot lock an agent out for the
-        // rest of the day. Beyond this the leg is the watchdog's problem, not
-        // a reason to refuse somebody's next dial.
+        .lt('created_at', staleBefore)
+        // Bounded, so a permanently stuck row cannot deny an agent their next
+        // dial for the rest of the day. Past this the watchdog owns it.
         .gt('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
 
-      const stillOpen = openCalls || []
-      if (stillOpen.length > 0) {
-        // Released, not just refused. Whatever is open has been abandoned by
-        // definition — the agent is asking for a new call — and leaving it up
-        // is the actual cost here. Refusing alone would stop the second leg
-        // and leave the first one running.
-        for (const open of stillOpen) {
-          for (const leg of [open.call_control_id, open.agent_call_control_id]) {
-            if (leg) {
-              try {
-                await hangupCallControlId(leg)
-              } catch (err) {
-                console.error('[calls/outbound] could not release orphaned leg', leg, err)
-              }
-            }
-          }
-        }
-
-        // ── CLOSE THE ROW OURSELVES, DO NOT WAIT FOR THE WEBHOOK ────────
-        // The row is what this guard reads, so leaving it open would refuse
-        // every future dial and lock the agent out entirely. That is exactly
-        // the state these rows are already in: the leg is gone but no hangup
-        // event ever arrived to close them, which is why they were still
-        // sitting open for the watchdog to find.
-        //
-        // Marked distinctly rather than as a normal clearing, so these stay
-        // countable — a rising number here means dials are being attempted
-        // over live calls, and that should be visible rather than disguised
-        // as ordinary hangups.
-        const { error: closeErr } = await supabaseAdmin
-          .from('calls')
-          .update({
-            hangup_cause: 'orphaned_released',
-            hangup_source: 'concurrency_guard',
-          })
-          .in('id', stillOpen.map(o => o.id))
-        if (closeErr) {
-          console.error('[calls/outbound] could not close orphaned rows:', closeErr.message)
-        }
-
+      if ((liveCount ?? 0) > 0) {
         console.warn(
-          `[calls/outbound] refused a second dial for ${userId} — released `
-          + `${stillOpen.length} open call(s) first`
+          `[calls/outbound] refused a dial for ${userId} — ${liveCount} call(s) `
+          + 'still open past the grace period'
         )
-
-        // Refuses at most one dial: the rows are closed above, so the next
-        // attempt finds nothing open and goes through.
         return NextResponse.json(
           {
             success: false,
