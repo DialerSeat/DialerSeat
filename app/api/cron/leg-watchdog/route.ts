@@ -49,6 +49,14 @@ interface CorrelatedRow {
   userId: string | null
 }
 
+// ── HOW LONG BEFORE AN OPEN ROW IS PRESUMED DEAD ────────────────────────
+// Only applied to rows whose legs are absent from an authoritative live list,
+// so this is not really a liveness guess — it is headroom for the ordinary
+// race where a call has just been placed and the hangup event is still in
+// flight. Ninety seconds is far longer than that gap and far shorter than
+// leaving a phantom call on screen.
+const CLOSE_ORPHAN_ROW_SECONDS = 90
+
 async function correlationRows(db: ReturnType<typeof getServiceClient>) {
   const since = new Date(Date.now() - CORRELATION_WINDOW_HOURS * 60 * 60_000).toISOString()
   const { data } = await db
@@ -118,6 +126,66 @@ export async function GET(req: Request) {
 
     const now = Date.now()
     const liveIds = legs.map(l => l.callControlId)
+
+    // ── A CALL NOBODY WILL EVER CLOSE ─────────────────────────────────────
+    // Two jobs were watching legs and neither closed a row. This watchdog
+    // hangs up legs that are LIVE at Telnyx past their thresholds, and the
+    // stale-call reaper frees an agent_sessions row when a heartbeat dies.
+    // Between them sits the case that actually happened: the leg is gone, the
+    // agent is still online, and no hangup event ever arrived — so the calls
+    // row stays duration 0 with no hangup_cause, forever. It shows as a live
+    // call on screen and counts as one to anything reading that shape.
+    //
+    // Safe to decide here and nowhere else, because this is the one place
+    // holding an AUTHORITATIVE list of what Telnyx currently has up — the
+    // request already returned 503 above if that list could not be fetched.
+    // Without that guarantee this would close every open row the moment
+    // Telnyx was unreachable, ending calls on screen while people were still
+    // talking on them.
+    const liveIdSet = new Set(liveIds)
+    const closableBefore = new Date(now - CLOSE_ORPHAN_ROW_SECONDS * 1000).toISOString()
+
+    const { data: openRows } = await db
+      .from('calls')
+      .select('id, call_control_id, agent_call_control_id, created_at')
+      .is('hangup_cause', null)
+      .or('duration.is.null,duration.eq.0')
+      .lt('created_at', closableBefore)
+      .gte('created_at', new Date(now - CORRELATION_WINDOW_HOURS * 60 * 60_000).toISOString())
+      .limit(500)
+
+    const orphanRowIds = (openRows || [])
+      .filter(r => {
+        // Untracked rows carry no leg id at all, so there is nothing to check
+        // them against and nothing this can safely conclude. Left alone.
+        const ids = [r.call_control_id, r.agent_call_control_id].filter(Boolean) as string[]
+        if (ids.length === 0) return false
+        // Open at Telnyx on either half means the call is real and ongoing;
+        // the threshold logic further down owns that case, not this one.
+        return !ids.some(id => liveIdSet.has(id))
+      })
+      .map(r => r.id)
+
+    if (orphanRowIds.length > 0) {
+      const { error: closeErr } = await db
+        .from('calls')
+        .update({
+          // Distinct from a carrier cause on purpose. These are rows closed
+          // by inference rather than by an event, and a rising count is a
+          // signal that hangup webhooks are being missed.
+          hangup_cause: 'orphaned_no_hangup_event',
+          hangup_source: 'leg_watchdog',
+        })
+        .in('id', orphanRowIds)
+      if (closeErr) {
+        console.error('[leg-watchdog] could not close orphaned rows:', closeErr.message)
+      } else {
+        console.warn(
+          `[leg-watchdog] closed ${orphanRowIds.length} call row(s) whose legs `
+          + 'are not live at Telnyx and never received a hangup event'
+        )
+      }
+    }
 
     const { data: priorSightings } = liveIds.length
       ? await db
