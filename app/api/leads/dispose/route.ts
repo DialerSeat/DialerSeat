@@ -94,6 +94,9 @@ export async function POST(req: Request) {
     }
 
     // ── WAS A CALL EVER PLACED FOR THIS LEAD? ───────────────────────────
+    // Used for the attempt counter only — whether a calls row gets written is
+    // decided further down, by whether there is an open call to attach to.
+    //
     // Asked against the calls table rather than trusting the client's elapsed
     // timer, which reads about a second for a lead that was never rung. If
     // /api/calls/outbound has written nothing for this lead in the last few
@@ -272,38 +275,30 @@ export async function POST(req: Request) {
         .from('calls')
         .update(callUpdates)
         .eq('id', openCall.id)
-    } else if (neverDialled) {
-      // ── A SKIP IS NOT A CALL ──────────────────────────────────────────
-      // Skipping a lead off the queue without ringing it used to land here
-      // and insert a calls row anyway: no phone_number, no call_control_id,
-      // no agent_call_control_id, no dial_source, and duration 1 from a
-      // client timer for a call that never started. Seven of them in one
-      // evening from a single agent, each reading as a one-second call.
+    } else {
+      // ── NO LEGS MEANS NO CALL, SO NO ROW ────────────────────────────────
+      // This branch used to insert a calls row to "not lose the disposition
+      // data". It cannot set call_control_id or agent_call_control_id — it
+      // has neither — so every row it wrote was a call with no legs, no
+      // phone_number, no dial_source, and a duration of 1 from a client timer
+      // for a call that never started.
       //
-      // Nothing dialled it and nothing billed for it, so it is not a call.
-      // The damage is to anything counting rows here as dials — cost per
-      // dial above all, which is a number the business is steered by.
+      // The first attempt at this gated the insert on "has this lead been
+      // dialled in the last fifteen minutes". That missed the case that
+      // actually produces them: a lead IS dialled, the call completes and is
+      // dispositioned, and the agent then skips the same lead again a moment
+      // later. The lookup above finds nothing to update because that row
+      // already carries a disposition, the fifteen-minute check says the lead
+      // was dialled, and the insert ran anyway. Three more appeared today.
       //
-      // The outcome is not lost: the lead's own row is updated above with
-      // last_called_at, which is what moves it down the queue, and the
-      // forensic trail below still records the disposition against the lead.
+      // Nothing is lost by not writing it. The lead row is updated above, and
+      // the disposition is recorded in call_events by the forensic trail
+      // immediately below, which is where a disposition without a call
+      // belongs. What this protects is cost per dial, which counts rows here.
       console.log(
         `[leads/dispose] ${disposition ?? 'disposition'} on lead ${lead_id} `
-        + 'with no call placed — recording no calls row'
+        + 'with no open call to attach it to — recorded in call_events only'
       )
-    } else {
-      // Fallback insert — a call was placed but its row could not be matched
-      // (manual dial, edge case). Same reasoning as above: this row has no
-      // hangup webhook coming to correct it, so a 0 here would read as
-      // in-flight forever. 1 is the floor the hangup handler uses.
-      const { data: inserted } = await supabaseAdmin.from('calls').insert({
-        user_id,
-        lead_id,
-        campaign_id,
-        disposition,
-        duration: typeof duration === 'number' && duration > 0 ? duration : 1,
-      }).select('id').maybeSingle()
-      resolvedCallId = inserted?.id ?? null
     }
 
     // Forensic trail (fire-and-forget; never blocks the response).
