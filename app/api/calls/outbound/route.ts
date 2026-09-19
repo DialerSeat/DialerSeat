@@ -3,7 +3,7 @@ import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 import { shouldMaskCampaign } from '@/lib/leadMasking'
 import { supabaseAdmin } from '@/lib/supabase'
-import { placeOutboundCall } from '@/lib/placeOutboundCall'
+import { placeOutboundCall, hangupCallControlId } from '@/lib/placeOutboundCall'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
 
@@ -63,6 +63,97 @@ export async function POST(req: Request) {
         { success: false, error: 'Missing destination' },
         { status: 400 }
       )
+    }
+
+    // ── ONE LIVE CALL PER AGENT, ENFORCED WHERE IT CANNOT BE SKIPPED ────
+    // The dialer has this guard, and that was the only place it existed. A
+    // browser running older code does not have it, and an agent on a stale
+    // tab placed a second dial 19 seconds into a live call: the first leg was
+    // never hung up by anything and sat open, connected and billing, with no
+    // tab pointing at it any more. The client is not a safe place to keep the
+    // only copy of a rule about spending money.
+    //
+    // Predictive is exempt by design — its whole purpose is several lines in
+    // flight per agent — so the mode is read before deciding. Read from the
+    // campaign rather than trusting the caller, for the same reason the
+    // destination is.
+    let modeForConcurrency: string | null = null
+    if (campaignId) {
+      const { data: campaignRow } = await supabaseAdmin
+        .from('campaigns')
+        .select('dialer_mode')
+        .eq('id', campaignId)
+        .maybeSingle()
+      modeForConcurrency = campaignRow?.dialer_mode ?? null
+    }
+
+    if (modeForConcurrency !== 'predictive') {
+      const { data: openCalls } = await supabaseAdmin
+        .from('calls')
+        .select('id, call_control_id, agent_call_control_id')
+        .eq('user_id', userId)
+        .is('hangup_cause', null)
+        .or('duration.is.null,duration.eq.0')
+        // Bounded so a permanently stuck row cannot lock an agent out for the
+        // rest of the day. Beyond this the leg is the watchdog's problem, not
+        // a reason to refuse somebody's next dial.
+        .gt('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+
+      const stillOpen = openCalls || []
+      if (stillOpen.length > 0) {
+        // Released, not just refused. Whatever is open has been abandoned by
+        // definition — the agent is asking for a new call — and leaving it up
+        // is the actual cost here. Refusing alone would stop the second leg
+        // and leave the first one running.
+        for (const open of stillOpen) {
+          for (const leg of [open.call_control_id, open.agent_call_control_id]) {
+            if (leg) {
+              try {
+                await hangupCallControlId(leg)
+              } catch (err) {
+                console.error('[calls/outbound] could not release orphaned leg', leg, err)
+              }
+            }
+          }
+        }
+
+        // ── CLOSE THE ROW OURSELVES, DO NOT WAIT FOR THE WEBHOOK ────────
+        // The row is what this guard reads, so leaving it open would refuse
+        // every future dial and lock the agent out entirely. That is exactly
+        // the state these rows are already in: the leg is gone but no hangup
+        // event ever arrived to close them, which is why they were still
+        // sitting open for the watchdog to find.
+        //
+        // Marked distinctly rather than as a normal clearing, so these stay
+        // countable — a rising number here means dials are being attempted
+        // over live calls, and that should be visible rather than disguised
+        // as ordinary hangups.
+        const { error: closeErr } = await supabaseAdmin
+          .from('calls')
+          .update({
+            hangup_cause: 'orphaned_released',
+            hangup_source: 'concurrency_guard',
+          })
+          .in('id', stillOpen.map(o => o.id))
+        if (closeErr) {
+          console.error('[calls/outbound] could not close orphaned rows:', closeErr.message)
+        }
+
+        console.warn(
+          `[calls/outbound] refused a second dial for ${userId} — released `
+          + `${stillOpen.length} open call(s) first`
+        )
+
+        // Refuses at most one dial: the rows are closed above, so the next
+        // attempt finds nothing open and goes through.
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'You are already on a call. Finish or skip it before dialing again.',
+          },
+          { status: 409 }
+        )
+      }
     }
 
     const result = await placeOutboundCall({
