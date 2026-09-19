@@ -955,7 +955,6 @@ function DialerPageInner() {
   const [allActiveOverrideMode, setAllActiveOverrideMode] = useState<DialerMode>('progressive')
   // True when the campaigns this selection covers do not all share one redial
   // count, so the control can say so rather than pick one and look definite.
-  const [dialRepeatMixed, setDialRepeatMixed] = useState(false)
 
   const [scriptIdx, setScriptIdx] = useState(0)
   // Draggable script-tab ordering. Holds a custom order of tab keys (campaign
@@ -1228,15 +1227,13 @@ function DialerPageInner() {
     // removal note said.
     //
     // Now it reads every active campaign. They agree -> show it. They differ
-    // -> show the LOWEST, because that is the only value true of all of them,
-    // and flag it mixed so the number is never claiming more than it means.
+    // -> show the LOWEST, because that is the only value true of all of them.
     const active = campaigns.filter(c => c.status === 'active')
     if (active.length === 0) return
     const vals = active.map(c => (c.dial_repeat_count === 2 || c.dial_repeat_count === 3)
       ? c.dial_repeat_count : 1)
     const lowest = Math.min(...vals) as 1 | 2 | 3
     setDialRepeatCount(lowest)
-    setDialRepeatMixed(vals.some(v => v !== lowest))
   }, [isSpecificCampaign, currentCampaign?.id, currentCampaign?.dial_repeat_count, campaigns])
 
   const isPredictive = dialerMode === 'predictive'
@@ -5472,7 +5469,6 @@ function DialerPageInner() {
       setCampaigns(prev => prev.map(c =>
         saved.has(c.id) ? { ...c, dial_repeat_count: n } : c
       ))
-      setDialRepeatMixed(saved.size !== targets.length)
     } catch (err) {
       console.error('Dial repeat count change failed:', err)
     }
@@ -6196,10 +6192,10 @@ function DialerPageInner() {
               not is worse than no control.
 
               That is fixed rather than reintroduced. It now READS every active
-              campaign (agreeing -> that value; differing -> the lowest, marked
-              mixed, because the lowest is the only number true of all of them)
-              and WRITES to every campaign the current selection dials, marking
-              only the rows the server actually accepted.
+              campaign (agreeing -> that value; differing -> the lowest, because
+              that is the only number true of all of them) and WRITES to every
+              campaign the current selection dials, marking only the rows the
+              server actually accepted.
 
               2x means: if they do not pick up the first time, dial once more,
               then move on. Predictive enforces this server-side from the
@@ -6227,12 +6223,6 @@ function DialerPageInner() {
                 {n}x
               </button>
             ))}
-            {dialRepeatMixed && (
-              <span title="The active campaigns do not all share this setting. Picking a value applies it to every one of them."
-                    style={{ fontSize: 9, letterSpacing: 0.5, color: terminalMuted, fontFamily: FUTURA, cursor: 'help' }}>
-                MIXED
-              </span>
-            )}
             {/* Native title rather than a hand-built popover: it reaches
                 keyboard and screen readers, it cannot be clipped by the panel,
                 and it needs no state. The text says what the setting DOES and
