@@ -236,37 +236,28 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
   let state = declaredUsable ? declaredState : null
   if (!state) state = areaUsable ? areaState : null
 
-  // Both usable and different: evaluate each and keep whichever is currently
-  // OUTSIDE its window, so the restrictive one decides. If both are inside,
-  // either gives the same answer and the declared one is kept for the message.
-  // Null unless the two sources genuinely disagree. Holds the pair verbatim
-  // rather than "the other one": the message names which source said what, and
-  // deriving that from whichever state won is how it ends up printing "state
-  // says TX but area code says TX".
-  let conflict: { declared: string; area: string } | null = null
-  if (declaredUsable && areaUsable && declaredState !== areaState) {
-    conflict = { declared: declaredState as string, area: areaState as string }
-    const insideNow = (st: string): boolean => {
-      const zone = STATE_TIMEZONES[st]
-      const r = getCallingRule(st)
-      const p: Record<string, string> = {}
-      for (const part of new Intl.DateTimeFormat('en-US', {
-        timeZone: zone, hour: '2-digit', minute: '2-digit', weekday: 'short', hour12: false,
-      }).formatToParts(new Date())) p[part.type] = part.value
-      const sunday = p.weekday === 'Sun'
-      if (r.noSundayCalls && sunday) return false
-      const startH = sunday ? (r.sundayStartHour ?? r.startHour) : r.startHour
-      const endH = sunday ? (r.sundayEndHour ?? r.endHour) : r.endHour
-      const mins = parseInt(p.hour, 10) * 60 + parseInt(p.minute, 10)
-      return mins >= startH * 60 && mins < endH * 60
-    }
-    // Whichever is closed decides. Both closed -> either; both open -> either.
-    if (insideNow(declaredState as string) && !insideNow(areaState as string)) {
-      state = areaState
-    } else {
-      state = declaredState
-    }
-  }
+  // ── THE STATE ON THE LEAD DECIDES. THE AREA CODE IS THE FALLBACK. ─────
+  // This used to evaluate both and keep whichever was currently CLOSED, so
+  // the stricter clock always won. Per instruction that is backwards: the
+  // area code is the last resort, consulted only when the lead has no usable
+  // state of its own.
+  //
+  // It is also the better data. A state column came from the list, describing
+  // where the person is. An area code describes where their number was issued,
+  // which after two decades of mobile portability is frequently a different
+  // place and sometimes a different coast — somebody who moved from Greensboro
+  // to Phoenix keeps 336 forever. Taking the stricter of a fact and a guess
+  // means the guess decides every time it happens to be stricter, and blocks
+  // calls that were legal all along.
+  //
+  // `state` is already set to the declared one above where it is usable, so
+  // there is nothing to choose here. The conflict is still recorded, because
+  // the disagreement is worth naming in the message and in the diagnosis even
+  // though it no longer changes the answer.
+  const conflict: { declared: string; area: string } | null =
+    declaredUsable && areaUsable && declaredState !== areaState
+      ? { declared: declaredState as string, area: areaState as string }
+      : null
 
   // Fail CLOSED. If we cannot establish where the lead is, we cannot
   // establish that calling them is legal, and the safe answer is no.
@@ -410,7 +401,7 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
       reason: `Too early in ${state} (${leadHour}:${String(leadMinute).padStart(2, '0')} local, window starts ${startHour}:00)`
         + (conflict
             ? `. This lead's state column says ${conflict.declared} and its area code says `
-              + `${conflict.area}; the call has to be legal in both, so the stricter one applies.`
+              + `${conflict.area}; the state column is what the window is based on.`
             : ''),
       retryAfter: atHourInTz(now, tz, startHour, 0),
       leadState: state,
@@ -425,7 +416,7 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
       reason: `Too late in ${state} (${leadHour}:${String(leadMinute).padStart(2, '0')} local, window ends ${endHour}:00)`
         + (conflict
             ? `. This lead's state column says ${conflict.declared} and its area code says `
-              + `${conflict.area}; the call has to be legal in both, so the stricter one applies.`
+              + `${conflict.area}; the state column is what the window is based on.`
             : ''),
       retryAfter: atHourInTz(now, tz, startHour, 1),
       leadState: state,
