@@ -186,3 +186,59 @@ describe('shouldResetAttemptCount', () => {
     expect(perPass).toEqual([2, 1])
   })
 })
+
+describe('an agent-leg failure is not a pickup', () => {
+  it('is not a human even though the call connected', () => {
+    // The lead's phone was answered and the client stamped its call-start,
+    // but the audio never reached the agent. Nobody was on our end.
+    expect(reachedAHuman(null, true, false, 'AGENT_LEG_FAILED')).toBe(false)
+  })
+
+  it('beats even an explicit human verdict', () => {
+    expect(reachedAHuman('human', true, false, 'AGENT_LEG_FAILED')).toBe(false)
+  })
+
+  it('leaves ordinary dispositions alone', () => {
+    expect(reachedAHuman('human', true, false, 'NO_ANSWER')).toBe(true)
+    expect(reachedAHuman(null, true, false, null)).toBe(true)
+  })
+
+  it('3x: three leg failures spend the sequence, then the next lead', () => {
+    // Joshua's rule. A broken line must not strand the dialer on one lead,
+    // and must not abandon that lead after a single failure either.
+    let attempts = 1
+    let dials = 1
+    while (shouldRedial({
+      reachedAHuman: reachedAHuman(null, true, false, 'AGENT_LEG_FAILED'),
+      alreadyQueued: false,
+      attemptsSoFar: attempts,
+      maxAttempts: 3,
+    })) {
+      attempts++; dials++
+    }
+    expect(dials).toBe(3)
+  })
+
+  it('2x: two leg failures, then the next lead', () => {
+    let attempts = 1
+    let dials = 1
+    while (shouldRedial({
+      reachedAHuman: reachedAHuman(null, true, false, 'AGENT_LEG_FAILED'),
+      alreadyQueued: false,
+      attemptsSoFar: attempts,
+      maxAttempts: 2,
+    })) {
+      attempts++; dials++
+    }
+    expect(dials).toBe(2)
+  })
+
+  it('1x: one leg failure and the queue moves on', () => {
+    expect(shouldRedial({
+      reachedAHuman: reachedAHuman(null, true, false, 'AGENT_LEG_FAILED'),
+      alreadyQueued: false,
+      attemptsSoFar: 1,
+      maxAttempts: 1,
+    })).toBe(false)
+  })
+})

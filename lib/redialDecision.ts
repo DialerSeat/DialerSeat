@@ -18,11 +18,28 @@
  * cannot drift out of step with the AMD result list the way a second copy
  * would.
  */
+/**
+ * Our own plumbing failing is not the prospect answering.
+ *
+ * The server writes AGENT_LEG_FAILED when the call never reached the agent's
+ * headset. The lead's phone may genuinely have been answered — the client can
+ * see the call connect and stamp its call-start — but there was nobody on our
+ * end, so it is not a pickup and the repeat sequence must not treat it as one.
+ * lib/recentDialSuppression already refuses to spend one of the prospect's six
+ * attempts on these; this is the same judgement applied to the repeat setting.
+ */
+export function agentLegFailed(disposition: string | null | undefined): boolean {
+  return disposition === 'AGENT_LEG_FAILED'
+}
+
 export function reachedAHuman(
   amdResult: string | null | undefined,
   connected: boolean,
-  isMachine: boolean
+  isMachine: boolean,
+  disposition?: string | null
 ): boolean {
+  // Nobody was on our end, so nobody was reached.
+  if (agentLegFailed(disposition)) return false
   // A machine is not a person however long it talked, and however cleanly the
   // media connected.
   if (isMachine) return false

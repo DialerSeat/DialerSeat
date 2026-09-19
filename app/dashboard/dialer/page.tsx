@@ -10,7 +10,7 @@ import type { QueueDiagnosis } from '@/lib/queueDiagnosis'
 import { phoneToState } from '@/lib/areaCode'
 import { BUILD_SHA } from '@/lib/buildId'
 import { rotationKey, sinkDialedLeads, recordDial, pinToTop, type DialLog } from '@/lib/queueRotation'
-import { reachedAHuman as didReachAHuman, shouldRedial, shouldResetAttemptCount } from '@/lib/redialDecision'
+import { reachedAHuman as didReachAHuman, shouldRedial, shouldResetAttemptCount, agentLegFailed } from '@/lib/redialDecision'
 
 /**
  * Whole seconds since a start timestamp, 0 when never started.
@@ -703,6 +703,10 @@ function DialerPageInner() {
   // lead returned immediately is recognised as the same pass — see
   // shouldResetAttemptCount.
   const lastServedLeadIdRef = useRef<string | null>(null)
+  // The disposition from the most recent /api/calls/check. Kept because the
+  // poll's catch path has no response to read and still needs to know whether
+  // the agent leg failed — see reachedAHuman.
+  const lastCheckDispositionRef = useRef<string | null>(null)
   // When the agent's SIP leg reached Established. Billing starts there, and the
   // short-duration floor is measured from it -- see releaseAgentLeg.
   const agentLegAnsweredAtRef = useRef<number | null>(null)
@@ -4182,6 +4186,7 @@ function DialerPageInner() {
       try {
         const res = await fetch(`/api/calls/check?sid=${callSid}`)
         const d = await res.json()
+        lastCheckDispositionRef.current = d.disposition ?? null
         if (d.status === 'completed' || d.status === 'canceled' || d.status === 'failed') {
           clearInterval(hangupPoll)
           activePollRef.current = null
@@ -4216,11 +4221,22 @@ function DialerPageInner() {
           // Asked before the lead is rotated, because a lead with attempts
           // left must keep its place at the top of the queue.
           const endingLead = currentLeadRef.current
-          const lateMachine = isNotHuman(d.amd_result)
+          // A leg failure ends this attempt exactly as a machine does: nobody
+          // was reached, and the sequence should spend an attempt and try
+          // again while it has any left. On 3x that means three failures and
+          // then the next lead, rather than the lead being abandoned after one
+          // because the call "connected".
+          const legFailed = agentLegFailed(d.disposition)
+          // Two different endings that share one outcome: nobody was reached,
+          // so the attempt is spent and the sequence tries again while it has
+          // attempts left. Kept as separate facts because they are told to the
+          // agent differently — claiming voicemail when our own line failed
+          // would be a lie on screen.
+          const nobodyReached = isNotHuman(d.amd_result) || legFailed
           const repeatCap = isPreview ? 1 : Math.min(dialRepeatCount, 3)
           const attemptsSoFar = leadAttemptCountRef.current
 
-          if (endingLead && lateMachine && shouldRedial({
+          if (endingLead && nobodyReached && shouldRedial({
             // A machine, however cleanly the media connected.
             reachedAHuman: false,
             alreadyQueued: redialQueuedRef.current,
@@ -4263,10 +4279,13 @@ function DialerPageInner() {
           // straight to the next lead. Human calls still get their sheet:
           // that qualifier still guards the non-AMD branch below, which is
           // what makes TERMINATE on a live call capture an outcome.
-          if (lateMachine) {
-            setAmdActivity(prev =>
-              [`VOICEMAIL FILTERED LATE, ${d.amd_result}`, ...prev].slice(0, 5)
-            )
+          if (nobodyReached) {
+            setAmdActivity(prev => [
+              legFailed
+                ? 'CALL DID NOT REACH YOUR HEADSET'
+                : `VOICEMAIL FILTERED LATE, ${d.amd_result}`,
+              ...prev,
+            ].slice(0, 5))
             setStatus('idle')
             setCurrentLead(null)
             // The next lead starts its own count.
@@ -4305,6 +4324,7 @@ function DialerPageInner() {
       try {
         const statusRes = await fetch(`/api/calls/check?sid=${callSid}`)
         const statusData = await statusRes.json()
+        lastCheckDispositionRef.current = statusData.disposition ?? null
 
         if (statusData.status === 'in-progress') {
           clearInterval(pollInterval)
@@ -4465,7 +4485,8 @@ function DialerPageInner() {
             const reachedAHuman = didReachAHuman(
               statusData.amd_result,
               !!callStartRef.current,
-              isAmdHangup
+              isAmdHangup,
+              statusData.disposition
             )
 
             if (shouldRedial({
@@ -4580,7 +4601,7 @@ function DialerPageInner() {
         // costs one attempt, where the other error calls somebody back who
         // just finished talking to us.
         if (ld && shouldRedial({
-          reachedAHuman: didReachAHuman(null, !!callStartRef.current, false),
+          reachedAHuman: didReachAHuman(null, !!callStartRef.current, false, lastCheckDispositionRef.current),
           alreadyQueued: redialQueuedRef.current,
           attemptsSoFar,
           maxAttempts: effectiveMax,

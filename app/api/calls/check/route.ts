@@ -102,6 +102,12 @@ export async function GET(req: Request) {
       status,
       amd_result: callRow.amd_result || null,
       duration: callRow.duration || 0,
+      // Already selected above, and the dialer needs it: AGENT_LEG_FAILED is
+      // how it learns that this call never reached the agent's headset. The
+      // lead's phone may well have been answered, but with nobody on our end
+      // it is not a pickup, and without this the client had no way to tell
+      // that apart from a real conversation.
+      disposition: callRow.disposition || null,
     })
   } catch (error: any) {
     return apiError(error, { route: 'calls/check' })
