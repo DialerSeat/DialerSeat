@@ -17,7 +17,7 @@ import {
 import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
 import { abortSiblingFanoutLines } from '@/lib/predictiveController'
 import { startTelnyxRecording } from '@/lib/telnyxRecording'
-import { remainingHoldMs, HOLD_SPREAD_SECONDS, AGENT_LEG_MIN_SECONDS } from '@/lib/complianceHold'
+import { remainingHoldMs, HOLD_SPREAD_SECONDS, AGENT_LEG_MIN_SECONDS, billingElapsedMs } from '@/lib/complianceHold'
 import { lifetimeAttemptCap } from '@/lib/dialerConstants'
 import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
 import {
@@ -353,15 +353,30 @@ export async function POST(req: Request) {
  */
 async function releaseAgentLegPastSix(
   agentCallControlId: string,
+  answeredAt: string | null | undefined,
   createdAt: string | null | undefined,
   reason: string
 ): Promise<void> {
   try {
-    const startedMs = createdAt ? new Date(createdAt).getTime() : NaN
-    // An unparseable timestamp yields elapsed 0, which holds the FULL floor.
-    // Wrong in the safe direction: a leg held too long costs a hundredth of a
-    // cent, a leg released too early costs the surcharge.
-    const elapsedMs = Number.isFinite(startedMs) ? Date.now() - startedMs : 0
+    // ── THE CLOCK STARTS AT ANSWER, NOT AT DIAL ────────────────────────
+    // This measured the hold from created_at, and Telnyx bills from answer.
+    // Ring time was therefore being spent out of the hold: a call that rang
+    // three seconds and was held to nine from creation billed six seconds of
+    // talk — exactly ON the short-duration line — and one that rang
+    // twenty-six seconds was already past the hold the moment it connected,
+    // so it was released instantly and billed five.
+    //
+    // Every short call in the last three hours had hangup_source 'caller',
+    // which is this teardown: talk_seconds of 4, 5 and 6 against durations of
+    // 17, 31 and 8. In each one duration equalled ring time plus talk, which
+    // is the arithmetic of a hold started at the wrong moment.
+    //
+    // The floor itself is unchanged — AGENT_LEG_MIN_SECONDS with its jitter,
+    // seven to nine and a half seconds. It is now seven to nine and a half
+    // seconds OF BILLED TIME, which is what the threshold actually counts.
+    // An unparseable or missing timestamp yields elapsed 0, which holds the
+    // FULL floor — wrong in the safe direction. See billingElapsedMs.
+    const elapsedMs = billingElapsedMs(answeredAt, createdAt)
     const waitMs = remainingHoldMs(AGENT_LEG_MIN_SECONDS, elapsedMs)
     if (waitMs > 0) {
       console.log(
@@ -1337,6 +1352,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     if (agentAlreadyBridged && callRow?.agent_call_control_id) {
       await releaseAgentLegPastSix(
         callRow.agent_call_control_id,
+        callRow.answered_at,
         callRow.created_at,
         'AMD machine'
       )
@@ -2127,6 +2143,7 @@ async function handleHangup(
     if (callRow?.agent_call_control_id) {
       await releaseAgentLegPastSix(
         callRow.agent_call_control_id,
+        callRow.answered_at,
         callRow.created_at,
         'call ended'
       )

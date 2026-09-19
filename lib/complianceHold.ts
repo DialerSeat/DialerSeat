@@ -99,3 +99,29 @@ export function remainingHoldMs(minSeconds: number, elapsedMs: number): number {
   if (target <= 0) return 0
   return Math.max(0, target - elapsedMs)
 }
+
+/**
+ * How long a leg has been BILLING, which is not how long it has existed.
+ *
+ * Telnyx starts charging at answer. A hold measured from the dial spends the
+ * ring time out of its own floor: a call that rang three seconds and was held
+ * to nine from creation billed six seconds of talk — exactly on the
+ * short-duration line — and one that rang twenty-six seconds was already past
+ * the floor the moment it connected, so it was released immediately and
+ * billed five.
+ *
+ * Falls back to creation only when there is no answer timestamp, which holds
+ * the leg longer rather than shorter. That is the safe direction: an extra
+ * second or two of a held leg costs a fraction of a cent, releasing early
+ * costs the surcharge on every short call that month.
+ */
+export function billingElapsedMs(
+  answeredAt: string | null | undefined,
+  createdAt: string | null | undefined,
+  now: number = Date.now()
+): number {
+  const start = answeredAt || createdAt
+  const startedMs = start ? new Date(start).getTime() : NaN
+  if (!Number.isFinite(startedMs)) return 0
+  return Math.max(0, now - startedMs)
+}
