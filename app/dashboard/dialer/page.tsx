@@ -2109,6 +2109,27 @@ function DialerPageInner() {
     } catch { /* the element is gone, which is the same outcome */ }
   }
 
+  // ── NO CALL AUDIO WHILE THE QUEUE PANEL IS UP. EVER. ──────────────────
+  // Standing rule, enforced on the STATE rather than on the teardown paths.
+  // Every path that ends a call was supposed to silence the element, and each
+  // one that forgot produced the same symptom: a second or two of the last
+  // call bleeding over the queue panel, and a fresh call that sounded as
+  // though it had been answered the instant it was placed. The skip path had
+  // it, the AMD path did not, and there is no reason to believe the next
+  // teardown added will remember either.
+  //
+  // So it is not asked of them any more. Whenever this dialer is not on a
+  // call, the element is silent — whatever route it took to get here.
+  //
+  // Only 'idle' and 'ended' are acted on. 'calling' is deliberately left
+  // alone: the track attaches around that transition and muting here would
+  // race the attach and silence the call that is just beginning. getAudioEl
+  // clears the mute when a new track attaches, which is what makes this safe
+  // to apply repeatedly.
+  useEffect(() => {
+    if (status === 'idle' || status === 'ended') silenceSIPAudio()
+  }, [status])
+
   // ── MEASURE WHAT THE CALL SOUNDED LIKE ────────────────────────────
   // "Calls sound kinda crappy" had no number attached to it, and nothing in
   // this codebase recorded one. getStats() lives on the RTCPeerConnection, so
@@ -3185,6 +3206,22 @@ function DialerPageInner() {
     if (!answeredAt) { end(); return }
     const wait = AGENT_LEG_FLOOR_MS - (Date.now() - answeredAt)
     if (wait <= 0) { end(); return }
+
+    // ── THE HOLD BELONGS IN THE BACKGROUND ──────────────────────────────
+    // The session stays up for the billing floor, and it was staying AUDIBLE
+    // for it. After an AMD skip the agent kept hearing the voicemail greeting
+    // for a second or two while the leg ran out its floor, and then the next
+    // call started underneath it — which is why a fresh call sounded as
+    // though it had been answered the instant it was placed.
+    //
+    // The skip path already had this right: silence locally, let the leg live
+    // out its floor, and let the server end it. Doing it here covers every
+    // deferred release instead of the one that happened to be fixed.
+    //
+    // Safe against the bug this keeps reintroducing: silenceSIPAudio mutes the
+    // shared element, and getAudioEl clears that mute when the next call
+    // attaches its track.
+    silenceSIPAudio()
     setTimeout(end, wait)
   }
 
