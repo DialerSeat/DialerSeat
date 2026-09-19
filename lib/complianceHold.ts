@@ -105,23 +105,29 @@ export function remainingHoldMs(minSeconds: number, elapsedMs: number): number {
  *
  * Telnyx starts charging at answer. A hold measured from the dial spends the
  * ring time out of its own floor: a call that rang three seconds and was held
- * to nine from creation billed six seconds of talk — exactly on the
- * short-duration line — and one that rang twenty-six seconds was already past
- * the floor the moment it connected, so it was released immediately and
- * billed five.
+ * to nine from creation billed six seconds — exactly on the short-duration
+ * line — and one that rang twenty-six seconds was already past the floor the
+ * moment it connected, so it was released immediately and billed five.
  *
- * Falls back to creation only when there is no answer timestamp, which holds
- * the leg longer rather than shorter. That is the safe direction: an extra
- * second or two of a held leg costs a fraction of a cent, releasing early
- * costs the surcharge on every short call that month.
+ * ── THERE IS NO FALLING BACK TO created_at ─────────────────────────────
+ * An earlier version of this took created_at when the answer stamp was
+ * missing, described as holding the leg longer. It does the opposite. The
+ * dial is EARLIER than the answer, so it reports a larger elapsed, and a
+ * larger elapsed asks remainingHoldMs for LESS hold — the precise mistake
+ * this function exists to correct, reintroduced as its own fallback. Legs
+ * kept billing six seconds whenever the answer webhook had not landed yet,
+ * which is a documented race: the AMD verdict and call.answered are separate
+ * events about three seconds apart.
+ *
+ * No answer stamp now means elapsed 0, so the FULL floor is held. Holding a
+ * leg a couple of seconds too long costs a fraction of a cent. Releasing one
+ * early costs the surcharge on every short call that month.
  */
 export function billingElapsedMs(
   answeredAt: string | null | undefined,
-  createdAt: string | null | undefined,
   now: number = Date.now()
 ): number {
-  const start = answeredAt || createdAt
-  const startedMs = start ? new Date(start).getTime() : NaN
+  const startedMs = answeredAt ? new Date(answeredAt).getTime() : NaN
   if (!Number.isFinite(startedMs)) return 0
   return Math.max(0, now - startedMs)
 }

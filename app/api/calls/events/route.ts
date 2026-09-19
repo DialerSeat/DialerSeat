@@ -354,7 +354,6 @@ export async function POST(req: Request) {
 async function releaseAgentLegPastSix(
   agentCallControlId: string,
   answeredAt: string | null | undefined,
-  createdAt: string | null | undefined,
   reason: string
 ): Promise<void> {
   try {
@@ -374,9 +373,23 @@ async function releaseAgentLegPastSix(
     // The floor itself is unchanged — AGENT_LEG_MIN_SECONDS with its jitter,
     // seven to nine and a half seconds. It is now seven to nine and a half
     // seconds OF BILLED TIME, which is what the threshold actually counts.
-    // An unparseable or missing timestamp yields elapsed 0, which holds the
-    // FULL floor — wrong in the safe direction. See billingElapsedMs.
-    const elapsedMs = billingElapsedMs(answeredAt, createdAt)
+    // ── RE-READ BEFORE GIVING UP ON THE ANSWER STAMP ──────────────────
+    // call.answered and the AMD verdict are separate webhooks about three
+    // seconds apart, so there is a real window where this handler runs before
+    // the column is written. The lead-leg hold further down already re-reads
+    // for exactly this reason; the agent leg did not, and simply took the
+    // dial time instead — which under-holds, and is why legs kept billing six
+    // seconds. Missing after the re-read means elapsed 0 and the full floor.
+    let effectiveAnsweredAt = answeredAt
+    if (!effectiveAnsweredAt) {
+      const { data: fresh } = await supabaseAdmin
+        .from('calls')
+        .select('answered_at')
+        .eq('agent_call_control_id', agentCallControlId)
+        .maybeSingle()
+      effectiveAnsweredAt = fresh?.answered_at ?? null
+    }
+    const elapsedMs = billingElapsedMs(effectiveAnsweredAt)
     const waitMs = remainingHoldMs(AGENT_LEG_MIN_SECONDS, elapsedMs)
     if (waitMs > 0) {
       console.log(
@@ -1353,7 +1366,6 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       await releaseAgentLegPastSix(
         callRow.agent_call_control_id,
         callRow.answered_at,
-        callRow.created_at,
         'AMD machine'
       )
     }
@@ -2144,7 +2156,6 @@ async function handleHangup(
       await releaseAgentLegPastSix(
         callRow.agent_call_control_id,
         callRow.answered_at,
-        callRow.created_at,
         'call ended'
       )
     }
