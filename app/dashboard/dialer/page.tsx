@@ -10,6 +10,7 @@ import type { QueueDiagnosis } from '@/lib/queueDiagnosis'
 import { phoneToState } from '@/lib/areaCode'
 import { BUILD_SHA } from '@/lib/buildId'
 import { rotationKey, sinkDialedLeads, recordDial, pinToTop, type DialLog } from '@/lib/queueRotation'
+import { nextDialDelayMs } from '@/lib/complianceHold'
 import { reachedAHuman as didReachAHuman, shouldRedial, shouldResetAttemptCount, agentLegFailed } from '@/lib/redialDecision'
 
 /**
@@ -4021,7 +4022,7 @@ function DialerPageInner() {
         duration: 0,
       })
       setCurrentLead(null)
-      if (autoChainOnFailure) scheduleDial(300)
+      if (autoChainOnFailure) scheduleDial(pacedDialDelay(300))
       else setStatus('idle')
       return
     }
@@ -4119,7 +4120,7 @@ function DialerPageInner() {
           setStatus('idle')
           setCurrentLead(null)
           if (autoChainOnFailure) scheduleDial(500)
-          else scheduleDial(300)
+          else scheduleDial(pacedDialDelay(300))
           return
         }
         // Outbound call POST failed for a reason other than 403/451 (e.g. the
@@ -4290,7 +4291,7 @@ function DialerPageInner() {
               if (abortDialingRef.current) return
               if (!availableRef.current) return
               dialLeadCall(endingLead)
-            }, 800)
+            }, pacedDialDelay(800))
             dialChainTimeoutsRef.current.add(lateRedialId)
             return
           }
@@ -4325,7 +4326,7 @@ function DialerPageInner() {
             // The next lead starts its own count.
             leadAttemptCountRef.current = 1
             redialQueuedRef.current = false
-            if (autoChainOnFailure) scheduleDial(300)
+            if (autoChainOnFailure) scheduleDial(pacedDialDelay(300))
           } else {
             // Snapshot the final duration before the timer effect resets it,
             // so the disposition sheet can show how long the call lasted. Use
@@ -4420,7 +4421,7 @@ function DialerPageInner() {
                 if (abortDialingRef.current) return
                 if (!availableRef.current) return
                 dialLeadCall(ld)
-              }, 800)
+              }, pacedDialDelay(800))
               dialChainTimeoutsRef.current.add(redialId)
               return
             }
@@ -4439,7 +4440,7 @@ function DialerPageInner() {
             setStatus('idle')
             setCurrentLead(null)
             leadAttemptCountRef.current = 1; redialQueuedRef.current = false // next lead starts its own count
-            scheduleDial(300) // see the exhausted path below — rotation no longer gates this
+            scheduleDial(pacedDialDelay(300)) // see the exhausted path below — rotation no longer gates this
             return
           }
 
@@ -4544,7 +4545,7 @@ function DialerPageInner() {
                 if (abortDialingRef.current) return
                 if (!availableRef.current) return
                 dialLeadCall(ld)
-              }, 800)
+              }, pacedDialDelay(800))
               dialChainTimeoutsRef.current.add(redialTimeoutId)
               return
             }
@@ -4594,7 +4595,7 @@ function DialerPageInner() {
           // filter in fetchNextLead is synchronous and ref-based, so that wait
           // no longer buys anything. Matched to the skip path's 300, which is
           // the shortest gap already proven against the SIP re-arm.
-          scheduleDial(300)
+          scheduleDial(pacedDialDelay(300))
         }
       } catch (err) {
         // ── A THROW HERE USED TO END THE SHIFT ──────────────────────────
@@ -4648,7 +4649,7 @@ function DialerPageInner() {
             if (abortDialingRef.current) return
             if (!availableRef.current) return
             dialLeadCall(ld)
-          }, 800)
+          }, pacedDialDelay(800))
           dialChainTimeoutsRef.current.add(retryId)
           return
         }
@@ -4657,7 +4658,7 @@ function DialerPageInner() {
         markLeadDialedLocally(ld?.id)
         setCurrentLead(null)
         leadAttemptCountRef.current = 1; redialQueuedRef.current = false
-        scheduleDial(800)
+        scheduleDial(pacedDialDelay(800))
       }
     }, 1500)
     activePollRef.current = pollInterval
@@ -4717,6 +4718,18 @@ function DialerPageInner() {
   // Schedules the next auto-chain dial, but tracked so it can be cancelled, and
   // re-checks availability when it fires. Use this everywhere instead of a bare
   // setTimeout(() => handleDial(), n).
+  /**
+   * How long before the next dial, given a leg that may still be settling.
+   *
+   * A redial reuses the same pool number on purpose, and the agent's SIP
+   * credential carries one call at a time — so dialing again while the last
+   * leg is still inside its billing floor tears that leg down early and bills
+   * it as a short call. Waiting costs a second or two of pacing; not waiting
+   * costs the surcharge. Efficiency, not speed.
+   */
+  const pacedDialDelay = (minDelayMs: number): number =>
+    nextDialDelayMs(agentLegAnsweredAtRef.current, AGENT_LEG_FLOOR_MS, minDelayMs)
+
   const scheduleDial = (delayMs: number) => {
     const id = setTimeout(() => {
       dialChainTimeoutsRef.current.delete(id)
@@ -5134,7 +5147,7 @@ function DialerPageInner() {
     if (isPredictive) {
       lastIncomingCallSidRef.current = null
     } else {
-      scheduleDial(300)
+      scheduleDial(pacedDialDelay(300))
     }
   }
 

@@ -131,3 +131,38 @@ export function billingElapsedMs(
   if (!Number.isFinite(startedMs)) return 0
   return Math.max(0, now - startedMs)
 }
+
+/**
+ * A leg still settling must not be cut short to make the next dial look fast.
+ *
+ * A back-to-back redial deliberately reuses the same pool number — inside
+ * three minutes that is the Apple repeated-call rule, and the recipient
+ * should see the caller ID they just saw. But the agent's SIP credential
+ * carries one call at a time, so a new INVITE arriving while the previous
+ * leg is still inside its billing floor tears that leg down early. It then
+ * bills a six-second increment, which is the very thing the floor exists to
+ * avoid: the dial looks instant and costs the surcharge.
+ *
+ * So the next dial waits out whatever is left of the floor, plus a moment for
+ * the BYE to actually land, rather than racing it. The cost is a second or
+ * two of pacing. What it buys is the leg being charged at the next increment
+ * up instead of the short one — efficiency rather than speed.
+ *
+ * @param agentLegAnsweredAt when the agent's leg answered, ms, or null when
+ *                           there is no live leg to wait for
+ * @param floorMs            the billing floor being protected
+ * @param minDelayMs         the pacing the caller wanted anyway
+ */
+export const LEG_SETTLE_MS = 400
+
+export function nextDialDelayMs(
+  agentLegAnsweredAt: number | null | undefined,
+  floorMs: number,
+  minDelayMs: number,
+  now: number = Date.now()
+): number {
+  if (!agentLegAnsweredAt) return minDelayMs
+  const remainingFloor = floorMs - (now - agentLegAnsweredAt)
+  if (remainingFloor <= 0) return minDelayMs
+  return Math.max(minDelayMs, remainingFloor + LEG_SETTLE_MS)
+}
