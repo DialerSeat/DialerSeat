@@ -6469,7 +6469,11 @@ function DialerPageInner() {
               flexShrink: 0,
             }}>
               <div>
-                {hasPermanent ? '⚠' : '⏱'}{' '}
+                {/* Warning glyph only for a permanent problem — a bad number,
+                    an unknown area code — which is something to act on. The
+                    calling window is just the time of day and carried a clock
+                    that said nothing the sentence does not. */}
+                {hasPermanent ? '⚠ ' : ''}
                 {queueDiagnosis?.summary
                   || (tcpaBlockedReason ? `${tcpaBlockedReason}, queue shown for review.` : null)
                   || 'Outside the calling window: queue shown for review, dialing will resume automatically once the window opens.'}
