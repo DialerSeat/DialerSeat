@@ -96,6 +96,24 @@ export const MAX_CLIENT_REPORTED_SECONDS = 3600
  * than asked for. MAX_LIFETIME_ATTEMPTS is therefore a ceiling applied on top
  * of the ladder rather than a replacement for it: the per-pass arithmetic still
  * scales, and nothing ever exceeds nine.
+ *
+ * ── WHAT THAT ARITHMETIC ACTUALLY PRODUCES, AND WHY IT IS CORRECT ────────
+ * With both constants at nine the ladder does not survive the ceiling:
+ *
+ *     1x -> min(1 * 9, 9) = 9
+ *     2x -> min(2 * 9, 9) = 9
+ *     3x -> min(3 * 9, 9) = 9
+ *
+ * Every mode gets nine, and that is the rule as stated by the operator:
+ * NINE IS THE LEAD'S LIFESPAN. The repeat count decides how many times in a
+ * row a lead is dialled on a single visit — it was never meant to decide how
+ * many dials the lead gets in total.
+ *
+ * So this is not a bug to be fixed by lowering DIAL_PASSES. Doing that would
+ * cut a 1x lead to three dials for its whole life, which is a different and
+ * much stricter product than the one being run. The text above describes the
+ * arithmetic's intent at the time it was written; the outcome is what is
+ * wanted. Leave it alone.
  */
 export const DIAL_PASSES = 9
 

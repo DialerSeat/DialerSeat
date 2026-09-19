@@ -43,9 +43,14 @@ export async function POST(req: Request) {
     // LIFETIME cap, not the per-pass 1x/2x/3x repeat count — see
     // lib/dialerConstants.ts. This was hardcoded to 3, which meant a campaign
     // set to 3x spent a lead's entire allowance on one visit and retired it
-    // permanently after a single pass. Now 1x -> 3, 2x -> 6, 3x -> 9, so the
-    // repeat setting controls pacing within a pass and the lead still gets
-    // three passes before being set aside.
+    // permanently after a single pass.
+    //
+    // NINE IS THE LEAD'S LIFESPAN, ON EVERY MODE. The repeat count decides
+    // how many times in a row a lead is dialled on one visit; it does not
+    // decide how many dials the lead gets in total. 1x, 2x and 3x all resolve
+    // to nine here, which is intended and not a collapsed ladder to be
+    // repaired — an earlier comment in this file described a 3/6/9 ladder
+    // that was never the rule.
     let attemptCap = lifetimeAttemptCap(1)
     if (lead.campaign_id) {
       const { data: campaign } = await supabaseAdmin
