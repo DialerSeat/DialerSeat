@@ -39,10 +39,27 @@ export interface LiveLeg {
   orphaned: boolean
 }
 
+const ACTIVE_CALLS_PAGE_SIZE = 250
+
 export interface LiveLegsResult {
   legs: LiveLeg[]
   /** True when the list came from Telnyx rather than being unavailable. */
   authoritative: boolean
+  /**
+   * True when this is the WHOLE list, not just the first page.
+   *
+   * Separate from `authoritative` because they fail differently and callers
+   * need to tell them apart. Unauthoritative means "we learned nothing".
+   * Incomplete means "everything here is real, but absence proves nothing" —
+   * only one page is requested, so past that size a live leg can be missing
+   * from the list entirely.
+   *
+   * A caller that acts on a leg being PRESENT (ending a runaway) is safe
+   * either way. A caller that acts on a leg being ABSENT (concluding a call
+   * is over) must check this, or at scale it will decide that live calls have
+   * ended because they were on page two.
+   */
+  complete: boolean
   error: string | null
 }
 
@@ -62,16 +79,17 @@ export async function listLiveLegs(
   const apiKey = process.env.TELNYX_API_KEY
   const connectionId = process.env.TELNYX_CONNECTION_ID
   if (!apiKey || !connectionId) {
-    return { legs: [], authoritative: false, error: 'Telnyx credentials are not configured' }
+    return { legs: [], authoritative: false, complete: false, error: 'Telnyx credentials are not configured' }
   }
 
   try {
     const res = await fetch(
-      `${TELNYX_API}/connections/${encodeURIComponent(connectionId)}/active_calls?page[size]=250`,
+      `${TELNYX_API}/connections/${encodeURIComponent(connectionId)}/active_calls`
+      + `?page[size]=${ACTIVE_CALLS_PAGE_SIZE}`,
       { headers: { Authorization: `Bearer ${apiKey}` }, cache: 'no-store' }
     )
     if (!res.ok) {
-      return { legs: [], authoritative: false, error: `Telnyx returned ${res.status}` }
+      return { legs: [], authoritative: false, complete: false, error: `Telnyx returned ${res.status}` }
     }
     const json = await res.json().catch(() => null)
     const rows = Array.isArray(json?.data) ? json.data : []
@@ -101,10 +119,22 @@ export async function listLiveLegs(
     // has been up longest, and an unknown age sorts last rather than first:
     // it is unmeasured, not new.
     legs.sort((a, b) => (b.ageSeconds ?? -1) - (a.ageSeconds ?? -1))
-    return { legs, authoritative: true, error: null }
+
+    // A full page means there is very likely another one we did not ask for.
+    // Reported rather than fetched: every caller today only needs to know
+    // whether absence from this list can be trusted, and none of them wants
+    // to page through thousands of legs on a two-minute cron.
+    const complete = rows.length < ACTIVE_CALLS_PAGE_SIZE
+    if (!complete) {
+      console.warn(
+        `[liveLegs] Telnyx returned a full page of ${rows.length} active calls — `
+        + 'the list is truncated and absence from it means nothing'
+      )
+    }
+    return { legs, authoritative: true, complete, error: null }
   } catch (err) {
     return {
-      legs: [], authoritative: false,
+      legs: [], authoritative: false, complete: false,
       error: err instanceof Error ? err.message : 'Lookup failed',
     }
   }

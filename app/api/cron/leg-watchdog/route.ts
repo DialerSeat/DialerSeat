@@ -103,7 +103,7 @@ export async function GET(req: Request) {
     }
 
     const rows = await correlationRows(db)
-    const { legs, authoritative, error } = await listLiveLegs(
+    const { legs, authoritative, complete, error } = await listLiveLegs(
       // listLiveLegs only needs these three fields; the finish state is read
       // from `rows` directly below.
       new Map([...rows].map(([id, r]) => [id, {
@@ -142,10 +142,17 @@ export async function GET(req: Request) {
     // Without that guarantee this would close every open row the moment
     // Telnyx was unreachable, ending calls on screen while people were still
     // talking on them.
+    // ── AND ONLY WHEN THE LIST IS THE WHOLE LIST ─────────────────────────
+    // Everything below reasons from a leg being ABSENT, which is only
+    // evidence if nothing was left out. listLiveLegs asks for a single page,
+    // so past that size a live leg is simply missing — and closing rows on
+    // that basis would mark calls as ended while people were still talking on
+    // them. Killing a runaway is safe on a truncated list because it reasons
+    // from presence; this cannot borrow that safety.
     const liveIdSet = new Set(liveIds)
     const closableBefore = new Date(now - CLOSE_ORPHAN_ROW_SECONDS * 1000).toISOString()
 
-    const { data: openRows } = await db
+    const { data: openRows } = !complete ? { data: [] } : await db
       .from('calls')
       .select('id, call_control_id, agent_call_control_id, created_at')
       .is('hangup_cause', null)
