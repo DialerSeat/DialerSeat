@@ -88,14 +88,39 @@ export async function POST(req: Request) {
       }
     }
 
+    // ── WAS A CALL EVER PLACED FOR THIS LEAD? ───────────────────────────
+    // Asked against the calls table rather than trusting the client's elapsed
+    // timer, which reads about a second for a lead that was never rung. If
+    // /api/calls/outbound has written nothing for this lead in the last few
+    // minutes then nothing dialled it, and the disposition belongs to the
+    // lead alone.
+    //
+    // Windowed rather than lifetime: a lead called last week and skipped
+    // today was still not called today, and should not have that old row
+    // treated as this visit's evidence.
+    const { count: recentCallCount } = await supabaseAdmin
+      .from('calls')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user_id)
+      .eq('lead_id', lead_id)
+      .gte('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString())
+    const neverDialled = (recentCallCount ?? 0) === 0
+
+    // ── AN ATTEMPT MEANS A DIAL, NOT A GLANCE ───────────────────────────
+    // Passing over a lead nobody rang used to spend one of its lifetime
+    // attempts, so a queue worked by skipping retired leads that were never
+    // called once. The counter governs when a lead is set aside for good; it
+    // has to count dials.
+    const effectiveAttempts = neverDialled ? currentAttempts : newAttempts
+
     let newStatus = 'called'
     if (disposition === 'DO NOT CALL') newStatus = 'dnc'
     else if (disposition === 'CLOSED') newStatus = 'closed'
     else if (disposition === 'APPOINTMENT') newStatus = 'appointment'
     else if (disposition === 'NOT INTERESTED') newStatus = 'called'
-    else if (disposition === 'SKIPPED') newStatus = newAttempts >= attemptCap ? 'maxed' : 'uncalled'
+    else if (disposition === 'SKIPPED') newStatus = effectiveAttempts >= attemptCap ? 'maxed' : 'uncalled'
     else if (disposition === 'NO_ANSWER') {
-      newStatus = newAttempts >= attemptCap ? 'maxed' : 'no_answer'
+      newStatus = effectiveAttempts >= attemptCap ? 'maxed' : 'no_answer'
     }
 
     // ── A SKIP MUST NOT ERASE A JUDGEMENT ─────────────────────────────────
@@ -112,7 +137,10 @@ export async function POST(req: Request) {
     const updates: Record<string, any> = {
       status: newStatus,
       ...(isSkip ? {} : { disposition }),
-      dial_attempts: newAttempts,
+      dial_attempts: effectiveAttempts,
+      // Stamped even when nothing was dialled. This is what moves the lead
+      // down the queue, and a skipped lead that keeps its place is served
+      // again immediately.
       last_called_at: new Date().toISOString(),
       // ── THE LAST CALL IS NOW THIS ONE ───────────────────────────────────
       // Kept in step with leads.disposition on this path, so a lead that
@@ -239,12 +267,30 @@ export async function POST(req: Request) {
         .from('calls')
         .update(callUpdates)
         .eq('id', openCall.id)
+    } else if (neverDialled) {
+      // ── A SKIP IS NOT A CALL ──────────────────────────────────────────
+      // Skipping a lead off the queue without ringing it used to land here
+      // and insert a calls row anyway: no phone_number, no call_control_id,
+      // no agent_call_control_id, no dial_source, and duration 1 from a
+      // client timer for a call that never started. Seven of them in one
+      // evening from a single agent, each reading as a one-second call.
+      //
+      // Nothing dialled it and nothing billed for it, so it is not a call.
+      // The damage is to anything counting rows here as dials — cost per
+      // dial above all, which is a number the business is steered by.
+      //
+      // The outcome is not lost: the lead's own row is updated above with
+      // last_called_at, which is what moves it down the queue, and the
+      // forensic trail below still records the disposition against the lead.
+      console.log(
+        `[leads/dispose] ${disposition ?? 'disposition'} on lead ${lead_id} `
+        + 'with no call placed — recording no calls row'
+      )
     } else {
-      // Fallback insert — lead has no open call row (rare, e.g., disposition
-      // came through without a prior outbound dial attempt)
-      // Same reasoning as above: this row has no hangup webhook coming to
-      // correct it, so a 0 here would read as in-flight forever. 1 is the
-      // floor the hangup handler uses for exactly this reason.
+      // Fallback insert — a call was placed but its row could not be matched
+      // (manual dial, edge case). Same reasoning as above: this row has no
+      // hangup webhook coming to correct it, so a 0 here would read as
+      // in-flight forever. 1 is the floor the hangup handler uses.
       const { data: inserted } = await supabaseAdmin.from('calls').insert({
         user_id,
         lead_id,
