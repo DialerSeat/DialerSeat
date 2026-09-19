@@ -50,3 +50,50 @@ export function shouldRedial(params: {
   if (params.alreadyQueued) return false
   return params.attemptsSoFar < params.maxAttempts
 }
+
+/**
+ * A lead handed back immediately is the same pass, not a new one.
+ *
+ * ── WHY 2x PRODUCED FOUR DIALS ─────────────────────────────────────────
+ * The attempt counter was reset unconditionally every time fetchNextLead
+ * returned. When rotation fails and the server hands back the lead just
+ * worked, that reset starts its budget over: two attempts, sequence ends
+ * without rotating, same lead returned, two more. Four dials in 69 seconds on
+ * a campaign set to 2x, with the lead's dial_attempts still reading 1.
+ *
+ * /api/leads/next names this exact shape in its own comments — client retries
+ * multiplying against server passes — and says it has to be fixed where the
+ * multiplication happens. This is that place.
+ *
+ * The counter is therefore reset when the queue moves on to somebody else, or
+ * when enough time has passed that this is genuinely a later pass over the
+ * list. Time matters because of the small-queue case: a queue holding one
+ * dialable lead legitimately serves it again, and keying only on identity
+ * would refuse it for the rest of the shift.
+ */
+export const SAME_PASS_WINDOW_MS = 2 * 60 * 1000
+
+export function shouldResetAttemptCount(params: {
+  leadId: string
+  lastServedLeadId: string | null
+  /** When this lead was last dialled, ms since epoch. 0 if never. */
+  lastDialedAt: number
+  /**
+   * Defaults to the current time. Read here rather than at the call site so
+   * the caller stays free of a clock read — the dialer's callers live in the
+   * component body, where react-hooks/purity rejects one — while tests still
+   * pin it explicitly.
+   */
+  now?: number
+  windowMs?: number
+}): boolean {
+  const now = params.now ?? Date.now()
+  const windowMs = params.windowMs ?? SAME_PASS_WINDOW_MS
+  // A different lead is unambiguously a new sequence.
+  if (params.leadId !== params.lastServedLeadId) return true
+  // Same lead, never dialled by this session — nothing to continue.
+  if (!params.lastDialedAt) return true
+  // Same lead, and long enough ago to be a real second pass rather than the
+  // queue handing back what it just gave us.
+  return now - params.lastDialedAt >= windowMs
+}

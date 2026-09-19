@@ -10,7 +10,7 @@ import type { QueueDiagnosis } from '@/lib/queueDiagnosis'
 import { phoneToState } from '@/lib/areaCode'
 import { BUILD_SHA } from '@/lib/buildId'
 import { rotationKey, sinkDialedLeads, recordDial, pinToTop, type DialLog } from '@/lib/queueRotation'
-import { reachedAHuman as didReachAHuman, shouldRedial } from '@/lib/redialDecision'
+import { reachedAHuman as didReachAHuman, shouldRedial, shouldResetAttemptCount } from '@/lib/redialDecision'
 
 /**
  * Whole seconds since a start timestamp, 0 when never started.
@@ -699,6 +699,10 @@ function DialerPageInner() {
   // anywhere else.
   const [dialLog, setDialLog] = useState<DialLog>({})
   const recentDialsByLeadRef = useRef<DialLog>({})
+  // The lead the last sequence was handed. Compared against the next one so a
+  // lead returned immediately is recognised as the same pass — see
+  // shouldResetAttemptCount.
+  const lastServedLeadIdRef = useRef<string | null>(null)
   // When the agent's SIP leg reached Established. Billing starts there, and the
   // short-duration floor is measured from it -- see releaseAgentLeg.
   const agentLegAnsweredAtRef = useRef<number | null>(null)
@@ -4836,7 +4840,27 @@ function DialerPageInner() {
 
     const lead = await fetchNextLead()
     if (!lead) return
-    leadAttemptCountRef.current = 1; redialQueuedRef.current = false
+
+    // ── A LEAD HANDED STRAIGHT BACK IS THE SAME PASS ────────────────────
+    // This reset was unconditional, and that is how a 2x campaign produced
+    // four dials in 69 seconds: the sequence spent its two attempts, ended
+    // without rotating the lead, and the server returned the same lead —
+    // whereupon the reset handed it a fresh pair. The lead's dial_attempts
+    // still read 1 through all four.
+    //
+    // /api/leads/next describes this exact shape in its own comments, client
+    // retries multiplying against server passes, and says it has to be fixed
+    // where the multiplication happens rather than by second-guessing the
+    // queue. This is where it happens.
+    if (shouldResetAttemptCount({
+      leadId: lead.id,
+      lastServedLeadId: lastServedLeadIdRef.current,
+      lastDialedAt: recentDialsByLeadRef.current[lead.id] ?? 0,
+    })) {
+      leadAttemptCountRef.current = 1
+    }
+    lastServedLeadIdRef.current = lead.id
+    redialQueuedRef.current = false
     setCurrentLead(lead)
     // Deliberately NOT rotated here. A lead that is about to be dialed must
     // stay exactly where it is, at the top, highlighted, for as long as the
