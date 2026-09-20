@@ -109,6 +109,12 @@ const PERSON_CALLS_LIMIT = 50
 const FEED_LIMIT_DEFAULT = 80
 const FEED_LIMIT_MAX = 1000
 
+// Matches the in-flight sentinel the abort sweep uses: a recent call with no
+// answer and a duration of 0 is one we believe is still up. Passed to
+// ops_map_live_counts so the rule lives in one place rather than being
+// restated in SQL.
+const IN_FLIGHT_MAX_AGE_SECONDS = 600
+
 export async function GET(req: NextRequest) {
   try {
     await requireAdmin()
@@ -262,14 +268,21 @@ export async function GET(req: NextRequest) {
           } as Awaited<ReturnType<typeof getTelnyxBalance>>)
         : getTelnyxBalance('ops-map'),
       getConcurrencySnapshot(),
-      // Last 24 hours of dials, for the live-ops summary. Two narrow columns,
-      // aggregated below rather than in SQL because the same rows answer both
-      // questions and a second round trip would buy nothing.
-      supabase
-        .from('calls')
-        .select('answered_at, duration, created_at')
-        .gte('created_at', new Date(Date.now() - 24 * 60 * 60_000).toISOString())
-        .limit(50000),
+      // ── COUNTED IN POSTGRES, NOT DOWNLOADED ───────────────────────────
+      // This selected three columns of every call in the last 24 hours, up to
+      // 50,000 rows, and counted them in JavaScript. On the three-second beat
+      // — and unlike every heavy query beside it, this one was never gated
+      // behind `fast`, so it ran on all of them. Thirty thousand times a day.
+      //
+      // It was comfortably the largest consumer of egress on this project and
+      // the reason the Supabase organization went 14 GB into a 5.5 GB
+      // allowance. The old comment argued a second round trip would buy
+      // nothing; it was not a round trip that mattered, it was the payload.
+      //
+      // Three integers now, computed where the rows already are.
+      supabase.rpc('ops_map_live_counts', {
+        p_in_flight_max_age_seconds: IN_FLIGHT_MAX_AGE_SECONDS,
+      }),
       fast ? EMPTY : supabase.rpc('ops_map_breakdown', { p_since: since }),
       fast ? EMPTY : supabase.rpc('ops_map_pulse', { p_since: since, p_buckets: buckets }),
       // Not filtered by mode or range: this is the dock's PEOPLE view, and its
@@ -632,22 +645,19 @@ export async function GET(req: NextRequest) {
     // uses, so this is our own belief about what is up. It is reported next to
     // the carrier's count rather than instead of it: when the two disagree,
     // that disagreement is the thing worth seeing.
-    const IN_FLIGHT_MAX_AGE_MS = 10 * 60_000
-    const nowMs = Date.now()
-    let believedInFlight = 0
-    let dials24h = 0
-    let answered24h = 0
-    for (const c of (dayCallsRes.data || []) as Array<{
-      answered_at: string | null; duration: number | null; created_at: string
-    }>) {
-      dials24h++
-      if (c.answered_at) answered24h++
-      if ((c.duration ?? 0) === 0 && !c.answered_at
-          && nowMs - new Date(c.created_at).getTime() < IN_FLIGHT_MAX_AGE_MS) {
-        believedInFlight++
-      }
+    // The same three numbers, now arriving already counted. Zeroes on a
+    // failed call rather than a thrown request: a corner summary must not be
+    // able to take the whole map down with it.
+    const live = (dayCallsRes.data as Array<{
+      dials_24h: number | string | null
+      answered_24h: number | string | null
+      believed_in_flight: number | string | null
+    }> | null)?.[0]
+    const liveOpsCounts = {
+      believedInFlight: Number(live?.believed_in_flight ?? 0),
+      dials24h: Number(live?.dials_24h ?? 0),
+      answered24h: Number(live?.answered_24h ?? 0),
     }
-    const liveOpsCounts = { believedInFlight, dials24h, answered24h }
 
     return NextResponse.json({
       success: true,

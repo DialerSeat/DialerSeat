@@ -141,17 +141,35 @@ type Mode = (typeof MODES)[number]['id']
 const RANGES = ['12h', '24h', '7d', '30d', '90d', 'all'] as const
 type Range = (typeof RANGES)[number]
 
-const SYNC_MS = 3000
+// ── THE BEAT IS THE EGRESS BILL ─────────────────────────────────────────
+// Three seconds, with this console open about nineteen hours a day, was
+// roughly 23,000 beats and six Supabase queries each — around 140,000
+// requests a day, some three quarters of everything this project sends.
+// That is what put the organization 14 GB into a 5.5 GB allowance.
+//
+// Ten seconds costs an operator almost nothing to look at and removes about
+// seventy percent of it. Nothing is deleted and nothing stops being
+// reported: this is how OFTEN the same numbers are re-asked for, not which
+// numbers exist. Every history view, all-time figure and stored row is
+// untouched.
+//
+// The live half still moves faster than anyone reads it. If a genuinely live
+// number ever needs to be second-by-second, give that one number its own
+// small endpoint rather than speeding the whole map back up.
+const SYNC_MS = 10_000
 
 /**
- * How many 3-second beats between full payloads. 10 beats = 30 seconds.
+ * How many beats between full payloads. 3 beats at 10s = 30 seconds, the same
+ * cadence the slow half had before the beat was slowed — the point of that
+ * change was the fast half's volume, and there is no reason to make the slow
+ * half staler as a side effect.
  *
  * Chosen against what the slow half actually is: a month-to-date compliance
  * ratio, visitor analytics, bucketed pulses and a carrier balance. Nothing in
  * that set is read at a glance, and none of it can move enough in thirty
  * seconds to change a decision.
  */
-const FULL_SYNC_EVERY = 10
+const FULL_SYNC_EVERY = 3
 
 /** Feed sizes offered in the dock. The route clamps to 1000 regardless. */
 const FEED_SIZES = [80, 250, 500, 1000]
