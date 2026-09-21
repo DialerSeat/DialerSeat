@@ -25,7 +25,7 @@ interface LogEntry {
     | 'seat_charge'
   user_name: string
   user_email: string | null
-  amount_cents: number
+  amount_cents: number | null
   date_iso: string
   retention_weeks: number | null
   source: string
@@ -363,7 +363,14 @@ function LogLine({ entry }: { entry: LogEntry }) {
         || entry.event_type === 'renewal' || entry.event_type === 'seat_charge') && (
         <>
           {' '}
-          <span style={{ color: C.amount }}>${(entry.amount_cents / 100).toFixed(2)}</span>
+          {/* A dash, not $0.00 and not a plan's list price. NULL means the
+              webhook had no invoice to read an amount from; zero is a real
+              amount and a fully discounted cycle should read as one. */}
+          <span style={{ color: C.amount }}>
+            {entry.amount_cents === null || entry.amount_cents === undefined
+              ? '—'
+              : `$${(entry.amount_cents / 100).toFixed(2)}`}
+          </span>
         </>
       )}
       {/* Which team the seat is on and the rate behind the amount. Without it

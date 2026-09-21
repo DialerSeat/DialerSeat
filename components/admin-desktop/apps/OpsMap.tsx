@@ -2686,11 +2686,18 @@ function VisitorPulse({ buckets }: { buckets: VisitorBucket[] }) {
 // off this panel is the totals.
 //
 // Seats and subscriptions stay apart rather than summing into one headline,
-// because only one of them is measured. Seat charges carry charged_cents,
-// which is what was really invoiced after comps. Subscriptions come from
-// billing_events.amount_cents, which the webhook writes at flat list price, so
-// that figure is an upper bound rather than a receipt. Adding a measured
-// number to an estimated one produces a third number that is neither.
+// because the two are not measured the same way. Seat charges carry
+// charged_cents, which is what was really invoiced after comps.
+//
+// billing_events.amount_cents used to be the plan's list price, written as a
+// constant by the webhook on every renewal whatever the invoice said — an
+// upper bound rather than a receipt. It now carries the invoice's own
+// amount_paid, or NULL where there was no invoice to read.
+//
+// They still stay apart, because the history does not: rows written before
+// that change still hold list price, so any total spanning them mixes
+// receipts with estimates. Worth revisiting once the old rows have aged out
+// of the ranges this panel offers.
 function IncomeSummary({ buckets, rangeLabel }: {
   buckets: IncomeBucket[]
   rangeLabel: string

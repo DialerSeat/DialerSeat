@@ -33,7 +33,14 @@ interface BillingEventInput {
   user_name: string
   user_email?: string | null
   plan?: 'pro' | 'wl' | null
-  amount_cents?: number
+  /**
+   * The real amount from the Stripe invoice, in cents.
+   *
+   * Omit it when there is no invoice to read. It is recorded as NULL and the
+   * log shows a dash — never a plan's list price standing in for a figure
+   * nobody checked.
+   */
+  amount_cents?: number | null
   retention_weeks?: number | null
   stripe_subscription_id?: string | null
 }
@@ -47,7 +54,9 @@ export async function logBillingEvent(input: BillingEventInput): Promise<void> {
       user_name: input.user_name,
       user_email: input.user_email ?? null,
       plan: input.plan ?? null,
-      amount_cents: input.amount_cents ?? 0,
+      // `?? null`, not `?? 0`. Zero is a real amount — a fully discounted
+      // cycle is worth telling apart from an unknown one.
+      amount_cents: input.amount_cents ?? null,
       retention_weeks: input.retention_weeks ?? null,
       stripe_subscription_id: input.stripe_subscription_id ?? null,
     })

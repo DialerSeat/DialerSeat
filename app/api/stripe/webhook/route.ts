@@ -179,7 +179,13 @@ export async function POST(req: Request) {
         const subscriptionId = invoiceSubscriptionId(invoice)
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-          await routeSubscription(subscription, event.type, invoice.billing_reason ?? undefined, event.created)
+          // The invoice's OWN amount travels with it. Without this the
+          // handlers had no figure to log and used a constant from the
+          // source instead — see the renewal sites.
+          await routeSubscription(
+            subscription, event.type, invoice.billing_reason ?? undefined, event.created,
+            typeof invoice.amount_paid === 'number' ? invoice.amount_paid : null,
+          )
 
           // ── A DECLINED CARD USED TO BE COMPLETELY SILENT ─────────────────
           // routeSubscription records the failure (chargeStatus 'failed' for
@@ -462,7 +468,9 @@ async function routeSubscription(
   subscription: Stripe.Subscription,
   eventType?: string,
   billingReason?: Stripe.Invoice.BillingReason,
-  eventCreated?: number
+  eventCreated?: number,
+  /** Cents actually paid on the invoice that triggered this, when there was one. */
+  invoiceAmountCents?: number | null,
 ) {
   const subKind = resolveSubKind(subscription)
 
@@ -472,11 +480,11 @@ async function routeSubscription(
   }
 
   if (subKind === 'whitelabel') {
-    await routeWhitelabel(subscription, eventType, billingReason, eventCreated)
+    await routeWhitelabel(subscription, eventType, billingReason, eventCreated, invoiceAmountCents)
     return
   }
 
-  await syncPersonalSubscription(subscription, eventType, billingReason, eventCreated)
+  await syncPersonalSubscription(subscription, eventType, billingReason, eventCreated, invoiceAmountCents)
 }
 
 async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
@@ -538,7 +546,8 @@ async function routeWhitelabel(
   subscription: Stripe.Subscription,
   eventType?: string,
   billingReason?: Stripe.Invoice.BillingReason,
-  eventCreated?: number
+  eventCreated?: number,
+  invoiceAmountCents?: number | null,
 ) {
   
   
@@ -601,13 +610,15 @@ async function routeWhitelabel(
         await sendAdminPush('resub', `${name} resubscribed to ${planLabel}.`)
         await logBillingEvent({
           event_type: 'resub', clerk_id: clerkId, user_name: name, user_email: email,
-          plan: 'wl', amount_cents: 7500, stripe_subscription_id: subscription.id,
+          plan: 'wl', amount_cents: invoiceAmountCents ?? undefined,
+          stripe_subscription_id: subscription.id,
         })
       } else {
         await sendAdminPush('new_sub', `${name} subscribed to ${planLabel}.`)
         await logBillingEvent({
           event_type: 'initial_sub', clerk_id: clerkId, user_name: name, user_email: email,
-          plan: 'wl', amount_cents: 7500, stripe_subscription_id: subscription.id,
+          plan: 'wl', amount_cents: invoiceAmountCents ?? undefined,
+          stripe_subscription_id: subscription.id,
         })
       }
     }
@@ -617,9 +628,16 @@ async function routeWhitelabel(
   ) {
     const { name, email } = await lookupNameAndEmail(clerkId)
     await sendAdminPush('renewal', `${name} renewed Manager+ subscription.`)
+    // ── WHAT STRIPE CHARGED, NOT WHAT THE PLAN LISTS FOR ────────────────
+    // This logged a flat 7500 on every cycle. That is the list price typed
+    // into the source, not a figure anyone read off the invoice, so a $0
+    // cycle, a proration or a discounted renewal all appeared in the log as
+    // a full-price $75 renewal. Undefined records NULL and the log shows a
+    // dash rather than inventing one.
     await logBillingEvent({
       event_type: 'renewal', clerk_id: clerkId, user_name: name, user_email: email,
-      plan: 'wl', amount_cents: 7500, stripe_subscription_id: subscription.id,
+      plan: 'wl', amount_cents: invoiceAmountCents ?? undefined,
+      stripe_subscription_id: subscription.id,
     })
   }
 
@@ -842,7 +860,8 @@ async function syncPersonalSubscription(
   subscription: Stripe.Subscription,
   eventType?: string,
   billingReason?: Stripe.Invoice.BillingReason,
-  eventCreated?: number
+  eventCreated?: number,
+  invoiceAmountCents?: number | null,
 ) {
   const clerkId =
     subscription.metadata?.clerk_id ||
@@ -894,13 +913,15 @@ async function syncPersonalSubscription(
         await sendAdminPush('resub', `${name} resubscribed to ${planLabel}.`)
         await logBillingEvent({
           event_type: 'resub', clerk_id: clerkId, user_name: name, user_email: email,
-          plan: 'pro', amount_cents: 3500, stripe_subscription_id: subscription.id,
+          plan: 'pro', amount_cents: invoiceAmountCents ?? undefined,
+          stripe_subscription_id: subscription.id,
         })
       } else {
         await sendAdminPush('new_sub', `${name} subscribed to ${planLabel}.`)
         await logBillingEvent({
           event_type: 'initial_sub', clerk_id: clerkId, user_name: name, user_email: email,
-          plan: 'pro', amount_cents: 3500, stripe_subscription_id: subscription.id,
+          plan: 'pro', amount_cents: invoiceAmountCents ?? undefined,
+          stripe_subscription_id: subscription.id,
         })
       }
 
@@ -951,9 +972,12 @@ async function syncPersonalSubscription(
   ) {
     const { name, email } = await lookupNameAndEmail(clerkId)
     await sendAdminPush('renewal', `${name} renewed Pro subscription.`)
+    // Same as the white-label renewal above: the invoice's amount, not the
+    // plan's list price.
     await logBillingEvent({
       event_type: 'renewal', clerk_id: clerkId, user_name: name, user_email: email,
-      plan: 'pro', amount_cents: 3500, stripe_subscription_id: subscription.id,
+      plan: 'pro', amount_cents: invoiceAmountCents ?? undefined,
+      stripe_subscription_id: subscription.id,
     })
   }
 
