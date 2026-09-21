@@ -3013,6 +3013,10 @@ function DialerPageInner() {
     }
 
     setAvailable(prev => !prev)
+    // Going offline ends the sequence: the control must not offer ABORT to
+    // somebody who is not dialing. Set here rather than in an effect watching
+    // `available`, so it happens with the toggle that caused it.
+    if (goingOffline) setDialSequenceActive(false)
     // The state has not flushed yet, so report the intent rather than reading
     // `available` back. goingOffline true means we just went offline.
     return !goingOffline
@@ -4700,6 +4704,19 @@ function DialerPageInner() {
   // is the one signal every dial path (client auto-chain via availableRef, and
   // the server controller via the heartbeat 'paused' state) actually respects.
   const abortDialingRef = useRef(false)
+
+  // ── IN A SEQUENCE IS NOT THE SAME AS ON A CALL ─────────────────────────
+  // The control read `status` alone, and between two leads the status is
+  // 'idle' — so the moment a call ended the button flipped back to INITIATE
+  // DIAL SEQUENCE while the chain was still running underneath. It invited
+  // the agent to start something already started, and on a skip it was the
+  // only thing on screen suggesting the dialer had stopped when it had not.
+  //
+  // This tracks the SEQUENCE: true from the moment the agent starts dialing
+  // until they abort or go unavailable, across every gap between calls. It is
+  // deliberately intent rather than a derived "is a timer pending" — the
+  // agent asked to be dialing, and stays dialing until they say otherwise.
+  const [dialSequenceActive, setDialSequenceActive] = useState(false)
   /**
    * One dial at a time.
    *
@@ -5055,6 +5072,7 @@ function DialerPageInner() {
     setSeconds(0)
     setActiveCallSid(null)
     activeCallSidRef.current = null
+    setDialSequenceActive(false)
     setAmdActivity(prev => ['■ DIALING ABORTED: idle, still live', ...prev].slice(0, 5))
   }
 
@@ -5082,6 +5100,7 @@ function DialerPageInner() {
     //     still false
     armClicksRef.current++
     abortDialingRef.current = false
+    setDialSequenceActive(true)
     await handleDial()
   }
 
@@ -7627,7 +7646,8 @@ function DialerPageInner() {
                   textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
                 }}>[ NO ACTIVE CAMPAIGNS IN SCOPE ]</div>
               )}
-              {status === 'idle' && available && activeScopeCampaigns.length > 0 && (
+              {status === 'idle' && available && activeScopeCampaigns.length > 0
+                && !dialSequenceActive && (
                 <button onClick={startDialSequence} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
                   background: terminalDark, color: 'var(--brand-primary)',
@@ -7656,7 +7676,10 @@ function DialerPageInner() {
                   }}>DIAL THIS LEAD</button>
                 </>
               )}
-              {status === 'calling' && (
+              {/* Shown while a call is up AND in the gaps between leads, so the
+                  control never invites the agent to start a sequence that is
+                  already running. */}
+              {(status === 'calling' || (status === 'idle' && dialSequenceActive)) && (
                 <button onClick={() => { abortDialing() }} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
                   background: '#f8e8e8', color: terminalRed,
