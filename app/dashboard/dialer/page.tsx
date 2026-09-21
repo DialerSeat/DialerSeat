@@ -3304,10 +3304,28 @@ function DialerPageInner() {
         releaseAgentLeg(swCallRef.current, { immediate: true })
         swCallRef.current = null
       } else {
-        silenceSIPAudio()
-        // Deliberately NOT cleared: the session is still live until the server
-        // drops it, and nulling the ref here would lose the handle needed to
-        // tear it down if that request never lands.
+        // ── FREE THE AGENT WITHOUT LOSING THE HANDLE ────────────────────
+        // This silenced the audio and deliberately left swCallRef set, on the
+        // reasoning that nulling it would lose the handle needed to tear the
+        // session down if the server request never landed. The reasoning was
+        // right; the consequence was not.
+        //
+        // isOnLiveCall() reads swCallRef, and runDial refuses to dial while it
+        // is set. On the skip path the hangup poll — the one place that nulls
+        // it, in startHangupPolling — has already been cleared by handleSkip,
+        // so nothing ever nulled it again. After a skip the dialer believed
+        // the agent was still on a call, refused the next dial with "ALREADY
+        // ON A CALL" and scheduled nothing. The queue stopped and the agent
+        // had to press INITIATE DIAL SEQUENCE to get moving again.
+        //
+        // releaseAgentLeg keeps its own reference to the session, silences it
+        // now and byes it once the billing floor has passed. So the handle
+        // survives in the closure that needs it, the server still drops the
+        // leg first in the ordinary case, and swCallRef can be cleared —
+        // which is the only thing the dialer reads to decide whether the
+        // agent is busy.
+        releaseAgentLeg(swCallRef.current)
+        swCallRef.current = null
       }
     }
     // NOT awaited when skipping. The server holds the lead's line for a few
