@@ -64,6 +64,9 @@ function routeExists(pathname: string): boolean {
 }
 
 describe('every /api path referenced in source has a route', () => {
+  // Walks every source file, so it is slow by nature and slower on a loaded
+  // machine — 2s alone, 11s alongside the rest of the suite. The 5s default
+  // made it fail for taking too long rather than for finding anything.
   it('has no dangling API references', () => {
     const dangling: string[] = []
 
@@ -89,5 +92,5 @@ describe('every /api path referenced in source has a route', () => {
     }
 
     expect([...new Set(dangling)], 'these /api paths have no route handler').toEqual([])
-  })
+  }, 30_000)
 })

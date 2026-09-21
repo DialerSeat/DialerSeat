@@ -11,6 +11,7 @@ import { phoneToState } from '@/lib/areaCode'
 import { BUILD_SHA } from '@/lib/buildId'
 import { rotationKey, sinkDialedLeads, recordDial, pinToTop, type DialLog } from '@/lib/queueRotation'
 import { nextDialDelayMs } from '@/lib/complianceHold'
+import { recordAgentLegOutcome, needsReregister, type AgentLegHistory } from '@/lib/agentLegHealth'
 import { reachedAHuman as didReachAHuman, shouldRedial, shouldResetAttemptCount, agentLegFailed } from '@/lib/redialDecision'
 
 /**
@@ -1040,6 +1041,16 @@ function DialerPageInner() {
    * eleven seconds and two leads, against thirty-nine.
    */
   const AGENT_LEG_FAIL_LIMIT = 2
+  // ── AND THE RATE, NOT ONLY THE STREAK ──────────────────────────────────
+  // The streak above is cleared by every INVITE that does arrive, so it only
+  // ever catches a registration that has died outright. One agent ran 47
+  // failures in 226 dials — one call in five never reaching their headset —
+  // with the failures scattered, so two never landed back to back and the
+  // recovery essentially never fired for the agent who needed it most.
+  //
+  // The last few outcomes are kept so a half-alive registration is visible as
+  // a rate. See lib/agentLegHealth.
+  const agentLegHistoryRef = useRef<AgentLegHistory>([])
   const registererRef = useRef<any>(null)
 
   const sessionHeartbeatRef = useRef<NodeJS.Timeout | null>(null)
@@ -1918,6 +1929,7 @@ function DialerPageInner() {
             // Proof the agent leg works: Telnyx reached this browser. Whatever
             // the registration state claimed, reachability is now a fact.
             agentLegPendingRef.current = false
+            agentLegHistoryRef.current = recordAgentLegOutcome(agentLegHistoryRef.current, false)
             if (agentLegFailStreakRef.current > 0) {
               console.log('[agent-leg] INVITE arrived, streak cleared')
               agentLegFailStreakRef.current = 0
@@ -3138,9 +3150,12 @@ function DialerPageInner() {
     // outlast the 45s window to say the same thing.
     if (agentLegPendingRef.current) {
       agentLegFailStreakRef.current += 1
+      agentLegHistoryRef.current = recordAgentLegOutcome(agentLegHistoryRef.current, true)
+      const recentFails = agentLegHistoryRef.current.filter(Boolean).length
       console.warn(
         `[agent-leg] no INVITE for the previous dial ` +
-        `(streak ${agentLegFailStreakRef.current}/${AGENT_LEG_FAIL_LIMIT})`
+        `(streak ${agentLegFailStreakRef.current}/${AGENT_LEG_FAIL_LIMIT}, ` +
+        `${recentFails} of the last ${agentLegHistoryRef.current.length} failed)`
       )
     }
     agentLegPendingRef.current = true
@@ -4829,7 +4844,11 @@ function DialerPageInner() {
     // nothing. Dialing does not resume from here — the registerer's
     // stateChange listener marks reachability on the 200 OK, and the next
     // chained dial proceeds normally once it does.
-    if (agentLegFailStreakRef.current >= AGENT_LEG_FAIL_LIMIT) {
+    if (needsReregister({
+      consecutiveFailures: agentLegFailStreakRef.current,
+      history: agentLegHistoryRef.current,
+      streakLimit: AGENT_LEG_FAIL_LIMIT,
+    })) {
       // Plain words only. "Re-registering" is what the code does, not what the
       // agent needs to know, and naming the mechanism invites them to try to
       // fix it — which for this fault means reloading at random.
@@ -4841,6 +4860,9 @@ function DialerPageInner() {
         ['⚠ DIALING PAUSED, RECONNECTING YOUR LINE', ...prev].slice(0, 5))
       agentLegPendingRef.current = false
       agentLegFailStreakRef.current = 0
+      // Cleared too, or the same window would trip the rate again on the very
+      // next dial and the agent would never get out of re-registering.
+      agentLegHistoryRef.current = []
       void (async () => {
         try {
           await registererRef.current?.register()
