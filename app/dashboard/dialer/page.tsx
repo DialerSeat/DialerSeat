@@ -4156,7 +4156,10 @@ function DialerPageInner() {
           showQueueOutcome(lead.id, data.detail || 'Outside calling window…')
           setStatus('idle')
           setCurrentLead(null)
-          if (autoChainOnFailure) scheduleDial(500)
+          // Paced like every other advance. No call was placed here, but the
+          // PREVIOUS one's leg may still be inside its billing floor, and
+          // dialling over it from the same pool number is what cuts it short.
+          if (autoChainOnFailure) scheduleDial(pacedDialDelay(500))
           else scheduleDial(pacedDialDelay(300))
           return
         }
@@ -4181,7 +4184,7 @@ function DialerPageInner() {
         })
         setStatus('idle')
         setCurrentLead(null)
-        if (autoChainOnFailure) scheduleDial(500)
+        if (autoChainOnFailure) scheduleDial(pacedDialDelay(500))
       }
     } catch (error) {
       console.error('Call error:', error)
@@ -5173,7 +5176,9 @@ function DialerPageInner() {
     if (isPredictive) {
       lastIncomingCallSidRef.current = null
     } else {
-      scheduleDial(400)
+      // Paced like every other advance — the leg just torn down here may
+      // still be inside its billing floor.
+      scheduleDial(pacedDialDelay(400))
     }
   }
 
