@@ -24,7 +24,15 @@ export type BillingEventType =
   | 'initial_sub'
   | 'resub'
   | 'renewal'
+  // Somebody pressed cancel. Logged when they DO it, not when the
+  // subscription finally lapses — the gap between the two is the only window
+  // in which anything can be done about it.
+  | 'cancel_scheduled'
   | 'cancel'
+  // A card was declined. This was being written straight to the table by the
+  // webhook, bypassing this type, and nested inside an optional lookup — so
+  // in two months not one decline was recorded. See the webhook.
+  | 'payment_failed'
   | 'account_deleted'
 
 interface BillingEventInput {
@@ -42,6 +50,11 @@ interface BillingEventInput {
    */
   amount_cents?: number | null
   retention_weeks?: number | null
+  /**
+   * Structured context for events where "what happened" needs a why —
+   * a decline code, the seller message. Stored as jsonb.
+   */
+  detail?: Record<string, unknown> | null
   stripe_subscription_id?: string | null
 }
 
@@ -59,6 +72,7 @@ export async function logBillingEvent(input: BillingEventInput): Promise<void> {
       amount_cents: input.amount_cents ?? null,
       retention_weeks: input.retention_weeks ?? null,
       stripe_subscription_id: input.stripe_subscription_id ?? null,
+      detail: input.detail ?? null,
     })
     if (error) {
       console.error('[billingEvents] insert failed:', error, input)

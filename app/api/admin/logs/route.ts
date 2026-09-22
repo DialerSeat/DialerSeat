@@ -28,6 +28,7 @@ interface LogEntry {
   id: string
   event_type:
     | 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel' | 'account_deleted'
+    | 'cancel_scheduled' | 'payment_failed'
     | 'seat_charge'
   user_name: string
   user_email: string | null
@@ -104,7 +105,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to build logs' }, { status: 500 })
     }
 
-    const counts = { accountsCreated: 0, accountsDeleted: 0, initialSubs: 0, resubs: 0, renewals: 0, cancels: 0 }
+    const counts = {
+      accountsCreated: 0, accountsDeleted: 0, initialSubs: 0, resubs: 0, renewals: 0, cancels: 0,
+      // Counted apart from `cancels`. One is somebody deciding to leave and
+      // still being here; the other is them gone. Summing them would double
+      // every departure, since a scheduled cancel becomes a cancel later.
+      cancelsScheduled: 0, paymentsFailed: 0,
+    }
     const entries: LogEntry[] = []
 
     for (const e of events || []) {
@@ -117,6 +124,8 @@ export async function GET(req: NextRequest) {
         case 'resub': counts.resubs++; break
         case 'renewal': counts.renewals++; break
         case 'cancel': counts.cancels++; break
+        case 'cancel_scheduled': counts.cancelsScheduled++; break
+        case 'payment_failed': counts.paymentsFailed++; break
       }
 
       entries.push({
@@ -124,7 +133,7 @@ export async function GET(req: NextRequest) {
         event_type: e.event_type,
         user_name: e.user_name || '(unknown)',
         user_email: e.user_email ?? null,
-        amount_cents: e.amount_cents ?? 0,
+        amount_cents: e.amount_cents ?? null,
         date_iso: e.created_at,
         retention_weeks: e.retention_weeks ?? null,
         source: 'supabase:billing_events',

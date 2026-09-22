@@ -22,6 +22,7 @@ interface LogEntry {
   id: string
   event_type:
     | 'account_created' | 'account_deleted' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
+    | 'cancel_scheduled' | 'payment_failed'
     | 'seat_charge'
   user_name: string
   user_email: string | null
@@ -35,7 +36,7 @@ interface LogEntry {
 
 interface LogsResponse {
   entries: LogEntry[]
-  counts: { accountsCreated: number; accountsDeleted: number; initialSubs: number; resubs: number; renewals: number; cancels: number }
+  counts: { accountsCreated: number; accountsDeleted: number; initialSubs: number; resubs: number; renewals: number; cancels: number; cancelsScheduled: number; paymentsFailed: number }
   timeframe: TimeframeKey
   window_days: number | null
 }
@@ -58,6 +59,11 @@ const C = {
   resub: '#5ce6b8',           // Teal — came back after lapsing
   renewal: '#5cb6ff',       // Cyan-blue
   cancel: '#ff4444',       // Red
+  // Amber, not red: they have decided to go but have not gone, and that gap
+  // is the only time anything can be done about it.
+  cancel_scheduled: '#ffa33d',
+  // Orange-red — money that did not arrive, and is usually recoverable today.
+  payment_failed: '#ff6b35',
   seat_charge: '#a0e838',  // Lime — a seat, distinct from a personal sub
   error: '#ff8844',        // Amber for errors
   amount: '#ffe048',       // Yellow for money
@@ -65,7 +71,7 @@ const C = {
 
 const FONT = '"SF Mono", "Cascadia Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, "Courier New", monospace'
 
-const FILTER_KEYS: FilterMode[] = ['all', 'account_created', 'account_deleted', 'initial_sub', 'resub', 'renewal', 'cancel']
+const FILTER_KEYS: FilterMode[] = ['all', 'account_created', 'account_deleted', 'initial_sub', 'resub', 'renewal', 'cancel_scheduled', 'cancel', 'payment_failed']
 
 type TimeframeKey = '24h' | '7d' | '30d' | '90d' | 'all'
 const TIMEFRAME_OPTIONS: { key: TimeframeKey; label: string }[] = [
@@ -231,7 +237,9 @@ export default function LogsApp() {
           { key: 'initial_sub', label: 'initial sub', count: data?.counts.initialSubs ?? 0 },
           { key: 'resub', label: 'resub', count: data?.counts.resubs ?? 0 },
           { key: 'renewal', label: 'renewal', count: data?.counts.renewals ?? 0 },
+          { key: 'cancel_scheduled', label: 'cancelled (still active)', count: data?.counts.cancelsScheduled ?? 0 },
           { key: 'cancel', label: 'cancel', count: data?.counts.cancels ?? 0 },
+          { key: 'payment_failed', label: 'card declined', count: data?.counts.paymentsFailed ?? 0 },
           { key: 'seat_charge', label: 'seat charge', count: entries.filter(e => e.event_type === 'seat_charge').length },
         ] as const).map((f, i) => (
           <button

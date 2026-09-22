@@ -218,7 +218,19 @@ export async function POST(req: Request) {
                 // Best effort on purpose: a renewal failure is recoverable
                 // and the notification matters more than the detail, so a
                 // lookup that fails still sends the original message.
+                // ── THE DECLINE IS RECORDED FIRST, EXPLAINED SECOND ──
+                // The row used to be written INSIDE the lookup below, which
+                // is explicitly best-effort. So when the payment intent could
+                // not be resolved — or anything in that lookup threw — the
+                // decline was not logged at all, only pushed. Two months and
+                // not one payment_failed row, against 90 of these events from
+                // Stripe.
+                //
+                // A card being declined is the fact. Which decline code it
+                // was is the detail. The fact is not allowed to depend on the
+                // detail resolving.
                 let why = ''
+                let failureDetail: Record<string, unknown> = {}
                 try {
                   const piId = invoicePaymentIntentId(invoice)
                   if (piId) {
@@ -226,21 +238,27 @@ export async function POST(req: Request) {
                     const chId = (intent as unknown as { latest_charge?: string }).latest_charge
                     const charge = typeof chId === 'string' ? await stripe.charges.retrieve(chId) : null
                     const detail = extractStripeFailureDetail(intent, charge)
+                    failureDetail = { ...detail }
                     why = ` ${summariseStripeFailure(detail)}`
-                    await supabase.from('billing_events').insert({
-                      clerk_id: subRow.user_id,
-                      event_type: 'payment_failed',
-                      plan: null,
-                      amount_cents: invoice.amount_due ?? 0,
-                      stripe_subscription_id: subscriptionId,
-                      user_name: name,
-                      user_email: null,
-                      detail: { ...detail, summary: why.trim(), source: 'invoice.payment_failed' },
-                    })
                   }
                 } catch (e) {
                   console.error('[stripe/webhook] could not resolve invoice failure reason', e)
                 }
+
+                await logBillingEvent({
+                  event_type: 'payment_failed',
+                  clerk_id: subRow.user_id,
+                  user_name: name,
+                  // amount_due, not amount_paid: nothing was paid, and what
+                  // they were asked for is the number worth seeing.
+                  amount_cents: invoice.amount_due ?? undefined,
+                  stripe_subscription_id: subscriptionId,
+                  detail: {
+                    ...failureDetail,
+                    summary: why.trim() || 'Card declined; reason unavailable',
+                    source: 'invoice.payment_failed',
+                  },
+                })
 
                 await sendAdminPush(
                   'payment_failed',
@@ -1140,6 +1158,25 @@ async function upsertPersonalSubscription(
     last_event_at: eventCreated != null ? new Date(eventCreated * 1000).toISOString() : undefined,
   }
 
+  // ── SOMEBODY JUST PRESSED CANCEL ──────────────────────────────────────
+  // cancel_at_period_end was stored and nothing else. The 'cancel' event only
+  // fires when the subscription finally lapses, which can be weeks later — so
+  // the log announced a customer's departure at the one moment nothing could
+  // be done about it, and said nothing on the day they decided.
+  //
+  // Read before the upsert, because the upsert is what makes it no longer new.
+  // Only the false -> true transition is logged: Stripe re-sends
+  // subscription.updated for unrelated changes and every one of them carries
+  // the flag, so keying on the value alone would log the same cancellation
+  // over and over.
+  const { data: priorSub } = await supabase
+    .from('subscriptions')
+    .select('cancel_at_period_end')
+    .eq('stripe_subscription_id', subscription.id)
+    .maybeSingle()
+  const justScheduledCancel =
+    subscription.cancel_at_period_end === true && priorSub?.cancel_at_period_end !== true
+
   const { error } = await supabase
     .from('subscriptions')
     .upsert(payload, { onConflict: 'stripe_subscription_id' })
@@ -1147,6 +1184,24 @@ async function upsertPersonalSubscription(
   if (error) {
     console.error('Failed to upsert personal subscription:', error)
     throw error
+  }
+
+  if (justScheduledCancel) {
+    const { name, email } = await lookupNameAndEmail(clerkId)
+    const endsAt = periodEnd ? new Date(periodEnd * 1000).toISOString() : null
+    await sendAdminPush(
+      'cancel',
+      `${name} cancelled — still active until ${endsAt ? endsAt.slice(0, 10) : 'period end'}.`
+    )
+    await logBillingEvent({
+      event_type: 'cancel_scheduled',
+      clerk_id: clerkId,
+      user_name: name,
+      user_email: email,
+      plan: plan === 'wl' || plan === 'pro' ? plan : null,
+      stripe_subscription_id: subscription.id,
+      detail: { ends_at: endsAt, source: 'cancel_at_period_end' },
+    })
   }
 }
 
