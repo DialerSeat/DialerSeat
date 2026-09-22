@@ -236,6 +236,20 @@ export async function GET(req: NextRequest) {
     const fast = req.nextUrl.searchParams.get('scope') === 'fast'
     const EMPTY = Promise.resolve({ data: [], error: null })
 
+    // ── WHO IS NOT A CUSTOMER ────────────────────────────────────────────
+    // Same rule the Logs app applies: admins and anything flagged internal.
+    // billing_events is a denormalised snapshot with no flag of its own, so
+    // the only way to tell a real customer from a test account is to ask the
+    // users table.
+    const { data: internalUsers } = await supabase
+      .from('users')
+      .select('clerk_id')
+      .or('is_admin.eq.true,exclude_from_analytics.eq.true')
+    const internalClerkIds = (internalUsers || [])
+      .map((u: { clerk_id: string | null }) => u.clerk_id)
+      .filter((id): id is string => !!id)
+    const internalIdSet = new Set(internalClerkIds)
+
     const [originsRes, extraVisitorsRes, targetsRes, feedRes, balanceRes, concurrencyRes, dayCallsRes, breakdownRes, pulseRes, peopleRes, notisRes, compRes, logsRes, visitorsRes, vPulseRes, incomeRes] = await Promise.all([
       mode === 'visitors'
         ? supabase.rpc('ops_map_visitors', { p_since: since })
@@ -306,11 +320,21 @@ export async function GET(req: NextRequest) {
       // what got pushed; logs are what happened. They overlap but are not the
       // same set, which is why the panel offers both and a merged view rather
       // than pretending one is the other.
+      //
+      // ── REAL CUSTOMERS ONLY ─────────────────────────────────────────
+      // This read the table raw, while the Logs app cross-references
+      // users.exclude_from_analytics and drops internal accounts. So the two
+      // screens disagreed about who exists, and the panel showed a $75
+      // renewal for whitelabel@dialerseat.com — an internal test
+      // subscription on a weekly cycle — as though a customer had paid.
+      //
+      // Excluded ids are resolved once above and passed in, rather than this
+      // query learning to do its own join.
       supabase
         .from('billing_events')
-        .select('id, event_type, user_name, user_email, plan, amount_cents, created_at')
+        .select('id, clerk_id, event_type, user_name, user_email, plan, amount_cents, created_at')
         .order('created_at', { ascending: false })
-        .limit(40),
+        .limit(40 + internalClerkIds.length),
       // Individual visitors — the same stitched view Visibility shows, where a
       // browser's anonymous reading and the account it later became are one
       // person. Reused rather than re-derived so the two screens cannot
@@ -597,10 +621,15 @@ export async function GET(req: NextRequest) {
     }
 
     const logs = ((logsRes.data || []) as Array<{
-      id: string; event_type: string | null
+      id: string; clerk_id: string | null; event_type: string | null
       user_name: string | null; user_email: string | null
       plan: string | null; amount_cents: number | null; created_at: string
-    }>).map(l => ({
+    }>)
+      // Internal accounts out. Fetched over-long above so dropping them still
+      // leaves a full panel.
+      .filter(l => !l.clerk_id || !internalIdSet.has(l.clerk_id))
+      .slice(0, 40)
+      .map(l => ({
       id: `log-${l.id}`,
       kind: l.event_type || 'event',
       title: (l.event_type || 'event').replace(/_/g, ' '),
