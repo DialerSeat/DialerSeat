@@ -284,7 +284,9 @@ export default function TermsPage() {
               Refunds are only considered within 24 hours of the charge going through. Once that
               24-hour window has passed, the charge is final, canceling afterward stops future
               billing (see Cancellation, above) but does not refund the period you're already in.
-              Contact <a href="mailto:support@dialerseat.com">support@dialerseat.com</a> with refund requests.
+              Contact <a href="mailto:support@dialerseat.com">support@dialerseat.com</a> with refund requests. 
+              And ONLY  <a href="mailto:support@dialerseat.com">support@dialerseat.com</a> Any other email address is Fraudulent.
+              And is not messaging you on our behalf.
             </p>
 
             <h3>Taxes</h3>
