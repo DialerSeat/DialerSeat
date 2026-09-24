@@ -227,28 +227,28 @@ function MacFrame({ title, titleColor, bg, children }: { title: string; titleCol
 
 
 const SCRIPTS: { key: string; label: string; text: string }[] = [
-  { key: 'life', label: 'Life', text: `"Hi (client), this is (your name goes here) reaching
+  { key: 'life', label: 'Life', text: `"Hi (client), this is (agent) reaching
 out about the life coverage you
 looked into.
 
 It only takes a minute, I can show
 you what you'd actually qualify for,
 no medical exam needed…"` },
-  { key: 'health', label: 'Health', text: `"Hi (client), this is (your name goes here), you
+  { key: 'health', label: 'Health', text: `"Hi (client), this is (agent), you
 requested help finding a health plan,
 is now a good time?
 
 Perfect. Let's see if we can get you
 better coverage for less than you're
 paying today…"` },
-  { key: 'realestate', label: 'Real Estate', text: `"Hi (client), this is (your name goes here), I saw
+  { key: 'realestate', label: 'Real Estate', text: `"Hi (client), this is (agent), I saw
 you were curious what your home
 might be worth.
 
 I can get you a real number today,
 and if you ever decide to sell, walk
 you through what's next…"` },
-  { key: 'solar', label: 'Solar', text: `"Hi (client), this is (your name goes here), did I
+  { key: 'solar', label: 'Solar', text: `"Hi (client), this is (agent), did I
 catch you at an okay time?
 
 Great. You asked about cutting your
