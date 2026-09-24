@@ -165,10 +165,22 @@ interface SessionStats {
   closed: number
   dnc: number
   notInterested: number
+  // Seconds, accumulated by the clock tick below. Dialing is time in a dial
+  // sequence or on a live call; talk is time on a live call with a person.
+  dialSeconds: number
+  talkSeconds: number
 }
 
 const ZERO_STATS: SessionStats = {
   calls: 0, connected: 0, appointments: 0, closed: 0, dnc: 0, notInterested: 0,
+  dialSeconds: 0, talkSeconds: 0,
+}
+
+/** 0m, 45m, 1h 26m. Minutes are the unit; nobody reads a dialing day in seconds. */
+function formatDuration(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  return hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`
 }
 
 const PERSONAL_SCOPE = '__personal__'
@@ -4735,6 +4747,41 @@ function DialerPageInner() {
   // deliberately intent rather than a derived "is a timer pending" — the
   // agent asked to be dialing, and stays dialing until they say otherwise.
   const [dialSequenceActive, setDialSequenceActive] = useState(false)
+  const dialSequenceActiveRef = useRef(false)
+  useEffect(() => { dialSequenceActiveRef.current = dialSequenceActive }, [dialSequenceActive])
+
+  // ── TIME DIALING AND TIME CONNECTED ─────────────────────────────────────
+  // Counted in this browser like every other tile in TODAY'S METRICS, off the
+  // clock that already ticks once a second. Measured from wall time between
+  // ticks rather than counting ticks, because a backgrounded tab's timer is
+  // throttled and a count would fall behind. Capped, so a laptop that slept in
+  // the middle of a sequence does not wake up an hour of dialing richer.
+  //
+  // Connected is status 'connected': the same moment the CONNECTED count goes
+  // up, after the AMD verdict, so a voicemail never adds a second.
+  const timeTickRef = useRef(Date.now())
+  const timePendingRef = useRef({ dial: 0, talk: 0 })
+  useEffect(() => {
+    const now = Date.now()
+    const dt = Math.min(Math.max(0, now - timeTickRef.current), 65_000) / 1000
+    timeTickRef.current = now
+    const talking = statusRef.current === 'connected'
+    const dialing = dialSequenceActiveRef.current || talking
+    if (dialing) timePendingRef.current.dial += dt
+    if (talking) timePendingRef.current.talk += dt
+    // Folded into the day's stats every 15 seconds rather than every second:
+    // the tiles show minutes, and the stats are saved to storage on change.
+    if (clockTick % 15 !== 0) return
+    const { dial, talk } = timePendingRef.current
+    if (dial === 0 && talk === 0) return
+    timePendingRef.current = { dial: 0, talk: 0 }
+    setSessionStats(s => ({
+      ...s,
+      dialSeconds: s.dialSeconds + dial,
+      talkSeconds: s.talkSeconds + talk,
+    }))
+  }, [clockTick])
+
   /**
    * One dial at a time.
    *
@@ -6792,11 +6839,12 @@ function DialerPageInner() {
         .dialer-manual-fs-btn { display: none; }
 
         /* ── TALLER METRICS WHEN THE WINDOW HAS THE ROOM ─────────────────
-           The owner's layout for a full desktop window: the metric tiles at
-           twice their compact height, the text one size up at its normal
-           proportions. 9px labels and 18px counts are the largest that fit a
-           busy day in a 280px sidebar: measured with NOT INTERESTED beside
-           21 and CONV RATE beside 12.5%, one step bigger truncates CONV RATE.
+           The owner's layout for a full desktop window: eight metric tiles in
+           four rows, in the same box height the first six had in three (40px
+           tiles, was 56), the text one size up at its normal proportions. 9px
+           labels and 18px counts are the largest that fit a busy day in a
+           280px sidebar: measured with NOT INTERESTED beside 21 and CONV RATE
+           beside 12.5%, one step bigger truncates CONV RATE.
            The keypad is flex: 1, so it gives up the difference by itself; the
            number display, settings row and DIAL row come in a little so the
            keys are not the only thing that pays.
@@ -6805,7 +6853,7 @@ function DialerPageInner() {
            tiles that were sized to keep DIAL on screen. */
         @media (min-width: 769px) and (min-height: 860px) {
           .dialer-right-sidebar .dialer-metric-grid { padding: 18px 10px !important; row-gap: 9px !important; }
-          .dialer-right-sidebar .dialer-metric-tile { min-height: 56px; }
+          .dialer-right-sidebar .dialer-metric-tile { min-height: 40px; }
           .dialer-right-sidebar .dialer-metric-label { font-size: 9px !important; letter-spacing: 0.5px !important; }
           .dialer-right-sidebar .dialer-metric-value { font-size: 18px !important; }
           .dialer-right-sidebar .dialer-md-display { min-height: 35px !important; padding-top: 6px !important; padding-bottom: 6px !important; }
@@ -7850,6 +7898,31 @@ function DialerPageInner() {
                   : '0.0%'}
               </span>
             </div>
+
+            {/* Seventh and eighth: time rather than counts. The label sits ABOVE
+                the figure here, not beside it: "TIME CONNECTED" and "1h 26m"
+                cannot share one line of a 280px sidebar at any size that reads. */}
+            {[
+              { label: 'TIME DIALING', seconds: sessionStats.dialSeconds, color: terminalAccent },
+              { label: 'TIME CONNECTED', seconds: sessionStats.talkSeconds, color: 'var(--brand-primary)' },
+            ].map((stat) => (
+              <div key={stat.label} className="dialer-metric-tile" style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',
+                gap: 1, minWidth: 0,
+                padding: '4px 8px', background: terminalSurface,
+                border: `1px solid ${terminalBorder}`, borderRadius: '3px',
+                borderLeft: `3px solid ${stat.color}`,
+              }}>
+                <span className="dialer-metric-label" style={{
+                  fontSize: '8px', letterSpacing: '1px', color: terminalMuted, lineHeight: 1.1,
+                  maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{stat.label}</span>
+                <span className="dialer-metric-value" style={{
+                  fontSize: '15px', fontWeight: 'bold', fontFamily: 'monospace', lineHeight: 1.1,
+                  color: stat.color,
+                }}>{formatDuration(stat.seconds)}</span>
+              </div>
+            ))}
           </div>
 
           <ManualDialer />
