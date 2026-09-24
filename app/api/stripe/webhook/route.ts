@@ -232,7 +232,18 @@ export async function POST(req: Request) {
                 let why = ''
                 let failureDetail: Record<string, unknown> = {}
                 try {
-                  const piId = invoicePaymentIntentId(invoice)
+                  let piId = invoicePaymentIntentId(invoice)
+                  // ── THE REASON WAS NEVER IN THE WEBHOOK ─────────────────
+                  // Invoice.payments is "includable (not returned by default;
+                  // request it with the expand request parameter)", and a
+                  // webhook's invoice is the default shape. So this came back
+                  // empty on every decline and every entry read "reason
+                  // unavailable". Asking for the invoice again with payments
+                  // expanded is what reaches the payment intent.
+                  if (!piId && invoice.id) {
+                    const full = await stripe.invoices.retrieve(invoice.id, { expand: ['payments'] })
+                    piId = invoicePaymentIntentId(full)
+                  }
                   if (piId) {
                     const intent = await stripe.paymentIntents.retrieve(piId)
                     const chId = (intent as unknown as { latest_charge?: string }).latest_charge
