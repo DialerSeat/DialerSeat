@@ -322,7 +322,7 @@ type Persisted = {
   theme?: OmTheme
   pulseTab?: 'calls' | 'visitors' | 'income'
   compWindow?: '7d' | 'month' | 'all'
-  showTargets?: boolean; feedView?: 'calls' | 'people' | 'logs'
+  showTargets?: boolean; feedView?: 'calls' | 'people' | 'logs'; focusLive?: boolean
   feedSize?: number
   callFilter?: 'all' | 'live' | 'answered' | 'missed' | 'machine' | 'human'
   peopleFilter?: 'all' | 'online' | 'paying' | 'seat' | 'dialed' | 'unplaced'
@@ -425,6 +425,17 @@ export default function OpsMap() {
   // Defaults to the light console the owner specified. Remembered per browser
   // like every other preference on this screen, so it survives a reload.
   const [theme, setTheme] = useState<OmTheme>(saved.theme ?? 'light')
+
+  // ── FOCUS: LIVE CALLS AND NOTHING ELSE ────────────────────────────────
+  // A wallboard mode. The map, the dock, the pulses, the notification box and
+  // every chip go away; what remains is the live calls table, the Telnyx
+  // balance, and the light/dark switch. Asked for by the owner as the view to
+  // leave up on a screen during a shift, where anything that is not a live
+  // call is noise.
+  //
+  // Remembered like every other preference here, so a browser left on the
+  // wallboard comes back to it.
+  const [focusLive, setFocusLive] = useState<boolean>(saved.focusLive ?? false)
   // Coerced, not trusted: 'both' and 'visitors' were valid until now and are
   // still in localStorage for anyone who used this before. An unrecognised
   // saved tab would select nothing and render an empty panel.
@@ -534,6 +545,28 @@ export default function OpsMap() {
     if (!el) return
     if (document.fullscreenElement === el) void document.exitFullscreen?.()
     else void el.requestFullscreen?.().catch(() => { /* denied by policy — leave as-is */ })
+  }
+
+  /**
+   * Enter or leave the wallboard.
+   *
+   * Entering asks for real fullscreen as well, because a wallboard with the
+   * browser's own chrome around it is not what was asked for. Leaving does
+   * NOT exit fullscreen: someone who wants the whole screen and the map back
+   * should get exactly that, and Esc is always there for the rest.
+   *
+   * requestFullscreen must be called from the user's own gesture, which this
+   * is. A refusal is ignored — the wallboard is still worth having windowed.
+   */
+  const toggleFocusLive = () => {
+    setFocusLive(v => {
+      const next = !v
+      const el = rootRef.current
+      if (next && el && document.fullscreenElement !== el) {
+        void el.requestFullscreen?.().catch(() => { /* denied by policy */ })
+      }
+      return next
+    })
   }
 
   // ── FIT vs FILL ───────────────────────────────────────────────────────
@@ -745,7 +778,7 @@ export default function OpsMap() {
     try {
       window.localStorage.setItem(STORE, JSON.stringify({
         mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView, feedSize,
-        notisOpen, compOpen, notisTab, pulseTab, compWindow, theme,
+        notisOpen, compOpen, notisTab, pulseTab, compWindow, theme, focusLive,
         logsSeenAt,
         callFilter, peopleFilter, peopleSort,
         selected,
@@ -761,7 +794,7 @@ export default function OpsMap() {
       }))
     } catch { /* nothing here is worth failing a render for */ }
   }, [mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView, feedSize,
-      notisOpen, compOpen, notisTab, pulseTab, compWindow, theme, logsSeenAt,
+      notisOpen, compOpen, notisTab, pulseTab, compWindow, theme, focusLive, logsSeenAt,
       callFilter, peopleFilter, peopleSort,
       selected, view])
 
@@ -1165,6 +1198,97 @@ export default function OpsMap() {
   const isVisitors = mode === 'visitors'
   const ranks = data?.breakdown ?? {}
 
+  // ── THE LIVE CALLS TABLE, ONCE ────────────────────────────────────────
+  // Rendered in two places now: the dock panel, and the focus view that shows
+  // nothing else. Extracted rather than copied so the two cannot drift — a
+  // second copy of a table this wide guarantees one of them is missing a
+  // column within a month.
+  //
+  // A function called as liveCallsTable(), not a component used as <X />:
+  // React then treats its output as part of this render rather than
+  // remounting a child on every three-second beat and losing the scroll
+  // position with it.
+  const liveCallsTable = () => (
+    <table className="om-t">
+      <thead>
+        <tr>
+          <th>TIME</th>
+          <th style={{ color: GREEN }}>AGENT</th>
+          <th className="om-hide-sm">FROM</th>
+          <th style={{ color: AMBER }}>DIALED</th>
+          <th className="om-hide-sm">TO</th>
+          <th className="om-hide-sm">DUR</th>
+          <th className="om-hide-sm">TALK</th>
+          <th>RESULT</th>
+          <th className="om-hide-sm">AMD</th>
+          <th className="om-hide-sm">CAMPAIGN</th>
+          <th className="om-hide-sm">REC</th>
+        </tr>
+      </thead>
+      <tbody>
+        {shownFeed.map(f => {
+          const live = liveSeconds(f, nowMs)
+          // A skipped call was never placed: no leg, no answer,
+          // nothing billed. Printing "0s" in the red reserved
+          // for short calls says a dial failed when none was
+          // ever made.
+          const neverPlaced = live === null
+            && f.duration === 0 && !f.answered
+          return (
+          <tr key={f.id} data-fresh={freshIds.has(f.id) ? '1' : undefined}>
+            <td style={{ color: CYAN }}>{hhmmss(f.at)}</td>
+            <td style={{ color: GREEN }}>{f.agent}</td>
+            <td className="om-hide-sm" style={{ color: MUTED }}>{f.agentPlace || '-'}</td>
+            <td style={{ color: AMBER }}>{prettyPhone(f.phone)}</td>
+            <td className="om-hide-sm" style={{ color: MUTED }}>{f.targetPlace || 'unknown'}</td>
+            {/* Eight seconds is the compliance floor, so a
+                short call is worth seeing without reading the
+                number. Neither bound applies to a call that is
+                still up or was never placed. */}
+            <td className="om-hide-sm" style={{
+              color: live !== null ? GREEN
+                : neverPlaced ? DIM
+                : f.duration >= 8 ? INK : RED,
+            }}>
+              {live !== null ? mmss(live)
+                : neverPlaced ? '-'
+                : `${f.duration}s`}
+            </td>
+            <td className="om-hide-sm" style={{ color: f.talkSeconds ? INK : DIM }}>
+              {f.talkSeconds ? f.talkSeconds + 's' : '-'}
+            </td>
+            <td style={{
+              color: live !== null ? GREEN
+                : f.disposition ? dispColour(f.disposition)
+                : f.answered ? INK : DIM,
+            }}>
+              {live !== null
+                ? 'on call'
+                : (f.disposition || (f.answered ? 'answered' : 'no answer'))}
+            </td>
+            <td className="om-hide-sm" style={{ color: amdColour(f.amdResult) }}>
+              {f.amdResult || (f.amdRequested ? 'pending' : 'off')}
+            </td>
+            <td className="om-hide-sm" style={{ color: DIM }}>{f.campaign || 'manual'}</td>
+            <td className="om-hide-sm"
+                style={{ color: f.recording === 'completed' ? VIOLET : DIM }}>
+              {f.recording === 'completed' ? 'rec' : '-'}
+            </td>
+          </tr>
+          )
+        })}
+        {shownFeed.length === 0 && (
+          <tr><td colSpan={11} style={{ color: DIM, padding: 10 }}>
+            {(data?.feed ?? []).length === 0
+              ? 'No calls yet.'
+              : 'No calls match this filter.'}
+          </td></tr>
+        )}
+      </tbody>
+    </table>
+  )
+
+
   return (
     <div
       ref={rootRef}
@@ -1336,6 +1460,88 @@ export default function OpsMap() {
           .om-hide-sm { display:none !important; }
         }
       `}</style>
+
+      {/* ── WALLBOARD ────────────────────────────────────────────────────
+          Live calls, the Telnyx balance, and the light/dark switch. Nothing
+          else: no map, no dock, no pulses, no notifications, no chips.
+
+          Rendered inside the themed root rather than as a portal, so it keeps
+          data-om-theme, every class in the stylesheet above, and rootRef —
+          which is the element fullscreen is requested on. A portal would have
+          needed all three copied and would have left the fullscreen target
+          pointing at a hidden map. */}
+      {focusLive && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 40,
+          background: PAGE, color: INK,
+          display: 'flex', flexDirection: 'column', minHeight: 0,
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 14px', borderBottom: `1px solid ${EDGE}`,
+            flexShrink: 0,
+          }}>
+            <span style={{
+              fontSize: 11, letterSpacing: 3, fontWeight: 800, color: INK,
+            }}>LIVE CALLS</span>
+
+            {/* The tab's own filters, not extra furniture. callFilter is
+                remembered across sessions, so a wallboard entered while it
+                was set to MACHINE would show a filtered subset with no way
+                to widen it — an empty table and no way out but leaving. */}
+            <div style={{ display: 'flex', gap: 4 }}>
+              {([
+                ['all', 'ALL'], ['live', 'ACTIVE'], ['answered', 'ANSWERED'],
+                ['missed', 'MISSED'], ['human', 'HUMAN'], ['machine', 'MACHINE'],
+              ] as const).map(([id, lbl]) => (
+                <button key={id} className="om-mini" data-on={callFilter === id}
+                        onClick={() => setCallFilter(id)}>{lbl}</button>
+              ))}
+            </div>
+
+            {/* Same source and the same beat as the map's own balance, so the
+                wallboard cannot disagree with the screen it came from. */}
+            <div className="om-hud om-hud-money" style={{ marginLeft: 'auto' }}
+                 title={data?.balance.authoritative
+                   ? 'Spendable at Telnyx right now'
+                   : (data?.balance.error || 'Carrier unreachable')}>
+              <span className="om-hud-k">TELNYX</span>
+              <span className="om-hud-v" style={{
+                color: !data || data.balance.availableCredit === null ? DIM
+                  : data.balance.availableCredit < 10 ? RED
+                  : data.balance.availableCredit < 25 ? AMBER : GREEN,
+              }}>
+                {!data || data.balance.availableCredit === null
+                  ? '-'
+                  : `${data.balance.currency && data.balance.currency !== 'USD'
+                      ? ''
+                      : '$'}${data.balance.availableCredit.toLocaleString(undefined, {
+                        minimumFractionDigits: 2, maximumFractionDigits: 2,
+                      })}${data.balance.currency && data.balance.currency !== 'USD'
+                      ? ` ${data.balance.currency}` : ''}`}
+              </span>
+            </div>
+
+            <button className="om-chip"
+                    title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                    onClick={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))}>
+              {theme === 'dark' ? '☀' : '☾'}
+            </button>
+            <button className="om-chip"
+                    title={isFull ? 'Exit fullscreen (Esc)' : 'Fullscreen'}
+                    onClick={toggleFull}>{isFull ? '❐' : '⛶'}</button>
+            <button className="om-chip" title="Back to the map"
+                    onClick={toggleFocusLive}>✕</button>
+          </div>
+
+          {/* The table owns the rest of the screen and scrolls on its own, so
+              the header and the balance stay put however long the list is. */}
+          <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '0 4px 4px' }}>
+            {liveCallsTable()}
+          </div>
+        </div>
+      )}
+
 
       {/* ── MAP ─────────────────────────────────────────────────────────── */}
       <svg
@@ -1615,6 +1821,10 @@ export default function OpsMap() {
                   onClick={() => setDockHidden(v => !v)}>{dockHidden ? '▣' : '-'}</button>
           <button className="om-chip" title={isFull ? 'Exit fullscreen (Esc)' : 'Fullscreen'}
                   onClick={toggleFull}>{isFull ? '❐' : '⛶'}</button>
+          {/* The wallboard. Beside fullscreen because it is the same kind of
+              action — both are about what the screen is for right now. */}
+          <button className="om-chip" title="Live calls only, fullscreen"
+                  onClick={toggleFocusLive}>◱</button>
         </div>
       </div>
 
@@ -2384,83 +2594,7 @@ export default function OpsMap() {
                       </tbody>
                     </table>
                   ) : feedView === 'calls' ? (
-                    <table className="om-t">
-                      <thead>
-                        <tr>
-                          <th>TIME</th>
-                          <th style={{ color: GREEN }}>AGENT</th>
-                          <th className="om-hide-sm">FROM</th>
-                          <th style={{ color: AMBER }}>DIALED</th>
-                          <th className="om-hide-sm">TO</th>
-                          <th className="om-hide-sm">DUR</th>
-                          <th className="om-hide-sm">TALK</th>
-                          <th>RESULT</th>
-                          <th className="om-hide-sm">AMD</th>
-                          <th className="om-hide-sm">CAMPAIGN</th>
-                          <th className="om-hide-sm">REC</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {shownFeed.map(f => {
-                          const live = liveSeconds(f, nowMs)
-                          // A skipped call was never placed: no leg, no answer,
-                          // nothing billed. Printing "0s" in the red reserved
-                          // for short calls says a dial failed when none was
-                          // ever made.
-                          const neverPlaced = live === null
-                            && f.duration === 0 && !f.answered
-                          return (
-                          <tr key={f.id} data-fresh={freshIds.has(f.id) ? '1' : undefined}>
-                            <td style={{ color: CYAN }}>{hhmmss(f.at)}</td>
-                            <td style={{ color: GREEN }}>{f.agent}</td>
-                            <td className="om-hide-sm" style={{ color: MUTED }}>{f.agentPlace || '-'}</td>
-                            <td style={{ color: AMBER }}>{prettyPhone(f.phone)}</td>
-                            <td className="om-hide-sm" style={{ color: MUTED }}>{f.targetPlace || 'unknown'}</td>
-                            {/* Eight seconds is the compliance floor, so a
-                                short call is worth seeing without reading the
-                                number. Neither bound applies to a call that is
-                                still up or was never placed. */}
-                            <td className="om-hide-sm" style={{
-                              color: live !== null ? GREEN
-                                : neverPlaced ? DIM
-                                : f.duration >= 8 ? INK : RED,
-                            }}>
-                              {live !== null ? mmss(live)
-                                : neverPlaced ? '-'
-                                : `${f.duration}s`}
-                            </td>
-                            <td className="om-hide-sm" style={{ color: f.talkSeconds ? INK : DIM }}>
-                              {f.talkSeconds ? f.talkSeconds + 's' : '-'}
-                            </td>
-                            <td style={{
-                              color: live !== null ? GREEN
-                                : f.disposition ? dispColour(f.disposition)
-                                : f.answered ? INK : DIM,
-                            }}>
-                              {live !== null
-                                ? 'on call'
-                                : (f.disposition || (f.answered ? 'answered' : 'no answer'))}
-                            </td>
-                            <td className="om-hide-sm" style={{ color: amdColour(f.amdResult) }}>
-                              {f.amdResult || (f.amdRequested ? 'pending' : 'off')}
-                            </td>
-                            <td className="om-hide-sm" style={{ color: DIM }}>{f.campaign || 'manual'}</td>
-                            <td className="om-hide-sm"
-                                style={{ color: f.recording === 'completed' ? VIOLET : DIM }}>
-                              {f.recording === 'completed' ? 'rec' : '-'}
-                            </td>
-                          </tr>
-                          )
-                        })}
-                        {shownFeed.length === 0 && (
-                          <tr><td colSpan={11} style={{ color: DIM, padding: 10 }}>
-                            {(data?.feed ?? []).length === 0
-                              ? 'No calls yet.'
-                              : 'No calls match this filter.'}
-                          </td></tr>
-                        )}
-                      </tbody>
-                    </table>
+                    liveCallsTable()
                   ) : (
                     <table className="om-t">
                       <thead>
