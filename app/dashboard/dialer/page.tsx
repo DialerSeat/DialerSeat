@@ -5851,9 +5851,16 @@ function DialerPageInner() {
           }}
           aria-label={inOverlay ? 'Close fullscreen dialer' : 'Open fullscreen dialer'}
           style={{
+            // The OPEN button takes no inline display, so the
+            // .dialer-manual-fs-btn rules own it: none on desktop, flex on a
+            // phone. An inline display: 'flex' beat the desktop rule, so it
+            // showed on a PC and did nothing. The CLOSE button inside the
+            // overlay keeps its inline flex on purpose: a tablet that opened the
+            // overlay in portrait and rotated past 768px must still see it.
+            display: inOverlay ? 'flex' : undefined,
             background: 'transparent', border: '1px solid var(--brand-sidebar-active-bg)', borderRadius: 4,
             color: 'var(--brand-on-sidebar-muted)', width: 28, height: 28,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', fontSize: 14, fontWeight: 'bold', padding: 0,
           }}
         >{inOverlay ? '×' : '⛶'}</button>
@@ -6786,19 +6793,21 @@ function DialerPageInner() {
 
         /* ── TALLER METRICS WHEN THE WINDOW HAS THE ROOM ─────────────────
            The owner's layout for a full desktop window: the metric tiles at
-           twice their compact height, with the text stretched to match rather
-           than widened, because the sidebar is 280px and "NOT INTERESTED" has
-           to stay on one line. The keypad is flex: 1, so it gives up the
-           difference by itself; the number display, settings row and DIAL
-           row come in a little so the keys are not the only thing that pays.
+           twice their compact height, the text one size up at its normal
+           proportions. 9px labels and 18px counts are the largest that fit a
+           busy day in a 280px sidebar: measured with NOT INTERESTED beside
+           21 and CONV RATE beside 12.5%, one step bigger truncates CONV RATE.
+           The keypad is flex: 1, so it gives up the difference by itself; the
+           number display, settings row and DIAL row come in a little so the
+           keys are not the only thing that pays.
            Only at 860px of height and up. Below that the keys would be
            squeezed under their own contents, and a phone keeps the compact
            tiles that were sized to keep DIAL on screen. */
         @media (min-width: 769px) and (min-height: 860px) {
           .dialer-right-sidebar .dialer-metric-grid { padding: 18px 10px !important; row-gap: 9px !important; }
           .dialer-right-sidebar .dialer-metric-tile { min-height: 56px; }
-          .dialer-right-sidebar .dialer-metric-label,
-          .dialer-right-sidebar .dialer-metric-value { transform: scaleY(2); transform-origin: center; }
+          .dialer-right-sidebar .dialer-metric-label { font-size: 9px !important; letter-spacing: 0.5px !important; }
+          .dialer-right-sidebar .dialer-metric-value { font-size: 18px !important; }
           .dialer-right-sidebar .dialer-md-display { min-height: 35px !important; padding-top: 6px !important; padding-bottom: 6px !important; }
           .dialer-right-sidebar .dialer-md-settings-btn { padding-top: 4px !important; padding-bottom: 4px !important; }
           .dialer-right-sidebar .dialer-md-action { padding-top: 8px !important; padding-bottom: 8px !important; }
