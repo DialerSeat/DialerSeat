@@ -549,6 +549,10 @@ export default function SettingsPage() {
     ? sub.awaitingApproval
     : []
 
+  // Paused: the only things to press are RESUME SUBSCRIPTION and DELETE
+  // ACCOUNT. Every other control is hidden; the read-only summaries stay.
+  const pausedOnly = !isAdmin && paused
+
   const showResubscribe =
     !isAdmin &&
     awaitingApproval.length === 0 &&
@@ -593,7 +597,7 @@ export default function SettingsPage() {
         </div>
 
         {/* BRAND VIEW TOGGLE — tenants + saved themes + standard, no parens */}
-        {showBrandToggle && brandOptions && (
+        {showBrandToggle && brandOptions && !pausedOnly && (
           <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>▸ WHITE-LABEL VIEW</div>
             <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
@@ -633,7 +637,7 @@ export default function SettingsPage() {
         )}
 
         {/* ── WHITELABEL EDITOR (button only, no inline editor) ── */}
-        {wlActive && (
+        {wlActive && !pausedOnly && (
           <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>▸ WHITELABEL EDITOR</div>
             <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
@@ -735,7 +739,7 @@ export default function SettingsPage() {
                 <div style={seatDetailStyle}>
                   Owner: {seat.ownerName} · $35.00 / WEEK
                 </div>
-                <button
+                {!pausedOnly && <button
                   onClick={() => startCancelSeat(seat)}
                   disabled={seatCancelling === seat.id}
                   style={{
@@ -745,7 +749,7 @@ export default function SettingsPage() {
                   }}
                 >
                   {seatCancelling === seat.id ? 'CANCELING...' : 'CANCEL ACCESS'}
-                </button>
+                </button>}
               </div>
             ))}
 
@@ -761,49 +765,7 @@ export default function SettingsPage() {
         {message && <div style={successStyle}>{message}</div>}
         {error && <div style={errorStyle}>{error}</div>}
 
-        {/* Always available, not only when something has gone wrong. The card
-            on file is worth being able to see and change on an ordinary day —
-            and when a seat charge fails, the instruction to update it finally
-            has somewhere to point. */}
-        {!isAdmin && (
-          <div style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
-              ▸ PAYMENT METHODS &amp; INVOICES
-            </div>
-            <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
-              Add or replace a card, keep more than one on file, and download past invoices.
-              Opens in a new tab. Handled by Stripe, card details never reach DialerSeat.
-            </div>
-
-            {portalError && (
-              <div style={{
-                marginBottom: 12, padding: '8px 10px', borderRadius: 3,
-                background: 'rgba(138, 26, 26, 0.18)', borderLeft: '3px solid #8a1a1a',
-                color: '#ff8888', fontSize: 12, lineHeight: 1.5,
-              }}>
-                {portalError}
-              </div>
-            )}
-
-            {/* Same button as PAUSE SUBSCRIPTION below: reversible, low-stakes,
-                so no accent bar. */}
-            <button
-              onClick={openBillingPortal}
-              disabled={portalBusy}
-              style={{
-                ...secondaryButtonStyle,
-                borderTop: 'none',
-                width: '100%', flex: 'none',
-                opacity: portalBusy ? 0.5 : 1,
-                cursor: portalBusy ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {portalBusy ? 'OPENING STRIPE...' : 'MANAGE PAYMENT METHODS & INVOICES'}
-            </button>
-          </div>
-        )}
-
-        {showResubscribe && (
+        {showResubscribe && !pausedOnly && (
           <div style={resubscribeBoxStyle}>
             <div style={resubscribeHeaderStyle}>
               {sub?.tier === 'lapsed'
@@ -895,7 +857,49 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {!isAdmin && sub?.isActive && !sub.cancelAtPeriodEnd && (
+        {/* Always available, not only when something has gone wrong. The card
+            on file is worth being able to see and change on an ordinary day —
+            and when a seat charge fails, the instruction to update it finally
+            has somewhere to point. */}
+        {!isAdmin && !pausedOnly && (
+          <div style={sectionStyle}>
+            <div style={sectionHeaderStyle}>
+              ▸ PAYMENT METHODS &amp; INVOICES
+            </div>
+            <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
+              Add or replace a card, keep more than one on file, and download past invoices.
+              Opens in a new tab. Handled by Stripe, card details never reach DialerSeat.
+            </div>
+
+            {portalError && (
+              <div style={{
+                marginBottom: 12, padding: '8px 10px', borderRadius: 3,
+                background: 'rgba(138, 26, 26, 0.18)', borderLeft: '3px solid #8a1a1a',
+                color: '#ff8888', fontSize: 12, lineHeight: 1.5,
+              }}>
+                {portalError}
+              </div>
+            )}
+
+            {/* Same button as PAUSE SUBSCRIPTION below: reversible, low-stakes,
+                so no accent bar. */}
+            <button
+              onClick={openBillingPortal}
+              disabled={portalBusy}
+              style={{
+                ...secondaryButtonStyle,
+                borderTop: 'none',
+                width: '100%', flex: 'none',
+                opacity: portalBusy ? 0.5 : 1,
+                cursor: portalBusy ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {portalBusy ? 'OPENING STRIPE...' : 'MANAGE PAYMENT METHODS & INVOICES'}
+            </button>
+          </div>
+        )}
+
+        {!isAdmin && sub?.isActive && !sub.cancelAtPeriodEnd && !pausedOnly && (
           <>
             {!confirming ? (
               <button onClick={handleStartCancel} style={dangerButtonStyle}>
