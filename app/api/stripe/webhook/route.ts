@@ -7,6 +7,7 @@ import { stripe } from '@/lib/stripe'
 import { activatePendingTeamMember, deactivateTeamMember } from '@/lib/teamMembership'
 import { sendAdminPush } from '@/lib/pushNotify'
 import { takeOverAgentPaidSeats } from '@/lib/seatTakeover'
+import { isReplacedFailedPlan, unpaidAccessEnd } from '@/lib/failedPlan'
 import { extractStripeFailureDetail, summariseStripeFailure } from '@/lib/stripeFailureDetail'
 import { logBillingEvent } from '@/lib/billingEvents'
 import { assembleAndSaveDisputeEvidence, recordDisputeClosed } from '@/lib/disputeEvidence'
@@ -508,6 +509,15 @@ async function routeSubscription(
     return
   }
 
+  // Anything still arriving for a plan that checkout replaced after a failed
+  // renewal: a late retry notice, a redelivered update. The plan is over, and
+  // its customer is on a new one, so none of it may log, notify, or write
+  // this account's status.
+  if (isReplacedFailedPlan(subscription)) {
+    await closeReplacedPlan(subscription)
+    return
+  }
+
   if (subKind === 'whitelabel') {
     await routeWhitelabel(subscription, eventType, billingReason, eventCreated, invoiceAmountCents)
     return
@@ -559,12 +569,59 @@ async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
     return
   }
 
-  if (subKind === 'whitelabel') {
-    await markWhitelabelCanceled(subscription)
+  // ── REPLACED, NOT CANCELLED ───────────────────────────────────────────
+  // Checkout ended this plan because its renewal failed, and started a new
+  // one in the same breath (lib/failedPlan). Running it through the cancel
+  // handlers below would push "cancelled", write a cancel into the ledger,
+  // hand this person's self-funded team seats to the owner, remove an
+  // agent-pays team membership, and switch off a Manager+ brand, all for a
+  // customer who is in the middle of paying again. It only closes the row.
+  if (isReplacedFailedPlan(subscription)) {
+    await closeReplacedPlan(subscription)
     return
   }
 
-  await markPersonalSubCanceled(subscription)
+  // ── A CANCELLED PLAN KEEPS ONLY THE DAYS THAT WERE PAID FOR ────────────
+  // Access to a cancelled plan runs to current_period_end, because that week
+  // was paid and nothing is refunded. When Stripe cancels a plan after its
+  // last retry fails, the period on file is the one the declined renewal
+  // opened, which was never paid: left alone, it handed out up to a week
+  // free. Null for every other cancel, which keeps its paid days as before.
+  //
+  // Worked out before anything is written, so a Stripe error here fails the
+  // event cleanly and the redelivery starts from nothing.
+  const accessEndsAt = await unpaidAccessEnd(subscription)
+
+  if (subKind === 'whitelabel') {
+    await markWhitelabelCanceled(subscription, accessEndsAt)
+    return
+  }
+
+  await markPersonalSubCanceled(subscription, accessEndsAt)
+}
+
+async function closeReplacedPlan(subscription: Stripe.Subscription) {
+  const accessEndsAt = await unpaidAccessEnd(subscription)
+  const periodEnd = subscription.items?.data?.[0]?.current_period_end
+  const { error } = await supabase
+    .from('subscriptions')
+    .update({
+      status: 'canceled',
+      canceled_at: subscription.canceled_at
+        ? new Date(subscription.canceled_at * 1000).toISOString()
+        : new Date().toISOString(),
+      // Written every time, both ways. Unpaid: access ends with the plan.
+      // Paid after all (a retry that cleared just before the cancel): the
+      // week runs to its end, and nothing is refunded.
+      current_period_end:
+        accessEndsAt ?? (periodEnd ? new Date(periodEnd * 1000).toISOString() : null),
+    })
+    .eq('stripe_subscription_id', subscription.id)
+  if (error) throw error
+  console.log(
+    `[stripe/webhook] ${subscription.id} closed as replaced after a failed renewal` +
+    (accessEndsAt ? `, access ended ${accessEndsAt}` : ', latest invoice paid, runs to period end')
+  )
 }
 
 
@@ -721,7 +778,11 @@ async function routeWhitelabel(
   }
 }
 
-async function markWhitelabelCanceled(subscription: Stripe.Subscription) {
+async function markWhitelabelCanceled(
+  subscription: Stripe.Subscription,
+  /** Set when the plan ended on a failed payment: see lib/failedPlan. */
+  accessEndsAt: string | null = null,
+) {
   const clerkId =
     subscription.metadata?.clerk_id ||
     (await lookupClerkIdByCustomer(subscription))
@@ -731,6 +792,7 @@ async function markWhitelabelCanceled(subscription: Stripe.Subscription) {
     .update({
       status: 'canceled',
       canceled_at: new Date().toISOString(),
+      ...(accessEndsAt ? { current_period_end: accessEndsAt } : {}),
     })
     .eq('stripe_subscription_id', subscription.id)
 
@@ -1152,6 +1214,10 @@ async function upsertPersonalSubscription(
   const periodEnd =
     (subscription as any).current_period_end ??
     (item as any)?.current_period_end
+  // A retry notice for a plan Stripe has since cancelled re-reads the
+  // subscription live and lands here. Without this it would write the unpaid
+  // period straight back over the cut the cancel made.
+  const unpaidEnd = subscription.status === 'canceled' ? await unpaidAccessEnd(subscription) : null
 
   const payload = {
     user_id: clerkId,
@@ -1161,7 +1227,7 @@ async function upsertPersonalSubscription(
     plan,
     status: subscription.status,
     current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
-    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+    current_period_end: unpaidEnd ?? (periodEnd ? new Date(periodEnd * 1000).toISOString() : null),
     cancel_at_period_end: subscription.cancel_at_period_end,
     canceled_at: subscription.canceled_at
       ? new Date(subscription.canceled_at * 1000).toISOString()
@@ -1232,12 +1298,17 @@ async function updatePersonalUserStatus(
   }
 }
 
-async function markPersonalSubCanceled(subscription: Stripe.Subscription) {
+async function markPersonalSubCanceled(
+  subscription: Stripe.Subscription,
+  /** Set when the plan ended on a failed payment: see lib/failedPlan. */
+  accessEndsAt: string | null = null,
+) {
   const { error } = await supabase
     .from('subscriptions')
     .update({
       status: 'canceled',
       canceled_at: new Date().toISOString(),
+      ...(accessEndsAt ? { current_period_end: accessEndsAt } : {}),
     })
     .eq('stripe_subscription_id', subscription.id)
 

@@ -3,10 +3,19 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { stripe } from '@/lib/stripe'
 import type Stripe from 'stripe'
+import { closeFailedPlans, endedOnFailedPayment } from '@/lib/failedPlan'
 
 const supabase = getServiceClient('stripe/create-subscription')
 
-const BLOCKING_STATUSES = ['active', 'past_due']
+// 'past_due' used to be here too, which made RESUBSCRIBE a dead end for
+// anybody whose renewal had declined: checkout refused them for holding the
+// very plan that had stopped working. A failed plan is now replaced rather
+// than obeyed. See FAILED_RENEWAL_STATUSES and lib/failedPlan.
+const BLOCKING_STATUSES = ['active']
+// A plan whose renewal payment failed. Stripe is still retrying (past_due) or
+// has stopped (unpaid); either way the account is read-only and the plan is
+// what stands between this person and paying again.
+const FAILED_RENEWAL_STATUSES = ['past_due', 'unpaid']
 // 'trialing' stays in this list even though nothing creates a trial any more.
 // It is a CLEANUP list, and its job is to clear historical rows out of the way
 // before a new subscription is written — legacy trialing rows still exist and
@@ -169,7 +178,11 @@ export async function POST(req: Request) {
       stripeSubs = await stripe.subscriptions.list({
         customer: customerId,
         status: 'all',
-        limit: 10,
+        // Every visit to billing creates a subscription and the next one
+        // cancels it, so ten was a handful of page loads. The checks below
+        // read this customer's HISTORY (did a payment fail before?), and a
+        // plan that ended on a declined card must not scroll out of view.
+        limit: 100,
       })
     } catch (err: any) {
       if (isResourceMissing(err)) {
@@ -199,6 +212,30 @@ export async function POST(req: Request) {
       )
     }
 
+    // Seat subscriptions pay for somebody's seat on a team. They are never this
+    // person's own plan, and one falling behind is the team's business, so
+    // nothing here replaces one or counts it against the buyer.
+    const ownPlans = stripeSubs.data.filter((s) => s.metadata?.sub_kind !== 'team_seat')
+    const failedRenewals = ownPlans.filter((s) => FAILED_RENEWAL_STATUSES.includes(s.status))
+
+    // ── NO DISCOUNT FOR COMING BACK FROM A DECLINE ──────────────────────
+    // Somebody whose card declined on renewal restarts at the plan's price.
+    // Otherwise a failed payment becomes a way to buy the same plan cheaper.
+    //
+    // Checked against the whole history, not only a plan failing right now:
+    // the first visit to billing replaces the failed plan, so a code typed a
+    // moment later would find nothing failing, and so would a return visit
+    // after Stripe gave up and cancelled the plan itself. Plans that never
+    // took a first payment (incomplete, incomplete_expired) don't count; a
+    // stalled signup is exactly who a code is for.
+    const failedBefore = failedRenewals.length > 0 || ownPlans.some(endedOnFailedPayment)
+    if (promoCode && failedBefore) {
+      return NextResponse.json(
+        { error: "Discount codes can't be used when restarting a plan after a failed payment." },
+        { status: 400 }
+      )
+    }
+
     const incompleteSubs = stripeSubs.data.filter((s) => s.status === 'incomplete')
     for (const sub of incompleteSubs) {
       try {
@@ -209,11 +246,20 @@ export async function POST(req: Request) {
     }
 
 
-    await supabase
+    // Except a plan that failed on a declined card. Its row is this person's
+    // history, and it is what tells the webhook their next payment is a
+    // resubscribe rather than a first-time signup. Its access is already cut
+    // to the moment it ended (lib/failedPlan), so it unlocks nothing.
+    const failedPlanIds = [...failedRenewals, ...ownPlans.filter(endedOnFailedPayment)].map((s) => s.id)
+    let staleRows = supabase
       .from('subscriptions')
       .delete()
       .eq('user_id', userId)
       .in('status', STALE_STATUSES)
+    if (failedPlanIds.length > 0) {
+      staleRows = staleRows.not('stripe_subscription_id', 'in', `(${failedPlanIds.join(',')})`)
+    }
+    await staleRows
 
     await supabase
       .from('subscriptions')
@@ -313,6 +359,32 @@ export async function POST(req: Request) {
         return NextResponse.json(
           { error: `Could not apply promo code: ${err.message}` },
           { status: 400 }
+        )
+      }
+    }
+
+    // Last step before the new plan exists, after every check that can still
+    // turn this request away: ending a plan is not something to undo.
+    const toClose = [...failedRenewals, ...ownPlans.filter(endedOnFailedPayment)]
+    if (toClose.length > 0) {
+      let closed: Awaited<ReturnType<typeof closeFailedPlans>>
+      try {
+        closed = await closeFailedPlans(failedRenewals, toClose)
+      } catch (err) {
+        // Handled here, never passed on: the catch at the bottom of this
+        // route reads a missing-resource error as a broken customer record
+        // and unlinks the customer, which would orphan their payment history.
+        console.error('[create-sub] could not close failed plan:', err)
+        return NextResponse.json(
+          { error: "We couldn't close your old plan, so nothing was charged. Try again in a minute." },
+          { status: 500 }
+        )
+      }
+      if (closed) {
+        console.error(`[create-sub] ${closed.paidMeanwhile} was paid as it was being replaced; not starting a new plan`)
+        return NextResponse.json(
+          { error: 'Your last payment just went through, so this week is already paid for. Nothing more was charged.' },
+          { status: 409 }
         )
       }
     }
