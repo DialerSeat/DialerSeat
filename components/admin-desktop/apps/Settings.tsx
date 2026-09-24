@@ -38,6 +38,7 @@ type NotifKey =
   | 'sub_paused'
   | 'sub_resumed'
   | 'payment_failed'
+  | 'checkout_stalled'
   | 'agent_online'
   // Operational events — see NOTIF_ROWS below
   | 'agent_leg_refused'
@@ -66,6 +67,9 @@ const NOTIF_ROWS: NotifRow[] = [
   // kept dialing, and the first anyone knew was a cancellation weeks later or
   // an email asking why they had been cut off.
   { key: 'payment_failed', label: 'Payment Failed', description: 'A card was declined: the subscription is past due and still recoverable' },
+  // Every real signup that never paid stopped on the card form. This is the
+  // one you answer with an email the same day.
+  { key: 'checkout_stalled', label: 'Stalled At Checkout', description: 'Someone reached the card form 30 minutes ago and left without paying' },
   // Not an alert. With few enough customers to care about each one, knowing
   // somebody is actually dialing right now is the most useful thing you can
   // be told.
@@ -91,6 +95,7 @@ interface PrefsResponse {
   sub_paused: boolean
   sub_resumed: boolean
   payment_failed: boolean
+  checkout_stalled: boolean
   agent_online: boolean
   agent_leg_refused: boolean
   pool_capacity: boolean
@@ -108,6 +113,7 @@ const DEFAULT_PREFS: PrefsResponse = {
   sub_paused: true,
   sub_resumed: true,
   payment_failed: true,
+  checkout_stalled: true,
   agent_online: true,
   agent_leg_refused: true,
   pool_capacity: true,
@@ -2354,6 +2360,7 @@ export default function SettingsApp() {
     renewal: prefs.renewal,
     cancel: prefs.cancel,
     payment_failed: prefs.payment_failed,
+    checkout_stalled: prefs.checkout_stalled,
     agent_online: prefs.agent_online,
     sub_paused: prefs.sub_paused,
     sub_resumed: prefs.sub_resumed,

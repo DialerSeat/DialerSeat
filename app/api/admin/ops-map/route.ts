@@ -6,6 +6,7 @@ import { getConcurrencySnapshot } from '@/lib/concurrency'
 import { requireAdmin } from '@/lib/admin'
 import { locate, US_STATES, COUNTRIES } from '@/lib/worldMap'
 import { stateForNumber, AREA_CODE_STATE } from '@/lib/areaCodes'
+import { normaliseBillingFeed } from '@/lib/billingEvents'
 
 export const dynamic = 'force-dynamic'
 
@@ -333,6 +334,8 @@ export async function GET(req: NextRequest) {
       supabase
         .from('billing_events')
         .select('id, clerk_id, event_type, user_name, user_email, plan, amount_cents, created_at')
+        // Checkout bookkeeping stays out; see normaliseBillingFeed.
+        .not('event_type', 'in', '(checkout_started,checkout_stalled)')
         .order('created_at', { ascending: false })
         .limit(40 + internalClerkIds.length),
       // Individual visitors — the same stitched view Visibility shows, where a
@@ -620,7 +623,8 @@ export async function GET(req: NextRequest) {
       })(),
     }
 
-    const logs = ((logsRes.data || []) as Array<{
+    // One card-declined entry per decline, however many times it was reported.
+    const logs = normaliseBillingFeed((logsRes.data || []) as Array<{
       id: string; clerk_id: string | null; event_type: string | null
       user_name: string | null; user_email: string | null
       plan: string | null; amount_cents: number | null; created_at: string

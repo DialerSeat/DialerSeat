@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
+import { normaliseBillingFeed } from '@/lib/billingEvents'
 
 const supabase = getServiceClient('admin/logs')
 
@@ -91,6 +92,9 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from('billing_events')
       .select('id, clerk_id, event_type, plan, amount_cents, retention_weeks, created_at, user_name, user_email')
+      // Checkout bookkeeping, one row per billing-page visit. Filtered in the
+      // query, not after it, so it cannot use up the row limit.
+      .not('event_type', 'in', '(checkout_started,checkout_stalled)')
       .order('created_at', { ascending: false })
       .limit(MAX_ENTRIES + excluded.size) // pad so post-filter still fills MAX_ENTRIES where possible
 
@@ -114,7 +118,8 @@ export async function GET(req: NextRequest) {
     }
     const entries: LogEntry[] = []
 
-    for (const e of events || []) {
+    // One card-declined entry per decline, however many times it was reported.
+    for (const e of normaliseBillingFeed(events || [])) {
       if (excluded.has(e.clerk_id)) continue
 
       switch (e.event_type) {

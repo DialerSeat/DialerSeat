@@ -34,6 +34,54 @@ export type BillingEventType =
   // in two months not one decline was recorded. See the webhook.
   | 'payment_failed'
   | 'account_deleted'
+  // Checkout bookkeeping. checkout_started is written when the card form
+  // loads (create-subscription), checkout_failed when Stripe declines at
+  // checkout, checkout_stalled by the checkout-stalls cron when somebody
+  // reached the form and left. None of the three were landing until 24 Sept
+  // 2026: the table's check constraint only allowed the six original types.
+  | 'checkout_started'
+  | 'checkout_failed'
+  | 'checkout_stalled'
+
+// ── WHAT THE LOG FEEDS SHOW ─────────────────────────────────────────────────
+// Two of the checkout types exist for the stalled-checkout alert, not for a
+// person to read: one checkout_started per billing-page visit would bury the
+// feed. The alert itself reaches the Notifications history through
+// sendAdminPush like every other push.
+//
+// A decline at checkout is the opposite: it IS something to read, and it
+// arrives up to three times within seconds (invoice.payment_failed as
+// payment_failed, payment_intent.payment_failed and the browser's own report
+// as checkout_failed). So the feeds show each one once, as the card-declined
+// entry the Logs app already knows how to draw.
+const HIDDEN_FROM_FEEDS = new Set(['checkout_started', 'checkout_stalled'])
+const SAME_DECLINE_MS = 10 * 60 * 1000
+
+export function normaliseBillingFeed<
+  T extends { clerk_id: string | null; event_type: string | null; created_at: string }
+>(rows: T[]): T[] {
+  const out: T[] = []
+  const lastDecline = new Map<string, number>()
+  // Oldest first, so the FIRST report of a decline is the one kept.
+  const ordered = [...rows].sort((a, b) => a.created_at.localeCompare(b.created_at))
+  for (const row of ordered) {
+    if (row.event_type && HIDDEN_FROM_FEEDS.has(row.event_type)) continue
+    if (row.event_type === 'payment_failed' || row.event_type === 'checkout_failed') {
+      const at = Date.parse(row.created_at)
+      const key = row.clerk_id || ''
+      // Measured from the last decline SHOWN, so a second attempt twenty
+      // minutes later still appears as its own entry.
+      const prev = lastDecline.get(key)
+      if (key && prev !== undefined && at - prev < SAME_DECLINE_MS) continue
+      lastDecline.set(key, at)
+      out.push({ ...row, event_type: 'payment_failed' } as T)
+      continue
+    }
+    out.push(row)
+  }
+  // Back to the newest-first order both feeds render in.
+  return out.sort((a, b) => b.created_at.localeCompare(a.created_at))
+}
 
 interface BillingEventInput {
   event_type: BillingEventType
