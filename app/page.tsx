@@ -117,6 +117,7 @@ export default async function Home({ searchParams }: PageProps) {
         }
         .ds-nav-links { display: flex; align-items: center; gap: 40px; }
         .ds-nav-link { display: inline-block; }
+        .ds-nav-link.ds-mobile-only { display: none; }
 
         .ds-announce-banner {
           padding: 8px 20px;
@@ -320,9 +321,15 @@ export default async function Home({ searchParams }: PageProps) {
             padding-left: 20px;
             padding-right: 20px;
           }
-          .ds-nav-links { gap: 0; }
+          .ds-nav-links { gap: 8px; }
           .ds-nav-link { display: none; }
           .ds-nav-link.ds-show-mobile { display: inline-block; }
+          .ds-nav-link.ds-mobile-only { display: inline-block; }
+          /* Room for SIGN IN and START NOW side by side on a 360px phone:
+             the wordmark comes down a size and both buttons tighten. */
+          .ds-nav-wordmark { font-size: 12px !important; letter-spacing: 2px !important; }
+          .ds-nav-link.ds-show-mobile,
+          .ds-nav-link.ds-mobile-only { padding: 7px 10px !important; letter-spacing: 1.5px !important; }
 
           .ds-announce-banner {
             padding: 8px 14px !important;
@@ -423,7 +430,7 @@ export default async function Home({ searchParams }: PageProps) {
               }}>
                 <span style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>D</span>
               </div>
-              <span style={{
+              <span className="ds-nav-wordmark" style={{
                 fontSize: '16px',
                 fontWeight: 'bold',
                 letterSpacing: '4px',
@@ -437,6 +444,10 @@ export default async function Home({ searchParams }: PageProps) {
               <Link href="#pricing" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>PRICING</Link>
               <Link href="#compare" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>COMPARE</Link>
               <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)', textDecoration: 'none', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap' }}>SIGN IN</Link>
+              {/* Phones only. GET STARTED is hidden below 768px, so a visitor on
+                  a phone (95% of Instagram traffic) had only SIGN IN, for an
+                  account they did not have yet. Same styling as GET STARTED. */}
+              <Link href="/sign-up" className="ds-nav-link ds-mobile-only" style={{ fontSize: '11px', letterSpacing: '2px', color: '#4a9eff', textDecoration: 'none', padding: '8px 12px', borderRadius: '6px', background: 'transparent', border: '1px solid #4a9eff', borderTop: '3px solid #4a9eff', whiteSpace: 'nowrap' }}>START NOW</Link>
               <Link href="/sign-up" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: '#4a9eff', textDecoration: 'none', padding: '10px 20px', borderRadius: '6px', background: 'transparent', border: '1px solid #4a9eff', borderTop: '3px solid #4a9eff', whiteSpace: 'nowrap' }}>GET STARTED</Link>
             </div>
           </nav>
