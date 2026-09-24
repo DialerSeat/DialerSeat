@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
+import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
@@ -13,6 +14,7 @@ import {
 const SLUG = 'five9'
 
 export const metadata: Metadata = {
+  keywords: prosConsKeywords(SLUG),
   title: 'DialerSeat vs Five9: Enterprise Features Without the Enterprise Sales Cycle',
   description:
     'DialerSeat is the modern alternative to Five9. Self-serve signup in minutes (not weeks of demos), public $35/week pricing (no custom quotes), no annual contract, no implementation fees. Multi-line predictive dialing with the same compliance posture.',
@@ -69,7 +71,7 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema(FAQS)} />
+      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: 'Home', url: '/' },

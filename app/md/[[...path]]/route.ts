@@ -112,12 +112,16 @@ function vsCompetitorDoc(slug: string): string | null {
     `## ${c.name}\n` +
     `- Pricing: ${c.pricing}\n- Billing: ${c.contract}\n- Dialing: ${c.dialing}\n` +
     `- Best for: ${c.bestFor}\n\n` +
-    `### Where ${c.name} is genuinely better\n${c.wins.map(w => `- ${w}`).join('\n')}\n\n` +
-    `### Where buyers get caught out\n${c.friction.map(f => `- ${f}`).join('\n')}\n\n` +
+    // Headed in the words people search and ask assistants: "pros and cons of
+    // X", "cons of X". This markdown is what AI crawlers read in place of the
+    // rendered page, so the phrasing matters here as much as in the headings.
+    `## Pros and cons of ${c.name}\n\n` +
+    `### Pros of ${c.name}\n${c.wins.map(w => `- ${w}`).join('\n')}\n\n` +
+    `### Cons of ${c.name}\n${c.friction.map(f => `- ${f}`).join('\n')}\n\n` +
     `## DialerSeat\n` +
     `- Pricing: ${DIALERSEAT.pricing}\n- Billing: ${DIALERSEAT.contract}\n` +
     `- Dialing: ${DIALERSEAT.dialing}\n- Best for: ${DIALERSEAT.bestFor}\n\n` +
-    `### Where DialerSeat is not the right answer\n` +
+    `### Cons of DialerSeat\n` +
     `${DIALERSEAT.friction.map(f => `- ${f}`).join('\n')}\n` +
     footer(`/vs/${c.slug}`)
   )
@@ -131,8 +135,8 @@ function matchupDoc(slug: string): string | null {
     `## ${c.name}\n${c.summary}\n\n` +
     `- Pricing: ${c.pricing}\n- Billing: ${c.contract}\n- Dialing: ${c.dialing}\n` +
     `- Best for: ${c.bestFor}\n\n` +
-    `**Where it wins:** ${c.wins.join('; ')}.\n\n` +
-    `**Where buyers get caught out:** ${c.friction.join('; ')}.\n`
+    `**Pros of ${c.name}:** ${c.wins.join('; ')}.\n\n` +
+    `**Cons of ${c.name}:** ${c.friction.join('; ')}.\n`
 
   return (
     `# ${a.name} vs ${b.name}\n\n` +

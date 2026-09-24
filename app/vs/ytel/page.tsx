@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
+import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
@@ -13,6 +14,7 @@ import {
 const SLUG = 'ytel'
 
 export const metadata: Metadata = {
+  keywords: prosConsKeywords(SLUG),
   title: "DialerSeat vs Ytel: No Platform Fee on Top of Seats",
   description: "Ytel prices seats around $99 per month on top of a platform fee, which small teams absorb disproportionately. DialerSeat is $35 per seat per week with no platform charge.",
   alternates: {
@@ -57,7 +59,7 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema(FAQS)} />
+      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: 'Home', url: '/' },

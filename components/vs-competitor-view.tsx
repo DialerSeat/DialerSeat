@@ -116,20 +116,26 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
           </GutsSection>
         )}
 
-        <GutsSection icon="scale" title={`Where ${c.name} is the better choice`}>
+        {/* ── PROS AND CONS ─────────────────────────────────────────────
+            Headed in the words buyers search — "pros and cons of X", "cons of
+            X" — because a heading is the strongest on-page signal a search
+            engine or an AI crawler reads. The content is unchanged: it was
+            always the competitor's genuine strengths and where buyers get
+            caught out. See lib/vsSeo for the structured-data half. */}
+        <GutsSection icon="scale" title={`Pros and cons of ${c.name}`}>
           <p>
             A comparison where the competitor loses at everything is marketing, and it
-            reads like marketing. These are real advantages.
+            reads like marketing. These are real advantages, and real drawbacks.
           </p>
           <div className="guts-grid-2">
             <div className="guts-panel">
-              <h3>{c.name} does this well</h3>
+              <h3>Pros of {c.name}</h3>
               <ul className="guts-list good">
                 {c.wins.map((w) => <li key={w}>{w}</li>)}
               </ul>
             </div>
             <div className="guts-panel">
-              <h3>Where buyers get caught out</h3>
+              <h3>Cons of {c.name}</h3>
               <ul className="guts-list warn">
                 {c.friction.map((f) => <li key={f}>{f}</li>)}
               </ul>
@@ -149,13 +155,13 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
           <p>{DIALERSEAT.bestFor}</p>
           <div className="guts-grid-2">
             <div className="guts-panel">
-              <h3>What we do well</h3>
+              <h3>Pros of DialerSeat</h3>
               <ul className="guts-list good">
                 {DIALERSEAT.wins.map((w) => <li key={w}>{w}</li>)}
               </ul>
             </div>
             <div className="guts-panel">
-              <h3>Where we fall short</h3>
+              <h3>Cons of DialerSeat</h3>
               <ul className="guts-list warn">
                 {DIALERSEAT.friction.map((f) => <li key={f}>{f}</li>)}
               </ul>

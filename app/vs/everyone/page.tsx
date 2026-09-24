@@ -8,7 +8,20 @@ import {
 } from '@/lib/schema'
 import VsEveryoneView from './view'
 
+// The five tools this page's tables name, in the forms people search. Each
+// one also has its own /vs page carrying the full pros-and-cons treatment
+// (lib/vsSeo); this page is the industry-wide view, so it claims the
+// category-level phrases as well.
+const COMPARED = ['ReadyMode', 'Mojo Dialer', 'PhoneBurner', 'Five9', 'Convoso']
+
 export const metadata: Metadata = {
+  keywords: [
+    'dialer pros and cons',
+    'predictive dialer pros and cons',
+    'cons of legacy dialers',
+    'best dialer comparison',
+    ...COMPARED.flatMap((n) => [`${n} pros and cons`, `cons of ${n}`]),
+  ],
   title: 'DialerSeat vs Every Legacy Dialer: ReadyMode, Mojo, PhoneBurner, Five9, and More',
   description:
     'Every legacy dialer shares the same flaws: opaque pricing, annual contracts, dated UI, add-on stacking, desktop-only, compliance shortcuts. DialerSeat fixes every one at $35/week per seat, cancel anytime. Solo or team. Every industry. Every device.',

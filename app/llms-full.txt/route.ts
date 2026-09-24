@@ -39,8 +39,8 @@ export async function GET() {
     `- ${c.name} in one line: ${c.summary}\n` +
     `- ${c.name} pricing: ${c.pricing} ${c.contract}\n` +
     `- ${c.name} dialing: ${c.dialing}\n` +
-    `- Where ${c.name} is genuinely better: ${c.wins.join('; ')}.\n` +
-    `- Where buyers get caught out: ${c.friction.join('; ')}.\n` +
+    `- Pros of ${c.name}: ${c.wins.join('; ')}.\n` +
+    `- Cons of ${c.name}: ${c.friction.join('; ')}.\n` +
     `- ${c.name} is the right choice for: ${c.bestFor}\n` +
     `- ${c.name} for teams: smallest team ${c.team.minimum}; adding one more agent, ${c.team.addingASeat}; five agents, ${c.team.fiveSeats}\n` +
     `- Full comparison: ${SITE_URL}/vs/${c.slug}\n`

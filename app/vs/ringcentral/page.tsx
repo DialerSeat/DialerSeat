@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
+import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
@@ -13,6 +14,7 @@ import {
 const SLUG = 'ringcentral'
 
 export const metadata: Metadata = {
+  keywords: prosConsKeywords(SLUG),
   title: "DialerSeat vs RingCentral: A Dialer, Not a Phone System",
   description: "RingCentral is an excellent business phone system, but outbound dialing lives in RingCX, its contact-centre product, from around $65 per user per month. DialerSeat is a dialer at $35 per seat per week.",
   alternates: {
@@ -62,7 +64,7 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema(FAQS)} />
+      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: 'Home', url: '/' },

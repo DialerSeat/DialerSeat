@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
+import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
@@ -13,6 +14,7 @@ import {
 const SLUG = '3cx'
 
 export const metadata: Metadata = {
+  keywords: prosConsKeywords(SLUG),
   title: 'DialerSeat vs 3CX: Sales Dialer vs Business Phone System',
   description:
     'DialerSeat and 3CX solve different problems. 3CX is a business PBX licensed by simultaneous call capacity; DialerSeat is a purpose-built outbound sales dialer at $35/seat/week: lead lists, dispositions, AMD, and TCPA compliance included, no capacity planning required.',
@@ -64,7 +66,7 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema(FAQS)} />
+      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: 'Home', url: '/' },

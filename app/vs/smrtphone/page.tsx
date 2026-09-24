@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
+import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
@@ -13,6 +14,7 @@ import {
 const SLUG = 'smrtphone'
 
 export const metadata: Metadata = {
+  keywords: prosConsKeywords(SLUG),
   title: "DialerSeat vs smrtPhone, Flat Weekly, Not Subscription Plus Credits",
   description: "smrtPhone stacks three charges: a $62-$104/month subscription, a $42-$75/seat/month dialer add-on, then per-minute credits. DialerSeat is $35 per seat per week with call time included.",
   alternates: {
@@ -62,7 +64,7 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema(FAQS)} />
+      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: 'Home', url: '/' },

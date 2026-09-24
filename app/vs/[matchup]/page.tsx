@@ -82,11 +82,22 @@ export async function generateMetadata(
   const title = `${m.a.name} vs ${m.b.name}: Pricing, Dialing Modes, and Who Each One Suits`
   const description =
     `An honest side-by-side of ${m.a.name} and ${m.b.name}: what each costs, which dialing modes ` +
-    `you actually get, where each one is genuinely stronger, and which buyer each suits.`
+    `you actually get, the pros and cons of each, and which buyer each suits.`
 
   return {
     title: `${title} | DialerSeat`,
     description,
+    // Both names, in the forms people search a two-way decision. See lib/vsSeo
+    // for why the headings and structured data matter more than this tag.
+    keywords: [
+      `${m.a.name} vs ${m.b.name}`,
+      `${m.a.name} vs ${m.b.name} pros and cons`,
+      `${m.b.name} vs ${m.a.name}`,
+      `pros and cons of ${m.a.name}`,
+      `pros and cons of ${m.b.name}`,
+      `cons of ${m.a.name}`,
+      `cons of ${m.b.name}`,
+    ],
     alternates: {
       canonical: `${SITE}/vs/${matchup}`,
       types: { 'text/markdown': `${SITE}/md/vs/${matchup}` },
@@ -143,19 +154,22 @@ function Column({ c }: { c: Competitor }) {
         ))}
       </dl>
 
+      {/* Real headings rather than styled divs, worded the way people search
+          ("pros of X", "cons of X"). A div that looks like a heading is just
+          text to a crawler; an h3 is a signal. Same visual as before. */}
       <div style={{ marginTop: 20 }}>
-        <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#16a34a' }}>
-          WHERE IT WINS
-        </div>
+        <h3 style={{ margin: 0, fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#16a34a', textTransform: 'uppercase' }}>
+          Pros of {c.name}
+        </h3>
         <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 14, lineHeight: 1.8, color: INK }}>
           {c.wins.map(w => <li key={w}>{w}</li>)}
         </ul>
       </div>
 
       <div style={{ marginTop: 18 }}>
-        <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a' }}>
-          WHERE BUYERS GET CAUGHT OUT
-        </div>
+        <h3 style={{ margin: 0, fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a', textTransform: 'uppercase' }}>
+          Cons of {c.name}
+        </h3>
         <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 14, lineHeight: 1.8, color: INK }}>
           {c.friction.map(f => <li key={f}>{f}</li>)}
         </ul>

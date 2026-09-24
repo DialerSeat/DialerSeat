@@ -27,6 +27,17 @@ export const runtime = 'nodejs'
 const SITE = 'https://dialerseat.com'
 
 export const metadata: Metadata = {
+  // No single competitor here, so the phrases are the team buyer's: the
+  // cross-tool pricing question this page answers. Each named tool carries
+  // its own pros-and-cons keywords on its /vs page (lib/vsSeo).
+  keywords: [
+    'dialer pricing for teams',
+    'team dialer pros and cons',
+    'cost of a dialer for 5 agents',
+    'call center dialer cost per agent',
+    'dialer seat minimums',
+    'best dialer for small teams',
+  ],
   title: 'Dialer Pricing for Teams: What 5 Agents Actually Cost | DialerSeat',
   description:
     'Seat minimums, contract terms, and what it really takes to add one more agent, compared across every major outbound dialer. Plus how leads are distributed across a floor without two agents calling the same person.',
