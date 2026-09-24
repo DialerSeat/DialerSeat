@@ -10,6 +10,10 @@ import DialerShowcase from '@/components/DialerShowcase'
 import JsonLd from '@/components/json-ld'
 import { organizationSchema, softwareApplicationSchema } from '@/lib/schema'
 import LeadQueueShowcase from '@/components/LeadQueueShowcase'
+import {
+  PhoneOutgoing, Voicemail, ClipboardList, BookmarkCheck, MousePointerClick,
+  Users, Globe, Plug, Lock, UserPlus, Upload, PhoneCall, ChartColumn,
+} from 'lucide-react'
 
 /**
  * One cell of the comparison table.
@@ -655,15 +659,15 @@ export default async function Home({ searchParams }: PageProps) {
             highest-authority page on the domain. */}
         <div className="ds-grid-3" style={{ display: 'grid', gap: '20px' }}>
           {[
-            { icon: '⚡', title: 'PREDICTIVE DIALING', href: '/dialing-modes/predictive', desc: 'Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour, every hour.' },
-            { icon: '🎙️', title: 'IDENTIFIES VOICEMAIL', href: '/faq/how-does-amd-work', desc: 'Stop wasting your day on dead air. DialerSeat knows when a machine answers and skips ahead to the next live human.' },
-            { icon: '📋', title: 'MULTIPLE CAMPAIGNS', href: '/faq/campaigns', desc: 'Run unlimited campaigns simultaneously. Upload a CSV, name it, and you are dialing in seconds.' },
-            { icon: '🎯', title: 'MEMORY OF MARKED LEADS', href: '/faq/leads', desc: 'Every disposition, callback, and note remembers itself. Your work is never lost between sessions or seats.' },
-            { icon: '📞', title: 'MANUAL DIALER', href: '/faq/what-is-a-preview-dialer', desc: 'When you want to control every call yourself, we have you. Click-to-dial individual numbers any time.' },
-            { icon: '🏢', title: 'TEAM WORKFLOW', href: '/faq/teams-how-it-works', desc: 'Buy seats for your whole crew. Each agent gets their own login, campaigns, and call data, all under one roof.' },
-            { icon: '🌎', title: 'WORKS GLOBALLY', href: '/faq/dialer-for-offshore-agents', desc: 'Dial US based leads from any country in the world. No increased price jumps for dialing while abroad.' },
-            { icon: '✨', title: 'CLEAN, PLUG-AND-PLAY UI', href: '/faq/mobile', desc: 'No bloat, no setup wizard, no learning curve. Sign in, upload, dial. Works on desktop and mobile.' },
-            { icon: '🔒', title: 'YOUR DATA, ALWAYS YOURS', href: '/faq/data-and-recordings', desc: 'Your leads stay saved even if your subscription lapses. Pick up right where you left off, no questions asked.' },
+            { icon: PhoneOutgoing, title: 'PREDICTIVE DIALING', href: '/dialing-modes/predictive', desc: 'Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour, every hour.' },
+            { icon: Voicemail, title: 'IDENTIFIES VOICEMAIL', href: '/faq/how-does-amd-work', desc: 'Stop wasting your day on dead air. DialerSeat knows when a machine answers and skips ahead to the next live human.' },
+            { icon: ClipboardList, title: 'MULTIPLE CAMPAIGNS', href: '/faq/campaigns', desc: 'Run unlimited campaigns simultaneously. Upload a CSV, name it, and you are dialing in seconds.' },
+            { icon: BookmarkCheck, title: 'MEMORY OF MARKED LEADS', href: '/faq/leads', desc: 'Every disposition, callback, and note remembers itself. Your work is never lost between sessions or seats.' },
+            { icon: MousePointerClick, title: 'MANUAL DIALER', href: '/faq/what-is-a-preview-dialer', desc: 'When you want to control every call yourself, we have you. Click-to-dial individual numbers any time.' },
+            { icon: Users, title: 'TEAM WORKFLOW', href: '/faq/teams-how-it-works', desc: 'Buy seats for your whole crew. Each agent gets their own login, campaigns, and call data, all under one roof.' },
+            { icon: Globe, title: 'WORKS GLOBALLY', href: '/faq/dialer-for-offshore-agents', desc: 'Dial US based leads from any country in the world. No increased price jumps for dialing while abroad.' },
+            { icon: Plug, title: 'CLEAN, PLUG-AND-PLAY UI', href: '/faq/mobile', desc: 'No bloat, no setup wizard, no learning curve. Sign in, upload, dial. Works on desktop and mobile.' },
+            { icon: Lock, title: 'YOUR DATA, ALWAYS YOURS', href: '/faq/data-and-recordings', desc: 'Your leads stay saved even if your subscription lapses. Pick up right where you left off, no questions asked.' },
           ].map((f, i) => (
             <div key={i} className="ds-feature-card" style={{
               padding: '30px',
@@ -673,7 +677,9 @@ export default async function Home({ searchParams }: PageProps) {
               display: 'flex',
               flexDirection: 'column',
             }}>
-              <div style={{ fontSize: '26px', marginBottom: '14px' }}>{f.icon}</div>
+              <div style={{ marginBottom: '14px', color: '#2a4a8a', lineHeight: 0 }}>
+                <f.icon size={26} strokeWidth={1.75} aria-hidden="true" />
+              </div>
               <h3 style={{
                 fontSize: '13px',
                 fontWeight: 'bold',
@@ -731,10 +737,10 @@ export default async function Home({ searchParams }: PageProps) {
           overflow: 'hidden',
         }}>
           {[
-            { step: '01', icon: '👤', title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime.' },
-            { step: '02', icon: '📤', title: 'UPLOAD YOUR LEADS', desc: 'Drop your CSV into a campaign. Name it, organize it, and have multiple campaigns ready to go simultaneously.' },
-            { step: '03', icon: '📞', title: 'HIT DIAL AND GO', desc: 'Launch your campaign and DialerSeat starts working immediately. Live connections come through the second someone picks up.' },
-            { step: '04', icon: '📊', title: 'TRACK AND CLOSE', desc: 'Disposition every call in one click. Track your performance in real time. Rinse and repeat until your list is done.' },
+            { step: '01', icon: UserPlus, title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime.' },
+            { step: '02', icon: Upload, title: 'UPLOAD YOUR LEADS', desc: 'Drop your CSV into a campaign. Name it, organize it, and have multiple campaigns ready to go simultaneously.' },
+            { step: '03', icon: PhoneCall, title: 'HIT DIAL AND GO', desc: 'Launch your campaign and DialerSeat starts working immediately. Live connections come through the second someone picks up.' },
+            { step: '04', icon: ChartColumn, title: 'TRACK AND CLOSE', desc: 'Disposition every call in one click. Track your performance in real time. Rinse and repeat until your list is done.' },
           ].map((step, i, arr) => (
             <div key={i} className="ds-step-card" style={{
               display: 'flex',
@@ -759,7 +765,9 @@ export default async function Home({ searchParams }: PageProps) {
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>{step.step}</div>
-              <div style={{ fontSize: '24px', flexShrink: 0 }} aria-hidden="true">{step.icon}</div>
+              <div style={{ flexShrink: 0, color: '#2a4a8a', lineHeight: 0 }} aria-hidden="true">
+                <step.icon size={24} strokeWidth={1.75} />
+              </div>
               <div style={{ minWidth: 0 }}>
                 <h3 style={{
                   fontSize: '13px',

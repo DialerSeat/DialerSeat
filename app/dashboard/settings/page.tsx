@@ -766,30 +766,40 @@ export default function SettingsPage() {
             and when a seat charge fails, the instruction to update it finally
             has somewhere to point. */}
         {!isAdmin && (
-          <div style={{ marginBottom: 18 }}>
+          <div style={sectionStyle}>
+            <div style={sectionHeaderStyle}>
+              ▸ PAYMENT METHODS &amp; INVOICES
+            </div>
+            <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
+              Add or replace a card, keep more than one on file, and download past invoices.
+              Opens in a new tab. Handled by Stripe, card details never reach DialerSeat.
+            </div>
+
+            {portalError && (
+              <div style={{
+                marginBottom: 12, padding: '8px 10px', borderRadius: 3,
+                background: 'rgba(138, 26, 26, 0.18)', borderLeft: '3px solid #8a1a1a',
+                color: '#ff8888', fontSize: 12, lineHeight: 1.5,
+              }}>
+                {portalError}
+              </div>
+            )}
+
+            {/* Same button as PAUSE SUBSCRIPTION below: reversible, low-stakes,
+                so no accent bar. */}
             <button
               onClick={openBillingPortal}
               disabled={portalBusy}
               style={{
-                background: 'transparent',
-                border: '1px solid var(--brand-primary)',
-                color: 'var(--brand-primary)',
-                borderRadius: 6, padding: '10px 16px',
-                fontSize: 12, letterSpacing: 1, fontWeight: 600,
-                cursor: portalBusy ? 'default' : 'pointer',
-                opacity: portalBusy ? 0.6 : 1,
-                fontFamily: 'inherit',
+                ...secondaryButtonStyle,
+                borderTop: 'none',
+                width: '100%', flex: 'none',
+                opacity: portalBusy ? 0.5 : 1,
+                cursor: portalBusy ? 'not-allowed' : 'pointer',
               }}
-            >{portalBusy ? 'Opening Stripe…' : 'Manage payment methods & invoices'}</button>
-            <div style={{ fontSize: 11.5, color: '#80848e', marginTop: 6, lineHeight: 1.6 }}>
-              Add or replace a card, keep more than one on file, and download past invoices.
-              Opens in a new tab. Handled by Stripe, card details never reach DialerSeat.
-            </div>
-            {portalError && (
-              <div style={{ fontSize: 12, color: '#ff6464', marginTop: 8, lineHeight: 1.6 }}>
-                {portalError}
-              </div>
-            )}
+            >
+              {portalBusy ? 'OPENING STRIPE...' : 'MANAGE PAYMENT METHODS & INVOICES'}
+            </button>
           </div>
         )}
 
