@@ -172,8 +172,8 @@ export default function NumbersFaqView() {
               <div className="num-layer">
                 <div className="num-layer-num">4</div>
                 <div className="num-layer-body">
-                  <h4>POOL ROTATION, NOT ONE NUMBER FOREVER</h4>
-                  <p>DialerSeat maintains a live pool of numbers sized to actual account volume, not a fixed number per seat. When usage on a given number climbs, rotation spreads dial volume instead of hammering one DID until it burns. Numbers pulled from rotation sit through a cooldown period before being reused, rather than going straight back into the pool hot.</p>
+                  <h4>DAILY CAPS AND LOAD SPREADING, NOT ONE NUMBER FOREVER</h4>
+                  <p>DialerSeat maintains a live pool of numbers sized to actual account volume, not a fixed number per seat. No number places more than 60 calls a day, and past 40 it drops to the back of the queue, so load spreads across the pool before any single number runs hot. A number answering far below its peers is slowed to 15 calls a day rather than pulled, then restored automatically once it recovers. <Link href="/faq/why-we-dont-rest-flagged-numbers">Why we slow numbers down instead of resting them.</Link></p>
                 </div>
               </div>
             </div>
@@ -210,16 +210,16 @@ export default function NumbersFaqView() {
               </div>
               <div className="num-math-row">
                 <span className="num-math-label">3. Monitored</span>
-                <span className="num-math-val">Volume tracked per number, not left unmanaged</span>
+                <span className="num-math-val">Capped at 60 a day, answer rate checked daily against the pool</span>
               </div>
               <div className="num-math-row">
                 <span className="num-math-label">4. Released (if surplus)</span>
-                <span className="num-math-val">Cold numbers cycle out on a cooldown, not reused hot</span>
+                <span className="num-math-val">Least-used numbers go first, never one just bought</span>
               </div>
             </div>
 
             <p className="muted">
-              You never see or manage this rotation directly, it happens
+              You never see or manage any of this directly, it happens
               automatically in the background. What you experience is just
               &ldquo;the numbers keep working,&rdquo; which is the actual
               point.
@@ -272,7 +272,7 @@ export default function NumbersFaqView() {
               </div>
               <div className="num-vs-row">
                 <div className="num-vs-cell label">Reputation monitoring</div>
-                <div className="num-vs-cell us">Handled at the pool level, rotation and cooldown built in</div>
+                <div className="num-vs-cell us">Every number checked daily against the pool, struggling ones slowed automatically</div>
               </div>
             </div>
           </section>
@@ -302,7 +302,7 @@ export default function NumbersFaqView() {
               immune to flagging. Carrier scoring models evolve constantly,
               and even a fully registered, A-attested number can pick up a
               label if it&apos;s dialed hard enough against a bad list.
-              What A-attestation, CNAM registration, and pool rotation do is
+              What A-attestation, CNAM registration, and per-number caps do is
               remove the infrastructure-level causes so the only variable
               left is how the campaign is actually run, which is
               genuinely within your control.

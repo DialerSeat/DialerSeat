@@ -137,6 +137,27 @@ const ANSWERS: HubItem[] = [
     keywords: 'stir shaken local presence flagged',
   },
   {
+    href: '/faq/how-we-keep-numbers-clean',
+    label: 'How we keep our numbers clean',
+    note: 'Daily caps, load spreading, and a health check on every number',
+    added: '2026-09-24',
+    keywords: 'spam likely flagged numbers caller id reputation stir shaken attestation',
+  },
+  {
+    href: '/faq/why-we-dont-rest-flagged-numbers',
+    label: 'Why we don’t rest a flagged number',
+    note: 'Rested numbers came back worse than new ones',
+    added: '2026-09-24',
+    keywords: 'spam flagged numbers cooldown rotate throttle reputation hiya',
+  },
+  {
+    href: '/faq/why-calls-show-spam-likely',
+    label: 'Why calls show “Spam Likely”',
+    note: 'How call labels are decided, and what you control',
+    added: '2026-09-24',
+    keywords: 'spam likely scam likely label caller id stir shaken cnam free caller registry',
+  },
+  {
     href: '/faq/how-many-numbers-do-i-need',
     label: 'How many numbers do I need?',
     note: 'What a dialing floor actually burns through',
@@ -410,7 +431,7 @@ export default function FaqView() {
 
         <DirectoryHub
           headlineTop="Pick your question."
-          headlineBottom="We'll give you a straight answer."
+          headlineBottom="We'll give you a straight answer."
           leadHref="/faq/why-dialerseat"
           leadLabel="Start with why we built this"
           picksLabel="TOP PICKS"
@@ -426,7 +447,7 @@ export default function FaqView() {
           allTitle="All Answers"
           allItems={ANSWERS}
           allCta="Browse all answers"
-          recentTitle="Recently Added"
+          recentTitle="Recently Added"
         />
 
         <div className="faqx-band">
@@ -587,14 +608,17 @@ export default function FaqView() {
                   Every outbound number carries STIR/SHAKEN A-attestation, is registered
                   for CNAM and the Free Caller Registry, and dials with local presence by
                   default, the carrier-level protections that most dialers sell as separate
-                  add-ons are just the default here. The number pool also rotates and cools
-                  down instead of hammering one number until it burns.
+                  add-ons are just the default here. No number places more than 60 calls a
+                  day, load spreads across the pool before any number runs hot, and every
+                  number is checked daily against the rest: one that falls well behind is
+                  slowed down automatically until it recovers.
                 </p>
                 <p>
-                  See <Link href="/faq/numbers">phone numbers &amp; caller ID</Link> for the
-                  full breakdown: including what&apos;s still on you (list quality, abandon
-                  rate, DNC scrubbing) since no infrastructure makes a number permanently
-                  immune to flagging.
+                  See <Link href="/faq/how-we-keep-numbers-clean">how we keep our numbers
+                  clean</Link> for the whole system with the actual thresholds, and{' '}
+                  <Link href="/faq/why-calls-show-spam-likely">why calls show Spam Likely</Link>{' '}
+                  for what&apos;s still on you (list quality, consent, DNC scrubbing), since no
+                  infrastructure makes a number permanently immune to flagging.
                 </p>
               </div>
             </details>

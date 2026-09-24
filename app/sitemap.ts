@@ -117,7 +117,13 @@ function apexSitemap(now: Date): MetadataRoute.Sitemap {
     e('/faq/calling-hours', 0.85, 'monthly'),
     e('/faq/10dlc-and-outbound-calling', 0.75, 'monthly'),
     e('/faq/how-many-numbers-do-i-need', 0.75, 'monthly'),
-    
+    // Spam-free numbers. The Spam Likely page is weighted highest of the three
+    // because it answers the question people actually search; the other two
+    // explain what we do about it once they are here.
+    e('/faq/why-calls-show-spam-likely', 0.85, 'monthly'),
+    e('/faq/how-we-keep-numbers-clean', 0.8, 'monthly'),
+    e('/faq/why-we-dont-rest-flagged-numbers', 0.75, 'monthly'),
+
     e('/faq/managers', 0.7, 'monthly'),
     e('/faq/white-label', 0.7, 'monthly'),
     
