@@ -51,6 +51,10 @@ export interface DisputeEvidenceSummary {
   lastCallAt: string | null
   windowStart: string | null
   windowEnd: string | null
+  purchases: number
+  cancellations: number
+  tightestResubSeconds: number | null
+  lastCancelAt: string | null
 }
 
 /** Resolve a Stripe customer to our Clerk id. Two tables carry the mapping and
@@ -137,6 +141,58 @@ async function gatherUsage(clerkId: string | null, windowStart: string | null, w
   }
 }
 
+/** The billing ledger is the OTHER evidence, and for this product it is often
+ *  the stronger one. Call records answer "services not rendered". They say
+ *  nothing about "I did not authorise this" — the reason code that actually
+ *  gets filed. A customer who cancelled and re-subscribed by hand, repeatedly,
+ *  from inside the account, has demonstrated authorisation far better than any
+ *  usage count can. Every row here came back to us from a Stripe webhook, so
+ *  the issuer can verify all of it against Stripe's own record. */
+async function gatherBillingHistory(clerkId: string | null) {
+  const empty = {
+    purchases: 0,
+    cancellations: 0,
+    tightestResubSeconds: null as number | null,
+    lastCancelAt: null as string | null,
+  }
+  if (!clerkId) return empty
+
+  const { data, error } = await supabase
+    .from('billing_events')
+    .select('event_type, created_at')
+    .eq('clerk_id', clerkId)
+    .in('event_type', ['initial_sub', 'resub', 'renewal', 'cancel'])
+    .order('created_at', { ascending: true })
+
+  if (error || !data) return empty
+
+  const purchases = data.filter((r: any) =>
+    r.event_type === 'initial_sub' || r.event_type === 'resub'
+  ).length
+  const cancels = data.filter((r: any) => r.event_type === 'cancel')
+
+  // The shortest gap between cancelling and buying again. A gap measured in
+  // seconds is a deliberate act by someone holding the login.
+  let tightest: number | null = null
+  for (let i = 0; i < data.length - 1; i++) {
+    const a = data[i] as any
+    const b = data[i + 1] as any
+    if (a.event_type !== 'cancel') continue
+    if (b.event_type !== 'resub' && b.event_type !== 'initial_sub') continue
+    const gap = Math.round(
+      (new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) / 1000
+    )
+    if (gap >= 0 && (tightest === null || gap < tightest)) tightest = gap
+  }
+
+  return {
+    purchases,
+    cancellations: cancels.length,
+    tightestResubSeconds: tightest,
+    lastCancelAt: cancels.length > 0 ? (cancels[cancels.length - 1] as any).created_at : null,
+  }
+}
+
 function hours(seconds: number): string {
   const h = Math.floor(seconds / 3600)
   const m = Math.round((seconds % 3600) / 60)
@@ -186,6 +242,7 @@ export async function assembleAndSaveDisputeEvidence(
       : null
 
     const usage = await gatherUsage(clerkId, windowStart, windowEnd)
+    const ledger = await gatherBillingHistory(clerkId)
 
     const { data: subRow } = clerkId
       ? await supabase
@@ -204,14 +261,28 @@ export async function assembleAndSaveDisputeEvidence(
       accountCreatedAt: user.accountCreatedAt,
       subscriptionStartedAt: subRow?.created_at ?? null,
       ...usage,
+      ...ledger,
       windowStart,
       windowEnd,
     }
 
     // ── THE NARRATIVE ────────────────────────────────────────────────────
-    // Stripe's reviewers read uncategorized_text. Leading with usage is
-    // deliberate: it is the fact that decides "services not rendered", and it
-    // is specific enough to be checkable.
+    // Stripe's reviewers read uncategorized_text. Two rules govern what goes
+    // in it.
+    //
+    // ONE: never argue the cardholder's case for them. The old version of this
+    // wrote "No calls were placed during the period this charge covers"
+    // whenever usage was zero, which handed the issuer the strongest sentence
+    // in the file. Silence about usage is not a lie; volunteering the one fact
+    // that decides the dispute against us is a self-inflicted loss. When there
+    // is usage it leads, because it is checkable and it settles "services not
+    // rendered". When there is none, the billing ledger carries the case.
+    //
+    // TWO: every sentence has to survive the issuer checking it against
+    // Stripe's own record, because they can. That is why the cancellation line
+    // is now conditional — asserting "no cancellation request was received"
+    // for an account that plainly cancelled is the kind of error that loses a
+    // dispute we would otherwise have won.
     const activity =
       usage.callsInWindow > 0
         ? `The account placed ${usage.callsInWindow.toLocaleString()} calls ` +
@@ -220,16 +291,39 @@ export async function assembleAndSaveDisputeEvidence(
           (usage.firstCallAt && usage.lastCallAt
             ? ` (first call ${usage.firstCallAt.slice(0, 10)}, last call ${usage.lastCallAt.slice(0, 10)}).`
             : '.')
-        : 'No calls were placed during the period this charge covers.'
+        : ''
+
+    // Repeat self-service purchases are the answer to "I did not authorise
+    // this", and they are the one thing this account type always has.
+    const repeatBuyer =
+      ledger.purchases > 1
+        ? `The cardholder started a paid subscription ${ledger.purchases} separate times from inside the account, ` +
+          `and cancelled ${ledger.cancellations} ${ledger.cancellations === 1 ? 'time' : 'times'}, ` +
+          `each through the self-service billing page while signed in.` +
+          (ledger.tightestResubSeconds !== null && ledger.tightestResubSeconds < 600
+            ? ` On one occasion the account was cancelled and a new paid subscription started ` +
+              `${ledger.tightestResubSeconds} seconds later.`
+            : '')
+        : ''
+
+    const cancelledInWindow =
+      ledger.lastCancelAt != null &&
+      windowStart != null &&
+      windowEnd != null &&
+      ledger.lastCancelAt >= windowStart &&
+      ledger.lastCancelAt <= windowEnd
 
     const narrative = [
       `DialerSeat is a cloud dialing platform billed weekly in advance for each agent seat.`,
       activity,
+      repeatBuyer,
       user.email ? `The account is registered to ${user.email}.` : '',
       summary.subscriptionStartedAt
         ? `The subscription was created on ${summary.subscriptionStartedAt.slice(0, 10)} through a checkout that required explicit acceptance of the recurring weekly charge.`
         : '',
-      `Cancellation is self-service and available at any time from the billing page; no cancellation request was received for this period.`,
+      cancelledInWindow
+        ? `Cancellation is self-service and available at any time from the billing page. The cardholder used it on ${ledger.lastCancelAt!.slice(0, 10)}, and billing stopped at the end of the period already paid for.`
+        : `Cancellation is self-service and available at any time from the billing page; no cancellation request was received for this period.`,
     ].filter(Boolean).join(' ')
 
     const evidence: Stripe.DisputeUpdateParams.Evidence = {
@@ -245,12 +339,43 @@ export async function assembleAndSaveDisputeEvidence(
     // Saved, NOT submitted. `submit` defaults to false; being explicit is the
     // point — this line is the difference between a reviewable draft and an
     // irreversible filing.
+    //
+    // `intended_submission_method` is the line that stops this helping and
+    // starts it hurting. Stripe's default is `prefer_manual`: "Stripe submits
+    // your evidence if you've added any. If you haven't, Stripe submits a
+    // Smart Disputes packet." So saving a draft under the default DISPLACES
+    // Stripe's packet — the packet built from cardholder data, network history
+    // and past win patterns, none of which we can see. Drafting evidence would
+    // have quietly replaced the better filing with the worse one.
+    //
+    // `prefer_smart_disputes` merges the two instead, which is what we want in
+    // every case: our call records and billing ledger are things Stripe cannot
+    // derive, and its network signals are things we cannot.
     let saveError: string | null = null
+    const baseParams: Stripe.DisputeUpdateParams = { evidence, submit: false }
     try {
-      await stripe.disputes.update(dispute.id, { evidence, submit: false })
+      await stripe.disputes.update(dispute.id, {
+        ...baseParams,
+        intended_submission_method: 'prefer_smart_disputes',
+      } as unknown as Stripe.DisputeUpdateParams)
     } catch (e: any) {
-      saveError = e?.message || 'unknown Stripe error'
-      console.error('[disputeEvidence] evidence save failed', e)
+      // The field is newer than some pinned API versions. If Stripe rejects it,
+      // fall back rather than lose the evidence save entirely — a draft under
+      // the default beats no draft at all, and the notification says so.
+      const unknownParam = /intended_submission_method/i.test(e?.message ?? '')
+      if (unknownParam) {
+        console.warn('[disputeEvidence] intended_submission_method rejected, saving without it')
+        try {
+          await stripe.disputes.update(dispute.id, baseParams)
+          saveError = 'saved, but Smart Disputes merge could not be requested (API version)'
+        } catch (e2: any) {
+          saveError = e2?.message || 'unknown Stripe error'
+          console.error('[disputeEvidence] evidence save failed', e2)
+        }
+      } else {
+        saveError = e?.message || 'unknown Stripe error'
+        console.error('[disputeEvidence] evidence save failed', e)
+      }
     }
 
     await supabase.from('billing_disputes').upsert(
@@ -288,6 +413,12 @@ export async function assembleAndSaveDisputeEvidence(
         (usage.callsInWindow > 0
           ? `They placed ${usage.callsInWindow.toLocaleString()} calls in the period charged. `
           : `No calls in the period charged. `) +
+        (ledger.purchases > 1
+          ? `${ledger.purchases} separate self-service purchases on the account` +
+            (ledger.tightestResubSeconds !== null && ledger.tightestResubSeconds < 600
+              ? `, one ${ledger.tightestResubSeconds}s after a cancellation. `
+              : `. `)
+          : ``) +
         (saveError
           ? `Evidence could NOT be saved: ${saveError}. `
           : `Evidence drafted and saved to Stripe. `) +
