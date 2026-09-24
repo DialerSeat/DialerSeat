@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { resolveAnalyticsScope } from '@/lib/analyticsScope'
+import { fetchAllRows } from '@/lib/fetchAllRows'
 import {
   canonical, labelFor, DISPOSITIONS,
   BREAKDOWN_FORMS, LEGACY_STATUS_VALUES,
@@ -20,11 +21,24 @@ export async function GET(req: NextRequest) {
   const start = searchParams.get('start')
   const end = searchParams.get('end')
 
-  let query = supabaseAdmin.from('calls').select('disposition').eq('user_id', userId)
-  if (start) query = query.gte('created_at', start)
-  if (end) query = query.lte('created_at', end)
-
-  const { data, error } = await query
+  // Paged, like the summary and the timeline. A bare select stops at 1000
+  // rows and still returns 200, so for anybody past a thousand calls in range
+  // this chart was drawn from an arbitrary thousand of them, and its CLOSED
+  // slice could disagree with the CLOSED card beside it.
+  const { rows: data, error, truncated } = await fetchAllRows<{ disposition: string | null }>(
+    (from, to) => {
+      let q = supabaseAdmin
+        .from('calls')
+        .select('disposition')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to)
+      if (start) q = q.gte('created_at', start)
+      if (end) q = q.lte('created_at', end)
+      return q
+    }
+  )
   if (error) {
     return apiError(error, { route: 'analytics/dispositions' })
   }
@@ -96,5 +110,5 @@ export async function GET(req: NextRequest) {
       a.group === b.group ? b.count - a.count : a.group === 'outcome' ? -1 : 1
     )
 
-  return NextResponse.json({ success: true, breakdown })
+  return NextResponse.json({ success: true, breakdown, partial: truncated })
 }

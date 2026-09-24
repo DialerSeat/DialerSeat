@@ -4,6 +4,7 @@ import { apiError } from '@/lib/apiError'
 import { reachedDials } from '@/lib/dialOutcome'
 import { resolveAnalyticsScope } from '@/lib/analyticsScope'
 import { fetchAllRows } from '@/lib/fetchAllRows'
+import { canonical } from '@/lib/dispositions'
 
 const supabase = getServiceClient('analytics/summary')
 
@@ -54,6 +55,9 @@ export async function GET(req: NextRequest) {
         .select('duration, disposition, campaign_id, created_at, answered_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: true })
+        // Calls placed together share a created_at to the microsecond, and a
+        // tie that straddles a page boundary can be read twice or not at all.
+        .order('id', { ascending: true })
         .range(from, to)
       if (start) q = q.gte('created_at', start)
       if (end) q = q.lte('created_at', end)
@@ -79,37 +83,43 @@ export async function GET(req: NextRequest) {
   // rather than something you go looking for. See lib/dialOutcome.ts.
   const reachedCalls = reachedDials(calls).length
 
-  // Same cap, same consequence: every disposition count below (contacts,
-  // conversions, closed, appointments, DNC) is derived from this set, so a
-  // truncated read understates all of them at once.
-  const { rows: leads, truncated: leadsTruncated } =
-    await fetchAllRows<any>((from, to) => {
-      let q = supabase
-        .from('leads')
-        .select('disposition, last_called_at')
-        .eq('user_id', userId)
-        .not('disposition', 'is', null)
-        .order('last_called_at', { ascending: true })
-        .range(from, to)
-      if (start) q = q.gte('last_called_at', start)
-      if (end) q = q.lte('last_called_at', end)
-      return q
-    })
-
-  const contactsReached = leads.filter(l => CONTACT_DISPS.includes(l.disposition)).length
-  const conversions = leads.filter(l => CONVERSION_DISPS.includes(l.disposition)).length
-  const closed = leads.filter(l => l.disposition === 'CLOSED').length
-  const appointments = leads.filter(l => l.disposition === 'APPOINTMENT').length
-  const dnc = leads.filter(l => l.disposition === 'DO NOT CALL').length
-  const notInterested = leads.filter(l => l.disposition === 'NOT INTERESTED').length
+  // ── A CLOSE IS SOMETHING THAT HAPPENED, NOT A FIELD ON A LEAD ─────────
+  // These were counted from leads: rows whose disposition was CLOSED at the
+  // moment of asking and whose last_called_at fell in the range. That is not
+  // the number of deals closed in the range, and it drifted from it three ways:
+  //
+  //   - Deleting a campaign deletes its leads, and every close in it went
+  //     with them. A real account closed three calls in August and deleted
+  //     those campaigns afterwards; this card has read 0 for him since, while
+  //     the disposition chart on the same page shows all three.
+  //   - A lead touched again later (skipped, redialled) moved its close to
+  //     the day of the touch.
+  //   - A lead later marked something else lost its close from every range,
+  //     past ones included.
+  //
+  // The call row keeps its disposition for good (deleting the lead only
+  // clears lead_id), and it is what the disposition chart, the timeline,
+  // best campaign and the dialer's own TODAY'S METRICS already count. So
+  // these count it too, and the page stops disagreeing with itself.
+  // canonical() folds the older spellings (APPOINTMENT_SET, NOT_INTERESTED).
+  const outcomes: (string | null)[] = calls.map(c => canonical(c.disposition))
+  const countOf = (values: string[]) =>
+    outcomes.filter(d => d !== null && values.includes(d)).length
+  const contactsReached = countOf(CONTACT_DISPS)
+  const conversions = countOf(CONVERSION_DISPS)
+  const closed = countOf(['CLOSED'])
+  const appointments = countOf(['APPOINTMENT'])
+  const dnc = countOf(['DO NOT CALL'])
+  const notInterested = countOf(['NOT INTERESTED'])
 
   const campaignTotals: Record<string, { total: number; converted: number }> = {}
-  for (const c of calls) {
+  calls.forEach((c, i) => {
     const cid = c.campaign_id || 'unknown'
     if (!campaignTotals[cid]) campaignTotals[cid] = { total: 0, converted: 0 }
     campaignTotals[cid].total++
-    if (CONVERSION_DISPS.includes(c.disposition)) campaignTotals[cid].converted++
-  }
+    const d = outcomes[i]
+    if (d !== null && CONVERSION_DISPS.includes(d)) campaignTotals[cid].converted++
+  })
   let bestCampaignId: string | null = null
   let bestRate = 0
   for (const [cid, t] of Object.entries(campaignTotals)) {
@@ -132,7 +142,10 @@ export async function GET(req: NextRequest) {
   const conversionRate = reachedCalls > 0 ? (conversions / reachedCalls) * 100 : 0
   const contactRate = reachedCalls > 0 ? (contactsReached / reachedCalls) * 100 : 0
 
-  const connectedCalls = calls.filter(c => CONTACT_DISPS.includes(c.disposition))
+  const connectedCalls = calls.filter((_, i) => {
+    const d = outcomes[i]
+    return d !== null && CONTACT_DISPS.includes(d)
+  })
   const avgCallLength = connectedCalls.length > 0
     ? Math.round(connectedCalls.reduce((s, c) => s + (c.duration || 0), 0) / connectedCalls.length)
     : 0
@@ -159,6 +172,6 @@ export async function GET(req: NextRequest) {
     // Only ever true if a user exceeds the runaway ceiling in lib/fetchAllRows.
     // Surfaced rather than swallowed: the entire point of this change is that
     // partial totals must never again be presented as complete ones.
-    partial: callsTruncated || leadsTruncated,
+    partial: callsTruncated,
   })
 }
