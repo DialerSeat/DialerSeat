@@ -5870,7 +5870,7 @@ function DialerPageInner() {
         overflowY: inOverlay ? 'auto' : 'visible',
         paddingBottom: inOverlay ? 'calc(20px + env(safe-area-inset-bottom, 0px))' : 12,
       }}>
-        <div style={{
+        <div className="dialer-md-display" style={{
           background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: '4px',
           padding: inOverlay ? '20px 16px' : '10px 12px',
           fontFamily: 'monospace', fontSize: inOverlay ? '32px' : '18px',
@@ -5916,6 +5916,7 @@ function DialerPageInner() {
           background: terminalSurface, overflow: 'hidden',
         }}>
           <button
+            className="dialer-md-settings-btn"
             onClick={() => setManualSettingsOpen(o => !o)}
             aria-expanded={manualSettingsOpen}
             style={{
@@ -6053,7 +6054,7 @@ function DialerPageInner() {
           display: 'grid', gridTemplateColumns: '1fr 2fr',
           gap: inOverlay ? '12px' : '6px', flexShrink: 0,
         }}>
-          <button onClick={handleBackspace} style={{
+          <button className="dialer-md-action" onClick={handleBackspace} style={{
             padding: inOverlay ? '20px' : '12px', borderRadius: '3px',
             background: terminalSurface, border: `1px solid ${terminalBorder}`,
             borderBottom: `3px solid ${terminalBorder}`, color: terminalMuted,
@@ -6062,7 +6063,7 @@ function DialerPageInner() {
           {/* Disabled while a dial is being placed and while one is up. The
               ref inside handleManualDial is what actually refuses the second
               click; this is so the button stops inviting it. */}
-          <button onClick={handleManualDial} disabled={!manualDialArmed} style={{
+          <button className="dialer-md-action" onClick={handleManualDial} disabled={!manualDialArmed} style={{
             padding: inOverlay ? '20px' : '12px', borderRadius: '3px', border: 'none',
             background: manualDialArmed ? terminalDark : terminalSurface,
             borderBottom: `3px solid ${manualDialArmed ? 'var(--brand-primary)' : terminalBorder}`,
@@ -6782,6 +6783,26 @@ function DialerPageInner() {
            the lead, so blowing it up covers the thing the agent is reading. On
            a phone it is the only way to get a usable keypad. */
         .dialer-manual-fs-btn { display: none; }
+
+        /* ── TALLER METRICS WHEN THE WINDOW HAS THE ROOM ─────────────────
+           The owner's layout for a full desktop window: the metric tiles at
+           twice their compact height, with the text stretched to match rather
+           than widened, because the sidebar is 280px and "NOT INTERESTED" has
+           to stay on one line. The keypad is flex: 1, so it gives up the
+           difference by itself; the number display, settings row and DIAL
+           row come in a little so the keys are not the only thing that pays.
+           Only at 860px of height and up. Below that the keys would be
+           squeezed under their own contents, and a phone keeps the compact
+           tiles that were sized to keep DIAL on screen. */
+        @media (min-width: 769px) and (min-height: 860px) {
+          .dialer-right-sidebar .dialer-metric-grid { padding: 18px 10px !important; row-gap: 9px !important; }
+          .dialer-right-sidebar .dialer-metric-tile { min-height: 56px; }
+          .dialer-right-sidebar .dialer-metric-label,
+          .dialer-right-sidebar .dialer-metric-value { transform: scaleY(2); transform-origin: center; }
+          .dialer-right-sidebar .dialer-md-display { min-height: 35px !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+          .dialer-right-sidebar .dialer-md-settings-btn { padding-top: 4px !important; padding-bottom: 4px !important; }
+          .dialer-right-sidebar .dialer-md-action { padding-top: 8px !important; padding-bottom: 8px !important; }
+        }
 
         @media (max-width: 768px) {
           .dialer-root { height: calc(100vh - 64px); height: calc(100dvh - 64px); }
@@ -7769,7 +7790,7 @@ function DialerPageInner() {
               integer or a percentage, so the digits were never what needed the
               room. The labels ellipsis rather than wrap, which keeps every
               tile exactly one line tall and the grid honest. */}
-          <div style={{
+          <div className="dialer-metric-grid" style={{
             padding: '8px 10px', display: 'grid',
             gridTemplateColumns: '1fr 1fr', gap: '4px', flexShrink: 0,
           }}>
@@ -7780,18 +7801,18 @@ function DialerPageInner() {
               { label: 'NOT INTERESTED', value: sessionStats.notInterested, color: '#d97706' },
               { label: 'DO NOT CALL', value: sessionStats.dnc, color: '#dc2626' },
             ].map((stat) => (
-              <div key={stat.label} style={{
+              <div key={stat.label} className="dialer-metric-tile" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 gap: 6, minWidth: 0,
                 padding: '5px 8px', background: terminalSurface,
                 border: `1px solid ${terminalBorder}`, borderRadius: '3px',
                 borderLeft: `3px solid ${stat.color}`,
               }}>
-                <span style={{
+                <span className="dialer-metric-label" style={{
                   fontSize: '8px', letterSpacing: '1px', color: terminalMuted,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{stat.label}</span>
-                <span style={{
+                <span className="dialer-metric-value" style={{
                   fontSize: '15px', fontWeight: 'bold', fontFamily: 'monospace',
                   color: stat.color, flexShrink: 0,
                 }}>{stat.value}</span>
@@ -7800,18 +7821,18 @@ function DialerPageInner() {
 
             {/* Sixth cell, so the grid closes evenly instead of leaving a hole
                 next to DO NOT CALL. */}
-            <div style={{
+            <div className="dialer-metric-tile" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               gap: 6, minWidth: 0,
               padding: '5px 8px', background: terminalSurface,
               border: `1px solid ${terminalBorder}`, borderRadius: '3px',
               borderLeft: `3px solid ${terminalAccent}`,
             }}>
-              <span style={{
+              <span className="dialer-metric-label" style={{
                 fontSize: '8px', letterSpacing: '1px', color: terminalMuted,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>CONV RATE</span>
-              <span style={{
+              <span className="dialer-metric-value" style={{
                 fontSize: '15px', fontWeight: 'bold', fontFamily: 'monospace',
                 color: terminalAccent, flexShrink: 0,
               }}>
