@@ -14,6 +14,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 
 const DIR = 'lib/i18n'
 const [cmd, locale, arg] = process.argv.slice(2)
@@ -76,6 +77,8 @@ if (cmd === 'status') {
   for (const p of problems) console.log('  ✗ ' + p)
   const done = ordered.filter((k) => sorted[k]).length
   console.log(`${locale}: ${done}/${ordered.length} translated`)
+  // Keep the browser's subset in step with the full dictionary.
+  execFileSync(process.execPath, ['scripts/i18n/client-dicts.mjs'], { stdio: 'ignore' })
 } else {
   console.log('usage: batch.mjs next|apply|status <locale> [arg]')
 }

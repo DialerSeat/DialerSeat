@@ -40,7 +40,13 @@ export const getUrlLocale = cache(async (): Promise<Locale | null> => {
   return isEnabledLocale(fromUrl) ? fromUrl : null
 })
 
+/** The full dictionary, for anything rendered or computed on the server. */
 export const getDictionary = cache(async (): Promise<Dictionary | null> =>
+  DICTS[await getLocale()],
+)
+
+/** The client subset, for handing to LocaleProvider in the browser. */
+export const getClientDictionary = cache(async (): Promise<Dictionary | null> =>
   loadDictionary(await getLocale()),
 )
 
