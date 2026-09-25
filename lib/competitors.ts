@@ -877,6 +877,68 @@ export const COMPETITORS: Competitor[] = [
     crossShopped: false,
     segment: 'phone_system',
   },
+  {
+    slug: 'talkdesk',
+    name: 'Talkdesk',
+    summary:
+      'An enterprise contact center platform that publishes its seat prices but sells the dialer separately, as an add-on with no published price.',
+    pricing:
+      'Digital Essentials is $85 per user per month, Voice Essentials $105, Elite $165 and Industry Experience Clouds $225. The outbound dialer is part of the Proactive Outbound Engagement add-on, whose price is not published.',
+    contract:
+      'Not stated on the pricing page. Talkdesk Express, for businesses under 50 employees, is described as having no commitment.',
+    dialing:
+      'Preview and predictive dialing through Talkdesk Dialer, sold within the Proactive Outbound Engagement add-on rather than in the seat price.',
+    wins: [
+      'A full enterprise contact center: omnichannel, workforce management, reporting',
+      'Published seat prices, which most enterprise platforms do not give',
+      'Industry-specific clouds for healthcare, financial services and retail',
+    ],
+    friction: [
+      'The dialer is an add-on with no published price, so the real cost of outbound is unknown until you talk to sales',
+      'The cheapest seat that carries voice at all is $105 a month, before the dialer',
+      'Built for contact center operations, which is a lot of platform for a floor that only dials',
+    ],
+    bestFor:
+      'Enterprise contact centers that need omnichannel, workforce management and industry compliance tooling, and have a procurement process to price the dialer add-on.',
+    team: {
+      minimum: 'Not stated, except Talkdesk Express for businesses under 50 employees',
+      addingASeat: '$85 to $225 a month depending on plan, plus the unpriced dialer add-on',
+      fiveSeats: '$525 a month on Voice Essentials, before the dialer add-on',
+    },
+    crossShopped: false,
+    segment: 'call_center',
+  },
+  {
+    slug: 'nextiva',
+    name: 'Nextiva',
+    summary:
+      'A business phone system whose published plans have no outbound dialer at all; progressive and predictive dialing sit in a contact center tier that is quoted by sales.',
+    pricing:
+      'Core is $23 per user per month, or $15 billed annually; Engage is $50, or $25 annually; Scale is $75 annually. None of them include outbound dialing. Contact center starts at $75 per agent per month for Essential, and the Professional tier that carries progressive and predictive dialing is quoted by sales.',
+    contract:
+      'Not stated. The lowest advertised price on every plan requires annual billing.',
+    dialing:
+      'No outbound dialer on the business phone plans. Progressive and predictive dialing are listed in the contact center Professional tier, which has no published price.',
+    wins: [
+      'A long-established business phone system with published plan pricing',
+      'Voice, video, SMS and the phone system in one product',
+      'Contact center tiers exist for teams that grow into them',
+    ],
+    friction: [
+      'The plans with published prices have no dialer, so the published price is not the dialing price',
+      'Progressive and predictive dialing need the Professional contact center tier, which is quoted by sales',
+      'The headline per-user prices require annual billing; paying monthly is materially more',
+    ],
+    bestFor:
+      'Businesses that want a phone system first and occasional outbound second, and are willing to move onto a quoted contact center tier if dialing becomes the job.',
+    team: {
+      minimum: 'Not stated',
+      addingASeat: '$15 to $75 a month on the business plans, or from $75 an agent on contact center',
+      fiveSeats: 'From $375 a month on contact center Essential, which does not include predictive dialing',
+    },
+    crossShopped: false,
+    segment: 'phone_system',
+  },
 ]
 
 export function competitorBySlug(slug: string): Competitor | undefined {

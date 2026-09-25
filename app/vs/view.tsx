@@ -227,6 +227,20 @@ const COMPARISONS: HubItem[] = [
     keywords: 'real estate investor expired fsbo leads storm',
   },
   {
+    href: '/vs/talkdesk',
+    label: 'VS Talkdesk',
+    note: 'Seats are priced; the dialer add-on is not',
+    added: '2026-09-25',
+    keywords: 'enterprise contact center omnichannel add-on',
+  },
+  {
+    href: '/vs/nextiva',
+    label: 'VS Nextiva',
+    note: 'The plans with a published price do not dial',
+    added: '2026-09-25',
+    keywords: 'phone system voip business contact center',
+  },
+  {
     href: '/vs/ringover',
     label: 'VS Ringover',
     note: 'A three-user minimum and a twelve-month commitment',

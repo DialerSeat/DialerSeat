@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { computeAbandonRate30d } from '@/lib/dialerPacing'
+import { PREDICTIVE_DEGRADE_PCT, PREDICTIVE_TARGET_ABANDON_PCT } from '@/lib/predictive/pacing'
 import { apiError } from '@/lib/apiError'
 
 export async function GET(req: Request) {
@@ -48,14 +49,33 @@ export async function GET(req: Request) {
       amdBreakdown[key] = (amdBreakdown[key] || 0) + 1
     }
 
+    // ── THE TWO NUMBERS, AS THE ENGINE ACTUALLY USES THEM ────────────────
+    // This screen described a recovery band that does not exist. It said
+    // multi-line stayed off "until rate drops below 2.0%", and reported
+    // autoRecoverAt as 2.0%, while the predictive engine has only ever had one
+    // threshold: at or above PREDICTIVE_DEGRADE_PCT (2.5%) it forces one line,
+    // and below it the line count is free again. There is no hysteresis, so a
+    // campaign sitting at 2.2% was being told it was still throttled when it
+    // was not.
+    //
+    // 2.0% is real, but it is a different number: PREDICTIVE_TARGET_ABANDON_PCT,
+    // the level the PROJECTION is held under when choosing lines. That is why a
+    // campaign between 2.0% and 2.5% is worth flagging — it is over the level
+    // the dialer aims to keep the projection beneath — but it is not throttled
+    // and it is not what recovery waits for. See lib/predictive/pacing.ts.
+    const DEGRADE_AT = PREDICTIVE_DEGRADE_PCT / 100   // 2.5%, forces one line
+    const TARGET_AT = PREDICTIVE_TARGET_ABANDON_PCT / 100 // 2.0%, the projection target
+
     let status: 'safe' | 'caution' | 'degraded'
     let statusMessage: string
-    if (stats.rate >= 0.025) {
+    if (stats.rate >= DEGRADE_AT) {
       status = 'degraded'
-      statusMessage = 'Pacing auto-throttled. Multi-line dialing disabled until rate drops below 2.0%.'
-    } else if (stats.rate >= 0.020) {
+      statusMessage =
+        'Pacing auto-throttled to one line. Multi-line dialing resumes once the 30-day rate is back under 2.5%.'
+    } else if (stats.rate >= TARGET_AT) {
       status = 'caution'
-      statusMessage = 'Approaching auto-throttle threshold. Pacing remains at configured rate but is one tick away from degrading.'
+      statusMessage =
+        'Above the 2% the dialer aims to keep its projection under, and below the 2.5% that forces one line. Still multi-line, with less room than usual.'
     } else {
       status = 'safe'
       statusMessage = 'Well under the 3% legal cap. Pacing is operating at configured multiplier.'
@@ -73,8 +93,10 @@ export async function GET(req: Request) {
         abandonedCalls: stats.abandoned,
         answeredCalls: stats.answered,
         legalCap: 0.03,
-        autoThrottleAt: 0.025,
-        autoRecoverAt: 0.020,
+        autoThrottleAt: DEGRADE_AT,
+        // The same threshold, not a lower one: there is no recovery band.
+        autoRecoverAt: DEGRADE_AT,
+        projectionTarget: TARGET_AT,
         status,
         statusMessage,
       },
