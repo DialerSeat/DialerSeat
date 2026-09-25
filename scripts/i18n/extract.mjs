@@ -88,6 +88,12 @@ const NOT_TEXT_KEY = /^(className|class|href|src|srcSet|id|key|slug|icon|color|c
 // (agents read it to US leads), and language names stay in their own language.
 const KEEP_ENGLISH = new Set(['components/DialerShowcase.tsx', 'components/LeadQueueShowcase.tsx', 'components/LanguageDropdown.tsx', 'components/LanguagePrompt.tsx'])
 const NEVER_ALONE = new Set(['DialerSeat', 'DIALERSEAT', 'Dialerseat'])
+// isProse was written to mark code, so it rejects anything with a semicolon or
+// a CSS word ("auto-dials", "fixed fee"). In data, a sentence of four or more
+// words that starts like a sentence is a sentence.
+const looksProse = (s) => isProse(s) || (
+  s.split(/\s+/).length >= 4 && /^[A-Z0-9$~+"(‘“]/.test(s) &&
+  !/[{}<>`\\]|=>|\$\{/.test(s) && !/\b\d+(px|em|rem|vh|vw|ms|deg)\b|rgba?\(|var\(--/.test(s))
 
 const publicScope = new Set()
 {
@@ -126,15 +132,18 @@ for (const file of [...publicScope, ...DATA_FILES].sort()) {
     if (ts.isJsxAttribute(n) && /^(style|className)$/.test(n.name.getText(sf))) return
     if (ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) return
     let text = null
+    let prop = false
     if (ts.isJsxAttribute(n) && n.initializer && !NOT_TEXT_KEY.test(n.name.getText(sf))) {
       const init = ts.isJsxExpression(n.initializer) ? n.initializer.expression : n.initializer
       if (init) text = literalText(init)
+      // Passed into a component: that component may render in the browser.
+      prop = /^[A-Z]/.test(n.parent.parent.tagName.getText(sf))
     } else if (ts.isPropertyAssignment(n) && !NOT_TEXT_KEY.test(n.name.getText(sf).replace(/['"]/g, ''))) {
       text = literalText(n.initializer)
     } else if (n.parent && ts.isArrayLiteralExpression(n.parent) && (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n) || ts.isBinaryExpression(n))) {
       text = literalText(n)
     }
-    if (text != null && isProse(text.trim()) && !NEVER_ALONE.has(text.trim())) add(text, file)
+    if (text != null && looksProse(text.trim()) && !NEVER_ALONE.has(text.trim())) add(text, prop ? file + '#prop' : file)
     ts.forEachChild(n, visit)
   }
   visit(sf)

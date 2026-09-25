@@ -31,7 +31,10 @@ const isClient = (f) => {
 // 'use client' file, but client components render it, so it ships too. So do
 // dictionary entries the catalog no longer lists: the live wording of a page
 // someone is rewriting, kept translated until the rewrite ships.
-const isShared = (f) => f.startsWith('lib/')
+const isShared = (f) => f.startsWith('lib/') ||
+  // Text a server page hands to a component as a prop (extract.mjs marks it):
+  // the component may render it in the browser.
+  f.endsWith('#prop')
 const clientKeys = Object.keys(catalog).filter((k) => catalog[k].some((f) => isClient(f) || isShared(f)))
 
 fs.mkdirSync(path.join(DIR, 'dictionaries', 'client'), { recursive: true })

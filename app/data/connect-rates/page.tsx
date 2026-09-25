@@ -211,8 +211,8 @@ export default async function ConnectRatesPage() {
                 {t("NOT ENOUGH DATA YET")}</div>
               <p style={{ fontSize: 14, lineHeight: 1.8, color: INK, margin: '8px 0 0' }}>
                 {t("{value}Nothing is published below {mIN_SAMPLE} calls in a bucket, because a rate computed from a smaller sample moves several points on ordinary variance. The tables below will fill in on their own as volume accumulates: no number here is ever estimated, smoothed, or carried over from a previous period.", { value: buckets
-                  ? `The platform has recorded ${buckets.total.dials.toLocaleString()} dials in the last 90 days. `
-                  : 'Platform data is not available in this environment. ', mIN_SAMPLE: MIN_SAMPLE.toLocaleString() })}</p>
+                  ? t("The platform has recorded {dials} dials in the last 90 days. ", { dials: buckets.total.dials.toLocaleString() })
+                  : t("Platform data is not available in this environment. "), mIN_SAMPLE: MIN_SAMPLE.toLocaleString() })}</p>
             </div>
           )}
 
