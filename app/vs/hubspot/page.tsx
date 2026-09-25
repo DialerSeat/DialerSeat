@@ -55,7 +55,7 @@ const FAQS = [
   {
     question: "Can I use DialerSeat with HubSpot?",
     answer:
-      "Yes. DialerSeat accepts leads pushed from HubSpot by webhook and reads the fields HubSpot nests under properties, so contacts can flow from the CRM into a dialing campaign without reformatting.",
+      "Yes, on team campaigns. A team owner on Manager+ can switch on lead drip, a webhook URL for a campaign, and DialerSeat reads the fields HubSpot nests under properties, so contacts flow from the CRM into that campaign without reformatting.",
   },
 ]
 

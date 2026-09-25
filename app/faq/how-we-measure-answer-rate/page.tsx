@@ -1,0 +1,211 @@
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import JsonLd from '@/components/json-ld'
+import SiteHeader from '@/components/site-header'
+import SiteFooter from '@/components/site-footer'
+import GutsShell, { GutsSection } from '@/components/GutsShell'
+import { faqRail } from '@/lib/gutsRail'
+import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+
+// =============================================================================
+// /faq/how-we-measure-answer-rate
+// =============================================================================
+// Every rule on this page is lib/dialOutcome, and every surface that quotes a
+// rate uses it: api/analytics/summary, api/teams/[id]/analytics,
+// api/manager/analytics, api/cron/number-health and /data/connect-rates.
+//
+//   answered          calls.answered_at, written once on the carrier's answer
+//                       event for the lead leg (api/calls/events)
+//   never rang        no answered_at AND duration 0 (neverRang). Out of the
+//                       denominator of every answer, connect and contact rate;
+//                       kept in dial counts and cost, because it was billed
+//   still ringing     same signature, since duration is written at hangup, so
+//                       it counts neither way until it ends
+//   minimum sample    /data/connect-rates MIN_SAMPLE = 250, a dash below it
+//
+// DELIBERATELY NOT HERE: the platform figures from the dead-socket bug that
+// made this rule necessary. The worked example is invented and labelled as
+// such, so no reader can mistake it for our numbers.
+// =============================================================================
+
+const ROUTE = '/faq/how-we-measure-answer-rate'
+
+export const metadata: Metadata = {
+  title: 'How DialerSeat Measures Answer Rate and Connect Rate | DialerSeat',
+  description:
+    'An answer rate is only as honest as its denominator. DialerSeat counts every dial you paid for, but calculates answer and connect rates only over dials that actually rang, so a technical failure is never blamed on your list.',
+  keywords: [
+    'how to calculate answer rate',
+    'dialer answer rate',
+    'connect rate calculation',
+    'outbound call answer rate',
+    'contact rate vs connect rate',
+    'cold calling answer rate',
+  ],
+  alternates: { canonical: `https://dialerseat.com${ROUTE}` },
+  openGraph: {
+    title: 'How DialerSeat Measures Answer Rate',
+    description:
+      'Every dial you paid for is counted. Only dials that rang are in the rate.',
+    url: `https://dialerseat.com${ROUTE}`,
+    type: 'article',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'How DialerSeat Measures Answer Rate',
+    description: 'Every dial you paid for is counted. Only dials that rang are in the rate.',
+  },
+}
+
+const FAQS = [
+  {
+    question: 'How does DialerSeat calculate answer rate?',
+    answer:
+      'Answered calls divided by dials that actually rang. A dial that failed before it reached the phone, with no answer and no ring time at all, is left out of the answer, connect and contact rates, because nobody had the chance to pick up. It is still counted in your dial totals and in your costs, because it was attempted and billed.',
+  },
+  {
+    question: 'Why not divide by every dial?',
+    answer:
+      'Because a dial that never rang tells you nothing about your list, your hours or your caller ID. Dividing by every dial would lower the rate every time something failed on the way out, and you would go looking for the problem in the wrong place.',
+  },
+  {
+    question: 'Are calls that are still ringing counted as unanswered?',
+    answer:
+      'No. A call is not counted either way until it has finished. Counting a call that is ringing right now as a miss would pull the rate down during every busy hour.',
+  },
+  {
+    question: 'Does the same rule apply to phone number health?',
+    answer:
+      'Yes. Each number’s answer rate is compared with the rest of the pool using only calls that rang, so a number is never held back because of dials that never reached anyone.',
+  },
+]
+
+export default function Page() {
+  return (
+    <>
+      <JsonLd data={faqPageSchema(FAQS)} />
+      <JsonLd
+        data={breadcrumbSchema([
+          { name: 'Home', url: '/' },
+          { name: 'FAQ', url: '/faq' },
+          { name: 'How we measure answer rate', url: ROUTE },
+        ])}
+      />
+      <SiteHeader />
+      <GutsShell rail={faqRail(ROUTE)} activeHref={ROUTE}>
+
+        <GutsSection>
+          <div className="guts-hero">
+            <div className="guts-eyebrow">▸ METRICS</div>
+            <h1>
+              A dial that never rang
+              <span className="second">isn’t a missed call.</span>
+            </h1>
+            <p>
+              An answer rate is only as honest as what it’s divided by. We count every dial you paid
+              for, and we calculate your rates only over the dials that actually reached a phone.
+            </p>
+          </div>
+        </GutsSection>
+
+        <GutsSection icon="info" title="The three numbers">
+          <div className="guts-grid-3">
+            <div className="guts-panel">
+              <div className="role">DIALS</div>
+              <h3>Every attempt</h3>
+              <p>
+                Every call the dialer placed, whatever happened next. This is what you pay for, so
+                it is what your dial counts and costs are built on.
+              </p>
+            </div>
+            <div className="guts-panel">
+              <div className="role">DIALS THAT RANG</div>
+              <h3>The denominator</h3>
+              <p>
+                Dials that reached the other end. Only these gave anyone the chance to answer.
+              </p>
+            </div>
+            <div className="guts-panel">
+              <div className="role">ANSWERED</div>
+              <h3>Somebody picked up</h3>
+              <p>
+                Recorded once, at the moment the carrier reports the call was answered. Not inferred
+                from how long the call lasted.
+              </p>
+            </div>
+          </div>
+          <p style={{ marginTop: 24 }}>
+            Answer rate is <strong>answered ÷ dials that rang</strong>. Connect and contact rates use
+            the same denominator.
+          </p>
+        </GutsSection>
+
+        <GutsSection icon="alert" title="What “never rang” means">
+          <p>
+            A dial can fail on the way out before it ever reaches a phone. When that happens there is
+            no answer and no ring time at all: zero seconds. A phone that nobody picks up still rings
+            for twenty seconds or more, so the two are easy to tell apart.
+          </p>
+          <p>
+            A dial like that is left out of the rate, because no one had the chance to answer it. It
+            stays in your dial count and your costs, because it really was attempted and billed.
+            Hiding it from those would make your costs look lower than they are.
+          </p>
+        </GutsSection>
+
+        <GutsSection icon="table" title="Why it matters: an example">
+          <p>
+            An invented campaign, to show the arithmetic. Not our data.
+          </p>
+          <div className="guts-grid-2">
+            <div className="guts-panel">
+              <div className="role">DIVIDED BY EVERY DIAL</div>
+              <h3>32%</h3>
+              <p>1,000 dials, 320 answered. But 200 of those dials failed before they rang.</p>
+            </div>
+            <div className="guts-panel">
+              <div className="role">DIVIDED BY DIALS THAT RANG</div>
+              <h3>40%</h3>
+              <p>800 dials rang, 320 answered. This is how the list actually performed.</p>
+            </div>
+          </div>
+          <p style={{ marginTop: 24 }}>
+            The first figure would send you to change your list, your calling hours or your caller
+            ID, when none of them was the problem. The second tells you how people actually
+            responded.
+          </p>
+        </GutsSection>
+
+        <GutsSection icon="check" title="Two more rules">
+          <ul className="guts-list good">
+            <li>
+              <strong>Calls still ringing don’t count yet.</strong> Until a call has finished it isn’t
+              evidence either way, so it isn’t counted as answered or unanswered.
+            </li>
+            <li>
+              <strong>Small samples get a dash, not a number.</strong> Our public{' '}
+              <Link href="/data/connect-rates">connect-rate data</Link> shows a rate only where at
+              least 250 dials rang. Below that, ordinary chance would move the figure by several
+              points, and we would be publishing noise.
+            </li>
+          </ul>
+        </GutsSection>
+
+        <GutsSection icon="phone" title="The same rule for your numbers">
+          <p>
+            Each caller ID’s answer rate is compared with the rest of the pool to catch numbers that
+            carriers have started flagging. That comparison uses only calls that rang, so a number is
+            never held back because of dials that never reached anyone. See{' '}
+            <Link href="/faq/how-we-keep-numbers-clean">how we keep numbers clean</Link>.
+          </p>
+          <div className="guts-btns">
+            <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
+            <Link href="/data/connect-rates" className="guts-btn secondary">SEE CONNECT-RATE DATA</Link>
+          </div>
+        </GutsSection>
+
+      </GutsShell>
+      <SiteFooter />
+    </>
+  )
+}

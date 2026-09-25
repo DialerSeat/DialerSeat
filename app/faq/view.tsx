@@ -95,6 +95,13 @@ const ANSWERS: HubItem[] = [
     keywords: 'voicemail machine detection',
   },
   {
+    href: '/faq/is-a-predictive-dialer-legal',
+    label: 'Is a predictive dialer legal?',
+    note: 'The 3% abandon rule, and the four conditions around it',
+    added: '2026-09-25',
+    keywords: 'compliance legal tcpa tsr abandoned fcc ftc',
+  },
+  {
     href: '/faq/why-is-compliance-important',
     label: 'Why is compliance important?',
     note: 'And why legacy dialers do not seem to care',
@@ -114,6 +121,13 @@ const ANSWERS: HubItem[] = [
     note: 'The windows DialerSeat enforces per lead',
     added: '2026-08-07',
     keywords: 'tcpa compliance time zone curfew',
+  },
+  {
+    href: '/faq/how-to-scrub-the-do-not-call-registry',
+    label: 'Scrubbing the Do Not Call Registry',
+    note: 'Access, cost, the 31-day rule, and the exceptions',
+    added: '2026-09-25',
+    keywords: 'compliance dnc do not call registry ftc scrub list',
   },
   {
     href: '/faq/compliance-export',
@@ -158,6 +172,13 @@ const ANSWERS: HubItem[] = [
     keywords: 'spam likely scam likely label caller id stir shaken cnam free caller registry',
   },
   {
+    href: '/faq/local-presence-dialing',
+    label: 'Local presence dialing',
+    note: 'How a caller ID gets picked for every single call',
+    added: '2026-09-25',
+    keywords: 'numbers caller id area code local presence',
+  },
+  {
     href: '/faq/how-many-numbers-do-i-need',
     label: 'How many numbers do I need?',
     note: 'What a dialing floor actually burns through',
@@ -172,6 +193,13 @@ const ANSWERS: HubItem[] = [
     keywords: 'import spreadsheet list data',
   },
   {
+    href: '/faq/send-leads-from-your-crm',
+    label: 'Send leads from your CRM',
+    note: 'One webhook URL per campaign, for any tool',
+    added: '2026-09-25',
+    keywords: 'leads webhook integration gohighlevel hubspot zapier drip',
+  },
+  {
     href: '/faq/campaigns',
     label: 'Setting up a campaign',
     note: 'Mode, AMD, and predictive pacing',
@@ -184,6 +212,13 @@ const ANSWERS: HubItem[] = [
     note: 'Write them, attach them, reorder them',
     added: '2026-07-20',
     keywords: 'pitch talk track',
+  },
+  {
+    href: '/faq/how-we-measure-answer-rate',
+    label: 'How we measure answer rate',
+    note: 'What goes in the denominator, and what does not',
+    added: '2026-09-25',
+    keywords: 'metrics answer connect contact rate analytics',
   },
   {
     href: '/faq/dialerseat-teams',
@@ -240,6 +275,20 @@ const ANSWERS: HubItem[] = [
     note: 'VAs, Philippines teams, and what they need',
     added: '2026-08-06',
     keywords: 'team remote virtual assistant',
+  },
+  {
+    href: '/faq/dialer-for-insurance-agents',
+    label: 'Dialer for insurance agents',
+    note: 'Medicare, final expense, ACA and P&C: what matters',
+    added: '2026-09-25',
+    keywords: 'insurance medicare final expense vertical agent',
+  },
+  {
+    href: '/faq/dialer-glossary',
+    label: 'Dialer glossary',
+    note: 'Every term in outbound calling, defined once',
+    added: '2026-09-25',
+    keywords: 'glossary terms definitions jargon abandoned amd',
   },
   {
     href: '/faq/data-and-recordings',

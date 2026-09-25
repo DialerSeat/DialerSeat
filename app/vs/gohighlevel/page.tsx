@@ -50,7 +50,7 @@ const FAQS = [
   {
     question: "Should an agency use GoHighLevel’s dialer or DialerSeat?",
     answer:
-      "If your clients already run on HighLevel and dialing is an occasional task, its built-in dialer keeps everything in one account. If dialing is the job, a dedicated dialer gives you predictive and multi-line dialing, calling with no per-minute wallet, and white-labeling on Manager+ for $75 a week. You can also run both: keep leads in HighLevel and push them into DialerSeat by webhook.",
+      "If your clients already run on HighLevel and dialing is an occasional task, its built-in dialer keeps everything in one account. If dialing is the job, a dedicated dialer gives you predictive and multi-line dialing, calling with no per-minute wallet, and white-labeling on Manager+ for $75 a week. You can also run both: on team campaigns, Manager+ includes lead drip, a webhook that takes leads straight from HighLevel into a DialerSeat campaign.",
   },
 ]
 

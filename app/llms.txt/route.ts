@@ -102,6 +102,13 @@ who want to offer a branded dialer to their own clients.
 - [Compliance export](${ROOT}/faq/compliance-export): downloadable per-campaign CSV of AMD results, abandon flags, and dispositions, redacted by default.
 - [Billing & cancellation](${ROOT}/faq/billing): what cancellation, failed payments, and mid-week seat changes actually do.
 - [Recordings & your data](${ROOT}/faq/data-and-recordings): recording retention, full-account JSON export, permanent account deletion.
+- [Is a predictive dialer legal?](${ROOT}/faq/is-a-predictive-dialer-legal): the FTC/FCC 3% abandoned-call cap, the 15-second ring, the recorded message and opt-out, and which of them DialerSeat enforces automatically.
+- [Scrubbing the Do Not Call Registry](${ROOT}/faq/how-to-scrub-the-do-not-call-registry): registry access, the $85-per-area-code fee from October 2026, the 31-day rule, and the two exceptions. DialerSeat does not scrub for you and says so.
+- [Local presence dialing](${ROOT}/faq/local-presence-dialing): how a caller ID is chosen per call, area code then state then region, with per-number daily caps.
+- [Send leads from your CRM](${ROOT}/faq/send-leads-from-your-crm): lead drip, one webhook URL per campaign, accepting any CRM field names.
+- [How answer rate is measured](${ROOT}/faq/how-we-measure-answer-rate): dials that never rang are excluded from rates and kept in dial counts and cost.
+- [Dialer glossary](${ROOT}/faq/dialer-glossary): every term in outbound calling defined once, legal definitions where they exist.
+- [Dialer for insurance agents](${ROOT}/faq/dialer-for-insurance-agents): Medicare, final expense, ACA and P&C, calling windows per lead state and what stays the agent's responsibility.
 - [FAQ](${ROOT}/faq): plain-English answers about dialers and the product.
 
 ## For teams and floors

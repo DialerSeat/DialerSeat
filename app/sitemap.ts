@@ -127,6 +127,18 @@ function apexSitemap(now: Date): MetadataRoute.Sitemap {
     e('/faq/how-we-keep-numbers-clean', 0.8, 'monthly'),
     e('/faq/why-we-dont-rest-flagged-numbers', 0.75, 'monthly'),
 
+
+    // Compliance questions people search before they search for a product.
+    // "is a predictive dialer legal" is the highest-intent question in the
+    // category: nobody asks it who is not about to buy one.
+    e('/faq/is-a-predictive-dialer-legal', 0.85, 'monthly'),
+    e('/faq/how-to-scrub-the-do-not-call-registry', 0.8, 'monthly'),
+
+    e('/faq/local-presence-dialing', 0.8, 'monthly'),
+    e('/faq/send-leads-from-your-crm', 0.8, 'monthly'),
+    e('/faq/how-we-measure-answer-rate', 0.7, 'monthly'),
+    e('/faq/dialer-glossary', 0.7, 'monthly'),
+    e('/faq/dialer-for-insurance-agents', 0.85, 'monthly'),
     e('/faq/managers', 0.7, 'monthly'),
     e('/faq/white-label', 0.7, 'monthly'),
     
