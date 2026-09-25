@@ -118,7 +118,6 @@ function SellerIdentityDialogBody({ ownerIsYou, onSaved, onUseProgressive, onClo
           width: '100%', maxWidth: 440, boxSizing: 'border-box',
           background: SURFACE,
           border: `1px solid ${BORDER}`,
-          borderTop: '3px solid var(--brand-primary)',
           borderRadius: 4, padding: 24,
           color: 'var(--brand-on-sidebar)', fontFamily: FUTURA,
         }}
@@ -149,7 +148,7 @@ function SellerIdentityDialogBody({ ownerIsYou, onSaved, onUseProgressive, onClo
               type="text"
               value={name}
               maxLength={80}
-              placeholder="Acme Insurance"
+              placeholder="Your Company LLC"
               autoComplete="organization"
               onChange={e => setName(e.target.value)}
               style={inputStyle}
@@ -254,12 +253,15 @@ const inputStyle: React.CSSProperties = {
   fontSize: 13, fontFamily: FUTURA, marginBottom: 4,
 }
 
+// The canonical primary button (docs/PALETTE.md): a dark face with the brand
+// colour as a stripe and as the text, not a filled block. A solid brand-blue
+// button glowed on this dark dialog in a way nothing else in the product does.
 function primaryButton(busy: boolean): React.CSSProperties {
   return {
     flex: '1 1 180px', padding: 12,
-    background: 'var(--brand-primary)', color: 'var(--brand-on-primary)',
-    border: 'none', borderRadius: 3,
-    fontSize: 11, fontWeight: 700, letterSpacing: 2, fontFamily: FUTURA,
+    background: 'var(--brand-header-bg)', color: 'var(--brand-primary)',
+    border: 'none', borderTop: '3px solid var(--brand-primary)', borderRadius: 3,
+    fontSize: 11, fontWeight: 700, letterSpacing: 3, fontFamily: FUTURA,
     cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.7 : 1,
     marginTop: 12,
   }

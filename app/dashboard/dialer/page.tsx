@@ -8153,7 +8153,7 @@ function DialerPageInner() {
               // went anywhere. Dialing time is the input, and reads as the
               // smaller number beside it.
               { label: 'TIME CONNECTED', seconds: sessionStats.talkSeconds, color: 'var(--brand-primary)' },
-              { label: 'TIME DIALING', seconds: sessionStats.dialSeconds, color: terminalAccent },
+              { label: 'TIME DIALED', seconds: sessionStats.dialSeconds, color: terminalAccent },
             ].map((stat) => (
               <div key={stat.label} className="dialer-metric-tile" style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',

@@ -700,7 +700,7 @@ export default function WhitelabelOnboardingPage() {
               type="text"
               value={brandName}
               onChange={e => setBrandName(e.target.value)}
-              placeholder="Acme Sales Group"
+              placeholder="Your Company"
               maxLength={64}
               style={inputStyle}
             />
@@ -717,7 +717,7 @@ export default function WhitelabelOnboardingPage() {
                 type="text"
                 value={slug}
                 onChange={e => setSlug(e.target.value.toLowerCase())}
-                placeholder="acme"
+                placeholder="yourcompany"
                 maxLength={30}
                 style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
               />

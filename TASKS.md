@@ -31,7 +31,7 @@ What to read when it runs (docs/PREDICTIVE.md has the full spec):
 All four shipped together. Nothing here is verified on a live floor yet.
 
 1. **Daily metrics: swap the two times.** DONE. TIME CONNECTED on the left,
-   TIME DIALING on the right.
+   TIME DIALED on the right.
 2. **Live calls full screen should not take the page with it.** DONE. Opening
    live calls asked the browser for real fullscreen on the way in, so one
    button did two things. It now only swaps what the app shows; the button

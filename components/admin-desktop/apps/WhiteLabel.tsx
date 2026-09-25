@@ -424,12 +424,12 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
     <ModalShell title="New White Label Tenant" onClose={onClose}>
       <div style={{ display: 'grid', gap: 10 }}>
         <div>
-          <label className="wl-label">Slug (subdomain) <span style={{ color: C.muted }}>e.g. &quot;acme&quot; → acme.dialerseat.com</span></label>
-          <input className="wl-input" value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())} placeholder="acme" />
+          <label className="wl-label">Slug (subdomain) <span style={{ color: C.muted }}>e.g. &quot;yourcompany&quot; → yourcompany.dialerseat.com</span></label>
+          <input className="wl-input" value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())} placeholder="yourcompany" />
         </div>
         <div>
           <label className="wl-label">Brand Name</label>
-          <input className="wl-input" value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="Acme Dialer" />
+          <input className="wl-input" value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="Your Company Dialer" />
         </div>
         <div>
           <label className="wl-label">Owner Clerk ID <span style={{ color: C.muted }}>(user_... must already exist in users)</span></label>
@@ -437,7 +437,7 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
         </div>
         <div>
           <label className="wl-label">Support Email <span style={{ color: C.muted }}>(optional)</span></label>
-          <input className="wl-input" type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} placeholder="support@acme.com" />
+          <input className="wl-input" type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} placeholder="support@yourcompany.com" />
         </div>
         <div>
           <label className="wl-label">Primary Color <span style={{ color: C.muted }}>(buttons + accents; the other 3 tokens start at defaults, edit in Branding)</span></label>
@@ -772,7 +772,7 @@ function BrandingSubTab() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
                 <label className="wl-label">Support Email</label>
-                <input className="wl-input" value={draft.support_email} onChange={(e) => setDraft({ ...draft, support_email: e.target.value })} placeholder="support@acme.com" />
+                <input className="wl-input" value={draft.support_email} onChange={(e) => setDraft({ ...draft, support_email: e.target.value })} placeholder="support@yourcompany.com" />
               </div>
               <div>
                 <label className="wl-label">Footer Text</label>
@@ -1353,7 +1353,7 @@ function SettingsSubTab() {
             {/* Custom domain */}
             <div>
               <label className="wl-label" style={{ fontWeight: 'bold' }}>Custom Domain</label>
-              <input className="wl-input" value={customDomain} onChange={e => setCustomDomain(e.target.value.trim())} placeholder="dialer.acme.com" style={{ fontFamily: 'monospace' }} />
+              <input className="wl-input" value={customDomain} onChange={e => setCustomDomain(e.target.value.trim())} placeholder="dialer.yourcompany.com" style={{ fontFamily: 'monospace' }} />
               <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>
                 Stored here for reference. DNS/SSL provisioning for custom domains is separate infrastructure and still on the backlog, setting this does not yet make the domain resolve.
               </div>

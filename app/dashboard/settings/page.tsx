@@ -756,7 +756,7 @@ export default function SettingsPage() {
               type="text"
               value={sellerName}
               maxLength={80}
-              placeholder="Acme Insurance"
+              placeholder="Your Company LLC"
               autoComplete="organization"
               onChange={e => { setSellerName(e.target.value); setSellerNote(null) }}
               style={{ ...brandSelectStyle(false), cursor: 'text', marginBottom: 12, boxSizing: 'border-box' }}
