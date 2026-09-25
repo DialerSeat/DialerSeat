@@ -159,16 +159,30 @@ async function gatherBillingHistory(clerkId: string | null) {
 
   const { data, error } = await supabase
     .from('billing_events')
-    .select('event_type, created_at')
+    .select('event_type, created_at, stripe_subscription_id')
     .eq('clerk_id', clerkId)
     .in('event_type', ['initial_sub', 'resub', 'renewal', 'cancel'])
     .order('created_at', { ascending: true })
 
   if (error || !data) return empty
 
-  const purchases = data.filter((r: any) =>
+  // ── A PURCHASE IS A SUBSCRIPTION, NOT A LOG LINE ─────────────────────────
+  // Until 25 Sept a declined renewal paid late was also announced as a new
+  // subscription, so the ledger holds a second initial_sub for a plan bought
+  // once (18 and 25 Sept). The ledger is append-only, so it is counted right
+  // here instead: one purchase per subscription, and a row with no
+  // subscription id counts on its own. Overstating purchases in evidence sent
+  // to the card issuer is the one thing this function must never do.
+  const purchaseRows = data.filter((r: any) =>
     r.event_type === 'initial_sub' || r.event_type === 'resub'
-  ).length
+  ) as Array<{ stripe_subscription_id: string | null }>
+  const purchasedSubs = new Set<string>()
+  let purchasesWithoutId = 0
+  for (const r of purchaseRows) {
+    if (r.stripe_subscription_id) purchasedSubs.add(r.stripe_subscription_id)
+    else purchasesWithoutId++
+  }
+  const purchases = purchasedSubs.size + purchasesWithoutId
   const cancels = data.filter((r: any) => r.event_type === 'cancel')
 
   // The shortest gap between cancelling and buying again. A gap measured in

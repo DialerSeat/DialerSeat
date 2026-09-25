@@ -22,7 +22,7 @@ interface LogEntry {
   id: string
   event_type:
     | 'account_created' | 'account_deleted' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
-    | 'cancel_scheduled' | 'payment_failed'
+    | 'cancel_scheduled' | 'payment_failed' | 'pause' | 'resume'
     | 'seat_charge'
   user_name: string
   user_email: string | null
@@ -36,7 +36,7 @@ interface LogEntry {
 
 interface LogsResponse {
   entries: LogEntry[]
-  counts: { accountsCreated: number; accountsDeleted: number; initialSubs: number; resubs: number; renewals: number; cancels: number; cancelsScheduled: number; paymentsFailed: number }
+  counts: { accountsCreated: number; accountsDeleted: number; initialSubs: number; resubs: number; renewals: number; cancels: number; cancelsScheduled: number; paymentsFailed: number; pauses: number; resumes: number }
   timeframe: TimeframeKey
   window_days: number | null
 }
@@ -64,6 +64,9 @@ const C = {
   cancel_scheduled: '#ffa33d',
   // Orange-red — money that did not arrive, and is usually recoverable today.
   payment_failed: '#ff6b35',
+  // Steel, not red or amber: billing stopped, plan kept, nobody has left.
+  pause: '#9fb4d0',
+  resume: '#7fd8ff',       // Light cyan: billing restarted on the same plan
   seat_charge: '#a0e838',  // Lime — a seat, distinct from a personal sub
   error: '#ff8844',        // Amber for errors
   amount: '#ffe048',       // Yellow for money
@@ -71,7 +74,9 @@ const C = {
 
 const FONT = '"SF Mono", "Cascadia Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, "Courier New", monospace'
 
-const FILTER_KEYS: FilterMode[] = ['all', 'account_created', 'account_deleted', 'initial_sub', 'resub', 'renewal', 'cancel_scheduled', 'cancel', 'payment_failed']
+// New filters go on the end: keys 1-6 select by position, and the chips are
+// numbered in this order, so moving an existing one renumbers what people know.
+const FILTER_KEYS: FilterMode[] = ['all', 'account_created', 'account_deleted', 'initial_sub', 'resub', 'renewal', 'cancel_scheduled', 'cancel', 'payment_failed', 'pause', 'resume']
 
 type TimeframeKey = '24h' | '7d' | '30d' | '90d' | 'all'
 const TIMEFRAME_OPTIONS: { key: TimeframeKey; label: string }[] = [
@@ -240,6 +245,8 @@ export default function LogsApp() {
           { key: 'cancel_scheduled', label: 'cancelled (still active)', count: data?.counts.cancelsScheduled ?? 0 },
           { key: 'cancel', label: 'cancel', count: data?.counts.cancels ?? 0 },
           { key: 'payment_failed', label: 'card declined', count: data?.counts.paymentsFailed ?? 0 },
+          { key: 'pause', label: 'paused', count: data?.counts.pauses ?? 0 },
+          { key: 'resume', label: 'resumed', count: data?.counts.resumes ?? 0 },
           { key: 'seat_charge', label: 'seat charge', count: entries.filter(e => e.event_type === 'seat_charge').length },
         ] as const).map((f, i) => (
           <button
@@ -343,6 +350,7 @@ export default function LogsApp() {
           <span>resubs: {data.counts.resubs}</span>
           <span>renewals: {data.counts.renewals}</span>
           <span>cancels: {data.counts.cancels}</span>
+          <span>pauses: {data.counts.pauses ?? 0}</span>
         </div>
       )}
     </div>

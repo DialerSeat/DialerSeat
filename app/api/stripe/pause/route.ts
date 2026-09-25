@@ -5,6 +5,7 @@ import { stripe } from '@/lib/stripe'
 import { requireNotAdmin } from '@/lib/subscription'
 import { sendAdminPush } from '@/lib/pushNotify'
 import { lookupUserIdentity } from '@/lib/userDisplayName'
+import { logBillingEvent } from '@/lib/billingEvents'
 
 const supabase = getServiceClient('stripe/pause')
 
@@ -32,10 +33,15 @@ const supabase = getServiceClient('stripe/pause')
 // free unlimited dialing. getAccessState in proxy.ts reads that marker.
 // =============================================================================
 
+/** The billing log records 'pro' or 'wl'; anything else is left blank. */
+function planOf(plan: string | null | undefined): 'pro' | 'wl' | null {
+  return plan === 'pro' || plan === 'wl' ? plan : null
+}
+
 async function loadSubscription(userId: string) {
   const { data } = await supabase
     .from('subscriptions')
-    .select('stripe_subscription_id, status, cancel_at_period_end, paused_at')
+    .select('stripe_subscription_id, status, cancel_at_period_end, paused_at, plan')
     .eq('user_id', userId)
     .in('status', ['active', 'past_due'])
     .order('created_at', { ascending: false })
@@ -105,8 +111,16 @@ export async function POST(req: Request) {
       // Alvarez paused" is — a pause is the one churn signal you can still do
       // something about. Non-fatal: a push failure must not fail the pause.
       try {
-        const { name } = await lookupUserIdentity(userId)
+        const { name, email } = await lookupUserIdentity(userId)
         await sendAdminPush('sub_paused', `${name} paused their subscription. Billing is stopped; their data is preserved.`)
+        // In the billing log as a pause, not left out of it: without this a
+        // later cancel was the first thing the log knew about this customer
+        // stepping back. Never throws (lib/billingEvents).
+        await logBillingEvent({
+          event_type: 'pause', clerk_id: userId, user_name: name, user_email: email,
+          plan: planOf(sub.plan), stripe_subscription_id: sub.stripe_subscription_id,
+          detail: { source: 'customer' },
+        })
       } catch (pushErr) {
         console.error('[stripe/pause] pause notification failed:', pushErr)
       }
@@ -170,8 +184,13 @@ export async function POST(req: Request) {
     }
 
     try {
-      const { name } = await lookupUserIdentity(userId)
+      const { name, email } = await lookupUserIdentity(userId)
       await sendAdminPush('sub_resumed', `${name} resumed their subscription. Billing has restarted.`)
+      await logBillingEvent({
+        event_type: 'resume', clerk_id: userId, user_name: name, user_email: email,
+        plan: planOf(sub.plan), stripe_subscription_id: sub.stripe_subscription_id,
+        detail: { source: 'customer' },
+      })
     } catch (pushErr) {
       console.error('[stripe/pause] resume notification failed:', pushErr)
     }

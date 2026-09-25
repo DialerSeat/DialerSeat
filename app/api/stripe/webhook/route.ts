@@ -674,7 +674,15 @@ async function routeWhitelabel(
     // slipped past claimStripeEvent's id-based dedup for some reason).
     const alreadyActive = existingRow?.status === 'active'
 
-    if (!alreadyActive) {
+    // ── A LATE RENEWAL IS A RENEWAL ──────────────────────────────────────
+    // past_due or unpaid back to active, on this same subscription, is a
+    // declined renewal being paid. The invoice.paid for it already says
+    // "renewed"; announcing it here as well sent "subscribed" and "renewed"
+    // for one payment (18 and 25 Sept). A new plan after a cancellation is a
+    // different subscription, so it still says "resubscribed".
+    const recoveredRenewal = existingRow?.status === 'past_due' || existingRow?.status === 'unpaid'
+
+    if (!alreadyActive && !recoveredRenewal) {
       // Same fix as before, still needed: exclude incomplete/
       // incomplete_expired rows from counting as a genuine PRIOR
       // subscription — a failed/retried earlier attempt by the same
@@ -980,40 +988,51 @@ async function syncPersonalSubscription(
 
     const alreadyActive = existingRow?.status === 'active'
 
+    // ── A LATE RENEWAL IS A RENEWAL ──────────────────────────────────────
+    // past_due or unpaid back to active, on this same subscription, is a
+    // declined renewal being paid. The invoice.paid for it already says
+    // "renewed"; announcing it here as well sent "subscribed" and "renewed"
+    // for one payment (18 and 25 Sept). A new plan after a cancellation is a
+    // different subscription, so it still says "resubscribed". Only the
+    // announcement is skipped; the seat restore below still runs.
+    const recoveredRenewal = existingRow?.status === 'past_due' || existingRow?.status === 'unpaid'
+
     if (!alreadyActive) {
       // Only count a PRIOR subscription that actually succeeded at some
       // point — never one still stuck in 'incomplete'/'incomplete_expired'.
       // A failed/retried earlier attempt shouldn't make a real first-ever
       // successful subscription look like a resub.
-      const { data: priorSubs } = await supabase
-        .from('subscriptions')
-        .select('id')
-        .eq('user_id', clerkId)
-        .neq('stripe_subscription_id', subscription.id)
-        .not('status', 'in', '(incomplete,incomplete_expired)')
-        .limit(1)
+      if (!recoveredRenewal) {
+        const { data: priorSubs } = await supabase
+          .from('subscriptions')
+          .select('id')
+          .eq('user_id', clerkId)
+          .neq('stripe_subscription_id', subscription.id)
+          .not('status', 'in', '(incomplete,incomplete_expired)')
+          .limit(1)
 
-      const isResub = !!(priorSubs && priorSubs.length > 0)
-      const { name, email } = await lookupNameAndEmail(clerkId)
-      // "Pro" matches PLAN_INFO.standard.label in app/billing/page.tsx —
-      // this function only ever runs for the standard personal plan
-      // (routeSubscription already branched whitelabel/team_seat away
-      // before calling here), so this is never ambiguous.
-      const planLabel = 'Pro'
-      if (isResub) {
-        await sendAdminPush('resub', `${name} resubscribed to ${planLabel}.`)
-        await logBillingEvent({
-          event_type: 'resub', clerk_id: clerkId, user_name: name, user_email: email,
-          plan: 'pro', amount_cents: invoiceAmountCents ?? undefined,
-          stripe_subscription_id: subscription.id,
-        })
-      } else {
-        await sendAdminPush('new_sub', `${name} subscribed to ${planLabel}.`)
-        await logBillingEvent({
-          event_type: 'initial_sub', clerk_id: clerkId, user_name: name, user_email: email,
-          plan: 'pro', amount_cents: invoiceAmountCents ?? undefined,
-          stripe_subscription_id: subscription.id,
-        })
+        const isResub = !!(priorSubs && priorSubs.length > 0)
+        const { name, email } = await lookupNameAndEmail(clerkId)
+        // "Pro" matches PLAN_INFO.standard.label in app/billing/page.tsx —
+        // this function only ever runs for the standard personal plan
+        // (routeSubscription already branched whitelabel/team_seat away
+        // before calling here), so this is never ambiguous.
+        const planLabel = 'Pro'
+        if (isResub) {
+          await sendAdminPush('resub', `${name} resubscribed to ${planLabel}.`)
+          await logBillingEvent({
+            event_type: 'resub', clerk_id: clerkId, user_name: name, user_email: email,
+            plan: 'pro', amount_cents: invoiceAmountCents ?? undefined,
+            stripe_subscription_id: subscription.id,
+          })
+        } else {
+          await sendAdminPush('new_sub', `${name} subscribed to ${planLabel}.`)
+          await logBillingEvent({
+            event_type: 'initial_sub', clerk_id: clerkId, user_name: name, user_email: email,
+            plan: 'pro', amount_cents: invoiceAmountCents ?? undefined,
+            stripe_subscription_id: subscription.id,
+          })
+        }
       }
 
       // ── THEY PAY AGAIN, THEIR SEAT COMES BACK ───────────────────────
@@ -1248,11 +1267,20 @@ async function upsertPersonalSubscription(
   // over and over.
   const { data: priorSub } = await supabase
     .from('subscriptions')
-    .select('cancel_at_period_end')
+    .select('cancel_at_period_end, status')
     .eq('stripe_subscription_id', subscription.id)
     .maybeSingle()
   const justScheduledCancel =
     subscription.cancel_at_period_end === true && priorSub?.cancel_at_period_end !== true
+
+  // ── STRIPE PAUSED IT: A PAUSE, NOT A CANCEL ─────────────────────────────
+  // Status 'paused' is Stripe's own: a trial ended with no card on file, and
+  // billing stopped with the plan kept. The customer's pause button is
+  // different (pause_collection, status stays 'active') and is logged by
+  // /api/stripe/pause. Only the move INTO 'paused' is logged, for the same
+  // reason as the scheduled cancel above.
+  const justPausedByStripe =
+    subscription.status === 'paused' && priorSub?.status !== 'paused'
 
   const { error } = await supabase
     .from('subscriptions')
@@ -1278,6 +1306,19 @@ async function upsertPersonalSubscription(
       plan: plan === 'wl' || plan === 'pro' ? plan : null,
       stripe_subscription_id: subscription.id,
       detail: { ends_at: endsAt, source: 'cancel_at_period_end' },
+    })
+  }
+
+  if (justPausedByStripe) {
+    const { name, email } = await lookupNameAndEmail(clerkId)
+    await logBillingEvent({
+      event_type: 'pause',
+      clerk_id: clerkId,
+      user_name: name,
+      user_email: email,
+      plan: plan === 'wl' || plan === 'pro' ? plan : null,
+      stripe_subscription_id: subscription.id,
+      detail: { source: 'stripe_status', reason: 'trial ended without a payment method' },
     })
   }
 }

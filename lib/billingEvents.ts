@@ -42,6 +42,11 @@ export type BillingEventType =
   | 'checkout_started'
   | 'checkout_failed'
   | 'checkout_stalled'
+  // Billing stopped with the plan kept, which is not a cancel. Before 25 Sept
+  // 2026 a pause only sent a push, so a customer who paused and later
+  // cancelled read in the log as a cancel with nothing before it.
+  | 'pause'
+  | 'resume'
 
 // ── WHAT THE LOG FEEDS SHOW ─────────────────────────────────────────────────
 // Two of the checkout types exist for the stalled-checkout alert, not for a

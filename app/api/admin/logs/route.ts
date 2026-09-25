@@ -115,6 +115,9 @@ export async function GET(req: NextRequest) {
       // still being here; the other is them gone. Summing them would double
       // every departure, since a scheduled cancel becomes a cancel later.
       cancelsScheduled: 0, paymentsFailed: 0,
+      // A pause keeps the plan and stops billing. Counted on its own so it is
+      // never read as a cancel.
+      pauses: 0, resumes: 0,
     }
     const entries: LogEntry[] = []
 
@@ -131,6 +134,8 @@ export async function GET(req: NextRequest) {
         case 'cancel': counts.cancels++; break
         case 'cancel_scheduled': counts.cancelsScheduled++; break
         case 'payment_failed': counts.paymentsFailed++; break
+        case 'pause': counts.pauses++; break
+        case 'resume': counts.resumes++; break
       }
 
       entries.push({
