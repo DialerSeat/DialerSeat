@@ -145,7 +145,7 @@ function SellerIdentityDialogBody({ ownerIsYou, onSaved, onUseProgressive, onClo
               type="text"
               value={name}
               maxLength={80}
-              placeholder={tr("Your Company LLC")}
+              placeholder={tr("Your Company")}
               autoComplete="organization"
               onChange={e => setName(e.target.value)}
               style={inputStyle}

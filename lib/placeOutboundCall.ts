@@ -354,6 +354,11 @@ export async function placeOutboundCall(
   // ── MANUAL DIAL BYPASS (unchanged from prior version) ───────────────────
   const isManualDial = !leadId && !campaignId
 
+  // Started here and read at the insert, so it runs alongside the lookups
+  // below rather than after them. A label for the call log only.
+  const liveModeP: Promise<string | null> =
+    source === 'user_dial' && !isManualDial ? agentSessionMode(userId) : Promise.resolve(null)
+
   // Declared out here because it is now used twice: the TCPA calling-window
   // check below, and the caller-ID choice further down. The lead's own state
   // is what decides which of our numbers reads as local to them — see
@@ -480,6 +485,17 @@ export async function placeOutboundCall(
   // the agent chooses the mode in the dialer, and the campaign column is only
   // its default. This decides the ring window (20 s, see below).
   if (source === 'controller_fanout') dialerMode = 'predictive'
+
+  // ── WHAT THE CALL LOG CALLS THIS DIAL ─────────────────────────────────────
+  // A label, not a rule: nothing in this file reads it. dialerMode above is the
+  // campaign's saved mode, which decides ring time and AMD. The log wants the
+  // mode the agent was actually dialing in, which All Active and "let the
+  // agent choose" can make different, so it comes from their live session.
+  // A campaign-less dial is 'manual', whatever dialerMode says for its rules.
+  const modeLabel =
+    source === 'controller_fanout' ? 'predictive'
+      : isManualDial ? 'manual'
+        : ((await liveModeP) ?? dialerMode)
 
   // ── THE MANUAL DIALER'S OWN RECORD SWITCH ────────────────────────────────
   // A manual dial has no campaign, so it had no recording setting to read and
@@ -618,10 +634,38 @@ export async function placeOutboundCall(
     // treats this as "the agent asked for it AND it is happening".
     recordingManual: manualRecordingRequested && recordingEnabled,
     dialerMode,
+    modeLabel,
     source,
     agentSessionId: agentSessionId || null,
     env,
   })
+}
+
+const LOGGED_SESSION_MODES = new Set(['preview', 'power', 'progressive'])
+
+/**
+ * The mode this agent's dialer is in right now, from the session row the
+ * heartbeat keeps current. Null when it is stale (over a minute), unknown, or
+ * 'predictive' (a hand dial is never a predictive line). Never throws: it only
+ * labels the call.
+ */
+async function agentSessionMode(clerkId: string): Promise<string | null> {
+  try {
+    const { data: u } = await supabase.from('users').select('id').eq('clerk_id', clerkId).maybeSingle()
+    if (!u?.id) return null
+    const { data: rows } = await supabase
+      .from('agent_sessions')
+      .select('dialer_mode, last_heartbeat')
+      .eq('user_id', u.id)
+      .order('last_heartbeat', { ascending: false })
+      .limit(1)
+    const s = rows?.[0]
+    if (!s?.dialer_mode || !s.last_heartbeat) return null
+    if (Date.now() - Date.parse(s.last_heartbeat) > 60_000) return null
+    return LOGGED_SESSION_MODES.has(s.dialer_mode) ? s.dialer_mode : null
+  } catch {
+    return null
+  }
 }
 
 interface DoPlaceCallParams {
@@ -637,6 +681,8 @@ interface DoPlaceCallParams {
   recordingEnabled: boolean
   recordingManual: boolean
   dialerMode: string
+  /** What the call log shows: the agent's live mode, 'predictive' or 'manual'. */
+  modeLabel: string
   source: 'user_dial' | 'controller_fanout'
   agentSessionId: string | null
   env: TelnyxConfig
@@ -1532,6 +1578,8 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       // burns its full daily cap at a near-zero answer rate forever.
       // See app/api/cron/number-health.
       pool_number_id: p.poolNumberId,
+      // The mode it was dialed in, for the call log (see modeLabel).
+      dialer_mode: p.modeLabel,
       // The agent's SIP leg, recorded on the LEAD's row because the agent leg
       // never gets a row of its own. Without this the abort sweep — which
       // reads from `calls` — had no way to reach it, so stopping a dial hung

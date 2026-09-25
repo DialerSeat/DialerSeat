@@ -224,6 +224,9 @@ type FeedRow = {
   duration: number; talkSeconds: number | null; answered: boolean
   disposition: string | null; amdResult: string | null; amdRequested: boolean
   source: string | null; campaign: string | null; recording: string | null
+  /** preview, power, progressive, predictive or manual. Null on calls placed
+   *  before 19 Sept, when the mode was not yet recorded against the call. */
+  dialerMode: string | null
 }
 type PulseBucket = { at: string; calls: number; answered: number; connected: number }
 type PlacePerson = {
@@ -1219,6 +1222,7 @@ export default function OpsMap() {
           <th className="om-hide-sm">TALK</th>
           <th>RESULT</th>
           <th className="om-hide-sm">AMD</th>
+          <th className="om-hide-sm">MODE</th>
           <th className="om-hide-sm">CAMPAIGN</th>
           <th className="om-hide-sm">REC</th>
         </tr>
@@ -1270,6 +1274,9 @@ export default function OpsMap() {
             <td className="om-hide-sm" style={{ color: amdColour(f.amdResult) }}>
               {f.amdResult || (f.amdRequested ? 'pending' : 'off')}
             </td>
+            <td className="om-hide-sm" style={{ color: f.dialerMode ? MUTED : DIM }}>
+              {f.dialerMode || '-'}
+            </td>
             <td className="om-hide-sm" style={{ color: DIM }}>{f.campaign || 'manual'}</td>
             <td className="om-hide-sm"
                 style={{ color: f.recording === 'completed' ? VIOLET : DIM }}>
@@ -1279,7 +1286,7 @@ export default function OpsMap() {
           )
         })}
         {shownFeed.length === 0 && (
-          <tr><td colSpan={12} style={{ color: DIM, padding: 10 }}>
+          <tr><td colSpan={13} style={{ color: DIM, padding: 10 }}>
             {(data?.feed ?? []).length === 0
               ? 'No calls yet.'
               : 'No calls match this filter.'}

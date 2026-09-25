@@ -59,6 +59,8 @@ type FeedRowRaw = {
   answered: boolean; disposition: string | null
   amd_result: string | null; amd_requested: boolean
   dial_source: string | null; campaign: string | null; recording_status: string | null
+  /** preview, power, progressive, predictive or manual; null before 19 Sept. */
+  dialer_mode: string | null
 }
 type BreakdownRow = { kind: string; label: string; n: number | string; detail: string | null }
 type PulseRow = { bucket: string; calls: number | string; answered: number | string; connected: number | string }
@@ -474,6 +476,7 @@ export async function GET(req: NextRequest) {
         amdResult: r.amd_result || null,
         amdRequested: !!r.amd_requested,
         source: r.dial_source || null,
+        dialerMode: r.dialer_mode || null,
         campaign: r.campaign || null,
         recording: r.recording_status || null,
       }

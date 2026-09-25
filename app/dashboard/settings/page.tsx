@@ -745,7 +745,7 @@ export default function SettingsPage() {
               type="text"
               value={sellerName}
               maxLength={80}
-              placeholder={tr("Your Company LLC")}
+              placeholder={tr("Your Company")}
               autoComplete="organization"
               onChange={e => { setSellerName(e.target.value); setSellerNote(null) }}
               style={{ ...brandSelectStyle(false), cursor: 'text', marginBottom: 12, boxSizing: 'border-box' }}
