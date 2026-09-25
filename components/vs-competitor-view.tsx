@@ -58,7 +58,7 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
             <h1>
               DialerSeat <span className="versus">{t("vs")}</span> {c.name}
             </h1>
-            <p>{c.summary}</p>
+            <p>{t(c.summary)}</p>
             <div className="guts-btns">
               <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
               <Link href="/vs" className="guts-btn secondary">{t("ALL COMPARISONS")}</Link>
@@ -91,7 +91,7 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
 
         {matrix && (
           <GutsSection icon="table" title={t("Where each tool wins")}>
-            <p>{matrix.lede}</p>
+            <p>{t(matrix.lede)}</p>
             <div className="guts-tablewrap">
               <table>
                 <thead>
@@ -202,7 +202,7 @@ function FactRow({ label, value }: { label: string; value: string }) {
         }
         .vsfact-value { font-size: 13.5px; line-height: 1.6; color: #1a1c24; }
       `}</style>
-      <div className="vsfact-label">{label}</div>
+      <div className="vsfact-label">{t(label)}</div>
       <div className="vsfact-value">{value}</div>
     </div>
   )

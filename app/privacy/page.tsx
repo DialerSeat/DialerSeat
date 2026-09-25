@@ -7,6 +7,7 @@ import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 
 
@@ -53,8 +54,8 @@ export default async function PrivacyPolicyPage() {
   return (
     <>
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Privacy Policy', url: '/privacy' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Privacy Policy"), url: '/privacy' },
       ])} />
       <>
       <SiteHeader />

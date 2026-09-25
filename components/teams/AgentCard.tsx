@@ -1,6 +1,8 @@
 'use client'
 
 import type { LiveState, TeamMemberRow } from '@/app/api/teams/[id]/members/route'
+import { msg } from '@/lib/i18n/msg'
+import { t } from '@/lib/i18n/client'
 
 // =============================================================================
 // AgentCard — one person on the floor
@@ -149,7 +151,7 @@ export default function AgentCard({
           <span style={{
             fontSize: 9, letterSpacing: 1.2, fontWeight: 700, color,
             flexShrink: 0,
-          }}>{STATE_LABEL[member.live]}</span>
+          }}>{t(STATE_LABEL[member.live])}</span>
         </div>
 
         <div className="agent-spark">
@@ -162,7 +164,7 @@ export default function AgentCard({
         <div
           className="agent-figs"
           style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8,
+            display: 'grid', gridTemplateColumns: msg("1fr 1fr 1fr"), gap: 8,
             fontVariantNumeric: 'tabular-nums',
           }}
         >
@@ -184,7 +186,7 @@ function Fig({ label, value }: { label: string; value: string }) {
       <div style={{
         fontSize: 9, letterSpacing: 1, color: 'var(--brand-muted-text)',
         marginBottom: 2, whiteSpace: 'nowrap',
-      }}>{label}</div>
+      }}>{t(label)}</div>
       <div style={{ fontSize: 15, fontWeight: 600 }}>{value}</div>
     </div>
   )

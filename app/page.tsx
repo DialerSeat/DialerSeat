@@ -16,6 +16,7 @@ import {
   Users, Globe, Plug, Lock, UserPlus, Upload, PhoneCall, ChartColumn,
 } from 'lucide-react'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 /**
  * One cell of the comparison table.
@@ -82,10 +83,10 @@ export default async function Home({ searchParams }: PageProps) {
   const dashboardBase = returnTenantSlug ? `https://${returnTenantSlug}.dialerseat.com` : ''
 
   const ctaHref = isLoggedIn ? `${dashboardBase}/dashboard` : '/sign-up'
-  const ctaLabel = isLoggedIn ? 'GO TO DASHBOARD' : 'GET STARTED'
+  const ctaLabel = isLoggedIn ? msg("GO TO DASHBOARD") : msg("GET STARTED")
 
   const wlCtaHref = isLoggedIn ? '/billing?plan=wl' : '/sign-up?plan=wl'
-  const wlCtaLabel = 'GET MANAGER+'
+  const wlCtaLabel = msg("GET MANAGER+")
 
   return (
 
@@ -523,10 +524,10 @@ export default async function Home({ searchParams }: PageProps) {
               boxSizing: 'border-box',
             }}>
               {[
-                { number: '$35', label: 'PER WEEK' },
-                { number: '5X', label: 'CHEAPER THAN OTHERS' },
-                { number: '$0', label: 'SETUP FEES' },
-                { number: '∞', label: 'LEADS UPLOADED' },
+                { number: '$35', label: msg("PER WEEK") },
+                { number: '5X', label: msg("CHEAPER THAN OTHERS") },
+                { number: '$0', label: msg("SETUP FEES") },
+                { number: '∞', label: msg("LEADS UPLOADED") },
               ].map((stat, i) => (
                 <div key={i} style={{ textAlign: 'center', flex: 1 }}>
                   <div className="ds-stats-num" style={{
@@ -540,7 +541,7 @@ export default async function Home({ searchParams }: PageProps) {
                     fontSize: '9px',
                     letterSpacing: '2px',
                     color: 'rgba(255,255,255,0.55)',
-                  }}>{stat.label}</div>
+                  }}>{t(stat.label)}</div>
                 </div>
               ))}
             </div>
@@ -576,7 +577,7 @@ export default async function Home({ searchParams }: PageProps) {
                 background: '#1a1a2e',
                 borderTop: '3px solid #4a9eff',
               }}>
-                {ctaLabel} →
+                {t(ctaLabel)} →
               </Link>
               <Link href="#compare" style={{
                 padding: '16px 32px',
@@ -662,15 +663,15 @@ export default async function Home({ searchParams }: PageProps) {
             highest-authority page on the domain. */}
         <div className="ds-grid-3" style={{ display: 'grid', gap: '20px' }}>
           {[
-            { icon: PhoneOutgoing, title: 'PREDICTIVE DIALING', href: '/dialing-modes/predictive', desc: 'Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour, every hour.' },
-            { icon: Voicemail, title: 'IDENTIFIES VOICEMAIL', href: '/faq/how-does-amd-work', desc: 'Stop wasting your day on dead air. DialerSeat knows when a machine answers and skips ahead to the next live human.' },
-            { icon: ClipboardList, title: 'MULTIPLE CAMPAIGNS', href: '/faq/campaigns', desc: 'Run unlimited campaigns simultaneously. Upload a CSV, name it, and you are dialing in seconds.' },
-            { icon: BookmarkCheck, title: 'MEMORY OF MARKED LEADS', href: '/faq/leads', desc: 'Every disposition, callback, and note remembers itself. Your work is never lost between sessions or seats.' },
-            { icon: MousePointerClick, title: 'MANUAL DIALER', href: '/faq/what-is-a-preview-dialer', desc: 'When you want to control every call yourself, we have you. Click-to-dial individual numbers any time.' },
-            { icon: Users, title: 'TEAM WORKFLOW', href: '/faq/teams-how-it-works', desc: 'Buy seats for your whole crew. Each agent gets their own login, campaigns, and call data, all under one roof.' },
-            { icon: Globe, title: 'WORKS GLOBALLY', href: '/faq/dialer-for-offshore-agents', desc: 'Dial US based leads from any country in the world. No increased price jumps for dialing while abroad.' },
-            { icon: Plug, title: 'CLEAN, PLUG-AND-PLAY UI', href: '/faq/mobile', desc: 'No bloat, no setup wizard, no learning curve. Sign in, upload, dial. Works on desktop and mobile.' },
-            { icon: Lock, title: 'YOUR DATA, ALWAYS YOURS', href: '/faq/data-and-recordings', desc: 'Your leads stay saved even if your subscription lapses. Pick up right where you left off, no questions asked.' },
+            { icon: PhoneOutgoing, title: msg("PREDICTIVE DIALING"), href: '/dialing-modes/predictive', desc: msg("Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour, every hour.") },
+            { icon: Voicemail, title: msg("IDENTIFIES VOICEMAIL"), href: '/faq/how-does-amd-work', desc: msg("Stop wasting your day on dead air. DialerSeat knows when a machine answers and skips ahead to the next live human.") },
+            { icon: ClipboardList, title: msg("MULTIPLE CAMPAIGNS"), href: '/faq/campaigns', desc: msg("Run unlimited campaigns simultaneously. Upload a CSV, name it, and you are dialing in seconds.") },
+            { icon: BookmarkCheck, title: msg("MEMORY OF MARKED LEADS"), href: '/faq/leads', desc: msg("Every disposition, callback, and note remembers itself. Your work is never lost between sessions or seats.") },
+            { icon: MousePointerClick, title: msg("MANUAL DIALER"), href: '/faq/what-is-a-preview-dialer', desc: msg("When you want to control every call yourself, we have you. Click-to-dial individual numbers any time.") },
+            { icon: Users, title: msg("TEAM WORKFLOW"), href: '/faq/teams-how-it-works', desc: msg("Buy seats for your whole crew. Each agent gets their own login, campaigns, and call data, all under one roof.") },
+            { icon: Globe, title: msg("WORKS GLOBALLY"), href: '/faq/dialer-for-offshore-agents', desc: msg("Dial US based leads from any country in the world. No increased price jumps for dialing while abroad.") },
+            { icon: Plug, title: msg("CLEAN, PLUG-AND-PLAY UI"), href: '/faq/mobile', desc: msg("No bloat, no setup wizard, no learning curve. Sign in, upload, dial. Works on desktop and mobile.") },
+            { icon: Lock, title: msg("YOUR DATA, ALWAYS YOURS"), href: '/faq/data-and-recordings', desc: msg("Your leads stay saved even if your subscription lapses. Pick up right where you left off, no questions asked.") },
           ].map((f, i) => (
             <div key={i} className="ds-feature-card" style={{
               padding: '30px',
@@ -689,13 +690,13 @@ export default async function Home({ searchParams }: PageProps) {
                 letterSpacing: '1.5px',
                 color: '#2a4a8a',
                 marginBottom: '12px',
-              }}>{f.title}</h3>
+              }}>{t(f.title)}</h3>
               <p style={{
                 fontSize: '13.5px',
                 lineHeight: '1.65',
                 color: '#5a5e6a',
                 marginBottom: '18px',
-              }}>{f.desc}</p>
+              }}>{t(f.desc)}</p>
               {/* Pushed to the bottom edge so every card's link sits on the
                   same line regardless of how long its description runs. */}
               <Link href={f.href} style={{
@@ -738,10 +739,10 @@ export default async function Home({ searchParams }: PageProps) {
           overflow: 'hidden',
         }}>
           {[
-            { step: '01', icon: UserPlus, title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime.' },
-            { step: '02', icon: Upload, title: 'UPLOAD YOUR LEADS', desc: 'Drop your CSV into a campaign. Name it, organize it, and have multiple campaigns ready to go simultaneously.' },
-            { step: '03', icon: PhoneCall, title: 'HIT DIAL AND GO', desc: 'Launch your campaign and DialerSeat starts working immediately. Live connections come through the second someone picks up.' },
-            { step: '04', icon: ChartColumn, title: 'TRACK AND CLOSE', desc: 'Disposition every call in one click. Track your performance in real time. Rinse and repeat until your list is done.' },
+            { step: '01', icon: UserPlus, title: msg("CREATE YOUR ACCOUNT"), desc: msg("Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime.") },
+            { step: '02', icon: Upload, title: msg("UPLOAD YOUR LEADS"), desc: msg("Drop your CSV into a campaign. Name it, organize it, and have multiple campaigns ready to go simultaneously.") },
+            { step: '03', icon: PhoneCall, title: msg("HIT DIAL AND GO"), desc: msg("Launch your campaign and DialerSeat starts working immediately. Live connections come through the second someone picks up.") },
+            { step: '04', icon: ChartColumn, title: msg("TRACK AND CLOSE"), desc: msg("Disposition every call in one click. Track your performance in real time. Rinse and repeat until your list is done.") },
           ].map((step, i, arr) => (
             <div key={i} className="ds-step-card" style={{
               display: 'flex',
@@ -776,12 +777,12 @@ export default async function Home({ searchParams }: PageProps) {
                   letterSpacing: '1.5px',
                   color: '#2a4a8a',
                   marginBottom: '6px',
-                }}>{step.title}</h3>
+                }}>{t(step.title)}</h3>
                 <p style={{
                   fontSize: '13.5px',
                   lineHeight: '1.6',
                   color: '#5a5e6a',
-                }}>{step.desc}</p>
+                }}>{t(step.desc)}</p>
               </div>
             </div>
           ))}
@@ -814,7 +815,7 @@ export default async function Home({ searchParams }: PageProps) {
         <div style={{ borderRadius: '4px', overflow: 'hidden', border: '1px solid #c4c8d0', background: '#ffffff' }}>
           <div className="ds-compare-header" style={{
             display: 'grid',
-            gridTemplateColumns: '1.6fr 1fr 1fr 1fr',
+            gridTemplateColumns: msg("1.6fr 1fr 1fr 1fr"),
             padding: '15px 26px',
             background: '#2a4a8a',
           }}>
@@ -825,31 +826,31 @@ export default async function Home({ searchParams }: PageProps) {
           </div>
 
           {[
-            { feature: 'Weekly Cost', us: '$35', them1: '$199+/mo', them2: '$150+/mo' },
-            { feature: 'No Contract', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'Setup Fee', us: '$0', them1: '$0', them2: '$200+' },
-            { feature: 'Plug & Play', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'Predictive Dialing', us: '✓', them1: '✓', them2: 'Limited' },
-            { feature: 'Identifies Voicemail', us: '✓', them1: '✓', them2: '✗' },
-            { feature: 'Manual Dialer', us: '✓', them1: '✗', them2: '✓' },
-            { feature: 'Multi Campaign', us: '✓', them1: '✓', them2: '✓' },
-            { feature: 'Unlimited Leads', us: '✓', them1: '✓', them2: 'Limited' },
-            { feature: 'Memory of Marked Leads', us: '✓', them1: 'Limited', them2: '✗' },
-            { feature: 'Data Saved Always', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'Team Workflow', us: '✓', them1: '✓', them2: 'Add-on' },
-            { feature: 'Works on Mobile', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'Works Globally', us: '✓', them1: 'US/CA', them2: 'Limited' },
-            { feature: 'Satisfaction Priority', us: '✓', them1: '✗', them2: '✗' },
+            { feature: msg("Weekly Cost"), us: '$35', them1: '$199+/mo', them2: '$150+/mo' },
+            { feature: msg("No Contract"), us: '✓', them1: '✗', them2: '✗' },
+            { feature: msg("Setup Fee"), us: '$0', them1: '$0', them2: '$200+' },
+            { feature: msg("Plug & Play"), us: '✓', them1: '✗', them2: '✗' },
+            { feature: msg("Predictive Dialing"), us: '✓', them1: '✓', them2: msg("Limited") },
+            { feature: msg("Identifies Voicemail"), us: '✓', them1: '✓', them2: '✗' },
+            { feature: msg("Manual Dialer"), us: '✓', them1: '✗', them2: '✓' },
+            { feature: msg("Multi Campaign"), us: '✓', them1: '✓', them2: '✓' },
+            { feature: msg("Unlimited Leads"), us: '✓', them1: '✓', them2: msg("Limited") },
+            { feature: msg("Memory of Marked Leads"), us: '✓', them1: msg("Limited"), them2: '✗' },
+            { feature: msg("Data Saved Always"), us: '✓', them1: '✗', them2: '✗' },
+            { feature: msg("Team Workflow"), us: '✓', them1: '✓', them2: 'Add-on' },
+            { feature: msg("Works on Mobile"), us: '✓', them1: '✗', them2: '✗' },
+            { feature: msg("Works Globally"), us: '✓', them1: 'US/CA', them2: msg("Limited") },
+            { feature: msg("Satisfaction Priority"), us: '✓', them1: '✗', them2: '✗' },
           ].map((row, i, arr) => (
             <div key={i} className="ds-compare-row" style={{
               display: 'grid',
-              gridTemplateColumns: '1.6fr 1fr 1fr 1fr',
+              gridTemplateColumns: msg("1.6fr 1fr 1fr 1fr"),
               padding: '13px 26px',
               alignItems: 'center',
               borderBottom: i < arr.length - 1 ? '1px solid #e2e4ea' : 'none',
               background: i % 2 === 1 ? '#f6f7f9' : '#ffffff',
             }}>
-              <div className="ds-compare-cell" style={{ fontSize: '13.5px', color: '#1a1c24' }}>{row.feature}</div>
+              <div className="ds-compare-cell" style={{ fontSize: '13.5px', color: '#1a1c24' }}>{t(row.feature)}</div>
               <CompareCell value={row.us} ours />
               <CompareCell value={row.them1} />
               <CompareCell value={row.them2} />
@@ -937,16 +938,16 @@ export default async function Home({ searchParams }: PageProps) {
 
             <div style={{ marginBottom: '40px', textAlign: 'left', flex: 1 }}>
               {[
-                'Predictive dialing engine',
-                'Voicemail detection',
-                'Unlimited outbound calling',
-                'Unlimited lead uploads',
-                'Multiple simultaneous campaigns',
-                'Disposition memory across sessions',
-                'Team seat management',
-                'Works globally',
-                'Your data saved forever',
-                'No setup fees ever',
+                msg("Predictive dialing engine"),
+                msg("Voicemail detection"),
+                msg("Unlimited outbound calling"),
+                msg("Unlimited lead uploads"),
+                msg("Multiple simultaneous campaigns"),
+                msg("Disposition memory across sessions"),
+                msg("Team seat management"),
+                msg("Works globally"),
+                msg("Your data saved forever"),
+                msg("No setup fees ever"),
               ].map((feature, i) => (
                 <div key={i} style={{
                   display: 'flex',
@@ -986,7 +987,7 @@ export default async function Home({ searchParams }: PageProps) {
               borderTop: '3px solid #4a9eff',
               marginBottom: '16px',
             }}>
-              {ctaLabel}
+              {t(ctaLabel)}
             </Link>
             <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'rgba(255,255,255,0.5)' }}>
               {t("$35 CHARGED TODAY · CANCEL ANYTIME")}</p>
@@ -1034,14 +1035,14 @@ export default async function Home({ searchParams }: PageProps) {
 
             <div style={{ marginBottom: '40px', textAlign: 'left', flex: 1 }}>
               {[
-                'Everything in Pro, plus:',
-                'Your own subdomain (you.dialerseat.com)',
-                'Upload your logo',
-                'Customize brand colors and theme',
-                'Branded sign-in for your team',
-                'Unlimited team seats under your brand',
-                'Your customers see your dialer, not ours',
-                'Priority manager-tier support',
+                msg("Everything in Pro, plus:"),
+                msg("Your own subdomain (you.dialerseat.com)"),
+                msg("Upload your logo"),
+                msg("Customize brand colors and theme"),
+                msg("Branded sign-in for your team"),
+                msg("Unlimited team seats under your brand"),
+                msg("Your customers see your dialer, not ours"),
+                msg("Priority manager-tier support"),
               ].map((feature, i) => (
                 <div key={i} style={{
                   display: 'flex',
@@ -1085,7 +1086,7 @@ export default async function Home({ searchParams }: PageProps) {
               borderTop: '3px solid #8a6a1a',
               marginBottom: '16px',
             }}>
-              {wlCtaLabel}
+              {t(wlCtaLabel)}
             </Link>
             <p style={{ fontSize: '11px', letterSpacing: '2px', color: '#5a5e6a' }}>
               {t("$75 CHARGED TODAY · CANCEL ANYTIME")}</p>
@@ -1133,7 +1134,7 @@ export default async function Home({ searchParams }: PageProps) {
           border: '1px solid #4a9eff',
           borderTop: '3px solid #4a9eff',
         }}>
-          {ctaLabel} →
+          {t(ctaLabel)} →
         </Link>
         <p style={{ marginTop: '20px', fontSize: '11px', letterSpacing: '3px', color: 'rgba(255,255,255,0.5)' }}>
           {t("$35/WEEK · NO CONTRACTS · CANCEL ANYTIME")}</p>

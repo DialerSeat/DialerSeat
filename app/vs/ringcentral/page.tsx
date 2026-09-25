@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 const SLUG = 'ringcentral'
 
@@ -37,22 +38,22 @@ const FAQS = [
   {
     question: "Does RingCentral include an auto dialer?",
     answer:
-      "Not in the plans most people quote. Core, Advanced and Ultra are business phone plans, even Ultra requires an add-on for dialing. Predictive and progressive dialing come with RingCX, RingCentral's contact-centre product, which starts around $65 per user per month. Outbound dialer minutes can also be metered separately.",
+      msg("Not in the plans most people quote. Core, Advanced and Ultra are business phone plans, even Ultra requires an add-on for dialing. Predictive and progressive dialing come with RingCX, RingCentral's contact-centre product, which starts around $65 per user per month. Outbound dialer minutes can also be metered separately."),
   },
   {
-    question: "Is RingCentral better than DialerSeat?",
+    question: msg("Is RingCentral better than DialerSeat?"),
     answer:
-      "At being a phone system, comfortably, and that is what it is. Global carrier infrastructure, enterprise compliance certifications, an enormous integration catalogue, and a company that will still be here in ten years. If you need a business phone system with outbound as a secondary requirement, RingCentral is the sensible answer.",
+      msg("At being a phone system, comfortably, and that is what it is. Global carrier infrastructure, enterprise compliance certifications, an enormous integration catalogue, and a company that will still be here in ten years. If you need a business phone system with outbound as a secondary requirement, RingCentral is the sensible answer."),
   },
   {
-    question: "When does DialerSeat make more sense?",
+    question: msg("When does DialerSeat make more sense?"),
     answer:
-      "When dialing is the job rather than a feature. If your team's day is a lead list and a headset, a contact-centre tier at roughly triple the price of a phone seat is a lot of platform for the part you actually use.",
+      msg("When dialing is the job rather than a feature. If your team's day is a lead list and a headset, a contact-centre tier at roughly triple the price of a phone seat is a lot of platform for the part you actually use."),
   },
   {
-    question: "Can I use both?",
+    question: msg("Can I use both?"),
     answer:
-      "Yes, and plenty of teams should. RingCentral for company telephony, DialerSeat for the outbound floor. They are not mutually exclusive.",
+      msg("Yes, and plenty of teams should. RingCentral for company telephony, DialerSeat for the outbound floor. They are not mutually exclusive."),
   },
 ]
 
@@ -67,9 +68,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs RingCentral', url: '/vs/ringcentral' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs RingCentral"), url: '/vs/ringcentral' },
         ])}
       />
       <VsCompetitorView c={competitor} />

@@ -7,6 +7,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /faq/why-calls-show-spam-likely — the outside view
@@ -53,22 +54,22 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'Why do my outbound calls show up as Spam Likely?',
+    question: msg("Why do my outbound calls show up as Spam Likely?"),
     answer:
-      'Because a call-protection provider scored your number as risky before the phone rang. Those scores are built from how people respond to the number: whether it has an established history, whether people answer, whether they stay on the line, and whether they complain or block it. Heavy volume on one number, low answer rates and complaints are the usual causes.',
+      msg("Because a call-protection provider scored your number as risky before the phone rang. Those scores are built from how people respond to the number: whether it has an established history, whether people answer, whether they stay on the line, and whether they complain or block it. Heavy volume on one number, low answer rates and complaints are the usual causes."),
   },
   {
-    question: 'Does STIR/SHAKEN stop my calls being labelled as spam?',
+    question: msg("Does STIR/SHAKEN stop my calls being labelled as spam?"),
     answer:
       'No. STIR/SHAKEN proves your caller ID is not spoofed, and A-attestation, the top grade, means your carrier knows you and gave you the number. It says nothing about whether people want the call. A properly signed call from a number with a poor reputation can still be labelled. Low attestation makes labelling more likely; high attestation does not prevent it.',
   },
   {
-    question: 'Will CNAM stop my calls showing as spam?',
+    question: msg("Will CNAM stop my calls showing as spam?"),
     answer:
-      'Not on most consumer phones. CNAM displays a business name of up to 15 characters, but according to the carrier Telnyx, wireless carriers generally do not use the CNAM service, so it may not show on mobiles at all. It helps on landlines. It is not a spam fix, and the Free Caller Registry states its registration data is not used to deliver caller name either.',
+      msg("Not on most consumer phones. CNAM displays a business name of up to 15 characters, but according to the carrier Telnyx, wireless carriers generally do not use the CNAM service, so it may not show on mobiles at all. It helps on landlines. It is not a spam fix, and the Free Caller Registry states its registration data is not used to deliver caller name either."),
   },
   {
-    question: 'What can I do about my calls being marked as spam?',
+    question: msg("What can I do about my calls being marked as spam?"),
     answer:
       'Spread volume across enough numbers that none dials heavily, call people who expect to hear from you, scrub against the Do Not Call Registry, keep lists fresh, and register your numbers with the Free Caller Registry. A dialer should handle the carrier and volume side automatically; consent and list quality stay with you.',
   },
@@ -81,9 +82,9 @@ export default async function Page() {
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'FAQ', url: '/faq' },
-          { name: 'Why calls show Spam Likely', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("FAQ"), url: '/faq' },
+          { name: msg("Why calls show Spam Likely"), url: ROUTE },
         ])}
       />
       <SiteHeader />

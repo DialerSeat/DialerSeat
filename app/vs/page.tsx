@@ -6,6 +6,7 @@ import {
   softwareApplicationSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 
 
@@ -46,8 +47,8 @@ export default function Page() {
       <JsonLd data={softwareApplicationSchema()} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
         ])}
       />
       <VsHubView />

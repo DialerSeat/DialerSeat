@@ -7,6 +7,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /faq/local-presence-dialing
@@ -70,29 +71,29 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'What is local presence dialing?',
+    question: msg("What is local presence dialing?"),
     answer:
-      'Local presence dialing means calling each prospect from a phone number local to them, so the caller ID shows a familiar area code instead of an out-of-state one. Many people are more willing to answer a call that looks local.',
+      msg("Local presence dialing means calling each prospect from a phone number local to them, so the caller ID shows a familiar area code instead of an out-of-state one. Many people are more willing to answer a call that looks local."),
   },
   {
-    question: 'Does DialerSeat do local presence dialing?',
+    question: msg("Does DialerSeat do local presence dialing?"),
     answer:
-      'Yes, on every call, in every dialing mode including predictive, with no add-on. For each call DialerSeat picks a number from its pool that matches the prospect’s area code, then their state, then their region, and only then any number with capacity.',
+      msg("Yes, on every call, in every dialing mode including predictive, with no add-on. For each call DialerSeat picks a number from its pool that matches the prospect’s area code, then their state, then their region, and only then any number with capacity."),
   },
   {
-    question: 'What if a lead has moved and kept their old number?',
+    question: msg("What if a lead has moved and kept their old number?"),
     answer:
-      'If the lead’s state in your list disagrees with their area code, DialerSeat matches their state instead. Someone who moved to Florida and kept a New York mobile number gets a Florida caller ID, because that is what looks local to them now.',
+      msg("If the lead’s state in your list disagrees with their area code, DialerSeat matches their state instead. Someone who moved to Florida and kept a New York mobile number gets a Florida caller ID, because that is what looks local to them now."),
   },
   {
-    question: 'Does local presence burn out numbers faster?',
+    question: msg("Does local presence burn out numbers faster?"),
     answer:
-      'It can, if every call to one area goes out on one number. DialerSeat prevents that. Once a number has made 40 calls in a day it moves to the back of the queue however good its match, so calls spread across the pool, and no number places more than 60 calls a day.',
+      msg("It can, if every call to one area goes out on one number. DialerSeat prevents that. Once a number has made 40 calls in a day it moves to the back of the queue however good its match, so calls spread across the pool, and no number places more than 60 calls a day."),
   },
   {
-    question: 'Does a redial use the same caller ID?',
+    question: msg("Does a redial use the same caller ID?"),
     answer:
-      'Yes, when it comes within three minutes. On an iPhone with Allow Repeated Calls switched on in Focus, a second call from the same caller within three minutes is let through, so DialerSeat redials from the number the prospect just saw. After three minutes it goes back to ordinary local matching.',
+      msg("Yes, when it comes within three minutes. On an iPhone with Allow Repeated Calls switched on in Focus, a second call from the same caller within three minutes is let through, so DialerSeat redials from the number the prospect just saw. After three minutes it goes back to ordinary local matching."),
   },
 ]
 
@@ -103,9 +104,9 @@ export default async function Page() {
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'FAQ', url: '/faq' },
-          { name: 'Local presence dialing', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("FAQ"), url: '/faq' },
+          { name: msg("Local presence dialing"), url: ROUTE },
         ])}
       />
       <SiteHeader />

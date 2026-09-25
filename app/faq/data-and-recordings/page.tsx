@@ -2,6 +2,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import DataRecordingsFaqView from './view'
+import { msg } from '@/lib/i18n/msg'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -41,9 +42,9 @@ export default function DataRecordingsFaqPage() {
   return (
     <>
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Faq', url: '/faq' },
-        { name: 'Recordings & Your Data', url: '/faq/data-and-recordings' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Faq"), url: '/faq' },
+        { name: msg("Recordings & Your Data"), url: '/faq/data-and-recordings' },
       ])} />
       <DataRecordingsFaqView />
     </>

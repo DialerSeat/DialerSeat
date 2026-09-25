@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { readTeamsView, writeTeamsView } from '@/lib/rememberTeamsView'
 import ArrangePanel from '@/components/teams/ArrangePanel'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // TEAMS SIDEBAR — the navigation spine of the Teams page
@@ -254,7 +255,7 @@ export default function TeamsSidebar({
 
   const [removeMode, setRemoveMode] = useState<'campaign' | 'team'>('team')
 
-  const confirmWord = leaveMode ? 'LEAVE' : agentMode ? 'REMOVE' : 'DELETE'
+  const confirmWord = leaveMode ? msg("LEAVE") : agentMode ? msg("REMOVE") : 'DELETE'
 
   // The one ticked thing that can be renamed, or null. Requires exactly one
   // selection, a renameable kind, and ownership — the same three conditions
@@ -1049,20 +1050,20 @@ export default function TeamsSidebar({
               {leaveMode
                 ? `Leave ${selectedList.length} team${selectedList.length === 1 ? '' : 's'}?`
                 : agentMode
-                ? `Remove ${selectedList.length} ${selectedList.length === 1 ? 'person' : 'people'} from ${removeMode === 'campaign' ? 'this campaign' : 'the team'}?`
+                ? `Remove ${selectedList.length} ${selectedList.length === 1 ? 'person' : 'people'} from ${removeMode === 'campaign' ? msg("this campaign") : msg("the team")}?`
                 : `Delete ${selectedList.length} item${selectedList.length === 1 ? '' : 's'}?`}
             </h3>
             <p style={{ margin: '0 0 12px', fontSize: 12.5, color: TEXT_DIM, lineHeight: 1.6 }}>
               {leaveMode
                 ? 'You lose access to its campaigns straight away, and any seat the owner ' +
                   'was paying for you ends. Nothing on the team is deleted. You would need ' +
-                  'a new code to come back.'
+                  msg("a new code to come back.")
                 : agentMode && removeMode === 'campaign'
                 ? 'They stay on the team and keep their seat, this only takes away this ' +
-                  'one campaign. Add them back any time from Add People.'
+                  msg("one campaign. Add them back any time from Add People.")
                 : agentMode
                 ? 'They come off the team entirely: every campaign, and the seat you were ' +
-                  'paying for. They would need a new code to come back.'
+                  msg("paying for. They would need a new code to come back.")
                 : tr("This cannot be undone.")}
             </p>
             <ul style={{
@@ -1071,11 +1072,11 @@ export default function TeamsSidebar({
               fontSize: 12.5, color: TEXT_MUTED, lineHeight: 1.7,
             }}>
               {selectedList.map(s => (
-                <li key={s.id}>{s.label} <span style={{ color: TEXT_DIM }}>({s.kind})</span></li>
+                <li key={s.id}>{tr(s.label)} <span style={{ color: TEXT_DIM }}>({s.kind})</span></li>
               ))}
             </ul>
             <label style={{ display: 'block', fontSize: 11.5, color: TEXT_MUTED, marginBottom: 6 }}>
-              {tr("Type")}{" "}<strong style={{ color: TEXT }}>{confirmWord}</strong> {tr("to confirm")}</label>
+              {tr("Type")}{" "}<strong style={{ color: TEXT }}>{tr(confirmWord)}</strong> {tr("to confirm")}</label>
             <input
               autoFocus
               value={confirmText}
@@ -1180,7 +1181,7 @@ export default function TeamsSidebar({
                 border: `1px solid ${joinMessage.kind === 'error' ? '#7f1d1d' : '#1f6b3f'}`,
                 color: joinMessage.kind === 'error' ? '#fca5a5' : '#86efac',
               }}
-            >{joinMessage.text}</div>
+            >{tr(joinMessage.text)}</div>
           )}
         </div>
       </div>

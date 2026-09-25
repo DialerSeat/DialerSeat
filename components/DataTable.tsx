@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 // ─────────────────────────────────────────────────────────────────────────
 // A TABLE THAT DOES NOT CARE HOW BIG THE DATA IS
@@ -62,7 +63,7 @@ const DEFAULT_THEME = {
 export default function DataTable<T>({
   columns, rows, rowKey, total, page, pageSize,
   loading, search, onSearch, onPage, onRowClick,
-  emptyMessage = 'Nothing here yet.',
+  emptyMessage = msg("Nothing here yet."),
   searchPlaceholder = 'Search…',
   actions, theme,
 }: DataTableProps<T>) {
@@ -83,7 +84,7 @@ export default function DataTable<T>({
             <input
               value={search ?? ''}
               onChange={e => onSearch(e.target.value)}
-              placeholder={searchPlaceholder}
+              placeholder={t(searchPlaceholder)}
               style={{
                 flex: 1, minWidth: 180, background: T_.surface, color: T_.text,
                 border: `1px solid ${T_.hairline}`, borderRadius: 4,
@@ -130,7 +131,7 @@ export default function DataTable<T>({
                   colSpan={columns.length}
                   style={{ padding: '22px 12px', color: T_.dim, fontSize: 13, textAlign: 'center' }}
                 >
-                  {loading ? t("Loading…") : emptyMessage}
+                  {loading ? t("Loading…") : t(emptyMessage)}
                 </td>
               </tr>
             ) : (

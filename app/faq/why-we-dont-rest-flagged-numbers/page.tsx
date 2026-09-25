@@ -7,6 +7,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /faq/why-we-dont-rest-flagged-numbers — the finding, on its own page
@@ -58,19 +59,19 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'Should you rest a phone number that has been flagged as spam?',
+    question: msg("Should you rest a phone number that has been flagged as spam?"),
     answer:
-      'In our experience, no. When DialerSeat rested flagged numbers for eight days or more, they came back answering at 16.4%, below a brand-new number at 20.5%. Cutting the volume on a flagged number instead worked: one number went from 109 calls a day to 33, and its answer rate rose from 34.4% to 63.1% within one to three days, on the same lead pool.',
+      msg("In our experience, no. When DialerSeat rested flagged numbers for eight days or more, they came back answering at 16.4%, below a brand-new number at 20.5%. Cutting the volume on a flagged number instead worked: one number went from 109 calls a day to 33, and its answer rate rose from 34.4% to 63.1% within one to three days, on the same lead pool."),
   },
   {
-    question: 'Why would resting a flagged number make it worse?',
+    question: msg("Why would resting a flagged number make it worse?"),
     answer:
-      'Because call reputation is built from being seen calling. Hiya grades numbers on four factors, and one of them, Maturity, asks whether you use established numbers rather than rotating through fresh ones. A resting number is not seen calling at all, so it cannot rebuild that, while the complaints that flagged it are still on record.',
+      msg("Because call reputation is built from being seen calling. Hiya grades numbers on four factors, and one of them, Maturity, asks whether you use established numbers rather than rotating through fresh ones. A resting number is not seen calling at all, so it cannot rebuild that, while the complaints that flagged it are still on record."),
   },
   {
-    question: 'What does DialerSeat do with a flagged number instead?',
+    question: msg("What does DialerSeat do with a flagged number instead?"),
     answer:
-      'It drops the number’s daily cap from 60 calls to 15 and leaves it in the pool. It keeps calling, visibly, while fewer and better calls let its answer rate and engagement recover. Once it is back in line with the rest of the pool, the daily check restores it to full volume automatically.',
+      msg("It drops the number’s daily cap from 60 calls to 15 and leaves it in the pool. It keeps calling, visibly, while fewer and better calls let its answer rate and engagement recover. Once it is back in line with the rest of the pool, the daily check restores it to full volume automatically."),
   },
 ]
 
@@ -81,9 +82,9 @@ export default async function Page() {
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'FAQ', url: '/faq' },
-          { name: 'Why we don’t rest flagged numbers', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("FAQ"), url: '/faq' },
+          { name: msg("Why we don’t rest flagged numbers"), url: ROUTE },
         ])}
       />
       <SiteHeader />

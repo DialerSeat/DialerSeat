@@ -4,6 +4,7 @@ import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { labelFor } from '@/lib/dispositions'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 
 
@@ -113,11 +114,11 @@ const dispositionTint = (disp: string | null): string => {
 // looks identical and both write the same values to the same
 // leads.disposition column.
 const EDIT_DISPOSITIONS = [
-  { value: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
-  { value: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
-  { value: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7' },
-  { value: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2' },
-  { value: 'SKIPPED', color: '#64748b', bg: '#f1f5f9' },
+  { value: msg("CLOSED"), color: '#16a34a', bg: '#dcfce7' },
+  { value: msg("APPOINTMENT"), color: '#2563eb', bg: '#dbeafe' },
+  { value: msg("NOT INTERESTED"), color: '#d97706', bg: '#fef3c7' },
+  { value: msg("DO NOT CALL"), color: '#dc2626', bg: '#fee2e2' },
+  { value: msg("SKIPPED"), color: '#64748b', bg: '#f1f5f9' },
   { value: 'NO_ANSWER', color: '#64748b', bg: '#f1f5f9' },
 ]
 
@@ -326,7 +327,7 @@ export default function RecordingsPage() {
         
         
         const ALLOWED = new Set([
-          'CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL', 'SKIPPED', 'NO_ANSWER',
+          msg("CLOSED"), msg("APPOINTMENT"), msg("NOT INTERESTED"), msg("DO NOT CALL"), msg("SKIPPED"), 'NO_ANSWER',
         ])
         const incoming = (data.recordings as Recording[]).filter(
           r => ALLOWED.has((r.disposition || 'NO_ANSWER') as string)
@@ -392,7 +393,7 @@ export default function RecordingsPage() {
       if (data.success) {
         setRecordings(prev => prev.filter(r => r.id !== id))
         setTotal(t => Math.max(0, t - 1))
-        setSyncMessage('Recording deleted.')
+        setSyncMessage(tr("Recording deleted."))
         setTimeout(() => setSyncMessage(null), 4000)
       } else {
         setSyncMessage(`Delete failed: ${data.error}`)
@@ -448,7 +449,7 @@ export default function RecordingsPage() {
         ))
         setExpandedId(null)
       } else {
-        setSyncMessage(`Disposition update failed: ${data.error || 'unknown error'}`)
+        setSyncMessage(`Disposition update failed: ${data.error || msg("unknown error")}`)
         setTimeout(() => setSyncMessage(null), 6000)
       }
     } catch (err: any) {
@@ -873,7 +874,7 @@ export default function RecordingsPage() {
       </div>
 
       {syncMessage && (
-        <div className="rec-sync-msg">{syncMessage}</div>
+        <div className="rec-sync-msg">{tr(syncMessage)}</div>
       )}
 
       <div className="rec-disclosure">
@@ -1009,10 +1010,10 @@ export default function RecordingsPage() {
 
           const hasLead = !!r.leads
           const leadName = hasLead
-            ? `${r.leads!.first_name || ''} ${r.leads!.last_name || ''}`.trim() || 'Unnamed Lead'
-            : 'Manual Dial'
+            ? `${r.leads!.first_name || ''} ${r.leads!.last_name || ''}`.trim() || msg("Unnamed Lead")
+            : msg("Manual Dial")
           const phone = r.leads?.phone || r.phone_number || '-'
-          const campName = r.campaigns?.name || (hasLead ? '-' : 'Direct')
+          const campName = r.campaigns?.name || (hasLead ? '-' : msg("Direct"))
           const { date, time } = formatDateClean(r.created_at)
           const dur = formatDuration(r.recording_duration || r.duration)
           const notes = r.leads?.notes || (r as any).notes || ''
@@ -1030,7 +1031,7 @@ export default function RecordingsPage() {
               style={{ background: dispositionTint(r.disposition) }}
               onClick={(e) => {
                 const target = e.target as HTMLElement
-                if (target.closest('button, audio, .rec-actions')) return
+                if (target.closest(msg("button, audio, .rec-actions"))) return
                 handleExpandRow(r)
               }}
             >
@@ -1054,7 +1055,7 @@ export default function RecordingsPage() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                  <div className="rec-camp">{campName}</div>
+                  <div className="rec-camp">{tr(campName)}</div>
                   {r.disposition ? (
                     <span className="rec-disp-badge" style={dispBadgeStyle}>{labelFor(r.disposition).toUpperCase()}</span>
                   ) : (
@@ -1130,7 +1131,7 @@ export default function RecordingsPage() {
                 <div className="col-meta">
                   <span>{date} · {time}</span>
                   <span>{dur}</span>
-                  <span>{campName}</span>
+                  <span>{tr(campName)}</span>
                 </div>
                 <div className="col-actions rec-actions">
                   <div className="rec-actions-row">
@@ -1190,7 +1191,7 @@ export default function RecordingsPage() {
                     </div>
                     <div className="rec-expand-row">
                       <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>{tr("CAMPAIGN")}</span>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{campName}</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{tr(campName)}</span>
                     </div>
                     <div className="rec-expand-row">
                       <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>{tr("DURATION")}</span>
@@ -1215,7 +1216,7 @@ export default function RecordingsPage() {
                   <div>
                     <div className="rec-expand-section-label">{tr("CALL NOTES")}</div>
                     <div className={`rec-notes-block ${!notes ? 'rec-notes-empty' : ''}`}>
-                      {notes || tr("No notes recorded for this call.")}
+                      {tr(notes) || tr("No notes recorded for this call.")}
                     </div>
                   </div>
                   {hasLead && (

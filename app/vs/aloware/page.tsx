@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 const SLUG = 'aloware'
 
@@ -35,17 +36,17 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: "How much is Aloware?",
+    question: msg("How much is Aloware?"),
     answer:
-      "iPro + AI is around $30 per user per month, uPro + AI around $60, and xPro + AI around $85. Aloware also documents ad-hoc charges that sit outside the seat price, so the plan rate is not the whole bill.",
+      msg("iPro + AI is around $30 per user per month, uPro + AI around $60, and xPro + AI around $85. Aloware also documents ad-hoc charges that sit outside the seat price, so the plan rate is not the whole bill."),
   },
   {
-    question: "Is Aloware good for CRM-based sales teams?",
+    question: msg("Is Aloware good for CRM-based sales teams?"),
     answer:
-      "Yes: that is what it is built for, and the HubSpot and Pipedrive integration is a genuine strength. If your team works leads inside a CRM and wants calling and texting attached to that workflow, Aloware fits the shape of the job better than a list dialer does.",
+      msg("Yes: that is what it is built for, and the HubSpot and Pipedrive integration is a genuine strength. If your team works leads inside a CRM and wants calling and texting attached to that workflow, Aloware fits the shape of the job better than a list dialer does."),
   },
   {
-    question: "Which is better for high-volume list dialing?",
+    question: msg("Which is better for high-volume list dialing?"),
     answer:
       "DialerSeat. Aloware is built around CRM workflows; DialerSeat is built around getting through a list, with predictive pacing, per-campaign modes and server-side calling-window enforcement.",
   },
@@ -62,9 +63,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs Aloware', url: '/vs/aloware' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs Aloware"), url: '/vs/aloware' },
         ])}
       />
       <VsCompetitorView c={competitor} />

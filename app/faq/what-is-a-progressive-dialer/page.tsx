@@ -9,6 +9,7 @@ import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -40,9 +41,9 @@ export default async function ProgressiveDialerPage() {
   return (
     <>
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Faq', url: '/faq' },
-        { name: 'Progressive Dialer', url: '/faq/what-is-a-progressive-dialer' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Faq"), url: '/faq' },
+        { name: msg("Progressive Dialer"), url: '/faq/what-is-a-progressive-dialer' },
       ])} />
       <>
       <SiteHeader />

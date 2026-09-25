@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 const BG = '#1e1f22'
 const PANEL = '#232428'
@@ -14,7 +15,7 @@ const ACCENT = '#2563eb'
 
 function quarterLabel(period: string): string {
   const [y, q] = period.split('-Q')
-  const names = ['Jan: Mar', 'Apr: Jun', 'Jul: Sep', 'Oct, Dec']
+  const names = [msg("Jan: Mar"), msg("Apr: Jun"), msg("Jul: Sep"), msg("Oct, Dec")]
   return `Q${q} ${y} · ${names[Number(q) - 1]}`
 }
 
@@ -66,7 +67,7 @@ export default function ReportsPage() {
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 500 }}>{title}</div>
+        <div style={{ fontSize: 14, fontWeight: 500 }}>{t(title)}</div>
         <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>{sub}</div>
       </div>
       <span style={{ color: MUTED, fontSize: 12 }}>{t("Open ↗")}</span>

@@ -11,6 +11,7 @@ import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { STATE_TIMEZONES } from '@/lib/timezones'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 export const metadata: Metadata = {
   title: 'Telemarketing Calling Hours by State: What DialerSeat Enforces | DialerSeat',
@@ -34,34 +35,34 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'What are the legal calling hours for telemarketing?',
+    question: msg("What are the legal calling hours for telemarketing?"),
     answer:
-      'The federal TCPA rule is 8:00am to 9:00pm in the time zone of the person being called, not the time zone of the caller. That distinction is the one most teams get wrong: an agent dialing at 6:30am Pacific is calling 9:30am Eastern, which is fine, but an agent dialing at 6:30pm Pacific is calling 9:30pm Eastern, which is not.',
+      msg("The federal TCPA rule is 8:00am to 9:00pm in the time zone of the person being called, not the time zone of the caller. That distinction is the one most teams get wrong: an agent dialing at 6:30am Pacific is calling 9:30am Eastern, which is fine, but an agent dialing at 6:30pm Pacific is calling 9:30pm Eastern, which is not."),
   },
   {
-    question: 'What hours does DialerSeat enforce?',
+    question: msg("What hours does DialerSeat enforce?"),
     answer:
-      'DialerSeat enforces 9:00am to 9:00pm in each lead’s own local time. The 9am start is deliberately one hour stricter than the federal 8am, because answer rates before 9am are poor and the compliance risk is not worth the marginal contact. Enforcement is server-side and per lead, so it applies no matter which agent is dialing or where they are.',
+      msg("DialerSeat enforces 9:00am to 9:00pm in each lead’s own local time. The 9am start is deliberately one hour stricter than the federal 8am, because answer rates before 9am are poor and the compliance risk is not worth the marginal contact. Enforcement is server-side and per lead, so it applies no matter which agent is dialing or where they are."),
   },
   {
-    question: 'How does DialerSeat know what time zone a lead is in?',
+    question: msg("How does DialerSeat know what time zone a lead is in?"),
     answer:
-      'From the state column on the lead if there is one, and from the area code if there is not. If neither can establish a location, the lead is not dialed, the check fails closed rather than guessing. That is why a lead with an unrecognised area code and no state sits in the queue: it is not a bug, it is the calling-window check refusing to approve a call it cannot verify.',
+      msg("From the state column on the lead if there is one, and from the area code if there is not. If neither can establish a location, the lead is not dialed, the check fails closed rather than guessing. That is why a lead with an unrecognised area code and no state sits in the queue: it is not a bug, it is the calling-window check refusing to approve a call it cannot verify."),
   },
   {
-    question: 'Do some states have stricter calling hours than the federal rule?',
+    question: msg("Do some states have stricter calling hours than the federal rule?"),
     answer:
-      'Yes. Florida and Maryland are commonly cited at 8am-8pm, Louisiana and Alabama restrict Sunday solicitation, Wisconsin bans Sunday telemarketing under its no-call statute, and Texas applies a narrower Sunday window. Several states have passed “mini-TCPA” laws since 2021 with their own hours, holiday and consent rules. DialerSeat does not currently enforce these state-specific variations automatically, it enforces the 9am-9pm baseline. Meeting stricter state law is your responsibility.',
+      msg("Yes. Florida and Maryland are commonly cited at 8am-8pm, Louisiana and Alabama restrict Sunday solicitation, Wisconsin bans Sunday telemarketing under its no-call statute, and Texas applies a narrower Sunday window. Several states have passed “mini-TCPA” laws since 2021 with their own hours, holiday and consent rules. DialerSeat does not currently enforce these state-specific variations automatically, it enforces the 9am-9pm baseline. Meeting stricter state law is your responsibility."),
   },
   {
-    question: 'Can I turn the calling window off?',
+    question: msg("Can I turn the calling window off?"),
     answer:
-      'Not from the dashboard. The window is enforced server-side, which means it cannot be bypassed by a client-side change or by an agent choosing a different mode. An override exists at the account level for specific named accounts with a documented reason, and every overridden call is logged with the reason it would otherwise have been blocked.',
+      msg("Not from the dashboard. The window is enforced server-side, which means it cannot be bypassed by a client-side change or by an agent choosing a different mode. An override exists at the account level for specific named accounts with a documented reason, and every overridden call is logged with the reason it would otherwise have been blocked."),
   },
   {
-    question: 'What happens to a lead that is outside its window?',
+    question: msg("What happens to a lead that is outside its window?"),
     answer:
-      'It stays in the queue and becomes dialable when its local window opens. Nothing is deleted and no attempt is recorded. The dialer tells you how many leads are waiting on the clock versus how many are blocked for a reason that waiting will not fix, so you can tell a quiet morning from a broken list.',
+      msg("It stays in the queue and becomes dialable when its local window opens. Nothing is deleted and no attempt is recorded. The dialer tells you how many leads are waiting on the clock versus how many are blocked for a reason that waiting will not fix, so you can tell a quiet morning from a broken list."),
   },
 ]
 
@@ -103,9 +104,9 @@ export default async function Page() {
   return (
     <>
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Faq', url: '/faq' },
-        { name: 'Telemarketing Calling Hours by State', url: '/faq/calling-hours' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Faq"), url: '/faq' },
+        { name: msg("Telemarketing Calling Hours by State"), url: '/faq/calling-hours' },
       ])} />
       <JsonLd data={faqPageSchema(FAQS)} />
       <SiteHeader />
@@ -162,7 +163,7 @@ export default async function Page() {
                 {zones.map(([zone, states]) => (
                   <tr key={zone}>
                     <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', whiteSpace: 'nowrap' }}>
-                      {ZONE_LABELS[zone] ?? zone}
+                      {t(ZONE_LABELS[zone]) ?? zone}
                     </td>
                     <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', color: '#c4c8d8' }}>
                       {states.sort().join(', ')}
@@ -210,8 +211,8 @@ export default async function Page() {
           <h2>{t("Calling hours, answered.")}</h2>
           {FAQS.map(f => (
             <div key={f.question} style={{ marginBottom: 28 }}>
-              <h3 style={{ fontSize: 18, marginBottom: 8 }}>{f.question}</h3>
-              <p style={{ margin: 0 }}>{f.answer}</p>
+              <h3 style={{ fontSize: 18, marginBottom: 8 }}>{t(f.question)}</h3>
+              <p style={{ margin: 0 }}>{t(f.answer)}</p>
             </div>
           ))}
         </section>

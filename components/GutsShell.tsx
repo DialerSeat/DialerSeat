@@ -116,11 +116,11 @@ export function GutsSection({
       {icon && (
         <div className="guts-icon">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            {ICONS[icon]}
+            {t(ICONS[icon])}
           </svg>
         </div>
       )}
-      {title && <h2>{title}</h2>}
+      {title && <h2>{t(title)}</h2>}
       {children}
     </section>
   )
@@ -458,7 +458,7 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
               {rail.map((group, gi) => (
                 <div className="guts-rail-group" key={group.label}>
                   <p className={`guts-rail-label${gi === 0 ? ' guts-rail-label-wide' : ''}`}>
-                    {group.label}
+                    {t(group.label)}
                   </p>
                   {group.items.map((item) => (
                     <Link
@@ -466,7 +466,7 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
                       href={item.href}
                       className={item.href === activeHref ? 'here' : undefined}
                     >
-                      <RailChevron /> {item.label}
+                      <RailChevron /> {t(item.label)}
                     </Link>
                   ))}
                 </div>

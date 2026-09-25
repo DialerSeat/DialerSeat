@@ -10,6 +10,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 
 type Slide = { src: string; alt: string; caption: string; isJpg?: boolean }
@@ -18,23 +19,23 @@ const MOBILE_SLIDES: Slide[] = [
   {
     src: '/faq-images/regular-mobile/landing-page.jpg',
     alt: 'DialerSeat marketing landing page on mobile, before signing in',
-    caption: 'The landing page on mobile, this is what a new visitor sees before ever signing up. Fully responsive, no separate mobile site.',
+    caption: msg("The landing page on mobile, this is what a new visitor sees before ever signing up. Fully responsive, no separate mobile site."),
     isJpg: true,
   },
   {
     src: '/faq-images/regular-mobile/sidebar-nav.png',
     alt: 'DialerSeat mobile sidebar navigation, standard Pro plan account',
-    caption: 'The sidebar on a standard Pro account: Analytics, Dialer, Campaigns, Recordings, Leads, Teams, Settings. Same navigation as desktop, same permissions.',
+    caption: msg("The sidebar on a standard Pro account: Analytics, Dialer, Campaigns, Recordings, Leads, Teams, Settings. Same navigation as desktop, same permissions."),
   },
   {
     src: '/faq-images/regular-mobile/dialer-progressive.png',
     alt: 'DialerSeat mobile dialer terminal running in progressive mode',
-    caption: 'The dialer terminal, running progressive mode with a live campaign selected. Full status, duration, connected rate, and mode readouts, nothing trimmed down for the smaller screen.',
+    caption: msg("The dialer terminal, running progressive mode with a live campaign selected. Full status, duration, connected rate, and mode readouts, nothing trimmed down for the smaller screen."),
   },
   {
     src: '/faq-images/regular-mobile/analytics-overview.png',
     alt: 'DialerSeat mobile analytics overview showing real call data',
-    caption: 'The analytics overview with real dialing history: total calls, hours dialed, conversions, and the call-volume chart, all on a phone screen.',
+    caption: msg("The analytics overview with real dialing history: total calls, hours dialed, conversions, and the call-volume chart, all on a phone screen."),
   },
 ]
 
@@ -64,7 +65,7 @@ function MobileCarousel() {
         </div>
         <button className="mob-carousel-arrow right" onClick={() => go(1)} aria-label={t("Next screenshot")}>›</button>
       </div>
-      <p className="mob-carousel-caption">{slide.caption}</p>
+      <p className="mob-carousel-caption">{t(slide.caption)}</p>
       <div className="mob-carousel-dots">
         {MOBILE_SLIDES.map((s, i) => (
           <button

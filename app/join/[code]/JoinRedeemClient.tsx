@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 const FUTURA = "'Futura PT', Futura, sans-serif"
 
@@ -49,7 +50,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
         if (cancelled) return
 
         if (!data.success) {
-          setError(data.error || 'This invite link is invalid or has expired.')
+          setError(data.error || msg("This invite link is invalid or has expired."))
           setPhase('error')
           return
         }
@@ -60,7 +61,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
         else setPhase('confirm')
       } catch {
         if (!cancelled) {
-          setError('Something went wrong loading this invite.')
+          setError(msg("Something went wrong loading this invite."))
           setPhase('error')
         }
       }
@@ -79,13 +80,13 @@ export default function JoinRedeemClient({ code }: { code: string }) {
       const data = await res.json()
 
       if (!data.success) {
-        setError(data.error || 'This link could not be redeemed.')
+        setError(data.error || msg("This link could not be redeemed."))
         setPhase('error')
         return
       }
 
       if (data.nextStep === 'redirect_to_billing') {
-        setMessage(`Joined ${data.team?.name || 'the team'}. Taking you to billing…`)
+        setMessage(`Joined ${data.team?.name || msg("the team")}. Taking you to billing…`)
         // Carry the code through. They are paying for their own seat, so the
         // code that brought them here is what the promo field wants — and
         // asking them to dig it back out of an email would be the product
@@ -97,7 +98,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
         setTimeout(() => router.push(billingUrl), 1000)
       } else if (data.nextStep === 'awaiting_owner_approval') {
         setPhase('pending')
-        setMessage(`You've requested to join ${data.team?.name || 'the team'}. The owner needs to approve your seat before you can dial.`)
+        setMessage(`You've requested to join ${data.team?.name || msg("the team")}. The owner needs to approve your seat before you can dial.`)
       } else {
         // redirect_to_dialer — straight to work, not a stats page. Scoped
         // to the team, and to the campaign directly when there's exactly
@@ -122,18 +123,18 @@ export default function JoinRedeemClient({ code }: { code: string }) {
         const targetHost = slug ? `${slug}.${rootDomain}` : null
 
         if (targetHost && typeof window !== 'undefined' && window.location.host !== targetHost) {
-          setMessage(`You're in. Taking you to your team's dialer…`)
+          setMessage(msg("You're in. Taking you to your team's dialer…"))
           setTimeout(() => {
             window.location.href =
               `https://${targetHost}/dashboard/dialer?${params.toString()}`
           }, 1000)
         } else {
-          setMessage(`You're in. Taking you to the dialer…`)
+          setMessage(msg("You're in. Taking you to the dialer…"))
           setTimeout(() => router.push(`/dashboard/dialer?${params.toString()}`), 1000)
         }
       }
     } catch (err: any) {
-      setError(err?.message || 'Something went wrong redeeming this link.')
+      setError(err?.message || msg("Something went wrong redeeming this link."))
       setPhase('error')
     }
   }
@@ -285,7 +286,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
             <div style={{ fontSize: 11, letterSpacing: 4, fontWeight: 'bold', color: C.primary, marginBottom: 14 }}>
               {t("JOINING…")}</div>
             <div style={{ fontSize: 13, lineHeight: 1.6, color: C.muted }}>
-              {message || t("Setting up your seat, one moment.")}
+              {t(message) || t("Setting up your seat, one moment.")}
             </div>
           </>
         )}
@@ -295,7 +296,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
             <div style={{ fontSize: 11, letterSpacing: 4, fontWeight: 'bold', color: '#ffaa3e', marginBottom: 14 }}>
               {t("PENDING APPROVAL")}</div>
             <div style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, marginBottom: 20 }}>
-              {message}
+              {t(message)}
             </div>
             <button onClick={() => router.push('/dashboard/teams')} style={goToTeamsBtn(C)}>{t("GO TO TEAMS")}</button>
           </>
@@ -306,7 +307,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
             <div style={{ fontSize: 11, letterSpacing: 4, fontWeight: 'bold', color: '#ff6464', marginBottom: 14 }}>
               {t("COULDN'T JOIN")}</div>
             <div style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, marginBottom: 20 }}>
-              {error}
+              {t(error)}
             </div>
             <button
               onClick={() => router.push('/dashboard/teams')}

@@ -12,6 +12,7 @@ import { getDictionary, getLocale, getUrlLocale } from '@/lib/i18n/server';
 import { LOCALE_COOKIE, PROMPT_COOKIE, localeDir, suggestLocale } from '@/lib/i18n/locales';
 import LanguagePrompt from '@/components/LanguagePrompt';
 import LocaleAccountSync from '@/components/LocaleAccountSync';
+import { msg } from '@/lib/i18n/msg'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://dialerseat.com'),
@@ -129,7 +130,7 @@ const dialerseatLocalization = {
       },
     },
     deletePage: {
-      title: 'delete account',
+      title: msg("delete account"),
       actionDescription: "Type 'delete account' below to continue.",
       confirm: 'delete account',
     },

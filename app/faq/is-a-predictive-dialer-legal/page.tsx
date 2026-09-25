@@ -7,6 +7,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /faq/is-a-predictive-dialer-legal
@@ -80,29 +81,29 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'Is a predictive dialer legal?',
+    question: msg("Is a predictive dialer legal?"),
     answer:
-      'Yes. In the US, predictive dialers are legal as long as they meet conditions set by the FTC’s Telemarketing Sales Rule and the FCC’s TCPA rules: abandon no more than 3% of calls answered by a person per campaign over each 30-day period, let an unanswered call ring at least 15 seconds or four rings, play a recorded message naming the seller and a callback number when no agent is free, offer an automated opt-out, keep records, and call only between 8 a.m. and 9 p.m. in the called person’s local time.',
+      msg("Yes. In the US, predictive dialers are legal as long as they meet conditions set by the FTC’s Telemarketing Sales Rule and the FCC’s TCPA rules: abandon no more than 3% of calls answered by a person per campaign over each 30-day period, let an unanswered call ring at least 15 seconds or four rings, play a recorded message naming the seller and a callback number when no agent is free, offer an automated opt-out, keep records, and call only between 8 a.m. and 9 p.m. in the called person’s local time."),
   },
   {
-    question: 'What is an abandoned call?',
+    question: msg("What is an abandoned call?"),
     answer:
-      'Under the Telemarketing Sales Rule, a call is abandoned when a person answers it and is not connected to a sales representative within two seconds of finishing their greeting. Predictive dialers dial more numbers than there are free agents, so occasionally more people answer than can be connected, and those calls are abandoned.',
+      msg("Under the Telemarketing Sales Rule, a call is abandoned when a person answers it and is not connected to a sales representative within two seconds of finishing their greeting. Predictive dialers dial more numbers than there are free agents, so occasionally more people answer than can be connected, and those calls are abandoned."),
   },
   {
-    question: 'What is the 3% abandon rate rule?',
+    question: msg("What is the 3% abandon rate rule?"),
     answer:
-      'No more than 3% of calls answered by a person may be abandoned, measured per calling campaign over the campaign’s length if under 30 days, or separately over each 30-day period after that. Both the FTC and the FCC set the same 3% limit.',
+      msg("No more than 3% of calls answered by a person may be abandoned, measured per calling campaign over the campaign’s length if under 30 days, or separately over each 30-day period after that. Both the FTC and the FCC set the same 3% limit."),
   },
   {
-    question: 'How does DialerSeat keep predictive dialing under 3%?',
+    question: msg("How does DialerSeat keep predictive dialing under 3%?"),
     answer:
-      'It tracks each campaign’s abandon rate over a rolling 30 days. When a campaign reaches 2.5%, below the 3% limit, the dialer stops dialing extra lines for it and drops to one line per agent. It returns to multi-line dialing once the rate is back under 2.5%. Unanswered predictive calls ring for 20 seconds, above the 15-second minimum.',
+      msg("It tracks each campaign’s abandon rate over a rolling 30 days. When a campaign reaches 2.5%, below the 3% limit, the dialer stops dialing extra lines for it and drops to one line per agent. It returns to multi-line dialing once the rate is back under 2.5%. Unanswered predictive calls ring for 20 seconds, above the 15-second minimum."),
   },
   {
-    question: 'Does DialerSeat play the required recorded message?',
+    question: msg("Does DialerSeat play the required recorded message?"),
     answer:
-      'Yes. You set your business name and a callback number once, in Settings, and the dialer plays a message naming them when no agent is free, offering the person the option to press 9 to stop future calls, which blocks that number across your whole account. Until both are set, DialerSeat will not run predictive at all: the mode cannot be saved on a campaign and the dialer refuses to start. Predictive without that message is not lawful, so the dialer declines to place the calls rather than place them wrongly.',
+      msg("Yes. You set your business name and a callback number once, in Settings, and the dialer plays a message naming them when no agent is free, offering the person the option to press 9 to stop future calls, which blocks that number across your whole account. Until both are set, DialerSeat will not run predictive at all: the mode cannot be saved on a campaign and the dialer refuses to start. Predictive without that message is not lawful, so the dialer declines to place the calls rather than place them wrongly."),
   },
 ]
 
@@ -113,9 +114,9 @@ export default async function Page() {
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'FAQ', url: '/faq' },
-          { name: 'Is a predictive dialer legal?', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("FAQ"), url: '/faq' },
+          { name: msg("Is a predictive dialer legal?"), url: ROUTE },
         ])}
       />
       <SiteHeader />

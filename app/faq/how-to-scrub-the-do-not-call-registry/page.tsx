@@ -7,6 +7,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /faq/how-to-scrub-the-do-not-call-registry
@@ -68,24 +69,24 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'Does DialerSeat scrub my list against the National Do Not Call Registry?',
+    question: msg("Does DialerSeat scrub my list against the National Do Not Call Registry?"),
     answer:
-      'No. Registry access requires your own organization’s registration and subscription with the FTC, so scrubbing is your responsibility. Remove registered numbers from your list before you upload it. DialerSeat does block numbers automatically when someone presses 9 on its abandoned-call message or texts STOP.',
+      msg("No. Registry access requires your own organization’s registration and subscription with the FTC, so scrubbing is your responsibility. Remove registered numbers from your list before you upload it. DialerSeat does block numbers automatically when someone presses 9 on its abandoned-call message or texts STOP."),
   },
   {
-    question: 'How much does the Do Not Call Registry cost?',
+    question: msg("How much does the Do Not Call Registry cost?"),
     answer:
-      'From October 1, 2026, the FTC charges $85 per area code, with the first five area codes free and a maximum of $23,425.',
+      msg("From October 1, 2026, the FTC charges $85 per area code, with the first five area codes free and a maximum of $23,425."),
   },
   {
-    question: 'How often do I have to scrub against the Do Not Call Registry?',
+    question: msg("How often do I have to scrub against the Do Not Call Registry?"),
     answer:
-      'To stay within the Telemarketing Sales Rule’s safe harbor, the copy of the registry you scrub against must be no more than 31 days old on the date of each call. In practice that means downloading it again and re-scrubbing at least every 31 days.',
+      msg("To stay within the Telemarketing Sales Rule’s safe harbor, the copy of the registry you scrub against must be no more than 31 days old on the date of each call. In practice that means downloading it again and re-scrubbing at least every 31 days."),
   },
   {
-    question: 'Can I ever call a number on the Do Not Call Registry?',
+    question: msg("Can I ever call a number on the Do Not Call Registry?"),
     answer:
-      'Yes, in two cases under the Telemarketing Sales Rule: when the person has given you an express agreement in writing to be called, or when you have an established business relationship with them and they have not asked you to stop. The FTC’s guidance sets out the details of each.',
+      msg("Yes, in two cases under the Telemarketing Sales Rule: when the person has given you an express agreement in writing to be called, or when you have an established business relationship with them and they have not asked you to stop. The FTC’s guidance sets out the details of each."),
   },
 ]
 
@@ -96,9 +97,9 @@ export default async function Page() {
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'FAQ', url: '/faq' },
-          { name: 'Scrubbing the Do Not Call Registry', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("FAQ"), url: '/faq' },
+          { name: msg("Scrubbing the Do Not Call Registry"), url: ROUTE },
         ])}
       />
       <SiteHeader />

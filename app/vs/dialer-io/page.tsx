@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 // The slug drops the dot. A literal /vs/dialer.io puts what looks like a file
 // extension at the end of a route segment, which is the one shape static
@@ -47,34 +48,34 @@ export const metadata: Metadata = {
 // themselves. Where they publish nothing, the answer says so.
 const FAQS = [
   {
-    question: 'What does Dialer.io cost?',
+    question: msg("What does Dialer.io cost?"),
     answer:
-      'Dialer.io does not publish a price. Their site states that pricing is tailored on a case-by-case basis with no hidden charges, and the "See Pricing" link goes to a contact form, so the number arrives after you share your team size, dialing volume and current tools. DialerSeat publishes $35 per seat per week on the homepage: one seat for three months is $455, and you can stop after the first week.',
+      msg("Dialer.io does not publish a price. Their site states that pricing is tailored on a case-by-case basis with no hidden charges, and the \"See Pricing\" link goes to a contact form, so the number arrives after you share your team size, dialing volume and current tools. DialerSeat publishes $35 per seat per week on the homepage: one seat for three months is $455, and you can stop after the first week."),
   },
   {
-    question: 'Does Dialer.io require a contract?',
+    question: msg("Does Dialer.io require a contract?"),
     answer:
-      'Their FAQ states an initial three-month commitment, after which you can continue month to month. That is the part worth pricing: three months is roughly thirteen weeks, so you are committing to thirteen weeks of a rate you have not been able to compare against anyone else, before you know whether the tool works on your list. DialerSeat bills weekly with no contract and no minimum term. The smallest thing you can buy is one week at $35, and the same thirteen weeks is $455 per seat if you keep going.',
+      msg("Their FAQ states an initial three-month commitment, after which you can continue month to month. That is the part worth pricing: three months is roughly thirteen weeks, so you are committing to thirteen weeks of a rate you have not been able to compare against anyone else, before you know whether the tool works on your list. DialerSeat bills weekly with no contract and no minimum term. The smallest thing you can buy is one week at $35, and the same thirteen weeks is $455 per seat if you keep going."),
   },
   {
-    question: 'What does a five-agent floor cost on each?',
+    question: msg("What does a five-agent floor cost on each?"),
     answer:
-      'On DialerSeat, $175 per week in seats at $35 each, plus $75 per week for the Manager+ owner who holds the team. Over the thirteen weeks Dialer.io asks you to commit to, that is $2,275 in seats. Dialer.io does not publish a five-seat number: it arrives after a sales call, and it commits you for three months.',
+      msg("On DialerSeat, $175 per week in seats at $35 each, plus $75 per week for the Manager+ owner who holds the team. Over the thirteen weeks Dialer.io asks you to commit to, that is $2,275 in seats. Dialer.io does not publish a five-seat number: it arrives after a sales call, and it commits you for three months."),
   },
   {
-    question: 'Which dialing modes does Dialer.io support?',
+    question: msg("Which dialing modes does Dialer.io support?"),
     answer:
-      'Their FAQ names preview dialing as the core mode, with power and progressive also offered. Predictive and multi-line dialing are not claimed anywhere in their published material. DialerSeat includes preview, power, progressive and predictive at the base price, selectable per campaign.',
+      msg("Their FAQ names preview dialing as the core mode, with power and progressive also offered. Predictive and multi-line dialing are not claimed anywhere in their published material. DialerSeat includes preview, power, progressive and predictive at the base price, selectable per campaign."),
   },
   {
-    question: 'What is Dialer.io genuinely better at?',
+    question: msg("What is Dialer.io genuinely better at?"),
     answer:
-      'Speed to lead and number health. Dialer.io queues a new lead for dialing the moment it arrives and runs cadences with cooldowns on the follow-ups, and their number-management system monitors caller-ID health, cools down flagged numbers and rotates them back in. They also sync natively with GoHighLevel and HubSpot, and enforce calling windows in Australia as well as the United States.',
+      msg("Speed to lead and number health. Dialer.io queues a new lead for dialing the moment it arrives and runs cadences with cooldowns on the follow-ups, and their number-management system monitors caller-ID health, cools down flagged numbers and rotates them back in. They also sync natively with GoHighLevel and HubSpot, and enforce calling windows in Australia as well as the United States."),
   },
   {
-    question: 'Who should pick DialerSeat instead?',
+    question: msg("Who should pick DialerSeat instead?"),
     answer:
-      'Teams that want a published price, no commitment, and multi-line predictive dialing for working a list at volume. If your leads arrive from forms in GoHighLevel or HubSpot and speed to first dial is the whole game, Dialer.io is built for exactly that and is the more direct fit.',
+      msg("Teams that want a published price, no commitment, and multi-line predictive dialing for working a list at volume. If your leads arrive from forms in GoHighLevel or HubSpot and speed to first dial is the whole game, Dialer.io is built for exactly that and is the more direct fit."),
   },
 ]
 
@@ -89,9 +90,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs Dialer.io', url: '/vs/dialer-io' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs Dialer.io"), url: '/vs/dialer-io' },
         ])}
       />
       <VsCompetitorView c={competitor} />

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 import LoginLinkSection from '@/components/LoginLinkSection'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 
 
@@ -44,9 +45,9 @@ interface SavedTheme {
 const PRESETS: Preset[] = [
   {
     key: 'preset-1',
-    label: 'Preset 1',
+    label: msg("Preset 1"),
     description:
-      'Warm gray sidebar, forest-green header, near-black accent on a muted green page.',
+      msg("Warm gray sidebar, forest-green header, near-black accent on a muted green page."),
     primary: '#101017',
     sidebar: '#514f4d',
     headerBg: '#208330',
@@ -54,9 +55,9 @@ const PRESETS: Preset[] = [
   },
   {
     key: 'preset-2',
-    label: 'Preset 2',
+    label: msg("Preset 2"),
     description:
-      'Clean light gray sidebar, white header, deep corporate blue accent on a white page.',
+      msg("Clean light gray sidebar, white header, deep corporate blue accent on a white page."),
     primary: '#00539B',
     sidebar: '#dbdbdb',
     headerBg: '#ffffff',
@@ -64,9 +65,9 @@ const PRESETS: Preset[] = [
   },
   {
     key: 'preset-3',
-    label: 'Preset 3',
+    label: msg("Preset 3"),
     description:
-      'Slate teal: deep blue-gray chrome with a bright teal accent, monochrome page wash.',
+      msg("Slate teal: deep blue-gray chrome with a bright teal accent, monochrome page wash."),
     primary: '#1ABC9C',
     sidebar: '#2C3E50',
     headerBg: '#2C3E50',
@@ -74,9 +75,9 @@ const PRESETS: Preset[] = [
   },
   {
     key: 'preset-4',
-    label: 'Preset 4',
+    label: msg("Preset 4"),
     description:
-      'All black chrome and page with a soft charcoal accent. Stealth and minimal.',
+      msg("All black chrome and page with a soft charcoal accent. Stealth and minimal."),
     primary: '#363636',
     sidebar: '#000000',
     headerBg: '#000000',
@@ -84,9 +85,9 @@ const PRESETS: Preset[] = [
   },
   {
     key: 'preset-5',
-    label: 'Preset 5',
+    label: msg("Preset 5"),
     description:
-      'Warm stone chrome with a taupe accent on a charcoal page. Understated and editorial.',
+      msg("Warm stone chrome with a taupe accent on a charcoal page. Understated and editorial."),
     primary: '#9C8F84',
     sidebar: '#D8D9D6',
     headerBg: '#D8D9D6',
@@ -94,9 +95,9 @@ const PRESETS: Preset[] = [
   },
   {
     key: 'preset-6',
-    label: 'Preset 6',
+    label: msg("Preset 6"),
     description:
-      'Deep brown chrome with slate blue accents on a warm gray dashboard. Quiet and confident.',
+      msg("Deep brown chrome with slate blue accents on a warm gray dashboard. Quiet and confident."),
     primary: '#62839d',
     sidebar: '#3b261b',
     headerBg: '#3b261b',
@@ -104,9 +105,9 @@ const PRESETS: Preset[] = [
   },
   {
     key: 'preset-7',
-    label: 'Preset 7',
+    label: msg("Preset 7"),
     description:
-      'Soft light gray chrome, lavender accent, faint lavender page wash. Calm and easy on the eyes.',
+      msg("Soft light gray chrome, lavender accent, faint lavender page wash. Calm and easy on the eyes."),
     primary: '#b8a3e0',
     sidebar: '#e4e6eb',
     headerBg: '#e4e6eb',
@@ -114,9 +115,9 @@ const PRESETS: Preset[] = [
   },
   {
     key: 'preset-default',
-    label: 'Default',
+    label: msg("Default"),
     description:
-      'The standard DialerSeat look, use this to run as the default DialerSeat tenant.',
+      msg("The standard DialerSeat look, use this to run as the default DialerSeat tenant."),
     primary: '#4a9eff',
     sidebar: '#111118',
     headerBg: '#1a1a2e',
@@ -263,7 +264,7 @@ export default function WhitelabelOnboardingPage() {
       setSlugStatus({
         kind: 'invalid',
         reason:
-          'Use only lowercase letters, numbers, and hyphens (2-30 chars, no leading/trailing dash).',
+          msg("Use only lowercase letters, numbers, and hyphens (2-30 chars, no leading/trailing dash)."),
       })
       return
     }
@@ -346,7 +347,7 @@ export default function WhitelabelOnboardingPage() {
       )
       const data = await res.json()
       if (!res.ok) {
-        alert(data.detail || data.error || 'Delete failed.')
+        alert(data.detail || data.error || tr("Delete failed."))
         setDeletingThemeId(null)
         return
       }
@@ -356,7 +357,7 @@ export default function WhitelabelOnboardingPage() {
       setSavedThemes(prev => prev.filter(t => t.id !== id))
       setDeletingThemeId(null)
     } catch (err: any) {
-      alert(err.message || 'Delete failed.')
+      alert(err.message || tr("Delete failed."))
       setDeletingThemeId(null)
     }
   }
@@ -372,11 +373,11 @@ export default function WhitelabelOnboardingPage() {
         })
         const upData = await upRes.json()
         if (!upRes.ok) {
-          return { url: null, error: upData.detail || upData.error || 'Logo upload failed.' }
+          return { url: null, error: upData.detail || upData.error || msg("Logo upload failed.") }
         }
         return { url: upData.url }
       } catch (err: any) {
-        return { url: null, error: err.message || 'Logo upload failed.' }
+        return { url: null, error: err.message || msg("Logo upload failed.") }
       }
     }
     return { url: existingLogoUrl }
@@ -386,11 +387,11 @@ export default function WhitelabelOnboardingPage() {
     setSaveAsNewError(null)
     const name = newThemeName.trim()
     if (!name) {
-      setSaveAsNewError('Name is required.')
+      setSaveAsNewError(tr("Name is required."))
       return
     }
     if (name.length > 40) {
-      setSaveAsNewError('Name must be 40 characters or fewer.')
+      setSaveAsNewError(tr("Name must be 40 characters or fewer."))
       return
     }
     if (savedThemes.length >= MAX_SAVED_THEMES) {
@@ -398,7 +399,7 @@ export default function WhitelabelOnboardingPage() {
       return
     }
     if (!HEX_RE.test(primary) || !HEX_RE.test(sidebar) || !HEX_RE.test(headerBg) || !HEX_RE.test(pageBg)) {
-      setSaveAsNewError('Fix invalid color values before saving.')
+      setSaveAsNewError(tr("Fix invalid color values before saving."))
       return
     }
 
@@ -425,7 +426,7 @@ export default function WhitelabelOnboardingPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setSaveAsNewError(data.detail || data.error || 'Save failed.')
+        setSaveAsNewError(data.detail || data.error || tr("Save failed."))
         setSavingAsNew(false)
         return
       }
@@ -438,7 +439,7 @@ export default function WhitelabelOnboardingPage() {
       setSavingAsNew(false)
       setTimeout(() => setSaveAsNewSuccess(null), 3500)
     } catch (err: any) {
-      setSaveAsNewError(err.message || 'Save failed.')
+      setSaveAsNewError(err.message || tr("Save failed."))
       setSavingAsNew(false)
     }
   }
@@ -474,7 +475,7 @@ export default function WhitelabelOnboardingPage() {
       )
       const data = await res.json()
       if (!res.ok) {
-        alert(data.detail || data.error || 'Overwrite failed.')
+        alert(data.detail || data.error || tr("Overwrite failed."))
         setOverwritingTheme(false)
         return
       }
@@ -483,7 +484,7 @@ export default function WhitelabelOnboardingPage() {
       setTimeout(() => setOverwriteSuccess(null), 3500)
       setOverwritingTheme(false)
     } catch (err: any) {
-      alert(err.message || 'Overwrite failed.')
+      alert(err.message || tr("Overwrite failed."))
       setOverwritingTheme(false)
     }
   }
@@ -502,11 +503,11 @@ export default function WhitelabelOnboardingPage() {
     setError(null)
 
     if (!brandName.trim()) {
-      setError('Brand name is required.')
+      setError(msg("Brand name is required."))
       return
     }
     if (!slug.trim()) {
-      setError('Subdomain is required.')
+      setError(msg("Subdomain is required."))
       return
     }
     if (slugStatus.kind === 'invalid') {
@@ -514,31 +515,31 @@ export default function WhitelabelOnboardingPage() {
       return
     }
     if (slugStatus.kind === 'taken' || slugStatus.kind === 'reserved') {
-      setError('This subdomain is not available. Pick another.')
+      setError(msg("This subdomain is not available. Pick another."))
       return
     }
     if (!HEX_RE.test(primary)) {
-      setError('Primary color must be a #RRGGBB hex value.')
+      setError(msg("Primary color must be a #RRGGBB hex value."))
       return
     }
     if (!HEX_RE.test(sidebar)) {
-      setError('Sidebar color must be a #RRGGBB hex value.')
+      setError(msg("Sidebar color must be a #RRGGBB hex value."))
       return
     }
     if (!HEX_RE.test(headerBg)) {
-      setError('Header color must be a #RRGGBB hex value.')
+      setError(msg("Header color must be a #RRGGBB hex value."))
       return
     }
     if (!HEX_RE.test(pageBg)) {
-      setError('Page background color must be a #RRGGBB hex value.')
+      setError(msg("Page background color must be a #RRGGBB hex value."))
       return
     }
     if (!editMode && !logoFile && !existingLogoUrl) {
-      setError('Logo is required.')
+      setError(msg("Logo is required."))
       return
     }
     if (editMode && !logoFile && !existingLogoUrl) {
-      setError('Logo is required.')
+      setError(msg("Logo is required."))
       return
     }
 
@@ -549,7 +550,7 @@ export default function WhitelabelOnboardingPage() {
       loginLinkUrl.trim().length > 0 ||
       loginLinkLabel.trim().length > 0
     if (wantsLink && (!loginLinkText.trim() || !loginLinkUrl.trim())) {
-      setError('Your login link needs both clickable text and a URL, or clear the link fields.')
+      setError(msg("Your login link needs both clickable text and a URL, or clear the link fields."))
       return
     }
 
@@ -573,7 +574,7 @@ export default function WhitelabelOnboardingPage() {
         })
         const upData = await upRes.json()
         if (!upRes.ok) {
-          setError(upData.error || 'Logo upload failed.')
+          setError(upData.error || msg("Logo upload failed."))
           setSubmitting(false)
           return
         }
@@ -599,7 +600,7 @@ export default function WhitelabelOnboardingPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.detail || data.error || 'Failed to save.')
+        setError(data.detail || data.error || msg("Failed to save."))
         setSubmitting(false)
         return
       }
@@ -619,7 +620,7 @@ export default function WhitelabelOnboardingPage() {
 
       router.push('/dashboard')
     } catch (err: any) {
-      setError(err.message || 'Something went wrong.')
+      setError(err.message || msg("Something went wrong."))
       setSubmitting(false)
     }
   }
@@ -671,7 +672,7 @@ export default function WhitelabelOnboardingPage() {
   let pickerDescription: string
   if (presetKey === 'custom') {
     pickerDescription =
-      'Pick your own sidebar, header, primary, and page background colors below.'
+      msg("Pick your own sidebar, header, primary, and page background colors below.")
   } else if (activeSavedTheme) {
     pickerDescription = `Your saved theme "${activeSavedTheme.name}". Edit colors below, then OVERWRITE to update this theme, SAVE AS NEW to save a copy, or SAVE CHANGES to apply to your live tenant.`
   } else {
@@ -789,7 +790,7 @@ export default function WhitelabelOnboardingPage() {
                     <div style={{ ...presetSwatchStyle, background: p.primary }} title={tr("Primary")} />
                     <div style={{ ...presetSwatchStyle, background: p.pageBg }} title={tr("Page background")} />
                   </div>
-                  <div style={presetNameStyle(presetKey === p.key)}>{p.label}</div>
+                  <div style={presetNameStyle(presetKey === p.key)}>{tr(p.label)}</div>
                 </button>
               ))}
               <button
@@ -814,7 +815,7 @@ export default function WhitelabelOnboardingPage() {
               </button>
             </div>
 
-            <div style={presetHintStyle}>{pickerDescription}</div>
+            <div style={presetHintStyle}>{tr(pickerDescription)}</div>
 
             {(presetKey === 'custom' || activeSavedTheme) && (
               <div style={colorPickerGridStyle}>
@@ -933,7 +934,7 @@ export default function WhitelabelOnboardingPage() {
               primaryColor={HEX_RE.test(primary) ? primary : '#4a9eff'}
               pageBgColor={HEX_RE.test(pageBg) ? pageBg : '#f0f1f4'}
               sidebarColor={HEX_RE.test(sidebar) ? sidebar : '#111118'}
-              label={loginLinkLabel}
+              label={tr(loginLinkLabel)}
               text={loginLinkText}
               url={loginLinkUrl}
               onLabelChange={setLoginLinkLabel}
@@ -949,7 +950,7 @@ export default function WhitelabelOnboardingPage() {
               {tr("Color and logo changes propagate site-wide within 60 seconds. Your own browser updates instantly on save. Other users (your team, your customers) will see the new look after their next page load, up to a minute later.")}</div>
           </div>
 
-          {error && <div style={errorBoxStyle}>{error}</div>}
+          {error && <div style={errorBoxStyle}>{tr(error)}</div>}
 
           {/* ── SUBMIT ── */}
           <button
@@ -991,7 +992,7 @@ export default function WhitelabelOnboardingPage() {
               )}
 
               {overwriteSuccess && (
-                <div style={saveAsNewSuccessStyle}>✓ {overwriteSuccess}</div>
+                <div style={saveAsNewSuccessStyle}>✓ {tr(overwriteSuccess)}</div>
               )}
 
               <button
@@ -1046,7 +1047,7 @@ export default function WhitelabelOnboardingPage() {
                     </button>
                   </div>
                   {saveAsNewError && (
-                    <div style={saveAsNewErrorStyle}>{saveAsNewError}</div>
+                    <div style={saveAsNewErrorStyle}>{tr(saveAsNewError)}</div>
                   )}
                   <div style={saveAsNewHintStyle}>
                     {tr("Saves the current colors and logo as a named theme. Doesn't change what your dashboard currently looks like, use SAVE CHANGES above to apply.")}</div>
@@ -1054,7 +1055,7 @@ export default function WhitelabelOnboardingPage() {
               )}
 
               {saveAsNewSuccess && (
-                <div style={saveAsNewSuccessStyle}>✓ {saveAsNewSuccess}</div>
+                <div style={saveAsNewSuccessStyle}>✓ {tr(saveAsNewSuccess)}</div>
               )}
             </>
           )}
@@ -1111,8 +1112,8 @@ function ColorRow({
         style={colorSwatchInputStyle}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={colorRowLabelStyle}>{label}</div>
-        <div style={colorRowDescStyle}>{description}</div>
+        <div style={colorRowLabelStyle}>{tr(label)}</div>
+        <div style={colorRowDescStyle}>{tr(description)}</div>
       </div>
       <input
         type="text"
@@ -1159,7 +1160,7 @@ function renderSlugStatus(
     )
   }
   if (status.kind === 'invalid') {
-    return <span style={{ color: 'var(--color-warning)' }}>{status.reason}</span>
+    return <span style={{ color: 'var(--color-warning)' }}>{tr(status.reason)}</span>
   }
   return null
 }

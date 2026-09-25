@@ -8,7 +8,8 @@ import fs from 'node:fs'
 import ts from 'typescript'
 
 export function primeSource(src, file) {
-  if (!/from ['"]@\/lib\/i18n\/server['"]/.test(src) || /primeLocale\(\)/.test(src)) {
+  // Only files that render with the server t() need priming.
+  if (!/import \{[^}]*\bt\b[^}]*\} from ['"]@\/lib\/i18n\/server['"]/.test(src) || /primeLocale\(\)/.test(src)) {
     return { src, status: 'skip' }
   }
   const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)

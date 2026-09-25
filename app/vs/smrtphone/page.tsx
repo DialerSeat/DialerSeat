@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 const SLUG = 'smrtphone'
 
@@ -35,22 +36,22 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: "How does smrtPhone pricing work?",
+    question: msg("How does smrtPhone pricing work?"),
     answer:
-      "Three charges stack. The smrtPhone subscription is $62/month Standard or $104/month Pro billed monthly. smrtDialer is an add-on on top at about $42 per seat per month single-line or $75 multi-line. Then call time is deducted from a pre-paid credit balance from around $0.02 per minute. A heavy dialing day costs more than a light one.",
+      msg("Three charges stack. The smrtPhone subscription is $62/month Standard or $104/month Pro billed monthly. smrtDialer is an add-on on top at about $42 per seat per month single-line or $75 multi-line. Then call time is deducted from a pre-paid credit balance from around $0.02 per minute. A heavy dialing day costs more than a light one."),
   },
   {
-    question: "Is smrtPhone better for real-estate investors?",
+    question: msg("Is smrtPhone better for real-estate investors?"),
     answer:
-      "If you run Podio or an REI CRM, quite possibly yes. smrtPhone is built for that world and the integration depth is real, it is a phone system wired into how investors already work, not a generic dialer with a connector bolted on. That is a genuine reason to choose it.",
+      msg("If you run Podio or an REI CRM, quite possibly yes. smrtPhone is built for that world and the integration depth is real, it is a phone system wired into how investors already work, not a generic dialer with a connector bolted on. That is a genuine reason to choose it."),
   },
   {
-    question: "Does smrtPhone have predictive dialing?",
+    question: msg("Does smrtPhone have predictive dialing?"),
     answer:
-      "No. smrtDialer is single-line or multi-line power dialing up to four lines, which is a different thing, there is no pacing engine adjusting to your team's answer rate. DialerSeat includes predictive alongside power, progressive and preview.",
+      msg("No. smrtDialer is single-line or multi-line power dialing up to four lines, which is a different thing, there is no pacing engine adjusting to your team's answer rate. DialerSeat includes predictive alongside power, progressive and preview."),
   },
   {
-    question: "What does DialerSeat charge for call time?",
+    question: msg("What does DialerSeat charge for call time?"),
     answer:
       "Nothing extra. $35 per seat per week covers the dialing; there is no per-minute credit balance to top up and no bill that grows on a good day.",
   },
@@ -67,9 +68,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs smrtPhone', url: '/vs/smrtphone' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs smrtPhone"), url: '/vs/smrtphone' },
         ])}
       />
       <VsCompetitorView c={competitor} />

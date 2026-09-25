@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 // Figures from REDX's own published pricing, read 24 Sept 2026. See the
 // entry in lib/competitors for what was and was not stated by the vendor.
@@ -38,24 +39,24 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: "What does REDX cost?",
+    question: msg("What does REDX cost?"),
     answer:
-      "Each lead list (expired, FSBO, FRBO, pre-foreclosure or GeoLeads) is $60 a month or $600 a year. Bundles are Core at $199 a month, Connect at $299 with a single-line power dialer, and Pro at $349 with a triple-line dialer. Extra users are $75 a month on Core and Connect and $99 on Pro.",
+      msg("Each lead list (expired, FSBO, FRBO, pre-foreclosure or GeoLeads) is $60 a month or $600 a year. Bundles are Core at $199 a month, Connect at $299 with a single-line power dialer, and Pro at $349 with a triple-line dialer. Extra users are $75 a month on Core and Connect and $99 on Pro."),
   },
   {
-    question: "Is the REDX dialer single-line or multi-line?",
+    question: msg("Is the REDX dialer single-line or multi-line?"),
     answer:
-      "Both, depending on the bundle: single-line on Connect at $299 a month and triple-line on Pro at $349. The Core bundle does not include the dialer.",
+      msg("Both, depending on the bundle: single-line on Connect at $299 a month and triple-line on Pro at $349. The Core bundle does not include the dialer."),
   },
   {
-    question: "Can I buy the REDX dialer without leads?",
+    question: msg("Can I buy the REDX dialer without leads?"),
     answer:
-      "REDX’s pricing page lists the dialer only as part of its Connect and Pro lead bundles, with no standalone dialer price. DialerSeat is the reverse: a dialer at $35 a week with no leads included, for agents who already have a source.",
+      msg("REDX’s pricing page lists the dialer only as part of its Connect and Pro lead bundles, with no standalone dialer price. DialerSeat is the reverse: a dialer at $35 a week with no leads included, for agents who already have a source."),
   },
   {
-    question: "Does DialerSeat come with real estate leads?",
+    question: msg("Does DialerSeat come with real estate leads?"),
     answer:
-      "No. DialerSeat is a dialer only, so you bring your own list, whether that is expireds and FSBOs from a data provider or leads from your own marketing. If you want leads and a dialer from one vendor, REDX is built for exactly that.",
+      msg("No. DialerSeat is a dialer only, so you bring your own list, whether that is expireds and FSBOs from a data provider or leads from your own marketing. If you want leads and a dialer from one vendor, REDX is built for exactly that."),
   },
 ]
 
@@ -70,9 +71,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs REDX', url: '/vs/redx' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs REDX"), url: '/vs/redx' },
         ])}
       />
       <VsCompetitorView c={competitor} />

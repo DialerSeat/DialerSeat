@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 export interface TeamCode {
   id: string
@@ -38,12 +39,12 @@ function linkFor(code: string): string {
 }
 
 function campaignNameFor(refs: TeamCampaignRef[], campaignId: string | null): string {
-  if (!campaignId) return 'All campaigns'
-  return refs.find(r => r.campaignId === campaignId)?.campaign?.name || 'Unknown campaign'
+  if (!campaignId) return msg("All campaigns")
+  return refs.find(r => r.campaignId === campaignId)?.campaign?.name || msg("Unknown campaign")
 }
 
 function usageLabel(code: TeamCode): string {
-  if (code.max_uses === 1) return code.use_count > 0 ? 'Used' : 'Unused, single use'
+  if (code.max_uses === 1) return code.use_count > 0 ? msg("Used") : msg("Unused, single use")
   if (code.max_uses === null) return `${code.use_count} joined, unlimited`
   return `${code.use_count} / ${code.max_uses} used`
 }
@@ -110,7 +111,7 @@ export default function SeatLinksPanel({
       })
       const data = await res.json()
       if (!data.success) {
-        setError(data.error || 'Could not create this link')
+        setError(data.error || msg("Could not create this link"))
         return
       }
       setJustCreated(data.code)
@@ -118,7 +119,7 @@ export default function SeatLinksPanel({
       resetForm()
       onChanged()
     } catch (e: any) {
-      setError(e.message || 'Something went wrong')
+      setError(e.message || msg("Something went wrong"))
     } finally {
       setSubmitting(false)
     }
@@ -186,8 +187,8 @@ export default function SeatLinksPanel({
             value={codeType}
             onChange={v => setCodeType(v as 'seat' | 'recruit')}
             options={[
-              { value: 'seat', label: 'Grant campaign access' },
-              { value: 'recruit', label: 'Just join the roster' },
+              { value: 'seat', label: msg("Grant campaign access") },
+              { value: 'recruit', label: msg("Just join the roster") },
             ]}
           />
 
@@ -214,8 +215,8 @@ export default function SeatLinksPanel({
             value={payer}
             onChange={v => setPayer(v as 'owner' | 'agent')}
             options={[
-              { value: 'owner', label: 'You pay: instant access' },
-              { value: 'agent', label: 'They pay their own way' },
+              { value: 'owner', label: msg("You pay: instant access") },
+              { value: 'agent', label: msg("They pay their own way") },
             ]}
           />
 
@@ -247,8 +248,8 @@ export default function SeatLinksPanel({
             value={singleUse ? 'single' : 'multi'}
             onChange={v => setSingleUse(v === 'single')}
             options={[
-              { value: 'single', label: 'One person, one link' },
-              { value: 'multi', label: 'Reusable: anyone with the link' },
+              { value: 'single', label: msg("One person, one link") },
+              { value: 'multi', label: msg("Reusable: anyone with the link") },
             ]}
           />
           {!singleUse && payer === 'owner' && (
@@ -256,7 +257,7 @@ export default function SeatLinksPanel({
               {t("Reusable owner-pays links need your manual approval per person before their access turns on, so charges don't happen without you seeing them first.")}</div>
           )}
 
-          {error && <ErrorInline>{error}</ErrorInline>}
+          {error && <ErrorInline>{t(error)}</ErrorInline>}
 
           <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
             <button onClick={handleCreate} disabled={submitting} style={{ ...primaryBtnStyle, opacity: submitting ? 0.6 : 1 }}>
@@ -346,7 +347,7 @@ function SegmentedTwo({ value, onChange, options }: {
             color: value === opt.value ? 'white' : T.text,
             border: `1px solid ${value === opt.value ? T.primary : T.border}`,
           }}
-        >{opt.label}</button>
+        >{t(opt.label)}</button>
       ))}
     </div>
   )

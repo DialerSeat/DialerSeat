@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { SITE } from '@/lib/siteTheme'
 import { inter } from '@/lib/fonts'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // THE "ASK US DIRECTLY" BOX
@@ -20,17 +21,17 @@ import { t as tr } from '@/lib/i18n/client'
 // =============================================================================
 
 const KINDS: { value: string; label: string }[] = [
-  { value: 'question', label: 'A question' },
-  { value: 'suggestion', label: 'A suggestion' },
-  { value: 'comparison', label: 'A dialer to compare' },
-  { value: 'other', label: 'Something else' },
+  { value: 'question', label: msg("A question") },
+  { value: 'suggestion', label: msg("A suggestion") },
+  { value: 'comparison', label: msg("A dialer to compare") },
+  { value: 'other', label: msg("Something else") },
 ]
 
 export default function SuggestionModal({
   open,
   onClose,
-  title = 'Ask us directly',
-  intro = 'A real person reads these. Leave an email if you want an answer back.',
+  title = msg("Ask us directly"),
+  intro = msg("A real person reads these. Leave an email if you want an answer back."),
   defaultKind = 'question',
 }: {
   open: boolean
@@ -89,7 +90,7 @@ export default function SuggestionModal({
     e.preventDefault()
     if (state === 'sending') return
     if (!message.trim()) {
-      setError('Please write a message.')
+      setError(msg("Please write a message."))
       setState('error')
       return
     }
@@ -103,13 +104,13 @@ export default function SuggestionModal({
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(data?.error || 'Something went wrong. Please try again.')
+        setError(data?.error || msg("Something went wrong. Please try again."))
         setState('error')
         return
       }
       setState('sent')
     } catch {
-      setError('Could not reach the server. Please try again.')
+      setError(msg("Could not reach the server. Please try again."))
       setState('error')
     }
   }
@@ -246,7 +247,7 @@ export default function SuggestionModal({
         className="sg-dialog"
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={tr(title)}
       >
         {state === 'sent' ? (
           <div className="sg-sent">
@@ -263,7 +264,7 @@ export default function SuggestionModal({
         ) : (
           <>
             <div className="sg-head">
-              <h2>{title}</h2>
+              <h2>{tr(title)}</h2>
               <button type="button" className="sg-close" onClick={close} aria-label={tr("Close")}>
                 ×
               </button>
@@ -281,7 +282,7 @@ export default function SuggestionModal({
                     aria-pressed={kind === k.value}
                     onClick={() => setKind(k.value)}
                   >
-                    {k.label}
+                    {tr(k.label)}
                   </button>
                 ))}
               </div>
@@ -312,7 +313,7 @@ export default function SuggestionModal({
               />
               <p className="sg-hint">{tr("Only used to reply. Leave it blank to stay anonymous.")}</p>
 
-              {state === 'error' && error && <div className="sg-error">{error}</div>}
+              {state === 'error' && error && <div className="sg-error">{tr(error)}</div>}
 
               <div className="sg-actions">
                 <button type="submit" className="sg-submit" disabled={state === 'sending'}>

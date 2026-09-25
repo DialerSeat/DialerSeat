@@ -68,6 +68,10 @@ export async function primeLocale(): Promise<void> {
  * primed it, that is English — it never throws. For generateMetadata and
  * route handlers, use getT().
  */
-export function t(text: string, vars?: Vars): string {
+export function t(text: string, vars?: Vars): string
+/** Anything that is not a string (undefined, a number, JSX) passes through. */
+export function t<T>(value: T): T
+export function t(text: unknown, vars?: Vars): unknown {
+  if (typeof text !== 'string') return text
   return translate(DICTS[requestLocale().current ?? DEFAULT_LOCALE], text, vars)
 }

@@ -19,6 +19,7 @@
 
 import { useState, useEffect } from 'react'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
@@ -39,7 +40,7 @@ const ACCENT = '#2a4a8a'
 const SCRIPTS: { key: string; label: string; text: string }[] = [
   {
     key: 'life',
-    label: 'Life',
+    label: msg("Life"),
     text: `"Hi (client), this is (agent) reaching
 out about the life coverage you
 looked into.
@@ -50,7 +51,7 @@ no medical exam needed…"`,
   },
   {
     key: 'health',
-    label: 'Health',
+    label: msg("Health"),
     text: `"Hi (client), this is (agent), you
 requested help finding a health plan,
 is now a good time?
@@ -61,7 +62,7 @@ paying today…"`,
   },
   {
     key: 'realestate',
-    label: 'Real Estate',
+    label: msg("Real Estate"),
     text: `"Hi (client), this is (agent), I saw
 you were curious what your home
 might be worth.
@@ -72,7 +73,7 @@ you through what's next…"`,
   },
   {
     key: 'solar',
-    label: 'Solar',
+    label: msg("Solar"),
     text: `"Hi (client), this is (agent), did I
 catch you at an okay time?
 
@@ -129,7 +130,7 @@ function MacFrame({
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#febc2e' }} />
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#28c840' }} />
         <span style={{ marginLeft: 10, fontSize: 10, letterSpacing: 2, color: titleColor, fontWeight: 700 }}>
-          {title}
+          {tr(title)}
         </span>
       </div>
       <div>{children}</div>
@@ -203,7 +204,7 @@ export default function DialerShowcase() {
                 <div style={{ flex: 1, padding: '6px 8px', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ fontSize: 7, letterSpacing: 2, color: C.muted, marginBottom: 3 }}>{tr("CALL SCRIPT")}</div>
                   <div key={script.key} style={{ height: 98, fontSize: 9.5, lineHeight: 1.5, color: C.onPage, fontFamily: MONO, whiteSpace: 'pre-wrap', animation: 'ds-showcase-rise 0.25s ease' }}>
-                    {script.text}
+                    {tr(script.text)}
                   </div>
                 </div>
               </div>
@@ -231,7 +232,7 @@ export default function DialerShowcase() {
                     borderRadius: 3,
                   }}
                 >
-                  <span style={{ fontSize: 8, letterSpacing: 1.5, color: 'rgba(255,255,255,0.5)' }}>{label}</span>
+                  <span style={{ fontSize: 8, letterSpacing: 1.5, color: 'rgba(255,255,255,0.5)' }}>{tr(label)}</span>
                   <span
                     style={{
                       fontSize: 14,

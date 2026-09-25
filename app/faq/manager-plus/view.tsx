@@ -10,6 +10,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 
 type Slide = { src: string; alt: string; caption: string }
@@ -19,19 +20,19 @@ const DESKTOP_SLIDES: Slide[] = [
     src: '/faq-images/manager-plus/desktop-analytics.png',
     alt: 'DialerSeat Manager+ analytics overview, white-labeled, showing total calls, hours dialed, conversions, closed deals, talk time, and best campaign',
     caption:
-      'ANALYTICS OVERVIEW: every number a manager actually checks each morning, in one screen. This account is running white-labeled, so the branding is entirely the operator\u2019s own.',
+      msg("ANALYTICS OVERVIEW: every number a manager actually checks each morning, in one screen. This account is running white-labeled, so the branding is entirely the operator’s own."),
   },
   {
     src: '/faq-images/manager-plus/desktop-dialer.png',
     alt: 'DialerSeat dialer terminal in power mode, white-labeled, showing manual dial pad and today\u2019s metrics sidebar',
     caption:
-      'The dialer terminal itself, same white-label skin. Manager+ doesn\u2019t change what agents dial with, it changes what the owner sees around it.',
+      msg("The dialer terminal itself, same white-label skin. Manager+ doesn’t change what agents dial with, it changes what the owner sees around it."),
   },
   {
     src: '/faq-images/manager-plus/desktop-os-multiwindow.png',
     alt: 'DialerSeat desktop app showing Teams and Analytics windows open side by side',
     caption:
-      'The desktop app running Teams and Analytics side by side, a manager watching team performance update live while managing seat codes in the next window.',
+      msg("The desktop app running Teams and Analytics side by side, a manager watching team performance update live while managing seat codes in the next window."),
   },
 ]
 
@@ -70,7 +71,7 @@ function DesktopCarousel() {
           ›
         </button>
       </div>
-      <p className="mp-carousel-caption">{slide.caption}</p>
+      <p className="mp-carousel-caption">{t(slide.caption)}</p>
       <div className="mp-carousel-dots">
         {DESKTOP_SLIDES.map((s, i) => (
           <button

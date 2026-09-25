@@ -59,9 +59,9 @@ function Card({ title, subtitle, children }: {
       <div style={{
         fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase',
         color: MUTED, marginBottom: subtitle ? 2 : 12,
-      }}>{title}</div>
+      }}>{tr(title)}</div>
       {subtitle && (
-        <div style={{ fontSize: 11, color: DIM, marginBottom: 10 }}>{subtitle}</div>
+        <div style={{ fontSize: 11, color: DIM, marginBottom: 10 }}>{tr(subtitle)}</div>
       )}
       {children}
     </div>
@@ -170,10 +170,10 @@ export function LineChart({ points, unit = '', color = SERIES[0] }: {
           />
         ))}
 
-        <text x={PAD_L} y={H - 6} fontSize="9" style={{ fill: DIM }}>{points[0].label}</text>
+        <text x={PAD_L} y={H - 6} fontSize="9" style={{ fill: DIM }}>{tr(points[0].label)}</text>
         {points.length > 1 && (
           <text x={W - 8} y={H - 6} fontSize="9" style={{ fill: DIM }} textAnchor="end">
-            {points[points.length - 1].label}
+            {tr(points[points.length - 1].label)}
           </text>
         )}
       </svg>
@@ -185,7 +185,7 @@ export function LineChart({ points, unit = '', color = SERIES[0] }: {
           borderRadius: 3, padding: '4px 8px', fontSize: 11, color: TEXT,
           pointerEvents: 'none',
         }}>
-          {points[hover].label} · <strong>{points[hover].value}{unit}</strong>
+          {tr(points[hover].label)} · <strong>{points[hover].value}{unit}</strong>
         </div>
       )}
     </div>
@@ -217,7 +217,7 @@ export function BarList({ points, total, colorByIndex = false }: {
                   it already carries identity, and coloured text just makes the
                   words harder to read. */}
               <span style={{ color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {p.label}
+                {tr(p.label)}
               </span>
               <span style={{ color: DIM, flexShrink: 0, marginLeft: 10 }}>
                 {p.value.toLocaleString()}{sum > 0 && ` · ${pct}%`}

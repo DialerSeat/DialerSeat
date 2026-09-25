@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 // Figures from Nextiva's own pricing page, read 25 Sept 2026: Core $23/$15,
 // Engage $50/$25, Scale $75 annual, contact center Essential from $75 an agent,
@@ -41,22 +42,22 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'What does Nextiva cost?',
+    question: msg("What does Nextiva cost?"),
     answer:
       'Nextiva publishes Core at $23 per user per month, or $15 billed annually; Engage at $50, or $25 annually; and Scale at $75 annually. Its contact center starts at $75 per agent per month. The lowest figure on every plan requires annual billing.',
   },
   {
-    question: 'Does Nextiva have a predictive dialer?',
+    question: msg("Does Nextiva have a predictive dialer?"),
     answer:
-      'Not on the business phone plans. Progressive and predictive dialing are listed in the contact center Professional tier, which Nextiva does not price publicly. So the plans you can see a price for are not the plans that dial.',
+      msg("Not on the business phone plans. Progressive and predictive dialing are listed in the contact center Professional tier, which Nextiva does not price publicly. So the plans you can see a price for are not the plans that dial."),
   },
   {
-    question: 'Is Nextiva or DialerSeat better for outbound calling?',
+    question: msg("Is Nextiva or DialerSeat better for outbound calling?"),
     answer:
-      'DialerSeat, if dialing is the job. All four dialing modes, answering machine detection, local presence and the compliance tooling are in the $35 weekly seat. Nextiva is a phone system first, and reaching predictive dialing means a contact center tier and a sales conversation.',
+      msg("DialerSeat, if dialing is the job. All four dialing modes, answering machine detection, local presence and the compliance tooling are in the $35 weekly seat. Nextiva is a phone system first, and reaching predictive dialing means a contact center tier and a sales conversation."),
   },
   {
-    question: 'When is Nextiva the better buy?',
+    question: msg("When is Nextiva the better buy?"),
     answer:
       'When you need a business phone system: extensions, an auto attendant, video meetings and SMS for a whole company that also makes some outbound calls. DialerSeat is not a phone system and does not try to be one.',
   },
@@ -73,9 +74,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs Nextiva', url: '/vs/nextiva' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs Nextiva"), url: '/vs/nextiva' },
         ])}
       />
       <VsCompetitorView c={competitor} />

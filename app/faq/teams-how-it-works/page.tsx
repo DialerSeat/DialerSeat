@@ -6,6 +6,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
 import { primeLocale, t as tr } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /faq/teams-how-it-works — the canonical Teams page
@@ -58,43 +59,43 @@ const FUTURA = "'Futura PT', Futura, 'Trebuchet MS', sans-serif"
 
 const FAQS = [
   {
-    question: 'How does DialerSeat stop two agents calling the same lead?',
+    question: msg("How does DialerSeat stop two agents calling the same lead?"),
     answer:
       'A lead is claimed in the database before it is dialed, using an atomic claim that hands concurrent agents different rows rather than letting them read the same one. ' +
       'A shared campaign therefore cannot produce two simultaneous calls to the same person. The claim is a lease rather than a permanent lock: it is renewed for as long as the agent is live and released automatically if their browser closes mid-call, so a crashed laptop frees the lead for someone else instead of stranding it.',
   },
   {
-    question: 'What happens to a lead if an agent’s computer dies mid-call?',
+    question: msg("What happens to a lead if an agent’s computer dies mid-call?"),
     answer:
-      'Their claim stops being renewed and expires within seconds, returning the lead to the queue for another agent. Nothing is lost and no manual cleanup is needed.',
+      msg("Their claim stops being renewed and expires within seconds, returning the lead to the queue for another agent. Nothing is lost and no manual cleanup is needed."),
   },
   {
-    question: 'How much is a team seat?',
+    question: msg("How much is a team seat?"),
     answer:
-      '$35 per week per agent, the same as a solo seat, there is no team tier and no per-seat markup. The team owner needs Manager+ at $75 per week, which also includes white-labeling. There is no seat minimum.',
+      msg("$35 per week per agent, the same as a solo seat, there is no team tier and no per-seat markup. The team owner needs Manager+ at $75 per week, which also includes white-labeling. There is no seat minimum."),
   },
   {
-    question: 'Who pays for each agent’s seat?',
+    question: msg("Who pays for each agent’s seat?"),
     answer:
-      'The owner decides per join code. A code can bill the seat to the owner, or require the agent to pay for their own. Both kinds can exist on the same team, which is how partner and in-house agents sit side by side.',
+      msg("The owner decides per join code. A code can bill the seat to the owner, or require the agent to pay for their own. Both kinds can exist on the same team, which is how partner and in-house agents sit side by side."),
   },
   {
-    question: 'Can I pause a seat instead of cancelling it?',
+    question: msg("Can I pause a seat instead of cancelling it?"),
     answer:
-      'Yes. Pausing stops billing for that seat while keeping the agent’s campaigns, leads, dispositions, and history intact. Resuming is one click and picks up where it left off, which matters for seasonal floors and for agents who step away.',
+      msg("Yes. Pausing stops billing for that seat while keeping the agent’s campaigns, leads, dispositions, and history intact. Resuming is one click and picks up where it left off, which matters for seasonal floors and for agents who step away."),
   },
   {
-    question: 'What can the team owner see?',
+    question: msg("What can the team owner see?"),
     answer:
-      'Which agents are live and which campaign each one is on, in real time, plus per-agent calls, connects, and a disposition breakdown over any date range. Campaigns are assigned at the team level so the whole floor works one list without anyone re-uploading it.',
+      msg("Which agents are live and which campaign each one is on, in real time, plus per-agent calls, connects, and a disposition breakdown over any date range. Campaigns are assigned at the team level so the whole floor works one list without anyone re-uploading it."),
   },
   {
-    question: 'Does DialerSeat have call monitoring, whisper, or barge?',
+    question: msg("Does DialerSeat have call monitoring, whisper, or barge?"),
     answer:
-      'No. Live call monitoring, whisper, and barge are not built, and neither is call scoring or workforce management. If those are requirements, an enterprise contact-centre platform is the better buy.',
+      msg("No. Live call monitoring, whisper, and barge are not built, and neither is call scoring or workforce management. If those are requirements, an enterprise contact-centre platform is the better buy."),
   },
   {
-    question: 'Can agents work from other countries?',
+    question: msg("Can agents work from other countries?"),
     answer:
       'Yes. An agent needs a browser and an internet connection; there is no per-country restriction and no separate international seat price. Calling windows are enforced against the lead’s state rather than the agent’s, so an agent in another timezone cannot dial outside a prospect’s legal window.',
   },
@@ -103,7 +104,7 @@ const FAQS = [
 function Section({ title, lead, items }: { title: string; lead: string; items: readonly string[] }) {
   return (
     <section style={{ marginTop: 46 }}>
-      <h2 style={{ fontSize: 25, fontWeight: 'bold', letterSpacing: -0.4, margin: 0 }}>{title}</h2>
+      <h2 style={{ fontSize: 25, fontWeight: 'bold', letterSpacing: -0.4, margin: 0 }}>{tr(title)}</h2>
       <p style={{ fontSize: 15, lineHeight: 1.8, color: MUTED, marginTop: 10, maxWidth: 780 }}>{lead}</p>
       <ul style={{ margin: '16px 0 0', paddingLeft: 18, fontSize: 14.5, lineHeight: 1.85, maxWidth: 830 }}>
         {items.map(t => <li key={t} style={{ marginBottom: 8 }}>{t}</li>)}
@@ -119,9 +120,9 @@ export default async function TeamsHowItWorksPage() {
       <JsonLd data={organizationSchema()} />
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'FAQ', url: '/faq' },
-        { name: 'How Teams Work', url: '/faq/teams-how-it-works' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("FAQ"), url: '/faq' },
+        { name: msg("How Teams Work"), url: '/faq/teams-how-it-works' },
       ])} />
 
       <GutsShell rail={faqRail('/faq/teams-how-it-works')} activeHref="/faq/teams-how-it-works">
@@ -182,8 +183,8 @@ export default async function TeamsHowItWorksPage() {
             <div style={{ marginTop: 20 }}>
               {FAQS.map(f => (
                 <div key={f.question} style={{ marginBottom: 24, maxWidth: 840 }}>
-                  <h3 style={{ fontSize: 16.5, fontWeight: 'bold', margin: 0 }}>{f.question}</h3>
-                  <p style={{ fontSize: 14.5, lineHeight: 1.8, color: MUTED, margin: '7px 0 0' }}>{f.answer}</p>
+                  <h3 style={{ fontSize: 16.5, fontWeight: 'bold', margin: 0 }}>{tr(f.question)}</h3>
+                  <p style={{ fontSize: 14.5, lineHeight: 1.8, color: MUTED, margin: '7px 0 0' }}>{tr(f.answer)}</p>
                 </div>
               ))}
             </div>

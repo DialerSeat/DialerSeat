@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { canonical, labelFor } from '@/lib/dispositions'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 
 
@@ -94,11 +95,11 @@ interface Campaign {
 // from labelFor, so this page says the same thing as every other screen and a
 // disposition renamed once is renamed everywhere.
 const DISPOSITIONS = [
-  { value: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
-  { value: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
-  { value: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7' },
-  { value: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2' },
-  { value: 'SKIPPED', color: '#64748b', bg: '#f1f5f9' },
+  { value: msg("CLOSED"), color: '#16a34a', bg: '#dcfce7' },
+  { value: msg("APPOINTMENT"), color: '#2563eb', bg: '#dbeafe' },
+  { value: msg("NOT INTERESTED"), color: '#d97706', bg: '#fef3c7' },
+  { value: msg("DO NOT CALL"), color: '#dc2626', bg: '#fee2e2' },
+  { value: msg("SKIPPED"), color: '#64748b', bg: '#f1f5f9' },
   { value: 'NO_ANSWER', color: '#64748b', bg: '#f1f5f9' },
 ]
 
@@ -396,11 +397,11 @@ export default function LeadsPage() {
 
   const handleAdd = async () => {
     if (!newLead.campaign_id) {
-      setAddError('Pick a campaign.')
+      setAddError(tr("Pick a campaign."))
       return
     }
     if (!newLead.phone.trim()) {
-      setAddError('Phone number is required.')
+      setAddError(tr("Phone number is required."))
       return
     }
     setAdding(true)
@@ -424,9 +425,9 @@ export default function LeadsPage() {
       if (!data.success) {
         if (res.status === 403) {
           setTier('lapsed')
-          setAddError('Subscription required to add leads.')
+          setAddError(tr("Subscription required to add leads."))
         } else {
-          setAddError(data.error || 'Failed to add lead.')
+          setAddError(data.error || tr("Failed to add lead."))
         }
         setAdding(false)
         return
@@ -437,7 +438,7 @@ export default function LeadsPage() {
       setCursor(0)
       setExpandedId(null)
     } catch (err: any) {
-      setAddError(err.message || 'Failed to add lead.')
+      setAddError(err.message || tr("Failed to add lead."))
     } finally {
       setAdding(false)
     }
@@ -468,9 +469,9 @@ export default function LeadsPage() {
       if (!data.success) {
         if (res.status === 403) {
           setTier('lapsed')
-          setDeleteError('Subscription required to delete leads.')
+          setDeleteError(tr("Subscription required to delete leads."))
         } else {
-          setDeleteError(data.error || 'Failed to delete lead.')
+          setDeleteError(data.error || tr("Failed to delete lead."))
         }
         setDeleting(false)
         return
@@ -480,7 +481,7 @@ export default function LeadsPage() {
       setExpandedId(null)
       setDeleteConfirmLead(null)
     } catch (err: any) {
-      setDeleteError(err.message || 'Failed to delete lead.')
+      setDeleteError(err.message || tr("Failed to delete lead."))
     } finally {
       setDeleting(false)
     }
@@ -922,7 +923,7 @@ export default function LeadsPage() {
                 style={{ background: dispositionTint(lead.disposition) }}
               >
                 <div className="lead-cell lead-cell-name">
-                  <div className="lead-name">{lead.first_name} {lead.last_name}</div>
+                  <div className="lead-name">{tr(lead.first_name)} {tr(lead.last_name)}</div>
                   <div className="lead-meta-mobile">
                     <span>{lead.state || '-'}</span>
                     <span>{campaignName(lead.campaign_id)}</span>
@@ -1309,7 +1310,7 @@ export default function LeadsPage() {
               </div>
 
               {addError && (
-                <div className="leads-modal-error">{addError}</div>
+                <div className="leads-modal-error">{tr(addError)}</div>
               )}
             </div>
 
@@ -1365,7 +1366,7 @@ export default function LeadsPage() {
                 fontSize: 13, lineHeight: 1.6, color: T.text, letterSpacing: 0.3,
               }}>
                 {tr("Permanently delete")}{" "}<strong style={{ fontFamily: 'monospace' }}>
-                  {deleteConfirmLead.first_name} {deleteConfirmLead.last_name}
+                  {tr(deleteConfirmLead.first_name)} {tr(deleteConfirmLead.last_name)}
                 </strong> ({deleteConfirmLead.phone})?
               </div>
               <div style={{
@@ -1373,7 +1374,7 @@ export default function LeadsPage() {
               }}>
                 {tr("This removes the lead and all its dial history. Cannot be undone.")}</div>
               {deleteError && (
-                <div className="leads-modal-error">{deleteError}</div>
+                <div className="leads-modal-error">{tr(deleteError)}</div>
               )}
             </div>
             <div className="leads-modal-footer">

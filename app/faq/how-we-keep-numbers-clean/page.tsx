@@ -7,6 +7,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /faq/how-we-keep-numbers-clean — the number-health system, end to end
@@ -59,24 +60,24 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'How does DialerSeat stop its numbers getting flagged as spam?',
+    question: msg("How does DialerSeat stop its numbers getting flagged as spam?"),
     answer:
-      'Four layers. Every call is signed with STIR/SHAKEN A-attestation, because every number is owned on our carrier account. No number places more than 60 calls a day, and load starts spreading across the pool at 40. Every number is checked daily against the rest of the pool, and one answering far below its peers is slowed to 15 calls a day until it recovers. Numbers are also registered with the Free Caller Registry.',
+      msg("Four layers. Every call is signed with STIR/SHAKEN A-attestation, because every number is owned on our carrier account. No number places more than 60 calls a day, and load starts spreading across the pool at 40. Every number is checked daily against the rest of the pool, and one answering far below its peers is slowed to 15 calls a day until it recovers. Numbers are also registered with the Free Caller Registry."),
   },
   {
-    question: 'How many calls does each DialerSeat number make per day?',
+    question: msg("How many calls does each DialerSeat number make per day?"),
     answer:
-      'At most 60. Past 40, a number drops to the back of the queue however good its area-code match is, so load spreads across the whole pool before any single number gets hot. The pool averages around 39 calls a number a day.',
+      msg("At most 60. Past 40, a number drops to the back of the queue however good its area-code match is, so load spreads across the whole pool before any single number gets hot. The pool averages around 39 calls a number a day."),
   },
   {
-    question: 'What happens when one of your numbers starts getting flagged?',
+    question: msg("What happens when one of your numbers starts getting flagged?"),
     answer:
-      'It is slowed down, not removed. A number answering below 40% of the pool median over three days is capped at 15 calls a day and stays in the pool, then goes back to full volume automatically once it recovers. Our own data found that resting a flagged number made it worse, while cutting its volume let it recover within days.',
+      msg("It is slowed down, not removed. A number answering below 40% of the pool median over three days is capped at 15 calls a day and stays in the pool, then goes back to full volume automatically once it recovers. Our own data found that resting a flagged number made it worse, while cutting its volume let it recover within days."),
   },
   {
-    question: 'Can DialerSeat guarantee my numbers never get flagged?',
+    question: msg("Can DialerSeat guarantee my numbers never get flagged?"),
     answer:
-      'No, and nobody honestly can. Carriers and call-analytics apps score numbers on how people respond to them, including complaints and blocks, so list quality, consent and the call itself still matter. What the platform controls is every carrier-level and volume-level cause of flagging, and it handles those automatically.',
+      msg("No, and nobody honestly can. Carriers and call-analytics apps score numbers on how people respond to them, including complaints and blocks, so list quality, consent and the call itself still matter. What the platform controls is every carrier-level and volume-level cause of flagging, and it handles those automatically."),
   },
 ]
 
@@ -87,9 +88,9 @@ export default async function Page() {
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'FAQ', url: '/faq' },
-          { name: 'How we keep numbers clean', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("FAQ"), url: '/faq' },
+          { name: msg("How we keep numbers clean"), url: ROUTE },
         ])}
       />
       <SiteHeader />

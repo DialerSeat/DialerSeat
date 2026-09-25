@@ -8,6 +8,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 
 
@@ -262,7 +263,7 @@ export default function AnalyticsPage({
     return range === 'today' ? weekBounds() : todayBounds()
   }, [range])
 
-  const secondaryLabel = range === 'today' ? 'This week' : 'Today'
+  const secondaryLabel = range === 'today' ? msg("This week") : msg("Today")
 
   useEffect(() => {
     if (!user || !adminChecked) return
@@ -300,11 +301,11 @@ export default function AnalyticsPage({
   }, [user, adminChecked, range, customStart, customEnd, bounds.start, bounds.end, secondaryBounds.start, secondaryBounds.end])
 
   const ranges: { key: Range; label: string }[] = [
-    { key: 'today', label: 'TODAY' },
-    { key: 'week', label: 'WEEK' },
-    { key: 'month', label: 'MONTH' },
-    { key: 'all', label: 'ALL TIME' },
-    { key: 'custom', label: 'CUSTOM' },
+    { key: 'today', label: msg("TODAY") },
+    { key: 'week', label: msg("WEEK") },
+    { key: 'month', label: msg("MONTH") },
+    { key: 'all', label: msg("ALL TIME") },
+    { key: 'custom', label: msg("CUSTOM") },
   ]
 
   const s = summary || {
@@ -574,7 +575,7 @@ export default function AnalyticsPage({
               key={r.key}
               className={`range-tab ${range === r.key ? 'active' : ''}`}
               onClick={() => setRange(r.key)}
-            >{r.label}</button>
+            >{t(r.label)}</button>
           ))}
         </div>
         {range === 'custom' && (
@@ -625,22 +626,22 @@ export default function AnalyticsPage({
             <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
               <div className="stat-label">{t("TOTAL CALLS")}</div>
               <div className="stat-value">{(s.totalCalls || 0).toLocaleString()}</div>
-              <div className="stat-sub">{secondaryLabel} {(sec.totalCalls || 0).toLocaleString()}</div>
+              <div className="stat-sub">{t(secondaryLabel)} {(sec.totalCalls || 0).toLocaleString()}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.accent }}>
               <div className="stat-label">{t("HOURS DIALED")}</div>
               <div className="stat-value" style={{ color: T.accent }}>{formatHours(s.totalDuration || 0)}</div>
-              <div className="stat-sub">{secondaryLabel} {formatHours(sec.totalDuration || 0)}</div>
+              <div className="stat-sub">{t(secondaryLabel)} {formatHours(sec.totalDuration || 0)}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
               <div className="stat-label">{t("CONVERSIONS")}</div>
               <div className="stat-value" style={{ color: T.green }}>{(s.conversions || 0).toLocaleString()}</div>
-              <div className="stat-sub">{secondaryLabel} {(sec.conversions || 0).toLocaleString()}</div>
+              <div className="stat-sub">{t(secondaryLabel)} {(sec.conversions || 0).toLocaleString()}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
               <div className="stat-label">{t("CLOSED")}</div>
               <div className="stat-value" style={{ color: T.green }}>{(s.closed || 0).toLocaleString()}</div>
-              <div className="stat-sub">{secondaryLabel} {(sec.closed || 0).toLocaleString()}</div>
+              <div className="stat-sub">{t(secondaryLabel)} {(sec.closed || 0).toLocaleString()}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
               <div className="stat-label">{t("TALK TIME")}</div>

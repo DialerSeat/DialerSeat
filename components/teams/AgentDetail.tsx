@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 const PANEL = 'var(--teams-panel, #232428)'
 const HAIRLINE = 'var(--teams-border, #1a1b1e)'
@@ -13,10 +14,10 @@ const GREEN = '#4ade80'
 const AMBER = '#fbbf24'
 
 const RANGES = [
-  { key: 'today', label: 'Today' },
-  { key: 'week', label: 'Week' },
-  { key: 'month', label: 'Month' },
-  { key: 'all', label: 'All time' },
+  { key: 'today', label: msg("Today") },
+  { key: 'week', label: msg("Week") },
+  { key: 'month', label: msg("Month") },
+  { key: 'all', label: msg("All time") },
 ]
 
 const btn: React.CSSProperties = {
@@ -43,7 +44,7 @@ function dur(seconds: number | null | undefined): string {
 function ago(iso: string | null): string {
   if (!iso) return 'never'
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (mins < 1) return 'just now'
+  if (mins < 1) return msg("just now")
   if (mins < 60) return `${mins}m ago`
   const hrs = Math.floor(mins / 60)
   if (hrs < 24) return `${hrs}h ago`
@@ -61,7 +62,7 @@ function Stat({ label, value, sub, accent }: {
       <div style={{
         fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase',
         color: MUTED, marginBottom: 6,
-      }}>{label}</div>
+      }}>{t(label)}</div>
       <div style={{ fontSize: 20, fontWeight: 600, color: accent || TEXT }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: DIM, marginTop: 3 }}>{sub}</div>}
     </div>
@@ -74,7 +75,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <div style={{
         fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase',
         color: MUTED, fontWeight: 600, marginBottom: 10,
-      }}>{title}</div>
+      }}>{t(title)}</div>
       {children}
     </section>
   )
@@ -121,19 +122,19 @@ export default function AgentDetail({
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok || !d?.success) {
-        setSeatNote(d?.error || 'That did not go through.')
+        setSeatNote(d?.error || msg("That did not go through."))
       } else {
         setSeatNote(
           action === 'pause'
-            ? 'Deactivated. Billing has stopped and they cannot dial.'
+            ? msg("Deactivated. Billing has stopped and they cannot dial.")
             : d.reissued
-              ? 'Activated. A new weekly seat has been started.'
-              : 'Activated. Weekly billing has restarted.'
+              ? msg("Activated. A new weekly seat has been started.")
+              : msg("Activated. Weekly billing has restarted.")
         )
         await load()
       }
     } catch (e: any) {
-      setSeatNote(e?.message || 'That did not go through.')
+      setSeatNote(e?.message || msg("That did not go through."))
     } finally {
       setSeatBusy(null)
     }
@@ -145,11 +146,11 @@ export default function AgentDetail({
       const r = await fetch(
         `/api/teams/agent?userId=${encodeURIComponent(userId)}&range=${range}`
       ).then(x => x.json())
-      if (!r.success) throw new Error(r.error || 'Could not load this agent')
+      if (!r.success) throw new Error(r.error || msg("Could not load this agent"))
       setData(r)
       setError(null)
     } catch (e: any) {
-      setError(e.message || 'Could not load this agent')
+      setError(e.message || msg("Could not load this agent"))
       setData(null)
     } finally {
       setLoading(false)
@@ -178,7 +179,7 @@ export default function AgentDetail({
     return (
       <div>
         <button style={btn} onClick={onBack}>{t("← Back")}</button>
-        <div style={{ color: '#ff6464', fontSize: 13, marginTop: 14 }}>{error}</div>
+        <div style={{ color: '#ff6464', fontSize: 13, marginTop: 14 }}>{t(error)}</div>
       </div>
     )
   }
@@ -208,7 +209,7 @@ export default function AgentDetail({
                 borderColor: range === r.key ? ACCENT : HAIRLINE,
                 color: range === r.key ? '#fff' : MUTED,
               }}
-            >{r.label}</button>
+            >{t(r.label)}</button>
           ))}
         </div>
       </div>
@@ -250,7 +251,7 @@ export default function AgentDetail({
         <Stat
           label="Talk time"
           value={dur(st.talkSeconds)}
-          sub={st.avgTalkSeconds ? `avg ${dur(st.avgTalkSeconds)} /call` : 'avg, /call'}
+          sub={st.avgTalkSeconds ? `avg ${dur(st.avgTalkSeconds)} /call` : msg("avg, /call")}
         />
       </div>
 
@@ -359,7 +360,7 @@ export default function AgentDetail({
                     : data.selfFunded || m.billingOverride === 'agent'
                     ? t("Paying for themselves, costs you nothing")
                     : m.seatCoveredBy
-                    ? `No charge, covered by their seat on ${m.coveredByTeam || 'another of your teams'}`
+                    ? `No charge, covered by their seat on ${m.coveredByTeam || msg("another of your teams")}`
                     : m.pickedUp
                     ? t("You picked this seat up automatically")
                     : m.billingOverride === 'owner'
@@ -457,7 +458,7 @@ export default function AgentDetail({
             ))}
           </div>
           {seatNote && (
-            <div style={{ fontSize: 12, color: DIM, marginTop: 10 }}>{seatNote}</div>
+            <div style={{ fontSize: 12, color: DIM, marginTop: 10 }}>{t(seatNote)}</div>
           )}
           <div style={{ fontSize: 11.5, color: DIM, marginTop: 10, lineHeight: 1.6 }}>
             {t("Deactivating stops the weekly charge and stops them dialing. They stay on the team with their campaigns and history intact, and activating starts the billing again.")}</div>

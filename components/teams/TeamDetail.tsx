@@ -84,7 +84,7 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div style={{
         fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase',
         color: MUTED, marginBottom: 6,
-      }}>{label}</div>
+      }}>{t(label)}</div>
       <div style={{ fontSize: 22, fontWeight: 700, color: TEXT }}>{value}</div>
     </div>
   )
@@ -101,7 +101,7 @@ function Section({ title, action, children }: {
         <h3 style={{
           margin: 0, fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase',
           color: MUTED, fontWeight: 600,
-        }}>{title}</h3>
+        }}>{t(title)}</h3>
         <div style={{ flex: 1 }} />
         {action}
       </div>
@@ -541,7 +541,7 @@ export default function TeamDetail({
                     the panel promising a discount billing will not apply. */}
                 {seatTier.next.seatsAway} {t("more")}{' '}
                 {seatTier.next.seatsAway === 1 ? t("seat") : t("seats")} {t("you pay for reaches")}{' '}
-                <strong style={{ color: TEXT }}>{seatTier.next.tier.label}</strong>
+                <strong style={{ color: TEXT }}>{t(seatTier.next.tier.label)}</strong>
                 {typeof seatTier.next.tier.percentOff === 'number'
                   ? `, ${seatTier.next.tier.percentOff}% off weekly.`
                   : t(", a rate we set with you directly. Email sales@dialerseat.com.")}

@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 // Seat prices from Talkdesk's own pricing page, read 25 Sept 2026. The dialer
 // sits in the Proactive Outbound Engagement add-on, which Talkdesk names on its
@@ -41,22 +42,22 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'What does Talkdesk cost?',
+    question: msg("What does Talkdesk cost?"),
     answer:
-      'Talkdesk publishes four seat prices: Digital Essentials at $85 per user per month, Voice Essentials at $105, Elite at $165 and Industry Experience Clouds at $225. Those are the seats. The outbound dialer is part of the Proactive Outbound Engagement add-on, and its price is not published.',
+      msg("Talkdesk publishes four seat prices: Digital Essentials at $85 per user per month, Voice Essentials at $105, Elite at $165 and Industry Experience Clouds at $225. Those are the seats. The outbound dialer is part of the Proactive Outbound Engagement add-on, and its price is not published."),
   },
   {
-    question: 'Does Talkdesk include a predictive dialer?',
+    question: msg("Does Talkdesk include a predictive dialer?"),
     answer:
-      'Not in the seat price. Talkdesk Dialer, which covers preview and predictive dialing, is sold inside the Proactive Outbound Engagement add-on. You will need a quote to know what outbound actually costs.',
+      msg("Not in the seat price. Talkdesk Dialer, which covers preview and predictive dialing, is sold inside the Proactive Outbound Engagement add-on. You will need a quote to know what outbound actually costs."),
   },
   {
-    question: 'Is Talkdesk or DialerSeat cheaper for an outbound team?',
+    question: msg("Is Talkdesk or DialerSeat cheaper for an outbound team?"),
     answer:
-      'DialerSeat, and by enough that the add-on price does not change the answer. Five DialerSeat seats are $175 a week, about $758 a month, with all four dialing modes included. Five Talkdesk Voice Essentials seats are $525 a month before the dialer add-on is priced at all.',
+      msg("DialerSeat, and by enough that the add-on price does not change the answer. Five DialerSeat seats are $175 a week, about $758 a month, with all four dialing modes included. Five Talkdesk Voice Essentials seats are $525 a month before the dialer add-on is priced at all."),
   },
   {
-    question: 'When is Talkdesk the right choice?',
+    question: msg("When is Talkdesk the right choice?"),
     answer:
       'When you are running a contact center rather than a dialing floor: inbound queues across several channels, workforce management, quality management and industry compliance tooling. DialerSeat does none of that. It dials.',
   },
@@ -73,9 +74,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs Talkdesk', url: '/vs/talkdesk' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs Talkdesk"), url: '/vs/talkdesk' },
         ])}
       />
       <VsCompetitorView c={competitor} />

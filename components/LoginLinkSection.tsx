@@ -233,7 +233,7 @@ export default function LoginLinkSection({
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                   {label.trim() ? (
                     <div style={{ fontSize: 9, letterSpacing: 2, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
-                      {label}
+                      {t(label)}
                     </div>
                   ) : null}
                   <span
@@ -245,7 +245,7 @@ export default function LoginLinkSection({
                       paddingBottom: 1, lineHeight: 1.3,
                     }}
                   >
-                    {text}
+                    {t(text)}
                     <ExternalLinkIcon color={primaryColor || '#4a9eff'} />
                   </span>
                 </div>

@@ -2,6 +2,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import FaqView from './view'
+import { msg } from '@/lib/i18n/msg'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -41,8 +42,8 @@ export default function FaqPage() {
   return (
     <>
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Frequently Asked Questions', url: '/faq' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Frequently Asked Questions"), url: '/faq' },
       ])} />
       <FaqView />
     </>

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import JsonLd from '@/components/json-ld'
 import { organizationSchema, breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /status — a real, public health page
@@ -71,7 +72,7 @@ async function timed<T>(fn: (signal: AbortSignal) => Promise<T>): Promise<{ ok: 
 
 async function checkDatabase(): Promise<Check> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    return { name: 'Database', detail: 'Not configured in this environment', state: 'unknown', ms: null }
+    return { name: msg("Database"), detail: msg("Not configured in this environment"), state: 'unknown', ms: null }
   }
   // Imported here, not at module scope. lib/supabase.ts calls createClient
   // when the MODULE loads, so a plain top-level import throws "supabaseUrl is
@@ -86,8 +87,8 @@ async function checkDatabase(): Promise<Check> {
     if (error) throw error
   })
   return {
-    name: 'Database',
-    detail: ok ? 'Reachable and accepting queries' : 'Not responding within 4s',
+    name: msg("Database"),
+    detail: ok ? msg("Reachable and accepting queries") : 'Not responding within 4s',
     state: ok ? (ms > 1500 ? 'degraded' : 'operational') : 'down',
     ms,
   }
@@ -96,7 +97,7 @@ async function checkDatabase(): Promise<Check> {
 async function checkCarrier(): Promise<Check> {
   const apiKey = process.env.TELNYX_API_KEY
   if (!apiKey) {
-    return { name: 'Carrier (voice)', detail: 'Not configured in this environment', state: 'unknown', ms: null }
+    return { name: msg("Carrier (voice)"), detail: msg("Not configured in this environment"), state: 'unknown', ms: null }
   }
   const { ok, ms } = await timed(async (signal) => {
     // A tiny authenticated read. Proves both that Telnyx is up and that our
@@ -110,18 +111,18 @@ async function checkCarrier(): Promise<Check> {
     if (!res.ok) throw new Error(String(res.status))
   })
   return {
-    name: 'Carrier (voice)',
-    detail: ok ? 'API reachable, credentials valid' : 'Not responding, or credentials rejected',
+    name: msg("Carrier (voice)"),
+    detail: ok ? msg("API reachable, credentials valid") : msg("Not responding, or credentials rejected"),
     state: ok ? (ms > 2000 ? 'degraded' : 'operational') : 'down',
     ms,
   }
 }
 
 const COLORS: Record<State, { fg: string; bg: string; label: string }> = {
-  operational: { fg: '#16a34a', bg: '#dcfce7', label: 'OPERATIONAL' },
-  degraded: { fg: '#8a6a1a', bg: '#fef3c7', label: 'DEGRADED' },
-  down: { fg: '#dc2626', bg: '#fee2e2', label: 'DOWN' },
-  unknown: { fg: '#5a5e6a', bg: '#f1f5f9', label: 'UNKNOWN' },
+  operational: { fg: '#16a34a', bg: '#dcfce7', label: msg("OPERATIONAL") },
+  degraded: { fg: '#8a6a1a', bg: '#fef3c7', label: msg("DEGRADED") },
+  down: { fg: '#dc2626', bg: '#fee2e2', label: msg("DOWN") },
+  unknown: { fg: '#5a5e6a', bg: '#f1f5f9', label: msg("UNKNOWN") },
 }
 
 const INK = '#1a1c24'
@@ -136,8 +137,8 @@ export default async function StatusPage() {
     // The application answered this request, so it is up by construction. Said
     // plainly rather than dressed up as a measurement.
     {
-      name: 'Application',
-      detail: 'Serving this page',
+      name: msg("Application"),
+      detail: msg("Serving this page"),
       state: 'operational',
       ms: null,
     },
@@ -151,10 +152,10 @@ export default async function StatusPage() {
     : 'unknown'
 
   const headline =
-    worst === 'operational' ? 'All systems operational'
-    : worst === 'degraded' ? 'Degraded performance'
-    : worst === 'down' ? 'Active incident'
-    : 'Status partially unavailable'
+    worst === 'operational' ? msg("All systems operational")
+    : worst === 'degraded' ? msg("Degraded performance")
+    : worst === 'down' ? msg("Active incident")
+    : msg("Status partially unavailable")
 
   const checkedAt = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
 
@@ -162,8 +163,8 @@ export default async function StatusPage() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Status', url: '/status' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Status"), url: '/status' },
       ])} />
 
       <main style={{
@@ -186,7 +187,7 @@ export default async function StatusPage() {
               background: COLORS[worst].fg, flexShrink: 0,
             }} />
             <h1 style={{ fontSize: 38, fontWeight: 'bold', letterSpacing: -1, margin: 0 }}>
-              {headline}
+              {t(headline)}
             </h1>
           </div>
 
@@ -202,7 +203,7 @@ export default async function StatusPage() {
               }}>
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <div style={{ fontSize: 15, fontWeight: 'bold' }}>{c.name}</div>
-                  <div style={{ fontSize: 13, color: MUTED, marginTop: 3 }}>{c.detail}</div>
+                  <div style={{ fontSize: 13, color: MUTED, marginTop: 3 }}>{t(c.detail)}</div>
                 </div>
                 <div style={{ fontSize: 12, color: MUTED, fontFamily: 'monospace', minWidth: 64, textAlign: 'right' }}>
                   {/* A dash, never a plausible-looking number. */}
@@ -214,7 +215,7 @@ export default async function StatusPage() {
                   color: COLORS[c.state].fg, background: COLORS[c.state].bg,
                   border: `1px solid ${COLORS[c.state].fg}`,
                 }}>
-                  {COLORS[c.state].label}
+                  {t(COLORS[c.state].label)}
                 </span>
               </div>
             ))}

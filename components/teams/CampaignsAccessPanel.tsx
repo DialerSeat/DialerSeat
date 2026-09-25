@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 interface TeamCampaignRow {
   campaignId: string
@@ -152,12 +153,12 @@ export default function CampaignsAccessPanel({
                     style={selectStyle(busy)}
                   >
                     {(Object.keys(ACCESS_MODE_LABELS) as AccessMode[]).map(mode => (
-                      <option key={mode} value={mode}>{ACCESS_MODE_LABELS[mode]}</option>
+                      <option key={mode} value={mode}>{t(ACCESS_MODE_LABELS[mode])}</option>
                     ))}
                   </select>
 
                   <button
-                    onClick={() => onDetach(tc.campaignId, tc.campaign?.name || 'this campaign')}
+                    onClick={() => onDetach(tc.campaignId, tc.campaign?.name || msg("this campaign"))}
                     disabled={busy}
                     style={subtleBtnStyle(busy, T.red)}
                   >{t("DETACH")}</button>

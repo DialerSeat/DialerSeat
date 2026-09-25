@@ -7,6 +7,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t as tr } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /faq/dialer-glossary
@@ -67,29 +68,29 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'What is an abandoned call?',
+    question: msg("What is an abandoned call?"),
     answer:
-      'Under the FTC’s Telemarketing Sales Rule, a call is abandoned when a person answers it and is not connected to a sales representative within two seconds of finishing their greeting. Predictive dialers cause them by dialing more numbers than there are free agents.',
+      msg("Under the FTC’s Telemarketing Sales Rule, a call is abandoned when a person answers it and is not connected to a sales representative within two seconds of finishing their greeting. Predictive dialers cause them by dialing more numbers than there are free agents."),
   },
   {
-    question: 'What is AMD, or answering machine detection?',
+    question: msg("What is AMD, or answering machine detection?"),
     answer:
-      'Software that listens to how a call is answered and decides whether it reached a person or a voicemail greeting, so the dialer can pass people to an agent and handle machines separately. It is a judgement made on audio, so it is never perfect.',
+      msg("Software that listens to how a call is answered and decides whether it reached a person or a voicemail greeting, so the dialer can pass people to an agent and handle machines separately. It is a judgement made on audio, so it is never perfect."),
   },
   {
-    question: 'What is the difference between connect rate and contact rate?',
+    question: msg("What is the difference between connect rate and contact rate?"),
     answer:
-      'Connect rate is how often somebody picks up. Contact rate is how often the agent actually spoke to the right person and got an outcome, which is a smaller number. A call answered by a voicemail greeting can raise connect rate without raising contact rate.',
+      msg("Connect rate is how often somebody picks up. Contact rate is how often the agent actually spoke to the right person and got an outcome, which is a smaller number. A call answered by a voicemail greeting can raise connect rate without raising contact rate."),
   },
   {
-    question: 'What is local presence dialing?',
+    question: msg("What is local presence dialing?"),
     answer:
-      'Calling each prospect from a phone number local to them, so the caller ID shows a familiar area code. DialerSeat matches the prospect’s area code first, then their state, then their region.',
+      msg("Calling each prospect from a phone number local to them, so the caller ID shows a familiar area code. DialerSeat matches the prospect’s area code first, then their state, then their region."),
   },
   {
-    question: 'What does “lines per agent” mean?',
+    question: msg("What does “lines per agent” mean?"),
     answer:
-      'How many numbers a predictive dialer calls at once for each available agent. More lines mean less waiting between conversations and more abandoned calls, which is why the rate is capped at 3%.',
+      msg("How many numbers a predictive dialer calls at once for each available agent. More lines mean less waiting between conversations and more abandoned calls, which is why the rate is capped at 3%."),
   },
 ]
 
@@ -100,22 +101,22 @@ const MODES: Term[] = [
   {
     term: 'Preview dialer',
     def: 'The agent sees the lead before the call is placed and starts it themselves. Slowest, and the right choice when each lead is worth preparing for.',
-    see: { href: '/faq/what-is-a-preview-dialer', label: 'Preview dialing' },
+    see: { href: '/faq/what-is-a-preview-dialer', label: msg("Preview dialing") },
   },
   {
     term: 'Power dialer',
     def: 'Dials the next lead automatically as soon as the last call ends. One call at a time, with no pause between them.',
-    see: { href: '/faq/what-is-a-power-dialer', label: 'Power dialing' },
+    see: { href: '/faq/what-is-a-power-dialer', label: msg("Power dialing") },
   },
   {
     term: 'Progressive dialer',
     def: 'Dials automatically with the agent already on the line, so there is no connect delay when somebody answers.',
-    see: { href: '/faq/what-is-a-progressive-dialer', label: 'Progressive dialing' },
+    see: { href: '/faq/what-is-a-progressive-dialer', label: msg("Progressive dialing") },
   },
   {
     term: 'Predictive dialer',
     def: 'Dials several numbers at once per available agent and passes the first person who answers to an agent. The most conversations per hour, and the only mode the abandon rules apply to.',
-    see: { href: '/faq/what-is-a-predictive-dialer', label: 'Predictive dialing' },
+    see: { href: '/faq/what-is-a-predictive-dialer', label: msg("Predictive dialing") },
   },
   {
     term: 'Lines per agent',
@@ -135,7 +136,7 @@ const METRICS: Term[] = [
   {
     term: 'Answer rate',
     def: 'How often somebody picks up, as a share of the dials that actually rang. Dials that failed before reaching a phone are left out of the rate and kept in the dial count.',
-    see: { href: '/faq/how-we-measure-answer-rate', label: 'How we measure it' },
+    see: { href: '/faq/how-we-measure-answer-rate', label: msg("How we measure it") },
   },
   {
     term: 'Connect rate',
@@ -167,12 +168,12 @@ const COMPLIANCE: Term[] = [
   {
     term: 'Abandoned call',
     def: 'A call where a person answers and is not connected to a sales representative within two seconds of finishing their greeting. The definition is the FTC’s, in the Telemarketing Sales Rule.',
-    see: { href: '/faq/is-a-predictive-dialer-legal', label: 'The rules in full' },
+    see: { href: '/faq/is-a-predictive-dialer-legal', label: msg("The rules in full") },
   },
   {
     term: 'Abandon rate, and the 3% rule',
     def: 'The share of calls answered by a person that were abandoned. Both the FTC and the FCC cap it at 3%, measured per campaign over each 30-day period. DialerSeat drops a campaign to one line per agent at 2.5%, before the limit.',
-    see: { href: '/faq/is-a-predictive-dialer-legal', label: 'How the cap is enforced' },
+    see: { href: '/faq/is-a-predictive-dialer-legal', label: msg("How the cap is enforced") },
   },
   {
     term: 'TCPA',
@@ -185,7 +186,7 @@ const COMPLIANCE: Term[] = [
   {
     term: 'DNC',
     def: 'Do not call. Both the National Do Not Call Registry, which you scrub your own lists against, and your own list of people who told you directly to stop.',
-    see: { href: '/faq/how-to-scrub-the-do-not-call-registry', label: 'How to scrub' },
+    see: { href: '/faq/how-to-scrub-the-do-not-call-registry', label: msg("How to scrub") },
   },
   {
     term: 'Suppression list',
@@ -194,7 +195,7 @@ const COMPLIANCE: Term[] = [
   {
     term: 'Calling window',
     def: 'The hours you are allowed to call. Federally 8 a.m. to 9 p.m. in the person’s own local time, with some states stricter. DialerSeat enforces it per lead, not per agent.',
-    see: { href: '/faq/calling-hours', label: 'Calling hours by state' },
+    see: { href: '/faq/calling-hours', label: msg("Calling hours by state") },
   },
   {
     term: 'Safe harbor',
@@ -222,22 +223,22 @@ const NUMBERS: Term[] = [
   {
     term: 'Local presence',
     def: 'Calling from a number in the prospect’s own area. DialerSeat matches area code, then state, then region, on every call.',
-    see: { href: '/faq/local-presence-dialing', label: 'How the number is picked' },
+    see: { href: '/faq/local-presence-dialing', label: msg("How the number is picked") },
   },
   {
     term: 'Spam Likely',
     def: 'A label a carrier or a phone app puts on an incoming call. It is a judgement made by analytics companies about how a number behaves, not a legal status, and it can be wrong.',
-    see: { href: '/faq/why-calls-show-spam-likely', label: 'Why it happens' },
+    see: { href: '/faq/why-calls-show-spam-likely', label: msg("Why it happens") },
   },
   {
     term: 'Number pool',
     def: 'The set of numbers a dialer calls from, so no single number carries all the traffic. DialerSeat sends a number to the back of the queue after 40 calls in a day, and rests it at 60.',
-    see: { href: '/faq/how-many-numbers-do-i-need', label: 'How many you need' },
+    see: { href: '/faq/how-many-numbers-do-i-need', label: msg("How many you need") },
   },
   {
     term: 'Number rotation',
     def: 'Spreading calls across a pool. Worth knowing that rotating faster is not automatically better: a brand new number with no history is not a trusted one.',
-    see: { href: '/faq/why-we-dont-rest-flagged-numbers', label: 'What we do instead' },
+    see: { href: '/faq/why-we-dont-rest-flagged-numbers', label: msg("What we do instead") },
   },
 ]
 
@@ -245,7 +246,7 @@ const FLOOR: Term[] = [
   {
     term: 'AMD',
     def: 'Answering machine detection. The dialer listens to how a call was answered and decides whether it reached a person or a voicemail greeting. It is a judgement about audio, so it is never perfect in either direction.',
-    see: { href: '/faq/how-does-amd-work', label: 'How AMD works' },
+    see: { href: '/faq/how-does-amd-work', label: msg("How AMD works") },
   },
   {
     term: 'Voicemail drop',
@@ -254,7 +255,7 @@ const FLOOR: Term[] = [
   {
     term: 'Lead drip',
     def: 'New leads arriving into a running campaign automatically from a CRM or a form, rather than being uploaded as a file.',
-    see: { href: '/faq/send-leads-from-your-crm', label: 'Setting it up' },
+    see: { href: '/faq/send-leads-from-your-crm', label: msg("Setting it up") },
   },
   {
     term: 'Barge, whisper and monitor',
@@ -263,7 +264,7 @@ const FLOOR: Term[] = [
   {
     term: 'Seat',
     def: 'One agent’s access to the dialer. DialerSeat charges $35 per seat per week with no minimum, so a seat is the whole unit of cost.',
-    see: { href: '/faq/why-we-charge', label: 'What that covers' },
+    see: { href: '/faq/why-we-charge', label: msg("What that covers") },
   },
 ]
 
@@ -276,7 +277,7 @@ function TermList({ terms }: { terms: Term[] }) {
           <p>{t.def}</p>
           {t.see && (
             <p>
-              <Link href={t.see.href}>{t.see.label} →</Link>
+              <Link href={t.see.href}>{tr(t.see.label)} →</Link>
             </p>
           )}
         </div>
@@ -292,9 +293,9 @@ export default async function Page() {
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'FAQ', url: '/faq' },
-          { name: 'Dialer glossary', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("FAQ"), url: '/faq' },
+          { name: msg("Dialer glossary"), url: ROUTE },
         ])}
       />
       <SiteHeader />

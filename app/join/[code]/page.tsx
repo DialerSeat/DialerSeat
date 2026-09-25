@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import JoinRedeemClient from './JoinRedeemClient'
 import DeadInvite from './DeadInvite'
+import { msg } from '@/lib/i18n/msg'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,7 +47,7 @@ async function codeIsLive(code: string): Promise<boolean> {
 async function lookupCodeIsLive(code: string): Promise<boolean> {
   const { data, error } = await supabaseAdmin
     .from('team_codes')
-    .select('id, max_uses, use_count')
+    .select(msg("id, max_uses, use_count"))
     .eq('code', code)
     .eq('is_active', true)
     .maybeSingle()

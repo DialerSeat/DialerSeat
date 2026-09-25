@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { usePredictiveGate } from '@/components/SellerIdentityDialog'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // CREATE TEAM / CREATE CAMPAIGN
@@ -82,10 +83,10 @@ function Shell({ title, subtitle, onClose, children, footer }: {
         }}
       >
         <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${HAIRLINE}` }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{title}</h2>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{tr(title)}</h2>
           {subtitle && (
             <p style={{ margin: '6px 0 0', fontSize: 12.5, color: DIM, lineHeight: 1.6 }}>
-              {subtitle}
+              {tr(subtitle)}
             </p>
           )}
         </div>
@@ -205,7 +206,7 @@ export function RenameModal({ kind, currentName, onClose, onSave, busy }: {
 }) {
   const [name, setName] = useState(currentName)
   const isMember = kind === 'member'
-  const noun = kind === 'team' ? 'Team' : kind === 'member' ? 'Nickname' : 'Campaign'
+  const noun = kind === 'team' ? msg("Team") : kind === 'member' ? msg("Nickname") : msg("Campaign")
   const trimmed = name.trim()
   const unchanged = trimmed === currentName.trim()
   // A nickname may be emptied — that is how somebody goes back to their real
@@ -218,11 +219,11 @@ export function RenameModal({ kind, currentName, onClose, onSave, busy }: {
       title={isMember ? tr("Set Nickname") : `Rename ${noun}`}
       subtitle={
         kind === 'team'
-          ? 'Everyone on this team sees the new name, including agents already dialing.'
+          ? msg("Everyone on this team sees the new name, including agents already dialing.")
           : kind === 'member'
             ? 'What you call them on this team. It does not change their account, ' +
-              'and it does not follow them to another team. Clear it to go back to their real name.'
-            : 'Agents see the new name in the dialer straight away. Nothing about the leads or settings changes.'
+              msg("and it does not follow them to another team. Clear it to go back to their real name.")
+            : msg("Agents see the new name in the dialer straight away. Nothing about the leads or settings changes.")
       }
       onClose={onClose}
       footer={
@@ -248,7 +249,7 @@ export function RenameModal({ kind, currentName, onClose, onSave, busy }: {
             if (e.key === 'Enter' && canSave) onSave(trimmed)
           }}
           maxLength={isMember ? 60 : 100}
-          placeholder={currentName}
+          placeholder={tr(currentName)}
         />
       </div>
     </Shell>
@@ -305,9 +306,9 @@ export function CreateCampaignModal({
   // keeps it from becoming the thing people type to get past the check.
   const nameProblem =
     mode !== 'new' ? null
-    : !name.trim() ? 'Name your campaign before saving it.'
-    : /^untitled(\s*\(\d+\))?$/i.test(name.trim()) ? 'Give it a real name, not "Untitled".'
-    : name.trim().length > 120 ? 'That name is too long (120 characters max).'
+    : !name.trim() ? msg("Name your campaign before saving it.")
+    : /^untitled(\s*\(\d+\))?$/i.test(name.trim()) ? msg("Give it a real name, not \"Untitled\".")
+    : name.trim().length > 120 ? msg("That name is too long (120 characters max).")
     : null
   const blockedSubmit = !teamId || !!nameProblem || (mode === 'existing' && !existingId)
 
@@ -657,7 +658,7 @@ export function ManageMemberModal({
   return (
     <Shell
       title={member.name}
-      subtitle={`${member.email || 'No email on file'} · ${teamName}`}
+      subtitle={`${member.email || msg("No email on file")} · ${teamName}`}
       onClose={onClose}
       footer={<button style={btn} onClick={onClose}>{tr("Close")}</button>}
     >

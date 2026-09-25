@@ -2,6 +2,7 @@
 import { use, useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -160,7 +161,7 @@ function fmtDateTime(iso: string): string {
 function relTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime()
   const m = Math.floor(ms / 60000)
-  if (m < 1) return 'just now'
+  if (m < 1) return msg("just now")
   if (m < 60) return `${m}m ago`
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h ago`
@@ -336,12 +337,12 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
       const res = await fetch(`/api/teams/${teamId}/analytics?${qs}`)
       const json: AnalyticsResponse = await res.json()
       if (!json.success) {
-        setError(json.error || 'Failed to load analytics')
+        setError(json.error || msg("Failed to load analytics"))
         return
       }
       setData(json)
     } catch (err: any) {
-      setError(err.message || 'Failed to load analytics')
+      setError(err.message || msg("Failed to load analytics"))
     } finally {
       setLoading(false)
     }
@@ -589,7 +590,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
       </div>
 
       <div className="ta-body">
-        {error && <div className="ta-error">{error}</div>}
+        {error && <div className="ta-error">{t(error)}</div>}
 
         {range === 'custom' && (!customStart || !customEnd) && (
           <div className="ta-empty">{t("PICK A START AND END DATE TO LOAD DATA")}</div>

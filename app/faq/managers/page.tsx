@@ -2,6 +2,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import View from './view'
+import { msg } from '@/lib/i18n/msg'
 
 export const metadata: Metadata = {
   title: 'For Managers: Agency Owners & Lead Vendors | DialerSeat',
@@ -26,9 +27,9 @@ export default function Page() {
   return (
     <>
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Faq', url: '/faq' },
-        { name: 'For Managers', url: '/faq/managers' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Faq"), url: '/faq' },
+        { name: msg("For Managers"), url: '/faq/managers' },
       ])} />
       <View />
     </>

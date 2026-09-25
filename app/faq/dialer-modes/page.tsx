@@ -9,6 +9,7 @@ import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -35,29 +36,29 @@ export const metadata: Metadata = {
 const MODES = [
   {
     key: 'preview',
-    label: 'PREVIEW',
+    label: msg("PREVIEW"),
     color: '#5a5e6a',
-    tagline: 'See the lead first, then dial.',
+    tagline: msg("See the lead first, then dial."),
     body:
-      'The dialer shows you each lead before anything rings. You read their info, get ready, and press dial when you want to. One call at a time, fully at your pace.',
+      msg("The dialer shows you each lead before anything rings. You read their info, get ready, and press dial when you want to. One call at a time, fully at your pace."),
     best: 'Best for high-value or complex calls where prep matters more than speed.',
     href: '/faq/what-is-a-preview-dialer',
   },
   {
     key: 'power',
-    label: 'POWER',
+    label: msg("POWER"),
     color: '${SITE.deep}',
-    tagline: 'Auto-dials the next lead the moment you hang up.',
+    tagline: msg("Auto-dials the next lead the moment you hang up."),
     body:
-      'One line per agent. The instant you finish a call, it dials the next lead automatically, no clicking between calls. You control the pace by toggling available / unavailable.',
+      msg("One line per agent. The instant you finish a call, it dials the next lead automatically, no clicking between calls. You control the pace by toggling available / unavailable."),
     best: 'Best for clean lists when you want steady, hands-free volume.',
     href: '/faq/what-is-a-power-dialer',
   },
   {
     key: 'progressive',
-    label: 'PROGRESSIVE',
+    label: msg("PROGRESSIVE"),
     color: '#1a6a1a',
-    tagline: 'Power, but it skips the voicemails for you.',
+    tagline: msg("Power, but it skips the voicemails for you."),
     body:
       'Same auto-dialing as power, except it listens to each pickup with answering-machine detection and quietly drops voicemails and dead air, only connecting you to real people.',
     best: 'Best when you want power-style volume without wasting time on machines.',
@@ -65,11 +66,11 @@ const MODES = [
   },
   {
     key: 'predictive',
-    label: 'PREDICTIVE',
+    label: msg("PREDICTIVE"),
     color: '#8a1a1a',
-    tagline: 'Dials several lines at once, connects you to live humans.',
+    tagline: msg("Dials several lines at once, connects you to live humans."),
     body:
-      'The highest-volume mode. It dials multiple lines per agent and uses pacing math to hand you a call only when a real person answers. A built-in abandon-rate cap keeps it compliant.',
+      msg("The highest-volume mode. It dials multiple lines per agent and uses pacing math to hand you a call only when a real person answers. A built-in abandon-rate cap keeps it compliant."),
     best: 'Best for big, well-staffed campaigns focused on maximum live conversations.',
     href: '/faq/what-is-a-predictive-dialer',
   },
@@ -82,8 +83,8 @@ export default async function DialerModesTldrPage() {
   return (
     <>
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Faq', url: '/faq' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Faq"), url: '/faq' },
         { name: 'Dialer Modes (TL;DR)', url: '/faq/dialer-modes' },
       ])} />
       <>
@@ -296,9 +297,9 @@ export default async function DialerModesTldrPage() {
         <div className="dmt-grid">
           {MODES.map(m => (
             <div key={m.key} className="dmt-card" style={{ ['--mc' as any]: m.color }}>
-              <span className="dmt-pill">{m.label}</span>
-              <h2 className="dmt-tagline">{m.tagline}</h2>
-              <p className="dmt-body">{m.body}</p>
+              <span className="dmt-pill">{t(m.label)}</span>
+              <h2 className="dmt-tagline">{t(m.tagline)}</h2>
+              <p className="dmt-body">{t(m.body)}</p>
               <p className="dmt-best">{m.best}</p>
               <Link href={m.href} className="dmt-link">{t("FULL BREAKDOWN ↗")}</Link>
             </div>

@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 const SLUG = 'wavv'
 
@@ -37,29 +38,29 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'How does DialerSeat compare to WAVV on price?',
+    question: msg("How does DialerSeat compare to WAVV on price?"),
     answer:
       'DialerSeat is $35 per seat per week, billed weekly, cancel any time, with preview, power, and multi-line predictive dialing all included at that one price. WAVV publishes three separate tiers: $59/month for manual preview dialing, $99/month for single-line auto-dial, and $149/month for multi-line predictive dialing across up to three lines, plus a $1/month fee per phone number on top of whichever plan you choose.',
   },
   {
-    question: 'Does DialerSeat include predictive dialing at every price point?',
+    question: msg("Does DialerSeat include predictive dialing at every price point?"),
     answer:
-      'Yes. Every DialerSeat seat includes multi-line predictive dialing, along with preview and power dialing, at the same $35/week price. WAVV requires upgrading to its top Multi Line tier to get predictive dialing across multiple lines.',
+      msg("Yes. Every DialerSeat seat includes multi-line predictive dialing, along with preview and power dialing, at the same $35/week price. WAVV requires upgrading to its top Multi Line tier to get predictive dialing across multiple lines."),
   },
   {
-    question: 'Does WAVV charge extra for phone numbers?',
+    question: msg("Does WAVV charge extra for phone numbers?"),
     answer:
-      'Yes, WAVV charges $1 per phone number per month on top of its plan pricing. DialerSeat includes unlimited dial-out numbers and multiple inbound numbers per seat at no additional cost.',
+      msg("Yes, WAVV charges $1 per phone number per month on top of its plan pricing. DialerSeat includes unlimited dial-out numbers and multiple inbound numbers per seat at no additional cost."),
   },
   {
-    question: 'Can I switch dialer modes per campaign in DialerSeat?',
+    question: msg("Can I switch dialer modes per campaign in DialerSeat?"),
     answer:
-      'Yes. DialerSeat lets you set the dialer mode: preview, power, progressive, or predictive: per campaign, so a cold list can run predictive while hot follow-ups run preview, all in the same account at the same price. WAVV\u2019s dialer speed is tied to which priced tier the account is on.',
+      msg("Yes. DialerSeat lets you set the dialer mode: preview, power, progressive, or predictive: per campaign, so a cold list can run predictive while hot follow-ups run preview, all in the same account at the same price. WAVV’s dialer speed is tied to which priced tier the account is on."),
   },
   {
-    question: 'Does DialerSeat offer a free trial like WAVV?',
+    question: msg("Does DialerSeat offer a free trial like WAVV?"),
     answer:
-      'No. WAVV offers a 7-day trial and DialerSeat does not, that one is theirs. DialerSeat bills from day one at $35 per seat per week, weekly with no annual contract, so the most you can be out is a single week. The card up front is deliberate: it is the cheapest way to filter out signups that were never going to dial.',
+      msg("No. WAVV offers a 7-day trial and DialerSeat does not, that one is theirs. DialerSeat bills from day one at $35 per seat per week, weekly with no annual contract, so the most you can be out is a single week. The card up front is deliberate: it is the cheapest way to filter out signups that were never going to dial."),
   },
 ]
 
@@ -74,9 +75,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs WAVV', url: '/vs/wavv' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs WAVV"), url: '/vs/wavv' },
         ])}
       />
       <VsCompetitorView c={competitor} />

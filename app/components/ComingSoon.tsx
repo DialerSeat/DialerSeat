@@ -45,7 +45,7 @@ export default function ComingSoon({ title, description, icon = '🚧' }: Coming
           color: 'var(--text-primary)',
           marginBottom: '16px',
           fontFamily: 'Futura PT, Futura, sans-serif',
-        }}>{title}</h1>
+        }}>{t(title)}</h1>
 
         {description && (
           <p style={{
@@ -54,7 +54,7 @@ export default function ComingSoon({ title, description, icon = '🚧' }: Coming
             color: 'var(--text-secondary)',
             marginBottom: '32px',
             letterSpacing: '0.5px',
-          }}>{description}</p>
+          }}>{t(description)}</p>
         )}
 
         <Link href="/dashboard" style={{

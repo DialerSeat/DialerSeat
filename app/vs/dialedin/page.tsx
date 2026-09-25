@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 const SLUG = 'dialedin'
 
@@ -35,19 +36,19 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: "What does DialedIn cost?",
+    question: msg("What does DialedIn cost?"),
     answer:
-      "The published starting price is around $89 per user per month. DialedIn is the product formerly sold as ChaseData. As with most tiered contact-centre products, the entry tier is not where the heavier outbound features live, so the relevant number depends on which plan covers what you actually need.",
+      msg("The published starting price is around $89 per user per month. DialedIn is the product formerly sold as ChaseData. As with most tiered contact-centre products, the entry tier is not where the heavier outbound features live, so the relevant number depends on which plan covers what you actually need."),
   },
   {
-    question: "Does DialedIn handle inbound as well?",
+    question: msg("Does DialedIn handle inbound as well?"),
     answer:
-      "Yes, and that is a genuine advantage over DialerSeat. DialedIn covers inbound and outbound in one platform. DialerSeat is outbound only: if you run a blended floor, that difference matters more than price.",
+      msg("Yes, and that is a genuine advantage over DialerSeat. DialedIn covers inbound and outbound in one platform. DialerSeat is outbound only: if you run a blended floor, that difference matters more than price."),
   },
   {
-    question: "Which one includes predictive dialing?",
+    question: msg("Which one includes predictive dialing?"),
     answer:
-      "Both offer predictive dialing. The difference is packaging: DialerSeat includes predictive, power, progressive and preview at the base price with no tier to climb, selectable per campaign.",
+      msg("Both offer predictive dialing. The difference is packaging: DialerSeat includes predictive, power, progressive and preview at the base price with no tier to climb, selectable per campaign."),
   },
 ]
 
@@ -62,9 +63,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs DialedIn', url: '/vs/dialedin' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs DialedIn"), url: '/vs/dialedin' },
         ])}
       />
       <VsCompetitorView c={competitor} />

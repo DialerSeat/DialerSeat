@@ -10,6 +10,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 export const metadata: Metadata = {
   title: 'How Many Phone Numbers Does an Outbound Dialer Need? | DialerSeat',
@@ -32,34 +33,34 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'How many phone numbers do I need for an outbound dialer?',
+    question: msg("How many phone numbers do I need for an outbound dialer?"),
     answer:
       'Enough that no single number carries a whole day of calls, plus headroom for numbers resting or retired. DialerSeat applies a per-number daily cap automatically and rotates across the pool, so the practical answer is that you add numbers when the pool tells you it is running hot rather than by working out a figure in advance. A single agent is comfortable on a handful; a floor needs proportionally more.',
   },
   {
-    question: 'Why not just use one number for everything?',
+    question: msg("Why not just use one number for everything?"),
     answer:
-      'Because volume on a single caller ID is the fastest way to get it labelled. Carrier analytics watch call volume, call duration, and how often people decline or report a number. A number placing several hundred short unanswered calls a day looks exactly like a robocall to that scoring, because statistically it is behaving like one. Once the label attaches, the number is finished: and if it is your only number, so is your answer rate.',
+      msg("Because volume on a single caller ID is the fastest way to get it labelled. Carrier analytics watch call volume, call duration, and how often people decline or report a number. A number placing several hundred short unanswered calls a day looks exactly like a robocall to that scoring, because statistically it is behaving like one. Once the label attaches, the number is finished: and if it is your only number, so is your answer rate."),
   },
   {
-    question: 'What is a sensible daily cap per number?',
+    question: msg("What is a sensible daily cap per number?"),
     answer:
-      'There is no universal correct figure, and anyone who quotes you one with confidence is guessing, carrier scoring is opaque and it changes. DialerSeat sets and enforces the cap for you, tuned against live answer-rate data rather than a number picked once and forgotten. What matters on your side is that the volume is spread across a pool instead of concentrated on one caller ID.',
+      msg("There is no universal correct figure, and anyone who quotes you one with confidence is guessing, carrier scoring is opaque and it changes. DialerSeat sets and enforces the cap for you, tuned against live answer-rate data rather than a number picked once and forgotten. What matters on your side is that the volume is spread across a pool instead of concentrated on one caller ID."),
   },
   {
-    question: 'Do more numbers mean better answer rates?',
+    question: msg("Do more numbers mean better answer rates?"),
     answer:
-      'Up to a point, and then no. Enough numbers to keep each one under its cap protects your answer rate. Far more numbers than you need does not improve it further, and each one still costs money every month. The goal is coverage with headroom, not accumulation.',
+      msg("Up to a point, and then no. Enough numbers to keep each one under its cap protects your answer rate. Far more numbers than you need does not improve it further, and each one still costs money every month. The goal is coverage with headroom, not accumulation."),
   },
   {
-    question: 'What about local presence, do I need a number in every area code?',
+    question: msg("What about local presence, do I need a number in every area code?"),
     answer:
-      'No, and chasing that is how a pool becomes expensive. DialerSeat prefers a caller ID matching the lead’s area code when one is available, falls back to the same state, then to any healthy number. A pool covering the regions your list actually concentrates in gets most of the benefit. Buying a number for every area code in the country gets very little more for a great deal more cost.',
+      msg("No, and chasing that is how a pool becomes expensive. DialerSeat prefers a caller ID matching the lead’s area code when one is available, falls back to the same state, then to any healthy number. A pool covering the regions your list actually concentrates in gets most of the benefit. Buying a number for every area code in the country gets very little more for a great deal more cost."),
   },
   {
-    question: 'What happens when a number goes bad?',
+    question: msg("What happens when a number goes bad?"),
     answer:
-      'DialerSeat tracks answer rate per number over a rolling window. A number whose answer rate has degraded relative to the rest of the pool is flagged and can be retired rather than dialed until it is worthless. That is the reason to hold headroom: retiring a number should not reduce your capacity below what the day needs.',
+      msg("DialerSeat tracks answer rate per number over a rolling window. A number whose answer rate has degraded relative to the rest of the pool is flagged and can be retired rather than dialed until it is worthless. That is the reason to hold headroom: retiring a number should not reduce your capacity below what the day needs."),
   },
 ]
 
@@ -68,9 +69,9 @@ export default async function Page() {
   return (
     <>
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Faq', url: '/faq' },
-        { name: 'How Many Phone Numbers Do I Need?', url: '/faq/how-many-numbers-do-i-need' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Faq"), url: '/faq' },
+        { name: msg("How Many Phone Numbers Do I Need?"), url: '/faq/how-many-numbers-do-i-need' },
       ])} />
       <JsonLd data={faqPageSchema(FAQS)} />
       <SiteHeader />
@@ -133,8 +134,8 @@ export default async function Page() {
           <h2>{t("Pool sizing, answered.")}</h2>
           {FAQS.map(f => (
             <div key={f.question} style={{ marginBottom: 28 }}>
-              <h3 style={{ fontSize: 18, marginBottom: 8 }}>{f.question}</h3>
-              <p style={{ margin: 0 }}>{f.answer}</p>
+              <h3 style={{ fontSize: 18, marginBottom: 8 }}>{t(f.question)}</h3>
+              <p style={{ margin: 0 }}>{t(f.answer)}</p>
             </div>
           ))}
         </section>

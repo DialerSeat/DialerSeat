@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import TeamFloor from '@/components/teams/TeamFloor'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /dashboard/teams/floor — the rebuilt Teams surface, live but not yet the
@@ -30,7 +31,7 @@ export default function TeamFloorPage() {
         const member = (d?.teams?.member ?? []) as any[]
         const first = owned[0] ?? member[0] ?? null
         if (first?.id) {
-          setTeam({ id: first.id, name: first.name || 'Team' })
+          setTeam({ id: first.id, name: first.name || msg("Team") })
           setState('ready')
         } else {
           setState('none')

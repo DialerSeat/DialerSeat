@@ -10,6 +10,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 
 type Slide = { src: string; alt: string; caption: string; theme: string }
@@ -18,25 +19,25 @@ const MOBILE_SLIDES: Slide[] = [
   {
     src: '/faq-images/manager-plus/pwa-login-chrome.png',
     alt: 'White-labeled DialerSeat mobile login screen, light theme',
-    caption: 'Login screen, light theme. Custom instagram link, custom copy, fully re-themed colors, installed straight to the home screen.',
+    caption: msg("Login screen, light theme. Custom instagram link, custom copy, fully re-themed colors, installed straight to the home screen."),
     theme: 'CHROME THEME',
   },
   {
     src: '/faq-images/manager-plus/pwa-login-neon.png',
     alt: 'White-labeled DialerSeat mobile login screen, dark neon-green theme',
-    caption: 'Same exact login flow, same codebase, completely different theme: dark background, neon-green accent, glowing logo treatment.',
+    caption: msg("Same exact login flow, same codebase, completely different theme: dark background, neon-green accent, glowing logo treatment."),
     theme: 'NEON THEME',
   },
   {
     src: '/faq-images/manager-plus/pwa-sidebar-chrome.png',
     alt: 'White-labeled DialerSeat mobile sidebar navigation, light theme',
-    caption: 'Sidebar navigation, light theme. Analytics, Dialer, Campaigns, Recordings, Leads, Teams, Settings, the manager\u2019s MANAGER+ badge shown bottom-left.',
+    caption: msg("Sidebar navigation, light theme. Analytics, Dialer, Campaigns, Recordings, Leads, Teams, Settings, the manager’s MANAGER+ badge shown bottom-left."),
     theme: 'CHROME THEME',
   },
   {
     src: '/faq-images/manager-plus/pwa-sidebar-neon.png',
     alt: 'White-labeled DialerSeat mobile sidebar navigation, dark neon-green theme',
-    caption: 'Identical navigation structure, neon theme. Every link, every label, every permission, unchanged. Only the skin is different.',
+    caption: msg("Identical navigation structure, neon theme. Every link, every label, every permission, unchanged. Only the skin is different."),
     theme: 'NEON THEME',
   },
   {
@@ -48,7 +49,7 @@ const MOBILE_SLIDES: Slide[] = [
   {
     src: '/faq-images/manager-plus/pwa-analytics-chrome.png',
     alt: 'White-labeled DialerSeat mobile analytics overview, light theme',
-    caption: 'The analytics overview on mobile: same six metric cards and call-volume chart as the desktop version, just reflowed for a phone screen.',
+    caption: msg("The analytics overview on mobile: same six metric cards and call-volume chart as the desktop version, just reflowed for a phone screen."),
     theme: 'CHROME THEME',
   },
 ]
@@ -80,7 +81,7 @@ function MobileCarousel() {
         <button className="wlm-carousel-arrow right" onClick={() => go(1)} aria-label={t("Next screenshot")}>›</button>
       </div>
       <div className="wlm-carousel-theme-tag">{slide.theme}</div>
-      <p className="wlm-carousel-caption">{slide.caption}</p>
+      <p className="wlm-carousel-caption">{t(slide.caption)}</p>
       <div className="wlm-carousel-dots">
         {MOBILE_SLIDES.map((s, i) => (
           <button

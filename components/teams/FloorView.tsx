@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 const PANEL = 'var(--teams-panel, #232428)'
 const HAIRLINE = 'var(--teams-border, #1a1b1e)'
@@ -12,9 +13,9 @@ const GREEN = '#4ade80'
 const AMBER = '#fbbf24'
 
 const RANGES = [
-  { key: 'today', label: 'Today' },
-  { key: 'week', label: 'Week' },
-  { key: 'month', label: 'Month' },
+  { key: 'today', label: msg("Today") },
+  { key: 'week', label: msg("Week") },
+  { key: 'month', label: msg("Month") },
 ]
 
 function dur(seconds: number): string {
@@ -28,7 +29,7 @@ function dur(seconds: number): string {
 function ago(iso: string | null): string {
   if (!iso) return 'never'
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (mins < 1) return 'just now'
+  if (mins < 1) return msg("just now")
   if (mins < 60) return `${mins}m ago`
   const hrs = Math.floor(mins / 60)
   if (hrs < 24) return `${hrs}h ago`
@@ -98,7 +99,7 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
                 borderRadius: 3, padding: '6px 12px', fontSize: 11.5,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
-            >{r.label}</button>
+            >{t(r.label)}</button>
           ))}
         </div>
       </div>

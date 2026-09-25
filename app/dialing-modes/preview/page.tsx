@@ -8,6 +8,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -39,9 +40,9 @@ export default async function PreviewDialerPage() {
   return (
     <>
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Dialing Modes', url: '/dialing-modes' },
-        { name: 'Preview Dialer', url: '/dialing-modes/preview' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Dialing Modes"), url: '/dialing-modes' },
+        { name: msg("Preview Dialer"), url: '/dialing-modes/preview' },
       ])} />
       <>
       <SiteHeader />

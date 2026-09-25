@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { t } from '@/lib/i18n/client'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Sitewide dashboard banners — promo/announcement banner on top, Dialer
@@ -67,7 +68,7 @@ function Ticker({ text, bg, color }: { text: string; bg: string; color: string }
               color,
             }}
           >
-            {text}
+            {t(text)}
           </span>
         ))}
       </div>

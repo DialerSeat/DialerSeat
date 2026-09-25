@@ -35,8 +35,8 @@ export default function DialingModeCTA({ headline, description }: Props) {
 
   return (
     <section style={sectionStyle}>
-      <h2 style={h2Style}>{headline}</h2>
-      <p style={pStyle}>{description}</p>
+      <h2 style={h2Style}>{t(headline)}</h2>
+      <p style={pStyle}>{t(description)}</p>
       <div style={btnRowStyle}>
         {showSignedIn ? (
           <Link href="/dashboard/dialer" style={primaryBtnStyle}>

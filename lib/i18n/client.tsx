@@ -62,7 +62,11 @@ function currentState(): I18nState {
 }
 
 /** Translate English text into the visitor's language. English is returned as-is. */
-export function t(text: string, vars?: Vars): string {
+export function t(text: string, vars?: Vars): string
+/** Anything that is not a string (undefined, a number, JSX) passes through. */
+export function t<T>(value: T): T
+export function t(text: unknown, vars?: Vars): unknown {
+  if (typeof text !== 'string') return text
   return translate(currentState().dict, text, vars)
 }
 

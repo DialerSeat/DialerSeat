@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 const SLUG = 'aircall'
 
@@ -37,29 +38,29 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'How does DialerSeat compare to Aircall on price?',
+    question: msg("How does DialerSeat compare to Aircall on price?"),
     answer:
-      "DialerSeat is $35 per seat per week, billed weekly, with the dialer included from the first seat. Aircall's Essentials plan is advertised from $30/user/month, but doesn't include the Power Dialer, Salesforce integration, or live call monitoring: those require the Professional plan at $50/user/month, and every Aircall plan carries a 3-license minimum. Independently reported transaction data (Vendr) shows real mid-size team costs commonly landing between $2,500 and $4,000/month once add-ons are included.",
+      msg("DialerSeat is $35 per seat per week, billed weekly, with the dialer included from the first seat. Aircall's Essentials plan is advertised from $30/user/month, but doesn't include the Power Dialer, Salesforce integration, or live call monitoring: those require the Professional plan at $50/user/month, and every Aircall plan carries a 3-license minimum. Independently reported transaction data (Vendr) shows real mid-size team costs commonly landing between $2,500 and $4,000/month once add-ons are included."),
   },
   {
-    question: 'Does Aircall\u2019s $30 plan include a power dialer?',
+    question: msg("Does Aircall’s $30 plan include a power dialer?"),
     answer:
-      "No. Multiple independent sources, sourced from Aircall's own blog and pricing breakdowns, confirm the Power Dialer sits on the Professional tier ($50/user/month), not the Essentials entry plan ($30/user/month). One G2 reviewer described signing up specifically for the power dialer and finding the product \"unusable\" once they realized it wasn't included on the basic plan. DialerSeat includes predictive, power, progressive, and preview dialing in the one $35/week price, with no tier to unlock.",
+      msg("No. Multiple independent sources, sourced from Aircall's own blog and pricing breakdowns, confirm the Power Dialer sits on the Professional tier ($50/user/month), not the Essentials entry plan ($30/user/month). One G2 reviewer described signing up specifically for the power dialer and finding the product \"unusable\" once they realized it wasn't included on the basic plan. DialerSeat includes predictive, power, progressive, and preview dialing in the one $35/week price, with no tier to unlock."),
   },
   {
-    question: 'Why doesn\u2019t Aircall\u2019s own pricing page show dollar amounts?',
+    question: msg("Why doesn’t Aircall’s own pricing page show dollar amounts?"),
     answer:
-      'Multiple independent pricing analyses report that Aircall\u2019s pricing page renders key figures as blank or "null" client-side, with the citable numbers instead coming from Aircall\u2019s own blog posts. DialerSeat publishes $35/week directly on its pricing page.',
+      msg("Multiple independent pricing analyses report that Aircall’s pricing page renders key figures as blank or \"null\" client-side, with the citable numbers instead coming from Aircall’s own blog posts. DialerSeat publishes $35/week directly on its pricing page."),
   },
   {
-    question: 'Does DialerSeat offer whitelabel like Aircall?',
+    question: msg("Does DialerSeat offer whitelabel like Aircall?"),
     answer:
-      'Yes: Manager+ is $75/month flat and includes full whitelabel, with no license minimum. We found no whitelabel or reseller program anywhere on Aircall\u2019s site. Aircall\u2019s Custom tier, typically requiring 25+ licenses, is quote-based rather than published.',
+      msg("Yes: Manager+ is $75/month flat and includes full whitelabel, with no license minimum. We found no whitelabel or reseller program anywhere on Aircall’s site. Aircall’s Custom tier, typically requiring 25+ licenses, is quote-based rather than published."),
   },
   {
-    question: 'Is Aircall\u2019s list price the real price?',
+    question: msg("Is Aircall’s list price the real price?"),
     answer:
-      "Not necessarily. Vendr's transaction data, drawn from actual purchases, shows the median Aircall buyer negotiates roughly 23% off list price. That means comparing DialerSeat's published $35/week against Aircall's list price likely understates the real gap for buyers who don't negotiate, and makes Aircall's true cost harder to predict upfront than a flat, published rate.",
+      msg("Not necessarily. Vendr's transaction data, drawn from actual purchases, shows the median Aircall buyer negotiates roughly 23% off list price. That means comparing DialerSeat's published $35/week against Aircall's list price likely understates the real gap for buyers who don't negotiate, and makes Aircall's true cost harder to predict upfront than a flat, published rate."),
   },
 ]
 
@@ -74,9 +75,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs Aircall', url: '/vs/aircall' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs Aircall"), url: '/vs/aircall' },
         ])}
       />
       <VsCompetitorView c={competitor} />

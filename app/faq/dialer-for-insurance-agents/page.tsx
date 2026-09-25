@@ -7,6 +7,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /faq/dialer-for-insurance-agents
@@ -70,29 +71,29 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'What is the best dialer for insurance agents?',
+    question: msg("What is the best dialer for insurance agents?"),
     answer:
-      'The one that fits how you sell. A final expense or Medicare agent working aged or shared leads needs volume, so power or predictive dialing and local caller ID matter most. An agent working referrals and quote requests needs preview dialing and good notes. DialerSeat includes all four modes at $35 per seat per week, so you are not paying for a tier to change how you dial.',
+      msg("The one that fits how you sell. A final expense or Medicare agent working aged or shared leads needs volume, so power or predictive dialing and local caller ID matter most. An agent working referrals and quote requests needs preview dialing and good notes. DialerSeat includes all four modes at $35 per seat per week, so you are not paying for a tier to change how you dial."),
   },
   {
-    question: 'How much does an insurance dialer cost?',
+    question: msg("How much does an insurance dialer cost?"),
     answer:
-      'DialerSeat is $35 per seat per week, billed weekly, with no contract, no setup fee and no seat minimum. Carrier usage is charged separately as you dial. Most dialers aimed at insurance agencies are sold per seat per month on an annual commitment, often with local presence and recording as paid add-ons.',
+      msg("DialerSeat is $35 per seat per week, billed weekly, with no contract, no setup fee and no seat minimum. Carrier usage is charged separately as you dial. Most dialers aimed at insurance agencies are sold per seat per month on an annual commitment, often with local presence and recording as paid add-ons."),
   },
   {
-    question: 'Can I run a predictive dialer for insurance calls legally?',
+    question: msg("Can I run a predictive dialer for insurance calls legally?"),
     answer:
-      'Yes, within the federal rules on abandoned calls, calling hours and consent. DialerSeat enforces the abandon-rate cap per campaign and the calling window per lead, but scrubbing the National Do Not Call Registry and keeping consent records for your leads stay your responsibility.',
+      msg("Yes, within the federal rules on abandoned calls, calling hours and consent. DialerSeat enforces the abandon-rate cap per campaign and the calling window per lead, but scrubbing the National Do Not Call Registry and keeping consent records for your leads stay your responsibility."),
   },
   {
-    question: 'Are calls recorded, and can I keep the recordings?',
+    question: msg("Are calls recorded, and can I keep the recordings?"),
     answer:
-      'Recording can be switched on per campaign, and recordings can be played back and downloaded. If a rule that applies to you requires calls to be retained for a set number of years, download and keep your own copies rather than relying on any platform’s storage.',
+      msg("Recording can be switched on per campaign, and recordings can be played back and downloaded. If a rule that applies to you requires calls to be retained for a set number of years, download and keep your own copies rather than relying on any platform’s storage."),
   },
   {
-    question: 'I am licensed in several states. Does the dialer handle calling hours?',
+    question: msg("I am licensed in several states. Does the dialer handle calling hours?"),
     answer:
-      'Yes. Calling windows are enforced server-side against each lead’s own state, not your location, so an agent in one time zone cannot dial a lead in another outside that lead’s legal hours. States with stricter rules than the federal window are enforced at the stricter rule.',
+      msg("Yes. Calling windows are enforced server-side against each lead’s own state, not your location, so an agent in one time zone cannot dial a lead in another outside that lead’s legal hours. States with stricter rules than the federal window are enforced at the stricter rule."),
   },
 ]
 
@@ -103,9 +104,9 @@ export default async function Page() {
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'FAQ', url: '/faq' },
-          { name: 'Dialer for insurance agents', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("FAQ"), url: '/faq' },
+          { name: msg("Dialer for insurance agents"), url: ROUTE },
         ])}
       />
       <SiteHeader />

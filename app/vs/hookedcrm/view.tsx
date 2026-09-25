@@ -5,6 +5,7 @@ import SiteFooter from '@/components/site-footer'
 import BackToVsButton from '@/components/back-to-vs-button'
 import { SITE } from '@/lib/siteTheme'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 
 const T = {
@@ -26,29 +27,29 @@ const T = {
 }
 
 const features = [
-  { feature: 'Public per-seat pricing', dialerseat: true, competitor: true },
-  { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: false },
-  { feature: 'Weekly billing option', dialerseat: true, competitor: false },
-  { feature: 'No annual contract required', dialerseat: true, competitor: true },
-  { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$129-$169/mo' },
-  { feature: 'AI add-on stacks on top of seat price', dialerseat: false, competitor: '+$59-$79/seat' },
-  { feature: 'Setup fee', dialerseat: '$0', competitor: 'Not published' },
-  { feature: 'Named dialer modes (power/predictive/etc.)', dialerseat: 'Preview, Power, Progressive, Predictive', competitor: 'Not specified anywhere on their site' },
-  { feature: 'Predictive dialer (multi-line)', dialerseat: true, competitor: 'Not specified' },
-  { feature: 'Per-campaign dialer mode', dialerseat: true, competitor: false },
-  { feature: 'AMD voicemail filter always on', dialerseat: true, competitor: 'Not specified' },
-  { feature: 'Multiple scripts per campaign', dialerseat: true, competitor: false },
-  { feature: 'Live mid-call script switching', dialerseat: true, competitor: false },
-  { feature: 'TCPA windows enforced server-side', dialerseat: true, competitor: 'Not specified' },
-  { feature: 'STIR/SHAKEN A-attestation', dialerseat: true, competitor: 'Not specified' },
-  { feature: 'Built-in CRM with lead profiles', dialerseat: true, competitor: true },
-  { feature: 'AI-assisted call notes', dialerseat: false, competitor: 'Tacklebox AI add-on' },
-  { feature: 'Live call monitor / whisper / barge', dialerseat: true, competitor: true },
-  { feature: 'Per-minute call charges on top of seat price', dialerseat: false, competitor: 'From $0.042/min' },
-  { feature: 'Per-number charges', dialerseat: false, competitor: 'From $4.60/mo' },
-  { feature: 'Public API + webhooks (any CRM)', dialerseat: true, competitor: true },
-  { feature: 'Works on phones + tablets (PWA install)', dialerseat: true, competitor: 'Not found' },
-  { feature: 'Lapsed-user data preservation', dialerseat: true, competitor: 'Not specified' },
+  { feature: msg("Public per-seat pricing"), dialerseat: true, competitor: true },
+  { feature: msg("Self-serve signup, no demo required"), dialerseat: true, competitor: false },
+  { feature: msg("Weekly billing option"), dialerseat: true, competitor: false },
+  { feature: msg("No annual contract required"), dialerseat: true, competitor: true },
+  { feature: msg("Per-seat cost"), dialerseat: '$35/wk, cancel anytime', competitor: '$129-$169/mo' },
+  { feature: msg("AI add-on stacks on top of seat price"), dialerseat: false, competitor: '+$59-$79/seat' },
+  { feature: msg("Setup fee"), dialerseat: '$0', competitor: 'Not published' },
+  { feature: msg("Named dialer modes (power/predictive/etc.)"), dialerseat: 'Preview, Power, Progressive, Predictive', competitor: 'Not specified anywhere on their site' },
+  { feature: msg("Predictive dialer (multi-line)"), dialerseat: true, competitor: 'Not specified' },
+  { feature: msg("Per-campaign dialer mode"), dialerseat: true, competitor: false },
+  { feature: msg("AMD voicemail filter always on"), dialerseat: true, competitor: 'Not specified' },
+  { feature: msg("Multiple scripts per campaign"), dialerseat: true, competitor: false },
+  { feature: msg("Live mid-call script switching"), dialerseat: true, competitor: false },
+  { feature: msg("TCPA windows enforced server-side"), dialerseat: true, competitor: 'Not specified' },
+  { feature: msg("STIR/SHAKEN A-attestation"), dialerseat: true, competitor: 'Not specified' },
+  { feature: msg("Built-in CRM with lead profiles"), dialerseat: true, competitor: true },
+  { feature: msg("AI-assisted call notes"), dialerseat: false, competitor: 'Tacklebox AI add-on' },
+  { feature: msg("Live call monitor / whisper / barge"), dialerseat: true, competitor: true },
+  { feature: msg("Per-minute call charges on top of seat price"), dialerseat: false, competitor: 'From $0.042/min' },
+  { feature: msg("Per-number charges"), dialerseat: false, competitor: 'From $4.60/mo' },
+  { feature: msg("Public API + webhooks (any CRM)"), dialerseat: true, competitor: true },
+  { feature: msg("Works on phones + tablets (PWA install)"), dialerseat: true, competitor: 'Not found' },
+  { feature: msg("Lapsed-user data preservation"), dialerseat: true, competitor: 'Not specified' },
 ]
 
 export default function VsHookedCrmView() {
@@ -343,7 +344,7 @@ export default function VsHookedCrmView() {
               <tbody>
                 {features.map((f, i) => (
                   <tr key={i}>
-                    <td>{f.feature}</td>
+                    <td>{t(f.feature)}</td>
                     <td className="ds-cell">
                       {f.dialerseat === true ? <span className="yes">✓</span>
                         : f.dialerseat === false ? <span className="no">✕</span>

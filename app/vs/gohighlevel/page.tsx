@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 // Figures from GoHighLevel's own published pricing, read 24 Sept 2026. See the
 // entry in lib/competitors for what was and was not stated by the vendor.
@@ -38,19 +39,19 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: "What does GoHighLevel cost?",
+    question: msg("What does GoHighLevel cost?"),
     answer:
-      "Starter is $97 a month, Unlimited $297 and Agency Pro $497, month to month with a 14-day trial. Calling runs through its LC Phone system and is billed per minute from a prepaid wallet: US outbound calls are about $0.018 a minute and local numbers $1.15 a month. An agency rebilling usage to clients can add its own markup on top.",
+      msg("Starter is $97 a month, Unlimited $297 and Agency Pro $497, month to month with a 14-day trial. Calling runs through its LC Phone system and is billed per minute from a prepaid wallet: US outbound calls are about $0.018 a minute and local numbers $1.15 a month. An agency rebilling usage to clients can add its own markup on top."),
   },
   {
-    question: "Does GoHighLevel have a power dialer?",
+    question: msg("Does GoHighLevel have a power dialer?"),
     answer:
-      "Yes. HighLevel’s phone system includes a power dialer that works through a call list automatically. Its own announcement of the feature does not say whether it dials more than one line at a time or which plans include it. DialerSeat includes multi-line predictive dialing alongside preview, power and progressive on every seat.",
+      msg("Yes. HighLevel’s phone system includes a power dialer that works through a call list automatically. Its own announcement of the feature does not say whether it dials more than one line at a time or which plans include it. DialerSeat includes multi-line predictive dialing alongside preview, power and progressive on every seat."),
   },
   {
-    question: "Should an agency use GoHighLevel’s dialer or DialerSeat?",
+    question: msg("Should an agency use GoHighLevel’s dialer or DialerSeat?"),
     answer:
-      "If your clients already run on HighLevel and dialing is an occasional task, its built-in dialer keeps everything in one account. If dialing is the job, a dedicated dialer gives you predictive and multi-line dialing, calling with no per-minute wallet, and white-labeling on Manager+ for $75 a week. You can also run both: on team campaigns, Manager+ includes lead drip, a webhook that takes leads straight from HighLevel into a DialerSeat campaign.",
+      msg("If your clients already run on HighLevel and dialing is an occasional task, its built-in dialer keeps everything in one account. If dialing is the job, a dedicated dialer gives you predictive and multi-line dialing, calling with no per-minute wallet, and white-labeling on Manager+ for $75 a week. You can also run both: on team campaigns, Manager+ includes lead drip, a webhook that takes leads straight from HighLevel into a DialerSeat campaign."),
   },
 ]
 
@@ -65,9 +66,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs GoHighLevel', url: '/vs/gohighlevel' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs GoHighLevel"), url: '/vs/gohighlevel' },
         ])}
       />
       <VsCompetitorView c={competitor} />

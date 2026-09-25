@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 const T = {
   bg: '#f0f1f4',
@@ -247,7 +248,7 @@ export default function CompliancePage() {
             )}
             <PlatformStat
               label="STATUS"
-              value={degradedCount > 0 ? `${degradedCount} DEGRADED` : cautionCount > 0 ? `${cautionCount} CAUTION` : 'ALL SAFE'}
+              value={degradedCount > 0 ? `${degradedCount} DEGRADED` : cautionCount > 0 ? `${cautionCount} CAUTION` : msg("ALL SAFE")}
               accent={degradedCount > 0 ? T.red : cautionCount > 0 ? T.amber : T.green}
             />
           </div>
@@ -458,7 +459,7 @@ function CampaignComplianceCard({
               fontWeight: 'bold',
               letterSpacing: 0.5,
             }}>
-              {status === 'degraded' ? '⚠ ' : '⚠ '}{c.statusMessage}
+              {status === 'degraded' ? '⚠ ' : '⚠ '}{t(c.statusMessage)}
             </div>
           )}
 
@@ -569,7 +570,7 @@ function PlatformStat({
       borderTop: `3px solid ${accent}`, borderRadius: 3,
     }}>
       <div style={{ fontSize: 9, letterSpacing: 2, color: T.muted, fontWeight: 'bold', marginBottom: 6 }}>
-        {label}
+        {t(label)}
       </div>
       <div style={{
         fontSize: 22, fontWeight: 'bold', color: accent, lineHeight: 1, fontFamily: 'monospace',
@@ -594,7 +595,7 @@ function Metric({ label, value, accent, fineprint }: {
     }}>
       <div style={{
         fontSize: 8, letterSpacing: 2, color: T.muted, fontWeight: 'bold', marginBottom: 4,
-      }}>{label}</div>
+      }}>{t(label)}</div>
       <div style={{
         fontSize: 16, fontWeight: 'bold', fontFamily: 'monospace',
         color: accent, lineHeight: 1.1,
@@ -627,7 +628,7 @@ function AmdChip({ label, count }: { label: string; count: number }) {
       alignItems: 'center',
       whiteSpace: 'nowrap',
     }}>
-      <span style={{ letterSpacing: 0.5 }}>{label}</span>
+      <span style={{ letterSpacing: 0.5 }}>{t(label)}</span>
       <span style={{ fontWeight: 'bold' }}>{count.toLocaleString()}</span>
     </div>
   )

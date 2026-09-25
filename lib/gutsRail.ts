@@ -1,5 +1,6 @@
 import type { RailGroup } from '@/components/GutsShell'
 import { COMPETITORS } from '@/lib/competitors'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // THE RAIL, ONCE
@@ -17,10 +18,10 @@ import { COMPETITORS } from '@/lib/competitors'
 
 /** Shown on every article, /vs and /faq alike. */
 const SITE_INFO: RailGroup = {
-  label: 'SITE INFO',
+  label: msg("SITE INFO"),
   items: [
-    { href: '/privacy', label: 'Privacy Policy' },
-    { href: '/terms', label: 'Terms of Use' },
+    { href: '/privacy', label: msg("Privacy Policy") },
+    { href: '/terms', label: msg("Terms of Use") },
   ],
 }
 
@@ -59,20 +60,20 @@ export function vsRail(activeSlug?: string): RailGroup[] {
 
   return [
     {
-      label: 'MAIN MENU',
+      label: msg("MAIN MENU"),
       items: [
-        { href: '/?view=landing', label: 'Home' },
-        { href: '/vs', label: 'All Comparisons' },
-        { href: '/faq', label: 'FAQ' },
+        { href: '/?view=landing', label: msg("Home") },
+        { href: '/vs', label: msg("All Comparisons") },
+        { href: '/faq', label: msg("FAQ") },
       ],
     },
     {
-      label: 'OTHER VS PAGES',
+      label: msg("OTHER VS PAGES"),
       items: [
         ...others,
-        { href: '/vs/everyone', label: 'Every legacy dialer' },
-        { href: '/vs/teams', label: 'Dialer pricing for teams' },
-        { href: '/vs', label: 'All dialer comparisons' },
+        { href: '/vs/everyone', label: msg("Every legacy dialer") },
+        { href: '/vs/teams', label: msg("Dialer pricing for teams") },
+        { href: '/vs', label: msg("All dialer comparisons") },
       ],
     },
     SITE_INFO,
@@ -90,11 +91,11 @@ export function vsRail(activeSlug?: string): RailGroup[] {
 export function legalRail(): RailGroup[] {
   return [
     {
-      label: 'MAIN MENU',
+      label: msg("MAIN MENU"),
       items: [
-        { href: '/?view=landing', label: 'Home' },
-        { href: '/faq', label: 'FAQ' },
-        { href: '/vs', label: 'Comparisons' },
+        { href: '/?view=landing', label: msg("Home") },
+        { href: '/faq', label: msg("FAQ") },
+        { href: '/vs', label: msg("Comparisons") },
       ],
     },
     SITE_INFO,
@@ -103,14 +104,14 @@ export function legalRail(): RailGroup[] {
 
 /** The questions worth putting one click away from any answer page. */
 const RAIL_ANSWERS: { href: string; label: string }[] = [
-  { href: '/faq/why-dialerseat', label: 'Why DialerSeat?' },
-  { href: '/faq/why-we-charge', label: 'Why we charge what we charge' },
-  { href: '/faq/billing', label: 'Billing & cancellation' },
+  { href: '/faq/why-dialerseat', label: msg("Why DialerSeat?") },
+  { href: '/faq/why-we-charge', label: msg("Why we charge what we charge") },
+  { href: '/faq/billing', label: msg("Billing & cancellation") },
   { href: '/faq/dialer-modes', label: 'Dialer modes (TL;DR)' },
-  { href: '/faq/how-we-keep-compliance', label: 'How we keep compliance' },
-  { href: '/faq/numbers', label: 'Phone numbers & caller ID' },
-  { href: '/faq/leads', label: 'Uploading & managing leads' },
-  { href: '/faq/manager-plus', label: 'What Manager+ adds' },
+  { href: '/faq/how-we-keep-compliance', label: msg("How we keep compliance") },
+  { href: '/faq/numbers', label: msg("Phone numbers & caller ID") },
+  { href: '/faq/leads', label: msg("Uploading & managing leads") },
+  { href: '/faq/manager-plus', label: msg("What Manager+ adds") },
 ]
 
 /**
@@ -122,16 +123,16 @@ export function faqRail(activePath?: string): RailGroup[] {
 
   return [
     {
-      label: 'MAIN MENU',
+      label: msg("MAIN MENU"),
       items: [
-        { href: '/?view=landing', label: 'Home' },
-        { href: '/faq', label: 'FAQ' },
-        { href: '/vs', label: 'Comparisons' },
+        { href: '/?view=landing', label: msg("Home") },
+        { href: '/faq', label: msg("FAQ") },
+        { href: '/vs', label: msg("Comparisons") },
       ],
     },
     {
-      label: 'OTHER FAQ PAGES',
-      items: [...others, { href: '/faq', label: 'All questions' }],
+      label: msg("OTHER FAQ PAGES"),
+      items: [...others, { href: '/faq', label: msg("All questions") }],
     },
     SITE_INFO,
   ]

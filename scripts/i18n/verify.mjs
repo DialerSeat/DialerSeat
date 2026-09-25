@@ -33,11 +33,14 @@ function normalise(js, fnNames) {
     const visit = (node) => {
       node = ts.visitEachChild(node, visit, ctx)
       // t("x") → "x"  (English: translate() returns its argument)
+      // t(x) and msg(x) → x  (English: both return their argument)
       if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
-        fnNames.has(node.expression.text) && node.arguments.length === 1 &&
-        ts.isStringLiteral(node.arguments[0])) {
-        return f.createStringLiteral(node.arguments[0].text)
+        fnNames.has(node.expression.text) && node.arguments.length === 1) {
+        const arg = node.arguments[0]
+        return ts.isStringLiteral(arg) ? f.createStringLiteral(arg.text) : arg
       }
+      // A backtick string with no ${} is the same string.
+      if (ts.isNoSubstitutionTemplateLiteral(node)) return f.createStringLiteral(node.text)
       // Quote style is not output: print every string the same way.
       if (ts.isStringLiteral(node) && node.getSourceFile?.()) return f.createStringLiteral(node.text)
       // React.createElement(tag, props, ...children): merge adjacent strings.
@@ -65,11 +68,13 @@ function normalise(js, fnNames) {
   return printer
     .printFile(out)
     .split('\n')
-    .filter((l) => !/from ['"]@\/lib\/i18n\/(client|server)['"]/.test(l))
+    .filter((l) => !/from ['"]@\/lib\/i18n\/(client|server|msg)['"]/.test(l))
     // prime.mjs adds these; neither changes what renders.
     .filter((l) => !/^\s*await primeLocale\(\);\s*$/.test(l))
     .map((l) => l.replace(/^export default async function/, 'export default function'))
     .join('\n')
+    // Line breaks are the printer's, not the page's.
+    .replace(/\s*\n\s*/g, ' ')
 }
 
 let failed = 0
@@ -90,10 +95,19 @@ for (const file of process.argv.slice(2)) {
     }
   }
   const after = fs.readFileSync(file, 'utf8')
-  const imp = after.match(/import \{[^}]*?\bt(?: as (\w+))?\s*[,}][^;]*?from ['"]@\/lib\/i18n\/(?:client|server)['"]/)
-  const fnNames = new Set([imp?.[1] || 't'])
-  const a = normalise(compile(before, file), new Set())
-  const b = normalise(compile(after, file), fnNames)
+  // Each side is normalised with its own i18n names, so a file that already
+  // went through wrap.mjs can be checked again after wrap-data.mjs.
+  const namesIn = (src) => {
+    const names = new Set()
+    const imp = src.match(/import \{([^}]*)\} from ['"]@\/lib\/i18n\/(?:client|server)['"]/)
+    const m = imp && imp[1].match(/\bt(?:\s+as\s+(\w+))?\s*(?:,|$)/)
+    if (m) names.add(m[1] || 't')
+    const msgImp = src.match(/import \{\s*msg(?: as (\w+))?\s*\} from ['"]@\/lib\/i18n\/msg['"]/)
+    if (msgImp) names.add(msgImp[1] || 'msg')
+    return names
+  }
+  const a = normalise(compile(before, file), namesIn(before))
+  const b = normalise(compile(after, file), namesIn(after))
   if (process.env.I18N_DUMP) {
     fs.writeFileSync(path.join(process.env.I18N_DUMP, path.basename(file) + '.before.js'), a)
     fs.writeFileSync(path.join(process.env.I18N_DUMP, path.basename(file) + '.after.js'), b)

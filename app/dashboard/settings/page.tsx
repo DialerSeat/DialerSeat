@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
@@ -198,15 +199,15 @@ export default function SettingsPage() {
       })
       const d = await res.json().catch(() => null)
       if (!res.ok || !d?.success) {
-        setSellerNote({ ok: false, text: d?.error || 'Could not save. Try again.' })
+        setSellerNote({ ok: false, text: d?.error || msg("Could not save. Try again.") })
         return
       }
       setSellerName(d.name || '')
       setSellerNumber(d.callbackNumber || '')
       setSellerReady(!!d.ready)
-      setSellerNote({ ok: true, text: d.ready ? 'Saved.' : 'Cleared.' })
+      setSellerNote({ ok: true, text: d.ready ? msg("Saved.") : msg("Cleared.") })
     } catch {
-      setSellerNote({ ok: false, text: 'Could not save. Check your connection and try again.' })
+      setSellerNote({ ok: false, text: msg("Could not save. Check your connection and try again.") })
     } finally {
       setSellerSaving(false)
     }
@@ -240,7 +241,7 @@ export default function SettingsPage() {
         })
       }
     } catch {
-      setError('Failed to load subscription status')
+      setError(msg("Failed to load subscription status"))
     } finally {
       setLoading(false)
     }
@@ -296,13 +297,13 @@ export default function SettingsPage() {
       // Card declined on resume. This is the one case worth interrupting for,
       // and it should hand them the fix rather than just the bad news.
       if (data.billingFailed) {
-        setPauseError(data.error || 'Your card was declined. Update your payment method to resume.')
+        setPauseError(data.error || tr("Your card was declined. Update your payment method to resume."))
         setTimeout(() => { window.location.href = data.redirectTo || '/billing' }, 2200)
         return
       }
-      setPauseError(data.error || 'Could not update your subscription')
+      setPauseError(data.error || tr("Could not update your subscription"))
     } catch (e) {
-      setPauseError(e instanceof Error ? e.message : 'Something went wrong')
+      setPauseError(e instanceof Error ? e.message : tr("Something went wrong"))
     } finally {
       setPausing(false)
     }
@@ -317,20 +318,20 @@ export default function SettingsPage() {
       const res = await fetch('/api/stripe/cancel', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Failed to cancel')
+        setError(data.error || msg("Failed to cancel"))
         setCanceling(false)
         return
       }
       setMessage(
         data.cancelAt
           ? `Canceled. Your service continues until ${formatDate(data.cancelAt)}.`
-          : 'Canceled.'
+          : msg("Canceled.")
       )
       setConfirming(false)
       setTypedConfirm('')
       await loadStatus()
     } catch (err: any) {
-      setError(err.message || 'Something went wrong')
+      setError(err.message || msg("Something went wrong"))
     } finally {
       setCanceling(false)
     }
@@ -386,7 +387,7 @@ export default function SettingsPage() {
       setPortalError([r.error, r.detail].filter(Boolean).join(' '))
     } catch {
       tab?.close()
-      setPortalError('Could not reach Stripe. Try again in a moment.')
+      setPortalError(tr("Could not reach Stripe. Try again in a moment."))
     } finally {
       setPortalBusy(false)
     }
@@ -404,14 +405,14 @@ export default function SettingsPage() {
       const res = await fetch('/api/stripe/resume', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Failed to resume subscription')
+        setError(data.error || msg("Failed to resume subscription"))
         setResuming(false)
         return
       }
-      setMessage('Your subscription has been resumed.')
+      setMessage(msg("Your subscription has been resumed."))
       await loadStatus()
     } catch (err: any) {
-      setError(err.message || 'Something went wrong')
+      setError(err.message || msg("Something went wrong"))
     } finally {
       setResuming(false)
     }
@@ -437,13 +438,13 @@ export default function SettingsPage() {
       })
       const data = await res.json()
       if (!data.success) {
-        setError(data.error || 'Failed to cancel seat'); return
+        setError(data.error || msg("Failed to cancel seat")); return
       }
-      setMessage(`Canceled access to ${seatConfirmTarget.campaignName || 'the campaign'}. You're still a member of ${seatConfirmTarget.teamName}.`)
+      setMessage(`Canceled access to ${seatConfirmTarget.campaignName || msg("the campaign")}. You're still a member of ${seatConfirmTarget.teamName}.`)
       setSeatConfirmTarget(null); setSeatTypedConfirm('')
       await loadStatus()
     } catch (err: any) {
-      setError(err.message || 'Failed to cancel seat')
+      setError(err.message || msg("Failed to cancel seat"))
     } finally {
       setSeatCancelling(null)
     }
@@ -469,7 +470,7 @@ export default function SettingsPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.detail || data.error || 'Failed to switch view')
+        setError(data.detail || data.error || msg("Failed to switch view"))
         setSwitchingBrand(false)
         return
       }
@@ -509,7 +510,7 @@ export default function SettingsPage() {
 
       window.location.reload()
     } catch (err: any) {
-      setError(err.message || 'Failed to switch view')
+      setError(err.message || msg("Failed to switch view"))
       setSwitchingBrand(false)
     }
   }
@@ -535,8 +536,8 @@ export default function SettingsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             type: 'exit',
-            subject: exitRating > 0 ? `Exit rating: ${exitRating}/5` : 'Account deletion feedback',
-            body: exitFeedback.trim() || '(no written feedback: rating only)',
+            subject: exitRating > 0 ? `Exit rating: ${exitRating}/5` : msg("Account deletion feedback"),
+            body: exitFeedback.trim() || msg("(no written feedback: rating only)"),
             disposition: exitRating > 0 ? `${exitRating}/5` : null,
           }),
         })
@@ -560,7 +561,7 @@ export default function SettingsPage() {
       })
       const data = await res.json()
       if (!res.ok || !data.success) {
-        setDeleteAccError(data.error || 'Failed to delete account.')
+        setDeleteAccError(data.error || tr("Failed to delete account."))
         setDeleteAccSubmitting(false)
         return
       }
@@ -573,7 +574,7 @@ export default function SettingsPage() {
       setDeleteAccSubmitting(false)
       setTimeout(() => { window.location.href = '/' }, 2200)
     } catch (err: any) {
-      setDeleteAccError(err?.message || 'Network error, please try again.')
+      setDeleteAccError(err?.message || tr("Network error, please try again."))
       setDeleteAccSubmitting(false)
     }
   }
@@ -637,7 +638,7 @@ export default function SettingsPage() {
             <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>{tr("· ADMIN")}</span>
           )}
           {!isAdmin && planLabel && (
-            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>· {planLabel}</span>
+            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>· {tr(planLabel)}</span>
           )}
           {!isAdmin && sub?.tier === 'lapsed' && !wlActive && (
             <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#ffaa3e', fontWeight: 'bold' }}>{tr("· UNSUBSCRIBED")}</span>
@@ -659,7 +660,7 @@ export default function SettingsPage() {
             >
               {brandOptions.available.map(t => (
                 <option key={t.id} value={t.id}>
-                  {t.brand_name}
+                  {tr(t.brand_name)}
                 </option>
               ))}
               {brandOptions.savedThemes.map(t => (
@@ -703,7 +704,7 @@ export default function SettingsPage() {
             <>
               <div style={rowStyle}>
                 <span style={labelStyle}>{tr("PLAN")}</span>
-                <span style={valueStyle}>{planLabel || tr("PRO")}</span>
+                <span style={valueStyle}>{tr(planLabel) || tr("PRO")}</span>
               </div>
 
               <div style={rowStyle}>
@@ -772,7 +773,7 @@ export default function SettingsPage() {
 
             {sellerNote && (
               <div style={{ fontSize: 11, letterSpacing: 1, marginBottom: 8, color: sellerNote.ok ? '#32ff7e' : '#ff8888' }}>
-                {sellerNote.text}
+                {tr(sellerNote.text)}
               </div>
             )}
 
@@ -853,8 +854,8 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {message && <div style={successStyle}>{message}</div>}
-        {error && <div style={errorStyle}>{error}</div>}
+        {message && <div style={successStyle}>{tr(message)}</div>}
+        {error && <div style={errorStyle}>{tr(error)}</div>}
 
         {showResubscribe && !pausedOnly && (
           <div style={resubscribeBoxStyle}>
@@ -866,7 +867,7 @@ export default function SettingsPage() {
             <div style={resubscribeTextStyle}>
               {sub?.tier === 'lapsed'
                 ? tr("Resubscribe to restore dialing, campaign creation, and lead imports. Your existing leads, recordings, and analytics are still here.")
-                : `You'll lose dialing access on ${sub?.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : 'period end'}. Resume billing now to keep going without interruption.`
+                : `You'll lose dialing access on ${sub?.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : msg("period end")}. Resume billing now to keep going without interruption.`
               }
             </div>
             <button onClick={handleResubscribe} disabled={resuming} style={{ ...resubscribeButtonStyle, opacity: resuming ? 0.6 : 1, cursor: resuming ? 'not-allowed' : 'pointer' }}>
@@ -917,7 +918,7 @@ export default function SettingsPage() {
                 background: 'rgba(138, 26, 26, 0.18)', borderLeft: '3px solid #8a1a1a',
                 color: '#ff8888', fontSize: 12, lineHeight: 1.5,
               }}>
-                {pauseError}
+                {tr(pauseError)}
               </div>
             )}
 
@@ -958,7 +959,7 @@ export default function SettingsPage() {
                 background: 'rgba(138, 26, 26, 0.18)', borderLeft: '3px solid #8a1a1a',
                 color: '#ff8888', fontSize: 12, lineHeight: 1.5,
               }}>
-                {portalError}
+                {tr(portalError)}
               </div>
             )}
 
@@ -1202,7 +1203,7 @@ export default function SettingsPage() {
                   style={typeInputStyle}
                 />
 
-                {deleteAccError && <div style={errorStyle}>{deleteAccError}</div>}
+                {deleteAccError && <div style={errorStyle}>{tr(deleteAccError)}</div>}
 
                 <div className="settings-confirm-buttons" style={confirmButtonsStyle}>
                   <button onClick={closeDeleteAccount} disabled={deleteAccSubmitting} style={secondaryButtonStyle}>
@@ -1246,17 +1247,17 @@ function formatDate(iso: string) {
 function planLabelFor(plan: SubStatus['plan']): string {
   switch (plan) {
     case 'manager_plus': return 'MANAGER+'
-    case 'both': return 'PRO + MANAGER+'
-    case 'pro': return 'PRO'
+    case 'both': return msg("PRO + MANAGER+")
+    case 'pro': return msg("PRO")
     default: return ''
   }
 }
 
 function tierStatusLabel(sub: SubStatus | null, wlActive: boolean): string {
-  if (!sub) return wlActive ? 'ACTIVE' : '-'
-  if (sub.tier === 'lapsed' && !wlActive) return 'UNSUBSCRIBED'
+  if (!sub) return wlActive ? msg("ACTIVE") : '-'
+  if (sub.tier === 'lapsed' && !wlActive) return msg("UNSUBSCRIBED")
   if (sub.cancelAtPeriodEnd) return `${sub.status?.toUpperCase()} (CANCELING)`
-  return sub.status?.toUpperCase() || (wlActive ? 'ACTIVE' : '-')
+  return sub.status?.toUpperCase() || (wlActive ? msg("ACTIVE") : '-')
 }
 
 function tierStatusColor(sub: SubStatus | null): string {

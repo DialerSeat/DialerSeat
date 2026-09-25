@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 // Figures from HubSpot's own published pricing, read 24 Sept 2026. See the
 // entry in lib/competitors for what was and was not stated by the vendor.
@@ -38,24 +39,24 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: "What does HubSpot Sales Hub cost for calling?",
+    question: msg("What does HubSpot Sales Hub cost for calling?"),
     answer:
-      "Per seat per month: Starter $20 ($7 billed annually), Professional $100 ($90 annually) and Enterprise $150. Professional adds a one-time onboarding fee of $1,500 and Enterprise $3,500. There is a free plan for up to two users.",
+      msg("Per seat per month: Starter $20 ($7 billed annually), Professional $100 ($90 annually) and Enterprise $150. Professional adds a one-time onboarding fee of $1,500 and Enterprise $3,500. There is a free plan for up to two users."),
   },
   {
-    question: "How many calling minutes does HubSpot include?",
+    question: msg("How many calling minutes does HubSpot include?"),
     answer:
-      "It depends on the plan: 500 minutes on Starter, 3,000 on Professional and 12,000 on Enterprise. DialerSeat does not meter calling minutes.",
+      msg("It depends on the plan: 500 minutes on Starter, 3,000 on Professional and 12,000 on Enterprise. DialerSeat does not meter calling minutes."),
   },
   {
-    question: "Does HubSpot have a power dialer?",
+    question: msg("Does HubSpot have a power dialer?"),
     answer:
-      "HubSpot has a power dialer in beta that queues calls from the CRM and can drop a voicemail in one click. Which plans include it is not stated, and predictive or multi-line dialing is not claimed. DialerSeat includes preview, power, progressive and multi-line predictive dialing on every seat.",
+      msg("HubSpot has a power dialer in beta that queues calls from the CRM and can drop a voicemail in one click. Which plans include it is not stated, and predictive or multi-line dialing is not claimed. DialerSeat includes preview, power, progressive and multi-line predictive dialing on every seat."),
   },
   {
-    question: "Can I use DialerSeat with HubSpot?",
+    question: msg("Can I use DialerSeat with HubSpot?"),
     answer:
-      "Yes, on team campaigns. A team owner on Manager+ can switch on lead drip, a webhook URL for a campaign, and DialerSeat reads the fields HubSpot nests under properties, so contacts flow from the CRM into that campaign without reformatting.",
+      msg("Yes, on team campaigns. A team owner on Manager+ can switch on lead drip, a webhook URL for a campaign, and DialerSeat reads the fields HubSpot nests under properties, so contacts flow from the CRM into that campaign without reformatting."),
   },
 ]
 
@@ -70,9 +71,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs HubSpot', url: '/vs/hubspot' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs HubSpot"), url: '/vs/hubspot' },
         ])}
       />
       <VsCompetitorView c={competitor} />

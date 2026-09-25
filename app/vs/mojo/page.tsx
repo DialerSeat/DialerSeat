@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 const SLUG = 'mojo'
 
@@ -37,29 +38,29 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'How does DialerSeat compare to Mojo Dialer on price?',
+    question: msg("How does DialerSeat compare to Mojo Dialer on price?"),
     answer:
-      'DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with everything included. Mojo Dialer advertises $139/month for Triple Line, but real customer bills land at $250-$350 once the $10/mo Agent Access fee and $25-$49 data add-ons (FSBO, Pre-Foreclosure, Neighborhood, Skip Tracer) are stacked. DialerSeat has no required access fee and no per-dataset subscriptions.',
+      msg("DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with everything included. Mojo Dialer advertises $139/month for Triple Line, but real customer bills land at $250-$350 once the $10/mo Agent Access fee and $25-$49 data add-ons (FSBO, Pre-Foreclosure, Neighborhood, Skip Tracer) are stacked. DialerSeat has no required access fee and no per-dataset subscriptions."),
   },
   {
-    question: 'Is DialerSeat only for real estate?',
+    question: msg("Is DialerSeat only for real estate?"),
     answer:
-      'No. DialerSeat is industry-agnostic from day one: insurance (life, health, IUL, veterans), real estate, financial services, B2B SaaS, fundraising, debt resolution, mortgage, solar, recruiting, and more. Mojo is built around FSBO, expired, and neighborhood data which works well for real estate but limits other industries.',
+      msg("No. DialerSeat is industry-agnostic from day one: insurance (life, health, IUL, veterans), real estate, financial services, B2B SaaS, fundraising, debt resolution, mortgage, solar, recruiting, and more. Mojo is built around FSBO, expired, and neighborhood data which works well for real estate but limits other industries."),
   },
   {
-    question: 'Does DialerSeat have triple-line dialing like Mojo?',
+    question: msg("Does DialerSeat have triple-line dialing like Mojo?"),
     answer:
-      'Yes, and also real predictive dialing with proper pacing and abandon-rate caps. Mojo offers triple-line but no true predictive mode. DialerSeat supports four modes (Preview, Power, Progressive, Predictive) configurable per campaign.',
+      msg("Yes, and also real predictive dialing with proper pacing and abandon-rate caps. Mojo offers triple-line but no true predictive mode. DialerSeat supports four modes (Preview, Power, Progressive, Predictive) configurable per campaign."),
   },
   {
-    question: 'Can I use my preferred real estate data with DialerSeat?',
+    question: msg("Can I use my preferred real estate data with DialerSeat?"),
     answer:
-      'Yes. DialerSeat integrates with the same FSBO, expired, and skip-tracing data providers Mojo resells, via our public API. You keep your preferred data source without paying Mojo a markup.',
+      msg("Yes. DialerSeat integrates with the same FSBO, expired, and skip-tracing data providers Mojo resells, via our public API. You keep your preferred data source without paying Mojo a markup."),
   },
   {
-    question: 'Does DialerSeat work on mobile?',
+    question: msg("Does DialerSeat work on mobile?"),
     answer:
-      'Yes. DialerSeat installs as a Progressive Web App on iPhone, iPad, Android, macOS, and Windows. Field agents can dial from an iPad, solo agents can close from their phone between meetings. Mojo offers mobile web only.',
+      msg("Yes. DialerSeat installs as a Progressive Web App on iPhone, iPad, Android, macOS, and Windows. Field agents can dial from an iPad, solo agents can close from their phone between meetings. Mojo offers mobile web only."),
   },
 ]
 
@@ -74,9 +75,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs/everyone' },
-          { name: 'DialerSeat vs Mojo Dialer', url: '/vs/mojo' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs/everyone' },
+          { name: msg("DialerSeat vs Mojo Dialer"), url: '/vs/mojo' },
         ])}
       />
       <VsCompetitorView c={competitor} />

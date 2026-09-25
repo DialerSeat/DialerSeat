@@ -14,6 +14,7 @@ import {
   type Competitor,
 } from '@/lib/competitors'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // HEAD-TO-HEAD COMPARISONS — "<A> vs <B>", where neither one is us
@@ -139,17 +140,17 @@ function Column({ c }: { c: Competitor }) {
       <h2 style={{ fontSize: 20, fontWeight: 'bold', letterSpacing: -0.3, margin: 0, color: INK }}>
         {c.name}
       </h2>
-      <p style={{ fontSize: 14, lineHeight: 1.7, color: MUTED, marginTop: 10 }}>{c.summary}</p>
+      <p style={{ fontSize: 14, lineHeight: 1.7, color: MUTED, marginTop: 10 }}>{t(c.summary)}</p>
 
       <dl style={{ margin: '20px 0 0' }}>
         {[
-          ['PRICING', c.pricing],
-          ['BILLING', c.contract],
-          ['DIALING', c.dialing],
-          ['BEST FOR', c.bestFor],
+          [msg("PRICING"), c.pricing],
+          [msg("BILLING"), c.contract],
+          [msg("DIALING"), c.dialing],
+          [msg("BEST FOR"), c.bestFor],
         ].map(([label, value]) => (
           <div key={label} style={{ marginBottom: 14 }}>
-            <dt style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: ACCENT }}>{label}</dt>
+            <dt style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: ACCENT }}>{t(label)}</dt>
             <dd style={{ margin: '4px 0 0', fontSize: 14, lineHeight: 1.65, color: INK }}>{value}</dd>
           </div>
         ))}
@@ -200,7 +201,7 @@ export default async function MatchupPage(
       answer:
         `${a.name}: ${a.pricing} ${a.contract} ${b.name}: ${b.pricing} ${b.contract} ` +
         `Compare the total including add-ons and minimums rather than the headline rate, for several ` +
-        `tools in this category the advertised number excludes the dialer itself.`,
+        msg("tools in this category the advertised number excludes the dialer itself."),
     },
     {
       question: `Which one should I pick, ${a.name} or ${b.name}?`,
@@ -219,8 +220,8 @@ export default async function MatchupPage(
       <JsonLd data={organizationSchema()} />
       <JsonLd data={faqPageSchema(faqs)} />
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Comparisons', url: '/vs' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Comparisons"), url: '/vs' },
         { name: `${a.name} vs ${b.name}`, url: `/vs/${matchup}` },
       ])} />
 

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // TEAM OVERVIEW — the command-center strip at the top of an owned team
@@ -116,7 +117,7 @@ export default function TeamOverview({
       })
       const json = await res.json()
       if (!json.success || !json.code) {
-        setGenError(json.error || 'Could not create a link')
+        setGenError(json.error || t("Could not create a link"))
         return
       }
       const url = `${window.location.origin}/join/${json.code.code}`
@@ -132,7 +133,7 @@ export default function TeamOverview({
       setRefreshKey(k => k + 1)
       onChanged()
     } catch (e) {
-      setGenError(e instanceof Error ? e.message : 'Something went wrong')
+      setGenError(e instanceof Error ? e.message : t("Something went wrong"))
     } finally {
       setGenerating(null)
     }
@@ -172,7 +173,7 @@ export default function TeamOverview({
           detail={
             live && live.online > 0
               ? `${live.ready} ready · ${live.dialing} dialing · ${live.onCall} on a call`
-              : 'nobody dialing right now'
+              : msg("nobody dialing right now")
           }
         />
         <Tile
@@ -182,7 +183,7 @@ export default function TeamOverview({
             data
               ? data.spend.seatCount > 0
                 ? `${data.spend.seatCount} paid seat${data.spend.seatCount === 1 ? '' : 's'}`
-                : 'no seats billing yet'
+                : msg("no seats billing yet")
               : ''
           }
         />
@@ -193,7 +194,7 @@ export default function TeamOverview({
           detail={
             data && data.seats.pending > 0
               ? `${data.seats.pending} waiting to be let in`
-              : 'nobody waiting'
+              : msg("nobody waiting")
           }
           accent={data && data.seats.pending > 0 ? T.amber : undefined}
         />
@@ -207,7 +208,7 @@ export default function TeamOverview({
           detail={
             data && data.calls.total > 0
               ? `${data.calls.answered.toLocaleString()} of ${data.calls.total.toLocaleString()} answered`
-              : 'no calls in this window'
+              : msg("no calls in this window")
           }
         />
       </div>
@@ -247,7 +248,7 @@ export default function TeamOverview({
         )}
         {genError && (
           <div style={{ flexBasis: '100%', marginTop: 4, fontSize: 11, color: '#8a1a1a' }}>
-            {genError}
+            {t(genError)}
           </div>
         )}
       </div>
@@ -269,7 +270,7 @@ export default function TeamOverview({
                 fontSize: 12,
               }}>
                 <span style={{ flex: '1 1 160px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {p.label}
+                  {t(p.label)}
                 </span>
                 <button
                   className="tov-btn is-solid"
@@ -314,7 +315,7 @@ function Tile({
         {accent && blink ? (
           <span style={{ color: accent, animation: 'tov-blink 1.6s ease-in-out infinite' }}>● </span>
         ) : null}
-        {label}
+        {t(label)}
       </div>
       <div style={{
         marginTop: 5, fontSize: 23, fontWeight: 'bold', lineHeight: 1.1,
@@ -328,7 +329,7 @@ function Tile({
         ) : null}
       </div>
       {detail ? (
-        <div style={{ marginTop: 4, fontSize: 10.5, color: T.muted }}>{detail}</div>
+        <div style={{ marginTop: 4, fontSize: 10.5, color: T.muted }}>{t(detail)}</div>
       ) : null}
     </div>
   )

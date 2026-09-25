@@ -10,6 +10,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 export const metadata: Metadata = {
   title: 'Do I Need 10DLC Registration to Make Outbound Calls? | DialerSeat',
@@ -32,34 +33,34 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'Do I need 10DLC registration to make outbound calls?',
+    question: msg("Do I need 10DLC registration to make outbound calls?"),
     answer:
-      'No. 10DLC, “10-digit long code”, is a registration framework the US carriers built for application-to-person text messaging. It governs SMS and MMS sent from ordinary ten-digit numbers. It has no bearing on voice calls. If you are dialing leads and not texting them, 10DLC is not something you need to register for.',
+      msg("No. 10DLC, “10-digit long code”, is a registration framework the US carriers built for application-to-person text messaging. It governs SMS and MMS sent from ordinary ten-digit numbers. It has no bearing on voice calls. If you are dialing leads and not texting them, 10DLC is not something you need to register for."),
   },
   {
-    question: 'Then why do people keep telling me to register?',
+    question: msg("Then why do people keep telling me to register?"),
     answer:
-      'Because most platforms that dial also text, and the vendor onboarding flow bundles the two. If a product sells calling and messaging together, its setup checklist will include brand and campaign registration whether or not you intend to send a single message. The advice is not wrong for that product, it is just not about calling.',
+      msg("Because most platforms that dial also text, and the vendor onboarding flow bundles the two. If a product sells calling and messaging together, its setup checklist will include brand and campaign registration whether or not you intend to send a single message. The advice is not wrong for that product, it is just not about calling."),
   },
   {
-    question: 'What is the voice equivalent of 10DLC?',
+    question: msg("What is the voice equivalent of 10DLC?"),
     answer:
-      'There are two, and they do different jobs. STIR/SHAKEN is a cryptographic attestation attached to the call itself, telling the receiving carrier that the network placing the call has verified the caller has the right to use that number. CNAM is the caller-name database that decides what text appears on the handset. Neither is a registration you complete once for your business the way 10DLC is, they are properties of the numbers you dial from.',
+      msg("There are two, and they do different jobs. STIR/SHAKEN is a cryptographic attestation attached to the call itself, telling the receiving carrier that the network placing the call has verified the caller has the right to use that number. CNAM is the caller-name database that decides what text appears on the handset. Neither is a registration you complete once for your business the way 10DLC is, they are properties of the numbers you dial from."),
   },
   {
-    question: 'Does DialerSeat handle STIR/SHAKEN and CNAM?',
+    question: msg("Does DialerSeat handle STIR/SHAKEN and CNAM?"),
     answer:
-      'Yes. Numbers in the pool carry A-attestation under STIR/SHAKEN and are CNAM-registered. You do not file anything, and there is no separate fee for it. This is a meaningful part of why a number reaches a handset looking like a real business rather than a suspected robocall.',
+      msg("Yes. Numbers in the pool carry A-attestation under STIR/SHAKEN and are CNAM-registered. You do not file anything, and there is no separate fee for it. This is a meaningful part of why a number reaches a handset looking like a real business rather than a suspected robocall."),
   },
   {
-    question: 'Will registering for 10DLC stop my calls being flagged as spam?',
+    question: msg("Will registering for 10DLC stop my calls being flagged as spam?"),
     answer:
-      'No, and this is the expensive version of the misunderstanding: teams spend weeks on brand registration expecting their answer rate to recover, and nothing changes, because the framework they registered with never touched voice. Call labelling is driven by attestation, by the calling patterns attached to a number, and by how many people decline or report it. What actually helps is A-attestation, rotating across a pool rather than burning one number, and retiring numbers whose answer rate has degraded.',
+      msg("No, and this is the expensive version of the misunderstanding: teams spend weeks on brand registration expecting their answer rate to recover, and nothing changes, because the framework they registered with never touched voice. Call labelling is driven by attestation, by the calling patterns attached to a number, and by how many people decline or report it. What actually helps is A-attestation, rotating across a pool rather than burning one number, and retiring numbers whose answer rate has degraded."),
   },
   {
-    question: 'Do I need 10DLC if I also send texts?',
+    question: msg("Do I need 10DLC if I also send texts?"),
     answer:
-      'Yes: if you send application-to-person SMS from a ten-digit US number, you need brand and campaign registration, and unregistered traffic is increasingly filtered or blocked outright. DialerSeat does not send SMS, so this is a question for whichever platform you text from.',
+      msg("Yes: if you send application-to-person SMS from a ten-digit US number, you need brand and campaign registration, and unregistered traffic is increasingly filtered or blocked outright. DialerSeat does not send SMS, so this is a question for whichever platform you text from."),
   },
 ]
 
@@ -68,9 +69,9 @@ export default async function Page() {
   return (
     <>
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Faq', url: '/faq' },
-        { name: 'Do I Need 10DLC Registration for Outbound Calls?', url: '/faq/10dlc-and-outbound-calling' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Faq"), url: '/faq' },
+        { name: msg("Do I Need 10DLC Registration for Outbound Calls?"), url: '/faq/10dlc-and-outbound-calling' },
       ])} />
       <JsonLd data={faqPageSchema(FAQS)} />
       <SiteHeader />
@@ -131,8 +132,8 @@ export default async function Page() {
           <h2>{t("Registration, answered.")}</h2>
           {FAQS.map(f => (
             <div key={f.question} style={{ marginBottom: 28 }}>
-              <h3 style={{ fontSize: 18, marginBottom: 8 }}>{f.question}</h3>
-              <p style={{ margin: 0 }}>{f.answer}</p>
+              <h3 style={{ fontSize: 18, marginBottom: 8 }}>{t(f.question)}</h3>
+              <p style={{ margin: 0 }}>{t(f.answer)}</p>
             </div>
           ))}
         </section>

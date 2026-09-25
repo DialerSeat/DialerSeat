@@ -9,6 +9,7 @@ import CampaignsAccessPanel from '@/components/teams/CampaignsAccessPanel'
 import WhitelabelTieIn from '@/components/teams/WhitelabelTieIn'
 import TeamOverview from '@/components/teams/TeamOverview'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 
 
@@ -262,7 +263,7 @@ export default function TeamsManager() {
       })
       const data = await res.json()
       if (!data.success) {
-        setRedeemMessage({ type: 'error', text: data.error || 'Redemption failed' })
+        setRedeemMessage({ type: 'error', text: data.error || msg("Redemption failed") })
         setRedeeming(false)
         return
       }
@@ -277,12 +278,12 @@ export default function TeamsManager() {
         setRedeemMessage({ type: 'success', text: `Joined ${data.team.name}. Redirecting...` })
         setTimeout(() => router.push(`/dashboard/teams/${data.team.id}/analytics`), 1000)
       } else {
-        setRedeemMessage({ type: 'success', text: 'Code redeemed.' })
+        setRedeemMessage({ type: 'success', text: msg("Code redeemed.") })
         setRedeemCode('')
         loadTeams()
       }
     } catch (err: any) {
-      setRedeemMessage({ type: 'error', text: err.message || 'Redemption failed' })
+      setRedeemMessage({ type: 'error', text: err.message || msg("Redemption failed") })
     } finally {
       setRedeeming(false)
     }
@@ -306,7 +307,7 @@ export default function TeamsManager() {
   const handleCreateSubmit = async () => {
     const name = createName.trim()
     if (!name) {
-      setCreateError('Team name required')
+      setCreateError(tr("Team name required"))
       return
     }
     setCreating(true)
@@ -323,7 +324,7 @@ export default function TeamsManager() {
           setShowCreateModal(false)
           setShowSubGate(true)
         } else {
-          setCreateError(data.error || 'Failed to create team')
+          setCreateError(data.error || tr("Failed to create team"))
         }
         setCreating(false)
         return
@@ -333,7 +334,7 @@ export default function TeamsManager() {
       setCreateDesc('')
       router.push(`/dashboard/teams/${data.team.id}/analytics`)
     } catch (err: any) {
-      setCreateError(err.message || 'Failed to create team')
+      setCreateError(err.message || tr("Failed to create team"))
       setCreating(false)
     }
   }
@@ -354,15 +355,15 @@ export default function TeamsManager() {
       const data = await res.json()
       if (!data.success) {
         if (res.status === 402) {
-          setActionError('A payment method is required on file before accepting an owner-paid seat. Add a card in /billing first.')
+          setActionError(tr("A payment method is required on file before accepting an owner-paid seat. Add a card in /billing first."))
         } else {
-          setActionError(data.error || 'Failed to accept')
+          setActionError(data.error || tr("Failed to accept"))
         }
         return
       }
       await loadTeams()
     } catch (err: any) {
-      setActionError(err.message || 'Failed to accept')
+      setActionError(err.message || tr("Failed to accept"))
     } finally {
       setActioningId(null)
     }
@@ -379,12 +380,12 @@ export default function TeamsManager() {
       })
       const data = await res.json()
       if (!data.success) {
-        setActionError(data.error || 'Failed to reject')
+        setActionError(data.error || tr("Failed to reject"))
         return
       }
       await loadTeams()
     } catch (err: any) {
-      setActionError(err.message || 'Failed to reject')
+      setActionError(err.message || tr("Failed to reject"))
     } finally {
       setActioningId(null)
     }
@@ -392,8 +393,8 @@ export default function TeamsManager() {
 
   const removeMember = (m: TeamMember) => {
     setConfirmState({
-      title: 'KICK MEMBER',
-      body: `Remove ${displayName(m.user, 'this member')} from the team? They lose all campaign access and any owner-paid subs end at period close. Type "remove" to confirm.`,
+      title: msg("KICK MEMBER"),
+      body: `Remove ${displayName(m.user, msg("this member"))} from the team? They lose all campaign access and any owner-paid subs end at period close. Type "remove" to confirm.`,
       confirmWord: 'remove',
       danger: true,
       onConfirm: async () => {
@@ -403,7 +404,7 @@ export default function TeamsManager() {
           body: JSON.stringify({ memberId: m.id, confirm: 'remove' }),
         })
         const data = await res.json()
-        if (!data.success) throw new Error(data.error || 'Failed to remove')
+        if (!data.success) throw new Error(data.error || msg("Failed to remove"))
         await loadTeams()
       },
     })
@@ -430,7 +431,7 @@ export default function TeamsManager() {
 
   const submitGrant = async () => {
     if (!grantTarget || !grantCampaignId) {
-      setGrantError('Select a campaign')
+      setGrantError(tr("Select a campaign"))
       return
     }
     setGrantSubmitting(true)
@@ -448,11 +449,11 @@ export default function TeamsManager() {
       const data = await res.json()
       if (!data.success) {
         if (res.status === 402) {
-          setGrantError('No payment method on file. Add a card in /billing, then try again.')
+          setGrantError(tr("No payment method on file. Add a card in /billing, then try again."))
         } else if (res.status === 409) {
-          setGrantError('This member already has access to that campaign.')
+          setGrantError(tr("This member already has access to that campaign."))
         } else {
-          setGrantError(data.error || 'Failed to grant access')
+          setGrantError(data.error || tr("Failed to grant access"))
         }
         return
       }
@@ -460,7 +461,7 @@ export default function TeamsManager() {
       setGrantCampaignId('')
       await loadTeams()
     } catch (err: any) {
-      setGrantError(err.message || 'Failed to grant access')
+      setGrantError(err.message || tr("Failed to grant access"))
     } finally {
       setGrantSubmitting(false)
     }
@@ -488,15 +489,15 @@ export default function TeamsManager() {
       const data = await res.json()
       if (!data.success) {
         if (res.status === 402) {
-          setActionError('No payment method on file. Add a card in /billing, then try again.')
+          setActionError(tr("No payment method on file. Add a card in /billing, then try again."))
         } else {
-          setActionError(data.error || 'Failed to reinstate')
+          setActionError(data.error || tr("Failed to reinstate"))
         }
         return
       }
       await loadTeams()
     } catch (err: any) {
-      setActionError(err.message || 'Failed to reinstate')
+      setActionError(err.message || tr("Failed to reinstate"))
     } finally {
       setActioningId(null)
     }
@@ -504,8 +505,8 @@ export default function TeamsManager() {
 
   const revokeAccess = (team: OwnedTeam, member: TeamMember, access: MemberCampaignAccess, campaignName: string) => {
     setConfirmState({
-      title: 'REVOKE CAMPAIGN ACCESS',
-      body: `Revoke ${displayName(member.user, 'this member')}'s access to "${campaignName}"? Their seat sub for this campaign ends at period close. They stay on the team and can be reinstated anytime. Type "remove" to confirm.`,
+      title: msg("REVOKE CAMPAIGN ACCESS"),
+      body: `Revoke ${displayName(member.user, msg("this member"))}'s access to "${campaignName}"? Their seat sub for this campaign ends at period close. They stay on the team and can be reinstated anytime. Type "remove" to confirm.`,
       confirmWord: 'remove',
       danger: true,
       onConfirm: async () => {
@@ -520,7 +521,7 @@ export default function TeamsManager() {
           }),
         })
         const data = await res.json()
-        if (!data.success) throw new Error(data.error || 'Failed to revoke')
+        if (!data.success) throw new Error(data.error || msg("Failed to revoke"))
         await loadTeams()
       },
     })
@@ -538,7 +539,7 @@ export default function TeamsManager() {
 
   const submitAttach = async () => {
     if (!attachModalTeam || !attachCampaignId) {
-      setAttachError('Select a campaign')
+      setAttachError(tr("Select a campaign"))
       return
     }
     setAttachSubmitting(true)
@@ -555,13 +556,13 @@ export default function TeamsManager() {
       })
       const data = await res.json()
       if (!data.success) {
-        setAttachError(data.error || 'Failed to attach campaign')
+        setAttachError(data.error || tr("Failed to attach campaign"))
         return
       }
       setAttachModalTeam(null)
       await loadTeams()
     } catch (err: any) {
-      setAttachError(err.message || 'Failed to attach campaign')
+      setAttachError(err.message || tr("Failed to attach campaign"))
     } finally {
       setAttachSubmitting(false)
     }
@@ -582,12 +583,12 @@ export default function TeamsManager() {
       })
       const data = await res.json()
       if (!data.success) {
-        setActionError(data.error || 'Failed to update access')
+        setActionError(data.error || tr("Failed to update access"))
         return
       }
       await loadTeams()
     } catch (err: any) {
-      setActionError(err.message || 'Failed to update access')
+      setActionError(err.message || tr("Failed to update access"))
     } finally {
       setActioningId(null)
     }
@@ -595,7 +596,7 @@ export default function TeamsManager() {
 
   const detachCampaign = (teamId: string, campaignId: string, campaignName: string) => {
     setConfirmState({
-      title: 'DETACH CAMPAIGN',
+      title: msg("DETACH CAMPAIGN"),
       body: `Detach "${campaignName}" from this team? Member access to this campaign will be revoked. Owner-paid seat subs tied to this campaign end at period close. Type "remove" to confirm.`,
       confirmWord: 'remove',
       danger: true,
@@ -606,7 +607,7 @@ export default function TeamsManager() {
           body: JSON.stringify({ teamId, campaignId, confirm: 'remove' }),
         })
         const data = await res.json()
-        if (!data.success) throw new Error(data.error || 'Failed to detach')
+        if (!data.success) throw new Error(data.error || msg("Failed to detach"))
         await loadTeams()
       },
     })
@@ -622,7 +623,7 @@ export default function TeamsManager() {
       setConfirmState(null)
       setConfirmInput('')
     } catch (err: any) {
-      setActionError(err.message || 'Action failed')
+      setActionError(err.message || tr("Action failed"))
     } finally {
       setConfirmSubmitting(false)
     }
@@ -647,13 +648,13 @@ export default function TeamsManager() {
       })
       const data = await res.json()
       if (!data.success) {
-        setEditError(data.error || 'Failed to update')
+        setEditError(data.error || tr("Failed to update"))
         return
       }
       setEditTeam(null)
       await loadTeams()
     } catch (err: any) {
-      setEditError(err.message || 'Failed to update')
+      setEditError(err.message || tr("Failed to update"))
     } finally {
       setEditSubmitting(false)
     }
@@ -681,12 +682,12 @@ export default function TeamsManager() {
         body: JSON.stringify({ confirm: 'remove' }),
       })
       const data = await res.json()
-      if (!data.success) throw new Error(data.error || 'Failed to delete')
+      if (!data.success) throw new Error(data.error || msg("Failed to delete"))
       setDeleteTeamStage(null)
       setDeleteTypedConfirm('')
       await loadTeams()
     } catch (err: any) {
-      setActionError(err.message || 'Failed to delete')
+      setActionError(err.message || tr("Failed to delete"))
     } finally {
       setDeleteSubmitting(false)
     }
@@ -794,7 +795,7 @@ export default function TeamsManager() {
               color:
                 redeemMessage.type === 'success' ? T.green :
                 redeemMessage.type === 'error' ? T.red : T.accent,
-            }}>{redeemMessage.text}</div>
+            }}>{tr(redeemMessage.text)}</div>
           )}
         </div>
 
@@ -804,7 +805,7 @@ export default function TeamsManager() {
             padding: '10px 14px', borderRadius: 3, fontSize: 12, letterSpacing: 1,
             marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
           }}>
-            <span>{actionError}</span>
+            <span>{tr(actionError)}</span>
             <button onClick={() => setActionError(null)} style={{
               background: 'transparent', border: 'none', color: T.red,
               cursor: 'pointer', fontSize: 16, fontFamily: 'inherit',
@@ -837,7 +838,7 @@ export default function TeamsManager() {
                         <div style={{
                           fontSize: 11, color: T.muted, letterSpacing: 0.5,
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                        }}>{team.description}</div>
+                        }}>{tr(team.description)}</div>
                       )}
                     </div>
                     <div style={{
@@ -1253,10 +1254,10 @@ export default function TeamsManager() {
                 <FieldLabel>{tr("ACCESS MODE")}</FieldLabel>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
                   {([
-                    { v: 'owner_pays', t: 'OWNER PAYS', d: 'You pay $35/wk per agent who joins. Agents dial without paying.' },
-                    { v: 'agent_pays', t: 'AGENT PAYS', d: 'Agents must have their own $35/wk sub to access.' },
-                    { v: 'public', t: 'PUBLIC', d: 'Any active subscriber can access without a code.' },
-                    { v: 'free', t: 'FREE', d: 'No per-seat fee for owner or agents. Members still need their own $35/wk DialerSeat sub to dial: free here means free campaign access, not free platform access.' },
+                    { v: 'owner_pays', t: msg("OWNER PAYS"), d: msg("You pay $35/wk per agent who joins. Agents dial without paying.") },
+                    { v: 'agent_pays', t: msg("AGENT PAYS"), d: msg("Agents must have their own $35/wk sub to access.") },
+                    { v: 'public', t: msg("PUBLIC"), d: msg("Any active subscriber can access without a code.") },
+                    { v: 'free', t: msg("FREE"), d: msg("No per-seat fee for owner or agents. Members still need their own $35/wk DialerSeat sub to dial: free here means free campaign access, not free platform access.") },
                   ] as const).map(opt => (
                     <label key={opt.v} style={{
                       display: 'flex', gap: 10, padding: '10px 12px',
@@ -1348,8 +1349,8 @@ export default function TeamsManager() {
                     <>
                       <FieldLabel>{tr("WHO PAYS THE $35/WEEK?")}</FieldLabel>
                       <SegmentedTwo
-                        left={{ label: 'OWNER PAYS', value: 'owner', desc: 'Charged to your card immediately.' }}
-                        right={{ label: 'AGENT PAYS', value: 'agent', desc: 'Uses their existing $35/wk sub.' }}
+                        left={{ label: msg("OWNER PAYS"), value: 'owner', desc: msg("Charged to your card immediately.") }}
+                        right={{ label: msg("AGENT PAYS"), value: 'agent', desc: msg("Uses their existing $35/wk sub.") }}
                         value={grantPayer === 'free' ? 'owner' : grantPayer}
                         onChange={v => setGrantPayer(v as 'owner' | 'agent')}
                       />
@@ -1396,8 +1397,8 @@ export default function TeamsManager() {
             <div style={{
               fontSize: 12, fontWeight: 'bold', letterSpacing: 4,
               color: confirmState.danger ? T.red : T.blue, marginBottom: 14,
-            }}>{confirmState.title}</div>
-            <p style={{ fontSize: 13, lineHeight: 1.6, color: T.text, margin: '0 0 16px 0' }}>{confirmState.body}</p>
+            }}>{tr(confirmState.title)}</div>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: T.text, margin: '0 0 16px 0' }}>{tr(confirmState.body)}</p>
             <input
               type="text" value={confirmInput} onChange={e => setConfirmInput(e.target.value)}
               placeholder={`type "${confirmState.confirmWord}"`}
@@ -1429,7 +1430,7 @@ function Section({ title, accent, action, children }: {
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 10 }}>
-        <div style={{ fontSize: 10, letterSpacing: 3, color: accent, fontWeight: 'bold' }}>▸ {title}</div>
+        <div style={{ fontSize: 10, letterSpacing: 3, color: accent, fontWeight: 'bold' }}>▸ {tr(title)}</div>
         {action}
       </div>
       {children}
@@ -1469,8 +1470,8 @@ function SegmentedTwo({ left, right, value, onChange }: {
             <div style={{
               fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
               color: selected ? 'var(--brand-primary)' : 'var(--brand-on-page-bg)', marginBottom: 4,
-            }}>{opt.label}</div>
-            <div style={{ fontSize: 10, color: 'var(--brand-muted-text)', lineHeight: 1.4 }}>{opt.desc}</div>
+            }}>{tr(opt.label)}</div>
+            <div style={{ fontSize: 10, color: 'var(--brand-muted-text)', lineHeight: 1.4 }}>{tr(opt.desc)}</div>
           </button>
         )
       })}
@@ -1483,7 +1484,7 @@ function ErrorInline({ text }: { text: string }) {
     <div style={{
       background: '#f8e8e8', border: `1px solid ${T.red}`, color: T.red,
       padding: '8px 12px', borderRadius: 3, fontSize: 11, letterSpacing: 1, marginTop: 8,
-    }}>{text}</div>
+    }}>{tr(text)}</div>
   )
 }
 

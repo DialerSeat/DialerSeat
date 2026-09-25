@@ -6,6 +6,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /faq/dialer-for-offshore-agents — the wedge nobody is priced for
@@ -59,34 +60,34 @@ const FUTURA = "'Futura PT', Futura, 'Trebuchet MS', sans-serif"
 
 const FAQS = [
   {
-    question: 'Can I use DialerSeat with agents in the Philippines or elsewhere overseas?',
+    question: msg("Can I use DialerSeat with agents in the Philippines or elsewhere overseas?"),
     answer:
-      'Yes. An agent needs a browser and an internet connection. There is no per-country restriction and no separate international seat price, a seat is $35 per week whether the agent is in Ohio or Manila. The account, the phone numbers, and the leads remain US.',
+      msg("Yes. An agent needs a browser and an internet connection. There is no per-country restriction and no separate international seat price, a seat is $35 per week whether the agent is in Ohio or Manila. The account, the phone numbers, and the leads remain US."),
   },
   {
-    question: 'Does an offshore agent cost more per seat?',
+    question: msg("Does an offshore agent cost more per seat?"),
     answer:
-      'No. This is the difference that makes an offshore floor viable at all: at $95-$250 per seat per month on other platforms, the software costs more than the wage, so the model does not work. At $35 per week it does.',
+      msg("No. This is the difference that makes an offshore floor viable at all: at $95-$250 per seat per month on other platforms, the software costs more than the wage, so the model does not work. At $35 per week it does."),
   },
   {
-    question: 'How do calling hours work when the agent is in a different timezone?',
+    question: msg("How do calling hours work when the agent is in a different timezone?"),
     answer:
-      'Calling windows are enforced against the lead’s own state, not the agent’s location or the account’s timezone. An agent working a Manila afternoon cannot dial a Florida lead outside that lead’s legal window, the server refuses the call rather than relying on the agent to know.',
+      msg("Calling windows are enforced against the lead’s own state, not the agent’s location or the account’s timezone. An agent working a Manila afternoon cannot dial a Florida lead outside that lead’s legal window, the server refuses the call rather than relying on the agent to know."),
   },
   {
-    question: 'Will call quality be acceptable from overseas?',
+    question: msg("Will call quality be acceptable from overseas?"),
     answer:
-      'Usually, but test it before you staff. Audio crosses the same distance regardless of platform, and the variable is the agent’s own connection, a wired office line behaves very differently from residential wifi. Run one agent on real calls for a day before hiring five.',
+      msg("Usually, but test it before you staff. Audio crosses the same distance regardless of platform, and the variable is the agent’s own connection, a wired office line behaves very differently from residential wifi. Run one agent on real calls for a day before hiring five."),
   },
   {
-    question: 'Does using offshore agents change my compliance obligations?',
+    question: msg("Does using offshore agents change my compliance obligations?"),
     answer:
-      'No. TCPA and DNC duties attach to the business placing the calls, not to where the person dialling sits. DialerSeat enforces calling windows per lead state and gives every campaign owner a per-call compliance export, but national DNC scrubbing and consent records remain your responsibility wherever your agents are.',
+      msg("No. TCPA and DNC duties attach to the business placing the calls, not to where the person dialling sits. DialerSeat enforces calling windows per lead state and gives every campaign owner a per-call compliance export, but national DNC scrubbing and consent records remain your responsibility wherever your agents are."),
   },
   {
-    question: 'Can each offshore agent have their own login and data?',
+    question: msg("Can each offshore agent have their own login and data?"),
     answer:
-      'Yes. Every agent gets their own login, their own dialer session, and their own call history. The owner sees per-agent activity and can pause a seat without losing that agent’s data.',
+      msg("Yes. Every agent gets their own login, their own dialer session, and their own call history. The owner sees per-agent activity and can pause a seat without losing that agent’s data."),
   },
 ]
 
@@ -97,9 +98,9 @@ export default async function OffshoreAgentsPage() {
       <JsonLd data={organizationSchema()} />
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'FAQ', url: '/faq' },
-        { name: 'Offshore Agents', url: '/faq/dialer-for-offshore-agents' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("FAQ"), url: '/faq' },
+        { name: msg("Offshore Agents"), url: '/faq/dialer-for-offshore-agents' },
       ])} />
 
       <GutsShell rail={faqRail('/faq/dialer-for-offshore-agents')} activeHref="/faq/dialer-for-offshore-agents">
@@ -160,8 +161,8 @@ export default async function OffshoreAgentsPage() {
             <div style={{ marginTop: 20 }}>
               {FAQS.map(f => (
                 <div key={f.question} style={{ marginBottom: 24, maxWidth: 840 }}>
-                  <h3 style={{ fontSize: 16.5, fontWeight: 'bold', margin: 0 }}>{f.question}</h3>
-                  <p style={{ fontSize: 14.5, lineHeight: 1.8, color: MUTED, margin: '7px 0 0' }}>{f.answer}</p>
+                  <h3 style={{ fontSize: 16.5, fontWeight: 'bold', margin: 0 }}>{t(f.question)}</h3>
+                  <p style={{ fontSize: 14.5, lineHeight: 1.8, color: MUTED, margin: '7px 0 0' }}>{t(f.answer)}</p>
                 </div>
               ))}
             </div>

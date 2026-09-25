@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import AgentCard from './AgentCard'
 import type { LiveState, TeamMemberRow } from '@/app/api/teams/[id]/members/route'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // TeamFloor — the control room
@@ -46,10 +47,10 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
         setMembers(data.members || [])
         setError(null)
       } else {
-        setError(data.error || 'Could not load the floor.')
+        setError(data.error || msg("Could not load the floor."))
       }
     } catch {
-      setError('Could not load the floor.')
+      setError(msg("Could not load the floor."))
     } finally {
       setLoaded(true)
     }
@@ -189,7 +190,7 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
             <div style={{
               border: '1px solid #fca5a5', background: '#fee2e2', color: '#8a1a1a',
               borderRadius: 8, padding: 10, fontSize: 12, marginBottom: 14,
-            }}>{error}</div>
+            }}>{tr(error)}</div>
           )}
 
           {/* Four figures, secondary by construction — small muted labels, the
@@ -288,7 +289,7 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
               <Row k="Calls today" v={String(selected.callsToday)} />
               <Row k="Answered" v={String(selected.answeredToday)} />
               <Row k="Talk time" v={mmss(selected.talkSecondsToday)} />
-              <Row k="Seat" v={selected.seatSuspended ? 'Paused' : selected.status} />
+              <Row k="Seat" v={selected.seatSuspended ? msg("Paused") : selected.status} />
               <Row
                 k="Billing"
                 v={selected.seatPriceCents != null
@@ -309,7 +310,7 @@ function Stat({ label, value, big }: { label: string; value: string; big?: boole
       <div style={{
         fontSize: 9.5, letterSpacing: 1.4, fontWeight: 700,
         color: 'var(--brand-muted-text)', marginBottom: 4,
-      }}>{label}</div>
+      }}>{tr(label)}</div>
       <div style={{ fontSize: big ? 34 : 20, fontWeight: 600, lineHeight: 1 }}>{value}</div>
     </div>
   )

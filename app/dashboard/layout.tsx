@@ -8,23 +8,24 @@ import { useBranding } from '@/components/ThemeProvider'
 import DashboardBanners from '@/components/DashboardBanners'
 import LanguageDropdown from '@/components/LanguageDropdown'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 const userNavItems = [
-  { label: 'ANALYTICS', href: '/dashboard/analytics' },
-  { label: 'DIALER', href: '/dashboard/dialer' },
-  { label: 'CAMPAIGNS', href: '/dashboard/campaigns' },
-  { label: 'RECORDINGS', href: '/dashboard/recordings' },
-  { label: 'LEADS', href: '/dashboard/leads' },
-  { label: 'TEAMS', href: '/dashboard/teams' },
-  { label: 'SETTINGS', href: '/dashboard/settings' },
+  { label: msg("ANALYTICS"), href: '/dashboard/analytics' },
+  { label: msg("DIALER"), href: '/dashboard/dialer' },
+  { label: msg("CAMPAIGNS"), href: '/dashboard/campaigns' },
+  { label: msg("RECORDINGS"), href: '/dashboard/recordings' },
+  { label: msg("LEADS"), href: '/dashboard/leads' },
+  { label: msg("TEAMS"), href: '/dashboard/teams' },
+  { label: msg("SETTINGS"), href: '/dashboard/settings' },
 ]
 
 const adminNavItems = [
-  { label: 'ANALYTICS', href: '/dashboard/admin/analytics' },
-  { label: 'OVERVIEW', href: '/dashboard/admin/overview' },
-  { label: 'TEAMS', href: '/dashboard/admin/teams' },
-  { label: 'NUMBERS', href: '/dashboard/admin/numbers' },
-  { label: 'SETTINGS', href: '/dashboard/admin/settings' },
+  { label: msg("ANALYTICS"), href: '/dashboard/admin/analytics' },
+  { label: msg("OVERVIEW"), href: '/dashboard/admin/overview' },
+  { label: msg("TEAMS"), href: '/dashboard/admin/teams' },
+  { label: msg("NUMBERS"), href: '/dashboard/admin/numbers' },
+  { label: msg("SETTINGS"), href: '/dashboard/admin/settings' },
 ]
 
 type AccessTier = 'active' | 'lapsed' | 'new' | null
@@ -253,34 +254,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // acted on, and stacking them here made the row about administration for
   // somebody who was only trying to find their own name.
   if (isAdmin) {
-    primaryLabel = 'ADMIN'
+    primaryLabel = msg("ADMIN")
     primaryColor = brandPrimary
     primaryWeight = 'bold'
   } else if (hasManagerPlus) {
-    primaryLabel = plan === 'both' ? 'PRO + MANAGER+' : 'MANAGER+'
+    primaryLabel = plan === 'both' ? msg("PRO + MANAGER+") : 'MANAGER+'
     primaryColor = brandPrimary
     primaryWeight = 'bold'
   } else if (hasActivePersonal) {
-    primaryLabel = 'PRO PLAN'
+    primaryLabel = msg("PRO PLAN")
     primaryColor = 'var(--brand-on-sidebar-muted)'
     primaryWeight = 'normal'
   } else if (hasAnySeat) {
-    primaryLabel = 'TEAM SEAT'
+    primaryLabel = msg("TEAM SEAT")
     primaryColor = brandPrimary
     primaryWeight = 'bold'
   } else if (isAwaitingApproval) {
     // Waiting on an owner is not a billing failure. "UNSUBSCRIBED" would be
     // both wrong and alarming: nothing lapsed, nobody owes anything, and the
     // person cannot do a single thing about it from here.
-    primaryLabel = 'AWAITING APPROVAL'
+    primaryLabel = msg("AWAITING APPROVAL")
     primaryColor = '#ffaa3e'
     primaryWeight = 'bold'
   } else if (tier === 'lapsed') {
-    primaryLabel = 'UNSUBSCRIBED'
+    primaryLabel = msg("UNSUBSCRIBED")
     primaryColor = '#ffaa3e'
     primaryWeight = 'bold'
   } else if (tier === 'new') {
-    primaryLabel = 'NO PLAN'
+    primaryLabel = msg("NO PLAN")
     primaryColor = '#ffaa3e'
     primaryWeight = 'bold'
   } else {
@@ -304,7 +305,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }}>
       <Image
         src={tenantLogoUrl!}
-        alt={tenantBrandName}
+        alt={tr(tenantBrandName)}
         fill
         sizes="260px"
         style={{ objectFit: 'contain', objectPosition: 'center center' }}
@@ -324,7 +325,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }}>
       <Image
         src={tenantLogoUrl!}
-        alt={tenantBrandName}
+        alt={tr(tenantBrandName)}
         fill
         sizes="140px"
         style={{ objectFit: 'contain', objectPosition: 'center center' }}
@@ -476,7 +477,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 fontWeight: 'bold',
                 color: active ? 'var(--brand-primary)' : 'var(--brand-on-sidebar-muted)',
                 flex: 1,
-              }}>{item.label}</span>
+              }}>{tr(item.label)}</span>
             </Link>
           )
         })}
@@ -562,13 +563,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             fontSize: '10px', color: primaryColor,
             letterSpacing: '1px', fontWeight: primaryWeight,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>{primaryLabel}</div>
+          }}>{tr(primaryLabel)}</div>
           {secondaryText && (
             <div style={{
               fontSize: '9px', color: 'var(--brand-on-sidebar-muted)',
               letterSpacing: '0.5px', marginTop: 1,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>{secondaryText}</div>
+            }}>{tr(secondaryText)}</div>
           )}
         </div>
         <LanguageDropdown opens="up" tone="sidebar" />

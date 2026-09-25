@@ -10,6 +10,7 @@ import {
   useElements,
 } from '@stripe/react-stripe-js'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
@@ -21,22 +22,22 @@ type Plan = 'standard' | 'wl'
 
 const PLAN_INFO = {
   standard: {
-    label: 'PRO',
+    label: msg("PRO"),
     price: 35,
-    title: 'Start your subscription',
-    subtitle: 'Pay $35 today and start dialing immediately.',
+    title: msg("Start your subscription"),
+    subtitle: msg("Pay $35 today and start dialing immediately."),
     weeklyBlurb: '$35.00 USD',
-    description: 'DialerSeat Pro: one agent seat, all features, billed weekly.',
+    description: msg("DialerSeat Pro: one agent seat, all features, billed weekly."),
     switchLabel: 'Switch to Manager+ ($75/wk)',
   },
   wl: {
-    label: 'MANAGER+',
+    label: msg("MANAGER+"),
     price: 75,
-    title: 'Customize your whitelabel dialer',
-    subtitle: 'Pay $75 today to provision your branded dialer.',
+    title: msg("Customize your whitelabel dialer"),
+    subtitle: msg("Pay $75 today to provision your branded dialer."),
     weeklyBlurb: '$75.00 USD',
     description:
-      'Manager+ unlocks white-label DialerSeat: your subdomain, your branding, full team control. After payment, you\u2019ll pick your subdomain, upload your logo, and set your brand colors.',
+      msg("Manager+ unlocks white-label DialerSeat: your subdomain, your branding, full team control. After payment, you’ll pick your subdomain, upload your logo, and set your brand colors."),
     switchLabel: 'Switch to Pro ($35/wk)',
   },
 } as const
@@ -113,7 +114,7 @@ function LoadingCard({ text }: { text: string }) {
       <div style={narrowShellStyle}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, padding: '48px 32px' }}>
           <BrandMark />
-          <div style={{ ...mutedTextStyle, margin: 0 }}>{text}</div>
+          <div style={{ ...mutedTextStyle, margin: 0 }}>{t(text)}</div>
         </div>
       </div>
     </main>
@@ -273,7 +274,7 @@ export default function BillingPage() {
       const createData = await createRes.json()
 
       if (!createRes.ok) {
-        setError(createData.error || 'Failed to start subscription')
+        setError(createData.error || msg("Failed to start subscription"))
         setCheckingStatus(false)
         setPromoAction(null)
         setRetryingBilling(false)
@@ -304,7 +305,7 @@ export default function BillingPage() {
       setRetryingBilling(false)
       setSwitchingPlan(false)
     } catch (err: any) {
-      setError(err.message || 'Something went wrong')
+      setError(err.message || msg("Something went wrong"))
       setCheckingStatus(false)
       setPromoAction(null)
       setRetryingBilling(false)
@@ -347,7 +348,7 @@ export default function BillingPage() {
     setCodeError(null)
 
     if (promoApplied?.toUpperCase() === raw || teamCodes.some(c => c.code === raw)) {
-      setCodeError('That code is already applied.')
+      setCodeError(t("That code is already applied."))
       return
     }
 
@@ -362,7 +363,7 @@ export default function BillingPage() {
 
       if (pv.ok && pvData?.success) {
         if (pvData.isOwnTeam) {
-          setCodeError('That is a code for your own team.')
+          setCodeError(t("That is a code for your own team."))
           setPromoAction(null)
           return
         }
@@ -381,7 +382,7 @@ export default function BillingPage() {
             setTeamCodes(prev =>
               prev.some(c => c.code === raw) ? prev : [...prev, {
                 code: raw,
-                teamName: pvData.team?.name || 'Team',
+                teamName: pvData.team?.name || msg("Team"),
                 payer,
                 status: pvData.memberStatus ?? null,
               }]
@@ -391,7 +392,7 @@ export default function BillingPage() {
             setPromoAction(null)
             return
           }
-          setCodeError(`You are already on ${pvData.team?.name || 'that team'}.`)
+          setCodeError(`You are already on ${pvData.team?.name || msg("that team")}.`)
           setPromoAction(null)
           return
         }
@@ -403,7 +404,7 @@ export default function BillingPage() {
         })
         const data = await res.json().catch(() => ({}))
         if (!res.ok || !data?.success) {
-          setCodeError(data?.error || 'That code could not be applied.')
+          setCodeError(data?.error || t("That code could not be applied."))
           setPromoAction(null)
           return
         }
@@ -413,7 +414,7 @@ export default function BillingPage() {
           ...prev,
           {
             code: raw,
-            teamName: data.team?.name || 'Team',
+            teamName: data.team?.name || msg("Team"),
             payer,
             status: data.member?.status ?? null,
           },
@@ -434,7 +435,7 @@ export default function BillingPage() {
           // DialerSeat (it just does not open that team's campaigns yet),
           // and the banner in the dashboard explains the wait.
           setSeatCovered({
-            teamName: data.team?.name || 'your team',
+            teamName: data.team?.name || msg("your team"),
             pending: data.member?.status !== 'active',
           })
           setTimeout(
@@ -459,12 +460,12 @@ export default function BillingPage() {
       // Everything else is a real answer about a real code and belongs on
       // screen as itself.
       if (pv.status === 410) {
-        setCodeError(pvData?.error || 'That invite has already been used.')
+        setCodeError(pvData?.error || t("That invite has already been used."))
         setPromoAction(null)
         return
       }
       if (pv.status === 401) {
-        setCodeError('Your session expired. Sign in again to apply this code.')
+        setCodeError(t("Your session expired. Sign in again to apply this code."))
         setPromoAction(null)
         return
       }
@@ -480,7 +481,7 @@ export default function BillingPage() {
         setCodeError(
           pvData?.error ||
           `We could not reach the invite service to check that code (error ${pv.status}). ` +
-          `The code itself may be fine, this is on our end. Try again in a moment.`
+          msg("The code itself may be fine, this is on our end. Try again in a moment.")
         )
         setPromoAction(null)
         return
@@ -492,7 +493,7 @@ export default function BillingPage() {
       setClientSecret(null)
       await initSubscription(raw)
     } catch (err: any) {
-      setCodeError(err?.message || 'Something went wrong applying that code.')
+      setCodeError(err?.message || t("Something went wrong applying that code."))
       setPromoAction(null)
     }
   }
@@ -571,7 +572,7 @@ export default function BillingPage() {
   }, [checkingStatus, isLoaded, promoCode])
 
   if (!isLoaded || checkingStatus) {
-    return <LoadingCard text={retryingBilling ? 'Returning to billing…' : 'Preparing secure checkout'} />
+    return <LoadingCard text={retryingBilling ? msg("Returning to billing…") : msg("Preparing secure checkout")} />
   }
 
   if (promoAction === 'applying') {
@@ -622,7 +623,7 @@ export default function BillingPage() {
   }
 
   if (error) {
-    const isPromoError = error.toLowerCase().includes('promo code')
+    const isPromoError = error.toLowerCase().includes(msg("promo code"))
     return (
       <main style={pageStyle}>
         <div style={narrowShellStyle}>
@@ -631,7 +632,7 @@ export default function BillingPage() {
             <div style={{ ...statusTitleStyle, color: '#ff6464' }}>
               {isPromoError ? t("Invalid code") : t("Something went wrong")}
             </div>
-            <div style={{ ...mutedTextStyle, marginBottom: 28 }}>{error}</div>
+            <div style={{ ...mutedTextStyle, marginBottom: 28 }}>{t(error)}</div>
             <button
               style={primaryButtonStyle}
               onClick={() => {
@@ -679,27 +680,27 @@ export default function BillingPage() {
           <div style={summaryColStyle} className="billing-col">
             <div style={eyebrowStyle}>
               <span style={eyebrowLabelStyle}>{t("PLAN")}</span>
-              <span style={eyebrowPlanStyle}>{planInfo.label}</span>
+              <span style={eyebrowPlanStyle}>{t(planInfo.label)}</span>
             </div>
 
             <div style={priceRowStyle} className="billing-price-row">
               {billing.hasDiscount && (
-                <span style={priceWasStyle}>{billing.fullLabel}</span>
+                <span style={priceWasStyle}>{t(billing.fullLabel)}</span>
               )}
-              <span style={priceNowStyle} className="billing-price-now">{billing.todayLabel}</span>
+              <span style={priceNowStyle} className="billing-price-now">{t(billing.todayLabel)}</span>
               <span style={priceUnitStyle}>{billing.hasDiscount ? t("today") : t("/ week")}</span>
             </div>
             {billing.hasDiscount ? (
               <div style={priceCaptionStyle} className="billing-price-caption">
-                <span style={{ color: '#32ff7e' }}>{promoApplied?.toUpperCase()}</span> {t("applied, then")}{" "}{billing.recurringLabel}
+                <span style={{ color: '#32ff7e' }}>{promoApplied?.toUpperCase()}</span> {t("applied, then")}{" "}{t(billing.recurringLabel)}
               </div>
             ) : (
               <div style={priceCaptionStyle} className="billing-price-caption">
                 {t("Charged today, then weekly until you cancel.")}</div>
             )}
 
-            <div style={sectionTitleStyle}>{planInfo.title}</div>
-            <div style={planDescStyle} className="billing-plan-desc">{planInfo.description}</div>
+            <div style={sectionTitleStyle}>{t(planInfo.title)}</div>
+            <div style={planDescStyle} className="billing-plan-desc">{t(planInfo.description)}</div>
 
             {plan === 'standard' ? (
               <button
@@ -709,7 +710,7 @@ export default function BillingPage() {
                 style={switchLinkStyle}
                 className="billing-switch-link"
               >
-                ↗ {PLAN_INFO.standard.switchLabel}
+                ↗ {t(PLAN_INFO.standard.switchLabel)}
               </button>
             ) : (
               <button
@@ -719,7 +720,7 @@ export default function BillingPage() {
                 style={switchLinkStyle}
                 className="billing-switch-link"
               >
-                ↘ {PLAN_INFO.wl.switchLabel}
+                ↘ {t(PLAN_INFO.wl.switchLabel)}
               </button>
             )}
 
@@ -730,7 +731,7 @@ export default function BillingPage() {
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
                 <span>
-                  <strong style={{ color: '#4a9eff' }}>{billing.todayLabel}</strong> {t("charged today to start your subscription")}{billing.hasDiscount && (
+                  <strong style={{ color: '#4a9eff' }}>{t(billing.todayLabel)}</strong> {t("charged today to start your subscription")}{billing.hasDiscount && (
                     <span style={{ color: '#32ff7e' }}> ({promoApplied?.toUpperCase()} {t("applied)")}</span>
                   )}
                 </span>
@@ -738,7 +739,7 @@ export default function BillingPage() {
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
                 <span>
-                  {t("You will be billed")}{" "}<strong style={{ color: '#4a9eff' }}>{billing.recurringLabel}</strong> {t("automatically thereafter")}</span>
+                  {t("You will be billed")}{" "}<strong style={{ color: '#4a9eff' }}>{t(billing.recurringLabel)}</strong> {t("automatically thereafter")}</span>
               </li>
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
@@ -794,7 +795,7 @@ export default function BillingPage() {
 
               {codeError && (
                 <div style={{ fontSize: 11, color: '#ff6464', letterSpacing: '0.04em', margin: '6px 0 2px' }}>
-                  {codeError}
+                  {t(codeError)}
                 </div>
               )}
 
@@ -1022,7 +1023,7 @@ function CheckoutForm({
         })
 
     if (error) {
-      setErrorMsg(error.message || 'Payment failed')
+      setErrorMsg(error.message || t("Payment failed"))
       setSubmitting(false)
 
       // ── RECORD WHY, BECAUSE NOTHING ELSE CAN ───────────────────────
@@ -1088,11 +1089,11 @@ function CheckoutForm({
             to survive that without ever implying the recurring charge is
             free too. */}
         <span>
-          {t("I agree my card will be charged")}{" "}<strong style={{ color: '#e0e2ea' }}>{billing.todayLabel} {t("today")}</strong> {t("and")}{' '}
-          <strong style={{ color: '#e0e2ea' }}>{billing.recurringLabel}</strong> {t("thereafter unless I cancel.")}</span>
+          {t("I agree my card will be charged")}{" "}<strong style={{ color: '#e0e2ea' }}>{t(billing.todayLabel)} {t("today")}</strong> {t("and")}{' '}
+          <strong style={{ color: '#e0e2ea' }}>{t(billing.recurringLabel)}</strong> {t("thereafter unless I cancel.")}</span>
       </label>
 
-      {errorMsg && <div style={errorStyle}>{errorMsg}</div>}
+      {errorMsg && <div style={errorStyle}>{t(errorMsg)}</div>}
 
       <button
         type="submit"

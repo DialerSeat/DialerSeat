@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { usePredictiveGate } from '@/components/SellerIdentityDialog'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 const PANEL = 'var(--teams-panel, #232428)'
 const HAIRLINE = 'var(--teams-border, #1a1b1e)'
@@ -69,7 +70,7 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       <div style={{
         fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase',
         color: MUTED, marginBottom: 6,
-      }}>{label}</div>
+      }}>{tr(label)}</div>
       <div style={{ fontSize: 20, fontWeight: 600, color: accent || TEXT }}>{value}</div>
     </div>
   )
@@ -89,7 +90,7 @@ function Section({ title, action, children }: {
         <div style={{
           fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase',
           color: MUTED, fontWeight: 600,
-        }}>{title}</div>
+        }}>{tr(title)}</div>
         {action}
       </div>
       {children}
@@ -126,9 +127,9 @@ function Toggle({ label, hint, on, busy, onChange }: {
         style={{ accentColor: ACCENT, marginTop: 2, cursor: busy ? 'wait' : 'pointer' }}
       />
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: 'block', fontSize: 13.5, color: TEXT }}>{label}</span>
+        <span style={{ display: 'block', fontSize: 13.5, color: TEXT }}>{tr(label)}</span>
         <span style={{ display: 'block', fontSize: 11.5, color: DIM, marginTop: 3, lineHeight: 1.6 }}>
-          {hint}
+          {tr(hint)}
         </span>
       </span>
     </label>
@@ -204,7 +205,7 @@ export default function CampaignDetail({
     try {
       const r = await fetch(`/api/teams/campaigns/detail?campaignId=${encodeURIComponent(campaignId)}`)
         .then(x => x.json())
-      if (!r.success) throw new Error(r.error || 'Could not load campaign')
+      if (!r.success) throw new Error(r.error || msg("Could not load campaign"))
       setData(r.campaign)
       setTeam(r.team)
       setAgents(r.agents || [])
@@ -221,7 +222,7 @@ export default function CampaignDetail({
       if (r.viewerRole === 'member') void loadPersonalScripts()
       setError(null)
     } catch (e: any) {
-      setError(e.message || 'Could not load campaign')
+      setError(e.message || msg("Could not load campaign"))
       setData(null)
     } finally {
       setLoading(false)
@@ -250,11 +251,11 @@ export default function CampaignDetail({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: campaignId, ...fields }),
       }).then(x => x.json())
-      if (!r.success) throw new Error(r.error || 'Could not save')
+      if (!r.success) throw new Error(r.error || msg("Could not save"))
       await load()
       onChanged?.()
     } catch (e: any) {
-      setError(e.message || 'Could not save')
+      setError(e.message || msg("Could not save"))
     } finally {
       setBusy(false)
     }
@@ -269,13 +270,13 @@ export default function CampaignDetail({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ campaignId, memberIds: Array.from(picked) }),
       }).then(x => x.json())
-      if (!r.success) throw new Error(r.error || 'Could not add those people')
+      if (!r.success) throw new Error(r.error || msg("Could not add those people"))
       setPicked(new Set())
       setPickerOpen(false)
       await load()
       onChanged?.()
     } catch (e: any) {
-      setError(e.message || 'Could not add those people')
+      setError(e.message || msg("Could not add those people"))
     } finally {
       setBusy(false)
     }
@@ -302,11 +303,11 @@ export default function CampaignDetail({
           accessMode: open ? 'free' : 'owner_pays',
         }),
       }).then(x => x.json())
-      if (!r.success) throw new Error(r.error || 'Could not change access')
+      if (!r.success) throw new Error(r.error || msg("Could not change access"))
       await load()
       onChanged?.()
     } catch (e: any) {
-      setError(e.message || 'Could not change access')
+      setError(e.message || msg("Could not change access"))
     } finally {
       setBusy(false)
     }
@@ -321,10 +322,10 @@ export default function CampaignDetail({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ campaignId, action }),
       }).then(x => x.json())
-      if (!r.success) throw new Error(r.error || 'Could not change lead drip')
+      if (!r.success) throw new Error(r.error || msg("Could not change lead drip"))
       await load()
     } catch (e: any) {
-      setError(e.message || 'Could not change lead drip')
+      setError(e.message || msg("Could not change lead drip"))
     } finally {
       setBusy(false)
     }
@@ -353,11 +354,11 @@ export default function CampaignDetail({
         // reversible from the picker directly above this list.
         body: JSON.stringify({ accessId, confirm: 'remove' }),
       }).then(x => x.json())
-      if (!r.success) throw new Error(r.error || 'Could not remove access')
+      if (!r.success) throw new Error(r.error || msg("Could not remove access"))
       await load()
       onChanged?.()
     } catch (e: any) {
-      setError(e.message || 'Could not remove access')
+      setError(e.message || msg("Could not remove access"))
     } finally {
       setBusy(false)
     }
@@ -372,7 +373,7 @@ export default function CampaignDetail({
       <div>
         <button style={btn} onClick={onBack}>{tr("← Back")}</button>
         <div style={{ color: '#ff6464', fontSize: 13, marginTop: 14 }}>
-          {error || tr("Campaign not available.")}
+          {tr(error) || tr("Campaign not available.")}
         </div>
       </div>
     )
@@ -410,11 +411,11 @@ export default function CampaignDetail({
             : { campaignId, name, body: editingScript.body }
         ),
       }).then(x => x.json())
-      if (!r.success) throw new Error(r.error || 'Could not save that script')
+      if (!r.success) throw new Error(r.error || msg("Could not save that script"))
       setEditingScript(null)
       await loadPersonalScripts()
     } catch (e: any) {
-      setError(e?.message || 'Could not save that script')
+      setError(e?.message || msg("Could not save that script"))
     } finally {
       setScriptBusy(false)
     }
@@ -503,11 +504,11 @@ export default function CampaignDetail({
         }}>
           {/* A dash, never a zero invented to fill the box: no calls yet is a
               different statement from nothing recorded. */}
-          {stat('Calls', myStats ? myStats.calls.toLocaleString() : '-')}
-          {stat('Talk time', myStats ? `${mins}m` : '-')}
-          {stat('Call Backs', myStats ? myStats.appointments : '-')}
-          {stat('Closed', myStats ? myStats.closed : '-')}
-          {stat('Not interested', myStats ? myStats.notInterested : '-')}
+          {stat(msg("Calls"), myStats ? myStats.calls.toLocaleString() : '-')}
+          {stat(msg("Talk time"), myStats ? `${mins}m` : '-')}
+          {stat(msg("Call Backs"), myStats ? myStats.appointments : '-')}
+          {stat(msg("Closed"), myStats ? myStats.closed : '-')}
+          {stat(msg("Not interested"), myStats ? myStats.notInterested : '-')}
         </div>
 
         {/* ── THE WEEK, THEIR OWN ─────────────────────────────────────
@@ -571,7 +572,7 @@ export default function CampaignDetail({
                     <div style={{
                       padding: '0 14px 14px', fontSize: 13, lineHeight: 1.7,
                       color: DIM, whiteSpace: 'pre-wrap',
-                    }}>{sc.body}</div>
+                    }}>{tr(sc.body)}</div>
                   )}
                 </div>
               ))}
@@ -731,7 +732,7 @@ export default function CampaignDetail({
                     <div style={{
                       padding: '0 14px 14px', fontSize: 13, lineHeight: 1.7,
                       color: DIM, whiteSpace: 'pre-wrap',
-                    }}>{sc.body || <span style={{ opacity: 0.6 }}>{tr("Empty")}</span>}</div>
+                    }}>{tr(sc.body) || <span style={{ opacity: 0.6 }}>{tr("Empty")}</span>}</div>
                   )}
                 </div>
               ))}
@@ -837,7 +838,7 @@ export default function CampaignDetail({
       </div>
 
       {error && (
-        <div style={{ fontSize: 12, color: '#ff6464', marginBottom: 12 }}>{error}</div>
+        <div style={{ fontSize: 12, color: '#ff6464', marginBottom: 12 }}>{tr(error)}</div>
       )}
 
       <div style={{
@@ -1104,7 +1105,7 @@ export default function CampaignDetail({
                         {e.ok ? '✓' : '!'}
                       </span>
                       <span style={{ flex: 1, minWidth: 0, color: TEXT }}>
-                        {e.message}
+                        {tr(e.message)}
                         {e.duplicates > 0 && (
                           <span style={{ color: DIM }}> · {e.duplicates} {tr("already here")}</span>
                         )}

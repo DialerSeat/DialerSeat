@@ -5,6 +5,7 @@ import JsonLd from '@/components/json-ld'
 import { organizationSchema, breadcrumbSchema } from '@/lib/schema'
 import { phoneToState } from '@/lib/areaCode'
 import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /data/connect-rates — the only thing here no competitor can republish
@@ -87,7 +88,7 @@ async function loadBuckets(): Promise<{ byState: Bucket[]; byHour: Bucket[]; tot
     .from('calls')
     // duration is read only by neverRang, which cannot tell a dial that never
     // rang from one that rang out without it.
-    .select('phone_number, answered_at, created_at, duration')
+    .select(msg("phone_number, answered_at, created_at, duration"))
     .gte('created_at', since)
     .limit(100000)
 
@@ -148,7 +149,7 @@ function Row({ label, b }: { label: string; b: Bucket }) {
   const r = rate(b)
   return (
     <tr>
-      <td style={{ padding: '9px 12px', borderTop: `1px solid ${BORDER}`, fontWeight: 'bold' }}>{label}</td>
+      <td style={{ padding: '9px 12px', borderTop: `1px solid ${BORDER}`, fontWeight: 'bold' }}>{t(label)}</td>
       <td style={{
         padding: '9px 12px', borderTop: `1px solid ${BORDER}`,
         textAlign: 'right', fontFamily: 'monospace',
@@ -175,9 +176,9 @@ export default async function ConnectRatesPage() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Data', url: '/data/connect-rates' },
-        { name: 'Connect rates', url: '/data/connect-rates' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Data"), url: '/data/connect-rates' },
+        { name: msg("Connect rates"), url: '/data/connect-rates' },
       ])} />
 
       <main style={{

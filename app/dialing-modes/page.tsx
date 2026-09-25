@@ -8,6 +8,7 @@ import {
   DIALING_MODES_FAQS,
 } from '@/lib/schema'
 import DialingModesView from './view'
+import { msg } from '@/lib/i18n/msg'
 
 export const metadata: Metadata = {
   title: 'Dialing Modes: Preview, Power, Progressive, Predictive | DialerSeat',
@@ -38,8 +39,8 @@ export default function DialingModesPage() {
       <JsonLd data={faqPageSchema(DIALING_MODES_FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Dialing Modes', url: '/dialing-modes' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Dialing Modes"), url: '/dialing-modes' },
         ])}
       />
       <DialingModesView />

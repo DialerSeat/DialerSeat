@@ -161,14 +161,14 @@ function Chevron({ className }: { className?: string }) {
  * rule under an 800-weight headline reads as a link, not as emphasis.
  */
 function Underlined({ text, word }: { text: string; word?: string }) {
-  if (!word) return <>{text}</>
+  if (!word) return <>{t(text)}</>
   const at = text.indexOf(word)
-  if (at === -1) return <>{text}</>
+  if (at === -1) return <>{t(text)}</>
   return (
     <>
       {text.slice(0, at)}
       <span className="hub-swash">
-        {word}
+        {t(word)}
         <svg viewBox="0 0 120 14" preserveAspectRatio="none" aria-hidden="true">
           <path d="M3,9.6 C22,4.2 44,11.4 63,6.6 C82,1.9 100,9.1 117,4.4" />
         </svg>
@@ -560,18 +560,18 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           </span>
         </h1>
         <Link href={props.leadHref} className="hub-lead">
-          {props.leadLabel} <span aria-hidden>→</span>
+          {t(props.leadLabel)} <span aria-hidden>→</span>
         </Link>
       </section>
 
       <div className="hub-inner">
 
         {/* ── TOP PICKS ── */}
-        <nav className="hub-picks" aria-label={props.picksLabel}>
-          <span className="hub-picks-label">{props.picksLabel}</span>
+        <nav className="hub-picks" aria-label={t(props.picksLabel)}>
+          <span className="hub-picks-label">{t(props.picksLabel)}</span>
           {props.picks.map((item) => (
             <Link key={item.href} href={item.href} className="hub-pick">
-              {item.label}
+              {t(item.label)}
             </Link>
           ))}
         </nav>
@@ -584,7 +584,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={props.searchPlaceholder}
+              placeholder={t(props.searchPlaceholder)}
               aria-label={`Search ${props.searchNoun}`}
             />
             <button type="submit">{t("Search")}</button>
@@ -593,10 +593,10 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           <div className="hub-request">
             <span className="hub-request-icon"><IconQuestion /></span>
             <div>
-              <div className="hub-request-title">{props.requestTitle}</div>
+              <div className="hub-request-title">{t(props.requestTitle)}</div>
               <div className="hub-request-body">
                 <button type="button" className="hub-ask" onClick={() => setAskOpen(true)}>
-                  {props.requestLabel}
+                  {t(props.requestLabel)}
                 </button>
               </div>
             </div>
@@ -616,7 +616,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
               onClick={() => setNavOpen((v) => !v)}
             >
               <span className="hub-badge plain"><IconHome /></span>
-              <h2>{props.navTitle}</h2>
+              <h2>{t(props.navTitle)}</h2>
               <span className="hub-nav-caret" aria-hidden>▾</span>
             </button>
             <div className="hub-nav-body">
@@ -624,7 +624,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
               {props.navItems.map((item) => (
                 <Link key={item.href} href={item.href} className="hub-row">
                   <Chevron className="hub-chev-left" />
-                  <span className="hub-row-label">{item.label}</span>
+                  <span className="hub-row-label">{t(item.label)}</span>
                 </Link>
               ))}
             </div>
@@ -634,13 +634,13 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           <section className={`hub-card hub-card-index${showAll || q ? ' is-expanded' : ''}`}>
             <div className="hub-card-head">
               <span className="hub-badge blue"><IconScales /></span>
-              <h2>{q ? t("Search results") : props.allTitle}</h2>
+              <h2>{q ? t("Search results") : t(props.allTitle)}</h2>
               {q && <span className="hub-card-count">{filtered.length}</span>}
             </div>
 
             {filtered.map((item) => (
               <Link key={item.href} href={item.href} className="hub-row">
-                <span className="hub-row-label">{item.label}</span>
+                <span className="hub-row-label">{t(item.label)}</span>
                 <Chevron className="hub-chev" />
               </Link>
             ))}
@@ -649,7 +649,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
               <p className="hub-empty">
                 {t("Nothing here matches “")}{query.trim()}&rdquo;.{' '}
                 <button type="button" className="hub-ask" onClick={() => setAskOpen(true)}>
-                  {props.requestLabel}
+                  {t(props.requestLabel)}
                 </button>{' '}
                 {t("and we'll write it.")}</p>
             )}
@@ -657,7 +657,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
             {!q && filtered.length > CHUNK && (
               <div className="hub-foot hub-foot-phone">
                 <button type="button" className="blue" onClick={() => setShowAll((v) => !v)}>
-                  {showAll ? t("Show fewer") : props.allCta}{' '}
+                  {showAll ? t("Show fewer") : t(props.allCta)}{' '}
                   <span aria-hidden>{showAll ? '↑' : '→'}</span>
                 </button>
               </div>
@@ -668,13 +668,13 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           <section className="hub-card">
             <div className="hub-card-head">
               <span className="hub-badge green"><IconStar /></span>
-              <h2>{props.recentTitle}</h2>
+              <h2>{t(props.recentTitle)}</h2>
             </div>
 
             {visibleRecent.map((item) => (
               <Link key={item.href} href={item.href} className="hub-row">
                 <span className="hub-dot" aria-hidden />
-                <span className="hub-row-label">{item.label}</span>
+                <span className="hub-row-label">{t(item.label)}</span>
                 <Chevron className="hub-chev" />
               </Link>
             ))}
@@ -686,7 +686,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
       <SuggestionModal
         open={askOpen}
         onClose={() => setAskOpen(false)}
-        title={props.requestTitle}
+        title={t(props.requestTitle)}
         intro={props.requestPrompt}
       />
     </div>

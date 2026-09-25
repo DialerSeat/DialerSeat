@@ -8,6 +8,7 @@ import SuggestionModal from '@/components/SuggestionModal'
 import { SITE } from '@/lib/siteTheme'
 import { inter } from '@/lib/fonts'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /vs/everyone — the industry-wide breakdown
@@ -60,101 +61,101 @@ interface FeatureRow {
 }
 
 const features: FeatureRow[] = [
-  { feature: 'Per-seat price', ds: '$35/wk, cancel anytime', rm: '$199-$249/mo', mo: '$149/mo + add-ons', pb: '$165-$215/mo', f9: '$175+/mo', cv: '$90+/mo, custom quote' },
-  { feature: 'Weekly billing option', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
-  { feature: 'Annual contract required', ds: false, rm: 'Typical', mo: false, pb: 'For best price', f9: 'Typical', cv: 'Typical' },
-  { feature: 'Public pricing on website', ds: true, rm: false, mo: true, pb: true, f9: false, cv: false },
-  { feature: 'Self-serve signup (no demo)', ds: true, rm: false, mo: true, pb: true, f9: false, cv: false },
-  { feature: 'Setup fee', ds: '$0', rm: '$500-$2K', mo: '$0', pb: '$0', f9: 'Variable', cv: 'Variable' },
-  { feature: 'Power dialer', ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
-  { feature: 'Preview dialer', ds: true, rm: true, mo: true, pb: false, f9: true, cv: true },
-  { feature: 'Progressive dialer', ds: true, rm: true, mo: 'Partial', pb: false, f9: true, cv: true },
-  { feature: 'Predictive dialer (multi-line)', ds: true, rm: true, mo: 'Triple-line only', pb: false, f9: true, cv: true },
-  { feature: 'Per-campaign dialer mode', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: msg("Per-seat price"), ds: '$35/wk, cancel anytime', rm: '$199-$249/mo', mo: '$149/mo + add-ons', pb: '$165-$215/mo', f9: '$175+/mo', cv: '$90+/mo, custom quote' },
+  { feature: msg("Weekly billing option"), ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: msg("Annual contract required"), ds: false, rm: 'Typical', mo: false, pb: 'For best price', f9: 'Typical', cv: 'Typical' },
+  { feature: msg("Public pricing on website"), ds: true, rm: false, mo: true, pb: true, f9: false, cv: false },
+  { feature: msg("Self-serve signup (no demo)"), ds: true, rm: false, mo: true, pb: true, f9: false, cv: false },
+  { feature: msg("Setup fee"), ds: '$0', rm: '$500-$2K', mo: '$0', pb: '$0', f9: 'Variable', cv: 'Variable' },
+  { feature: msg("Power dialer"), ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
+  { feature: msg("Preview dialer"), ds: true, rm: true, mo: true, pb: false, f9: true, cv: true },
+  { feature: msg("Progressive dialer"), ds: true, rm: true, mo: 'Partial', pb: false, f9: true, cv: true },
+  { feature: msg("Predictive dialer (multi-line)"), ds: true, rm: true, mo: 'Triple-line only', pb: false, f9: true, cv: true },
+  { feature: msg("Per-campaign dialer mode"), ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
   { feature: 'AMD voicemail filter (~1.8s)', ds: 'Always on', rm: 'Users report misses', mo: 'Optional', pb: true, f9: true, cv: true },
-  { feature: 'Multiple scripts per campaign', ds: true, rm: false, mo: false, pb: false, f9: 'Custom build', cv: false },
-  { feature: 'Live mid-call script switching', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
-  { feature: 'Works on phones + tablets', ds: 'Full dialer, same as desktop', rm: false, mo: 'Native app, poor reviews', pb: false, f9: 'Supervisor app only', cv: 'No app found; iOS issues reported' },
-  { feature: 'All outbound numbers carrier-registered', ds: true, rm: 'Inconsistent', mo: 'Inconsistent', pb: 'Variable', f9: 'Variable', cv: 'Variable' },
-  { feature: 'STIR/SHAKEN A-attestation', ds: true, rm: 'Variable', mo: 'Variable', pb: true, f9: true, cv: 'Variable' },
-  { feature: 'TCPA enforced server-side', ds: true, rm: 'Partial', mo: 'Partial', pb: 'Partial', f9: 'Partial', cv: 'Partial' },
-  { feature: 'Local presence dialing', ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
-  { feature: 'Public API + webhooks (works with any CRM)', ds: true, rm: false, mo: false, pb: true, f9: true, cv: 'Limited' },
-  { feature: 'Calendar-aligned analytics (Sun/1st)', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
-  { feature: 'Lapsed-user data preservation', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: msg("Multiple scripts per campaign"), ds: true, rm: false, mo: false, pb: false, f9: 'Custom build', cv: false },
+  { feature: msg("Live mid-call script switching"), ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: msg("Works on phones + tablets"), ds: 'Full dialer, same as desktop', rm: false, mo: 'Native app, poor reviews', pb: false, f9: 'Supervisor app only', cv: 'No app found; iOS issues reported' },
+  { feature: msg("All outbound numbers carrier-registered"), ds: true, rm: 'Inconsistent', mo: 'Inconsistent', pb: 'Variable', f9: 'Variable', cv: 'Variable' },
+  { feature: msg("STIR/SHAKEN A-attestation"), ds: true, rm: 'Variable', mo: 'Variable', pb: true, f9: true, cv: 'Variable' },
+  { feature: msg("TCPA enforced server-side"), ds: true, rm: 'Partial', mo: 'Partial', pb: 'Partial', f9: 'Partial', cv: 'Partial' },
+  { feature: msg("Local presence dialing"), ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
+  { feature: msg("Public API + webhooks (works with any CRM)"), ds: true, rm: false, mo: false, pb: true, f9: true, cv: 'Limited' },
+  { feature: msg("Calendar-aligned analytics (Sun/1st)"), ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: msg("Lapsed-user data preservation"), ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
 ]
 
 const INDUSTRY_FAILURES = [
   {
     num: '01',
-    title: 'OPAQUE PRICING',
-    body: 'Five9, Convoso, ReadyMode, and most enterprise dialers hide their real pricing behind a sales call. You spend a week scheduling and sitting through demos before anyone gives you a number. We publish $35/week on the homepage.',
+    title: msg("OPAQUE PRICING"),
+    body: msg("Five9, Convoso, ReadyMode, and most enterprise dialers hide their real pricing behind a sales call. You spend a week scheduling and sitting through demos before anyone gives you a number. We publish $35/week on the homepage."),
   },
   {
     num: '02',
-    title: 'ANNUAL CONTRACT LOCK-IN',
+    title: msg("ANNUAL CONTRACT LOCK-IN"),
     body: 'The industry standard for "best pricing" is a 12-month commitment with auto-renewal and 60-day cancellation clauses. PhoneBurner, Five9, Convoso, ReadyMode all do this. We bill weekly with one-click cancellation.',
   },
   {
     num: '03',
-    title: 'ADD-ON STACKING',
-    body: 'The headline $149-$199 advertised price becomes $200-$300 effective once you add data feeds (Mojo $25-$49 per dataset), tier upgrades for basic features, or industry-specific add-ons. Our $35/week, cancel anytime, is the bill: nothing stacks on top, and it never becomes a monthly premium.',
+    title: msg("ADD-ON STACKING"),
+    body: msg("The headline $149-$199 advertised price becomes $200-$300 effective once you add data feeds (Mojo $25-$49 per dataset), tier upgrades for basic features, or industry-specific add-ons. Our $35/week, cancel anytime, is the bill: nothing stacks on top, and it never becomes a monthly premium."),
   },
   {
     num: '04',
-    title: 'DESKTOP-ONLY SOFTWARE',
-    body: 'Most legacy dialers were built before tablets existed and never modernized. ReadyMode and PhoneBurner have no mobile app at all. Five9 publishes one, but it\'s for supervisors to monitor calls, not for agents to dial from. Field agents and solo reps need to be at their desk. We work on phone, tablet, and desktop, with the full dialer, install to home screen and it behaves like a native app.',
+    title: msg("DESKTOP-ONLY SOFTWARE"),
+    body: msg("Most legacy dialers were built before tablets existed and never modernized. ReadyMode and PhoneBurner have no mobile app at all. Five9 publishes one, but it's for supervisors to monitor calls, not for agents to dial from. Field agents and solo reps need to be at their desk. We work on phone, tablet, and desktop, with the full dialer, install to home screen and it behaves like a native app."),
   },
   {
     num: '05',
-    title: 'COMPLIANCE SHORTCUTS',
-    body: 'Number registration is inconsistent at most competitors. TCPA enforcement is often partial rather than server-side per lead state. We register every outbound number with the carrier registry and enforce TCPA windows server-side. We respect the laws so you do not get blocked or fined.',
+    title: msg("COMPLIANCE SHORTCUTS"),
+    body: msg("Number registration is inconsistent at most competitors. TCPA enforcement is often partial rather than server-side per lead state. We register every outbound number with the carrier registry and enforce TCPA windows server-side. We respect the laws so you do not get blocked or fined."),
   },
   {
     num: '06',
-    title: 'DATED INTERFACES',
-    body: 'ReadyMode reviewers describe the UI as "Windows 8" or "dated." Mojo, PhoneBurner, and most enterprise tools accumulated UI debt over a decade. Rep retention suffers when the software feels old. DialerSeat ships with a modern design system: clean, fast, and built for the way teams actually work.',
+    title: msg("DATED INTERFACES"),
+    body: msg("ReadyMode reviewers describe the UI as \"Windows 8\" or \"dated.\" Mojo, PhoneBurner, and most enterprise tools accumulated UI debt over a decade. Rep retention suffers when the software feels old. DialerSeat ships with a modern design system: clean, fast, and built for the way teams actually work."),
   },
 ]
 
 const SWITCHING_FROM = [
-  { name: 'READYMODE', href: '/vs/readymode', summary: 'Same multi-line predictive at $35/week, cancel anytime, instead of $199-$249/month locked into a contract. No $500-$2,000 setup fee.' },
-  { name: 'BATCHDIALER', href: '/vs/batchdialer', summary: "Their $95/seat headline is the annual prepay rate, month to month it's $119-$249. Automatic number replacement on every DialerSeat plan, not gated behind Pro." },
-  { name: 'MOJO DIALER', href: '/vs/mojo', summary: 'Same triple-line speed across every industry, not just real estate. No mandatory $10/mo Agent Access fee stacked on top.' },
-  { name: 'PHONEBURNER', href: '/vs/phoneburner', summary: 'Multi-line predictive included (PhoneBurner is single-line only). Weekly billing, no annual contract.' },
-  { name: 'FIVE9', href: '/vs/five9', summary: 'Same compliance posture without the enterprise sales cycle. Self-serve setup in minutes, not weeks.' },
-  { name: 'CONVOSO', href: '/vs/convoso', summary: 'Same high-volume outbound dialing for insurance, solar, and lead-heavy verticals. One flat weekly price, no seat minimum.' },
-  { name: 'KIXIE', href: '/vs/kixie', summary: 'Same predictive and multi-line dialing without paying Kixie\'s $95+/seat/month multi-line tier.' },
-  { name: 'JUSTCALL', href: '/vs/justcall', summary: 'Same power and predictive dialing without the Pro-tier upgrade, JustCall\'s $29/month plan doesn\'t include a dialer.' },
-  { name: 'AIRCALL', href: '/vs/aircall', summary: 'Same self-serve outbound dialing without the Professional-tier upsell, Aircall gates its dialer behind a $50/seat/month tier.' },
+  { name: 'READYMODE', href: '/vs/readymode', summary: msg("Same multi-line predictive at $35/week, cancel anytime, instead of $199-$249/month locked into a contract. No $500-$2,000 setup fee.") },
+  { name: 'BATCHDIALER', href: '/vs/batchdialer', summary: msg("Their $95/seat headline is the annual prepay rate, month to month it's $119-$249. Automatic number replacement on every DialerSeat plan, not gated behind Pro.") },
+  { name: 'MOJO DIALER', href: '/vs/mojo', summary: msg("Same triple-line speed across every industry, not just real estate. No mandatory $10/mo Agent Access fee stacked on top.") },
+  { name: 'PHONEBURNER', href: '/vs/phoneburner', summary: msg("Multi-line predictive included (PhoneBurner is single-line only). Weekly billing, no annual contract.") },
+  { name: 'FIVE9', href: '/vs/five9', summary: msg("Same compliance posture without the enterprise sales cycle. Self-serve setup in minutes, not weeks.") },
+  { name: 'CONVOSO', href: '/vs/convoso', summary: msg("Same high-volume outbound dialing for insurance, solar, and lead-heavy verticals. One flat weekly price, no seat minimum.") },
+  { name: 'KIXIE', href: '/vs/kixie', summary: msg("Same predictive and multi-line dialing without paying Kixie's $95+/seat/month multi-line tier.") },
+  { name: 'JUSTCALL', href: '/vs/justcall', summary: msg("Same power and predictive dialing without the Pro-tier upgrade, JustCall's $29/month plan doesn't include a dialer.") },
+  { name: 'AIRCALL', href: '/vs/aircall', summary: msg("Same self-serve outbound dialing without the Professional-tier upsell, Aircall gates its dialer behind a $50/seat/month tier.") },
 ]
 
 const teamScaling: FeatureRow[] = [
-  { feature: 'Whitelabel available', ds: 'Manager+, $75/mo flat', rm: false, mo: false, pb: false, f9: false, cv: false },
-  { feature: 'Manager/supervisor seat', ds: 'Included in Manager+', rm: 'Admin seat can’t dial', mo: false, pb: 'Requires Professional tier', f9: 'Requires 50-seat Optimum quote', cv: 'Custom quote' },
-  { feature: 'Live call monitoring / coaching', ds: true, rm: 'iQ tier only', mo: false, pb: 'Professional tier ($195+/seat)', f9: 'Optimum tier, custom quote', cv: true },
-  { feature: 'Price change as team grows', ds: 'None: flat $35/wk per seat', rm: '+$50/seat at 5th license', mo: 'None: but no team plan exists', pb: '+$30-$50/seat per tier', f9: '50-seat minimum on every plan', cv: '~20-seat minimum before you can meaningfully start' },
+  { feature: msg("Whitelabel available"), ds: 'Manager+, $75/mo flat', rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: msg("Manager/supervisor seat"), ds: 'Included in Manager+', rm: 'Admin seat can’t dial', mo: false, pb: 'Requires Professional tier', f9: 'Requires 50-seat Optimum quote', cv: 'Custom quote' },
+  { feature: msg("Live call monitoring / coaching"), ds: true, rm: 'iQ tier only', mo: false, pb: 'Professional tier ($195+/seat)', f9: 'Optimum tier, custom quote', cv: true },
+  { feature: msg("Price change as team grows"), ds: 'None: flat $35/wk per seat', rm: '+$50/seat at 5th license', mo: 'None: but no team plan exists', pb: '+$30-$50/seat per tier', f9: '50-seat minimum on every plan', cv: '~20-seat minimum before you can meaningfully start' },
 ]
 
 /** The rail's middle block. Real published routes only. */
 const OTHER_VS = [
-  { label: 'DialerSeat vs ReadyMode', href: '/vs/readymode' },
-  { label: 'DialerSeat vs Mojo Dialer', href: '/vs/mojo' },
-  { label: 'DialerSeat vs PhoneBurner', href: '/vs/phoneburner' },
-  { label: 'DialerSeat vs BatchDialer', href: '/vs/batchdialer' },
-  { label: 'DialerSeat vs Five9', href: '/vs/five9' },
-  { label: 'DialerSeat vs Convoso', href: '/vs/convoso' },
-  { label: 'DialerSeat vs VICIdial', href: '/vs/vicidial' },
-  { label: 'DialerSeat vs Kixie', href: '/vs/kixie' },
-  { label: 'Dialer pricing for teams', href: '/vs/teams' },
-  { label: 'All dialer comparisons', href: '/vs' },
+  { label: msg("DialerSeat vs ReadyMode"), href: '/vs/readymode' },
+  { label: msg("DialerSeat vs Mojo Dialer"), href: '/vs/mojo' },
+  { label: msg("DialerSeat vs PhoneBurner"), href: '/vs/phoneburner' },
+  { label: msg("DialerSeat vs BatchDialer"), href: '/vs/batchdialer' },
+  { label: msg("DialerSeat vs Five9"), href: '/vs/five9' },
+  { label: msg("DialerSeat vs Convoso"), href: '/vs/convoso' },
+  { label: msg("DialerSeat vs VICIdial"), href: '/vs/vicidial' },
+  { label: msg("DialerSeat vs Kixie"), href: '/vs/kixie' },
+  { label: msg("Dialer pricing for teams"), href: '/vs/teams' },
+  { label: msg("All dialer comparisons"), href: '/vs' },
 ]
 
 /** No FAQ here — it is already in MAIN MENU, and a rail that lists the same
  *  destination twice makes you read both lists to be sure. */
 const SITE_INFO = [
-  { label: 'Privacy Policy', href: '/privacy' },
-  { label: 'Terms of Use', href: '/terms' },
+  { label: msg("Privacy Policy"), href: '/privacy' },
+  { label: msg("Terms of Use"), href: '/terms' },
 ]
 
 function StatusCell({ value }: { value: Cell }) {
@@ -536,7 +537,7 @@ export default function VsEveryoneView() {
                   <p className="vse-rail-label">{t("OTHER VS PAGES")}</p>
                   {OTHER_VS.map((item) => (
                     <Link key={item.href} href={item.href}>
-                      <RailChevron /> {item.label}
+                      <RailChevron /> {t(item.label)}
                     </Link>
                   ))}
                 </div>
@@ -545,7 +546,7 @@ export default function VsEveryoneView() {
                   <p className="vse-rail-label">{t("SITE INFO")}</p>
                   {SITE_INFO.map((item) => (
                     <Link key={item.href} href={item.href}>
-                      <RailChevron /> {item.label}
+                      <RailChevron /> {t(item.label)}
                     </Link>
                   ))}
                 </div>
@@ -613,8 +614,8 @@ export default function VsEveryoneView() {
                     <div key={f.num} className="vse-failure">
                       <div className="num">{f.num}</div>
                       <div>
-                        <h3>{f.title}</h3>
-                        <p>{f.body}</p>
+                        <h3>{t(f.title)}</h3>
+                        <p>{t(f.body)}</p>
                       </div>
                     </div>
                   ))}
@@ -642,7 +643,7 @@ export default function VsEveryoneView() {
                     <tbody>
                       {features.map((f) => (
                         <tr key={f.feature}>
-                          <td>{f.feature}</td>
+                          <td>{t(f.feature)}</td>
                           <td className="ds-col"><StatusCell value={f.ds} /></td>
                           <td><StatusCell value={f.rm} /></td>
                           <td><StatusCell value={f.mo} /></td>
@@ -677,7 +678,7 @@ export default function VsEveryoneView() {
                     <tbody>
                       {teamScaling.map((f) => (
                         <tr key={f.feature}>
-                          <td>{f.feature}</td>
+                          <td>{t(f.feature)}</td>
                           <td className="ds-col"><StatusCell value={f.ds} /></td>
                           <td><StatusCell value={f.rm} /></td>
                           <td><StatusCell value={f.mo} /></td>
@@ -700,7 +701,7 @@ export default function VsEveryoneView() {
                   {SWITCHING_FROM.map((s) => (
                     <Link key={s.name} href={s.href}>
                       <h3>{s.name}</h3>
-                      <p>{s.summary}</p>
+                      <p>{t(s.summary)}</p>
                     </Link>
                   ))}
                 </div>

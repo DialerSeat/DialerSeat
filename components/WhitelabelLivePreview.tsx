@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from 'react'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 
 
@@ -77,11 +78,11 @@ export function WhitelabelLivePreview({
   const onHeaderMuted = `color-mix(in srgb, ${onHeader} 65%, transparent)`
 
   const navItems = [
-    { label: 'ANALYTICS', active: true },
-    { label: 'DIALER', active: false },
-    { label: 'CAMPAIGNS', active: false },
-    { label: 'LEADS', active: false },
-    { label: 'SETTINGS', active: false },
+    { label: msg("ANALYTICS"), active: true },
+    { label: msg("DIALER"), active: false },
+    { label: msg("CAMPAIGNS"), active: false },
+    { label: msg("LEADS"), active: false },
+    { label: msg("SETTINGS"), active: false },
   ]
 
   return (
@@ -145,7 +146,7 @@ export function WhitelabelLivePreview({
                 lineHeight: 1.3,
               }}
             >
-              {(brandName || 'YOUR BRAND').toUpperCase()}
+              {(brandName || msg("YOUR BRAND")).toUpperCase()}
             </div>
           )}
         </div>
@@ -166,7 +167,7 @@ export function WhitelabelLivePreview({
                 fontWeight: item.active ? 700 : 500,
               }}
             >
-              {item.label}
+              {t(item.label)}
             </div>
           ))}
         </div>
@@ -219,7 +220,7 @@ export function WhitelabelLivePreview({
           >
             {t("ANALYTICS OVERVIEW")}</div>
           <div style={{ display: 'flex', gap: 2 }}>
-            {['TODAY', 'WEEK', 'MONTH'].map((label, i) => (
+            {[msg("TODAY"), msg("WEEK"), msg("MONTH")].map((label, i) => (
               <div
                 key={label}
                 style={{
@@ -232,7 +233,7 @@ export function WhitelabelLivePreview({
                   borderRadius: 2,
                 }}
               >
-                {label}
+                {t(label)}
               </div>
             ))}
           </div>

@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 const SLUG = 'readymode'
 
@@ -37,29 +38,29 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'How does DialerSeat compare to ReadyMode on price?',
+    question: msg("How does DialerSeat compare to ReadyMode on price?"),
     answer:
-      'DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with no setup fee and no annual contract. ReadyMode publishes a $165 starting price that lands at $200-$249 in practice once implementation fees, tier upgrades, and custom reports are added. ReadyMode also typically charges a $500-$2,000 setup fee. DialerSeat charges $0 for setup.',
+      msg("DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with no setup fee and no annual contract. ReadyMode publishes a $165 starting price that lands at $200-$249 in practice once implementation fees, tier upgrades, and custom reports are added. ReadyMode also typically charges a $500-$2,000 setup fee. DialerSeat charges $0 for setup."),
   },
   {
-    question: 'What does DialerSeat have that ReadyMode does not?',
+    question: msg("What does DialerSeat have that ReadyMode does not?"),
     answer:
-      'Weekly billing with one-click cancellation, per-campaign dialer mode (not account-wide), multiple scripts per campaign with live mid-call switching, server-side TCPA window enforcement per lead state, calendar-aligned analytics (Sunday + 1st-of-month resets), lapsed-user data preservation, and a Progressive Web App that installs on phones, tablets, and desktops. ReadyMode is desktop-only and forces one dialer mode account-wide.',
+      msg("Weekly billing with one-click cancellation, per-campaign dialer mode (not account-wide), multiple scripts per campaign with live mid-call switching, server-side TCPA window enforcement per lead state, calendar-aligned analytics (Sunday + 1st-of-month resets), lapsed-user data preservation, and a Progressive Web App that installs on phones, tablets, and desktops. ReadyMode is desktop-only and forces one dialer mode account-wide."),
   },
   {
-    question: 'Is DialerSeat compliant with TCPA?',
+    question: msg("Is DialerSeat compliant with TCPA?"),
     answer:
-      'DialerSeat enforces TCPA calling windows server-side per lead state, provisions outbound traffic through a carrier providing STIR/SHAKEN A-attestation where supported, and registers every outbound number with the carrier registry (CNAM, FCR). The predictive dialer enforces the FTC Telemarketing Sales Rule 3% abandon-rate cap automatically. Consent record-keeping and DNC scrubbing remain the responsibility of the campaign owner.',
+      msg("DialerSeat enforces TCPA calling windows server-side per lead state, provisions outbound traffic through a carrier providing STIR/SHAKEN A-attestation where supported, and registers every outbound number with the carrier registry (CNAM, FCR). The predictive dialer enforces the FTC Telemarketing Sales Rule 3% abandon-rate cap automatically. Consent record-keeping and DNC scrubbing remain the responsibility of the campaign owner."),
   },
   {
-    question: 'Can I migrate my data from ReadyMode to DialerSeat?',
+    question: msg("Can I migrate my data from ReadyMode to DialerSeat?"),
     answer:
-      'Yes. DialerSeat supports bulk import of leads, campaigns, and dispositions. Our team handles the conversion so you keep your call history and campaign structure intact.',
+      msg("Yes. DialerSeat supports bulk import of leads, campaigns, and dispositions. Our team handles the conversion so you keep your call history and campaign structure intact."),
   },
   {
-    question: 'Does DialerSeat work for solo agents or only teams?',
+    question: msg("Does DialerSeat work for solo agents or only teams?"),
     answer:
-      'Both. $35/week buys one seat. No minimum seat count, no team-only features locked away, no per-seat creep. Solo agents get the same product as 500-seat operations.',
+      msg("Both. $35/week buys one seat. No minimum seat count, no team-only features locked away, no per-seat creep. Solo agents get the same product as 500-seat operations."),
   },
 ]
 
@@ -74,9 +75,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs/everyone' },
-          { name: 'DialerSeat vs ReadyMode', url: '/vs/readymode' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs/everyone' },
+          { name: msg("DialerSeat vs ReadyMode"), url: '/vs/readymode' },
         ])}
       />
       <VsCompetitorView c={competitor} />

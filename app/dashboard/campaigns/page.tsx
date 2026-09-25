@@ -8,6 +8,7 @@ import { overlayDismiss } from '@/lib/overlayDismiss'
 import { uploadLeadsInChunks, type UploadProgress } from '@/lib/uploadLeadsInChunks'
 import { usePredictiveGate } from '@/components/SellerIdentityDialog'
 import { t as tr } from '@/lib/i18n/client'
+import { msg as msgText } from '@/lib/i18n/msg'
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -114,7 +115,7 @@ function relativeTime(iso: string | null | undefined): string {
   const now = Date.now()
   const diff = Math.max(0, now - then)
   const sec = Math.floor(diff / 1000)
-  if (sec < 60) return 'just now'
+  if (sec < 60) return msgText("just now")
   const min = Math.floor(sec / 60)
   if (min < 60) return `${min}m ago`
   const hr = Math.floor(min / 60)
@@ -132,7 +133,7 @@ function relativeTime(iso: string | null | undefined): string {
 function LeadPreviewThumb({
   leads,
   totalLeads,
-  emptyHint = 'NO LEADS UPLOADED',
+  emptyHint = msgText("NO LEADS UPLOADED"),
   onClick,
   interactive = false,
   height = '100%',
@@ -165,7 +166,7 @@ function LeadPreviewThumb({
           cursor: interactive ? 'pointer' : 'default',
         }}
       >
-        {emptyHint}
+        {tr(emptyHint)}
       </div>
     )
   }
@@ -219,7 +220,7 @@ function LeadPreviewThumb({
               background: i % 2 === 0 ? 'white' : T.bg,
             }}>
               <td style={tdStyle}>
-                {lead.first_name} {lead.last_name}
+                {tr(lead.first_name)} {tr(lead.last_name)}
               </td>
               <td style={tdStyle}>{lead.phone}</td>
               <td style={tdStyle}>{lead.state || ''}</td>
@@ -320,9 +321,9 @@ export default function CampaignsPage() {
   // error, and both paths below go through it so the two cannot drift.
   const nameProblem = (() => {
     const n = campaignName.trim()
-    if (!n) return 'Name your campaign before saving it.'
-    if (/^untitled(\s*\(\d+\))?$/i.test(n)) return 'Give it a real name, not "Untitled".'
-    if (n.length > 120) return 'That name is too long (120 characters max).'
+    if (!n) return msgText("Name your campaign before saving it.")
+    if (/^untitled(\s*\(\d+\))?$/i.test(n)) return msgText("Give it a real name, not \"Untitled\".")
+    if (n.length > 120) return msgText("That name is too long (120 characters max).")
     return null
   })()
   const [createMode, setCreateMode] = useState<DialerMode>('progressive')
@@ -616,7 +617,7 @@ export default function CampaignsPage() {
     parseLeadsFile(file, sheetName)
       .then(parsed => setCsvData(parsed))
       .catch(err => {
-        setFileTypeError(err instanceof Error ? err.message : 'Failed to read that file.')
+        setFileTypeError(err instanceof Error ? err.message : tr("Failed to read that file."))
         setCsvName('')
       })
   }
@@ -636,7 +637,7 @@ export default function CampaignsPage() {
         }
       })
       .catch(err => {
-        setFileTypeError(err instanceof Error ? err.message : 'Failed to read that file.')
+        setFileTypeError(err instanceof Error ? err.message : tr("Failed to read that file."))
       })
   }
 
@@ -786,7 +787,7 @@ export default function CampaignsPage() {
       
       openEditor(newCampaign)
     } catch (err: any) {
-      alert(`Couldn't create the sheet: ${err.message || 'unknown error'}`)
+      alert(`Couldn't create the sheet: ${err.message || msgText("unknown error")}`)
     } finally {
       setCreating(false)
     }
@@ -859,7 +860,7 @@ export default function CampaignsPage() {
               csvFailed = {
                 error: typeof uploadData?.error === 'string'
                   ? uploadData.error
-                  : 'The leads file could not be imported. The campaign was created without it.',
+                  : msgText("The leads file could not be imported. The campaign was created without it."),
                 detail: typeof uploadData?.detail === 'string' ? uploadData.detail : undefined,
                 rejected: typeof uploadData?.rejected === 'number' ? uploadData.rejected : undefined,
                 rejections: Array.isArray(uploadData?.rejections) ? uploadData.rejections : undefined,
@@ -898,7 +899,7 @@ export default function CampaignsPage() {
           }
         } catch {
           csvFailed = {
-            error: 'The leads file could not be uploaded, the request failed. The campaign was created without it.',
+            error: msgText("The leads file could not be uploaded, the request failed. The campaign was created without it."),
           }
         }
       }
@@ -1003,7 +1004,7 @@ export default function CampaignsPage() {
     try {
       parsed = await parseLeadsFile(file, sheetName)
     } catch (err) {
-      setFileTypeError(err instanceof Error ? err.message : 'Failed to read that file.')
+      setFileTypeError(err instanceof Error ? err.message : tr("Failed to read that file."))
       return
     }
 
@@ -1035,7 +1036,7 @@ export default function CampaignsPage() {
         failure = {
           error: typeof data?.error === 'string'
             ? data.error
-            : 'The upload could not be completed.',
+            : msgText("The upload could not be completed."),
           detail: typeof data?.detail === 'string' ? data.detail : undefined,
           rejected: typeof data?.rejected === 'number' ? data.rejected : undefined,
           rejections: Array.isArray(data?.rejections) ? data.rejections : undefined,
@@ -1076,7 +1077,7 @@ export default function CampaignsPage() {
 
     if (!ok && !isLapsedError) {
       setCsvUploadError(failure ?? {
-        error: 'The upload could not be completed. If this persists, contact support@dialerseat.com.',
+        error: msgText("The upload could not be completed. If this persists, contact support@dialerseat.com."),
       })
       return
     }
@@ -1105,7 +1106,7 @@ export default function CampaignsPage() {
         return
       }
     } catch (err) {
-      setFileTypeError(err instanceof Error ? err.message : 'Failed to read that file.')
+      setFileTypeError(err instanceof Error ? err.message : tr("Failed to read that file."))
       return
     }
 
@@ -1197,7 +1198,7 @@ export default function CampaignsPage() {
   }
 
   const closeScriptsManager = () => {
-    if (libDirty && !confirm('Unsaved script changes. Discard?')) return
+    if (libDirty && !confirm(tr("Unsaved script changes. Discard?"))) return
     setScriptsManagerOpen(false)
     setLibDirty(false)
 
@@ -1222,7 +1223,7 @@ export default function CampaignsPage() {
   }
 
   const selectLibScript = (id: string) => {
-    if (libDirty && !confirm('Unsaved changes on this script. Switch anyway?')) return
+    if (libDirty && !confirm(tr("Unsaved changes on this script. Switch anyway?"))) return
     const s = library.find(x => x.id === id)
     if (!s) return
     setActiveLibId(id)
@@ -1240,7 +1241,7 @@ export default function CampaignsPage() {
       const res = await fetch('/api/scripts/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Untitled Script', body: '' }),
+        body: JSON.stringify({ name: msgText("Untitled Script"), body: '' }),
       })
       const data = await res.json()
       if (data.success && data.script) {
@@ -1250,7 +1251,7 @@ export default function CampaignsPage() {
         setLibBody(data.script.body)
         setLibDirty(false)
       } else {
-        alert(`Couldn't create script: ${data.error || 'unknown error'}`)
+        alert(`Couldn't create script: ${data.error || msgText("unknown error")}`)
       }
     } finally {
       setLibSaving(false)
@@ -1271,7 +1272,7 @@ export default function CampaignsPage() {
         setLibrary(prev => prev.map(s => s.id === activeLibId ? data.script : s))
         setLibDirty(false)
       } else {
-        alert(`Save failed: ${data.error || 'unknown error'}`)
+        alert(`Save failed: ${data.error || msgText("unknown error")}`)
       }
     } finally {
       setLibSaving(false)
@@ -1282,8 +1283,8 @@ export default function CampaignsPage() {
     const s = library.find(x => x.id === id)
     const owned = s ? (s.is_team !== true || s.user_id === user?.id) : true
     const msg = owned
-      ? 'Delete this script everywhere? It will be removed from all campaigns.'
-      : 'Remove this team script from your campaigns?'
+      ? msgText("Delete this script everywhere? It will be removed from all campaigns.")
+      : msgText("Remove this team script from your campaigns?")
     if (!confirm(msg)) return
     const res = await fetch('/api/scripts/delete', {
       method: 'POST',
@@ -1303,7 +1304,7 @@ export default function CampaignsPage() {
       }
       if (settingsCampaign) loadCampaignLinks(settingsCampaign.id)
     } else {
-      alert(`Delete failed: ${data.error || 'unknown error'}`)
+      alert(`Delete failed: ${data.error || msgText("unknown error")}`)
     }
   }
 
@@ -1513,7 +1514,7 @@ export default function CampaignsPage() {
           body: JSON.stringify({ id, ...corePatch }),
         })
         const data = await res.json()
-        if (!data.success) throw new Error(data.error || 'Failed to save campaign settings')
+        if (!data.success) throw new Error(data.error || msgText("Failed to save campaign settings"))
       }
 
       
@@ -1547,7 +1548,7 @@ export default function CampaignsPage() {
       setEditBaseline(null)
       setSettingsId(null)
     } catch (err: any) {
-      alert(`Couldn't save changes: ${err.message || 'unknown error'}`)
+      alert(`Couldn't save changes: ${err.message || msgText("unknown error")}`)
     } finally {
       setEditSaving(false)
     }
@@ -1632,7 +1633,7 @@ export default function CampaignsPage() {
   }
 
   const closeSettings = () => {
-    if (editDirty && !confirm('You have unsaved changes. Discard them?')) return
+    if (editDirty && !confirm(tr("You have unsaved changes. Discard them?"))) return
 
     
     
@@ -1691,7 +1692,7 @@ export default function CampaignsPage() {
       Object.keys(editorEdits).length > 0 ||
       editorAdds.length > 0 ||
       editorDeletes.size > 0
-    if (hasChanges && !confirm('Unsaved changes will be lost. Close anyway?')) return
+    if (hasChanges && !confirm(tr("Unsaved changes will be lost. Close anyway?"))) return
 
     
     
@@ -1840,7 +1841,7 @@ export default function CampaignsPage() {
       setEditBaseline(null)
       setSettingsId(null)
     } catch (err: any) {
-      alert(`Save failed: ${err?.message || 'unknown error'}`)
+      alert(`Save failed: ${err?.message || msgText("unknown error")}`)
     } finally {
       setEditorSaving(false)
     }
@@ -3167,7 +3168,7 @@ export default function CampaignsPage() {
                     }}
                   >
                     {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
-                      <option key={m} value={m}>{MODE_LABELS[m]}</option>
+                      <option key={m} value={m}>{tr(MODE_LABELS[m])}</option>
                     ))}
                   </select>
                 </div>
@@ -3307,7 +3308,7 @@ export default function CampaignsPage() {
                       <p style={{
                         fontSize: 10, color: T.muted, margin: 0,
                         fontFamily: 'monospace', letterSpacing: 1,
-                      }}>{csvName}</p>
+                      }}>{tr(csvName)}</p>
                     </>
                   ) : (
                     <>
@@ -3371,7 +3372,7 @@ export default function CampaignsPage() {
                         return (
                           <div key={s.id} className={`script-toggle-row ${on ? '' : 'off'}`}>
                             <div className="script-toggle-label" style={!on ? { color: T.muted } : undefined}>
-                              {(s.name || 'UNTITLED').toUpperCase()}
+                              {(s.name || msgText("UNTITLED")).toUpperCase()}
                               {s.is_team && <span className="team-mark">{tr("TEAM")}</span>}
                             </div>
                             <div
@@ -3463,7 +3464,7 @@ export default function CampaignsPage() {
                             onClick={() => selectLibScript(s.id)}
                           >
                             {owned && <span className="script-grip" title={tr("Drag to reorder")}>⠿</span>}
-                            <span className="lib-rail-name">{(s.name || 'UNTITLED').toUpperCase()}</span>
+                            <span className="lib-rail-name">{(s.name || msgText("UNTITLED")).toUpperCase()}</span>
                             {s.is_team && <span className="team-mark">{tr("TEAM")}</span>}
                           </div>
                         )
@@ -3627,7 +3628,7 @@ export default function CampaignsPage() {
                       disabled={isLapsed}
                     >
                       {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
-                        <option key={m} value={m}>{MODE_LABELS[m]}</option>
+                        <option key={m} value={m}>{tr(MODE_LABELS[m])}</option>
                       ))}
                     </select>
                   </div>
@@ -3870,7 +3871,7 @@ export default function CampaignsPage() {
                         return (
                           <div key={s.id} className={`script-toggle-row ${on ? '' : 'off'}`}>
                             <div className="script-toggle-label" style={!on ? { color: T.muted } : undefined}>
-                              {(s.name || 'UNTITLED').toUpperCase()}
+                              {(s.name || msgText("UNTITLED")).toUpperCase()}
                               {s.is_team && <span className="team-mark">{tr("TEAM")}</span>}
                             </div>
                             <div
@@ -4016,7 +4017,7 @@ export default function CampaignsPage() {
                 fontSize: 12.5, lineHeight: 1.7, color: T.text, margin: 0,
                 letterSpacing: 0.3, fontFamily: FUTURA, fontWeight: 'bold',
               }}>
-                {csvUploadError.error}
+                {tr(csvUploadError.error)}
               </p>
 
               {/* Per-reason breakdown with real examples, so the user can see
@@ -4032,7 +4033,7 @@ export default function CampaignsPage() {
                         fontSize: 11, fontWeight: 'bold', letterSpacing: 0.4,
                         color: T.text, fontFamily: FUTURA,
                       }}>
-                        {r.label}, {r.count.toLocaleString()} {tr("row")}{r.count === 1 ? '' : 's'}
+                        {tr(r.label)}, {r.count.toLocaleString()} {tr("row")}{r.count === 1 ? '' : 's'}
                       </div>
                       {r.examples.length > 0 && (
                         <div style={{
@@ -4070,7 +4071,7 @@ export default function CampaignsPage() {
                         fontSize: 11, fontWeight: 'bold', letterSpacing: 0.4,
                         color: T.text, fontFamily: FUTURA,
                       }}>
-                        {w.label}, {w.count.toLocaleString()} {tr("lead")}{w.count === 1 ? '' : 's'}
+                        {tr(w.label)}, {w.count.toLocaleString()} {tr("lead")}{w.count === 1 ? '' : 's'}
                       </div>
                       {w.examples.length > 0 && (
                         <div style={{
@@ -4094,7 +4095,7 @@ export default function CampaignsPage() {
                   fontSize: 11, lineHeight: 1.65, color: T.muted, marginTop: 10,
                   fontFamily: 'monospace', wordBreak: 'break-word',
                 }}>
-                  {csvUploadError.detail}
+                  {tr(csvUploadError.detail)}
                 </p>
               )}
 
@@ -4133,7 +4134,7 @@ export default function CampaignsPage() {
                 fontSize: 12, lineHeight: 1.7, color: T.text, margin: 0,
                 letterSpacing: 0.5, fontFamily: 'monospace',
               }}>
-                {fileTypeError}
+                {tr(fileTypeError)}
               </p>
             </div>
             <div className="settings-footer">
@@ -4272,7 +4273,7 @@ export default function CampaignsPage() {
                       onDragEnd={onLinkDragEnd}
                     >
                       <span className="script-grip" title={tr("Drag to reorder")}>⠿</span>
-                      <span className="chip-name">{(s.name || 'UNTITLED').toUpperCase()}</span>
+                      <span className="chip-name">{(s.name || msgText("UNTITLED")).toUpperCase()}</span>
                       {s.is_team && <span className="team-mark">{tr("TEAM")}</span>}
                       <button
                         className="chip-toggle"
@@ -4283,7 +4284,7 @@ export default function CampaignsPage() {
                   ))}
                   {campaignScriptLinks.filter(s => !s.enabled).map(s => (
                     <div key={s.id} className="editor-script-chip off">
-                      <span className="chip-name">{(s.name || 'UNTITLED').toUpperCase()}</span>
+                      <span className="chip-name">{(s.name || msgText("UNTITLED")).toUpperCase()}</span>
                       {s.is_team && <span className="team-mark">{tr("TEAM")}</span>}
                       <button
                         className="chip-toggle add"

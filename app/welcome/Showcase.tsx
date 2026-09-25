@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 
 
@@ -71,22 +72,22 @@ interface Scene {
 const SCENES: Scene[] = [
   {
     key: 'dialer',
-    eyebrow: 'A SUPERIOR DIALER',
-    headline: "If your career is dialing numbers,\nYou're in the right place.",
-    sub: "Dial all day on an unlimited number pool, with all of your scripts in one place, with four dialer modes included to suit your style seamlessly.",
+    eyebrow: msg("A SUPERIOR DIALER"),
+    headline: msg("If your career is dialing numbers,\nYou're in the right place."),
+    sub: msg("Dial all day on an unlimited number pool, with all of your scripts in one place, with four dialer modes included to suit your style seamlessly."),
   },
   {
     key: 'analytics',
-    eyebrow: 'YOUR NUMBERS, LIVE',
-    headline: 'DialerSeat Analytics',
+    eyebrow: msg("YOUR NUMBERS, LIVE"),
+    headline: msg("DialerSeat Analytics"),
     headline2: 'Statistics as you dial.',
-    sub: "Calls, conversions, talk time, and where your closes come from: all tracked on the backend for you, the second each call ends. Nothing to log, and nothing to maintain. Upload infinite campaigns and toggle each one on or off for the smoothest possible workflow.",
+    sub: msg("Calls, conversions, talk time, and where your closes come from: all tracked on the backend for you, the second each call ends. Nothing to log, and nothing to maintain. Upload infinite campaigns and toggle each one on or off for the smoothest possible workflow."),
   },
   {
     key: 'superior',
-    eyebrow: 'WHY IT WINS',
-    headline: 'Designed to make you a closing machine',
-    sub: "Created by a team of seasoned developers alongside a group of high-ranking producers with real knowledge of the game who are tired of empty promises. DialerSeat is built around your experience: and we're actively taking suggestions as well, to provide the best dialer on the face of the earth. Thanks for all of your support along this journey.\n~ DialerSeat",
+    eyebrow: msg("WHY IT WINS"),
+    headline: msg("Designed to make you a closing machine"),
+    sub: msg("Created by a team of seasoned developers alongside a group of high-ranking producers with real knowledge of the game who are tired of empty promises. DialerSeat is built around your experience: and we're actively taking suggestions as well, to provide the best dialer on the face of the earth. Thanks for all of your support along this journey.\n~ DialerSeat"),
   },
 ]
 
@@ -145,17 +146,17 @@ export default function ShowcaseWizard({ joinCode = null }: { joinCode?: string 
         {/* explanation */}
         <div style={{ padding: '18px 24px 12px', display: 'flex', justifyContent: 'center' }}>
           <div key={current.key} className="sw-explain" style={{ maxWidth: 620, textAlign: 'center', animation: 'sw-rise 0.45s ease' }}>
-            <div style={{ fontSize: 11, letterSpacing: 4, color: C.primary, fontWeight: 800, marginBottom: 10 }}>{current.eyebrow}</div>
+            <div style={{ fontSize: 11, letterSpacing: 4, color: C.primary, fontWeight: 800, marginBottom: 10 }}>{tr(current.eyebrow)}</div>
             {current.headline2 ? (
               <>
-                <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 6, whiteSpace: 'pre-line' }}>{current.headline}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 6, whiteSpace: 'pre-line' }}>{tr(current.headline)}</div>
                 <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 12, whiteSpace: 'pre-line' }}>{current.headline2}</div>
               </>
             ) : (
-              <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 12, whiteSpace: 'pre-line' }}>{current.headline}</div>
+              <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 12, whiteSpace: 'pre-line' }}>{tr(current.headline)}</div>
             )}
             {current.subLead && <div style={{ fontSize: 15, lineHeight: 1.6, color: C.primary, fontWeight: 700, marginBottom: 6 }}>{current.subLead}</div>}
-            <div style={{ fontSize: 15, lineHeight: 1.6, color: 'rgba(255,255,255,0.72)', whiteSpace: 'pre-line' }}>{current.sub}</div>
+            <div style={{ fontSize: 15, lineHeight: 1.6, color: 'rgba(255,255,255,0.72)', whiteSpace: 'pre-line' }}>{tr(current.sub)}</div>
           </div>
         </div>
 
@@ -219,7 +220,7 @@ function MacFrame({ title, titleColor, bg, children }: { title: string; titleCol
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f57' }} />
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#febc2e' }} />
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#28c840' }} />
-        <span style={{ marginLeft: 10, fontSize: 10, letterSpacing: 2, color: titleColor, fontWeight: 700 }}>{title}</span>
+        <span style={{ marginLeft: 10, fontSize: 10, letterSpacing: 2, color: titleColor, fontWeight: 700 }}>{tr(title)}</span>
       </div>
       <div>{children}</div>
     </div>
@@ -228,28 +229,28 @@ function MacFrame({ title, titleColor, bg, children }: { title: string; titleCol
 
 
 const SCRIPTS: { key: string; label: string; text: string }[] = [
-  { key: 'life', label: 'Life', text: `"Hi (client), this is (agent) reaching
+  { key: 'life', label: msg("Life"), text: `"Hi (client), this is (agent) reaching
 out about the life coverage you
 looked into.
 
 It only takes a minute, I can show
 you what you'd actually qualify for,
 no medical exam needed…"` },
-  { key: 'health', label: 'Health', text: `"Hi (client), this is (agent), you
+  { key: 'health', label: msg("Health"), text: `"Hi (client), this is (agent), you
 requested help finding a health plan,
 is now a good time?
 
 Perfect. Let's see if we can get you
 better coverage for less than you're
 paying today…"` },
-  { key: 'realestate', label: 'Real Estate', text: `"Hi (client), this is (agent), I saw
+  { key: 'realestate', label: msg("Real Estate"), text: `"Hi (client), this is (agent), I saw
 you were curious what your home
 might be worth.
 
 I can get you a real number today,
 and if you ever decide to sell, walk
 you through what's next…"` },
-  { key: 'solar', label: 'Solar', text: `"Hi (client), this is (agent), did I
+  { key: 'solar', label: msg("Solar"), text: `"Hi (client), this is (agent), did I
 catch you at an okay time?
 
 Great. You asked about cutting your
@@ -278,14 +279,14 @@ function DialerScene() {
   const script = SCRIPTS[scriptIdx]
 
   const metrics: [string, string, string][] = [
-    ['DIALS', '131', C.primary],
-    ['CONNECTED', '35', C.primary],
-    ['TALK TIME', '1h 26m', '#4a9eff'],
-    ['CLOSED', '12', GREEN],
-    ['APPOINTMENTS', '8', '#1a4a8a'],
-    ['CALLBACKS', '17', '#8a6a1a'],
-    ['NOT INTERESTED', '21', '#8a6a1a'],
-    ['DO NOT CALL', '4', '#8a1a1a'],
+    [msg("DIALS"), '131', C.primary],
+    [msg("CONNECTED"), '35', C.primary],
+    [msg("TALK TIME"), '1h 26m', '#4a9eff'],
+    [msg("CLOSED"), '12', GREEN],
+    [msg("APPOINTMENTS"), '8', '#1a4a8a'],
+    [msg("CALLBACKS"), '17', '#8a6a1a'],
+    [msg("NOT INTERESTED"), '21', '#8a6a1a'],
+    [msg("DO NOT CALL"), '4', '#8a1a1a'],
   ]
 
   return (
@@ -323,7 +324,7 @@ function DialerScene() {
                 </div>
                 <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ fontSize: 8, letterSpacing: 2, color: C.muted, marginBottom: 6 }}>{tr("CALL SCRIPT")}</div>
-                  <div key={script.key} style={{ height: 136, fontSize: 11, lineHeight: 1.7, color: C.onPage, fontFamily: MONO, whiteSpace: 'pre-wrap', animation: 'sw-rise 0.25s ease' }}>{script.text}</div>
+                  <div key={script.key} style={{ height: 136, fontSize: 11, lineHeight: 1.7, color: C.onPage, fontFamily: MONO, whiteSpace: 'pre-wrap', animation: 'sw-rise 0.25s ease' }}>{tr(script.text)}</div>
                 </div>
               </div>
             </div>
@@ -342,7 +343,7 @@ function DialerScene() {
                   padding: '6px 11px', background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(255,255,255,0.08)', borderLeft: `3px solid ${color}`, borderRadius: 3,
                 }}>
-                  <span style={{ fontSize: 8, letterSpacing: 1.5, color: 'rgba(255,255,255,0.5)' }}>{label}</span>
+                  <span style={{ fontSize: 8, letterSpacing: 1.5, color: 'rgba(255,255,255,0.5)' }}>{tr(label)}</span>
                   <span style={{ fontSize: 15, fontWeight: 700, fontFamily: MONO, color: cl ? GREEN_BRIGHT : color === C.primary ? '#7ab8ff' : 'rgba(255,255,255,0.85)' }}>{value}</span>
                 </div>
               )
@@ -357,10 +358,10 @@ function DialerScene() {
 
 function AnalyticsScene() {
   const tiles: [string, number, string, string, string, boolean][] = [
-    ['TOTAL CALLS', 1284, C.primary, '', '↑ 12%', true],
-    ['CONVERSIONS', 159, GREEN, '', '↑ 15%', false],
-    ['TALK TIME', 14, '#4a9eff', 'h', '↑ 6%', false],
-    ['CLOSED', 86, GREEN, '', '↑ 9%', false],
+    [msg("TOTAL CALLS"), 1284, C.primary, '', '↑ 12%', true],
+    [msg("CONVERSIONS"), 159, GREEN, '', '↑ 15%', false],
+    [msg("TALK TIME"), 14, '#4a9eff', 'h', '↑ 6%', false],
+    [msg("CLOSED"), 86, GREEN, '', '↑ 9%', false],
   ]
   const [vals, setVals] = useState(tiles.map(() => 0))
   const [showCharts, setShowCharts] = useState(false)
@@ -385,10 +386,10 @@ function AnalyticsScene() {
   const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
   const pie = [
-    { label: 'Closed', val: 42, color: GREEN },
-    { label: 'Callback', val: 28, color: C.primary },
-    { label: 'Not int.', val: 20, color: '#8a6a1a' },
-    { label: 'DNC', val: 10, color: '#8a1a1a' },
+    { label: msg("Closed"), val: 42, color: GREEN },
+    { label: msg("Callback"), val: 28, color: C.primary },
+    { label: msg("Not int."), val: 20, color: '#8a6a1a' },
+    { label: msg("DNC"), val: 10, color: '#8a1a1a' },
   ]
   let acc = 0; const R = 34, CX = 40, CY = 40
   const arcs = pie.map(seg => {
@@ -453,7 +454,7 @@ function AnalyticsScene() {
                 {pie.map(seg => (
                   <div key={seg.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ width: 8, height: 8, borderRadius: 2, background: seg.color }} />
-                    <span style={{ fontSize: 9, color: C.onPage, fontWeight: 600 }}>{seg.label}</span>
+                    <span style={{ fontSize: 9, color: C.onPage, fontWeight: 600 }}>{tr(seg.label)}</span>
                     <span style={{ fontSize: 9, color: C.muted, fontFamily: MONO, marginLeft: 'auto' }}>{seg.val}%</span>
                   </div>
                 ))}
@@ -469,12 +470,12 @@ function AnalyticsScene() {
 
 function SuperiorScene() {
   const features: { icon: string; title: string; body: string }[] = [
-    { icon: '⊘', title: 'No contracts', body: "Cancel anytime, absolutely no strings attached. Stay for the right reasons, not because you have to." },
-    { icon: '🔒', title: 'Secured & protected', body: 'Your data is protected and secured at every level, your numbers and leads PERMANENTLY yours.' },
-    { icon: '💸', title: 'The best price, guaranteed', body: 'More dialer for less money than the competition, enterprise-grade quality without the enterprise-level pricing.' },
-    { icon: '∞', title: 'Unlimited dialing', body: 'Dial all day on an unlimited number pool: no line limits, never any surprise coverage fees.' },
-    { icon: '📮', title: 'Voicemail Detection', body: "Real voicemail detection, not the fake stuff. Skip dead drops and spend your time on live people." },
-    { icon: '🎯', title: 'Always improving', body: 'Shaped by real producers and updated constantly, the dialer that keeps getting better.' },
+    { icon: '⊘', title: msg("No contracts"), body: msg("Cancel anytime, absolutely no strings attached. Stay for the right reasons, not because you have to.") },
+    { icon: '🔒', title: msg("Secured & protected"), body: msg("Your data is protected and secured at every level, your numbers and leads PERMANENTLY yours.") },
+    { icon: '💸', title: msg("The best price, guaranteed"), body: msg("More dialer for less money than the competition, enterprise-grade quality without the enterprise-level pricing.") },
+    { icon: '∞', title: msg("Unlimited dialing"), body: msg("Dial all day on an unlimited number pool: no line limits, never any surprise coverage fees.") },
+    { icon: '📮', title: msg("Voicemail Detection"), body: msg("Real voicemail detection, not the fake stuff. Skip dead drops and spend your time on live people.") },
+    { icon: '🎯', title: msg("Always improving"), body: msg("Shaped by real producers and updated constantly, the dialer that keeps getting better.") },
   ]
   return (
     <MacFrame title={tr("WHY DIALERSEAT")} titleColor="#5a8a5a" bg={C.sidebar}>
@@ -482,15 +483,15 @@ function SuperiorScene() {
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 15, fontWeight: 800, color: C.onSidebar, letterSpacing: 0.5 }}>{tr("A superior dialer, designed for success.")}</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: msg("repeat(3, 1fr)"), gap: 12 }}>
           {features.map((f, i) => (
             <div key={f.title} style={{
               background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: 10, padding: 14, animation: `sw-pop 0.45s ease ${i * 0.06}s both`,
             }}>
               <div style={{ width: 30, height: 30, borderRadius: 8, background: `color-mix(in srgb, ${C.primary} 22%, transparent)`, color: C.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, marginBottom: 9 }}>{f.icon}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: C.onSidebar, marginBottom: 5 }}>{f.title}</div>
-              <div style={{ fontSize: 11, lineHeight: 1.5, color: 'rgba(255,255,255,0.6)' }}>{f.body}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: C.onSidebar, marginBottom: 5 }}>{tr(f.title)}</div>
+              <div style={{ fontSize: 11, lineHeight: 1.5, color: 'rgba(255,255,255,0.6)' }}>{tr(f.body)}</div>
             </div>
           ))}
         </div>

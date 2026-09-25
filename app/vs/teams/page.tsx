@@ -7,6 +7,7 @@ import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schem
 import { COMPETITORS, DIALERSEAT } from '@/lib/competitors'
 import { FACTS } from '@/lib/canonicalFacts'
 import { primeLocale, t as tr } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /vs/teams — what a five-agent floor actually costs, across every tool
@@ -68,30 +69,30 @@ const FUTURA = "'Futura PT', Futura, 'Trebuchet MS', sans-serif"
 
 const FAQS = [
   {
-    question: 'What does a 5-agent dialer team cost?',
+    question: msg("What does a 5-agent dialer team cost?"),
     answer:
       'On DialerSeat, $175 per week in seats ($35 each) plus $75 per week for the Manager+ owner, with all four dialer modes included and no contract. ' +
       'Most alternatives price per seat per month with a minimum: Orum is around $1,250/month for five, billed annually with a three-seat minimum; ' +
       'Aircall is $250/month on the tier that includes the Power Dialer, with a three-licence minimum; Five9 does not publish pricing and quotes commonly land at $175+ per seat per month.',
   },
   {
-    question: 'Can two agents on the same campaign call the same lead?',
+    question: msg("Can two agents on the same campaign call the same lead?"),
     answer:
       'Not on DialerSeat. Leads are claimed atomically in the database before they are dialed, so a shared campaign cannot hand the same lead to two agents. ' +
       'The claim is a lease that is renewed while the agent is live and released automatically if their browser closes mid-call, so a crashed session frees its lead instead of stranding it.',
   },
   {
-    question: 'Is there a seat minimum?',
+    question: msg("Is there a seat minimum?"),
     answer:
-      'No. A team of two is a supported configuration. Several alternatives have minimums: Orum requires three seats, Aircall three licences, JustCall two.',
+      msg("No. A team of two is a supported configuration. Several alternatives have minimums: Orum requires three seats, Aircall three licences, JustCall two."),
   },
   {
-    question: 'Who pays for each agent’s seat?',
+    question: msg("Who pays for each agent’s seat?"),
     answer:
-      'The team owner chooses per join code. A code can be set so the owner is billed for that seat, or so the agent pays for their own. Both can exist on the same team.',
+      msg("The team owner chooses per join code. A code can be set so the owner is billed for that seat, or so the agent pays for their own. Both can exist on the same team."),
   },
   {
-    question: 'Can an agent work from another country?',
+    question: msg("Can an agent work from another country?"),
     answer:
       'Yes. Agents need a browser and an internet connection; there is no per-country restriction and no separate international seat price. ' +
       'Calling windows are enforced against the lead’s state rather than the agent’s, so an agent in another timezone cannot dial outside a prospect’s legal window.',
@@ -127,9 +128,9 @@ export default async function TeamsComparisonPage() {
       <JsonLd data={organizationSchema()} />
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd data={breadcrumbSchema([
-        { name: 'Home', url: '/' },
-        { name: 'Comparisons', url: '/vs' },
-        { name: 'Teams', url: '/vs/teams' },
+        { name: msg("Home"), url: '/' },
+        { name: msg("Comparisons"), url: '/vs' },
+        { name: msg("Teams"), url: '/vs/teams' },
       ])} />
 
       <GutsShell rail={vsRail()} activeHref="/vs/teams">
@@ -195,9 +196,9 @@ export default async function TeamsComparisonPage() {
               gap: 18, marginTop: 26,
             }}>
               {[
-                ['LEAD DISTRIBUTION', FACTS.teams.distribution],
-                ['SEATS AND BILLING', FACTS.teams.seats],
-                ['WHAT THE OWNER SEES', FACTS.teams.visibility],
+                [msg("LEAD DISTRIBUTION"), FACTS.teams.distribution],
+                [msg("SEATS AND BILLING"), FACTS.teams.seats],
+                [msg("WHAT THE OWNER SEES"), FACTS.teams.visibility],
               ].map(([title, items]) => (
                 <div key={title as string} style={{
                   background: '#fff', border: `1px solid ${BORDER}`,
@@ -251,9 +252,9 @@ export default async function TeamsComparisonPage() {
             <div style={{ marginTop: 20 }}>
               {FAQS.map(f => (
                 <div key={f.question} style={{ marginBottom: 22, maxWidth: 830 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 'bold', margin: 0 }}>{f.question}</h3>
+                  <h3 style={{ fontSize: 16, fontWeight: 'bold', margin: 0 }}>{tr(f.question)}</h3>
                   <p style={{ fontSize: 14.5, lineHeight: 1.8, color: MUTED, margin: '7px 0 0' }}>
-                    {f.answer}
+                    {tr(f.answer)}
                   </p>
                 </div>
               ))}

@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 const SLUG = 'calltools'
 
@@ -35,24 +36,24 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: "How much does CallTools cost?",
+    question: msg("How much does CallTools cost?"),
     answer:
-      "Roughly $119.99 per user per month month-to-month, or about $101.99 on an annual commitment. Those are starting figures, CallTools prices by quote, and reported setup fees run $500-$1,500 before the first call, with complex CRM integrations quoted separately at $2,000-$5,000. SMS is billed per message on top.",
+      msg("Roughly $119.99 per user per month month-to-month, or about $101.99 on an annual commitment. Those are starting figures, CallTools prices by quote, and reported setup fees run $500-$1,500 before the first call, with complex CRM integrations quoted separately at $2,000-$5,000. SMS is billed per message on top."),
   },
   {
-    question: "Does DialerSeat charge a setup fee?",
+    question: msg("Does DialerSeat charge a setup fee?"),
     answer:
-      "No. $35 per seat per week is the whole bill for the software, charged weekly, cancellable any week. There is no onboarding fee, no implementation project and no minimum term.",
+      msg("No. $35 per seat per week is the whole bill for the software, charged weekly, cancellable any week. There is no onboarding fee, no implementation project and no minimum term."),
   },
   {
-    question: "Is CallTools better for large contact centres?",
+    question: msg("Is CallTools better for large contact centres?"),
     answer:
-      "It is a mature contact-centre platform with reporting depth built for supervisors managing large floors, and if that is what you need it is a reasonable choice. DialerSeat is built for teams that want the dialing without the platform around it.",
+      msg("It is a mature contact-centre platform with reporting depth built for supervisors managing large floors, and if that is what you need it is a reasonable choice. DialerSeat is built for teams that want the dialing without the platform around it."),
   },
   {
-    question: "Can I try either without talking to sales?",
+    question: msg("Can I try either without talking to sales?"),
     answer:
-      "DialerSeat, yes, sign up and dial. CallTools is quote-based, so the real number requires a sales conversation.",
+      msg("DialerSeat, yes, sign up and dial. CallTools is quote-based, so the real number requires a sales conversation."),
   },
 ]
 
@@ -67,9 +68,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs CallTools', url: '/vs/calltools' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs CallTools"), url: '/vs/calltools' },
         ])}
       />
       <VsCompetitorView c={competitor} />

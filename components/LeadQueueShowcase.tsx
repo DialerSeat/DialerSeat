@@ -46,6 +46,7 @@
 
 import { useState, useEffect } from 'react'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
@@ -186,8 +187,8 @@ const RESULT_MS = 600
 // app/dashboard/dialer/page.tsx) rather than the outline chips this mockup
 // used to draw.
 const OUTCOME_COPY: Record<Outcome, { label: string; color: string; bg: string }> = {
-  voicemail: { label: 'VOICEMAIL', color: D.amber, bg: D.amberBg },
-  connected: { label: 'CONNECTED', color: D.green, bg: D.greenBg },
+  voicemail: { label: msg("VOICEMAIL"), color: D.amber, bg: D.amberBg },
+  connected: { label: msg("CONNECTED"), color: D.green, bg: D.greenBg },
 }
 
 /**
@@ -556,7 +557,7 @@ export default function LeadQueueShowcase() {
                       border: `1px solid ${OUTCOME_COPY[currentOutcome].color}`,
                     }}
                   >
-                    {OUTCOME_COPY[currentOutcome].label}
+                    {tr(OUTCOME_COPY[currentOutcome].label)}
                   </span>
                 ) : (
                   <span
@@ -577,7 +578,7 @@ export default function LeadQueueShowcase() {
                   className="lq-tag"
                   style={{ color: oc.color, background: oc.bg, border: `1px solid ${oc.color}` }}
                 >
-                  {oc.label}
+                  {tr(oc.label)}
                 </span>
               ) : (
                 <span

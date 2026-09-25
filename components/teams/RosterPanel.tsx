@@ -1,6 +1,7 @@
 'use client'
 
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 interface TeamUser {
   email: string | null
   first_name: string | null
@@ -80,7 +81,7 @@ function fmtMoney(cents: number): string {
 }
 
 function campaignNameFor(refs: TeamCampaignRef[], campaignId: string): string {
-  return refs.find(r => r.campaignId === campaignId)?.campaign?.name || 'Unknown campaign'
+  return refs.find(r => r.campaignId === campaignId)?.campaign?.name || msg("Unknown campaign")
 }
 
 export default function RosterPanel({
@@ -193,15 +194,15 @@ export default function RosterPanel({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
                     {m.campaignAccess.map(a => {
                       const cName = campaignNameFor(teamCampaigns, a.campaignId)
-                      const payerLabel = a.payer === 'owner' ? 'OWNER PAYS' : a.payer === 'agent' ? 'AGENT PAYS' : 'FREE'
+                      const payerLabel = a.payer === 'owner' ? msg("OWNER PAYS") : a.payer === 'agent' ? msg("AGENT PAYS") : msg("FREE")
                       const payerColor = a.payer === 'owner' ? T.green : a.payer === 'agent' ? T.amber : T.primary
                       return (
                         <div key={a.id} style={{
                           background: T.surface, border: `1px solid ${T.border}`, borderRadius: 3,
                           padding: '5px 8px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
                         }}>
-                          <span style={{ flex: '1 1 120px', minWidth: 0, fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cName}</span>
-                          <Badge color={payerColor}>{payerLabel}</Badge>
+                          <span style={{ flex: '1 1 120px', minWidth: 0, fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t(cName)}</span>
+                          <Badge color={payerColor}>{t(payerLabel)}</Badge>
                           <button onClick={() => onRevokeAccess(m, a, cName)} style={subtleBtnStyle(false, T.red)}>{t("REVOKE")}</button>
                         </div>
                       )

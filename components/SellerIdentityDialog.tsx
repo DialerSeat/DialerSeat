@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // PREDICTIVE'S TWO DETAILS, ASKED FOR WHERE PREDICTIVE IS PICKED
@@ -86,16 +87,16 @@ function SellerIdentityDialogBody({ ownerIsYou, onSaved, onUseProgressive, onClo
       })
       const d = await res.json().catch(() => null)
       if (!res.ok || !d?.success) {
-        setError(d?.error || 'Could not save. Try again.')
+        setError(d?.error || msg("Could not save. Try again."))
         return
       }
       if (!d.ready) {
-        setError('Enter both your business name and a callback number.')
+        setError(msg("Enter both your business name and a callback number."))
         return
       }
       onSaved()
     } catch {
-      setError('Could not save. Check your connection and try again.')
+      setError(msg("Could not save. Check your connection and try again."))
     } finally {
       setSaving(false)
     }
@@ -165,7 +166,7 @@ function SellerIdentityDialogBody({ ownerIsYou, onSaved, onUseProgressive, onClo
 
             {error && (
               <div role="alert" style={{ fontSize: 12, color: '#ff8888', letterSpacing: 0.5, marginBottom: 12 }}>
-                {error}
+                {tr(error)}
               </div>
             )}
 

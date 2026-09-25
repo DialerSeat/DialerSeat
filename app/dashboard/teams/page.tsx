@@ -23,6 +23,7 @@ import {
   RenameModal,
 } from '@/components/teams/TeamModals'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // TEAMS — OVERVIEW, ALL USERS, REQUESTS
@@ -87,17 +88,17 @@ type PanelView = 'overview' | 'all_users' | 'requests' | 'team' | 'campaign' | '
 type MetricView = 'activity' | 'conversion' | 'talk_time' | 'seats'
 
 const RANGES: Array<{ key: RangeKey; label: string }> = [
-  { key: 'today', label: 'Today' },
-  { key: 'week', label: 'Week' },
-  { key: 'month', label: 'Month' },
-  { key: 'all', label: 'All Time' },
-  { key: 'custom', label: 'Custom' },
+  { key: 'today', label: msg("Today") },
+  { key: 'week', label: msg("Week") },
+  { key: 'month', label: msg("Month") },
+  { key: 'all', label: msg("All Time") },
+  { key: 'custom', label: msg("Custom") },
 ]
 
 // Only one view exists so far. The others were listed before they were built,
 // which promises reports that are not there — worse than a short menu.
 const METRIC_VIEWS: Array<{ key: MetricView; label: string; hint: string }> = [
-  { key: 'activity', label: 'All Users', hint: 'Everyone across every team' },
+  { key: 'activity', label: msg("All Users"), hint: msg("Everyone across every team") },
 ]
 
 const BG = 'var(--teams-page-bg, #1e1f22)'
@@ -115,7 +116,7 @@ function displayName(m: ApiMember): string {
   const nick = m.nickname?.trim()
   if (nick) return nick
   const full = `${m.user?.first_name?.trim() || ''} ${m.user?.last_name?.trim() || ''}`.trim()
-  return full || m.user?.email || 'Unknown agent'
+  return full || m.user?.email || msg("Unknown agent")
 }
 
 /** Their real name, for the places that have to show both — the rename dialog
@@ -123,7 +124,7 @@ function displayName(m: ApiMember): string {
  *  a nickname never hides who somebody actually is. */
 function realName(m: ApiMember): string {
   const full = `${m.user?.first_name?.trim() || ''} ${m.user?.last_name?.trim() || ''}`.trim()
-  return full || m.user?.email || 'Unknown agent'
+  return full || m.user?.email || msg("Unknown agent")
 }
 
 function toSidebarTeams(teams: ApiTeam[]): SidebarTeam[] {
@@ -152,7 +153,7 @@ function toSidebarTeams(teams: ApiTeam[]): SidebarTeam[] {
           : members.filter(m => (m.campaignAccess || []).some(a => a.campaignId === tc.campaignId))
         return {
           id: tc.campaignId,
-          name: tc.campaign?.name || 'Untitled campaign',
+          name: tc.campaign?.name || msg("Untitled campaign"),
           openToTeam,
           // memberId is the team_members ROW id, which is what
           // /api/teams/members/remove addresses. The user id identifies a
@@ -211,7 +212,7 @@ function RecordingsFeed({ recordings, total, agents }: {
   const hidden = matching.length - shown.length
 
   const dur = (s: number) => {
-    if (s <= 0) return 'no answer'
+    if (s <= 0) return msg("no answer")
     const m = Math.floor(s / 60)
     return m > 0 ? `${m}m ${s % 60}s` : `${s}s`
   }
@@ -344,7 +345,7 @@ function StatTile({ label, value, sub, accent }: {
       <div style={{
         fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', color: MUTED,
         marginBottom: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-      }}>{label}</div>
+      }}>{tr(label)}</div>
       <div style={{ fontSize: 26, fontWeight: 700, color: TEXT, lineHeight: 1.1 }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: DIM, marginTop: 6 }}>{sub}</div>}
     </div>
@@ -385,7 +386,7 @@ function ChartCard({ title }: { title: string }) {
       <div style={{
         fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase',
         color: MUTED, marginBottom: 12,
-      }}>▾ {title}</div>
+      }}>▾ {tr(title)}</div>
       <div style={{ height: 200, display: 'grid', placeItems: 'center', color: DIM, fontSize: 12 }}>
         {tr("No data for this range")}</div>
     </div>
@@ -406,7 +407,7 @@ function ViewHeader({ title, onBack }: { title: string; onBack: () => void }) {
           color: TEXT, cursor: 'pointer', fontSize: 18, lineHeight: 1,
         }}
       >←</button>
-      <span style={{ fontSize: 22, fontWeight: 600, color: TEXT }}>{title}</span>
+      <span style={{ fontSize: 22, fontWeight: 600, color: TEXT }}>{tr(title)}</span>
     </div>
   )
 }
@@ -831,7 +832,7 @@ export default function TeamsPage() {
     try {
       const data = await fetch('/api/campaigns/list').then(r => r.json())
       const rows = (data.campaigns || []).map((c: any) => ({
-        id: c.id, name: c.name || 'Untitled campaign',
+        id: c.id, name: c.name || msg("Untitled campaign"),
       }))
       setMyCampaigns(rows)
     } catch {
@@ -860,12 +861,12 @@ export default function TeamsPage() {
   // The header names the scope in the same words the sidebar used to select
   // it. The sidebar and the panel must never disagree about where you are.
   const scopeLabel = useMemo(() => {
-    if (scope.kind === 'all') return 'ALL USERS'
-    if (scope.kind === 'requests') return 'REQUESTS'
+    if (scope.kind === 'all') return msg("ALL USERS")
+    if (scope.kind === 'requests') return msg("REQUESTS")
     const team = teams.find(t => t.id === (scope as any).teamId)
-    if (scope.kind === 'team') return (team?.name || 'Team').toUpperCase()
+    if (scope.kind === 'team') return (team?.name || msg("Team")).toUpperCase()
     const campaign = team?.campaigns.find(c => c.id === (scope as any).campaignId)
-    if (scope.kind === 'campaign') return (campaign?.name || 'Campaign').toUpperCase()
+    if (scope.kind === 'campaign') return (campaign?.name || msg("Campaign")).toUpperCase()
     // Three places may know this person's name, and only one of them is the
     // tree. Somebody opened from All Users has no campaign in scope, so the
     // tree lookup finds nothing and the header would read "AGENT" — the one
@@ -878,7 +879,7 @@ export default function TeamsPage() {
     const anywhere = teams
       .flatMap(t => t.campaigns.flatMap(c => c.agents))
       .find(x => x.id === wantedId)
-    return (anywhere?.name || 'Agent').toUpperCase()
+    return (anywhere?.name || msg("Agent")).toUpperCase()
   }, [scope, teams, roster])
 
   // One row per MEMBERSHIP, not per person. Somebody on two of your teams
@@ -991,12 +992,12 @@ export default function TeamsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ memberId, action }),
       }).then(x => x.json())
-      if (!r.success) throw new Error(r.error || 'Could not change the seat')
+      if (!r.success) throw new Error(r.error || msg("Could not change the seat"))
       setManageMember(null)
       void refresh(true)
       void loadRoster()
     } catch (e: any) {
-      setError(e.message || 'Could not change the seat')
+      setError(e.message || msg("Could not change the seat"))
     } finally {
       setManageBusy(false)
     }
@@ -1011,12 +1012,12 @@ export default function TeamsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ memberId }),
       }).then(x => x.json())
-      if (!r.success) throw new Error(r.error || 'Could not remove them')
+      if (!r.success) throw new Error(r.error || msg("Could not remove them"))
       setManageMember(null)
       void refresh(true)
       void loadRoster()
     } catch (e: any) {
-      setError(e.message || 'Could not remove them')
+      setError(e.message || msg("Could not remove them"))
     } finally {
       setManageBusy(false)
     }
@@ -1056,7 +1057,7 @@ export default function TeamsPage() {
         const c = (tc as any).campaign || tc
         const cid = (tc as any).campaignId || c?.id
         if (!cid) continue
-        out.push({ id: cid, name: c?.name || 'Campaign', team: t.name })
+        out.push({ id: cid, name: c?.name || msg("Campaign"), team: t.name })
       }
     }
     return out
@@ -1094,14 +1095,14 @@ export default function TeamsPage() {
         body: JSON.stringify(body),
       }).then(x => x.json())
 
-      if (!r.success) throw new Error(r.error || 'Rename failed')
+      if (!r.success) throw new Error(r.error || msg("Rename failed"))
       setRenaming(null)
       setRenameToken(t => t + 1)
       await refresh(true)
     } catch (e: any) {
       // Left open with the typed name still in it. Closing the dialog on
       // failure would throw away what they wrote and tell them nothing.
-      alert(e?.message || 'Could not rename that.')
+      alert(e?.message || tr("Could not rename that."))
     } finally {
       setRenameBusy(false)
     }
@@ -1128,16 +1129,16 @@ export default function TeamsPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data?.success) {
-        setAssignResult(data?.error || 'Could not add those people to that team.')
+        setAssignResult(data?.error || tr("Could not add those people to that team."))
       } else {
-        setAssignResult(data.summary || 'Done.')
+        setAssignResult(data.summary || tr("Done."))
         setSelectedMembers(new Set())
         setAddToTeamId('')
         void refresh()
         void loadRoster()
       }
     } catch (e: any) {
-      setAssignResult(e?.message || 'Something went wrong.')
+      setAssignResult(e?.message || tr("Something went wrong."))
     } finally {
       setAddingToTeam(false)
     }
@@ -1159,10 +1160,10 @@ export default function TeamsPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data?.success) {
-        setError(data?.error || 'Could not save that order.')
+        setError(data?.error || msg("Could not save that order."))
       }
     } catch {
-      setError('Could not save that order.')
+      setError(msg("Could not save that order."))
     } finally {
       // Either way. On success this is the order coming back from the server
       // rather than the client's guess at it; on failure it is what undoes
@@ -1253,20 +1254,20 @@ export default function TeamsPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data?.success) {
-        setAssignResult(data?.error || 'Could not add those members.')
+        setAssignResult(data?.error || tr("Could not add those members."))
       } else {
         const parts: string[] = []
         if (data.granted) parts.push(`${data.granted} added`)
         if (data.alreadyHad) parts.push(`${data.alreadyHad} already had access`)
         if (data.skipped?.length) parts.push(`${data.skipped.length} skipped`)
-        setAssignResult(parts.join(' · ') || 'Nothing to do.')
+        setAssignResult(parts.join(' · ') || tr("Nothing to do."))
         setSelectedMembers(new Set())
         setAssignTo('')
         void refresh()
         void loadRoster()
       }
     } catch (e: any) {
-      setAssignResult(e?.message || 'Something went wrong.')
+      setAssignResult(e?.message || tr("Something went wrong."))
     } finally {
       setAssigning(false)
     }
@@ -1322,7 +1323,7 @@ export default function TeamsPage() {
       }
       await refresh()
     } catch (e: any) {
-      setError(e.message || 'Could not update that request')
+      setError(e.message || msg("Could not update that request"))
     } finally {
       setBusy(false)
     }
@@ -1613,7 +1614,7 @@ export default function TeamsPage() {
                   fontSize: 11, letterSpacing: 1, textTransform: 'uppercase',
                   fontWeight: 600, fontFamily: 'inherit',
                 }}
-              >{r.label}</button>
+              >{tr(r.label)}</button>
             ))}
           </div>
         )}
@@ -1803,7 +1804,7 @@ export default function TeamsPage() {
                   setView('agent')
                 }}
                 searchPlaceholder="Search by name or email…"
-                emptyMessage={rosterSearch ? `Nobody matches “${rosterSearch}”.` : 'No members yet.'}
+                emptyMessage={rosterSearch ? `Nobody matches “${rosterSearch}”.` : msg("No members yet.")}
                 theme={{ panel: PANEL, hairline: HAIRLINE, text: TEXT, muted: MUTED, dim: DIM }}
                 actions={
                   roster.length > 0 ? (
@@ -1843,13 +1844,13 @@ export default function TeamsPage() {
                   },
                   {
                     key: 'name',
-                    header: 'Name',
+                    header: msg("Name"),
                     width: 220,
                     render: (r: any) => (
                       <span style={{ opacity: r.suspended ? 0.55 : 1 }}>
                         {r.name}
                         {r.realName && r.realName !== r.name && (
-                          <span style={{ display: 'block', fontSize: 11, color: DIM }}>{r.realName}</span>
+                          <span style={{ display: 'block', fontSize: 11, color: DIM }}>{tr(r.realName)}</span>
                         )}
                         {r.email && r.email !== r.name && (
                           <span style={{ display: 'block', fontSize: 11, color: DIM }}>{r.email}</span>
@@ -1859,7 +1860,7 @@ export default function TeamsPage() {
                   },
                   {
                     key: 'team',
-                    header: 'Team',
+                    header: msg("Team"),
                     width: 170,
                     // Every team, because this is the column that answers why
                     // somebody with two seats is one row. Listed rather than
@@ -1877,7 +1878,7 @@ export default function TeamsPage() {
                   },
                   {
                     key: 'seat',
-                    header: 'Seat',
+                    header: msg("Seat"),
                     width: 170,
                     // ── ONE LINE, BECAUSE ONE PERSON IS ONE SEAT ────────
                     // This printed a line per membership, so somebody on
@@ -1923,7 +1924,7 @@ export default function TeamsPage() {
                   },
                   {
                     key: 'campaigns',
-                    header: 'Campaigns',
+                    header: msg("Campaigns"),
                     numeric: true,
                     width: 110,
                     render: (r: any) => r.campaignCount || '-',
@@ -2183,8 +2184,8 @@ export default function TeamsPage() {
                         one person's name is the header contradicting the click
                         that got you here. */}
                     {scope.kind === 'all' || scope.kind === 'requests'
-                      ? (METRIC_VIEWS.find(m => m.key === metric)?.label || 'All Users').toUpperCase()
-                      : scopeLabel}
+                      ? (METRIC_VIEWS.find(m => m.key === metric)?.label || msg("All Users")).toUpperCase()
+                      : tr(scopeLabel)}
                     <span style={{ fontSize: 12, color: MUTED }}>▾</span>
                   </button>
                   {metricOpen && (
@@ -2210,11 +2211,11 @@ export default function TeamsPage() {
                               color: TEXT, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 500,
                             }}
                           >
-                            {mv.label}
+                            {tr(mv.label)}
                             <span style={{
                               fontSize: 11, fontWeight: 400,
                               color: metric === mv.key ? 'rgba(255,255,255,0.78)' : DIM,
-                            }}>{mv.hint}</span>
+                            }}>{tr(mv.hint)}</span>
                           </button>
                         ))}
                       </div>
@@ -2273,7 +2274,7 @@ export default function TeamsPage() {
                   value={statsLoading ? '-' : fmtDuration(stats?.tiles?.talkSecondsTotal)}
                   sub={stats?.tiles?.avgTalkSeconds
                     ? `avg ${fmtDuration(stats.tiles.avgTalkSeconds)} /call`
-                    : 'avg, /call'}
+                    : msg("avg, /call")}
                   accent="#2563eb"
                 />
                 <StatTile
@@ -2287,7 +2288,7 @@ export default function TeamsPage() {
                 <StatTile
                   label="Active Seats"
                   value={String(seatCountForDisplay || 0)}
-                  sub={seatTier?.percentOff > 0 ? `${seatTier.percentOff}% off weekly` : 'across your teams'}
+                  sub={seatTier?.percentOff > 0 ? `${seatTier.percentOff}% off weekly` : msg("across your teams")}
                   accent="#b45309"
                 />
               </div>
@@ -2342,10 +2343,10 @@ export default function TeamsPage() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ id: campaignId, status: nextStatus }),
                     }).then(x => x.json())
-                    if (!r.success) throw new Error(r.error || 'Could not change the campaign')
+                    if (!r.success) throw new Error(r.error || msg("Could not change the campaign"))
                     await refresh()
                   } catch (e: any) {
-                    setError(e.message || 'Could not change the campaign')
+                    setError(e.message || msg("Could not change the campaign"))
                   } finally { setBusy(false) }
                 }}
                 onNewCode={(id, campaignId) => {
@@ -2361,10 +2362,10 @@ export default function TeamsPage() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ codeId }),
                     }).then(x => x.json())
-                    if (!r.success) throw new Error(r.error || 'Could not regenerate')
+                    if (!r.success) throw new Error(r.error || msg("Could not regenerate"))
                     await refresh()
                   } catch (e: any) {
-                    setError(e.message || 'Could not regenerate code')
+                    setError(e.message || msg("Could not regenerate code"))
                   } finally { setBusy(false) }
                 }}
               />
@@ -2388,7 +2389,7 @@ export default function TeamsPage() {
       {manageMember && (
         <ManageMemberModal
           member={manageMember}
-          teamName={manageMember.teamName || 'this team'}
+          teamName={manageMember.teamName || msg("this team")}
           busy={manageBusy}
           onClose={() => setManageMember(null)}
           onSeatAction={seatAction}
@@ -2493,7 +2494,7 @@ export default function TeamsPage() {
               }).then(x => x.json())
 
               if (!r.success) {
-                setJoinMessage({ kind: 'error', text: r.error || 'That code did not work.' })
+                setJoinMessage({ kind: 'error', text: r.error || msg("That code did not work.") })
                 return
               }
 
@@ -2505,7 +2506,7 @@ export default function TeamsPage() {
               // The endpoint reports pending on the member row, not at the top
               // level. A code that needs approval has not granted anything yet,
               // and saying "joined" would be a lie the agent discovers later.
-              const teamName = r.team?.name || 'the team'
+              const teamName = r.team?.name || msg("the team")
               const isPending = r.member?.status === 'pending'
               const grants = Number(r.newAccessGrants || 0)
 
@@ -2518,7 +2519,7 @@ export default function TeamsPage() {
                     : `Joined ${teamName}.`,
               })
             } catch {
-              setJoinMessage({ kind: 'error', text: 'Could not reach the server. Try again.' })
+              setJoinMessage({ kind: 'error', text: msg("Could not reach the server. Try again.") })
             } finally {
               setJoining(false)
             }
@@ -2539,11 +2540,11 @@ export default function TeamsPage() {
                 body: JSON.stringify({ name, description }),
               })
               const data = await res.json()
-              if (!data.success) throw new Error(data.error || 'Could not create team')
+              if (!data.success) throw new Error(data.error || msg("Could not create team"))
               setShowTeamModal(false)
               await refresh()
             } catch (e: any) {
-              setError(e.message || 'Could not create team')
+              setError(e.message || msg("Could not create team"))
             } finally {
               setBusy(false)
             }
@@ -2578,7 +2579,7 @@ export default function TeamsPage() {
                   }),
                 }).then(r => r.json())
                 if (!created.success || !created.campaign?.id) {
-                  throw new Error(created.error || 'Could not create campaign')
+                  throw new Error(created.error || msg("Could not create campaign"))
                 }
                 campaignId = created.campaign.id
               }
@@ -2589,14 +2590,14 @@ export default function TeamsPage() {
                 body: JSON.stringify({ teamId, campaignId, accessMode }),
               }).then(r => r.json())
               if (!attached.success) {
-                throw new Error(attached.error || 'Could not add the campaign to this team')
+                throw new Error(attached.error || msg("Could not add the campaign to this team"))
               }
 
               setShowCampaignModal(false)
               await refresh()
               await loadMyCampaigns()
             } catch (e: any) {
-              setError(e.message || 'Could not create campaign')
+              setError(e.message || msg("Could not create campaign"))
             } finally {
               setBusy(false)
             }
@@ -2607,7 +2608,7 @@ export default function TeamsPage() {
       {showCodeModal && codeTeamId && (
         <CreateCodeModal
           busy={busy}
-          teamName={teams.find(t => t.id === codeTeamId)?.name || 'this team'}
+          teamName={teams.find(t => t.id === codeTeamId)?.name || msg("this team")}
           defaultCampaignId={codeCampaignId}
           campaigns={(teams.find(t => t.id === codeTeamId)?.campaigns || [])
             .map(c => ({ id: c.id, name: c.name }))}
@@ -2628,11 +2629,11 @@ export default function TeamsPage() {
                   singleUse: maxUses === 1,
                 }),
               }).then(x => x.json())
-              if (!r.success) throw new Error(r.error || 'Could not create code')
+              if (!r.success) throw new Error(r.error || msg("Could not create code"))
               setShowCodeModal(false)
               await refresh()
             } catch (e: any) {
-              setError(e.message || 'Could not create code')
+              setError(e.message || msg("Could not create code"))
             } finally { setBusy(false) }
           }}
         />
@@ -2655,7 +2656,7 @@ export default function TeamsPage() {
             padding: '11px 15px', borderRadius: 5, fontSize: 13, maxWidth: 380,
             boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
           }}
-        >{error}</div>
+        >{tr(error)}</div>
       )}
     </div>
   )

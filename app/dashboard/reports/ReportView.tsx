@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { t as tr } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 // ─────────────────────────────────────────────────────────────────────────
 // THE STATEMENT
@@ -59,7 +60,7 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
       padding: '7px 0', borderBottom: `1px solid ${RULE}`,
       fontSize: 13,
     }}>
-      <span style={{ color: SOFT }}>{label}</span>
+      <span style={{ color: SOFT }}>{tr(label)}</span>
       <span style={{ color: INK, fontWeight: strong ? 700 : 500, textAlign: 'right' }}>{value}</span>
     </div>
   )
@@ -90,14 +91,14 @@ export default function ReportView({ period }: { period: string }) {
     try {
       const r = await fetch(`/api/reports/seat-report?period=${encodeURIComponent(period)}`)
         .then(x => x.json())
-      if (!r.success) throw new Error(r.error || 'Could not build this statement')
+      if (!r.success) throw new Error(r.error || msg("Could not build this statement"))
       setData(r)
       setLegalName(r.account?.legalName || '')
       setAddress(r.account?.address || '')
       setReference(r.account?.reference || '')
       setError(null)
     } catch (e: any) {
-      setError(e.message || 'Could not build this statement')
+      setError(e.message || msg("Could not build this statement"))
     } finally {
       setLoading(false)
     }
@@ -114,10 +115,10 @@ export default function ReportView({ period }: { period: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ legalName, address, reference }),
       }).then(x => x.json())
-      if (!r.success) throw new Error(r.error || 'Could not save')
+      if (!r.success) throw new Error(r.error || msg("Could not save"))
       await load()
     } catch (e: any) {
-      setIdError(e.message || 'Could not save')
+      setIdError(e.message || tr("Could not save"))
     } finally {
       setSavingId(false)
     }
@@ -127,7 +128,7 @@ export default function ReportView({ period }: { period: string }) {
     return <div style={{ padding: 40, color: SOFT, fontSize: 14 }}>{tr("Building statement…")}</div>
   }
   if (error || !data) {
-    return <div style={{ padding: 40, color: '#c0392b', fontSize: 14 }}>{error}</div>
+    return <div style={{ padding: 40, color: '#c0392b', fontSize: 14 }}>{tr(error)}</div>
   }
 
   const b = data.billing
@@ -190,7 +191,7 @@ export default function ReportView({ period }: { period: string }) {
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
         position: 'sticky', top: 0, background: '#fff', zIndex: 10,
       }}>
-        <strong style={{ fontSize: 14 }}>{data.periodLabel} {tr("statement")}</strong>
+        <strong style={{ fontSize: 14 }}>{tr(data.periodLabel)} {tr("statement")}</strong>
         <div style={{ flex: 1 }} />
         <button
           onClick={() => window.print()}
@@ -237,7 +238,7 @@ export default function ReportView({ period }: { period: string }) {
             <div style={{ fontSize: 11, color: SOFT }}>
               {tr("Do not enter an EIN or SSN. DialerSeat does not store tax identifiers, and this statement does not need one to be valid.")}</div>
             {idError && (
-              <div style={{ fontSize: 12, color: '#c0392b' }}>{idError}</div>
+              <div style={{ fontSize: 12, color: '#c0392b' }}>{tr(idError)}</div>
             )}
             <div>
               <button
@@ -271,7 +272,7 @@ export default function ReportView({ period }: { period: string }) {
           </div>
           <div className="hdr-right" style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 19, fontWeight: 700 }}>{tr("Billing Statement")}</div>
-            <div style={{ fontSize: 13, color: SOFT, marginTop: 3 }}>{data.periodLabel}</div>
+            <div style={{ fontSize: 13, color: SOFT, marginTop: 3 }}>{tr(data.periodLabel)}</div>
             <div style={{ fontSize: 11, color: SOFT, marginTop: 8 }}>
               {tr("Issued")}{" "}{shortDate(data.generatedAt)}
             </div>
@@ -330,12 +331,12 @@ export default function ReportView({ period }: { period: string }) {
 
         {b.discountCents === 0 && data.tier?.percentOff > 0 && (
           <div style={{ fontSize: 11.5, color: SOFT, marginTop: 8, lineHeight: 1.6 }}>
-            {tr("This account currently qualifies for a")}{" "}{data.tier.percentOff}{tr("% volume discount (")}{data.tier.label} {tr("tier,")}{" "}{data.tier.activeSeats} {tr("active seats). No discount was applied to the charges in this period.")}</div>
+            {tr("This account currently qualifies for a")}{" "}{data.tier.percentOff}{tr("% volume discount (")}{tr(data.tier.label)} {tr("tier,")}{" "}{data.tier.activeSeats} {tr("active seats). No discount was applied to the charges in this period.")}</div>
         )}
 
         {prev && (
           <>
-            <H>{tr("Compared with")}{" "}{prev.label}</H>
+            <H>{tr("Compared with")}{" "}{tr(prev.label)}</H>
             <div className="keep">
               <Row
                 label="Spend"
@@ -380,7 +381,7 @@ export default function ReportView({ period }: { period: string }) {
                     <td>{li.teamName}</td>
                     <td>{shortDate(li.serviceStart)}, {shortDate(li.serviceEnd)}</td>
                     <td style={{ textTransform: 'capitalize' }}>
-                      {li.status}
+                      {tr(li.status)}
                       {!li.reconciled && li.status === 'paid' && (
                         <span style={{ color: SOFT }}> *</span>
                       )}
@@ -481,10 +482,10 @@ export default function ReportView({ period }: { period: string }) {
               value={
                 data.paymentMethods.length > 0
                   ? `${data.paymentMethods[0].brand.toUpperCase()} ending ${data.paymentMethods[0].last4}`
-                  : 'See charge table'
+                  : msg("See charge table")
               }
             />
-            <Row label="Date incurred" value={`Each charge dated in the table above`} />
+            <Row label="Date incurred" value={msg("Each charge dated in the table above")} />
             <Row label="Description" value="Per-seat software subscription" />
           </div>
           <p style={{ margin: '0 0 10px' }}>
@@ -505,7 +506,7 @@ export default function ReportView({ period }: { period: string }) {
           justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
         }}>
           <span>{tr("DialerSeat ·")}{" "}{data.supplier.site}</span>
-          <span>{data.periodLabel} {tr("· issued")}{" "}{shortDate(data.generatedAt)}</span>
+          <span>{tr(data.periodLabel)} {tr("· issued")}{" "}{shortDate(data.generatedAt)}</span>
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 const SLUG = '3cx'
 
@@ -37,24 +38,24 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: 'Is DialerSeat a replacement for 3CX?',
+    question: msg("Is DialerSeat a replacement for 3CX?"),
     answer:
-      'Not necessarily. 3CX is a general business PBX, extensions, ring groups, video conferencing, licensed by simultaneous call capacity. DialerSeat is purpose-built for outbound sales campaigns: lead lists, dispositions, a predictive dialer, and TCPA compliance. Many teams run 3CX for company-wide phone infrastructure and DialerSeat specifically for the sales floor\u2019s outbound dialing.',
+      msg("Not necessarily. 3CX is a general business PBX, extensions, ring groups, video conferencing, licensed by simultaneous call capacity. DialerSeat is purpose-built for outbound sales campaigns: lead lists, dispositions, a predictive dialer, and TCPA compliance. Many teams run 3CX for company-wide phone infrastructure and DialerSeat specifically for the sales floor’s outbound dialing."),
   },
   {
-    question: 'How is DialerSeat priced compared to 3CX?',
+    question: msg("How is DialerSeat priced compared to 3CX?"),
     answer:
-      'DialerSeat is $35 per seat per week, billed weekly, with carrier lines, hosting, and support included. 3CX licenses per system per year based on simultaneous call (SC) capacity rather than per seat, and typically requires separate SIP trunk, hosting, and support costs on top of the license itself.',
+      msg("DialerSeat is $35 per seat per week, billed weekly, with carrier lines, hosting, and support included. 3CX licenses per system per year based on simultaneous call (SC) capacity rather than per seat, and typically requires separate SIP trunk, hosting, and support costs on top of the license itself."),
   },
   {
-    question: 'Does 3CX have a predictive dialer for sales campaigns?',
+    question: msg("Does 3CX have a predictive dialer for sales campaigns?"),
     answer:
-      '3CX is built around general business call routing, queues, ring groups, IVR, not a dialer purpose-built for cold outbound sales campaigns. It has no lead list management, no disposition tracking, and no answering-machine detection. DialerSeat includes preview, power, progressive, and multi-line predictive dialing modes built specifically for outbound sales.',
+      msg("3CX is built around general business call routing, queues, ring groups, IVR, not a dialer purpose-built for cold outbound sales campaigns. It has no lead list management, no disposition tracking, and no answering-machine detection. DialerSeat includes preview, power, progressive, and multi-line predictive dialing modes built specifically for outbound sales."),
   },
   {
-    question: 'Does DialerSeat require capacity planning like 3CX\u2019s simultaneous call licensing?',
+    question: msg("Does DialerSeat require capacity planning like 3CX’s simultaneous call licensing?"),
     answer:
-      'No. DialerSeat is priced per seat, not per simultaneous call capacity, so there\u2019s no need to estimate concurrent call volume ahead of time or size a license tier. Sign up, add seats as needed, and start dialing.',
+      msg("No. DialerSeat is priced per seat, not per simultaneous call capacity, so there’s no need to estimate concurrent call volume ahead of time or size a license tier. Sign up, add seats as needed, and start dialing."),
   },
 ]
 
@@ -69,9 +70,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs 3CX', url: '/vs/3cx' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs 3CX"), url: '/vs/3cx' },
         ])}
       />
       <VsCompetitorView c={competitor} />

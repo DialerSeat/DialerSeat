@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useBranding } from '@/components/ThemeProvider'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 
 
@@ -125,7 +126,7 @@ export default function SignInPage() {
           
           <div style={{ marginTop: 40 }}>
             <CoBrandOnDark
-              brandName={branding?.brand_name || 'Brand'}
+              brandName={branding?.brand_name || msg("Brand")}
               linkLabel={loginLinkLabel}
               linkText={loginLinkText}
               linkUrl={loginLinkUrl}
@@ -331,7 +332,7 @@ function CoBrandOnDark({
             <div style={{
               fontSize: 9, letterSpacing: 2, fontWeight: 700, textTransform: 'uppercase',
               color: 'var(--brand-on-sidebar-muted)', fontFamily: FUTURA,
-            }}>{linkLabel}</div>
+            }}>{t(linkLabel)}</div>
           ) : null}
           <a
             href={linkUrl!}
@@ -345,7 +346,7 @@ function CoBrandOnDark({
               fontFamily: FUTURA,
             }}
           >
-            {linkText}
+            {t(linkText)}
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={primary}
               strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden
               style={{ marginLeft: 5, flexShrink: 0, transform: 'translateY(0.5px)' }}>

@@ -295,13 +295,13 @@ const ModeCard = ({ label, slug, color, body, bestFor }: {
       letterSpacing: 4,
       color,
       margin: '0 0 10px 0',
-    }}>{label}</h3>
+    }}>{t(label)}</h3>
     <p style={{
       fontSize: 14,
       lineHeight: 1.7,
       color: T.text,
       margin: '0 0 10px 0',
-    }}>{body}</p>
+    }}>{t(body)}</p>
     <p style={{
       fontSize: 13,
       lineHeight: 1.6,
@@ -320,7 +320,7 @@ const ModeCard = ({ label, slug, color, body, bestFor }: {
         textDecoration: 'none',
       }}
     >
-      {t("READ THE FULL")}{" "}{label} {t("DEEP DIVE →")}</Link>
+      {t("READ THE FULL")}{" "}{t(label)} {t("DEEP DIVE →")}</Link>
   </div>
 )
 

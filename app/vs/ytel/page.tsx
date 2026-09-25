@@ -10,6 +10,7 @@ import {
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+import { msg } from '@/lib/i18n/msg'
 
 const SLUG = 'ytel'
 
@@ -35,19 +36,19 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    question: "What does Ytel cost?",
+    question: msg("What does Ytel cost?"),
     answer:
-      "A Contact Centre Seat is around $99 per month, with the Engagement Platform around $399 and Trust Center around $499. Seats are priced per agent on top of a platform fee, which means a small team pays a disproportionate share of fixed cost.",
+      msg("A Contact Centre Seat is around $99 per month, with the Engagement Platform around $399 and Trust Center around $499. Seats are priced per agent on top of a platform fee, which means a small team pays a disproportionate share of fixed cost."),
   },
   {
-    question: "Does Ytel offer APIs?",
+    question: msg("Does Ytel offer APIs?"),
     answer:
-      "Yes, and it is a real differentiator. Ytel provides communications APIs alongside the dialer, so if you are building your own tooling on top of voice and SMS it is a genuinely different proposition from a finished dialer.",
+      msg("Yes, and it is a real differentiator. Ytel provides communications APIs alongside the dialer, so if you are building your own tooling on top of voice and SMS it is a genuinely different proposition from a finished dialer."),
   },
   {
-    question: "Who is DialerSeat better for?",
+    question: msg("Who is DialerSeat better for?"),
     answer:
-      "Teams under about twenty agents who want to dial rather than build. There is no platform fee, no minimum, and every dialer mode is included at $35 per seat per week.",
+      msg("Teams under about twenty agents who want to dial rather than build. There is no platform fee, no minimum, and every dialer mode is included at $35 per seat per week."),
   },
 ]
 
@@ -62,9 +63,9 @@ export default function Page() {
       <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Comparisons', url: '/vs' },
-          { name: 'DialerSeat vs Ytel', url: '/vs/ytel' },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Comparisons"), url: '/vs' },
+          { name: msg("DialerSeat vs Ytel"), url: '/vs/ytel' },
         ])}
       />
       <VsCompetitorView c={competitor} />
