@@ -13,7 +13,7 @@ import {
   matchupSlug,
   type Competitor,
 } from '@/lib/competitors'
-import { primeLocale, t } from '@/lib/i18n/server'
+import { getT, primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 
@@ -89,11 +89,14 @@ async function matchupMetadata(
   const m = resolveMatchup(matchup)
   if (!m) return {}
 
-  const title = t("{a} vs {b}: Pricing, Dialing Modes, and Who Each One Suits", { a: m.a.name, b: m.b.name })
-  const description = t("An honest side-by-side of {a} and {b}: what each costs, which dialing modes you actually get, the pros and cons of each, and which buyer each suits.", { a: m.a.name, b: m.b.name })
+  // getT, not t: metadata runs outside the page render, where the request's
+  // language has not been primed for the synchronous t().
+  const tm = await getT()
+  const title = tm(msg("{a} vs {b}: Pricing, Dialing Modes, and Who Each One Suits"), { a: m.a.name, b: m.b.name })
+  const description = tm(msg("An honest side-by-side of {a} and {b}: what each costs, which dialing modes you actually get, the pros and cons of each, and which buyer each suits."), { a: m.a.name, b: m.b.name })
 
   return {
-    title: t("{title} | DialerSeat", { title }),
+    title: tm(msg("{title} | DialerSeat"), { title }),
     description,
     // Both names, in the forms people search a two-way decision. See lib/vsSeo
     // for why the headings and structured data matter more than this tag.
