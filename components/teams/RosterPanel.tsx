@@ -1,5 +1,6 @@
 'use client'
 
+import { t } from '@/lib/i18n/client'
 interface TeamUser {
   email: string | null
   first_name: string | null
@@ -112,7 +113,7 @@ export default function RosterPanel({
       {pendingMembers.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: T.amber, marginBottom: 10 }}>
-            ▸ PENDING REQUESTS ({pendingMembers.length})
+            {t("▸ PENDING REQUESTS (")}{pendingMembers.length})
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {pendingMembers.map(m => {
@@ -127,19 +128,18 @@ export default function RosterPanel({
                   <div style={{ flex: '1 1 200px', minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 'bold' }}>{name}</div>
                     <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>
-                      via {m.joined_via_code || 'unknown'} · {fmtDate(m.created_at)}
+                      {t("via")}{" "}{m.joined_via_code || t("unknown")} · {fmtDate(m.created_at)}
                       {isOwnerPays && (
                         <span style={{ color: T.amber, fontWeight: 'bold' }}>
-                          {' · '}accepting charges you {fmtMoney(seatCents)}/wk
-                        </span>
+                          {' · '}{t("accepting charges you")}{" "}{fmtMoney(seatCents)}{t("/wk")}</span>
                       )}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={() => onAccept(m)} disabled={busy} style={primaryBtnStyle(busy)}>
-                      {busy ? '…' : 'ACCEPT'}
+                      {busy ? '…' : t("ACCEPT")}
                     </button>
-                    <button onClick={() => onReject(m)} disabled={busy} style={dangerBtnStyle(busy)}>REJECT</button>
+                    <button onClick={() => onReject(m)} disabled={busy} style={dangerBtnStyle(busy)}>{t("REJECT")}</button>
                   </div>
                 </div>
               )
@@ -149,12 +149,11 @@ export default function RosterPanel({
       )}
 
       <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: T.muted, marginBottom: 10 }}>
-        ▸ ROSTER ({activeMembers.length})
+        {t("▸ ROSTER (")}{activeMembers.length})
       </div>
       {activeMembers.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '32px 16px', color: T.muted, fontSize: 13, border: `1px dashed ${T.border}`, borderRadius: 6 }}>
-          No active members yet. Share a seat link to get someone dialing.
-        </div>
+          {t("No active members yet. Share a seat link to get someone dialing.")}</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {activeMembers.map(m => {
@@ -170,23 +169,23 @@ export default function RosterPanel({
                   <div style={{ flex: '1 1 200px', minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       {name}
-                      {!hasAccess && <Badge color={T.amber}>NO ACCESS</Badge>}
+                      {!hasAccess && <Badge color={T.amber}>{t("NO ACCESS")}</Badge>}
                     </div>
                     <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>
-                      joined {fmtDate(m.accepted_at || m.created_at)}
+                      {t("joined")}{" "}{fmtDate(m.accepted_at || m.created_at)}
                       {m.joined_via_code && ` · via ${m.joined_via_code}`}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {!hasAccess && teamCampaigns.length > 0 && (
                       <button onClick={() => onReinstate(m)} disabled={busy} style={primaryBtnStyle(busy)}>
-                        {busy ? '…' : '↻ REINSTATE'}
+                        {busy ? '…' : t("↻ REINSTATE")}
                       </button>
                     )}
                     {hasAccess && canAddMore && (
-                      <button onClick={() => onAddCampaign(m)} style={subtleBtnStyle(false, T.primary)}>+ ADD CAMPAIGN</button>
+                      <button onClick={() => onAddCampaign(m)} style={subtleBtnStyle(false, T.primary)}>{t("+ ADD CAMPAIGN")}</button>
                     )}
-                    <button onClick={() => onKick(m)} disabled={busy} style={subtleBtnStyle(busy, T.red)}>KICK</button>
+                    <button onClick={() => onKick(m)} disabled={busy} style={subtleBtnStyle(busy, T.red)}>{t("KICK")}</button>
                   </div>
                 </div>
 
@@ -203,7 +202,7 @@ export default function RosterPanel({
                         }}>
                           <span style={{ flex: '1 1 120px', minWidth: 0, fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cName}</span>
                           <Badge color={payerColor}>{payerLabel}</Badge>
-                          <button onClick={() => onRevokeAccess(m, a, cName)} style={subtleBtnStyle(false, T.red)}>REVOKE</button>
+                          <button onClick={() => onRevokeAccess(m, a, cName)} style={subtleBtnStyle(false, T.red)}>{t("REVOKE")}</button>
                         </div>
                       )
                     })}

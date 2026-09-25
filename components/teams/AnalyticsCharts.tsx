@@ -6,6 +6,7 @@ import {
   CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 import { DISPOSITION_COLORS, renderDispositionLabels } from '@/components/analytics/dispositionPie'
+import { t as tr } from '@/lib/i18n/client'
 
 // ── COLOURS COME FROM THE TENANT, VIA STYLE NOT ATTRIBUTES ───────────────
 // The rest of the teams area reads --brand-* variables. These charts could
@@ -70,8 +71,7 @@ function Card({ title, subtitle, children }: {
 function Empty() {
   return (
     <div style={{ height: 200, display: 'grid', placeItems: 'center', color: DIM, fontSize: 12 }}>
-      No calls in this range
-    </div>
+      {tr("No calls in this range")}</div>
   )
 }
 
@@ -240,7 +240,7 @@ export function BarList({ points, total, colorByIndex = false }: {
 
 export function VolumeChart({ points }: { points: Point[] }) {
   return (
-    <Card title="Call Volume Over Time">
+    <Card title={tr("Call Volume Over Time")}>
       <LineChart points={points} />
     </Card>
   )
@@ -248,7 +248,7 @@ export function VolumeChart({ points }: { points: Point[] }) {
 
 export function ConversionChart({ points }: { points: Point[] }) {
   return (
-    <Card title="Conversion Rate Over Time">
+    <Card title={tr("Conversion Rate Over Time")}>
       <LineChart points={points} unit="%" color={SERIES[1]} />
     </Card>
   )
@@ -270,7 +270,7 @@ export interface DispositionSlice {
  */
 export function DispositionChart({ points }: { points: DispositionSlice[] }) {
   return (
-    <Card title="Disposition Breakdown">
+    <Card title={tr("Disposition Breakdown")}>
       {points.length === 0 ? <Empty /> : (
         <ResponsiveContainer width="100%" height={240}>
           <PieChart>
@@ -324,7 +324,7 @@ export interface CampaignBar {
  */
 export function CampaignChart({ points }: { points: CampaignBar[] }) {
   return (
-    <Card title="Campaign Performance">
+    <Card title={tr("Campaign Performance")}>
       {points.length === 0 ? <Empty /> : (
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={points} layout="horizontal">

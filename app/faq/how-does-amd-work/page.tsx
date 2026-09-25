@@ -9,6 +9,7 @@ import ExplainerStyles from '@/components/ExplainerStyles'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -32,7 +33,8 @@ export const metadata: Metadata = {
   },
 }
 
-export default function Page() {
+export default async function Page() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={breadcrumbSchema([
@@ -47,189 +49,106 @@ export default function Page() {
         <ExplainerStyles accent="#2a4a8a" accentBg="#e8eef8" />
 
         <section className="exp-hero">
-          <div className="exp-hero-inner">            <div className="exp-eyebrow">EXPLAINER · AMD</div>
-            <span style={{ fontSize: 11, color: "#8888aa", letterSpacing: "2px", display: "block", marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
-            <h1>How does AMD work?</h1>
+          <div className="exp-hero-inner">            <div className="exp-eyebrow">{t("EXPLAINER · AMD")}</div>
+            <span style={{ fontSize: 11, color: "#8888aa", letterSpacing: "2px", display: "block", marginBottom: 16 }}>{t("LAST UPDATED 07/28/2026")}</span>
+            <h1>{t("How does AMD work?")}</h1>
             <p className="exp-lead">
-              Answering Machine Detection listens to a phone pickup and
-              decides whether you&apos;re about to talk to a human or a
-              voicemail. When it works well, it doubles your real talk
-              time per hour.
-            </p>
+              {t("Answering Machine Detection listens to a phone pickup and decides whether you're about to talk to a human or a voicemail. When it works well, it doubles your real talk time per hour.")}</p>
           </div>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ THE SHORT VERSION</div>
-          <h2>It listens for about a second and a half.</h2>
+          <div className="exp-section-label">{t("▸ THE SHORT VERSION")}</div>
+          <h2>{t("It listens for about a second and a half.")}</h2>
           <p>
-            When an outbound call connects, AMD does <em>not</em> connect
-            you to the line immediately. Instead, the system holds the
-            audio for roughly 1-2 seconds and analyzes what comes through.
-            Humans tend to answer with a quick &quot;hello?&quot; usually
-            under 1.5 seconds of audio, with a clear pause afterward
-            waiting for a response.
-          </p>
+            {t("When an outbound call connects, AMD does")}{" "}<em>{t("not")}</em> {t("connect you to the line immediately. Instead, the system holds the audio for roughly 1-2 seconds and analyzes what comes through. Humans tend to answer with a quick \"hello?\" usually under 1.5 seconds of audio, with a clear pause afterward waiting for a response.")}</p>
           <p>
-            Voicemail greetings sound different. They&apos;re longer,
-            usually 4-15 seconds, run as a continuous monologue, and end
-            with a beep. AMD looks at the duration of the initial speech,
-            the pauses, the frequency profile, and (in modern systems)
-            machine-learned signatures of common voicemail-greeting
-            patterns. When the math says &quot;machine,&quot; the call
-            drops before you ever pick up.
-          </p>
+            {t("Voicemail greetings sound different. They're longer, usually 4-15 seconds, run as a continuous monologue, and end with a beep. AMD looks at the duration of the initial speech, the pauses, the frequency profile, and (in modern systems) machine-learned signatures of common voicemail-greeting patterns. When the math says \"machine,\" the call drops before you ever pick up.")}</p>
         </section>
 
         <section className="exp-section alt">
           <div className="inner">
-            <div className="exp-section-label">▸ COMMON QUESTIONS</div>
-            <h2>The stuff people ask about AMD.</h2>
+            <div className="exp-section-label">{t("▸ COMMON QUESTIONS")}</div>
+            <h2>{t("The stuff people ask about AMD.")}</h2>
 
             <div className="exp-qa">
               <details>
-                <summary>How accurate is AMD?</summary>
+                <summary>{t("How accurate is AMD?")}</summary>
                 <div className="answer">
                   <p>
-                    Modern AMD on a clean carrier path is around 90-95%
-                    accurate. The remaining 5-10% splits between two kinds
-                    of error: <strong>false positives</strong> (AMD thinks
-                    a human is a voicemail and drops the call you wanted)
-                    and <strong>false negatives</strong> (AMD thinks a
-                    voicemail is a human and connects you to the
-                    greeting).
-                  </p>
+                    {t("Modern AMD on a clean carrier path is around 90-95% accurate. The remaining 5-10% splits between two kinds of error:")}{" "}<strong>{t("false positives")}</strong> {t("(AMD thinks a human is a voicemail and drops the call you wanted) and")}{" "}<strong>{t("false negatives")}</strong> {t("(AMD thinks a voicemail is a human and connects you to the greeting).")}</p>
                   <p>
-                    False positives are the painful ones, you just missed
-                    a connect. False negatives are mildly annoying but
-                    survivable; you hang up and the queue advances.
-                  </p>
+                    {t("False positives are the painful ones, you just missed a connect. False negatives are mildly annoying but survivable; you hang up and the queue advances.")}</p>
                 </div>
               </details>
 
               <details>
-                <summary>Doesn&apos;t the &quot;hello? ... hello?&quot; delay annoy people?</summary>
+                <summary>{t("Doesn't the \"hello? ... hello?\" delay annoy people?")}</summary>
                 <div className="answer">
                   <p>
-                    Yes, sometimes. There&apos;s a noticeable beat between
-                    when the human says &quot;hello&quot; and when the
-                    agent comes on the line, that&apos;s AMD doing its
-                    work. On lower-quality carrier paths it can be 2+
-                    seconds, which is enough to make people hang up.
-                  </p>
+                    {t("Yes, sometimes. There's a noticeable beat between when the human says \"hello\" and when the agent comes on the line, that's AMD doing its work. On lower-quality carrier paths it can be 2+ seconds, which is enough to make people hang up.")}</p>
                   <p>
-                    On DialerSeat, AMD runs through Telnyx&apos;s native
-                    call detection, tuned for speed so the analysis window
-                    stays short. That&apos;s short enough that most humans
-                    wait, but it&apos;s never going to be zero. It&apos;s a
-                    trade-off.
-                  </p>
+                    {t("On DialerSeat, AMD runs through Telnyx's native call detection, tuned for speed so the analysis window stays short. That's short enough that most humans wait, but it's never going to be zero. It's a trade-off.")}</p>
                 </div>
               </details>
 
               <details>
-                <summary>How does DialerSeat&apos;s AMD work specifically?</summary>
+                <summary>{t("How does DialerSeat's AMD work specifically?")}</summary>
                 <div className="answer">
                   <p>
-                    We use Telnyx&apos;s native call-detection engine,
-                    built on top of their carrier-grade telephony
-                    infrastructure. It classifies every pickup as{' '}
-                    <code>human</code>, <code>machine</code>, or{' '}
-                    <code>not_sure</code>. Anything classified as
-                    <code> machine</code> drops server-side, silently and
-                    instantly, before your screen ever lights up, no
-                    disposition prompt, the dialer just moves on to the
-                    next lead. A <code>not_sure</code> result is treated
-                    the same as a human pickup, so a call never gets stuck
-                    waiting on an ambiguous read.
-                  </p>
+                    {t("We use Telnyx's native call-detection engine, built on top of their carrier-grade telephony infrastructure. It classifies every pickup as")}{' '}
+                    <code>human</code>, <code>machine</code>{t(", or")}{' '}
+                    <code>not_sure</code>{t(". Anything classified as")}<code> machine</code> {t("drops server-side, silently and instantly, before your screen ever lights up, no disposition prompt, the dialer just moves on to the next lead. A")}{" "}<code>not_sure</code> {t("result is treated the same as a human pickup, so a call never gets stuck waiting on an ambiguous read.")}</p>
                   <p>
-                    Every AMD result is stored on the call record, so you
-                    can audit AMD accuracy on your own campaigns later by
-                    pulling the analytics.
-                  </p>
+                    {t("Every AMD result is stored on the call record, so you can audit AMD accuracy on your own campaigns later by pulling the analytics.")}</p>
                 </div>
               </details>
 
               <details>
-                <summary>When does AMD actually fire on DialerSeat?</summary>
+                <summary>{t("When does AMD actually fire on DialerSeat?")}</summary>
                 <div className="answer">
                   <p>
-                    By default: progressive and predictive modes get AMD
-                    on automatically. Power and preview don&apos;t, in
-                    those modes you&apos;re expected to deal with
-                    voicemails yourself (and many agents prefer that
-                    because they want to leave a voicemail).
-                  </p>
+                    {t("By default: progressive and predictive modes get AMD on automatically. Power and preview don't, in those modes you're expected to deal with voicemails yourself (and many agents prefer that because they want to leave a voicemail).")}</p>
                   <p>
-                    You can override the default per-campaign in campaign
-                    settings if you want AMD on for power mode or off for
-                    progressive.
-                  </p>
+                    {t("You can override the default per-campaign in campaign settings if you want AMD on for power mode or off for progressive.")}</p>
                 </div>
               </details>
 
               <details>
-                <summary>What happens to calls that AMD drops?</summary>
+                <summary>{t("What happens to calls that AMD drops?")}</summary>
                 <div className="answer">
                   <p>
-                    They get logged with a disposition of <code>NO_ANSWER_AMD</code>
-                    and the queue advances to the next lead automatically.
-                    Your agent never sees them, that&apos;s the whole
-                    point.
-                  </p>
+                    {t("They get logged with a disposition of")}{" "}<code>NO_ANSWER_AMD</code>
+                    {t("and the queue advances to the next lead automatically. Your agent never sees them, that's the whole point.")}</p>
                   <p>
-                    The lead doesn&apos;t get permanently removed from
-                    your list, AMD-dropped calls are typically retried
-                    later based on your campaign&apos;s retry rules.
-                  </p>
+                    {t("The lead doesn't get permanently removed from your list, AMD-dropped calls are typically retried later based on your campaign's retry rules.")}</p>
                 </div>
               </details>
 
               <details>
-                <summary>Can I see why a specific call was dropped?</summary>
+                <summary>{t("Can I see why a specific call was dropped?")}</summary>
                 <div className="answer">
                   <p>
-                    Yes. Every call record includes the AMD result (which
-                    of the six outcomes triggered) along with timing
-                    info. Pull it up in the calls log in your dashboard
-                    or export it for analysis.
-                  </p>
+                    {t("Yes. Every call record includes the AMD result (which of the six outcomes triggered) along with timing info. Pull it up in the calls log in your dashboard or export it for analysis.")}</p>
                 </div>
               </details>
 
               <details>
-                <summary>Are voicemail drops a separate feature?</summary>
+                <summary>{t("Are voicemail drops a separate feature?")}</summary>
                 <div className="answer">
                   <p>
-                    Different feature, related concept. AMD <em>detects</em>
-                    voicemails. Voicemail drops <em>play a pre-recorded
-                    message into</em> one once detected.
-                    DialerSeat does not do voicemail drops today. When AMD
-                    calls a machine, the call ends and the queue advances 
-                    nothing is left behind.
-                    It is on the list rather than shipped, and we would rather
-                    say that than have you plan a campaign around it.
-                  </p>
+                    {t("Different feature, related concept. AMD")}{" "}<em>{t("detects")}</em>
+                    {t("voicemails. Voicemail drops")}{" "}<em>{t("play a pre-recorded message into")}</em> {t("one once detected. DialerSeat does not do voicemail drops today. When AMD calls a machine, the call ends and the queue advances nothing is left behind. It is on the list rather than shipped, and we would rather say that than have you plan a campaign around it.")}</p>
                 </div>
               </details>
 
               <details>
-                <summary>Is AMD compliant with TCPA / TSR?</summary>
+                <summary>{t("Is AMD compliant with TCPA / TSR?")}</summary>
                 <div className="answer">
                   <p>
-                    AMD itself doesn&apos;t change your compliance picture.
-                    The compliance rules apply to the act of placing the
-                    call, not to whether you connect to a human or a
-                    machine afterward.
-                  </p>
+                    {t("AMD itself doesn't change your compliance picture. The compliance rules apply to the act of placing the call, not to whether you connect to a human or a machine afterward.")}</p>
                   <p>
-                    AMD is, however, what makes <Link href="/faq/what-is-a-progressive-dialer">progressive
-                    mode</Link> work as a higher-throughput alternative
-                    to power, without triggering the FTC&apos;s 3% abandon
-                    cap. See the <Link href="/faq/why-is-compliance-important">compliance
-                    page</Link> for more.
-                  </p>
+                    {t("AMD is, however, what makes")}{" "}<Link href="/faq/what-is-a-progressive-dialer">{t("progressive mode")}</Link> {t("work as a higher-throughput alternative to power, without triggering the FTC's 3% abandon cap. See the")}{" "}<Link href="/faq/why-is-compliance-important">{t("compliance page")}</Link> {t("for more.")}</p>
                 </div>
               </details>
             </div>

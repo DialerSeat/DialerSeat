@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { t as tr } from '@/lib/i18n/client'
 
 
 
@@ -127,7 +128,7 @@ export default function ShowcaseWizard({ joinCode = null }: { joinCode?: string 
           ))}
         </div>
         <div style={{ flex: 1 }} />
-        <button onClick={goBilling} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700, cursor: 'pointer', padding: '6px 4px' }}>SKIP →</button>
+        <button onClick={goBilling} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700, cursor: 'pointer', padding: '6px 4px' }}>{tr("SKIP →")}</button>
       </div>
 
       {/* MIDDLE GROUP */}
@@ -161,10 +162,10 @@ export default function ShowcaseWizard({ joinCode = null }: { joinCode?: string 
         {/* controls */}
         <div style={{ padding: '16px 28px 30px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
           {scene > 0 && (
-            <button onClick={prev} style={{ padding: '12px 20px', borderRadius: 10, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.85)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700 }}>← BACK</button>
+            <button onClick={prev} style={{ padding: '12px 20px', borderRadius: 10, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.85)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700 }}>{tr("← BACK")}</button>
           )}
           <button onClick={isLast ? goBilling : next} style={{ padding: '13px 28px', borderRadius: 10, border: 'none', cursor: 'pointer', background: C.primary, color: C.onPrimary, fontFamily: FUTURA, fontSize: 13, letterSpacing: 2, fontWeight: 800 }}>
-            {isLast ? 'GET STARTED →' : 'NEXT →'}
+            {isLast ? tr("GET STARTED →") : tr("NEXT →")}
           </button>
         </div>
       </div>
@@ -288,23 +289,23 @@ function DialerScene() {
   ]
 
   return (
-    <MacFrame title="DIALER" titleColor="#5a8a5a" bg={C.sidebar}>
+    <MacFrame title={tr("DIALER")} titleColor="#5a8a5a" bg={C.sidebar}>
       <div className="sw-dialer-row" style={{ display: 'flex', minHeight: 300 }}>
         <div className="sw-dialer-call" style={{ flex: 1, padding: 14, borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, background: C.page, border: `1px solid ${C.cardBorder}`, borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '7px 12px', background: C.sidebar, borderBottom: `1px solid ${C.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>LEAD PROFILE</span>
-              <span style={{ fontSize: 9, fontFamily: MONO, color: C.primary }}>ID: 7a3f9c2e</span>
+              <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>{tr("LEAD PROFILE")}</span>
+              <span style={{ fontSize: 9, fontFamily: MONO, color: C.primary }}>{tr("ID: 7a3f9c2e")}</span>
             </div>
             <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '10px 14px', background: C.page, border: `2px solid ${GREEN}`, borderRadius: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                   <div>
-                    <div style={{ fontSize: 19, fontWeight: 800, fontFamily: MONO, color: C.onPage, letterSpacing: 1, marginBottom: 3 }}>JOHN DOE</div>
+                    <div style={{ fontSize: 19, fontWeight: 800, fontFamily: MONO, color: C.onPage, letterSpacing: 1, marginBottom: 3 }}>{tr("JOHN DOE")}</div>
                     <div style={{ fontSize: 15, fontFamily: MONO, color: ACCENT, fontWeight: 800, letterSpacing: 2 }}>+1 (713) 555-0142</div>
-                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.muted, letterSpacing: 1, marginTop: 4 }}>HOUSTON, TX · {mm}:{ss}</div>
+                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.muted, letterSpacing: 1, marginTop: 4 }}>{tr("HOUSTON, TX ·")}{" "}{mm}:{ss}</div>
                   </div>
-                  <div style={{ padding: '4px 10px', borderRadius: 2, background: '#e8f5e8', border: `1px solid ${GREEN}`, fontSize: 9, letterSpacing: 2, fontWeight: 800, color: GREEN }}>● LIVE</div>
+                  <div style={{ padding: '4px 10px', borderRadius: 2, background: '#e8f5e8', border: `1px solid ${GREEN}`, fontSize: 9, letterSpacing: 2, fontWeight: 800, color: GREEN }}>{tr("● LIVE")}</div>
                 </div>
               </div>
 
@@ -321,7 +322,7 @@ function DialerScene() {
                   ))}
                 </div>
                 <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: 8, letterSpacing: 2, color: C.muted, marginBottom: 6 }}>CALL SCRIPT</div>
+                  <div style={{ fontSize: 8, letterSpacing: 2, color: C.muted, marginBottom: 6 }}>{tr("CALL SCRIPT")}</div>
                   <div key={script.key} style={{ height: 136, fontSize: 11, lineHeight: 1.7, color: C.onPage, fontFamily: MONO, whiteSpace: 'pre-wrap', animation: 'sw-rise 0.25s ease' }}>{script.text}</div>
                 </div>
               </div>
@@ -330,7 +331,7 @@ function DialerScene() {
         </div>
         <div className="sw-dialer-metrics" style={{ width: 196, display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '8px 14px', background: C.sidebar, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>TODAY'S METRICS</span>
+            <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>{tr("TODAY'S METRICS")}</span>
           </div>
           <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
             {metrics.map(([label, value, color]) => {
@@ -400,16 +401,16 @@ function AnalyticsScene() {
   })
 
   return (
-    <MacFrame title="ANALYTICS" titleColor="#4a9eff" bg={C.page}>
+    <MacFrame title={tr("ANALYTICS")} titleColor="#4a9eff" bg={C.page}>
       <div style={{ background: C.header, padding: '12px 18px', borderBottom: `2px solid ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: GREEN_BRIGHT, animation: 'sw-pulse 1.2s infinite' }} />
-          <span style={{ fontSize: 12, letterSpacing: 3, color: C.primary, fontWeight: 800 }}>ANALYTICS OVERVIEW</span>
+          <span style={{ fontSize: 12, letterSpacing: 3, color: C.primary, fontWeight: 800 }}>{tr("ANALYTICS OVERVIEW")}</span>
         </span>
-        <span style={{ fontSize: 8.5, letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)', fontWeight: 700, border: '1px solid rgba(255,255,255,0.18)', borderRadius: 4, padding: '3px 8px' }}>LAST 7 DAYS</span>
+        <span style={{ fontSize: 8.5, letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)', fontWeight: 700, border: '1px solid rgba(255,255,255,0.18)', borderRadius: 4, padding: '3px 8px' }}>{tr("LAST 7 DAYS")}</span>
       </div>
       <div style={{ padding: 16 }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: C.onPage, marginBottom: 12, letterSpacing: 0.5 }}>WELCOME BACK, (YOUR NAME GOES HERE).</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.onPage, marginBottom: 12, letterSpacing: 0.5 }}>{tr("WELCOME BACK, (YOUR NAME GOES HERE).")}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 9, marginBottom: 12 }}>
           {tiles.map((t, i) => (
             <div key={t[0]} style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderTop: `3px solid ${t[2]}`, borderRadius: 8, padding: 11 }}>
@@ -426,8 +427,8 @@ function AnalyticsScene() {
         <div className="sw-an-row" style={{ display: 'flex', gap: 10 }}>
           <div style={{ flex: 1, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 8, letterSpacing: 1.5, color: C.muted, fontWeight: 700 }}>CALL VOLUME OVER TIME</span>
-              <span style={{ fontSize: 8, fontWeight: 800, color: GREEN_BRIGHT }}>↑ 18% vs last week</span>
+              <span style={{ fontSize: 8, letterSpacing: 1.5, color: C.muted, fontWeight: 700 }}>{tr("CALL VOLUME OVER TIME")}</span>
+              <span style={{ fontSize: 8, fontWeight: 800, color: GREEN_BRIGHT }}>{tr("↑ 18% vs last week")}</span>
             </div>
             <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 74, display: 'block' }}>
               <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.primary} stopOpacity="0.32" /><stop offset="100%" stopColor={C.primary} stopOpacity="0" /></linearGradient></defs>
@@ -442,7 +443,7 @@ function AnalyticsScene() {
             </div>
           </div>
           <div className="sw-an-right" style={{ width: 188, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 12 }}>
-            <div style={{ fontSize: 8, letterSpacing: 1.5, color: C.muted, fontWeight: 700, marginBottom: 8 }}>DISPOSITION BREAKDOWN</div>
+            <div style={{ fontSize: 8, letterSpacing: 1.5, color: C.muted, fontWeight: 700, marginBottom: 8 }}>{tr("DISPOSITION BREAKDOWN")}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: showCharts ? 1 : 0, transition: 'opacity 0.5s ease 0.15s' }}>
               <svg viewBox="0 0 80 80" style={{ width: 70, height: 70, flexShrink: 0 }}>
                 {arcs.map((a, i) => <path key={i} d={a.d} fill={a.color} />)}
@@ -476,10 +477,10 @@ function SuperiorScene() {
     { icon: '🎯', title: 'Always improving', body: 'Shaped by real producers and updated constantly, the dialer that keeps getting better.' },
   ]
   return (
-    <MacFrame title="WHY DIALERSEAT" titleColor="#5a8a5a" bg={C.sidebar}>
+    <MacFrame title={tr("WHY DIALERSEAT")} titleColor="#5a8a5a" bg={C.sidebar}>
       <div style={{ padding: 22 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: C.onSidebar, letterSpacing: 0.5 }}>A superior dialer, designed for success.</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: C.onSidebar, letterSpacing: 0.5 }}>{tr("A superior dialer, designed for success.")}</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
           {features.map((f, i) => (

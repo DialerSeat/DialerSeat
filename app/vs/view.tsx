@@ -7,6 +7,7 @@ import SiteFooter from '@/components/site-footer'
 import DirectoryHub, { type HubItem } from '@/components/DirectoryHub'
 import { SITE } from '@/lib/siteTheme'
 import { inter } from '@/lib/fonts'
+import { t } from '@/lib/i18n/client'
 
 // =============================================================================
 // /vs — the comparison index
@@ -438,38 +439,29 @@ export default function VsHubView() {
 
         <div className="vshub-band">
           <div className="vshub-panel">
-            <div className="vshub-eyebrow">▸ FOR TEAMS &amp; AGENCIES</div>
-            <h2>Manager+ adds whitelabel for $75/week, flat.</h2>
+            <div className="vshub-eyebrow">{t("▸ FOR TEAMS & AGENCIES")}</div>
+            <h2>{t("Manager+ adds whitelabel for $75/week, flat.")}</h2>
             <p>
-              Running more than one seat, or managing dialing for other people&apos;s teams?
-              Manager+ is a flat $75/week upgrade that puts your brand on the platform, same
-              rate whether you&apos;re managing 2 seats or 200. None of the dialers on this page
-              offer true whitelabel; the closest most get is a referral or reseller program that
-              keeps their name on the product.
-            </p>
+              {t("Running more than one seat, or managing dialing for other people's teams? Manager+ is a flat $75/week upgrade that puts your brand on the platform, same rate whether you're managing 2 seats or 200. None of the dialers on this page offer true whitelabel; the closest most get is a referral or reseller program that keeps their name on the product.")}</p>
             <p>
-              <Link href="/vs/teams">See what five agents cost on every tool →</Link>
+              <Link href="/vs/teams">{t("See what five agents cost on every tool →")}</Link>
             </p>
           </div>
 
           <section className="vshub-cta">
-            <div className="vshub-cta-eyebrow">▸ SKIP THE COMPARISON</div>
-            <h2>Skip the comparison. Just try it.</h2>
+            <div className="vshub-cta-eyebrow">{t("▸ SKIP THE COMPARISON")}</div>
+            <h2>{t("Skip the comparison. Just try it.")}</h2>
             <p>
-              $35/seat/week. Cancel anytime. Every feature included. No setup fee, no contract,
-              no demos. The fastest way to know if DialerSeat™ beats whatever you&apos;re using
-              now is to actually use it.
-            </p>
+              {t("$35/seat/week. Cancel anytime. Every feature included. No setup fee, no contract, no demos. The fastest way to know if DialerSeat™ beats whatever you're using now is to actually use it.")}</p>
             <div className="vshub-cta-row">
               <Link
                 href={showSignedIn ? '/dashboard/analytics' : '/sign-up'}
                 className="vshub-btn primary"
               >
-                {showSignedIn ? 'GO TO DASHBOARD →' : 'GET STARTED →'}
+                {showSignedIn ? t("GO TO DASHBOARD →") : t("GET STARTED →")}
               </Link>
               <Link href="/vs/everyone" className="vshub-btn secondary">
-                THE FULL BREAKDOWN
-              </Link>
+                {t("THE FULL BREAKDOWN")}</Link>
             </div>
           </section>
         </div>

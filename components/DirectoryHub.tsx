@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import { SITE } from '@/lib/siteTheme'
 import { inter } from '@/lib/fonts'
 import SuggestionModal from '@/components/SuggestionModal'
+import { t } from '@/lib/i18n/client'
 
 // =============================================================================
 // THE DIRECTORY HUB — the shared template behind /vs and /faq
@@ -586,7 +587,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
               placeholder={props.searchPlaceholder}
               aria-label={`Search ${props.searchNoun}`}
             />
-            <button type="submit">Search</button>
+            <button type="submit">{t("Search")}</button>
           </form>
 
           <div className="hub-request">
@@ -633,7 +634,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           <section className={`hub-card hub-card-index${showAll || q ? ' is-expanded' : ''}`}>
             <div className="hub-card-head">
               <span className="hub-badge blue"><IconScales /></span>
-              <h2>{q ? 'Search results' : props.allTitle}</h2>
+              <h2>{q ? t("Search results") : props.allTitle}</h2>
               {q && <span className="hub-card-count">{filtered.length}</span>}
             </div>
 
@@ -646,18 +647,17 @@ export default function DirectoryHub(props: DirectoryHubProps) {
 
             {filtered.length === 0 && (
               <p className="hub-empty">
-                Nothing here matches &ldquo;{query.trim()}&rdquo;.{' '}
+                {t("Nothing here matches “")}{query.trim()}&rdquo;.{' '}
                 <button type="button" className="hub-ask" onClick={() => setAskOpen(true)}>
                   {props.requestLabel}
                 </button>{' '}
-                and we&apos;ll write it.
-              </p>
+                {t("and we'll write it.")}</p>
             )}
 
             {!q && filtered.length > CHUNK && (
               <div className="hub-foot hub-foot-phone">
                 <button type="button" className="blue" onClick={() => setShowAll((v) => !v)}>
-                  {showAll ? 'Show fewer' : props.allCta}{' '}
+                  {showAll ? t("Show fewer") : props.allCta}{' '}
                   <span aria-hidden>{showAll ? '↑' : '→'}</span>
                 </button>
               </div>

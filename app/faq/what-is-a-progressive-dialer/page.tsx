@@ -8,6 +8,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -34,7 +35,8 @@ export const metadata: Metadata = {
 const MODE_COLOR = '#1a6a1a'
 const MODE_BG = '#e8f5e8'
 
-export default function ProgressiveDialerPage() {
+export default async function ProgressiveDialerPage() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={breadcrumbSchema([
@@ -385,121 +387,76 @@ export default function ProgressiveDialerPage() {
         {/* HERO */}
         <section className="dm-hero">
           <div className="dm-hero-inner">
-            <div className="dm-eyebrow">PROGRESSIVE DIALER</div>
-          <span style={{ fontSize: 11, color: '${SITE.muted}', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
-            <h1>Power, but without the voicemails.</h1>
+            <div className="dm-eyebrow">{t("PROGRESSIVE DIALER")}</div>
+          <span style={{ fontSize: 11, color: '${SITE.muted}', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>{t("LAST UPDATED 07/28/2026")}</span>
+            <h1>{t("Power, but without the voicemails.")}</h1>
             <p className="dm-lead">
-              One line per agent: same as power, same compliance profile 
-              but the system listens to the pickup before connecting you. The
-              answering machines never reach your ear. Born in the early
-              2000s as the safe middle ground between power and predictive,
-              it became the default in any vertical where one mistake could
-              cost more than ten thousand connects.
-            </p>
+              {t("One line per agent: same as power, same compliance profile but the system listens to the pickup before connecting you. The answering machines never reach your ear. Born in the early 2000s as the safe middle ground between power and predictive, it became the default in any vertical where one mistake could cost more than ten thousand connects.")}</p>
           </div>
         </section>
 
         {/* MECHANISM */}
         <section className="dm-section">
-          <h2>How progressive dialing works</h2>
+          <h2>{t("How progressive dialing works")}</h2>
           <p>
-            Progressive looks almost identical to power on paper, with one
-            critical difference: the system makes the agent wait an extra
-            second or two while answering-machine detection (AMD) decides
-            whether the pickup is human. If it is, the agent gets connected.
-            If it isn&apos;t, the call gets dropped and the queue advances
-            silently.
-          </p>
+            {t("Progressive looks almost identical to power on paper, with one critical difference: the system makes the agent wait an extra second or two while answering-machine detection (AMD) decides whether the pickup is human. If it is, the agent gets connected. If it isn't, the call gets dropped and the queue advances silently.")}</p>
           <ol className="dm-steps">
-            <li><div>Set yourself available, pick a campaign, click <em>Initiate Dial Sequence</em>.</div></li>
-            <li><div>The system pulls the next lead and places the call, same as power.</div></li>
-            <li><div>Phone rings. Pickup happens. <em>The agent doesn&apos;t hear it yet.</em></div></li>
-            <li><div>AMD listens for the first ~1.5 seconds. It&apos;s checking the audio signature, humans say short greetings (&quot;Hello?&quot;); machines deliver long monologues (&quot;Hi, you&apos;ve reached...&quot;).</div></li>
-            <li><div>If AMD detects a human, the system connects the agent and the lead profile pops on the screen. You jump in mid-greeting.</div></li>
-            <li><div>If AMD detects a machine, the call is silently dropped and the queue advances. You never heard the voicemail.</div></li>
-            <li><div>Loop.</div></li>
+            <li><div>{t("Set yourself available, pick a campaign, click")}{" "}<em>{t("Initiate Dial Sequence")}</em>.</div></li>
+            <li><div>{t("The system pulls the next lead and places the call, same as power.")}</div></li>
+            <li><div>{t("Phone rings. Pickup happens.")}{" "}<em>{t("The agent doesn't hear it yet.")}</em></div></li>
+            <li><div>{t("AMD listens for the first ~1.5 seconds. It's checking the audio signature, humans say short greetings (\"Hello?\"); machines deliver long monologues (\"Hi, you've reached...\").")}</div></li>
+            <li><div>{t("If AMD detects a human, the system connects the agent and the lead profile pops on the screen. You jump in mid-greeting.")}</div></li>
+            <li><div>{t("If AMD detects a machine, the call is silently dropped and the queue advances. You never heard the voicemail.")}</div></li>
+            <li><div>{t("Loop.")}</div></li>
           </ol>
           <div className="dm-pullquote">
-            The defining property of progressive is the <strong>AMD
-            pre-screen</strong>. One line per agent (zero abandonment, like
-            power), but the audio gets filtered through detection before
-            reaching the agent. You only hear humans.
-          </div>
+            {t("The defining property of progressive is the")}{" "}<strong>{t("AMD pre-screen")}</strong>{t(". One line per agent (zero abandonment, like power), but the audio gets filtered through detection before reaching the agent. You only hear humans.")}</div>
         </section>
 
         {/* ORIGINS */}
         <section className="dm-section alt">
           <div className="inner">
-            <h2>Where it came from</h2>
+            <h2>{t("Where it came from")}</h2>
             <p>
-              Progressive is the youngest of the four classical dialing
-              modes. It didn&apos;t exist until two things came together in
-              the late 1990s: cheap real-time DSP (digital signal processing)
-              capable of running AMD in the cloud, and the
-              regulatory shock of the FTC&apos;s Telemarketing Sales Rule.
-            </p>
+              {t("Progressive is the youngest of the four classical dialing modes. It didn't exist until two things came together in the late 1990s: cheap real-time DSP (digital signal processing) capable of running AMD in the cloud, and the regulatory shock of the FTC's Telemarketing Sales Rule.")}</p>
             <p>
-              The TSR landed in its modern form in 2003 (revisions to 16 CFR
-              Part 310), and the headline change was the 3% abandonment cap
-              on predictive dialers. Overnight, predictive went from
-              &quot;turn it up and let it run&quot; to a regulated activity
-              that required active monitoring, abandon-rate accounting, and
-              real legal exposure if you got it wrong.
-            </p>
+              {t("The TSR landed in its modern form in 2003 (revisions to 16 CFR Part 310), and the headline change was the 3% abandonment cap on predictive dialers. Overnight, predictive went from \"turn it up and let it run\" to a regulated activity that required active monitoring, abandon-rate accounting, and real legal exposure if you got it wrong.")}</p>
             <p>
-              That left an obvious gap: shops that wanted the speed of
-              auto-dialing but couldn&apos;t justify the compliance overhead
-              of predictive. The answer that emerged from vendors like Noble
-              Systems, Genesys, and CallTools in the early-to-mid 2000s was
-              progressive, one line per agent (so abandonment is
-              structurally impossible) plus AMD to chew through the
-              voicemails that were eating power dialers alive.
-            </p>
+              {t("That left an obvious gap: shops that wanted the speed of auto-dialing but couldn't justify the compliance overhead of predictive. The answer that emerged from vendors like Noble Systems, Genesys, and CallTools in the early-to-mid 2000s was progressive, one line per agent (so abandonment is structurally impossible) plus AMD to chew through the voicemails that were eating power dialers alive.")}</p>
             <p>
-              By the late 2000s, progressive had become the standard mode
-              for insurance lead-gen, mortgage refi outreach, and any B2C
-              vertical where the cost of a TCPA complaint dwarfed the
-              throughput gain from predictive. It&apos;s still that today,
-              mostly. AMD has gotten dramatically better, pre-dial
-              carrier-side detection from providers like Telnyx in the
-              2020s is meaningfully more accurate than the early DSP
-              attempts, but the shape of the mode hasn&apos;t changed.
-            </p>
+              {t("By the late 2000s, progressive had become the standard mode for insurance lead-gen, mortgage refi outreach, and any B2C vertical where the cost of a TCPA complaint dwarfed the throughput gain from predictive. It's still that today, mostly. AMD has gotten dramatically better, pre-dial carrier-side detection from providers like Telnyx in the 2020s is meaningfully more accurate than the early DSP attempts, but the shape of the mode hasn't changed.")}</p>
           </div>
         </section>
 
         {/* WHEN IT SHINES */}
         <section className="dm-section">
-          <h2>When progressive wins</h2>
+          <h2>{t("When progressive wins")}</h2>
           <p>
-            Progressive is the right call when you want power&apos;s pace
-            without burning the day on voicemails, or when you&apos;re in a
-            vertical where predictive feels too aggressive.
-          </p>
+            {t("Progressive is the right call when you want power's pace without burning the day on voicemails, or when you're in a vertical where predictive feels too aggressive.")}</p>
           <div className="dm-shines-grid">
             <div className="dm-shines-card">
-              <h4>INSURANCE LEAD-GEN</h4>
-              <p>High voicemail rates kill power. Progressive cuts the machine wastage and keeps you within compliance lines all states recognize.</p>
+              <h4>{t("INSURANCE LEAD-GEN")}</h4>
+              <p>{t("High voicemail rates kill power. Progressive cuts the machine wastage and keeps you within compliance lines all states recognize.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>MORTGAGE / REFI</h4>
-              <p>Time-sensitive offers, B2C audience, heavy TCPA scrutiny. Progressive is the legacy industry default for exactly these reasons.</p>
+              <h4>{t("MORTGAGE / REFI")}</h4>
+              <p>{t("Time-sensitive offers, B2C audience, heavy TCPA scrutiny. Progressive is the legacy industry default for exactly these reasons.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>SOLAR / HOME SERVICES</h4>
-              <p>Lots of dial volume on warmer-but-not-warm lists. Progressive&apos;s AMD pre-screen is the productivity unlock.</p>
+              <h4>{t("SOLAR / HOME SERVICES")}</h4>
+              <p>{t("Lots of dial volume on warmer-but-not-warm lists. Progressive's AMD pre-screen is the productivity unlock.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>HEALTHCARE OUTREACH</h4>
-              <p>Patient calls where compliance and tone matter. One line per agent is structurally safer; AMD avoids accidental message-on-machine TCPA issues.</p>
+              <h4>{t("HEALTHCARE OUTREACH")}</h4>
+              <p>{t("Patient calls where compliance and tone matter. One line per agent is structurally safer; AMD avoids accidental message-on-machine TCPA issues.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>HIGH-VOICEMAIL LISTS</h4>
-              <p>If you&apos;re hitting 40%+ voicemail on your campaigns, progressive saves you literal hours per agent per day.</p>
+              <h4>{t("HIGH-VOICEMAIL LISTS")}</h4>
+              <p>{t("If you're hitting 40%+ voicemail on your campaigns, progressive saves you literal hours per agent per day.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>RAMPING TO PREDICTIVE</h4>
-              <p>Many shops use progressive as the bridge: get the team comfortable with auto-advance and AMD, then move to predictive once volume justifies the pacing math.</p>
+              <h4>{t("RAMPING TO PREDICTIVE")}</h4>
+              <p>{t("Many shops use progressive as the bridge: get the team comfortable with auto-advance and AMD, then move to predictive once volume justifies the pacing math.")}</p>
             </div>
           </div>
         </section>
@@ -507,51 +464,30 @@ export default function ProgressiveDialerPage() {
         {/* TRADE-OFFS */}
         <section className="dm-section alt">
           <div className="inner">
-            <h2>What you give up</h2>
+            <h2>{t("What you give up")}</h2>
             <p>
-              The first second or two of the call. AMD needs to hear the
-              pickup before it can decide. That means when the audio finally
-              reaches your headset, the person on the other end has already
-              said &quot;Hello&quot; sometimes twice. Good agents adapt
-              quickly (you open with &quot;Hi, this is Maria from...&quot;
-              instead of waiting for them to speak), but it takes a session
-              or two to get used to.
-            </p>
+              {t("The first second or two of the call. AMD needs to hear the pickup before it can decide. That means when the audio finally reaches your headset, the person on the other end has already said \"Hello\" sometimes twice. Good agents adapt quickly (you open with \"Hi, this is Maria from...\" instead of waiting for them to speak), but it takes a session or two to get used to.")}</p>
             <p>
-              You also give up some throughput vs predictive. Progressive is
-              still one line per agent: if you have 10 ready agents, you
-              have 10 outbound calls in flight at most. Predictive on the
-              same campaign would have 15-30 lines in flight. For pure
-              volume, predictive wins. For everything else, progressive
-              wins.
-            </p>
+              {t("You also give up some throughput vs predictive. Progressive is still one line per agent: if you have 10 ready agents, you have 10 outbound calls in flight at most. Predictive on the same campaign would have 15-30 lines in flight. For pure volume, predictive wins. For everything else, progressive wins.")}</p>
             <p>
-              And AMD isn&apos;t perfect. False positives (humans flagged as
-              machines and dropped) cost you connects. False negatives
-              (machines that get through to the agent) cost you a few
-              wasted seconds per call. The error rate is low, meaningfully
-              under 5% on modern carriers, but it&apos;s not zero.
-            </p>
+              {t("And AMD isn't perfect. False positives (humans flagged as machines and dropped) cost you connects. False negatives (machines that get through to the agent) cost you a few wasted seconds per call. The error rate is low, meaningfully under 5% on modern carriers, but it's not zero.")}</p>
           </div>
         </section>
 
         {/* ON DIALERSEAT */}
         <section className="dm-on-ds">
           <div className="inner">
-            <h2>Progressive on DialerSeat</h2>
+            <h2>{t("Progressive on DialerSeat")}</h2>
             <p>
-              Switch any campaign to <em>PROGRESSIVE</em> from the mode tile
-              in the dialer terminal. AMD enables automatically, that&apos;s
-              the whole point of the mode.
-            </p>
+              {t("Switch any campaign to")}{" "}<em>{t("PROGRESSIVE")}</em> {t("from the mode tile in the dialer terminal. AMD enables automatically, that's the whole point of the mode.")}</p>
             <ul className="dm-bullets">
-              <li>Telnyx AMD via the platform&apos;s native call detection. Classifies every pickup as human, machine, or not_sure (not_sure is treated as human, so a call never stalls on an ambiguous read).</li>
-              <li>Machine-detected calls get dropped server-side. Agent sees a quick &quot;VOICEMAIL FILTERED&quot; log line, then the next lead loads.</li>
-              <li>Auto-advance after disposition (you don&apos;t click between calls).</li>
-              <li>One outbound line per agent. Zero abandonment risk by definition.</li>
-              <li>TCPA window check before every dial.</li>
-              <li>National DNC scrubbing is on you, scrub your list against the registry before you upload it. State-specific lists are on you too. See <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link>.</li>
-              <li>Per-call AMD result stored on the calls table for later analytics. You can see your true human-pickup rate by campaign.</li>
+              <li>{t("Telnyx AMD via the platform's native call detection. Classifies every pickup as human, machine, or not_sure (not_sure is treated as human, so a call never stalls on an ambiguous read).")}</li>
+              <li>{t("Machine-detected calls get dropped server-side. Agent sees a quick \"VOICEMAIL FILTERED\" log line, then the next lead loads.")}</li>
+              <li>{t("Auto-advance after disposition (you don't click between calls).")}</li>
+              <li>{t("One outbound line per agent. Zero abandonment risk by definition.")}</li>
+              <li>{t("TCPA window check before every dial.")}</li>
+              <li>{t("National DNC scrubbing is on you, scrub your list against the registry before you upload it. State-specific lists are on you too. See")}{" "}<Link href="/faq/how-we-keep-compliance">{t("how we keep compliance")}</Link>.</li>
+              <li>{t("Per-call AMD result stored on the calls table for later analytics. You can see your true human-pickup rate by campaign.")}</li>
             </ul>
           </div>
         </section>
@@ -559,22 +495,22 @@ export default function ProgressiveDialerPage() {
         {/* OTHER MODES */}
         <section className="dm-other">
           <div className="inner">
-            <h2>The other three modes</h2>
+            <h2>{t("The other three modes")}</h2>
             <div className="dm-other-grid">
               <Link href="/dialing-modes/preview" className="dm-other-card preview">
-                <span className="pill">PREVIEW</span>
-                <h3>Agent reviews, then dials</h3>
-                <p>The original outbound mode. Slow by design: right for high-touch, high-value calls.</p>
+                <span className="pill">{t("PREVIEW")}</span>
+                <h3>{t("Agent reviews, then dials")}</h3>
+                <p>{t("The original outbound mode. Slow by design: right for high-touch, high-value calls.")}</p>
               </Link>
               <Link href="/dialing-modes/power" className="dm-other-card power">
-                <span className="pill">POWER</span>
-                <h3>Auto-dial, one line per agent</h3>
-                <p>The inside-sales workhorse since the mid-1990s. Faster than preview, simpler than progressive.</p>
+                <span className="pill">{t("POWER")}</span>
+                <h3>{t("Auto-dial, one line per agent")}</h3>
+                <p>{t("The inside-sales workhorse since the mid-1990s. Faster than preview, simpler than progressive.")}</p>
               </Link>
               <Link href="/dialing-modes/predictive" className="dm-other-card predictive">
-                <span className="pill">PREDICTIVE</span>
-                <h3>Multiple lines, agent prediction</h3>
-                <p>1.5-3× lines per agent. Highest throughput, needs a team of 8+ to really engage, auto-degrade keeps it off the legal line.</p>
+                <span className="pill">{t("PREDICTIVE")}</span>
+                <h3>{t("Multiple lines, agent prediction")}</h3>
+                <p>{t("1.5-3× lines per agent. Highest throughput, needs a team of 8+ to really engage, auto-degrade keeps it off the legal line.")}</p>
               </Link>
             </div>
           </div>

@@ -6,6 +6,7 @@ import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 // =============================================================================
 // /faq/send-leads-from-your-crm — lead drip
@@ -90,7 +91,8 @@ const FAQS = [
   },
 ]
 
-export default function Page() {
+export default async function Page() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={faqPageSchema(FAQS)} />
@@ -106,141 +108,100 @@ export default function Page() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ LEADS</div>
+            <div className="guts-eyebrow">{t("▸ LEADS")}</div>
             <h1>
-              One URL per campaign.
-              <span className="second">Any CRM can use it.</span>
+              {t("One URL per campaign.")}<span className="second">{t("Any CRM can use it.")}</span>
             </h1>
             <p>
-              Lead drip gives a campaign its own webhook address. Point your CRM, your forms or your
-              automations at it, and new leads land straight in the dial queue, even while your team
-              is mid-session.
-            </p>
+              {t("Lead drip gives a campaign its own webhook address. Point your CRM, your forms or your automations at it, and new leads land straight in the dial queue, even while your team is mid-session.")}</p>
           </div>
         </GutsSection>
 
-        <GutsSection icon="info" title="Why a webhook instead of an integration">
+        <GutsSection icon="info" title={t("Why a webhook instead of an integration")}>
           <p>
-            A separate connector for every CRM is a separate thing that breaks every time that CRM
-            changes something. A web address that accepts JSON works with every tool that can send a
-            web request, which is nearly all of them.
-          </p>
+            {t("A separate connector for every CRM is a separate thing that breaks every time that CRM changes something. A web address that accepts JSON works with every tool that can send a web request, which is nearly all of them.")}</p>
           <div className="guts-grid-3">
-            <div className="guts-panel"><h3>GoHighLevel</h3><p>A workflow webhook action.</p></div>
-            <div className="guts-panel"><h3>HubSpot</h3><p>A workflow webhook.</p></div>
-            <div className="guts-panel"><h3>Zapier or Make</h3><p>A webhook step.</p></div>
-            <div className="guts-panel"><h3>Google Sheets</h3><p>A short Apps Script.</p></div>
-            <div className="guts-panel"><h3>Your own forms</h3><p>One request from your code.</p></div>
-            <div className="guts-panel"><h3>Lead vendors</h3><p>Anyone who can post leads to a URL.</p></div>
+            <div className="guts-panel"><h3>{t("GoHighLevel")}</h3><p>{t("A workflow webhook action.")}</p></div>
+            <div className="guts-panel"><h3>{t("HubSpot")}</h3><p>{t("A workflow webhook.")}</p></div>
+            <div className="guts-panel"><h3>{t("Zapier or Make")}</h3><p>{t("A webhook step.")}</p></div>
+            <div className="guts-panel"><h3>{t("Google Sheets")}</h3><p>{t("A short Apps Script.")}</p></div>
+            <div className="guts-panel"><h3>{t("Your own forms")}</h3><p>{t("One request from your code.")}</p></div>
+            <div className="guts-panel"><h3>{t("Lead vendors")}</h3><p>{t("Anyone who can post leads to a URL.")}</p></div>
           </div>
         </GutsSection>
 
-        <GutsSection icon="list" title="What to send">
+        <GutsSection icon="list" title={t("What to send")}>
           <p>
-            JSON, with <code>Content-Type: application/json</code>, in whichever of these shapes your
-            tool finds easiest:
-          </p>
+            {t("JSON, with")}{" "}<code>Content-Type: application/json</code>{t(", in whichever of these shapes your tool finds easiest:")}</p>
           <ul className="guts-list good">
-            <li>one lead as a single object</li>
-            <li>several leads as an array</li>
+            <li>{t("one lead as a single object")}</li>
+            <li>{t("several leads as an array")}</li>
             <li>
-              several leads wrapped as <code>{'{"leads": [ ... ]}'}</code>
+              {t("several leads wrapped as")}{" "}<code>{'{"leads": [ ... ]}'}</code>
             </li>
           </ul>
           <p>
-            Up to <strong>500 leads per request</strong>. Send more in several requests.
-          </p>
+            {t("Up to")}{" "}<strong>{t("500 leads per request")}</strong>{t(". Send more in several requests.")}</p>
           <p>
-            The only thing each lead must have is a <strong>10-digit US phone number</strong>. Names,
-            email, address and anything else are optional. If your form records consent, send it too:
-            fields such as <code>consent_date</code>, <code>opt_in_source</code> or{' '}
-            <code>tcpa_language</code> are kept with the lead as its consent record.
-          </p>
+            {t("The only thing each lead must have is a")}{" "}<strong>{t("10-digit US phone number")}</strong>{t(". Names, email, address and anything else are optional. If your form records consent, send it too: fields such as")}{" "}<code>consent_date</code>, <code>opt_in_source</code> {t("or")}{' '}
+            <code>tcpa_language</code> {t("are kept with the lead as its consent record.")}</p>
         </GutsSection>
 
-        <GutsSection icon="swap" title="Your field names, not ours">
+        <GutsSection icon="swap" title={t("Your field names, not ours")}>
           <p>
-            No CRM uses the same field names, and rejecting a lead because it said “Phone Number”
-            instead of “phone” is the most common way these setups fail. So lead drip reads what
-            people actually send.
-          </p>
+            {t("No CRM uses the same field names, and rejecting a lead because it said “Phone Number” instead of “phone” is the most common way these setups fail. So lead drip reads what people actually send.")}</p>
           <ul className="guts-list good">
             <li>
-              <strong>Phone</strong> can arrive as phone, phone_number, mobile, cell, telephone,
-              primary_phone and several other common names.
-            </li>
+              <strong>{t("Phone")}</strong> {t("can arrive as phone, phone_number, mobile, cell, telephone, primary_phone and several other common names.")}</li>
             <li>
-              <strong>Names</strong> can arrive as first_name or firstname, last_name or surname, and
-              the other usual variations.
-            </li>
+              <strong>{t("Names")}</strong> {t("can arrive as first_name or firstname, last_name or surname, and the other usual variations.")}</li>
             <li>
-              <strong>Nested fields</strong> one level deep are read as if they were flat, which is
-              how HubSpot’s <code>properties</code> arrive.
-            </li>
+              <strong>{t("Nested fields")}</strong> {t("one level deep are read as if they were flat, which is how HubSpot’s")}{" "}<code>properties</code> {t("arrive.")}</li>
             <li>
-              <strong>Anything unrecognised is kept</strong> with the lead instead of thrown away. The
-              field nobody anticipated is often the one an agent needs on the call.
-            </li>
+              <strong>{t("Anything unrecognised is kept")}</strong> {t("with the lead instead of thrown away. The field nobody anticipated is often the one an agent needs on the call.")}</li>
           </ul>
         </GutsSection>
 
-        <GutsSection icon="check" title="You always know what happened">
+        <GutsSection icon="check" title={t("You always know what happened")}>
           <p>
-            A bare “error 400” tells a sender nothing about whether the field names were wrong, the
-            numbers were unusable or the campaign was paused. So every response spells it out:
-          </p>
+            {t("A bare “error 400” tells a sender nothing about whether the field names were wrong, the numbers were unusable or the campaign was paused. So every response spells it out:")}</p>
           <ul className="guts-list good">
             <li>
-              how many leads were <strong>accepted</strong>
+              {t("how many leads were")}{" "}<strong>{t("accepted")}</strong>
             </li>
             <li>
-              how many were <strong>skipped as duplicates</strong>, because that number is already on
-              the campaign or appeared twice in the same request
-            </li>
+              {t("how many were")}{" "}<strong>{t("skipped as duplicates")}</strong>{t(", because that number is already on the campaign or appeared twice in the same request")}</li>
             <li>
-              how many were <strong>rejected</strong>, with the reason
-            </li>
+              {t("how many were")}{" "}<strong>{t("rejected")}</strong>{t(", with the reason")}</li>
             <li>
-              whether the campaign is <strong>live</strong>, or <strong>paused</strong> so nothing will
-              be dialed until it is switched back on
-            </li>
+              {t("whether the campaign is")}{" "}<strong>{t("live")}</strong>{t(", or")}{" "}<strong>{t("paused")}</strong> {t("so nothing will be dialed until it is switched back on")}</li>
           </ul>
           <p>
-            Duplicates matter more than they look. CRM automations fire twice and sheets re-sync, and
-            without the check the same person would be called twice. Every request is also logged, so
-            you can read it back from the campaign later.
-          </p>
+            {t("Duplicates matter more than they look. CRM automations fire twice and sheets re-sync, and without the check the same person would be called twice. Every request is also logged, so you can read it back from the campaign later.")}</p>
         </GutsSection>
 
-        <GutsSection icon="shield" title="Keeping the URL private">
+        <GutsSection icon="shield" title={t("Keeping the URL private")}>
           <ul className="guts-list good">
             <li>
-              The address contains a long secret that DialerSeat generates. It is never one you
-              choose, because a secret somebody picks is usually a weak one.
-            </li>
+              {t("The address contains a long secret that DialerSeat generates. It is never one you choose, because a secret somebody picks is usually a weak one.")}</li>
             <li>
-              If a URL leaks, generate a new one from the campaign page and the old one stops working.
-            </li>
+              {t("If a URL leaks, generate a new one from the campaign page and the old one stops working.")}</li>
             <li>
-              A wrong address and a revoked one get exactly the same response, so nobody can probe
-              for a URL that used to work.
-            </li>
+              {t("A wrong address and a revoked one get exactly the same response, so nobody can probe for a URL that used to work.")}</li>
           </ul>
         </GutsSection>
 
-        <GutsSection icon="team" title="Where to find it">
+        <GutsSection icon="team" title={t("Where to find it")}>
           <p>
-            Lead drip is switched on from a campaign’s page in <strong>Teams</strong>, which comes with{' '}
-            <Link href="/faq/manager-plus">Manager+</Link>. Turn it on, copy the campaign’s URL into
-            your CRM or automation, and send a test lead to see the response.
-          </p>
+            {t("Lead drip is switched on from a campaign’s page in")}{" "}<strong>{t("Teams")}</strong>{t(", which comes with")}{' '}
+            <Link href="/faq/manager-plus">{t("Manager+")}</Link>{t(". Turn it on, copy the campaign’s URL into your CRM or automation, and send a test lead to see the response.")}</p>
           <p>
-            Uploading a spreadsheet works on every plan. See{' '}
-            <Link href="/faq/leads">uploading and managing leads</Link>.
+            {t("Uploading a spreadsheet works on every plan. See")}{' '}
+            <Link href="/faq/leads">{t("uploading and managing leads")}</Link>.
           </p>
           <div className="guts-btns">
-            <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
-            <Link href="/faq/manager-plus" className="guts-btn secondary">WHAT MANAGER+ ADDS</Link>
+            <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
+            <Link href="/faq/manager-plus" className="guts-btn secondary">{t("WHAT MANAGER+ ADDS")}</Link>
           </div>
         </GutsSection>
 

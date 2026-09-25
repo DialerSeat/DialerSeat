@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
+import { t } from '@/lib/i18n/client'
 
 const T = {
   bg: '#f0f1f4',
@@ -167,11 +168,9 @@ export default function CompliancePage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
-            🛡 COMPLIANCE
-          </span>
+            {t("🛡 COMPLIANCE")}</span>
           <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1 }}>
-            {campaigns.length} CAMPAIGN{campaigns.length === 1 ? '' : 'S'} · 30-DAY WINDOW
-          </span>
+            {campaigns.length} {t("CAMPAIGN")}{campaigns.length === 1 ? '' : 'S'} {t("· 30-DAY WINDOW")}</span>
         </div>
         <Link
           href="/dialing-modes"
@@ -187,7 +186,7 @@ export default function CompliancePage() {
             fontWeight: 'bold',
             textDecoration: 'none',
           }}
-        >📖 METHODOLOGY</Link>
+        >{t("📖 METHODOLOGY")}</Link>
       </div>
 
       <div style={{
@@ -204,10 +203,9 @@ export default function CompliancePage() {
           marginBottom: 16,
         }}>
           <div style={{ fontSize: 11, lineHeight: 1.6, color: T.text }}>
-            <strong style={{ color: T.accent, letterSpacing: 1 }}>About this page:</strong> Live monitoring of FTC TSR § 310.4(b)(4) safe-harbor compliance + TCPA one-to-one consent (FCC Jan 2025) for every campaign you own. Abandon rates calculated over a rolling 30-day window per campaign.{' '}
+            <strong style={{ color: T.accent, letterSpacing: 1 }}>{t("About this page:")}</strong> {t("Live monitoring of FTC TSR § 310.4(b)(4) safe-harbor compliance + TCPA one-to-one consent (FCC Jan 2025) for every campaign you own. Abandon rates calculated over a rolling 30-day window per campaign.")}{' '}
             <Link href="/dialing-modes" target="_blank" style={{ color: T.blue, fontWeight: 'bold' }}>
-              Read full methodology →
-            </Link>
+              {t("Read full methodology →")}</Link>
           </div>
         </div>
 
@@ -267,11 +265,9 @@ export default function CompliancePage() {
           lineHeight: 1.6,
         }}>
           <div style={{ fontSize: 9, letterSpacing: 3, color: '#8888aa', fontWeight: 'bold', marginBottom: 6 }}>
-            ▸ TCPA ONE-TO-ONE CONSENT · FCC RULE EFFECTIVE JAN 2025
-          </div>
+            {t("▸ TCPA ONE-TO-ONE CONSENT · FCC RULE EFFECTIVE JAN 2025")}</div>
           <div>
-            Each lead must have prior express written consent specific to <strong style={{ color: T.blue }}>your business</strong>, not bundled across multiple sellers. Upload leads with optional CSV columns: <code style={{ background: '#2a2c34', padding: '1px 6px', borderRadius: 2 }}>consent_date</code>, <code style={{ background: '#2a2c34', padding: '1px 6px', borderRadius: 2 }}>consent_source</code>, <code style={{ background: '#2a2c34', padding: '1px 6px', borderRadius: 2 }}>consent_description</code>, <code style={{ background: '#2a2c34', padding: '1px 6px', borderRadius: 2 }}>consent_proof_url</code>. Each lead&apos;s consent is visible on the Leads tab.
-          </div>
+            {t("Each lead must have prior express written consent specific to")}{" "}<strong style={{ color: T.blue }}>{t("your business")}</strong>{t(", not bundled across multiple sellers. Upload leads with optional CSV columns:")}{" "}<code style={{ background: '#2a2c34', padding: '1px 6px', borderRadius: 2 }}>consent_date</code>, <code style={{ background: '#2a2c34', padding: '1px 6px', borderRadius: 2 }}>consent_source</code>, <code style={{ background: '#2a2c34', padding: '1px 6px', borderRadius: 2 }}>consent_description</code>, <code style={{ background: '#2a2c34', padding: '1px 6px', borderRadius: 2 }}>consent_proof_url</code>{t(". Each lead's consent is visible on the Leads tab.")}</div>
         </div>
 
         <div style={{
@@ -285,20 +281,18 @@ export default function CompliancePage() {
           lineHeight: 1.6,
         }}>
           <div style={{ fontSize: 9, letterSpacing: 3, color: '#8888aa', fontWeight: 'bold', marginBottom: 6 }}>
-            ▸ LEGAL THRESHOLDS · FTC TSR § 310.4(b)(4)
-          </div>
+            {t("▸ LEGAL THRESHOLDS · FTC TSR § 310.4(b)(4)")}</div>
           <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
-            <span><strong style={{ color: T.green }}>0.0%, 1.9%</strong> · Safe</span>
-            <span><strong style={{ color: T.amber }}>2.0%, 2.4%</strong> · Caution (auto-throttle pending)</span>
-            <span><strong style={{ color: T.red }}>2.5% +</strong> · Auto-degraded to 1× lines</span>
-            <span><strong style={{ color: '#ff6464' }}>3.0% +</strong> · Legal violation</span>
+            <span><strong style={{ color: T.green }}>0.0%, 1.9%</strong> {t("· Safe")}</span>
+            <span><strong style={{ color: T.amber }}>2.0%, 2.4%</strong> {t("· Caution (auto-throttle pending)")}</span>
+            <span><strong style={{ color: T.red }}>2.5% +</strong> {t("· Auto-degraded to 1× lines")}</span>
+            <span><strong style={{ color: '#ff6464' }}>3.0% +</strong> {t("· Legal violation")}</span>
           </div>
         </div>
 
         {loading ? (
           <div style={{ padding: 40, textAlign: 'center', fontSize: 11, letterSpacing: 3, color: T.muted }}>
-            LOADING CAMPAIGNS...
-          </div>
+            {t("LOADING CAMPAIGNS...")}</div>
         ) : campaigns.length === 0 ? (
           <div style={{
             background: T.surface, border: `1px dashed ${T.border}`, borderRadius: 4,
@@ -306,11 +300,9 @@ export default function CompliancePage() {
           }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🛡</div>
             <div style={{ fontSize: 13, fontWeight: 'bold', letterSpacing: 3, color: T.muted, marginBottom: 6 }}>
-              NO CAMPAIGNS YET
-            </div>
+              {t("NO CAMPAIGNS YET")}</div>
             <div style={{ fontSize: 12, color: T.muted, letterSpacing: 0.5 }}>
-              Create a campaign to start tracking compliance metrics.
-            </div>
+              {t("Create a campaign to start tracking compliance metrics.")}</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -412,12 +404,11 @@ function CampaignComplianceCard({
               border: `1px solid ${statusColor}`,
               fontFamily: 'monospace',
             }}>
-              {status === 'degraded' ? '⚠ DEGRADED' : status === 'caution' ? '⚠ CAUTION' : '● SAFE'}
+              {status === 'degraded' ? t("⚠ DEGRADED") : status === 'caution' ? t("⚠ CAUTION") : t("● SAFE")}
             </span>
           </div>
           <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', letterSpacing: 0.5 }}>
-            {campaign.called_leads.toLocaleString()} of {campaign.total_leads.toLocaleString()} leads called
-          </div>
+            {campaign.called_leads.toLocaleString()} {t("of")}{" "}{campaign.total_leads.toLocaleString()} {t("leads called")}</div>
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -432,7 +423,7 @@ function CampaignComplianceCard({
               fontFamily: 'Futura PT, Futura, sans-serif',
               opacity: isLoadingStats ? 0.5 : 1,
             }}
-          >{isLoadingStats ? '...' : '↻ REFRESH'}</button>
+          >{isLoadingStats ? '...' : t("↻ REFRESH")}</button>
           <button
             onClick={onOpenExport}
             disabled={isExporting}
@@ -445,18 +436,16 @@ function CampaignComplianceCard({
               fontFamily: 'Futura PT, Futura, sans-serif',
               opacity: isExporting ? 0.5 : 1,
             }}
-          >{isExporting ? '...' : '⬇ EXPORT CSV'}</button>
+          >{isExporting ? '...' : t("⬇ EXPORT CSV")}</button>
         </div>
       </div>
 
       {isLoadingStats && !stats ? (
         <div style={{ padding: 24, textAlign: 'center', fontSize: 11, letterSpacing: 3, color: T.muted }}>
-          LOADING STATS...
-        </div>
+          {t("LOADING STATS...")}</div>
       ) : !stats || !c ? (
         <div style={{ padding: 24, textAlign: 'center', fontSize: 11, letterSpacing: 2, color: T.muted }}>
-          No data available
-        </div>
+          {t("No data available")}</div>
       ) : (
         <>
           {status !== 'safe' && (
@@ -508,7 +497,7 @@ function CampaignComplianceCard({
             }}>
               <div style={{
                 fontSize: 9, letterSpacing: 3, color: T.muted, fontWeight: 'bold', marginBottom: 8,
-              }}>▸ AMD BREAKDOWN (30D)</div>
+              }}>{t("▸ AMD BREAKDOWN (30D)")}</div>
               <div style={{
                 display: 'flex', gap: 6, flexWrap: 'wrap',
               }}>
@@ -534,8 +523,7 @@ function CampaignComplianceCard({
           flexWrap: 'wrap',
         }}>
           <div style={{ fontSize: 10, letterSpacing: 2, color: T.muted, fontWeight: 'bold' }}>
-            EXPORT WINDOW:
-          </div>
+            {t("EXPORT WINDOW:")}</div>
           {[7, 30, 90, 365].map(days => (
             <button
               key={days}
@@ -547,7 +535,7 @@ function CampaignComplianceCard({
                 fontWeight: 'bold', cursor: 'pointer',
                 fontFamily: 'Futura PT, Futura, sans-serif',
               }}
-            >LAST {days} DAYS</button>
+            >{t("LAST")}{" "}{days} {t("DAYS")}</button>
           ))}
           <button
             onClick={onCloseExport}
@@ -559,7 +547,7 @@ function CampaignComplianceCard({
               fontFamily: 'Futura PT, Futura, sans-serif',
               marginLeft: 'auto',
             }}
-          >CANCEL</button>
+          >{t("CANCEL")}</button>
         </div>
       )}
     </div>

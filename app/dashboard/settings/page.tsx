@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
+import { t as tr } from '@/lib/i18n/client'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
@@ -581,7 +582,7 @@ export default function SettingsPage() {
     return (
       <div className="settings-root" style={pageStyle}>
         <div style={cardStyle}>
-          <div style={titleStyle}>LOADING...</div>
+          <div style={titleStyle}>{tr("LOADING...")}</div>
         </div>
       </div>
     )
@@ -629,28 +630,26 @@ export default function SettingsPage() {
       `}</style>
 
       <div className="settings-card" style={cardStyle}>
-        <div style={titleStyle}>SETTINGS</div>
+        <div style={titleStyle}>{tr("SETTINGS")}</div>
         <div style={subtitleStyle}>
           {user?.primaryEmailAddress?.emailAddress}
           {isAdmin && (
-            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>· ADMIN</span>
+            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>{tr("· ADMIN")}</span>
           )}
           {!isAdmin && planLabel && (
             <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>· {planLabel}</span>
           )}
           {!isAdmin && sub?.tier === 'lapsed' && !wlActive && (
-            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#ffaa3e', fontWeight: 'bold' }}>· UNSUBSCRIBED</span>
+            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#ffaa3e', fontWeight: 'bold' }}>{tr("· UNSUBSCRIBED")}</span>
           )}
         </div>
 
         {/* BRAND VIEW TOGGLE — tenants + saved themes + standard, no parens */}
         {showBrandToggle && brandOptions && !pausedOnly && (
           <div style={sectionStyle}>
-            <div style={sectionHeaderStyle}>▸ WHITE-LABEL VIEW</div>
+            <div style={sectionHeaderStyle}>{tr("▸ WHITE-LABEL VIEW")}</div>
             <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
-              Which brand do you want to view the app as? Your selection is
-              saved to your account and applies on every device.
-            </div>
+              {tr("Which brand do you want to view the app as? Your selection is saved to your account and applies on every device.")}</div>
 
             <select
               value={currentBrandValue}
@@ -670,15 +669,13 @@ export default function SettingsPage() {
               ))}
               {brandOptions.canSeeStandard && (
                 <option value="standard">
-                  DialerSeat Pro
-                </option>
+                  {tr("DialerSeat Pro")}</option>
               )}
             </select>
 
             {switchingBrand && (
               <div style={{ ...mutedStyle, marginTop: 8, fontSize: 10 }}>
-                Switching view…
-              </div>
+                {tr("Switching view…")}</div>
             )}
           </div>
         )}
@@ -686,35 +683,31 @@ export default function SettingsPage() {
         {/* ── WHITELABEL EDITOR (button only, no inline editor) ── */}
         {wlActive && !pausedOnly && (
           <div style={sectionStyle}>
-            <div style={sectionHeaderStyle}>▸ WHITELABEL EDITOR</div>
+            <div style={sectionHeaderStyle}>{tr("▸ WHITELABEL EDITOR")}</div>
             <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
-              Manage your colors, presets, custom themes, brand name,
-              subdomain, and logo in the onboarding editor. Changes propagate
-              site-wide within 60 seconds.
-            </div>
+              {tr("Manage your colors, presets, custom themes, brand name, subdomain, and logo in the onboarding editor. Changes propagate site-wide within 60 seconds.")}</div>
             <Link href="/onboarding/whitelabel" style={editorButtonStyle}>
-              OPEN WHITELABEL EDITOR
-            </Link>
+              {tr("OPEN WHITELABEL EDITOR")}</Link>
           </div>
         )}
 
         {/* PERSONAL SUBSCRIPTION */}
         <div style={sectionStyle}>
-          <div style={sectionHeaderStyle}>▸ YOUR SUBSCRIPTION</div>
+          <div style={sectionHeaderStyle}>{tr("▸ YOUR SUBSCRIPTION")}</div>
 
           {!sub?.hasSubscription && !wlActive && (
-            <div style={mutedStyle}>No active subscription on file.</div>
+            <div style={mutedStyle}>{tr("No active subscription on file.")}</div>
           )}
 
           {(sub?.hasSubscription || wlActive) && (
             <>
               <div style={rowStyle}>
-                <span style={labelStyle}>PLAN</span>
-                <span style={valueStyle}>{planLabel || 'PRO'}</span>
+                <span style={labelStyle}>{tr("PLAN")}</span>
+                <span style={valueStyle}>{planLabel || tr("PRO")}</span>
               </div>
 
               <div style={rowStyle}>
-                <span style={labelStyle}>STATUS</span>
+                <span style={labelStyle}>{tr("STATUS")}</span>
                 <span style={{ ...valueStyle, color: tierStatusColor(sub) }}>
                   {tierStatusLabel(sub, wlActive)}
                 </span>
@@ -723,15 +716,15 @@ export default function SettingsPage() {
               {sub?.currentPeriodEnd && sub?.tier !== 'lapsed' && (
                 <div style={rowStyle}>
                   <span style={labelStyle}>
-                    {sub.cancelAtPeriodEnd ? 'ACCESS UNTIL' : 'NEXT BILLING'}
+                    {sub.cancelAtPeriodEnd ? tr("ACCESS UNTIL") : tr("NEXT BILLING")}
                   </span>
                   <span style={valueStyle}>{formatDate(sub.currentPeriodEnd)}</span>
                 </div>
               )}
 
               <div style={rowStyle}>
-                <span style={labelStyle}>PRICE</span>
-                <span style={valueStyle}>${weeklyPrice.toFixed(2)} / WEEK</span>
+                <span style={labelStyle}>{tr("PRICE")}</span>
+                <span style={valueStyle}>${weeklyPrice.toFixed(2)} {tr("/ WEEK")}</span>
               </div>
             </>
           )}
@@ -740,31 +733,25 @@ export default function SettingsPage() {
         {/* PREDICTIVE DIALING — the two details its recorded message needs */}
         {!pausedOnly && (
           <div style={sectionStyle}>
-            <div style={sectionHeaderStyle}>▸ PREDICTIVE DIALING</div>
+            <div style={sectionHeaderStyle}>{tr("▸ PREDICTIVE DIALING")}</div>
             <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
-              When two people answer at once and no agent is free, predictive plays a
-              short recorded message with your business name and a number they can call
-              back, as the law requires. Predictive stays locked until both are filled
-              in. Team campaigns use the team owner&apos;s.
-            </div>
+              {tr("When two people answer at once and no agent is free, predictive plays a short recorded message with your business name and a number they can call back, as the law requires. Predictive stays locked until both are filled in. Team campaigns use the team owner's.")}</div>
 
             <label htmlFor="settings-seller-name" style={{ ...labelStyle, display: 'block', marginBottom: 6 }}>
-              BUSINESS NAME
-            </label>
+              {tr("BUSINESS NAME")}</label>
             <input
               id="settings-seller-name"
               type="text"
               value={sellerName}
               maxLength={80}
-              placeholder="Your Company LLC"
+              placeholder={tr("Your Company LLC")}
               autoComplete="organization"
               onChange={e => { setSellerName(e.target.value); setSellerNote(null) }}
               style={{ ...brandSelectStyle(false), cursor: 'text', marginBottom: 12, boxSizing: 'border-box' }}
             />
 
             <label htmlFor="settings-seller-number" style={{ ...labelStyle, display: 'block', marginBottom: 6 }}>
-              CALLBACK NUMBER
-            </label>
+              {tr("CALLBACK NUMBER")}</label>
             <input
               id="settings-seller-number"
               type="tel"
@@ -777,9 +764,9 @@ export default function SettingsPage() {
             />
 
             <div style={{ ...rowStyle, borderBottom: 'none', paddingTop: 0 }}>
-              <span style={{ ...labelStyle }}>PREDICTIVE</span>
+              <span style={{ ...labelStyle }}>{tr("PREDICTIVE")}</span>
               <span style={{ ...valueStyle, color: sellerReady ? '#32ff7e' : '#ffaa3e' }}>
-                {sellerReady === null ? '-' : sellerReady ? 'UNLOCKED' : 'LOCKED'}
+                {sellerReady === null ? '-' : sellerReady ? tr("UNLOCKED") : tr("LOCKED")}
               </span>
             </div>
 
@@ -795,18 +782,16 @@ export default function SettingsPage() {
               disabled={sellerSaving}
               style={{ ...editorButtonStyle, cursor: sellerSaving ? 'wait' : 'pointer', opacity: sellerSaving ? 0.7 : 1 }}
             >
-              {sellerSaving ? 'SAVING…' : 'SAVE'}
+              {sellerSaving ? tr("SAVING…") : tr("SAVE")}
             </button>
           </div>
         )}
 
         {/* SUPPORT */}
         <div style={sectionStyle}>
-          <div style={sectionHeaderStyle}>▸ SUPPORT</div>
+          <div style={sectionHeaderStyle}>{tr("▸ SUPPORT")}</div>
           <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
-            Found a bug, need help, or have an idea to make DialerSeat better?
-            Send it straight to us.
-          </div>
+            {tr("Found a bug, need help, or have an idea to make DialerSeat better? Send it straight to us.")}</div>
           <div style={{ fontSize: 13, fontFamily: FUTURA, color: CHROME.text }}>
             support@dialerseat.com
           </div>
@@ -816,24 +801,22 @@ export default function SettingsPage() {
         {hasAnySeats && (
           <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>
-              ▸ TEAM SEATS ({seats!.counts.totalSeats})
+              {tr("▸ TEAM SEATS (")}{seats!.counts.totalSeats})
             </div>
 
             {seats!.ownerPaidSeats.map(seat => (
               <div key={seat.id} style={seatRowStyle('var(--brand-primary)')}>
                 <div style={seatHeaderStyle}>
                   <span style={seatTeamStyle}>{seat.teamName}</span>
-                  <span style={seatBadgeStyle('var(--brand-primary)')}>OWNER PAID</span>
+                  <span style={seatBadgeStyle('var(--brand-primary)')}>{tr("OWNER PAID")}</span>
                 </div>
                 <div style={seatDetailStyle}>
-                  Paid by <strong style={{ color: CHROME.text }}>{seat.ownerName}</strong> · ${(seat.amountCents / 100).toFixed(2)} / WEEK
-                </div>
+                  {tr("Paid by")}{" "}<strong style={{ color: CHROME.text }}>{seat.ownerName}</strong> · ${(seat.amountCents / 100).toFixed(2)} {tr("/ WEEK")}</div>
                 <div style={seatDetailStyle}>
-                  Period: {formatDate(seat.periodStart)} → {formatDate(seat.periodEnd)}
+                  {tr("Period:")}{" "}{formatDate(seat.periodStart)} → {formatDate(seat.periodEnd)}
                 </div>
                 <div style={{ ...seatDetailStyle, color: CHROME.muted, fontSize: 10, marginTop: 6 }}>
-                  Only the team owner can cancel this seat.
-                </div>
+                  {tr("Only the team owner can cancel this seat.")}</div>
               </div>
             ))}
 
@@ -841,14 +824,13 @@ export default function SettingsPage() {
               <div key={seat.id} style={seatRowStyle('#8a6a1a')}>
                 <div style={seatHeaderStyle}>
                   <span style={seatTeamStyle}>{seat.teamName}</span>
-                  <span style={seatBadgeStyle('#ffaa3e')}>AGENT PAID</span>
+                  <span style={seatBadgeStyle('#ffaa3e')}>{tr("AGENT PAID")}</span>
                 </div>
                 <div style={seatDetailStyle}>
-                  Campaign: <strong style={{ color: CHROME.text }}>{seat.campaignName || '-'}</strong>
+                  {tr("Campaign:")}{" "}<strong style={{ color: CHROME.text }}>{seat.campaignName || '-'}</strong>
                 </div>
                 <div style={seatDetailStyle}>
-                  Owner: {seat.ownerName} · $35.00 / WEEK
-                </div>
+                  {tr("Owner:")}{" "}{seat.ownerName} {tr("· $35.00 / WEEK")}</div>
                 {!pausedOnly && <button
                   onClick={() => startCancelSeat(seat)}
                   disabled={seatCancelling === seat.id}
@@ -858,7 +840,7 @@ export default function SettingsPage() {
                     cursor: seatCancelling === seat.id ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {seatCancelling === seat.id ? 'CANCELING...' : 'CANCEL ACCESS'}
+                  {seatCancelling === seat.id ? tr("CANCELING...") : tr("CANCEL ACCESS")}
                 </button>}
               </div>
             ))}
@@ -867,8 +849,7 @@ export default function SettingsPage() {
               fontSize: 10, color: CHROME.muted, letterSpacing: 1, lineHeight: 1.5,
               marginTop: 12, paddingTop: 12, borderTop: `1px solid ${CHROME.borderSoft}`,
             }}>
-              Canceling a seat ends campaign access only. You remain on the team and can rejoin a campaign anytime.
-            </div>
+              {tr("Canceling a seat ends campaign access only. You remain on the team and can rejoin a campaign anytime.")}</div>
           </div>
         )}
 
@@ -879,27 +860,26 @@ export default function SettingsPage() {
           <div style={resubscribeBoxStyle}>
             <div style={resubscribeHeaderStyle}>
               {sub?.tier === 'lapsed'
-                ? 'YOUR SUBSCRIPTION HAS LAPSED'
-                : 'YOUR SUBSCRIPTION IS SCHEDULED TO CANCEL'}
+                ? tr("YOUR SUBSCRIPTION HAS LAPSED")
+                : tr("YOUR SUBSCRIPTION IS SCHEDULED TO CANCEL")}
             </div>
             <div style={resubscribeTextStyle}>
               {sub?.tier === 'lapsed'
-                ? 'Resubscribe to restore dialing, campaign creation, and lead imports. Your existing leads, recordings, and analytics are still here.'
+                ? tr("Resubscribe to restore dialing, campaign creation, and lead imports. Your existing leads, recordings, and analytics are still here.")
                 : `You'll lose dialing access on ${sub?.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : 'period end'}. Resume billing now to keep going without interruption.`
               }
             </div>
             <button onClick={handleResubscribe} disabled={resuming} style={{ ...resubscribeButtonStyle, opacity: resuming ? 0.6 : 1, cursor: resuming ? 'not-allowed' : 'pointer' }}>
               {resuming
-                ? 'RESUMING...'
-                : sub?.tier === 'lapsed' ? 'RESUBSCRIBE, $35/WEEK' : 'RESUME SUBSCRIPTION'}
+                ? tr("RESUMING...")
+                : sub?.tier === 'lapsed' ? tr("RESUBSCRIBE, $35/WEEK") : tr("RESUME SUBSCRIPTION")}
             </button>
           </div>
         )}
 
         {isAdmin && sub?.isActive && !sub.cancelAtPeriodEnd && (
           <div style={adminNoticeStyle}>
-            ADMIN ACCOUNTS CANNOT CANCEL FROM THIS PANEL
-          </div>
+            {tr("ADMIN ACCOUNTS CANNOT CANCEL FROM THIS PANEL")}</div>
         )}
 
         {/* ── PAUSE ─────────────────────────────────────────────────────────
@@ -909,16 +889,13 @@ export default function SettingsPage() {
         {!isAdmin && sub?.hasSubscription && !sub.cancelAtPeriodEnd && (
           <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>
-              ▸ {paused ? 'SUBSCRIPTION PAUSED' : 'PAUSE SUBSCRIPTION'}
+              ▸ {paused ? tr("SUBSCRIPTION PAUSED") : tr("PAUSE SUBSCRIPTION")}
             </div>
             <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
               {paused ? (
                 <>
-                  Billing is paused. You can resume weekly billing at any time 
-                  one click, no re-signup, and everything is exactly where you
-                  left it.
-                  {sub.currentPeriodEnd && (
-                    <> Your current week runs to{' '}
+                  {tr("Billing is paused. You can resume weekly billing at any time one click, no re-signup, and everything is exactly where you left it.")}{sub.currentPeriodEnd && (
+                    <> {tr("Your current week runs to")}{' '}
                       <strong style={{ color: 'var(--brand-primary)' }}>
                         {formatDate(sub.currentPeriodEnd)}
                       </strong>.
@@ -927,12 +904,9 @@ export default function SettingsPage() {
                 </>
               ) : (
                 <>
-                  Stopping for a while? Pause instead of cancelling. You keep the
-                  week you&apos;ve already paid for, your leads, campaigns and
-                  call history stay untouched, and{' '}
+                  {tr("Stopping for a while? Pause instead of cancelling. You keep the week you've already paid for, your leads, campaigns and call history stay untouched, and")}{' '}
                   <strong style={{ color: 'var(--brand-primary)' }}>
-                    you can resume weekly billing at any time
-                  </strong>.
+                    {tr("you can resume weekly billing at any time")}</strong>.
                 </>
               )}
             </div>
@@ -961,8 +935,8 @@ export default function SettingsPage() {
               }}
             >
               {pausing
-                ? (paused ? 'RESUMING...' : 'PAUSING...')
-                : (paused ? 'RESUME SUBSCRIPTION' : 'PAUSE SUBSCRIPTION')}
+                ? (paused ? tr("RESUMING...") : tr("PAUSING..."))
+                : (paused ? tr("RESUME SUBSCRIPTION") : tr("PAUSE SUBSCRIPTION"))}
             </button>
           </div>
         )}
@@ -974,12 +948,9 @@ export default function SettingsPage() {
         {!isAdmin && !pausedOnly && (
           <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>
-              ▸ PAYMENT METHODS &amp; INVOICES
-            </div>
+              {tr("▸ PAYMENT METHODS & INVOICES")}</div>
             <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
-              Add or replace a card, keep more than one on file, and download past invoices.
-              Opens in a new tab. Handled by Stripe, card details never reach DialerSeat.
-            </div>
+              {tr("Add or replace a card, keep more than one on file, and download past invoices. Opens in a new tab. Handled by Stripe, card details never reach DialerSeat.")}</div>
 
             {portalError && (
               <div style={{
@@ -1004,7 +975,7 @@ export default function SettingsPage() {
                 cursor: portalBusy ? 'not-allowed' : 'pointer',
               }}
             >
-              {portalBusy ? 'OPENING STRIPE...' : 'MANAGE PAYMENT METHODS & INVOICES'}
+              {portalBusy ? tr("OPENING STRIPE...") : tr("MANAGE PAYMENT METHODS & INVOICES")}
             </button>
           </div>
         )}
@@ -1013,34 +984,30 @@ export default function SettingsPage() {
           <>
             {!confirming ? (
               <button onClick={handleStartCancel} style={dangerButtonStyle}>
-                CANCEL SUBSCRIPTION
-              </button>
+                {tr("CANCEL SUBSCRIPTION")}</button>
             ) : (
               <div style={confirmBoxStyle}>
                 <div style={confirmTextStyle}>
-                  Cancel your subscription? You&apos;ll keep access until{' '}
+                  {tr("Cancel your subscription? You'll keep access until")}{' '}
                   <strong style={{ color: 'var(--brand-primary)' }}>
-                    {sub.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : 'period end'}
+                    {sub.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : tr("period end")}
                   </strong>
-                  . No further charges.
-                </div>
+                  {tr(". No further charges.")}</div>
 
                 <div style={typePromptStyle}>
-                  Type <strong style={{ color: '#ff8888' }}>cancel</strong> to confirm:
-                </div>
+                  {tr("Type")}{" "}<strong style={{ color: '#ff8888' }}>{tr("cancel")}</strong> {tr("to confirm:")}</div>
                 <input
                   type="text"
                   value={typedConfirm}
                   onChange={e => setTypedConfirm(e.target.value)}
-                  placeholder="cancel"
+                  placeholder={tr("cancel")}
                   autoFocus
                   style={typeInputStyle}
                 />
 
                 <div className="settings-confirm-buttons" style={confirmButtonsStyle}>
                   <button onClick={handleAbortCancel} disabled={canceling} style={secondaryButtonStyle}>
-                    KEEP SUBSCRIPTION
-                  </button>
+                    {tr("KEEP SUBSCRIPTION")}</button>
                   <button
                     onClick={handleCancel}
                     disabled={canceling || !confirmReady}
@@ -1050,7 +1017,7 @@ export default function SettingsPage() {
                       cursor: canceling || !confirmReady ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {canceling ? 'CANCELING...' : 'CONFIRM CANCEL'}
+                    {canceling ? tr("CANCELING...") : tr("CONFIRM CANCEL")}
                   </button>
                 </div>
               </div>
@@ -1060,23 +1027,19 @@ export default function SettingsPage() {
 
         {sub?.cancelAtPeriodEnd && !showResubscribe && (
           <div style={warnStyle}>
-            Your subscription is scheduled to cancel at the end of the current billing period.
-          </div>
+            {tr("Your subscription is scheduled to cancel at the end of the current billing period.")}</div>
         )}
 
         {/* DELETE ACCOUNT — separate from subscription cancellation; wipes app data + Clerk identity */}
         <div style={{ ...sectionStyle, borderLeft: '3px solid #8a1a1a', marginTop: 24 }}>
-          <div style={{ ...sectionHeaderStyle, color: '#e0a0a0' }}>▸ DELETE ACCOUNT</div>
+          <div style={{ ...sectionHeaderStyle, color: '#e0a0a0' }}>{tr("▸ DELETE ACCOUNT")}</div>
           <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
-            Permanently deletes your DialerSeat account, leads, campaigns, calls, and sign-in.
-            This cannot be undone.
-          </div>
+            {tr("Permanently deletes your DialerSeat account, leads, campaigns, calls, and sign-in. This cannot be undone.")}</div>
           {isAdmin ? (
-            <div style={adminNoticeStyle}>ADMIN ACCOUNTS CANNOT SELF-DELETE FROM THIS PANEL</div>
+            <div style={adminNoticeStyle}>{tr("ADMIN ACCOUNTS CANNOT SELF-DELETE FROM THIS PANEL")}</div>
           ) : (
             <button onClick={openDeleteAccount} style={miniDangerButtonStyle}>
-              DELETE MY ACCOUNT
-            </button>
+              {tr("DELETE MY ACCOUNT")}</button>
           )}
         </div>
       </div>
@@ -1103,21 +1066,19 @@ export default function SettingsPage() {
           >
             <div style={{
               fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#ff8888', marginBottom: 14,
-            }}>CANCEL SEAT ACCESS</div>
+            }}>{tr("CANCEL SEAT ACCESS")}</div>
             <p style={{ fontSize: 13, lineHeight: 1.6, color: CHROME.text, margin: '0 0 14px 0' }}>
-              Cancel your access to <strong>{seatConfirmTarget.campaignName || 'this campaign'}</strong> on team <strong>{seatConfirmTarget.teamName}</strong>?
+              {tr("Cancel your access to")}{" "}<strong>{seatConfirmTarget.campaignName || tr("this campaign")}</strong> {tr("on team")}{" "}<strong>{seatConfirmTarget.teamName}</strong>?
             </p>
             <p style={{ fontSize: 12, lineHeight: 1.6, color: CHROME.muted, margin: '0 0 16px 0' }}>
-              You stay on the team but lose dialing access to this campaign. Your $35/wk for this seat stops at period close.
-            </p>
+              {tr("You stay on the team but lose dialing access to this campaign. Your $35/wk for this seat stops at period close.")}</p>
             <div style={typePromptStyle}>
-              Type <strong style={{ color: '#ff8888' }}>cancel</strong> to confirm:
-            </div>
+              {tr("Type")}{" "}<strong style={{ color: '#ff8888' }}>{tr("cancel")}</strong> {tr("to confirm:")}</div>
             <input
               type="text"
               value={seatTypedConfirm}
               onChange={e => setSeatTypedConfirm(e.target.value)}
-              placeholder="cancel"
+              placeholder={tr("cancel")}
               autoFocus
               disabled={seatCancelling !== null}
               style={typeInputStyle}
@@ -1127,7 +1088,7 @@ export default function SettingsPage() {
                 onClick={() => { setSeatConfirmTarget(null); setSeatTypedConfirm('') }}
                 disabled={seatCancelling !== null}
                 style={secondaryButtonStyle}
-              >KEEP ACCESS</button>
+              >{tr("KEEP ACCESS")}</button>
               <button
                 onClick={submitCancelSeat}
                 disabled={seatCancelling !== null || seatTypedConfirm.toLowerCase().trim() !== 'cancel'}
@@ -1137,7 +1098,7 @@ export default function SettingsPage() {
                   cursor: (seatCancelling !== null || seatTypedConfirm.toLowerCase().trim() !== 'cancel') ? 'not-allowed' : 'pointer',
                 }}
               >
-                {seatCancelling !== null ? 'CANCELING...' : 'CONFIRM CANCEL'}
+                {seatCancelling !== null ? tr("CANCELING...") : tr("CONFIRM CANCEL")}
               </button>
             </div>
           </div>
@@ -1165,12 +1126,9 @@ export default function SettingsPage() {
             {deleteStep === 'feedback' && (
               <>
                 <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#ff8888', marginBottom: 10 }}>
-                  BEFORE YOU GO
-                </div>
+                  {tr("BEFORE YOU GO")}</div>
                 <p style={{ fontSize: 13, lineHeight: 1.6, margin: '0 0 16px 0', color: CHROME.text }}>
-                  How was your experience with DialerSeat? Your feedback goes straight to the
-                  team, it genuinely helps us improve.
-                </p>
+                  {tr("How was your experience with DialerSeat? Your feedback goes straight to the team, it genuinely helps us improve.")}</p>
 
                 <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
                   {[1, 2, 3, 4, 5].map(n => (
@@ -1194,7 +1152,7 @@ export default function SettingsPage() {
                 <textarea
                   value={exitFeedback}
                   onChange={e => setExitFeedback(e.target.value)}
-                  placeholder="What worked, what didn't, what we should fix, anything at all."
+                  placeholder={tr("What worked, what didn't, what we should fix, anything at all.")}
                   maxLength={8000}
                   rows={5}
                   style={{
@@ -1211,14 +1169,13 @@ export default function SettingsPage() {
                     disabled={exitSubmitting}
                     style={secondaryButtonStyle}
                   >
-                    SKIP
-                  </button>
+                    {tr("SKIP")}</button>
                   <button
                     onClick={() => submitExitFeedback(false)}
                     disabled={exitSubmitting}
                     style={{ ...secondaryButtonStyle, flex: 1 }}
                   >
-                    {exitSubmitting ? 'SUBMITTING...' : 'SUBMIT & CONTINUE'}
+                    {exitSubmitting ? tr("SUBMITTING...") : tr("SUBMIT & CONTINUE")}
                   </button>
                 </div>
               </>
@@ -1227,25 +1184,19 @@ export default function SettingsPage() {
             {deleteStep === 'confirm' && (
               <>
                 <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#ff8888', marginBottom: 14 }}>
-                  PERMANENTLY DELETE YOUR ACCOUNT
-                </div>
+                  {tr("PERMANENTLY DELETE YOUR ACCOUNT")}</div>
                 <p style={{ fontSize: 13, lineHeight: 1.6, margin: '0 0 14px 0', color: CHROME.text }}>
-                  This removes your leads, campaigns, calls, recordings, team memberships, and
-                  sign-in. This cannot be undone.
-                </p>
+                  {tr("This removes your leads, campaigns, calls, recordings, team memberships, and sign-in. This cannot be undone.")}</p>
                 <p style={{ fontSize: 12, lineHeight: 1.6, margin: '0 0 16px 0', color: CHROME.muted }}>
-                  If you have an active subscription, cancel it first, active accounts can&apos;t
-                  be deleted until billing stops.
-                </p>
+                  {tr("If you have an active subscription, cancel it first, active accounts can't be deleted until billing stops.")}</p>
 
                 <div style={typePromptStyle}>
-                  Type <strong style={{ color: '#ff8888' }}>DELETE</strong> to confirm:
-                </div>
+                  {tr("Type")}{" "}<strong style={{ color: '#ff8888' }}>{tr("DELETE")}</strong> {tr("to confirm:")}</div>
                 <input
                   type="text"
                   value={deleteTypedConfirm}
                   onChange={e => setDeleteTypedConfirm(e.target.value)}
-                  placeholder="DELETE"
+                  placeholder={tr("DELETE")}
                   autoFocus
                   disabled={deleteAccSubmitting}
                   style={typeInputStyle}
@@ -1255,8 +1206,7 @@ export default function SettingsPage() {
 
                 <div className="settings-confirm-buttons" style={confirmButtonsStyle}>
                   <button onClick={closeDeleteAccount} disabled={deleteAccSubmitting} style={secondaryButtonStyle}>
-                    KEEP MY ACCOUNT
-                  </button>
+                    {tr("KEEP MY ACCOUNT")}</button>
                   <button
                     onClick={executeDeleteAccount}
                     disabled={deleteAccSubmitting || deleteTypedConfirm.trim().toUpperCase() !== 'DELETE'}
@@ -1266,7 +1216,7 @@ export default function SettingsPage() {
                       cursor: deleteAccSubmitting || deleteTypedConfirm.trim().toUpperCase() !== 'DELETE' ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {deleteAccSubmitting ? 'DELETING...' : 'DELETE PERMANENTLY'}
+                    {deleteAccSubmitting ? tr("DELETING...") : tr("DELETE PERMANENTLY")}
                   </button>
                 </div>
               </>
@@ -1275,12 +1225,9 @@ export default function SettingsPage() {
             {deleteStep === 'done' && (
               <>
                 <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#32ff7e', marginBottom: 14 }}>
-                  ACCOUNT DELETED
-                </div>
+                  {tr("ACCOUNT DELETED")}</div>
                 <p style={{ fontSize: 13, lineHeight: 1.6, color: CHROME.text }}>
-                  Your data has been removed. Taking you home now, thanks for using
-                  DialerSeat.
-                </p>
+                  {tr("Your data has been removed. Taking you home now, thanks for using DialerSeat.")}</p>
               </>
             )}
           </div>

@@ -5,6 +5,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 // =============================================================================
 // /faq/dialer-for-offshore-agents — the wedge nobody is priced for
@@ -89,7 +90,8 @@ const FAQS = [
   },
 ]
 
-export default function OffshoreAgentsPage() {
+export default async function OffshoreAgentsPage() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={organizationSchema()} />
@@ -103,43 +105,32 @@ export default function OffshoreAgentsPage() {
       <GutsShell rail={faqRail('/faq/dialer-for-offshore-agents')} activeHref="/faq/dialer-for-offshore-agents">
         <div className="guts-sec">
           <nav style={{ fontSize: 11, letterSpacing: 1.5, color: MUTED, marginBottom: 22 }}>
-            <Link href="/" style={{ color: MUTED }}>HOME</Link>{' · '}
-            <Link href="/faq" style={{ color: MUTED }}>FAQ</Link>
+            <Link href="/" style={{ color: MUTED }}>{t("HOME")}</Link>{' · '}
+            <Link href="/faq" style={{ color: MUTED }}>{t("FAQ")}</Link>
           </nav>
 
           <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: ACCENT, marginBottom: 14 }}>
-            ▸ Remote &amp; offshore
-          </div>
+            {t("▸ Remote & offshore")}</div>
           <h1 style={{ fontSize: 43, fontWeight: 'bold', letterSpacing: -1, lineHeight: 1.13, margin: 0, maxWidth: 820 }}>
-            Running a dialer with agents overseas.
-          </h1>
+            {t("Running a dialer with agents overseas.")}</h1>
           <p style={{ fontSize: 16.5, lineHeight: 1.8, color: MUTED, maxWidth: 770, marginTop: 18 }}>
-            Most teams never build an offshore floor because the dialer costs more per seat than the
-            agent does per hour. That is a pricing problem, not a technical one.
-          </p>
+            {t("Most teams never build an offshore floor because the dialer costs more per seat than the agent does per hour. That is a pricing problem, not a technical one.")}</p>
 
           <section style={{
             marginTop: 34, background: '#fff', border: `1px solid ${BORDER}`,
             borderTop: `3px solid ${ACCENT}`, borderRadius: 8, padding: 28,
           }}>
             <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: ACCENT }}>
-              THE ARITHMETIC
-            </div>
+              {t("THE ARITHMETIC")}</div>
             <p style={{ fontSize: 15.5, lineHeight: 1.85, marginTop: 12, maxWidth: 760 }}>
-              A ten-agent floor costs <strong>$350 per week</strong> in seats on DialerSeat, plus $75
-              for the Manager+ owner. The same ten seats on a platform charging $250 per user per
-              month is roughly <strong>$2,500 a month</strong>, usually on an annual commitment.
-            </p>
+              {t("A ten-agent floor costs")}{" "}<strong>{t("$350 per week")}</strong> {t("in seats on DialerSeat, plus $75 for the Manager+ owner. The same ten seats on a platform charging $250 per user per month is roughly")}{" "}<strong>{t("$2,500 a month")}</strong>{t(", usually on an annual commitment.")}</p>
             <p style={{ fontSize: 14.5, lineHeight: 1.8, color: MUTED, marginTop: 12, maxWidth: 760 }}>
-              That gap is not a discount. It is the difference between a staffing model that works and
-              one that does not get attempted.
-            </p>
+              {t("That gap is not a discount. It is the difference between a staffing model that works and one that does not get attempted.")}</p>
           </section>
 
           <section style={{ marginTop: 46 }}>
             <h2 style={{ fontSize: 25, fontWeight: 'bold', letterSpacing: -0.4, margin: 0 }}>
-              What carries over the border
-            </h2>
+              {t("What carries over the border")}</h2>
             <ul style={{ margin: '16px 0 0', paddingLeft: 18, fontSize: 14.5, lineHeight: 1.85, maxWidth: 820 }}>
               {FACTS.teams.offshore.map(l => <li key={l} style={{ marginBottom: 8 }}>{l}</li>)}
             </ul>
@@ -147,17 +138,11 @@ export default function OffshoreAgentsPage() {
 
           <section style={{ marginTop: 46 }}>
             <h2 style={{ fontSize: 25, fontWeight: 'bold', letterSpacing: -0.4, margin: 0 }}>
-              The one thing worth testing first
-            </h2>
+              {t("The one thing worth testing first")}</h2>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: MUTED, marginTop: 12, maxWidth: 790 }}>
-              Audio quality is the variable, and it is about the agent&apos;s connection rather than the
-              platform. Voice has to cross the same ocean whatever software you use, and a wired office
-              line in Manila behaves very differently from residential wifi during a storm.
-            </p>
+              {t("Audio quality is the variable, and it is about the agent's connection rather than the platform. Voice has to cross the same ocean whatever software you use, and a wired office line in Manila behaves very differently from residential wifi during a storm.")}</p>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: MUTED, marginTop: 10, maxWidth: 790 }}>
-              Put one agent on real calls for a day before hiring five. It is a cheap test and it is
-              the only one that tells you anything, a speed test will not.
-            </p>
+              {t("Put one agent on real calls for a day before hiring five. It is a cheap test and it is the only one that tells you anything, a speed test will not.")}</p>
           </section>
 
           <section style={{
@@ -165,18 +150,13 @@ export default function OffshoreAgentsPage() {
             borderLeft: '4px solid #8a6a1a', borderRadius: 8, padding: 26,
           }}>
             <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a' }}>
-              COMPLIANCE DOES NOT MOVE OFFSHORE WITH THE AGENT
-            </div>
+              {t("COMPLIANCE DOES NOT MOVE OFFSHORE WITH THE AGENT")}</div>
             <p style={{ fontSize: 14.5, lineHeight: 1.8, marginTop: 10, maxWidth: 790 }}>
-              TCPA and DNC obligations attach to the business placing the calls, not to where the
-              person dialling sits. DialerSeat enforces calling windows per lead state and exports a
-              per-call compliance record for any date range, but national DNC scrubbing and consent
-              records stay your responsibility, exactly as they would with a domestic floor.
-            </p>
+              {t("TCPA and DNC obligations attach to the business placing the calls, not to where the person dialling sits. DialerSeat enforces calling windows per lead state and exports a per-call compliance record for any date range, but national DNC scrubbing and consent records stay your responsibility, exactly as they would with a domestic floor.")}</p>
           </section>
 
           <section style={{ marginTop: 52 }}>
-            <h2 style={{ fontSize: 25, fontWeight: 'bold', letterSpacing: -0.4, margin: 0 }}>Questions</h2>
+            <h2 style={{ fontSize: 25, fontWeight: 'bold', letterSpacing: -0.4, margin: 0 }}>{t("Questions")}</h2>
             <div style={{ marginTop: 20 }}>
               {FAQS.map(f => (
                 <div key={f.question} style={{ marginBottom: 24, maxWidth: 840 }}>
@@ -192,14 +172,12 @@ export default function OffshoreAgentsPage() {
               fontSize: 11, letterSpacing: 1.5, fontWeight: 'bold', color: '#fff',
               background: ACCENT, borderRadius: 4, padding: '13px 20px', textDecoration: 'none',
             }}>
-              HOW TEAMS WORK
-            </Link>
+              {t("HOW TEAMS WORK")}</Link>
             <Link href="/vs/teams" style={{
               fontSize: 11, letterSpacing: 1.5, fontWeight: 'bold', color: ACCENT,
               border: `1px solid ${ACCENT}`, borderRadius: 4, padding: '13px 20px', textDecoration: 'none',
             }}>
-              WHAT 5 AGENTS COST ELSEWHERE
-            </Link>
+              {t("WHAT 5 AGENTS COST ELSEWHERE")}</Link>
           </div>
         </div>
       </GutsShell>

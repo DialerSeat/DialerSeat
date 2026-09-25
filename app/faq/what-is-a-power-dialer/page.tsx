@@ -8,6 +8,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -34,7 +35,8 @@ export const metadata: Metadata = {
 const MODE_COLOR = '${SITE.deep}'
 const MODE_BG = '#e8eef8'
 
-export default function PowerDialerPage() {
+export default async function PowerDialerPage() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={breadcrumbSchema([
@@ -385,116 +387,74 @@ export default function PowerDialerPage() {
         {/* HERO */}
         <section className="dm-hero">
           <div className="dm-hero-inner">
-            <div className="dm-eyebrow">POWER DIALER</div>
-          <span style={{ fontSize: 11, color: '${SITE.muted}', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
-            <h1>The workhorse of inside sales.</h1>
+            <div className="dm-eyebrow">{t("POWER DIALER")}</div>
+          <span style={{ fontSize: 11, color: '${SITE.muted}', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>{t("LAST UPDATED 07/28/2026")}</span>
+            <h1>{t("The workhorse of inside sales.")}</h1>
             <p className="dm-lead">
-              One line per agent, queue-driven, auto-advancing. If you&apos;ve
-              ever heard the words <em>&quot;click-to-dial&quot;</em> on a sales
-              floor, you&apos;ve heard the power dialer. It&apos;s the mode
-              that defined outbound from 1995 onward and still does the
-              majority of the work in B2B and SDR shops.
-            </p>
+              {t("One line per agent, queue-driven, auto-advancing. If you've ever heard the words")}{" "}<em>{t("\"click-to-dial\"")}</em> {t("on a sales floor, you've heard the power dialer. It's the mode that defined outbound from 1995 onward and still does the majority of the work in B2B and SDR shops.")}</p>
           </div>
         </section>
 
         {/* MECHANISM */}
         <section className="dm-section">
-          <h2>How power dialing works</h2>
+          <h2>{t("How power dialing works")}</h2>
           <p>
-            Power is preview&apos;s faster sibling. The agent still triggers
-            the run, but once started the system stops asking permission
-            between calls. You click once, it dials forever, or until you
-            stop it.
-          </p>
+            {t("Power is preview's faster sibling. The agent still triggers the run, but once started the system stops asking permission between calls. You click once, it dials forever, or until you stop it.")}</p>
           <ol className="dm-steps">
-            <li><div>Set yourself available, pick a campaign, click <em>Initiate Dial Sequence</em>.</div></li>
-            <li><div>The system pulls the next lead from the queue and immediately places the call. The lead profile appears on your screen as the phone rings.</div></li>
-            <li><div>Phone rings. You wait. If a human answers, you talk. If voicemail or no-answer, the system can drop the call and move on (or pop disposition first, depending on settings).</div></li>
-            <li><div>After hangup or disposition, the queue advances. The next lead pulls automatically. No clicking required.</div></li>
-            <li><div>Loop forever, or until you set yourself offline.</div></li>
+            <li><div>{t("Set yourself available, pick a campaign, click")}{" "}<em>{t("Initiate Dial Sequence")}</em>.</div></li>
+            <li><div>{t("The system pulls the next lead from the queue and immediately places the call. The lead profile appears on your screen as the phone rings.")}</div></li>
+            <li><div>{t("Phone rings. You wait. If a human answers, you talk. If voicemail or no-answer, the system can drop the call and move on (or pop disposition first, depending on settings).")}</div></li>
+            <li><div>{t("After hangup or disposition, the queue advances. The next lead pulls automatically. No clicking required.")}</div></li>
+            <li><div>{t("Loop forever, or until you set yourself offline.")}</div></li>
           </ol>
           <div className="dm-pullquote">
-            The defining property of power is <strong>one outbound line per
-            agent</strong>. The system never has more calls in flight than it
-            has people to answer them. Throughput goes up, compliance profile
-            stays identical to preview.
-          </div>
+            {t("The defining property of power is")}{" "}<strong>{t("one outbound line per agent")}</strong>{t(". The system never has more calls in flight than it has people to answer them. Throughput goes up, compliance profile stays identical to preview.")}</div>
         </section>
 
         {/* ORIGINS */}
         <section className="dm-section alt">
           <div className="inner">
-            <h2>Where it came from</h2>
+            <h2>{t("Where it came from")}</h2>
             <p>
-              The power dialer is a 1990s invention. Through the 1980s, big
-              call centers had been running predictive systems (more on those
-              later), but predictive required serious hardware, Aspect
-              CallCenter, Rockwell Spectrum, EIS dialers, and serious
-              compliance discipline. Smaller shops couldn&apos;t afford either.
-            </p>
+              {t("The power dialer is a 1990s invention. Through the 1980s, big call centers had been running predictive systems (more on those later), but predictive required serious hardware, Aspect CallCenter, Rockwell Spectrum, EIS dialers, and serious compliance discipline. Smaller shops couldn't afford either.")}</p>
             <p>
-              What smaller shops <em>could</em> afford, by the mid-1990s,
-              was a PC running early CRM software (ACT!, GoldMine, Maximizer)
-              with a TAPI or modem dial-out integration. Click a contact in
-              the CRM, the modem dials the number, the agent picks up the
-              handset. That was the seed. It got formalized as
-              &quot;click-to-dial&quot; by Avaya and similar vendors and
-              quickly evolved into queue-driven workflows, the system
-              wouldn&apos;t just dial when clicked, it would auto-pull from a
-              list.
-            </p>
+              {t("What smaller shops")}{" "}<em>{t("could")}</em> {t("afford, by the mid-1990s, was a PC running early CRM software (ACT!, GoldMine, Maximizer) with a TAPI or modem dial-out integration. Click a contact in the CRM, the modem dials the number, the agent picks up the handset. That was the seed. It got formalized as \"click-to-dial\" by Avaya and similar vendors and quickly evolved into queue-driven workflows, the system wouldn't just dial when clicked, it would auto-pull from a list.")}</p>
             <p>
-              The term &quot;power dialer&quot; came from the marketing
-              departments of vendors trying to differentiate this faster
-              mode from manual without claiming it was predictive. Mojo
-              Dialer (founded 2001, with VoIP from around 2008) and
-              PhoneBurner (2008) brought it down-market to solo agents and
-              small teams in the 2010s. By then, predictive had become a
-              big-shop tool and power had become the default for everyone
-              else.
-            </p>
+              {t("The term \"power dialer\" came from the marketing departments of vendors trying to differentiate this faster mode from manual without claiming it was predictive. Mojo Dialer (founded 2001, with VoIP from around 2008) and PhoneBurner (2008) brought it down-market to solo agents and small teams in the 2010s. By then, predictive had become a big-shop tool and power had become the default for everyone else.")}</p>
             <p>
-              The mode hasn&apos;t fundamentally changed in 25 years. What
-              changed around it is everything else: lead lists in cloud
-              CRMs, dialer audio over WebRTC instead of a desk phone, and
-              answering-machine detection (AMD) that&apos;s good enough to
-              meaningfully cut wasted time on voicemails.
-            </p>
+              {t("The mode hasn't fundamentally changed in 25 years. What changed around it is everything else: lead lists in cloud CRMs, dialer audio over WebRTC instead of a desk phone, and answering-machine detection (AMD) that's good enough to meaningfully cut wasted time on voicemails.")}</p>
           </div>
         </section>
 
         {/* WHEN IT SHINES */}
         <section className="dm-section">
-          <h2>When power wins</h2>
+          <h2>{t("When power wins")}</h2>
           <p>
-            Power is the right default for most outbound. It&apos;s faster
-            than preview, safer than predictive, and works with a team of one.
-          </p>
+            {t("Power is the right default for most outbound. It's faster than preview, safer than predictive, and works with a team of one.")}</p>
           <div className="dm-shines-grid">
             <div className="dm-shines-card">
-              <h4>SDR TEAMS</h4>
-              <p>Inside sales reps qualifying leads. You need volume, you need to read the lead while it rings, you don&apos;t need predictive pacing.</p>
+              <h4>{t("SDR TEAMS")}</h4>
+              <p>{t("Inside sales reps qualifying leads. You need volume, you need to read the lead while it rings, you don't need predictive pacing.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>SOLO AGENTS</h4>
-              <p>Predictive needs multiple agents to make sense. Power is the most efficient mode you can run alone.</p>
+              <h4>{t("SOLO AGENTS")}</h4>
+              <p>{t("Predictive needs multiple agents to make sense. Power is the most efficient mode you can run alone.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>B2B COLD CALLING</h4>
-              <p>Calling businesses with mid-quality lists. You want speed without dropping calls, power handles that.</p>
+              <h4>{t("B2B COLD CALLING")}</h4>
+              <p>{t("Calling businesses with mid-quality lists. You want speed without dropping calls, power handles that.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>WARM B2C FOLLOW-UPS</h4>
-              <p>Leads opted in, you have context, you don&apos;t need predictive throughput. Power keeps it personal but fast.</p>
+              <h4>{t("WARM B2C FOLLOW-UPS")}</h4>
+              <p>{t("Leads opted in, you have context, you don't need predictive throughput. Power keeps it personal but fast.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>SMALL TEAMS (2-4)</h4>
-              <p>Below the threshold where predictive math actually pays off, but above where preview is too slow. Power is the sweet spot.</p>
+              <h4>{t("SMALL TEAMS (2-4)")}</h4>
+              <p>{t("Below the threshold where predictive math actually pays off, but above where preview is too slow. Power is the sweet spot.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>COMPLIANCE-SENSITIVE LISTS</h4>
-              <p>Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.</p>
+              <h4>{t("COMPLIANCE-SENSITIVE LISTS")}</h4>
+              <p>{t("Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.")}</p>
             </div>
           </div>
         </section>
@@ -502,43 +462,28 @@ export default function PowerDialerPage() {
         {/* TRADE-OFFS */}
         <section className="dm-section alt">
           <div className="inner">
-            <h2>What you give up</h2>
+            <h2>{t("What you give up")}</h2>
             <p>
-              The dead time during ring. A power agent spends real seconds
-              waiting on each ring. On a list with a 25% pickup rate, three
-              out of four dials are time you&apos;ll never get back. Add a
-              few seconds per disposition, and your effective talk time
-              floats around 15-20 minutes per hour.
-            </p>
+              {t("The dead time during ring. A power agent spends real seconds waiting on each ring. On a list with a 25% pickup rate, three out of four dials are time you'll never get back. Add a few seconds per disposition, and your effective talk time floats around 15-20 minutes per hour.")}</p>
             <p>
-              The other thing power gives up is voicemail filtering, by
-              default. If you&apos;re hitting answering machines on every
-              third dial and you don&apos;t turn AMD on, you&apos;re going
-              to hear the same robotic &quot;Hi, you&apos;ve reached
-              ...&quot; ten thousand times before the year is out. It&apos;s
-              a one-click toggle in campaign settings if you&apos;d rather
-              have progressive&apos;s filtering behavior on a power-mode
-              campaign.
-            </p>
+              {t("The other thing power gives up is voicemail filtering, by default. If you're hitting answering machines on every third dial and you don't turn AMD on, you're going to hear the same robotic \"Hi, you've reached ...\" ten thousand times before the year is out. It's a one-click toggle in campaign settings if you'd rather have progressive's filtering behavior on a power-mode campaign.")}</p>
           </div>
         </section>
 
         {/* ON DIALERSEAT */}
         <section className="dm-on-ds">
           <div className="inner">
-            <h2>Power on DialerSeat</h2>
+            <h2>{t("Power on DialerSeat")}</h2>
             <p>
-              Power is the default mode for new campaigns. Pick it and you&apos;re
-              dialing, no per-campaign tuning required.
-            </p>
+              {t("Power is the default mode for new campaigns. Pick it and you're dialing, no per-campaign tuning required.")}</p>
             <ul className="dm-bullets">
-              <li>AMD is off by default in power mode: you hear every pickup, voicemail included. Flip it on per-campaign in settings if you want machine pickups filtered out.</li>
-              <li>Auto-advance after disposition, no clicking between calls once you&apos;re going.</li>
-              <li>One outbound line per agent. Zero abandonment possible. No FTC exposure.</li>
-              <li>TCPA window enforcement per lead&apos;s local time zone. No 6 AM Pacific dials to East Coast leads.</li>
-              <li>National DNC scrubbing is on you, scrub your list against the registry before you upload it. State-specific lists are on you too. See <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link>.</li>
-              <li>Keyboard shortcuts for disposition so you keep your hands on the keys, not the mouse.</li>
-              <li>Live duration timer, connected-rate counter, and per-session metrics in the right sidebar.</li>
+              <li>{t("AMD is off by default in power mode: you hear every pickup, voicemail included. Flip it on per-campaign in settings if you want machine pickups filtered out.")}</li>
+              <li>{t("Auto-advance after disposition, no clicking between calls once you're going.")}</li>
+              <li>{t("One outbound line per agent. Zero abandonment possible. No FTC exposure.")}</li>
+              <li>{t("TCPA window enforcement per lead's local time zone. No 6 AM Pacific dials to East Coast leads.")}</li>
+              <li>{t("National DNC scrubbing is on you, scrub your list against the registry before you upload it. State-specific lists are on you too. See")}{" "}<Link href="/faq/how-we-keep-compliance">{t("how we keep compliance")}</Link>.</li>
+              <li>{t("Keyboard shortcuts for disposition so you keep your hands on the keys, not the mouse.")}</li>
+              <li>{t("Live duration timer, connected-rate counter, and per-session metrics in the right sidebar.")}</li>
             </ul>
           </div>
         </section>
@@ -546,22 +491,22 @@ export default function PowerDialerPage() {
         {/* OTHER MODES */}
         <section className="dm-other">
           <div className="inner">
-            <h2>The other three modes</h2>
+            <h2>{t("The other three modes")}</h2>
             <div className="dm-other-grid">
               <Link href="/dialing-modes/preview" className="dm-other-card preview">
-                <span className="pill">PREVIEW</span>
-                <h3>Agent reviews, then dials</h3>
-                <p>The original outbound mode. Slow by design: right for high-touch, high-value calls.</p>
+                <span className="pill">{t("PREVIEW")}</span>
+                <h3>{t("Agent reviews, then dials")}</h3>
+                <p>{t("The original outbound mode. Slow by design: right for high-touch, high-value calls.")}</p>
               </Link>
               <Link href="/dialing-modes/progressive" className="dm-other-card progressive">
-                <span className="pill">PROGRESSIVE</span>
-                <h3>Auto-dial with voicemail filtering</h3>
-                <p>Same compliance profile as power, but the system listens to the pickup and drops machines.</p>
+                <span className="pill">{t("PROGRESSIVE")}</span>
+                <h3>{t("Auto-dial with voicemail filtering")}</h3>
+                <p>{t("Same compliance profile as power, but the system listens to the pickup and drops machines.")}</p>
               </Link>
               <Link href="/dialing-modes/predictive" className="dm-other-card predictive">
-                <span className="pill">PREDICTIVE</span>
-                <h3>Multiple lines, agent prediction</h3>
-                <p>1.5-3× lines per agent. Highest throughput, needs a team of 8+ to really engage, auto-degrade keeps it off the legal line.</p>
+                <span className="pill">{t("PREDICTIVE")}</span>
+                <h3>{t("Multiple lines, agent prediction")}</h3>
+                <p>{t("1.5-3× lines per agent. Highest throughput, needs a team of 8+ to really engage, auto-degrade keeps it off the legal line.")}</p>
               </Link>
             </div>
           </div>

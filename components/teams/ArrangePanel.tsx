@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
+import { t as tr } from '@/lib/i18n/client'
 
 // =============================================================================
 // DRAG THE SIDEBAR INTO THE ORDER YOU WORK IN
@@ -225,8 +226,7 @@ export default function ArrangePanel({
         gap: 8, marginBottom: 10,
       }}>
         <span style={{ fontSize: 11, letterSpacing: 1.4, color: C.muted, fontWeight: 700 }}>
-          REARRANGE
-        </span>
+          {tr("REARRANGE")}</span>
         <button
           onClick={onClose}
           style={{
@@ -234,18 +234,15 @@ export default function ArrangePanel({
             borderRadius: 3, color: C.text, fontSize: 11.5, fontFamily: 'inherit',
             padding: '4px 10px', cursor: 'pointer',
           }}
-        >{saving ? 'Saving…' : 'Done'}</button>
+        >{saving ? tr("Saving…") : tr("Done")}</button>
       </div>
 
       <p style={{ margin: '0 0 12px', fontSize: 11, color: C.dim, lineHeight: 1.6 }}>
-        Drag the grips. Teams move among teams, campaigns within their own team.
-        Saved as you drop.
-      </p>
+        {tr("Drag the grips. Teams move among teams, campaigns within their own team. Saved as you drop.")}</p>
 
       {order.length === 0 && (
         <div style={{ fontSize: 12, color: C.dim }}>
-          Nothing to arrange, you do not own any teams yet.
-        </div>
+          {tr("Nothing to arrange, you do not own any teams yet.")}</div>
       )}
 
       {order.map(team => {
@@ -307,7 +304,7 @@ export default function ArrangePanel({
             {team.campaigns.length === 0 && (
               <div style={{
                 margin: '4px 0 0 18px', fontSize: 11, color: C.dim,
-              }}>No campaigns on this team.</div>
+              }}>{tr("No campaigns on this team.")}</div>
             )}
           </div>
         )

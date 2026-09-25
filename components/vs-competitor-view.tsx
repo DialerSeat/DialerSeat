@@ -8,6 +8,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { vsRail } from '@/lib/gutsRail'
 import { DIALERSEAT, type Competitor } from '@/lib/competitors'
 import { featuresFor } from '@/lib/competitorFeatures'
+import { t } from '@/lib/i18n/client'
 
 // =============================================================================
 // DATA-DRIVEN COMPETITOR PAGE
@@ -53,27 +54,25 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ COMPARISON</div>
+            <div className="guts-eyebrow">{t("▸ COMPARISON")}</div>
             <h1>
-              DialerSeat <span className="versus">vs</span> {c.name}
+              DialerSeat <span className="versus">{t("vs")}</span> {c.name}
             </h1>
             <p>{c.summary}</p>
             <div className="guts-btns">
-              <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
-              <Link href="/vs" className="guts-btn secondary">ALL COMPARISONS</Link>
+              <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
+              <Link href="/vs" className="guts-btn secondary">{t("ALL COMPARISONS")}</Link>
             </div>
           </div>
         </GutsSection>
 
-        <GutsSection icon="price" title="What each one costs and what you get">
+        <GutsSection icon="price" title={t("What each one costs and what you get")}>
           <p>
-            Both columns are stated the way each vendor states them. Where {c.name} prices
-            by quote, that is said rather than guessed at.
-          </p>
+            {t("Both columns are stated the way each vendor states them. Where")}{" "}{c.name} {t("prices by quote, that is said rather than guessed at.")}</p>
           <div className="guts-grid-2">
             <div className="guts-panel">
               <h3>DialerSeat</h3>
-              <div className="role">OUR PRODUCT</div>
+              <div className="role">{t("OUR PRODUCT")}</div>
               <FactRow label="PRICING" value={DIALERSEAT.pricing} />
               <FactRow label="CONTRACT" value={DIALERSEAT.contract} />
               <FactRow label="DIALING" value={DIALERSEAT.dialing} />
@@ -81,7 +80,7 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
             </div>
             <div className="guts-panel">
               <h3>{c.name}</h3>
-              <div className="role">COMPETITOR</div>
+              <div className="role">{t("COMPETITOR")}</div>
               <FactRow label="PRICING" value={c.pricing} />
               <FactRow label="CONTRACT" value={c.contract} />
               <FactRow label="DIALING" value={c.dialing} />
@@ -91,13 +90,13 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
         </GutsSection>
 
         {matrix && (
-          <GutsSection icon="table" title="Where each tool wins">
+          <GutsSection icon="table" title={t("Where each tool wins")}>
             <p>{matrix.lede}</p>
             <div className="guts-tablewrap">
               <table>
                 <thead>
                   <tr>
-                    <th>FEATURE</th>
+                    <th>{t("FEATURE")}</th>
                     <th className="ds-head">DIALERSEAT</th>
                     <th>{c.name.toUpperCase()}</th>
                   </tr>
@@ -124,44 +123,40 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
             caught out. See lib/vsSeo for the structured-data half. */}
         <GutsSection icon="scale" title={`Pros and cons of ${c.name}`}>
           <p>
-            A comparison where the competitor loses at everything is marketing, and it
-            reads like marketing. These are real advantages, and real drawbacks.
-          </p>
+            {t("A comparison where the competitor loses at everything is marketing, and it reads like marketing. These are real advantages, and real drawbacks.")}</p>
           <div className="guts-grid-2">
             <div className="guts-panel">
-              <h3>Pros of {c.name}</h3>
+              <h3>{t("Pros of")}{" "}{c.name}</h3>
               <ul className="guts-list good">
                 {c.wins.map((w) => <li key={w}>{w}</li>)}
               </ul>
             </div>
             <div className="guts-panel">
-              <h3>Cons of {c.name}</h3>
+              <h3>{t("Cons of")}{" "}{c.name}</h3>
               <ul className="guts-list warn">
                 {c.friction.map((f) => <li key={f}>{f}</li>)}
               </ul>
             </div>
           </div>
           <div className="guts-callout">
-            <h3>Who should pick {c.name}</h3>
+            <h3>{t("Who should pick")}{" "}{c.name}</h3>
             <p>{c.bestFor}</p>
             <p>
-              If that describes you, take {c.name}. It is a real product with real
-              strengths and no comparison page should talk you out of the right tool.
-            </p>
+              {t("If that describes you, take")}{" "}{c.name}{t(". It is a real product with real strengths and no comparison page should talk you out of the right tool.")}</p>
           </div>
         </GutsSection>
 
-        <GutsSection icon="check" title="Who should pick DialerSeat">
+        <GutsSection icon="check" title={t("Who should pick DialerSeat")}>
           <p>{DIALERSEAT.bestFor}</p>
           <div className="guts-grid-2">
             <div className="guts-panel">
-              <h3>Pros of DialerSeat</h3>
+              <h3>{t("Pros of DialerSeat")}</h3>
               <ul className="guts-list good">
                 {DIALERSEAT.wins.map((w) => <li key={w}>{w}</li>)}
               </ul>
             </div>
             <div className="guts-panel">
-              <h3>Cons of DialerSeat</h3>
+              <h3>{t("Cons of DialerSeat")}</h3>
               <ul className="guts-list warn">
                 {DIALERSEAT.friction.map((f) => <li key={f}>{f}</li>)}
               </ul>
@@ -169,19 +164,14 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
           </div>
 
           <p className="guts-note">
-            DialerSeat publishes this page, so read the DialerSeat column with that in
-            mind. Competitor pricing and capability are taken from each vendor&rsquo;s own
-            published material and independent review sites at the time of writing, and
-            vendors change their pricing without telling us. Check theirs before you
-            decide. If something here is out of date or wrong,{' '}
+            {t("DialerSeat publishes this page, so read the DialerSeat column with that in mind. Competitor pricing and capability are taken from each vendor’s own published material and independent review sites at the time of writing, and vendors change their pricing without telling us. Check theirs before you decide. If something here is out of date or wrong,")}{' '}
             <button type="button" className="guts-inline" onClick={() => setAskOpen(true)}>
-              tell us and we will fix it
-            </button>.
+              {t("tell us and we will fix it")}</button>.
           </p>
 
           <div className="guts-btns">
-            <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
-            <Link href="/faq" className="guts-btn secondary">READ THE FAQ</Link>
+            <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
+            <Link href="/faq" className="guts-btn secondary">{t("READ THE FAQ")}</Link>
           </div>
         </GutsSection>
 

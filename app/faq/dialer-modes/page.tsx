@@ -8,6 +8,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -76,7 +77,8 @@ const MODES = [
 
 const ACCENT = '${SITE.deep}'
 
-export default function DialerModesTldrPage() {
+export default async function DialerModesTldrPage() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={breadcrumbSchema([
@@ -283,14 +285,11 @@ export default function DialerModesTldrPage() {
 
         <section className="dmt-hero">
           <div className="dmt-hero-inner">
-            <div className="dmt-eyebrow">DIALER MODES · TL;DR</div>
-          <span style={{ fontSize: 11, color: "${SITE.muted}", letterSpacing: "2px", display: "block", marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
-            <h1>The four modes, in plain English.</h1>
+            <div className="dmt-eyebrow">{t("DIALER MODES · TL;DR")}</div>
+          <span style={{ fontSize: 11, color: "${SITE.muted}", letterSpacing: "2px", display: "block", marginBottom: 16 }}>{t("LAST UPDATED 07/28/2026")}</span>
+            <h1>{t("The four modes, in plain English.")}</h1>
             <p className="dmt-lead">
-              DialerSeat has four ways to dial. Here&apos;s the simple version of
-              what each one does and when to pick it. You can change a
-              campaign&apos;s mode any time.
-            </p>
+              {t("DialerSeat has four ways to dial. Here's the simple version of what each one does and when to pick it. You can change a campaign's mode any time.")}</p>
           </div>
         </section>
 
@@ -301,16 +300,13 @@ export default function DialerModesTldrPage() {
               <h2 className="dmt-tagline">{m.tagline}</h2>
               <p className="dmt-body">{m.body}</p>
               <p className="dmt-best">{m.best}</p>
-              <Link href={m.href} className="dmt-link">FULL BREAKDOWN ↗</Link>
+              <Link href={m.href} className="dmt-link">{t("FULL BREAKDOWN ↗")}</Link>
             </div>
           ))}
         </div>
 
         <div className="dmt-note">
-          Not sure which to choose? Power is the safe default: clean, steady, and
-          compliant out of the box. Switch to progressive to skip voicemails, or
-          predictive once you have a team and want maximum volume.
-        </div>
+          {t("Not sure which to choose? Power is the safe default: clean, steady, and compliant out of the box. Switch to progressive to skip voicemails, or predictive once you have a team and want maximum volume.")}</div>
 
         <DialingModeCTA
           headline="Every account gets every mode."

@@ -1,6 +1,7 @@
 'use client'
 import { use, useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { t } from '@/lib/i18n/client'
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -202,7 +203,7 @@ function Awaiting() {
       borderRadius: 3,
       fontFamily: FUTURA,
       whiteSpace: 'nowrap',
-    }}>AWAITING DATA</span>
+    }}>{t("AWAITING DATA")}</span>
   )
 }
 
@@ -535,9 +536,9 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
 
       <div className="ta-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <Link href="/dashboard/teams" className="ta-back">← TEAMS</Link>
+          <Link href="/dashboard/teams" className="ta-back">{t("← TEAMS")}</Link>
           <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.5, color: 'var(--brand-on-header)' }}>
-            {data?.team.name || 'Team'}
+            {data?.team.name || t("Team")}
           </span>
           {data && <span className="ta-role-pill">{data.viewerRole.toUpperCase()}</span>}
         </div>
@@ -551,10 +552,10 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
               className={`ta-seg-btn ${range === r ? 'active' : ''}`}
               onClick={() => setRange(r)}
             >
-              {r === 'today' ? 'TODAY'
-                : r === 'week' ? '7-DAY'
-                : r === 'month' ? '30-DAY'
-                : r === 'all' ? 'ALL TIME' : 'CUSTOM'}
+              {r === 'today' ? t("TODAY")
+                : r === 'week' ? t("7-DAY")
+                : r === 'month' ? t("30-DAY")
+                : r === 'all' ? t("ALL TIME") : t("CUSTOM")}
             </button>
           ))}
         </div>
@@ -566,9 +567,9 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
           </div>
         )}
         <div className="ta-filter-field">
-          <label>CAMPAIGN</label>
+          <label>{t("CAMPAIGN")}</label>
           <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}>
-            <option value="all">All campaigns</option>
+            <option value="all">{t("All campaigns")}</option>
             {(data?.campaigns || []).map(c => (
               <option key={c.campaignId} value={c.campaignId}>{c.name || c.campaignId.slice(0, 8)}</option>
             ))}
@@ -576,9 +577,9 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
         </div>
         {showMemberFilter && (
           <div className="ta-filter-field">
-            <label>MEMBER</label>
+            <label>{t("MEMBER")}</label>
             <select value={memberFilter} onChange={e => setMemberFilter(e.target.value)}>
-              <option value="all">All members</option>
+              <option value="all">{t("All members")}</option>
               {(data?.members || []).map(m => (
                 <option key={m.userId} value={m.userId}>{m.name}{m.isOwner ? ' (Owner)' : ''}</option>
               ))}
@@ -591,11 +592,11 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
         {error && <div className="ta-error">{error}</div>}
 
         {range === 'custom' && (!customStart || !customEnd) && (
-          <div className="ta-empty">PICK A START AND END DATE TO LOAD DATA</div>
+          <div className="ta-empty">{t("PICK A START AND END DATE TO LOAD DATA")}</div>
         )}
 
         {loading && !data && range !== 'custom' && (
-          <div className="ta-empty">LOADING ANALYTICS…</div>
+          <div className="ta-empty">{t("LOADING ANALYTICS…")}</div>
         )}
 
         {data && (
@@ -603,7 +604,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
             <div className="ta-kpi-grid">
               <div className="ta-kpi">
                 <div>
-                  <div className="ta-kpi-label">TOTAL CALLS</div>
+                  <div className="ta-kpi-label">{t("TOTAL CALLS")}</div>
                   <div className="ta-kpi-value">
                     {data.totals.calls > 0 ? data.totals.calls.toLocaleString() : <Awaiting />}
                   </div>
@@ -611,7 +612,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
               </div>
               <div className="ta-kpi">
                 <div>
-                  <div className="ta-kpi-label">CONNECT RATE</div>
+                  <div className="ta-kpi-label">{t("CONNECT RATE")}</div>
                   <div className="ta-kpi-value">
                     {connectPct !== null ? `${Math.round(connectPct)}%` : <Awaiting />}
                   </div>
@@ -620,7 +621,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
               </div>
               <div className="ta-kpi">
                 <div>
-                  <div className="ta-kpi-label">CONVERSIONS</div>
+                  <div className="ta-kpi-label">{t("CONVERSIONS")}</div>
                   <div className="ta-kpi-value" style={{ color: data.totals.conversions > 0 ? T.green : T.text }}>
                     {data.totals.conversions > 0 ? data.totals.conversions.toLocaleString() : <Awaiting />}
                   </div>
@@ -628,7 +629,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
               </div>
               <div className="ta-kpi">
                 <div>
-                  <div className="ta-kpi-label">TALK TIME</div>
+                  <div className="ta-kpi-label">{t("TALK TIME")}</div>
                   <div className="ta-kpi-value">
                     {data.totals.talkSeconds > 0 ? fmtTime(data.totals.talkSeconds) : <Awaiting />}
                   </div>
@@ -642,7 +643,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                   dialing at once is two hours. */}
               <div className="ta-kpi">
                 <div>
-                  <div className="ta-kpi-label">HOURS DIALED</div>
+                  <div className="ta-kpi-label">{t("HOURS DIALED")}</div>
                   <div className="ta-kpi-value">
                     {data.totals.dialedSeconds > 0 ? fmtTime(data.totals.dialedSeconds) : <Awaiting />}
                   </div>
@@ -654,13 +655,12 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
             {isOwner && (
               <div className="ta-section">
                 <div className="ta-section-head">
-                  ▸ LEADERBOARD
-                  {memberFilter !== 'all' && <span style={{ color: T.amber }}>· MEMBER FILTERED</span>}
-                  {campaignFilter !== 'all' && <span style={{ color: T.amber }}>· CAMPAIGN FILTERED</span>}
+                  {t("▸ LEADERBOARD")}{memberFilter !== 'all' && <span style={{ color: T.amber }}>{t("· MEMBER FILTERED")}</span>}
+                  {campaignFilter !== 'all' && <span style={{ color: T.amber }}>{t("· CAMPAIGN FILTERED")}</span>}
                 </div>
                 <div className="ta-list">
                   {leaderboardRows.length === 0 ? (
-                    <div className="ta-empty">NO ACTIVE MEMBERS YET</div>
+                    <div className="ta-empty">{t("NO ACTIVE MEMBERS YET")}</div>
                   ) : (
                     leaderboardRows.map((m, i) => {
                       // Over dials that RANG, not dials attempted. A dial the
@@ -713,7 +713,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                                 <span style={{
                                   fontSize: 8, letterSpacing: 1, color: T.blue, padding: '1px 6px',
                                   border: `1px solid ${T.blue}`, borderRadius: 20, flexShrink: 0,
-                                }}>OWNER</span>
+                                }}>{t("OWNER")}</span>
                               )}
                             </div>
                             {cr !== null && (
@@ -728,34 +728,34 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                           <div className="ta-lb-metrics">
                             <div className="ta-lb-metric">
                               <div className="ta-lb-metric-val">{m.calls > 0 ? m.calls.toLocaleString() : '-'}</div>
-                              <div className="ta-lb-metric-key">CALLS</div>
+                              <div className="ta-lb-metric-key">{t("CALLS")}</div>
                             </div>
                             <div className="ta-lb-metric">
                               <div className="ta-lb-metric-val">{cr !== null ? `${Math.round(cr)}%` : '-'}</div>
-                              <div className="ta-lb-metric-key">CONNECT</div>
+                              <div className="ta-lb-metric-key">{t("CONNECT")}</div>
                             </div>
                             <div className="ta-lb-metric">
                               <div className="ta-lb-metric-val" style={{ color: m.conversions > 0 ? T.green : T.text }}>
                                 {m.conversions > 0 ? m.conversions.toLocaleString() : '-'}
                               </div>
-                              <div className="ta-lb-metric-key">CONV</div>
+                              <div className="ta-lb-metric-key">{t("CONV")}</div>
                             </div>
                             <div className="ta-lb-metric">
                               <div className="ta-lb-metric-val">{m.talkSeconds > 0 ? fmtTime(m.talkSeconds) : '-'}</div>
-                              <div className="ta-lb-metric-key">TALK</div>
+                              <div className="ta-lb-metric-key">{t("TALK")}</div>
                             </div>
                             {/* Beside TALK on purpose: the gap between the two
                                 is the thing an owner is actually reading. */}
                             <div className="ta-lb-metric">
                               <div className="ta-lb-metric-val">{m.dialedSeconds > 0 ? fmtTime(m.dialedSeconds) : '-'}</div>
-                              <div className="ta-lb-metric-key">DIALED</div>
+                              <div className="ta-lb-metric-key">{t("DIALED")}</div>
                             </div>
                             {typeof m.spentCents === 'number' && (
                               <div className="ta-lb-metric">
                                 <div className="ta-lb-metric-val" style={{ color: m.spentCents > 0 ? T.amber : T.text }}>
                                   {m.spentCents > 0 ? fmtMoney(m.spentCents) : '-'}
                                 </div>
-                                <div className="ta-lb-metric-key">SEAT SPEND</div>
+                                <div className="ta-lb-metric-key">{t("SEAT SPEND")}</div>
                               </div>
                             )}
                           </div>
@@ -770,29 +770,29 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
             {/* YOUR STATS — member view — one personal scoreboard card */}
             {!isOwner && (
               <div className="ta-section">
-                <div className="ta-section-head">▸ YOUR STATS</div>
+                <div className="ta-section-head">{t("▸ YOUR STATS")}</div>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <div className="ta-personal-grid">
                     <div className="ta-personal-cell">
-                      <span className="ta-personal-key">CALLS</span>
+                      <span className="ta-personal-key">{t("CALLS")}</span>
                       <span className="ta-personal-val">
                         {data.viewerStats.calls > 0 ? data.viewerStats.calls.toLocaleString() : <Awaiting />}
                       </span>
                     </div>
                     <div className="ta-personal-cell">
-                      <span className="ta-personal-key">CONNECTED</span>
+                      <span className="ta-personal-key">{t("CONNECTED")}</span>
                       <span className="ta-personal-val">
                         {data.viewerStats.connected > 0 ? data.viewerStats.connected.toLocaleString() : <Awaiting />}
                       </span>
                     </div>
                     <div className="ta-personal-cell">
-                      <span className="ta-personal-key">CONVERSIONS</span>
+                      <span className="ta-personal-key">{t("CONVERSIONS")}</span>
                       <span className="ta-personal-val" style={{ color: data.viewerStats.conversions > 0 ? T.green : T.text }}>
                         {data.viewerStats.conversions > 0 ? data.viewerStats.conversions.toLocaleString() : <Awaiting />}
                       </span>
                     </div>
                     <div className="ta-personal-cell">
-                      <span className="ta-personal-key">TALK TIME</span>
+                      <span className="ta-personal-key">{t("TALK TIME")}</span>
                       <span className="ta-personal-val">
                         {data.viewerStats.talkSeconds > 0 ? fmtTime(data.viewerStats.talkSeconds) : <Awaiting />}
                       </span>
@@ -812,7 +812,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                 member's individual numbers. */}
             {data.campaignBreakdown.length > 0 && (
               <div className="ta-section">
-                <div className="ta-section-head">▸ BY CAMPAIGN</div>
+                <div className="ta-section-head">{t("▸ BY CAMPAIGN")}</div>
                 <div className="ta-list">
                   {data.campaignBreakdown.map(c => {
                     const cr = c.reachedCalls > 0 ? (c.connected / c.reachedCalls) * 100 : null
@@ -820,7 +820,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                       <div key={c.campaignId} className="ta-row">
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {c.name || 'Untitled campaign'}
+                            {c.name || t("Untitled campaign")}
                           </span>
                           {cr !== null && (
                             <div style={{
@@ -834,21 +834,21 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                         <div className="ta-lb-metrics">
                           <div className="ta-lb-metric">
                             <div className="ta-lb-metric-val">{c.calls > 0 ? c.calls.toLocaleString() : '-'}</div>
-                            <div className="ta-lb-metric-key">CALLS</div>
+                            <div className="ta-lb-metric-key">{t("CALLS")}</div>
                           </div>
                           <div className="ta-lb-metric">
                             <div className="ta-lb-metric-val">{c.calls > 0 ? `${Math.round(cr!)}%` : '-'}</div>
-                            <div className="ta-lb-metric-key">CONNECT</div>
+                            <div className="ta-lb-metric-key">{t("CONNECT")}</div>
                           </div>
                           <div className="ta-lb-metric">
                             <div className="ta-lb-metric-val" style={{ color: c.conversions > 0 ? T.green : T.text }}>
                               {c.conversions > 0 ? c.conversions.toLocaleString() : '-'}
                             </div>
-                            <div className="ta-lb-metric-key">CONV</div>
+                            <div className="ta-lb-metric-key">{t("CONV")}</div>
                           </div>
                           <div className="ta-lb-metric">
                             <div className="ta-lb-metric-val">{c.talkSeconds > 0 ? fmtTime(c.talkSeconds) : '-'}</div>
-                            <div className="ta-lb-metric-key">TALK</div>
+                            <div className="ta-lb-metric-key">{t("TALK")}</div>
                           </div>
                         </div>
                       </div>
@@ -861,22 +861,22 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
             {/* SEAT SPEND VS OUTPUT — owner only, financial data */}
             {isOwner && typeof data.totalSeatSpendCents === 'number' && (
               <div className="ta-section">
-                <div className="ta-section-head">▸ SEAT SPEND VS OUTPUT</div>
+                <div className="ta-section-head">{t("▸ SEAT SPEND VS OUTPUT")}</div>
                 <div className="ta-personal-grid">
                   <div className="ta-personal-cell">
-                    <span className="ta-personal-key">TOTAL SEAT SPEND</span>
+                    <span className="ta-personal-key">{t("TOTAL SEAT SPEND")}</span>
                     <span className="ta-personal-val">
                       {data.totalSeatSpendCents > 0 ? fmtMoney(data.totalSeatSpendCents) : <Awaiting />}
                     </span>
                   </div>
                   <div className="ta-personal-cell">
-                    <span className="ta-personal-key">CONVERSIONS THIS PERIOD</span>
+                    <span className="ta-personal-key">{t("CONVERSIONS THIS PERIOD")}</span>
                     <span className="ta-personal-val" style={{ color: data.totals.conversions > 0 ? T.green : T.text }}>
                       {data.totals.conversions > 0 ? data.totals.conversions.toLocaleString() : <Awaiting />}
                     </span>
                   </div>
                   <div className="ta-personal-cell">
-                    <span className="ta-personal-key">COST PER CONVERSION</span>
+                    <span className="ta-personal-key">{t("COST PER CONVERSION")}</span>
                     <span className="ta-personal-val">
                       {data.totalSeatSpendCents > 0 && data.totals.conversions > 0
                         ? fmtMoney(data.totalSeatSpendCents / data.totals.conversions)
@@ -891,7 +891,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
             {isOwner && (
               <div className="ta-section">
                 <div className="ta-section-head">
-                  ▸ RECENT CALLS{data.recentCalls.length > 0 && ` (LAST ${data.recentCalls.length})`}
+                  {t("▸ RECENT CALLS")}{data.recentCalls.length > 0 && ` (LAST ${data.recentCalls.length})`}
                 </div>
                 <div className="ta-list">
                   {data.recentCalls.length > 0 ? (
@@ -922,7 +922,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                       </div>
                     ))
                   ) : (
-                    <div className="ta-empty">NO CALLS LOGGED YET</div>
+                    <div className="ta-empty">{t("NO CALLS LOGGED YET")}</div>
                   )}
                 </div>
               </div>
@@ -942,11 +942,11 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
             {isOwner && (
               <div className="ta-section">
                 <div className="ta-section-head">
-                  ▸ RECORDINGS{data.recordings.length > 0 && ` (${data.recordings.length}${
+                  {t("▸ RECORDINGS")}{data.recordings.length > 0 && ` (${data.recordings.length}${
                     (data.recordingsTotal ?? 0) > data.recordings.length
                       ? ` OF ${data.recordingsTotal}` : ''})`}
-                  {memberFilter !== 'all' && <span style={{ color: T.amber }}>· MEMBER FILTERED</span>}
-                  {campaignFilter !== 'all' && <span style={{ color: T.amber }}>· CAMPAIGN FILTERED</span>}
+                  {memberFilter !== 'all' && <span style={{ color: T.amber }}>{t("· MEMBER FILTERED")}</span>}
+                  {campaignFilter !== 'all' && <span style={{ color: T.amber }}>{t("· CAMPAIGN FILTERED")}</span>}
                 </div>
                 <div className="ta-list">
                   {data.recordings.length > 0 ? (
@@ -955,7 +955,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                         <Avatar name={r.agentName} />
                         <div className="ta-rec-main">
                           <div className="ta-rec-lead">
-                            {r.leadName || r.phone || 'Unknown lead'}
+                            {r.leadName || r.phone || t("Unknown lead")}
                             {r.leadName && r.phone && (
                               <span style={{ color: T.muted, fontWeight: 400 }}> · {r.phone}</span>
                             )}
@@ -971,13 +971,13 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                           {/* Talk time, not call duration: for a recording,
                               how long somebody spoke is the useful number. */}
                           <div className="ta-call-dur">
-                            {r.talkSeconds > 0 ? fmtTime(r.talkSeconds) : 'no answer'}
+                            {r.talkSeconds > 0 ? fmtTime(r.talkSeconds) : t("no answer")}
                           </div>
                         </div>
                         <button className="ta-rec-play"
                                 onClick={() => setPlayingId(playingId === r.id ? null : r.id)}
                                 aria-expanded={playingId === r.id}>
-                          {playingId === r.id ? 'CLOSE' : 'PLAY'}
+                          {playingId === r.id ? t("CLOSE") : t("PLAY")}
                         </button>
                         {playingId === r.id && (
                           // Streamed through our own route, never from
@@ -993,23 +993,17 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                         )}
                         {playErrors[r.id] && (
                           <div style={{ flexBasis: '100%', fontSize: 10, color: T.amber, letterSpacing: 1 }}>
-                            RECORDING UNAVAILABLE. Telnyx deletes audio on its own
-                            retention schedule, so an older call can have a row here
-                            and no audio behind it.
-                          </div>
+                            {t("RECORDING UNAVAILABLE. Telnyx deletes audio on its own retention schedule, so an older call can have a row here and no audio behind it.")}</div>
                         )}
                       </div>
                     ))
                   ) : (
                     <div className="ta-empty">
-                      NO RECORDINGS IN THIS RANGE
-                    </div>
+                      {t("NO RECORDINGS IN THIS RANGE")}</div>
                   )}
                   {(data.recordingsTotal ?? 0) > data.recordings.length && (
                     <div className="ta-empty" style={{ color: T.amber }}>
-                      NEWEST {data.recordings.length} SHOWN OF {data.recordingsTotal}.
-                      NARROW BY AGENT, CAMPAIGN OR DATE TO SEE OLDER ONES.
-                    </div>
+                      {t("NEWEST")}{" "}{data.recordings.length} {t("SHOWN OF")}{" "}{data.recordingsTotal}{t(". NARROW BY AGENT, CAMPAIGN OR DATE TO SEE OLDER ONES.")}</div>
                   )}
                 </div>
               </div>

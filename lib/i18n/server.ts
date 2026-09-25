@@ -6,6 +6,17 @@ import {
 } from './locales'
 import { translate, type Dictionary, type Vars } from './translate'
 import { loadDictionary } from './dictionaries'
+import es from './dictionaries/es.json'
+import ptBR from './dictionaries/pt-BR.json'
+import fr from './dictionaries/fr.json'
+import ar from './dictionaries/ar.json'
+import it from './dictionaries/it.json'
+import de from './dictionaries/de.json'
+
+// On the server every dictionary is bundled, so a lookup never waits on I/O.
+const DICTS: Record<Locale, Dictionary | null> = {
+  en: null, es, 'pt-BR': ptBR, fr, ar, it, de,
+}
 
 /**
  * The language for this request. English unless something says otherwise.
@@ -15,10 +26,12 @@ import { loadDictionary } from './dictionaries'
 export const getLocale = cache(async (): Promise<Locale> => {
   const h = await headers()
   const fromUrl = h.get(LOCALE_HEADER)
-  if (isEnabledLocale(fromUrl)) return fromUrl
   const fromCookie = (await cookies()).get(LOCALE_COOKIE)?.value
-  if (isEnabledLocale(fromCookie)) return fromCookie
-  return DEFAULT_LOCALE
+  const locale: Locale = isEnabledLocale(fromUrl)
+    ? fromUrl
+    : isEnabledLocale(fromCookie) ? fromCookie : DEFAULT_LOCALE
+  requestLocale().current = locale
+  return locale
 })
 
 /** True when this request came in through a language address like /es/faq. */
@@ -35,4 +48,26 @@ export const getDictionary = cache(async (): Promise<Dictionary | null> =>
 export async function getT(): Promise<(text: string, vars?: Vars) => string> {
   const dict = await getDictionary()
   return (text, vars) => translate(dict, text, vars)
+}
+
+// The request's language, held in React's per-request cache so t() can read
+// it synchronously — including after an await inside an async page, where a
+// hook like use() would no longer work. Filled by getLocale(); every page
+// calls primeLocale() first, because on a client-side navigation the root
+// layout does not re-render and so cannot be relied on to fill it.
+const requestLocale = cache((): { current: Locale | null } => ({ current: null }))
+
+/** First line of every server page that shows text: `await primeLocale()`. */
+export async function primeLocale(): Promise<void> {
+  await getLocale()
+}
+
+/**
+ * For server components, used inline in JSX exactly like the client `t()`.
+ * Reads the language primeLocale() stored for this request; if nothing
+ * primed it, that is English — it never throws. For generateMetadata and
+ * route handlers, use getT().
+ */
+export function t(text: string, vars?: Vars): string {
+  return translate(DICTS[requestLocale().current ?? DEFAULT_LOCALE], text, vars)
 }

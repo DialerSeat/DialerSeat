@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { t } from '@/lib/i18n/server'
 
 
 
@@ -77,55 +78,55 @@ export default function ExplainerCrossLinks({ current }: Props) {
 
       <section className="exp-xlinks">
         <div className="exp-xlinks-inner">
-          <h2>Other explainers</h2>
+          <h2>{t("Other explainers")}</h2>
           <div className="exp-xlinks-grid">
             <Link href="/faq/what-is-a-preview-dialer" className={`exp-xlink preview ${current === 'preview' ? 'current' : ''}`}>
-              <span className="pill">PREVIEW</span>
-              <div>What is a preview dialer?</div>
+              <span className="pill">{t("PREVIEW")}</span>
+              <div>{t("What is a preview dialer?")}</div>
             </Link>
             <Link href="/faq/what-is-a-power-dialer" className={`exp-xlink power ${current === 'power' ? 'current' : ''}`}>
-              <span className="pill">POWER</span>
-              <div>What is a power dialer?</div>
+              <span className="pill">{t("POWER")}</span>
+              <div>{t("What is a power dialer?")}</div>
             </Link>
             <Link href="/faq/what-is-a-progressive-dialer" className={`exp-xlink progressive ${current === 'progressive' ? 'current' : ''}`}>
-              <span className="pill">PROGRESSIVE</span>
-              <div>What is a progressive dialer?</div>
+              <span className="pill">{t("PROGRESSIVE")}</span>
+              <div>{t("What is a progressive dialer?")}</div>
             </Link>
             <Link href="/faq/what-is-a-predictive-dialer" className={`exp-xlink predictive ${current === 'predictive' ? 'current' : ''}`}>
-              <span className="pill">PREDICTIVE</span>
-              <div>What is a predictive dialer?</div>
+              <span className="pill">{t("PREDICTIVE")}</span>
+              <div>{t("What is a predictive dialer?")}</div>
             </Link>
             <Link href="/faq/why-is-compliance-important" className={`exp-xlink compliance-why ${current === 'compliance-why' ? 'current' : ''}`}>
-              <span className="pill">COMPLIANCE · WHY</span>
-              <div>Why is compliance important?</div>
+              <span className="pill">{t("COMPLIANCE · WHY")}</span>
+              <div>{t("Why is compliance important?")}</div>
             </Link>
             <Link href="/faq/how-we-keep-compliance" className={`exp-xlink compliance-how ${current === 'compliance-how' ? 'current' : ''}`}>
-              <span className="pill">COMPLIANCE · HOW</span>
-              <div>How we keep compliance.</div>
+              <span className="pill">{t("COMPLIANCE · HOW")}</span>
+              <div>{t("How we keep compliance.")}</div>
             </Link>
             <Link href="/faq/how-does-amd-work" className={`exp-xlink amd ${current === 'amd' ? 'current' : ''}`}>
-              <span className="pill">AMD</span>
-              <div>How does AMD work?</div>
+              <span className="pill">{t("AMD")}</span>
+              <div>{t("How does AMD work?")}</div>
             </Link>
             <Link href="/faq/why-we-charge" className={`exp-xlink pricing ${current === 'pricing' ? 'current' : ''}`}>
-              <span className="pill">PRICING</span>
-              <div>Why we charge what we charge.</div>
+              <span className="pill">{t("PRICING")}</span>
+              <div>{t("Why we charge what we charge.")}</div>
             </Link>
             <Link href="/faq/dialerseat-teams" className={`exp-xlink teams ${current === 'teams' ? 'current' : ''}`}>
-              <span className="pill">TEAMS</span>
-              <div>DialerSeat for teams.</div>
+              <span className="pill">{t("TEAMS")}</span>
+              <div>{t("DialerSeat for teams.")}</div>
             </Link>
             <Link href="/faq/calling-hours" className={`exp-xlink calling-hours ${current === 'calling-hours' ? 'current' : ''}`}>
-              <span className="pill">CALLING HOURS</span>
-              <div>What hours can you legally call?</div>
+              <span className="pill">{t("CALLING HOURS")}</span>
+              <div>{t("What hours can you legally call?")}</div>
             </Link>
             <Link href="/faq/10dlc-and-outbound-calling" className={`exp-xlink registration ${current === 'registration' ? 'current' : ''}`}>
-              <span className="pill">REGISTRATION</span>
-              <div>Do you need 10DLC to call?</div>
+              <span className="pill">{t("REGISTRATION")}</span>
+              <div>{t("Do you need 10DLC to call?")}</div>
             </Link>
             <Link href="/faq/how-many-numbers-do-i-need" className={`exp-xlink pool-sizing ${current === 'pool-sizing' ? 'current' : ''}`}>
-              <span className="pill">NUMBER POOL</span>
-              <div>How many numbers do you need?</div>
+              <span className="pill">{t("NUMBER POOL")}</span>
+              <div>{t("How many numbers do you need?")}</div>
             </Link>
           </div>
         </div>

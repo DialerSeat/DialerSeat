@@ -7,6 +7,7 @@ import SiteFooter from '@/components/site-footer'
 import DirectoryHub, { type HubItem } from '@/components/DirectoryHub'
 import { SITE } from '@/lib/siteTheme'
 import { inter } from '@/lib/fonts'
+import { t } from '@/lib/i18n/client'
 
 // =============================================================================
 // /faq — the answers index
@@ -509,291 +510,180 @@ export default function FaqView() {
                   <path d="M20.4 14.4a2.2 2.2 0 0 1-2.2 2.2H7.8L3.6 20.4V5.6a2.2 2.2 0 0 1 2.2-2.2h12.4a2.2 2.2 0 0 1 2.2 2.2z" />
                 </svg>
               </span>
-              <h2>Common questions</h2>
+              <h2>{t("Common questions")}</h2>
               <span className="faqx-ask">
-                Not listed? <a href="mailto:support@dialerseat.com">Email support</a>
+                {t("Not listed?")}{" "}<a href="mailto:support@dialerseat.com">{t("Email support")}</a>
               </span>
             </div>
 
             <details>
-              <summary>How much does DialerSeat cost?</summary>
+              <summary>{t("How much does DialerSeat cost?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  $35 per week per seat on Pro. That&apos;s the entire price for a dialing
-                  agent. No setup fee, no per-call surcharge, no tier upcharges, no add-on
-                  modules, no annual minimum, no &quot;contact sales for pricing.&quot;
-                  Billing is weekly through Stripe.
-                </p>
+                  {t("$35 per week per seat on Pro. That's the entire price for a dialing agent. No setup fee, no per-call surcharge, no tier upcharges, no add-on modules, no annual minimum, no \"contact sales for pricing.\" Billing is weekly through Stripe.")}</p>
                 <p>
-                  Every seat includes unlimited dial-out numbers, multiple inbound numbers,
-                  all four dialer modes, call recording, voicemail detection, and analytics 
-                  no metered minutes, no per-number fees. See{' '}
-                  <Link href="/faq/why-we-charge">why we charge what we charge</Link> for
-                  the full breakdown vs. competitors who stack add-ons.
-                </p>
+                  {t("Every seat includes unlimited dial-out numbers, multiple inbound numbers, all four dialer modes, call recording, voicemail detection, and analytics no metered minutes, no per-number fees. See")}{' '}
+                  <Link href="/faq/why-we-charge">{t("why we charge what we charge")}</Link> {t("for the full breakdown vs. competitors who stack add-ons.")}</p>
                 <p>
-                  Want to own a team, resell seats, or white-label the whole platform?
-                  That&apos;s <strong>Manager+</strong> at $75/week instead of the standard
-                  $35, see <Link href="/faq/manager-plus">what Manager+ adds</Link> for
-                  the full breakdown.
+                  {t("Want to own a team, resell seats, or white-label the whole platform? That's")}{" "}<strong>{t("Manager+")}</strong> {t("at $75/week instead of the standard $35, see")}{" "}<Link href="/faq/manager-plus">{t("what Manager+ adds")}</Link> {t("for the full breakdown.")}</p>
+              </div>
+            </details>
+
+            <details>
+              <summary>{t("Do I have to sign a contract?")}</summary>
+              <div className="faqx-answer">
+                <p>
+                  {t("No. There's no contract and no minimum term. You pay for the current week of service and cancel whenever you want. We don't lock anyone into anything.")}</p>
+              </div>
+            </details>
+
+            <details>
+              <summary>{t("Can I cancel anytime?")}</summary>
+              <div className="faqx-answer">
+                <p>
+                  {t("Yes. Cancel from your billing page in two clicks. Your subscription ends at the close of the current weekly cycle, you keep access through what you've paid for, then it stops billing. Your leads, recordings, and campaigns remain accessible if you want to come back.")}</p>
+                <p>
+                  {t("See")}{" "}<Link href="/faq/billing">{t("billing & cancellation")}</Link> {t("for what a failed card actually does and how mid-week seat changes are billed.")}</p>
+              </div>
+            </details>
+
+            <details>
+              <summary>{t("Which dialing modes do you support?")}</summary>
+              <div className="faqx-answer">
+                <p>
+                  {t("All four: preview, power, progressive, and predictive. Each is available on every account at every tier, we don't gate dialing modes behind upgrades. Full breakdown on the")}{' '}
+                  <Link href="/dialing-modes">{t("dialing modes page")}</Link>.
                 </p>
               </div>
             </details>
 
             <details>
-              <summary>Do I have to sign a contract?</summary>
+              <summary>{t("How do I upload leads?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  No. There&apos;s no contract and no minimum term. You pay for the current
-                  week of service and cancel whenever you want. We don&apos;t lock anyone
-                  into anything.
+                  {t("Drop in a spreadsheet, there's no template to match or import wizard to click through. Column headers like")}{" "}<code>phone</code>,{' '}
+                  <code>first_name</code>, <code>email</code>{t(", and")}{" "}<code>state</code> {t("get auto-detected regardless of exact capitalization, and the only hard requirement is a column with something that has at least 10 digits in it once you strip out formatting.")}</p>
+                <p>
+                  {t("See")}{" "}<Link href="/faq/leads">{t("uploading & managing leads")}</Link> {t("for the full field reference, optional consent columns, and how the 3-attempt retry cycle works once leads are in a campaign.")}</p>
+              </div>
+            </details>
+
+            <details>
+              <summary>{t("Can I write my own call scripts?")}</summary>
+              <div className="faqx-answer">
+                <p>
+                  {t("Yes: write as many as you want, attach them to whichever campaigns need them, and reorder which one shows first if a campaign has several. Personal scripts are yours alone; a Manager+ team owner can also publish a script the whole team sees.")}</p>
+                <p>
+                  {t("See")}{" "}<Link href="/faq/scripts">{t("call scripts")}</Link> {t("for how attaching and reordering actually works.")}</p>
+              </div>
+            </details>
+
+            <details>
+              <summary>{t("How do I set up a campaign?")}</summary>
+              <div className="faqx-answer">
+                <p>
+                  {t("Create it, name it or don't, pick a dialer mode (defaults to power), and it's active immediately: no setup wizard, no required fields beyond that. AMD and predictive pacing are both optional settings with sane defaults.")}</p>
+                <p>
+                  {t("See")}{" "}<Link href="/faq/campaigns">{t("setting up a campaign")}</Link> {t("for the complete settings reference.")}</p>
+              </div>
+            </details>
+
+            <details>
+              <summary>{t("How does DialerSeat handle TCPA compliance?")}</summary>
+              <div className="faqx-answer">
+                <p>
+                  {t("The dialer enforces the federal calling-time window (8 AM-9 PM in the lead's local time zone) on every outbound call. Predictive mode applies the FTC TSR safe-harbor conditions in software, 3% abandon-rate cap, auto-degrade at 2.5% to leave a safety buffer, AMD pre-screen, ring-duration handling.")}</p>
+                <p>
+                  {t("National DNC list scrubbing and consent records remain the seller's responsibility, we don't scrub your list against the registry for you today. We're transparent about which compliance layers we own and which fall on the campaign owner on the")}{' '}
+                  <Link href="/faq/how-we-keep-compliance">{t("how we keep compliance page")}</Link>.
                 </p>
               </div>
             </details>
 
             <details>
-              <summary>Can I cancel anytime?</summary>
+              <summary>{t("How do you keep numbers from getting flagged as spam?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  Yes. Cancel from your billing page in two clicks. Your subscription ends
-                  at the close of the current weekly cycle, you keep access through what
-                  you&apos;ve paid for, then it stops billing. Your leads, recordings, and
-                  campaigns remain accessible if you want to come back.
-                </p>
+                  {t("Every outbound number carries STIR/SHAKEN A-attestation, is registered for CNAM and the Free Caller Registry, and dials with local presence by default, the carrier-level protections that most dialers sell as separate add-ons are just the default here. No number places more than 60 calls a day, load spreads across the pool before any number runs hot, and every number is checked daily against the rest: one that falls well behind is slowed down automatically until it recovers.")}</p>
                 <p>
-                  See <Link href="/faq/billing">billing &amp; cancellation</Link> for what
-                  a failed card actually does and how mid-week seat changes are billed.
-                </p>
+                  {t("See")}{" "}<Link href="/faq/how-we-keep-numbers-clean">{t("how we keep our numbers clean")}</Link> {t("for the whole system with the actual thresholds, and")}{' '}
+                  <Link href="/faq/why-calls-show-spam-likely">{t("why calls show Spam Likely")}</Link>{' '}
+                  {t("for what's still on you (list quality, consent, DNC scrubbing), since no infrastructure makes a number permanently immune to flagging.")}</p>
               </div>
             </details>
 
             <details>
-              <summary>Which dialing modes do you support?</summary>
+              <summary>{t("Can I export a compliance record for a campaign?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  All four: preview, power, progressive, and predictive. Each is available
-                  on every account at every tier, we don&apos;t gate dialing modes behind
-                  upgrades. Full breakdown on the{' '}
-                  <Link href="/dialing-modes">dialing modes page</Link>.
-                </p>
+                  {t("Yes, any campaign owner can pull a downloadable CSV for any date range: AMD result, abandon flag, disposition, and duration, one row per call, with the lead's phone number masked by default. It's the actual receipt behind the compliance claims, not just a dashboard summary.")}</p>
+                <p>
+                  {t("See")}{" "}<Link href="/faq/compliance-export">{t("compliance export")}</Link> {t("for the full column reference and when people actually pull one.")}</p>
               </div>
             </details>
 
             <details>
-              <summary>How do I upload leads?</summary>
+              <summary>{t("Can I record calls?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  Drop in a spreadsheet, there&apos;s no template to match or import wizard
-                  to click through. Column headers like <code>phone</code>,{' '}
-                  <code>first_name</code>, <code>email</code>, and <code>state</code> get
-                  auto-detected regardless of exact capitalization, and the only hard
-                  requirement is a column with something that has at least 10 digits in it
-                  once you strip out formatting.
-                </p>
-                <p>
-                  See <Link href="/faq/leads">uploading &amp; managing leads</Link> for the
-                  full field reference, optional consent columns, and how the 3-attempt retry
-                  cycle works once leads are in a campaign.
-                </p>
+                  {t("Yes. Recordings are captured server-side, stored encrypted, and accessible from your dashboard for 30 days. Pull them down for review, training, or your own long-term archive during that window, call metadata (dial timestamps, dispositions, AMD results) is kept separately for 24 months to meet the TSR's record-keeping floor, but the audio itself follows the 30-day retention window.")}</p>
               </div>
             </details>
 
             <details>
-              <summary>Can I write my own call scripts?</summary>
+              <summary>{t("Do you have a team plan?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  Yes: write as many as you want, attach them to whichever campaigns need
-                  them, and reorder which one shows first if a campaign has several. Personal
-                  scripts are yours alone; a Manager+ team owner can also publish a script
-                  the whole team sees.
-                </p>
+                  {t("Yes:")}{" "}<strong>{t("Manager+")}</strong>{t(", at $75/week. It's what the team owner pays to create and own a team; each individual seat inside the team still runs $35/week, regardless of team size. You can configure it so the owner pays for the whole team's seats, or so individual agents pay for their own access. Both flows are supported.")}</p>
                 <p>
-                  See <Link href="/faq/scripts">call scripts</Link> for how attaching and
-                  reordering actually works.
-                </p>
+                  {t("See")}{" "}<Link href="/faq/dialerseat-teams">{t("DialerSeat for teams")}</Link> {t("for the full breakdown: owner-paid vs. agent-paid mechanics, shared campaigns, team-mode predictive routing, and how seat cancellations work.")}</p>
               </div>
             </details>
 
             <details>
-              <summary>How do I set up a campaign?</summary>
+              <summary>{t("Can my team share campaigns?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  Create it, name it or don&apos;t, pick a dialer mode (defaults to power),
-                  and it&apos;s active immediately: no setup wizard, no required fields
-                  beyond that. AMD and predictive pacing are both optional settings with
-                  sane defaults.
-                </p>
-                <p>
-                  See <Link href="/faq/campaigns">setting up a campaign</Link> for the
-                  complete settings reference.
-                </p>
+                  {t("Yes. Team owners can grant campaign access to team members. In team-mode predictive dialing, the system routes connected humans across all agents working the same campaign: when an agent disconnects, the routed human reroutes to another available agent on the same campaign rather than dropping.")}</p>
               </div>
             </details>
 
             <details>
-              <summary>How does DialerSeat handle TCPA compliance?</summary>
+              <summary>{t("Do you offer a white-label option?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  The dialer enforces the federal calling-time window (8 AM-9 PM in the
-                  lead&apos;s local time zone) on every outbound call. Predictive mode
-                  applies the FTC TSR safe-harbor conditions in software, 3% abandon-rate
-                  cap, auto-degrade at 2.5% to leave a safety buffer, AMD pre-screen,
-                  ring-duration handling.
-                </p>
-                <p>
-                  National DNC list scrubbing and consent records remain the seller&apos;s
-                  responsibility, we don&apos;t scrub your list against the registry for
-                  you today. We&apos;re transparent about which compliance layers we own and
-                  which fall on the campaign owner on the{' '}
-                  <Link href="/faq/how-we-keep-compliance">how we keep compliance page</Link>.
-                </p>
+                  {t("Yes: it's bundled into")}{" "}<strong>{t("Manager+")}</strong> {t("at $75/week, replacing your $35/week Pro subscription rather than stacking on top of it. Includes a custom subdomain, your branding (logo, colors, favicon), and the ability to onboard your own users under your brand. The underlying dialer is the same one we run. See")}{' '}
+                  <Link href="/faq/white-label">{t("white-label")}</Link> {t("for the branding details, or")}{" "}<Link href="/faq/manager-plus">{t("the Manager+ breakdown")}</Link> {t("for the full tier: team ownership, advanced analytics, and priority support included.")}</p>
               </div>
             </details>
 
             <details>
-              <summary>How do you keep numbers from getting flagged as spam?</summary>
+              <summary>{t("Is there a mobile app?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  Every outbound number carries STIR/SHAKEN A-attestation, is registered
-                  for CNAM and the Free Caller Registry, and dials with local presence by
-                  default, the carrier-level protections that most dialers sell as separate
-                  add-ons are just the default here. No number places more than 60 calls a
-                  day, load spreads across the pool before any number runs hot, and every
-                  number is checked daily against the rest: one that falls well behind is
-                  slowed down automatically until it recovers.
-                </p>
-                <p>
-                  See <Link href="/faq/how-we-keep-numbers-clean">how we keep our numbers
-                  clean</Link> for the whole system with the actual thresholds, and{' '}
-                  <Link href="/faq/why-calls-show-spam-likely">why calls show Spam Likely</Link>{' '}
-                  for what&apos;s still on you (list quality, consent, DNC scrubbing), since no
-                  infrastructure makes a number permanently immune to flagging.
-                </p>
+                  {t("Yes, DialerSeat installs to your phone's home screen as a Progressive Web App (PWA): the same dialer terminal, analytics, and teams tools as desktop, full-screen, with no App Store download required. We strongly recommend installing it rather than dialing from a regular browser tab if you're working from your phone at all. See")}{' '}
+                  <Link href="/faq/mobile">{t("DialerSeat on mobile")}</Link> {t("for install steps on iPhone and Android, or")}{' '}
+                  <Link href="/faq/white-label-mobile">{t("white-label on mobile")}</Link> {t("if your account is branded.")}</p>
               </div>
             </details>
 
             <details>
-              <summary>Can I export a compliance record for a campaign?</summary>
+              <summary>{t("Where is my data hosted?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  Yes, any campaign owner can pull a downloadable CSV for any date range:
-                  AMD result, abandon flag, disposition, and duration, one row per call,
-                  with the lead&apos;s phone number masked by default. It&apos;s the actual
-                  receipt behind the compliance claims, not just a dashboard summary.
-                </p>
+                  {t("Application data sits on Supabase (US region). Recordings are stored encrypted. Payments are handled by Stripe, DialerSeat never sees or stores credit card numbers. Telephony runs through Telnyx with full STIR/SHAKEN attestation.")}</p>
                 <p>
-                  See <Link href="/faq/compliance-export">compliance export</Link> for the
-                  full column reference and when people actually pull one.
-                </p>
+                  {t("You can export everything in your account as a single JSON file, or permanently delete your account, both self-serve from settings. See")}{' '}
+                  <Link href="/faq/data-and-recordings">{t("recordings & your data")}</Link>{' '}
+                  {t("for exactly what's included in each and how deletion is protected against accidental use.")}</p>
               </div>
             </details>
 
             <details>
-              <summary>Can I record calls?</summary>
+              <summary>{t("Will the $35/week price change?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  Yes. Recordings are captured server-side, stored encrypted, and accessible
-                  from your dashboard for 30 days. Pull them down for review, training, or
-                  your own long-term archive during that window, call metadata (dial
-                  timestamps, dispositions, AMD results) is kept separately for 24 months to
-                  meet the TSR&apos;s record-keeping floor, but the audio itself follows the
-                  30-day retention window.
-                </p>
-              </div>
-            </details>
-
-            <details>
-              <summary>Do you have a team plan?</summary>
-              <div className="faqx-answer">
-                <p>
-                  Yes: <strong>Manager+</strong>, at $75/week. It&apos;s what the team
-                  owner pays to create and own a team; each individual seat inside the team
-                  still runs $35/week, regardless of team size. You can configure it so the
-                  owner pays for the whole team&apos;s seats, or so individual agents pay
-                  for their own access. Both flows are supported.
-                </p>
-                <p>
-                  See <Link href="/faq/dialerseat-teams">DialerSeat for teams</Link> for the
-                  full breakdown: owner-paid vs. agent-paid mechanics, shared campaigns,
-                  team-mode predictive routing, and how seat cancellations work.
-                </p>
-              </div>
-            </details>
-
-            <details>
-              <summary>Can my team share campaigns?</summary>
-              <div className="faqx-answer">
-                <p>
-                  Yes. Team owners can grant campaign access to team members. In team-mode
-                  predictive dialing, the system routes connected humans across all agents
-                  working the same campaign: when an agent disconnects, the routed human
-                  reroutes to another available agent on the same campaign rather than
-                  dropping.
-                </p>
-              </div>
-            </details>
-
-            <details>
-              <summary>Do you offer a white-label option?</summary>
-              <div className="faqx-answer">
-                <p>
-                  Yes: it&apos;s bundled into <strong>Manager+</strong> at $75/week,
-                  replacing your $35/week Pro subscription rather than stacking on top of
-                  it. Includes a custom subdomain, your branding (logo, colors, favicon),
-                  and the ability to onboard your own users under your brand. The underlying
-                  dialer is the same one we run. See{' '}
-                  <Link href="/faq/white-label">white-label</Link> for the branding details,
-                  or <Link href="/faq/manager-plus">the Manager+ breakdown</Link> for the
-                  full tier: team ownership, advanced analytics, and priority support
-                  included.
-                </p>
-              </div>
-            </details>
-
-            <details>
-              <summary>Is there a mobile app?</summary>
-              <div className="faqx-answer">
-                <p>
-                  Yes, DialerSeat installs to your phone&apos;s home screen as a
-                  Progressive Web App (PWA): the same dialer terminal, analytics, and teams
-                  tools as desktop, full-screen, with no App Store download required. We
-                  strongly recommend installing it rather than dialing from a regular browser
-                  tab if you&apos;re working from your phone at all. See{' '}
-                  <Link href="/faq/mobile">DialerSeat on mobile</Link> for install steps on
-                  iPhone and Android, or{' '}
-                  <Link href="/faq/white-label-mobile">white-label on mobile</Link> if your
-                  account is branded.
-                </p>
-              </div>
-            </details>
-
-            <details>
-              <summary>Where is my data hosted?</summary>
-              <div className="faqx-answer">
-                <p>
-                  Application data sits on Supabase (US region). Recordings are stored
-                  encrypted. Payments are handled by Stripe, DialerSeat never sees or
-                  stores credit card numbers. Telephony runs through Telnyx with full
-                  STIR/SHAKEN attestation.
-                </p>
-                <p>
-                  You can export everything in your account as a single JSON file, or
-                  permanently delete your account, both self-serve from settings. See{' '}
-                  <Link href="/faq/data-and-recordings">recordings &amp; your data</Link>{' '}
-                  for exactly what&apos;s included in each and how deletion is protected
-                  against accidental use.
-                </p>
-              </div>
-            </details>
-
-            <details>
-              <summary>Will the $35/week price change?</summary>
-              <div className="faqx-answer">
-                <p>
-                  We have no plans to raise it. If we ever needed to, existing customers
-                  would be grandfathered at the rate they signed up at. The price
-                  you&apos;re looking at today is the price you&apos;ll keep paying.
-                </p>
+                  {t("We have no plans to raise it. If we ever needed to, existing customers would be grandfathered at the rate they signed up at. The price you're looking at today is the price you'll keep paying.")}</p>
               </div>
             </details>
           </div>
@@ -801,32 +691,28 @@ export default function FaqView() {
           {/* ── CTA ── */}
           <section className="faqx-cta">
             <div className="faqx-cta-eyebrow">
-              {showSignedIn ? '▸ READY TO DIAL' : '▸ STILL HAVE QUESTIONS?'}
+              {showSignedIn ? t("▸ READY TO DIAL") : t("▸ STILL HAVE QUESTIONS?")}
             </div>
             {showSignedIn ? (
               <>
-                <h2>Hop back in.</h2>
-                <p>The terminal&apos;s waiting.</p>
+                <h2>{t("Hop back in.")}</h2>
+                <p>{t("The terminal's waiting.")}</p>
                 <div className="faqx-cta-row">
                   <Link href="/dashboard/analytics" className="faqx-btn primary">
-                    GO TO DASHBOARD →
-                  </Link>
+                    {t("GO TO DASHBOARD →")}</Link>
                   <Link href="/dialing-modes" className="faqx-btn secondary">
-                    DIALING MODES
-                  </Link>
+                    {t("DIALING MODES")}</Link>
                 </div>
               </>
             ) : (
               <>
-                <h2>The best way to find out is to use it.</h2>
-                <p>$35 for a week. No contract. Cancel any time. Your data stays yours.</p>
+                <h2>{t("The best way to find out is to use it.")}</h2>
+                <p>{t("$35 for a week. No contract. Cancel any time. Your data stays yours.")}</p>
                 <div className="faqx-cta-row">
                   <Link href="/sign-up" className="faqx-btn primary">
-                    GET STARTED →
-                  </Link>
+                    {t("GET STARTED →")}</Link>
                   <Link href="/faq/why-dialerseat" className="faqx-btn secondary">
-                    WHY DIALERSEAT?
-                  </Link>
+                    {t("WHY DIALERSEAT?")}</Link>
                 </div>
               </>
             )}

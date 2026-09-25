@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { t as tr } from '@/lib/i18n/client'
 
 // ─────────────────────────────────────────────────────────────────────────
 // THE STATEMENT
@@ -123,7 +124,7 @@ export default function ReportView({ period }: { period: string }) {
   }
 
   if (loading) {
-    return <div style={{ padding: 40, color: SOFT, fontSize: 14 }}>Building statement…</div>
+    return <div style={{ padding: 40, color: SOFT, fontSize: 14 }}>{tr("Building statement…")}</div>
   }
   if (error || !data) {
     return <div style={{ padding: 40, color: '#c0392b', fontSize: 14 }}>{error}</div>
@@ -189,7 +190,7 @@ export default function ReportView({ period }: { period: string }) {
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
         position: 'sticky', top: 0, background: '#fff', zIndex: 10,
       }}>
-        <strong style={{ fontSize: 14 }}>{data.periodLabel} statement</strong>
+        <strong style={{ fontSize: 14 }}>{data.periodLabel} {tr("statement")}</strong>
         <div style={{ flex: 1 }} />
         <button
           onClick={() => window.print()}
@@ -198,7 +199,7 @@ export default function ReportView({ period }: { period: string }) {
             padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
             fontFamily: 'inherit',
           }}
-        >Download PDF</button>
+        >{tr("Download PDF")}</button>
       </div>
 
       {/* ── ADDRESSING ───────────────────────────────────────────────────── */}
@@ -210,37 +211,31 @@ export default function ReportView({ period }: { period: string }) {
           background: '#f7f8fa',
         }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>
-            Who is this statement for?
-          </div>
+            {tr("Who is this statement for?")}</div>
           <div style={{ fontSize: 12, color: SOFT, marginBottom: 12, lineHeight: 1.6 }}>
-            If the seats were bought by a company, put the company&apos;s legal name
-            here, a deduction belongs to the entity that incurred the expense.
-            Saved once and used on every statement.
-          </div>
+            {tr("If the seats were bought by a company, put the company's legal name here, a deduction belongs to the entity that incurred the expense. Saved once and used on every statement.")}</div>
           <div style={{ display: 'grid', gap: 8 }}>
             <input
               className="idf"
-              placeholder="Legal or business name"
+              placeholder={tr("Legal or business name")}
               value={legalName}
               onChange={e => setLegalName(e.target.value)}
             />
             <textarea
               className="idf"
-              placeholder="Business address (optional)"
+              placeholder={tr("Business address (optional)")}
               rows={2}
               value={address}
               onChange={e => setAddress(e.target.value)}
             />
             <input
               className="idf"
-              placeholder="Your own reference (optional)"
+              placeholder={tr("Your own reference (optional)")}
               value={reference}
               onChange={e => setReference(e.target.value)}
             />
             <div style={{ fontSize: 11, color: SOFT }}>
-              Do not enter an EIN or SSN. DialerSeat does not store tax
-              identifiers, and this statement does not need one to be valid.
-            </div>
+              {tr("Do not enter an EIN or SSN. DialerSeat does not store tax identifiers, and this statement does not need one to be valid.")}</div>
             {idError && (
               <div style={{ fontSize: 12, color: '#c0392b' }}>{idError}</div>
             )}
@@ -253,7 +248,7 @@ export default function ReportView({ period }: { period: string }) {
                   color: BRAND, borderRadius: 4, padding: '7px 14px',
                   fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit',
                 }}
-              >{savingId ? 'Saving…' : 'Save and update statement'}</button>
+              >{savingId ? tr("Saving…") : tr("Save and update statement")}</button>
             </div>
           </div>
         </div>
@@ -275,10 +270,10 @@ export default function ReportView({ period }: { period: string }) {
             </div>
           </div>
           <div className="hdr-right" style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 19, fontWeight: 700 }}>Billing Statement</div>
+            <div style={{ fontSize: 19, fontWeight: 700 }}>{tr("Billing Statement")}</div>
             <div style={{ fontSize: 13, color: SOFT, marginTop: 3 }}>{data.periodLabel}</div>
             <div style={{ fontSize: 11, color: SOFT, marginTop: 8 }}>
-              Issued {shortDate(data.generatedAt)}
+              {tr("Issued")}{" "}{shortDate(data.generatedAt)}
             </div>
             {data.documentRef && (
               <div style={{ fontSize: 10.5, color: SOFT, marginTop: 6, fontWeight: 600 }}>
@@ -287,7 +282,7 @@ export default function ReportView({ period }: { period: string }) {
             )}
             {data.account.customerId && (
               <div style={{ fontSize: 10.5, color: SOFT, marginTop: 2 }}>
-                Account {data.account.customerId}
+                {tr("Account")}{" "}{data.account.customerId}
               </div>
             )}
           </div>
@@ -295,10 +290,9 @@ export default function ReportView({ period }: { period: string }) {
 
         <div className="keep" style={{ marginTop: 18 }}>
           <div style={{ fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', color: SOFT, fontWeight: 700 }}>
-            Billed to
-          </div>
+            {tr("Billed to")}</div>
           <div style={{ fontSize: 15, fontWeight: 600, marginTop: 5 }}>
-            {data.account.name || data.account.email || 'Account holder'}
+            {data.account.name || data.account.email || tr("Account holder")}
           </div>
           {data.account.address && (
             <div style={{ fontSize: 12.5, color: SOFT, marginTop: 3, whiteSpace: 'pre-line' }}>
@@ -310,12 +304,12 @@ export default function ReportView({ period }: { period: string }) {
           )}
           {data.account.reference && (
             <div style={{ fontSize: 11.5, color: SOFT, marginTop: 3 }}>
-              Reference: {data.account.reference}
+              {tr("Reference:")}{" "}{data.account.reference}
             </div>
           )}
         </div>
 
-        <H>Summary</H>
+        <H>{tr("Summary")}</H>
         <div className="keep">
           <Row label={`Seats billed in ${data.periodLabel}`} value={String(b.distinctSeats)} />
           <Row label="Charges settled" value={String(b.paidCount)} />
@@ -336,15 +330,12 @@ export default function ReportView({ period }: { period: string }) {
 
         {b.discountCents === 0 && data.tier?.percentOff > 0 && (
           <div style={{ fontSize: 11.5, color: SOFT, marginTop: 8, lineHeight: 1.6 }}>
-            This account currently qualifies for a {data.tier.percentOff}% volume
-            discount ({data.tier.label} tier, {data.tier.activeSeats} active seats).
-            No discount was applied to the charges in this period.
-          </div>
+            {tr("This account currently qualifies for a")}{" "}{data.tier.percentOff}{tr("% volume discount (")}{data.tier.label} {tr("tier,")}{" "}{data.tier.activeSeats} {tr("active seats). No discount was applied to the charges in this period.")}</div>
         )}
 
         {prev && (
           <>
-            <H>Compared with {prev.label}</H>
+            <H>{tr("Compared with")}{" "}{prev.label}</H>
             <div className="keep">
               <Row
                 label="Spend"
@@ -364,22 +355,21 @@ export default function ReportView({ period }: { period: string }) {
           </>
         )}
 
-        <H>Charges</H>
+        <H>{tr("Charges")}</H>
         {b.lineItems.length === 0 ? (
           <div style={{ fontSize: 13, color: SOFT }}>
-            No seat charges were raised in this period.
-          </div>
+            {tr("No seat charges were raised in this period.")}</div>
         ) : (
           <div className="rt-wrap">
             <table className="rt" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Agent</th>
-                  <th>Team</th>
-                  <th>Service period</th>
-                  <th>Status</th>
-                  <th className="num">Amount</th>
+                  <th>{tr("Date")}</th>
+                  <th>{tr("Agent")}</th>
+                  <th>{tr("Team")}</th>
+                  <th>{tr("Service period")}</th>
+                  <th>{tr("Status")}</th>
+                  <th className="num">{tr("Amount")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -412,18 +402,14 @@ export default function ReportView({ period }: { period: string }) {
 
         {!b.reconciliation.complete && b.paidCount > 0 && (
           <div style={{ fontSize: 11, color: SOFT, marginTop: 8, lineHeight: 1.6 }}>
-            * This amount is DialerSeat&apos;s recorded charge and could not be
-            re-confirmed against the payment processor at the time this statement
-            was generated. Your card or bank statement is the authoritative record.
-          </div>
+            {tr("* This amount is DialerSeat's recorded charge and could not be re-confirmed against the payment processor at the time this statement was generated. Your card or bank statement is the authoritative record.")}</div>
         )}
 
-        <H>Payment method</H>
+        <H>{tr("Payment method")}</H>
         <div className="keep">
           {data.paymentMethods.length === 0 ? (
             <div style={{ fontSize: 13, color: SOFT }}>
-              No card on file at the time this statement was generated.
-            </div>
+              {tr("No card on file at the time this statement was generated.")}</div>
           ) : (
             data.paymentMethods.map((pm: any, i: number) => (
               <Row
@@ -435,21 +421,19 @@ export default function ReportView({ period }: { period: string }) {
           )}
         </div>
 
-        <H>Account structure</H>
+        <H>{tr("Account structure")}</H>
         <div style={{ fontSize: 11.5, color: SOFT, marginBottom: 8, lineHeight: 1.6 }}>
-          A snapshot as at {shortDate(data.generatedAt)}, not a reconstruction of
-          how the account was configured during the period.
-        </div>
+          {tr("A snapshot as at")}{" "}{shortDate(data.generatedAt)}{tr(", not a reconstruction of how the account was configured during the period.")}</div>
         {data.structure.teams.length === 0 ? (
-          <div style={{ fontSize: 13, color: SOFT }}>No teams on this account.</div>
+          <div style={{ fontSize: 13, color: SOFT }}>{tr("No teams on this account.")}</div>
         ) : (
           <table className="rt" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th>Team</th>
-                <th>Created</th>
-                <th className="num">Members</th>
-                <th className="num">Campaigns</th>
+                <th>{tr("Team")}</th>
+                <th>{tr("Created")}</th>
+                <th className="num">{tr("Members")}</th>
+                <th className="num">{tr("Campaigns")}</th>
               </tr>
             </thead>
             <tbody>
@@ -462,7 +446,7 @@ export default function ReportView({ period }: { period: string }) {
                 </tr>
               ))}
               <tr>
-                <td style={{ fontWeight: 700 }}>Total</td>
+                <td style={{ fontWeight: 700 }}>{tr("Total")}</td>
                 <td />
                 <td className="num" style={{ fontWeight: 700 }}>{data.structure.totalMembers}</td>
                 <td className="num" style={{ fontWeight: 700 }}>{data.structure.totalCampaigns}</td>
@@ -477,7 +461,7 @@ export default function ReportView({ period }: { period: string }) {
             law about altering it. Neither is tax advice and the page says so —
             claiming this "meets IRS requirements" would be a promise nobody
             here is in a position to make, and it varies by entity and state. */}
-        <H>What this statement contains</H>
+        <H>{tr("What this statement contains")}</H>
         {/* ── THE FIVE ELEMENTS ────────────────────────────────────────────
             IRS guidance on supporting documents for business expenses names
             five things a record has to establish: the payee, the amount paid,
@@ -488,10 +472,7 @@ export default function ReportView({ period }: { period: string }) {
             what the charge was FOR. */}
         <div className="keep" style={{ fontSize: 11.5, color: SOFT, lineHeight: 1.8 }}>
           <p style={{ margin: '0 0 10px' }}>
-            IRS guidance on supporting documents for business expenses lists five
-            things a record needs to establish. This statement carries each of
-            them:
-          </p>
+            {tr("IRS guidance on supporting documents for business expenses lists five things a record needs to establish. This statement carries each of them:")}</p>
           <div style={{ marginBottom: 12 }}>
             <Row label="Payee" value={`${data.supplier.name}, ${data.supplier.site}`} />
             <Row label="Amount paid" value={money(b.paidCents)} />
@@ -507,33 +488,15 @@ export default function ReportView({ period }: { period: string }) {
             <Row label="Description" value="Per-seat software subscription" />
           </div>
           <p style={{ margin: '0 0 10px' }}>
-            Only settled charges are included in the total. Charges that failed or
-            are still pending are listed separately and excluded, because money that
-            did not leave the account is not an expense, and an overstated
-            deduction is a worse outcome than a missing one.
-          </p>
+            {tr("Only settled charges are included in the total. Charges that failed or are still pending are listed separately and excluded, because money that did not leave the account is not an expense, and an overstated deduction is a worse outcome than a missing one.")}</p>
           <p style={{ margin: '0 0 10px' }}>
-            <strong style={{ color: INK }}>Keep this.</strong> The IRS period of
-            limitations for most returns is three years from filing, and longer in
-            some circumstances, six years where more than 25% of gross income was
-            omitted, and no limit where no return was filed. Retention is measured
-            from the date the return was filed, not from the date of this document.
-          </p>
+            <strong style={{ color: INK }}>{tr("Keep this.")}</strong> {tr("The IRS period of limitations for most returns is three years from filing, and longer in some circumstances, six years where more than 25% of gross income was omitted, and no limit where no return was filed. Retention is measured from the date the return was filed, not from the date of this document.")}</p>
           <p style={{ margin: '0 0 10px' }}>
-            This is a billing record, not tax advice. Whether these amounts are
-            deductible, and how they should be treated, depends on your entity and
-            jurisdiction, that is a question for a qualified tax professional. Your
-            card or bank statement remains the authoritative record of payment.
-          </p>
+            {tr("This is a billing record, not tax advice. Whether these amounts are deductible, and how they should be treated, depends on your entity and jurisdiction, that is a question for a qualified tax professional. Your card or bank statement remains the authoritative record of payment.")}</p>
           <p style={{ margin: 0 }}>
-            <strong style={{ color: INK }}>Do not alter this document.</strong>{' '}
-            Under 26 U.S.C. § 7206, willfully making or using a document known to be
-            false as to any material matter, in connection with a matter arising
-            under the internal revenue laws, is a federal criminal offense. If a
-            figure here is wrong, ask us to correct it at {data.supplier.contact} 
-            a corrected statement is reissued under the same reference, and it takes
-            minutes.
-          </p>
+            <strong style={{ color: INK }}>{tr("Do not alter this document.")}</strong>{' '}
+            {tr("Under 26 U.S.C. § 7206, willfully making or using a document known to be false as to any material matter, in connection with a matter arising under the internal revenue laws, is a federal criminal offense. If a figure here is wrong, ask us to correct it at")}{" "}{data.supplier.contact} 
+            {tr("a corrected statement is reissued under the same reference, and it takes minutes.")}</p>
         </div>
 
         <div style={{
@@ -541,8 +504,8 @@ export default function ReportView({ period }: { period: string }) {
           fontSize: 10.5, color: SOFT, display: 'flex',
           justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
         }}>
-          <span>DialerSeat · {data.supplier.site}</span>
-          <span>{data.periodLabel} · issued {shortDate(data.generatedAt)}</span>
+          <span>{tr("DialerSeat ·")}{" "}{data.supplier.site}</span>
+          <span>{data.periodLabel} {tr("· issued")}{" "}{shortDate(data.generatedAt)}</span>
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { t } from '@/lib/i18n/client'
 
 
 export default function BackToVsButton() {
@@ -32,8 +33,7 @@ export default function BackToVsButton() {
       className="back-to-vs-btn"
     >
       <span style={{ fontSize: 14, lineHeight: 1 }}>←</span>
-      ALL COMPARISONS
-      <style>{`
+      {t("ALL COMPARISONS")}<style>{`
         .back-to-vs-btn:hover {
           background: rgba(255, 255, 255, 1) !important;
           border-color: rgba(74, 158, 255, 0.5) !important;

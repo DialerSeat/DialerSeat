@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { t } from '@/lib/i18n/client'
 
 // =============================================================================
 // TEAM DETAIL — what a team looks like when you click it
@@ -207,30 +208,27 @@ export default function TeamDetail({
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13.5, color: TEXT }}>
                 {seat.suspended
-                  ? 'Your seat on this team is paused'
+                  ? t("Your seat on this team is paused")
                   : seat.billingOverride === 'agent'
-                  ? 'You pay for this seat'
-                  : 'Your seat is covered by the team'}
+                  ? t("You pay for this seat")
+                  : t("Your seat is covered by the team")}
               </div>
               <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
                 {/* The roster size was shown here as "One of N on this team".
                     It told the agent nothing they can act on, and framed their
                     seat as a headcount line rather than as their own. */}
                 {seat.suspended
-                  ? 'Contact whoever runs this team, only they can resume it.'
-                  : 'Active'}
+                  ? t("Contact whoever runs this team, only they can resume it.")
+                  : t("Active")}
               </div>
             </div>
           </div>
         )}
 
-        <Section title="Your Campaigns">
+        <Section title={t("Your Campaigns")}>
           {available.length === 0 ? (
             <div style={{ color: DIM, fontSize: 13, lineHeight: 1.7 }}>
-              You are on this team, but no campaigns have been opened to you yet.
-              The team owner assigns those, reach out to whoever sent you your
-              join code.
-            </div>
+              {t("You are on this team, but no campaigns have been opened to you yet. The team owner assigns those, reach out to whoever sent you your join code.")}</div>
           ) : (
             <div style={{ display: 'grid', gap: 8 }}>
               {available.map(c => {
@@ -245,13 +243,13 @@ export default function TeamDetail({
                       <div style={{ fontSize: 14, fontWeight: 500, color: paused ? DIM : TEXT }}>
                         {c.name}
                         {paused && (
-                          <span style={{ color: '#fbbf24', fontSize: 11, marginLeft: 8 }}>paused</span>
+                          <span style={{ color: '#fbbf24', fontSize: 11, marginLeft: 8 }}>{t("paused")}</span>
                         )}
                       </div>
                       <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
                         {paused
-                          ? 'The owner has paused this campaign'
-                          : 'Ready to dial'}
+                          ? t("The owner has paused this campaign")
+                          : t("Ready to dial")}
                       </div>
                     </div>
                     {/* Straight to the queue with this campaign selected. The
@@ -263,7 +261,7 @@ export default function TeamDetail({
                           ...btn, textDecoration: 'none',
                           borderColor: ACCENT, color: '#fff', background: ACCENT,
                         }}
-                      >Dial</a>
+                      >{t("Dial")}</a>
                     )}
                   </div>
                 )
@@ -273,12 +271,9 @@ export default function TeamDetail({
         </Section>
 
         {locked.length > 0 && (
-          <Section title="Also On This Team">
+          <Section title={t("Also On This Team")}>
             <div style={{ color: DIM, fontSize: 12.5, lineHeight: 1.7, marginBottom: 8 }}>
-              You do not have access to these yet. Whoever runs this team can add
-              you to any of them without it costing you anything, your seat is
-              already paid for. Ask them.
-            </div>
+              {t("You do not have access to these yet. Whoever runs this team can add you to any of them without it costing you anything, your seat is already paid for. Ask them.")}</div>
             <div style={{ display: 'grid', gap: 6 }}>
               {locked.map(c => (
                 <div key={c.id} style={{
@@ -316,26 +311,23 @@ export default function TeamDetail({
           <button
             style={btn}
             onClick={() => onRename('team', team.id, team.name)}
-          >Rename team</button>
+          >{t("Rename team")}</button>
         </div>
       )}
 
       {team.isOwner && (
         <Section
-          title="Join Codes"
+          title={t("Join Codes")}
           action={
             <button
               style={{ ...btn, borderColor: ACCENT, color: '#fff', background: ACCENT }}
               onClick={() => onNewCode?.(team.id)}
-            >+ New Code</button>
+            >{t("+ New Code")}</button>
           }
         >
           {team.codes.length === 0 ? (
             <div style={{ color: DIM, fontSize: 13, lineHeight: 1.7 }}>
-              No codes yet. A <strong style={{ color: MUTED }}>team code</strong> lets
-              someone join the team; a <strong style={{ color: MUTED }}>campaign code</strong> puts
-              them straight onto one campaign and into the team at the same time.
-            </div>
+              {t("No codes yet. A")}{" "}<strong style={{ color: MUTED }}>{t("team code")}</strong> {t("lets someone join the team; a")}{" "}<strong style={{ color: MUTED }}>{t("campaign code")}</strong> {t("puts them straight onto one campaign and into the team at the same time.")}</div>
           ) : (
             <div style={{ display: 'grid', gap: 8 }}>
               {team.codes.map(c => {
@@ -359,15 +351,15 @@ export default function TeamDetail({
                         fontSize: 9, letterSpacing: 0.6, textTransform: 'uppercase',
                         color: DIM, border: `1px solid ${HAIRLINE}`,
                         borderRadius: 3, padding: '2px 6px',
-                      }}>{isTeamCode ? 'Team' : 'Campaign'}</span>
+                      }}>{isTeamCode ? t("Team") : t("Campaign")}</span>
                       <div style={{ flex: 1 }} />
                       <button style={btn} onClick={() => copy(c.code, `c-${c.id}`)}>
-                        {copied === `c-${c.id}` ? 'Copied' : 'Copy Code'}
+                        {copied === `c-${c.id}` ? t("Copied") : t("Copy Code")}
                       </button>
                       <button style={btn} onClick={() => copy(link, `l-${c.id}`)}>
-                        {copied === `l-${c.id}` ? 'Copied' : 'Copy Link'}
+                        {copied === `l-${c.id}` ? t("Copied") : t("Copy Link")}
                       </button>
-                      <button style={btn} onClick={() => onRegenerateCode?.(c.id)}>Regenerate</button>
+                      <button style={btn} onClick={() => onRegenerateCode?.(c.id)}>{t("Regenerate")}</button>
                     </div>
                     {/* Terms in one line, because an owner handing out three
                         codes needs to tell them apart at a glance. */}
@@ -381,7 +373,7 @@ export default function TeamDetail({
                       {campaignName
                         ? `${campaignName} · `
                         : 'Team code: joins the team only, until you add them to a campaign · '}
-                      {c.payer === 'agent' ? 'agent pays their seat' : 'you pay the seat'}
+                      {c.payer === 'agent' ? t("agent pays their seat") : t("you pay the seat")}
                       {' · '}
                       {c.max_uses ? `${uses}/${c.max_uses} used` : `${uses} used`}
                       {c.is_active === false ? ' · inactive' : ''}
@@ -392,25 +384,23 @@ export default function TeamDetail({
             </div>
           )}
           <div style={{ fontSize: 11.5, color: DIM, marginTop: 10, lineHeight: 1.6 }}>
-            Regenerating a code stops the old one working immediately and does not
-            remove anyone who already joined with it.
-          </div>
+            {t("Regenerating a code stops the old one working immediately and does not remove anyone who already joined with it.")}</div>
         </Section>
       )}
 
       <Section
-        title="Campaigns"
+        title={t("Campaigns")}
         action={
           team.isOwner ? (
             <button
               style={{ ...btn, borderColor: ACCENT, color: '#fff', background: ACCENT }}
               onClick={() => onNewCampaign?.(team.id)}
-            >+ New Campaign</button>
+            >{t("+ New Campaign")}</button>
           ) : undefined
         }
       >
         {team.campaigns.length === 0 ? (
-          <div style={{ color: DIM, fontSize: 13 }}>No campaigns in this team yet.</div>
+          <div style={{ color: DIM, fontSize: 13 }}>{t("No campaigns in this team yet.")}</div>
         ) : (
           <div style={{ display: 'grid', gap: 8 }}>
             {team.campaigns.map(c => (
@@ -437,11 +427,11 @@ export default function TeamDetail({
                   }}>
                     {c.name}
                     {c.status === 'inactive' && (
-                      <span style={{ color: '#fbbf24', fontSize: 11, marginLeft: 8 }}>paused</span>
+                      <span style={{ color: '#fbbf24', fontSize: 11, marginLeft: 8 }}>{t("paused")}</span>
                     )}
                   </div>
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
-                    {c.agentCount} {c.agentCount === 1 ? 'agent' : 'agents'}
+                    {c.agentCount} {c.agentCount === 1 ? t("agent") : t("agents")}
                     {c.totalLeads ? ` · ${c.totalLeads.toLocaleString()} leads` : ''}
                   </div>
                 </div>
@@ -454,7 +444,7 @@ export default function TeamDetail({
                     fontSize: 9, letterSpacing: 0.6, textTransform: 'uppercase',
                     color: DIM, border: `1px solid ${HAIRLINE}`,
                     borderRadius: 3, padding: '2px 6px', whiteSpace: 'nowrap',
-                  }}>Open to team</span>
+                  }}>{t("Open to team")}</span>
                 )}
                 {/* Each campaign can mint its own code. Someone joining with it
                     lands in the team AND on this campaign in one step, which is
@@ -478,18 +468,17 @@ export default function TeamDetail({
                     onClick={() => onToggleCampaign?.(
                       c.id, c.status === 'inactive' ? 'active' : 'inactive'
                     )}
-                  >{c.status === 'inactive' ? 'Inactive' : 'Active'}</button>
+                  >{c.status === 'inactive' ? t("Inactive") : t("Active")}</button>
                 )}
                 {team.isOwner && (
                   <button style={btn} onClick={() => onNewCode?.(team.id, c.id)}>
-                    + Code
-                  </button>
+                    {t("+ Code")}</button>
                 )}
                 {/* Everything else on this row is a shortcut. This is the way
                     into the campaign itself — its agents, its settings, its
                     remaining leads. */}
                 {team.isOwner && (
-                  <button style={btn} onClick={() => onOpenCampaign?.(c.id)}>Open</button>
+                  <button style={btn} onClick={() => onOpenCampaign?.(c.id)}>{t("Open")}</button>
                 )}
                 </div>
               </div>
@@ -498,7 +487,7 @@ export default function TeamDetail({
         )}
       </Section>
 
-      <Section title="Members">
+      <Section title={t("Members")}>
         {/* ── VOLUME STANDING ──────────────────────────────────────────────
             Owner-only, and only once there is something true to say. A team
             with three seats does not need a discount ladder in their face —
@@ -531,35 +520,31 @@ export default function TeamDetail({
                 track 18, and seeing it track 6 later reads as a billing bug.
                 Naming the funded count up front is cheaper than that email. */}
             <strong style={{ color: TEXT }}>
-              {seatTier.totalSeats} active {seatTier.totalSeats === 1 ? 'seat' : 'seats'}
+              {seatTier.totalSeats} {t("active")}{" "}{seatTier.totalSeats === 1 ? t("seat") : t("seats")}
             </strong>
             {' across your teams'}
             {seatTier.ownerPaidSeats !== seatTier.totalSeats && (
-              <> · <strong style={{ color: TEXT }}>{seatTier.ownerPaidSeats}</strong> you pay for</>
+              <> · <strong style={{ color: TEXT }}>{seatTier.ownerPaidSeats}</strong> {t("you pay for")}</>
             )}
             {seatTier.percentOff > 0 && (
               <> · <span style={{ color: '#32ff7e' }}>
-                {seatTier.percentOff}% off your weekly seat cost
-              </span></>
+                {seatTier.percentOff}{t("% off your weekly seat cost")}</span></>
             )}
 
             {seatTier.salesHandoff ? (
               <div style={{ marginTop: 4 }}>
-                You are past fifty seats, rates at this size are set individually.
-                Email <strong style={{ color: TEXT }}>sales@dialerseat.com</strong> and
-                we will put together a partnership that fits how you actually run.
-              </div>
+                {t("You are past fifty seats, rates at this size are set individually. Email")}{" "}<strong style={{ color: TEXT }}>sales@dialerseat.com</strong> {t("and we will put together a partnership that fits how you actually run.")}</div>
             ) : seatTier.next ? (
               <div style={{ marginTop: 4 }}>
                 {/* Deliberately says "seats you pay for". The rung only moves on
                     funded seats, so counting self-funded ones toward it would be
                     the panel promising a discount billing will not apply. */}
-                {seatTier.next.seatsAway} more{' '}
-                {seatTier.next.seatsAway === 1 ? 'seat' : 'seats'} you pay for reaches{' '}
+                {seatTier.next.seatsAway} {t("more")}{' '}
+                {seatTier.next.seatsAway === 1 ? t("seat") : t("seats")} {t("you pay for reaches")}{' '}
                 <strong style={{ color: TEXT }}>{seatTier.next.tier.label}</strong>
                 {typeof seatTier.next.tier.percentOff === 'number'
                   ? `, ${seatTier.next.tier.percentOff}% off weekly.`
-                  : ', a rate we set with you directly. Email sales@dialerseat.com.'}
+                  : t(", a rate we set with you directly. Email sales@dialerseat.com.")}
               </div>
             ) : null}
 
@@ -572,10 +557,8 @@ export default function TeamDetail({
               && seatTier.totalSeats >= 10
               && seatTier.ownerPaidSeats < 10 && (
               <div style={{ marginTop: 4 }}>
-                Most of your seats are paid for by the agents themselves, so the
-                weekly discount does not apply, it only reduces what{' '}
-                <em style={{ color: MUTED }}>you</em> are billed. A roster this size is
-                worth talking about directly: email{' '}
+                {t("Most of your seats are paid for by the agents themselves, so the weekly discount does not apply, it only reduces what")}{' '}
+                <em style={{ color: MUTED }}>{t("you")}</em> {t("are billed. A roster this size is worth talking about directly: email")}{' '}
                 <strong style={{ color: TEXT }}>sales@dialerseat.com</strong>.
               </div>
             )}
@@ -583,7 +566,7 @@ export default function TeamDetail({
         )}
 
         {team.members.length === 0 ? (
-          <div style={{ color: DIM, fontSize: 13 }}>No members yet.</div>
+          <div style={{ color: DIM, fontSize: 13 }}>{t("No members yet.")}</div>
         ) : (
           <div style={{ display: 'grid', gap: 8 }}>
             {team.members.map(m => (
@@ -595,12 +578,12 @@ export default function TeamDetail({
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 500 }}>{m.name}</div>
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
-                    {m.campaignCount} {m.campaignCount === 1 ? 'campaign' : 'campaigns'}
+                    {m.campaignCount} {m.campaignCount === 1 ? t("campaign") : t("campaigns")}
                     {m.seatPaidBy ? ` · seat paid by ${m.seatPaidBy}` : ''}
                   </div>
                 </div>
                 {team.isOwner && (
-                  <button style={btn} onClick={() => onManageUser?.(m.id)}>Manage</button>
+                  <button style={btn} onClick={() => onManageUser?.(m.id)}>{t("Manage")}</button>
                 )}
               </div>
             ))}

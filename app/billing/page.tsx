@@ -9,6 +9,7 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js'
+import { t } from '@/lib/i18n/client'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
@@ -591,9 +592,9 @@ export default function BillingPage() {
         <div style={narrowShellStyle}>
           <div style={{ padding: '48px 32px', textAlign: 'center' }}>
             <BrandMark />
-            <div style={{ ...statusTitleStyle, color: '#32ff7e' }}>Subscription active</div>
+            <div style={{ ...statusTitleStyle, color: '#32ff7e' }}>{t("Subscription active")}</div>
             <div style={mutedTextStyle}>
-              Promo code applied. Redirecting{plan === 'wl' ? ' to white-label setup' : ' to your dashboard'}...
+              {t("Promo code applied. Redirecting")}{plan === 'wl' ? ' to white-label setup' : ' to your dashboard'}...
             </div>
           </div>
         </div>
@@ -607,13 +608,12 @@ export default function BillingPage() {
         <div style={narrowShellStyle}>
           <div style={{ padding: '48px 32px', textAlign: 'center' }}>
             <BrandMark />
-            <div style={{ ...statusTitleStyle, color: '#32ff7e' }}>$0.00 owed</div>
+            <div style={{ ...statusTitleStyle, color: '#32ff7e' }}>{t("$0.00 owed")}</div>
             <div style={mutedTextStyle}>
-              Your seat on <strong style={{ color: '#e0e2ea' }}>{seatCovered.teamName}</strong> is
-              covered by the team owner, there&apos;s nothing to pay here.{' '}
+              {t("Your seat on")}{" "}<strong style={{ color: '#e0e2ea' }}>{seatCovered.teamName}</strong> {t("is covered by the team owner, there's nothing to pay here.")}{' '}
               {seatCovered.pending
-                ? 'Taking you in now. The owner still needs to approve you before their campaigns open up.'
-                : 'Taking you in now.'}
+                ? t("Taking you in now. The owner still needs to approve you before their campaigns open up.")
+                : t("Taking you in now.")}
             </div>
           </div>
         </div>
@@ -629,7 +629,7 @@ export default function BillingPage() {
           <div style={{ padding: '48px 32px', textAlign: 'center' }}>
             <BrandMark />
             <div style={{ ...statusTitleStyle, color: '#ff6464' }}>
-              {isPromoError ? 'Invalid code' : 'Something went wrong'}
+              {isPromoError ? t("Invalid code") : t("Something went wrong")}
             </div>
             <div style={{ ...mutedTextStyle, marginBottom: 28 }}>{error}</div>
             <button
@@ -642,8 +642,7 @@ export default function BillingPage() {
               }}
               disabled={abandoning}
             >
-              Return to billing
-            </button>
+              {t("Return to billing")}</button>
             <button
               type="button"
               onClick={abandonAndSignOut}
@@ -654,7 +653,7 @@ export default function BillingPage() {
                 cursor: abandoning ? 'not-allowed' : 'pointer',
               }}
             >
-              {abandoning ? 'Going back...' : 'Back to home'}
+              {abandoning ? t("Going back...") : t("Back to home")}
             </button>
           </div>
         </div>
@@ -679,7 +678,7 @@ export default function BillingPage() {
           {/* ── LEFT: order summary ─────────────────────────────── */}
           <div style={summaryColStyle} className="billing-col">
             <div style={eyebrowStyle}>
-              <span style={eyebrowLabelStyle}>PLAN</span>
+              <span style={eyebrowLabelStyle}>{t("PLAN")}</span>
               <span style={eyebrowPlanStyle}>{planInfo.label}</span>
             </div>
 
@@ -688,16 +687,15 @@ export default function BillingPage() {
                 <span style={priceWasStyle}>{billing.fullLabel}</span>
               )}
               <span style={priceNowStyle} className="billing-price-now">{billing.todayLabel}</span>
-              <span style={priceUnitStyle}>{billing.hasDiscount ? 'today' : '/ week'}</span>
+              <span style={priceUnitStyle}>{billing.hasDiscount ? t("today") : t("/ week")}</span>
             </div>
             {billing.hasDiscount ? (
               <div style={priceCaptionStyle} className="billing-price-caption">
-                <span style={{ color: '#32ff7e' }}>{promoApplied?.toUpperCase()}</span> applied, then {billing.recurringLabel}
+                <span style={{ color: '#32ff7e' }}>{promoApplied?.toUpperCase()}</span> {t("applied, then")}{" "}{billing.recurringLabel}
               </div>
             ) : (
               <div style={priceCaptionStyle} className="billing-price-caption">
-                Charged today, then weekly until you cancel.
-              </div>
+                {t("Charged today, then weekly until you cancel.")}</div>
             )}
 
             <div style={sectionTitleStyle}>{planInfo.title}</div>
@@ -727,37 +725,34 @@ export default function BillingPage() {
 
             <div style={dividerStyle} className="billing-divider" />
 
-            <div style={termsHeaderStyle} className="billing-terms-header">Billing terms</div>
+            <div style={termsHeaderStyle} className="billing-terms-header">{t("Billing terms")}</div>
             <ul style={termsListStyle} className="billing-terms-list">
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
                 <span>
-                  <strong style={{ color: '#4a9eff' }}>{billing.todayLabel}</strong> charged today to start your subscription
-                  {billing.hasDiscount && (
-                    <span style={{ color: '#32ff7e' }}> ({promoApplied?.toUpperCase()} applied)</span>
+                  <strong style={{ color: '#4a9eff' }}>{billing.todayLabel}</strong> {t("charged today to start your subscription")}{billing.hasDiscount && (
+                    <span style={{ color: '#32ff7e' }}> ({promoApplied?.toUpperCase()} {t("applied)")}</span>
                   )}
                 </span>
               </li>
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
                 <span>
-                  You will be billed <strong style={{ color: '#4a9eff' }}>{billing.recurringLabel}</strong> automatically thereafter
-                </span>
+                  {t("You will be billed")}{" "}<strong style={{ color: '#4a9eff' }}>{billing.recurringLabel}</strong> {t("automatically thereafter")}</span>
               </li>
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
-                <span>Cancel anytime in Settings, service continues until period end</span>
+                <span>{t("Cancel anytime in Settings, service continues until period end")}</span>
               </li>
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
-                <span>Refunds are only considered within 24 hours of being charged, contact support@dialerseat.com</span>
+                <span>{t("Refunds are only considered within 24 hours of being charged, contact support@dialerseat.com")}</span>
               </li>
               {plan === 'wl' && (
                 <li style={termItemStyle}>
                   <span style={{ ...termBulletStyle, background: '#ffd96a' }} />
                   <span style={{ color: '#ffd96a' }}>
-                    After payment you&apos;ll choose your subdomain, upload your logo, and set your brand colors.
-                  </span>
+                    {t("After payment you'll choose your subdomain, upload your logo, and set your brand colors.")}</span>
                 </li>
               )}
             </ul>
@@ -765,7 +760,7 @@ export default function BillingPage() {
 
           {/* ── RIGHT: payment ──────────────────────────────────── */}
           <div style={payColStyle} className="billing-col">
-            <div style={payHeaderStyle} className="billing-pay-header">Payment details</div>
+            <div style={payHeaderStyle} className="billing-pay-header">{t("Payment details")}</div>
 
             <div style={promoBoxStyle} className="billing-promo-box">
               {/* Team codes stack. No remove button: leaving a team is a
@@ -775,11 +770,11 @@ export default function BillingPage() {
               {teamCodes.map(c => (
                 <div key={c.code} style={{ ...promoAppliedStyle, marginBottom: 6 }}>
                   <span>
-                    ✓ <strong style={{ color: '#32ff7e' }}>{c.code}</strong>, joined{' '}
+                    ✓ <strong style={{ color: '#32ff7e' }}>{c.code}</strong>{t(", joined")}{' '}
                     {c.teamName.toUpperCase()}
                   </span>
                   <span style={{ fontSize: 10, letterSpacing: '0.08em', color: c.payer === 'owner' ? '#32ff7e' : '#8a8f9e' }}>
-                    {c.payer === 'owner' ? 'SEAT COVERED' : 'YOU PAY THIS SEAT'}
+                    {c.payer === 'owner' ? t("SEAT COVERED") : t("YOU PAY THIS SEAT")}
                   </span>
                 </div>
               ))}
@@ -787,15 +782,13 @@ export default function BillingPage() {
               {promoApplied && (
                 <div style={{ ...promoAppliedStyle, marginBottom: 6 }}>
                   <span>
-                    ✓ CODE <strong style={{ color: '#32ff7e' }}>{promoApplied.toUpperCase()}</strong> APPLIED
-                  </span>
+                    {t("✓ CODE")}{" "}<strong style={{ color: '#32ff7e' }}>{promoApplied.toUpperCase()}</strong> {t("APPLIED")}</span>
                   <button
                     onClick={handleRemovePromo}
                     disabled={!!promoAction}
                     style={promoRemoveStyle}
                   >
-                    REMOVE
-                  </button>
+                    {t("REMOVE")}</button>
                 </div>
               )}
 
@@ -810,13 +803,13 @@ export default function BillingPage() {
                   onClick={() => setShowPromo(true)}
                   style={promoToggleStyle}
                 >
-                  + {teamCodes.length > 0 || promoApplied ? 'Add another code' : 'Have a code?'}
+                  + {teamCodes.length > 0 || promoApplied ? t("Add another code") : t("Have a code?")}
                 </button>
               ) : (
                 <div style={promoFormStyle}>
                   <input
                     type="text"
-                    placeholder="Enter code"
+                    placeholder={t("Enter code")}
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                     onKeyDown={(e) => {
@@ -834,7 +827,7 @@ export default function BillingPage() {
                       cursor: !promoCode.trim() || !!promoAction ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {promoAction === 'applying' ? '...' : 'Apply'}
+                    {promoAction === 'applying' ? '...' : t("Apply")}
                   </button>
                 </div>
               )}
@@ -869,8 +862,7 @@ export default function BillingPage() {
             </Elements>
 
             <div style={footerNoteStyle} className="billing-footer-note">
-              Payments processed securely by Stripe. Your card details never touch our servers.
-            </div>
+              {t("Payments processed securely by Stripe. Your card details never touch our servers.")}</div>
           </div>
         </div>
       </div>
@@ -1096,9 +1088,8 @@ function CheckoutForm({
             to survive that without ever implying the recurring charge is
             free too. */}
         <span>
-          I agree my card will be charged <strong style={{ color: '#e0e2ea' }}>{billing.todayLabel} today</strong> and{' '}
-          <strong style={{ color: '#e0e2ea' }}>{billing.recurringLabel}</strong> thereafter unless I cancel.
-        </span>
+          {t("I agree my card will be charged")}{" "}<strong style={{ color: '#e0e2ea' }}>{billing.todayLabel} {t("today")}</strong> {t("and")}{' '}
+          <strong style={{ color: '#e0e2ea' }}>{billing.recurringLabel}</strong> {t("thereafter unless I cancel.")}</span>
       </label>
 
       {errorMsg && <div style={errorStyle}>{errorMsg}</div>}
@@ -1113,7 +1104,7 @@ function CheckoutForm({
         }}
         className="billing-submit-btn"
       >
-        {submitting ? 'Processing...' : 'Continue'}
+        {submitting ? t("Processing...") : t("Continue")}
       </button>
 
       <button
@@ -1127,7 +1118,7 @@ function CheckoutForm({
         }}
         className="billing-cancel-btn"
       >
-        {abandoning ? 'Canceling...' : 'Cancel'}
+        {abandoning ? t("Canceling...") : t("Cancel")}
       </button>
     </form>
   )

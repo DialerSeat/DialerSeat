@@ -9,6 +9,7 @@ import ExplainerStyles from '@/components/ExplainerStyles'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 export const metadata: Metadata = {
   title: 'How Many Phone Numbers Does an Outbound Dialer Need? | DialerSeat',
@@ -62,7 +63,8 @@ const FAQS = [
   },
 ]
 
-export default function Page() {
+export default async function Page() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={breadcrumbSchema([
@@ -78,102 +80,57 @@ export default function Page() {
 
         <section className="exp-hero">
           <div className="exp-hero-inner">
-            <div className="exp-eyebrow">EXPLAINER · NUMBER POOLS</div>
-            <h1>How many phone numbers does a dialer need?</h1>
+            <div className="exp-eyebrow">{t("EXPLAINER · NUMBER POOLS")}</div>
+            <h1>{t("How many phone numbers does a dialer need?")}</h1>
             <p className="exp-lead">
-              Enough that no single number carries a whole day of calls. The
-              arithmetic is simple; the reason behind it is what most teams learn
-              the expensive way.
-            </p>
+              {t("Enough that no single number carries a whole day of calls. The arithmetic is simple; the reason behind it is what most teams learn the expensive way.")}</p>
           </div>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ HOW TO THINK ABOUT IT</div>
-          <h2>Enough that no one number carries the day.</h2>
+          <div className="exp-section-label">{t("▸ HOW TO THINK ABOUT IT")}</div>
+          <h2>{t("Enough that no one number carries the day.")}</h2>
           <p>
-            The instinct is to work out an exact figure in advance. Resist it 
-            the honest answer is that the right number depends on your call
-            volume, how long your calls run, and how carriers are scoring
-            traffic that month, and only the first of those is knowable up
-            front.
-          </p>
+            {t("The instinct is to work out an exact figure in advance. Resist it the honest answer is that the right number depends on your call volume, how long your calls run, and how carriers are scoring traffic that month, and only the first of those is knowable up front.")}</p>
           <p>
-            DialerSeat applies a per-number daily cap and rotates across the
-            pool automatically. You do not set it, and you do not need to
-            calculate against it. What you watch instead is whether the pool is
-            running hot: when numbers are regularly hitting their cap or
-            answer rates start slipping, that is the pool telling you to add a
-            few. It is a feedback loop rather than a formula.
-          </p>
+            {t("DialerSeat applies a per-number daily cap and rotates across the pool automatically. You do not set it, and you do not need to calculate against it. What you watch instead is whether the pool is running hot: when numbers are regularly hitting their cap or answer rates start slipping, that is the pool telling you to add a few. It is a feedback loop rather than a formula.")}</p>
           <p>
-            Buy in small batches and add as you grow. A number costs about a
-            dollar a month; an agent whose calls stop connecting costs
-            considerably more than that in an afternoon.
-          </p>
+            {t("Buy in small batches and add as you grow. A number costs about a dollar a month; an agent whose calls stop connecting costs considerably more than that in an afternoon.")}</p>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ WHY NOT ONE NUMBER</div>
-          <h2>Volume on a single caller ID is what gets it labelled.</h2>
+          <div className="exp-section-label">{t("▸ WHY NOT ONE NUMBER")}</div>
+          <h2>{t("Volume on a single caller ID is what gets it labelled.")}</h2>
           <p>
-            Carrier analytics do not know your intent. They observe a number
-            placing several hundred calls a day, most of them short, most of them
-            unanswered, many of them to people who have never called back. That is
-            a behavioural profile, and it is the same profile a robocaller has.
-          </p>
+            {t("Carrier analytics do not know your intent. They observe a number placing several hundred calls a day, most of them short, most of them unanswered, many of them to people who have never called back. That is a behavioural profile, and it is the same profile a robocaller has.")}</p>
           <p>
-            Once a number picks up a Spam Likely label it is effectively finished
- and if it was carrying your entire operation, your answer rate goes
-            with it. Spreading the same volume across a pool keeps every number
-            below the threshold where that pattern forms.
-          </p>
+            {t("Once a number picks up a Spam Likely label it is effectively finished and if it was carrying your entire operation, your answer rate goes with it. Spreading the same volume across a pool keeps every number below the threshold where that pattern forms.")}</p>
           <p>
-            This is also why buying numbers is cheap insurance. A number costs
-            about a dollar a month. An agent whose calls stop connecting costs
-            considerably more than that in an afternoon.
-          </p>
+            {t("This is also why buying numbers is cheap insurance. A number costs about a dollar a month. An agent whose calls stop connecting costs considerably more than that in an afternoon.")}</p>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ LOCAL PRESENCE</div>
-          <h2>Match the region, not every area code.</h2>
+          <div className="exp-section-label">{t("▸ LOCAL PRESENCE")}</div>
+          <h2>{t("Match the region, not every area code.")}</h2>
           <p>
-            DialerSeat picks a caller ID by locality: an exact area-code match
-            first, then the same state, then any healthy number in the pool. A
-            lead in Charlotte sees a Charlotte number if one is free.
-          </p>
+            {t("DialerSeat picks a caller ID by locality: an exact area-code match first, then the same state, then any healthy number in the pool. A lead in Charlotte sees a Charlotte number if one is free.")}</p>
           <p>
-            The temptation is to buy a number for every area code your list
-            touches. Resist it. Most lists concentrate heavily in a handful of
-            regions, and covering those captures nearly all of the benefit. The
-            long tail of one-lead area codes costs the same per number and returns
-            almost nothing.
-          </p>
+            {t("The temptation is to buy a number for every area code your list touches. Resist it. Most lists concentrate heavily in a handful of regions, and covering those captures nearly all of the benefit. The long tail of one-lead area codes costs the same per number and returns almost nothing.")}</p>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ WHEN A NUMBER GOES BAD</div>
-          <h2>Headroom is what makes retirement possible.</h2>
+          <div className="exp-section-label">{t("▸ WHEN A NUMBER GOES BAD")}</div>
+          <h2>{t("Headroom is what makes retirement possible.")}</h2>
           <p>
-            DialerSeat tracks answer rate per number across a rolling window. When
-            one falls materially behind the rest of the pool, that is the signal it
-            has been labelled somewhere upstream, and the right response is to stop
-            using it, not to keep dialing and hope.
-          </p>
+            {t("DialerSeat tracks answer rate per number across a rolling window. When one falls materially behind the rest of the pool, that is the signal it has been labelled somewhere upstream, and the right response is to stop using it, not to keep dialing and hope.")}</p>
           <p>
-            Retiring a number only works if you can afford to lose it. A pool
-            sized exactly to your daily volume cannot retire anything without
-            pushing everything else over its cap, which is the whole argument
-            for keeping a few spare.{' '}
-            <Link href="/faq/numbers">How the number pool works</Link> covers
-            rotation, caps and health monitoring in detail.
-          </p>
+            {t("Retiring a number only works if you can afford to lose it. A pool sized exactly to your daily volume cannot retire anything without pushing everything else over its cap, which is the whole argument for keeping a few spare.")}{' '}
+            <Link href="/faq/numbers">{t("How the number pool works")}</Link> {t("covers rotation, caps and health monitoring in detail.")}</p>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ COMMON QUESTIONS</div>
-          <h2>Pool sizing, answered.</h2>
+          <div className="exp-section-label">{t("▸ COMMON QUESTIONS")}</div>
+          <h2>{t("Pool sizing, answered.")}</h2>
           {FAQS.map(f => (
             <div key={f.question} style={{ marginBottom: 28 }}>
               <h3 style={{ fontSize: 18, marginBottom: 8 }}>{f.question}</h3>

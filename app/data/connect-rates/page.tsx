@@ -4,6 +4,7 @@ import Link from 'next/link'
 import JsonLd from '@/components/json-ld'
 import { organizationSchema, breadcrumbSchema } from '@/lib/schema'
 import { phoneToState } from '@/lib/areaCode'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 // =============================================================================
 // /data/connect-rates — the only thing here no competitor can republish
@@ -165,6 +166,7 @@ function Row({ label, b }: { label: string; b: Bucket }) {
 }
 
 export default async function ConnectRatesPage() {
+  await primeLocale()
   const buckets = await loadBuckets()
   const enough = !!buckets && buckets.total.dials >= MIN_SAMPLE
   const generated = new Date().toISOString().slice(0, 10)
@@ -184,19 +186,15 @@ export default async function ConnectRatesPage() {
       }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '80px 24px 96px' }}>
           <nav style={{ fontSize: 11, letterSpacing: 1.5, color: MUTED, marginBottom: 22 }}>
-            <Link href="/" style={{ color: MUTED }}>HOME</Link>
+            <Link href="/" style={{ color: MUTED }}>{t("HOME")}</Link>
           </nav>
 
           <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: ACCENT, marginBottom: 14 }}>
-            ▸ Platform data
-          </div>
+            {t("▸ Platform data")}</div>
           <h1 style={{ fontSize: 42, fontWeight: 'bold', letterSpacing: -1, lineHeight: 1.12, margin: 0 }}>
-            When and where outbound calls actually get answered
-          </h1>
+            {t("When and where outbound calls actually get answered")}</h1>
           <p style={{ fontSize: 16, lineHeight: 1.8, color: MUTED, marginTop: 18, maxWidth: 720 }}>
-            Measured on the DialerSeat platform over the last 90 days, from anonymized call records.
-            No lead, customer, or campaign is identifiable here. Free to cite with attribution.
-          </p>
+            {t("Measured on the DialerSeat platform over the last 90 days, from anonymized call records. No lead, customer, or campaign is identifiable here. Free to cite with attribution.")}</p>
 
           {!enough && (
             <div style={{
@@ -204,30 +202,25 @@ export default async function ConnectRatesPage() {
               border: '1px solid #8a6a1a', borderRadius: 6,
             }}>
               <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a' }}>
-                NOT ENOUGH DATA YET
-              </div>
+                {t("NOT ENOUGH DATA YET")}</div>
               <p style={{ fontSize: 14, lineHeight: 1.8, color: INK, margin: '8px 0 0' }}>
                 {buckets
                   ? `The platform has recorded ${buckets.total.dials.toLocaleString()} dials in the last 90 days. `
                   : 'Platform data is not available in this environment. '}
-                Nothing is published below {MIN_SAMPLE.toLocaleString()} calls in a bucket, because a rate
-                computed from a smaller sample moves several points on ordinary variance. The tables below
-                will fill in on their own as volume accumulates: no number here is ever estimated,
-                smoothed, or carried over from a previous period.
-              </p>
+                {t("Nothing is published below")}{" "}{MIN_SAMPLE.toLocaleString()} {t("calls in a bucket, because a rate computed from a smaller sample moves several points on ordinary variance. The tables below will fill in on their own as volume accumulates: no number here is ever estimated, smoothed, or carried over from a previous period.")}</p>
             </div>
           )}
 
           {buckets && (
             <>
               <section style={{ marginTop: 40 }}>
-                <h2 style={{ fontSize: 22, fontWeight: 'bold', margin: 0 }}>Overall</h2>
+                <h2 style={{ fontSize: 22, fontWeight: 'bold', margin: 0 }}>{t("Overall")}</h2>
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12, background: '#fff' }}>
                   <thead>
                     <tr style={{ fontSize: 10, letterSpacing: 2, color: MUTED, textAlign: 'left' }}>
-                      <th style={{ padding: '9px 12px' }}>PERIOD</th>
-                      <th style={{ padding: '9px 12px', textAlign: 'right' }}>DIALS</th>
-                      <th style={{ padding: '9px 12px', textAlign: 'right' }}>CONNECT RATE</th>
+                      <th style={{ padding: '9px 12px' }}>{t("PERIOD")}</th>
+                      <th style={{ padding: '9px 12px', textAlign: 'right' }}>{t("DIALS")}</th>
+                      <th style={{ padding: '9px 12px', textAlign: 'right' }}>{t("CONNECT RATE")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -237,19 +230,16 @@ export default async function ConnectRatesPage() {
               </section>
 
               <section style={{ marginTop: 40 }}>
-                <h2 style={{ fontSize: 22, fontWeight: 'bold', margin: 0 }}>By hour of day (UTC)</h2>
+                <h2 style={{ fontSize: 22, fontWeight: 'bold', margin: 0 }}>{t("By hour of day (UTC)")}</h2>
                 <p style={{ fontSize: 13, color: MUTED, marginTop: 8 }}>
-                  Dial time in UTC, not the lead&apos;s local time. Converting to local time per lead is
-                  the next iteration of this table; presenting UTC as though it were local would be the
-                  kind of small dishonesty that makes the rest of the page worthless.
-                </p>
+                  {t("Dial time in UTC, not the lead's local time. Converting to local time per lead is the next iteration of this table; presenting UTC as though it were local would be the kind of small dishonesty that makes the rest of the page worthless.")}</p>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12, background: '#fff', minWidth: 420 }}>
                     <thead>
                       <tr style={{ fontSize: 10, letterSpacing: 2, color: MUTED, textAlign: 'left' }}>
-                        <th style={{ padding: '9px 12px' }}>HOUR</th>
-                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>DIALS</th>
-                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>CONNECT RATE</th>
+                        <th style={{ padding: '9px 12px' }}>{t("HOUR")}</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>{t("DIALS")}</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>{t("CONNECT RATE")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -260,19 +250,16 @@ export default async function ConnectRatesPage() {
               </section>
 
               <section style={{ marginTop: 40 }}>
-                <h2 style={{ fontSize: 22, fontWeight: 'bold', margin: 0 }}>By state</h2>
+                <h2 style={{ fontSize: 22, fontWeight: 'bold', margin: 0 }}>{t("By state")}</h2>
                 <p style={{ fontSize: 13, color: MUTED, marginTop: 8 }}>
-                  State inferred from the destination area code. Mobile numbers keep their original area
-                  code after a move, so this measures the number&apos;s origin, not necessarily where the
-                  person is now.
-                </p>
+                  {t("State inferred from the destination area code. Mobile numbers keep their original area code after a move, so this measures the number's origin, not necessarily where the person is now.")}</p>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12, background: '#fff', minWidth: 420 }}>
                     <thead>
                       <tr style={{ fontSize: 10, letterSpacing: 2, color: MUTED, textAlign: 'left' }}>
-                        <th style={{ padding: '9px 12px' }}>STATE</th>
-                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>DIALS</th>
-                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>CONNECT RATE</th>
+                        <th style={{ padding: '9px 12px' }}>{t("STATE")}</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>{t("DIALS")}</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>{t("CONNECT RATE")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -285,18 +272,18 @@ export default async function ConnectRatesPage() {
           )}
 
           <section style={{ marginTop: 44, borderTop: `1px solid ${BORDER}`, paddingTop: 24 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 'bold', margin: 0 }}>Method</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 'bold', margin: 0 }}>{t("Method")}</h2>
             <ul style={{ fontSize: 14, lineHeight: 1.9, color: MUTED, marginTop: 10, paddingLeft: 18 }}>
-              <li>A &quot;connect&quot; is a call the carrier reported as answered.</li>
-              <li>Window: rolling 90 days, recomputed on each page load.</li>
-              <li>Buckets under {MIN_SAMPLE.toLocaleString()} calls show a dash, not a rate.</li>
-              <li>State is derived from the destination area code.</li>
-              <li>No lead, customer, campaign, or phone number appears on this page.</li>
-              <li>Generated {generated}.</li>
+              <li>{t("A \"connect\" is a call the carrier reported as answered.")}</li>
+              <li>{t("Window: rolling 90 days, recomputed on each page load.")}</li>
+              <li>{t("Buckets under")}{" "}{MIN_SAMPLE.toLocaleString()} {t("calls show a dash, not a rate.")}</li>
+              <li>{t("State is derived from the destination area code.")}</li>
+              <li>{t("No lead, customer, campaign, or phone number appears on this page.")}</li>
+              <li>{t("Generated")}{" "}{generated}.</li>
             </ul>
             <p style={{ fontSize: 13, lineHeight: 1.8, color: MUTED, marginTop: 14 }}>
-              Cite this page as: DialerSeat, &quot;Outbound Connect Rates by State and Hour,&quot;{' '}
-              dialerseat.com/data/connect-rates, accessed {generated}.
+              {t("Cite this page as: DialerSeat, \"Outbound Connect Rates by State and Hour,\"")}{' '}
+              {t("dialerseat.com/data/connect-rates, accessed")}{" "}{generated}.
             </p>
           </section>
         </div>

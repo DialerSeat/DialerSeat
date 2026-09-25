@@ -6,6 +6,7 @@ import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { primeLocale, t as tr } from '@/lib/i18n/server'
 
 // =============================================================================
 // /faq/dialer-glossary
@@ -284,7 +285,8 @@ function TermList({ terms }: { terms: Term[] }) {
   )
 }
 
-export default function Page() {
+export default async function Page() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={faqPageSchema(FAQS)} />
@@ -300,45 +302,40 @@ export default function Page() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ GLOSSARY</div>
+            <div className="guts-eyebrow">{tr("▸ GLOSSARY")}</div>
             <h1>
-              Every dialer term,
-              <span className="second">defined once, properly.</span>
+              {tr("Every dialer term,")}<span className="second">{tr("defined once, properly.")}</span>
             </h1>
             <p>
-              Outbound calling has its own vocabulary, and a lot of it is used loosely by the people
-              selling it. Where a term has a legal definition, that is the one used here. Where it
-              describes something DialerSeat does, it says what we actually do.
-            </p>
+              {tr("Outbound calling has its own vocabulary, and a lot of it is used loosely by the people selling it. Where a term has a legal definition, that is the one used here. Where it describes something DialerSeat does, it says what we actually do.")}</p>
           </div>
         </GutsSection>
 
-        <GutsSection icon="swap" title="Dialing modes and pacing">
+        <GutsSection icon="swap" title={tr("Dialing modes and pacing")}>
           <TermList terms={MODES} />
         </GutsSection>
 
-        <GutsSection icon="table" title="The numbers on your dashboard">
+        <GutsSection icon="table" title={tr("The numbers on your dashboard")}>
           <TermList terms={METRICS} />
           <p style={{ marginTop: 24 }}>
-            When you compare two platforms’ figures, ask what each one divides by. That choice moves a
-            rate more than anything the platforms actually do differently.{' '}
-            <Link href="/faq/how-we-measure-answer-rate">How we measure ours</Link>.
+            {tr("When you compare two platforms’ figures, ask what each one divides by. That choice moves a rate more than anything the platforms actually do differently.")}{' '}
+            <Link href="/faq/how-we-measure-answer-rate">{tr("How we measure ours")}</Link>.
           </p>
         </GutsSection>
 
-        <GutsSection icon="shield" title="Compliance">
+        <GutsSection icon="shield" title={tr("Compliance")}>
           <TermList terms={COMPLIANCE} />
         </GutsSection>
 
-        <GutsSection icon="phone" title="Phone numbers and caller ID">
+        <GutsSection icon="phone" title={tr("Phone numbers and caller ID")}>
           <TermList terms={NUMBERS} />
         </GutsSection>
 
-        <GutsSection icon="team" title="On the floor">
+        <GutsSection icon="team" title={tr("On the floor")}>
           <TermList terms={FLOOR} />
           <div className="guts-btns">
-            <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
-            <Link href="/faq" className="guts-btn secondary">ALL ANSWERS</Link>
+            <Link href="/sign-up" className="guts-btn primary">{tr("GET STARTED →")}</Link>
+            <Link href="/faq" className="guts-btn secondary">{tr("ALL ANSWERS")}</Link>
           </div>
         </GutsSection>
 

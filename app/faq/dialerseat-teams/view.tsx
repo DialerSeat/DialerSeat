@@ -21,6 +21,7 @@ import FaqTheme from '@/components/faq-theme'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
+import { t } from '@/lib/i18n/client'
 
 
 export default function DialerSeatTeamsFaqView() {
@@ -382,79 +383,47 @@ export default function DialerSeatTeamsFaqView() {
           {/* HERO */}
           <section className="tfaq-hero">
             <div className="tfaq-hero-inner">
-              <Link href="/faq" className="tfaq-breadcrumb">← BACK TO FAQ</Link>
-              <div className="faq-eyebrow">DIALERSEAT TEAMS</div>
-        <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
-              <h1>Premium leads, agency floors, shared pools.</h1>
+              <Link href="/faq" className="tfaq-breadcrumb">{t("← BACK TO FAQ")}</Link>
+              <div className="faq-eyebrow">{t("DIALERSEAT TEAMS")}</div>
+        <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>{t("LAST UPDATED 07/28/2026")}</span>
+              <h1>{t("Premium leads, agency floors, shared pools.")}</h1>
               <p className="tfaq-lead">
-                DialerSeat Teams is the overlay that lets you sell seat-based
-                dialer access to your premium lead campaigns, with full
-                attribution back to you. Built for lead vendors monetizing
-                their premium files, agencies running multiple producers,
-                and any operation where more than one person dials the same
-                list.
-              </p>
+                {t("DialerSeat Teams is the overlay that lets you sell seat-based dialer access to your premium lead campaigns, with full attribution back to you. Built for lead vendors monetizing their premium files, agencies running multiple producers, and any operation where more than one person dials the same list.")}</p>
             </div>
           </section>
 
           {/* WHAT IT IS */}
           <section className="faq-section">
-            <div className="tfaq-label">▸ WHAT TEAMS ACTUALLY ARE</div>
-            <h2>One account holder. Many seats. Real attribution.</h2>
+            <div className="tfaq-label">{t("▸ WHAT TEAMS ACTUALLY ARE")}</div>
+            <h2>{t("One account holder. Many seats. Real attribution.")}</h2>
             <p>
-              A Team is created by one DialerSeat account holder (the
-              owner). They attach their own premium campaigns to that team
-              and invite other DialerSeat users to dial those campaigns.
-              Members keep their own DialerSeat login. Every dial they make
-              on team campaigns rolls back into the owner&apos;s analytics
-              view in real time.
-            </p>
+              {t("A Team is created by one DialerSeat account holder (the owner). They attach their own premium campaigns to that team and invite other DialerSeat users to dial those campaigns. Members keep their own DialerSeat login. Every dial they make on team campaigns rolls back into the owner's analytics view in real time.")}</p>
             <p>
-              It is not a separate product. It does not replace your account.
-              It does not bypass platform billing. It is a structured way to
-              rent dialing access to premium campaigns you own, with the
-              audit trail, attribution, and analytics your business actually
-              needs.
-            </p>
+              {t("It is not a separate product. It does not replace your account. It does not bypass platform billing. It is a structured way to rent dialing access to premium campaigns you own, with the audit trail, attribution, and analytics your business actually needs.")}</p>
           </section>
 
           {/* THREE AUDIENCES */}
           <section className="faq-section alt">
             <div className="inner">
-              <div className="tfaq-label">▸ WHO TEAMS IS FOR</div>
-              <h2>Three real use cases.</h2>
+              <div className="tfaq-label">{t("▸ WHO TEAMS IS FOR")}</div>
+              <h2>{t("Three real use cases.")}</h2>
               <p>
-                Teams was designed around three specific operator types we&apos;ve
-                watched lose money to outdated tooling. If you&apos;re any of
-                these, this is the product.
-              </p>
+                {t("Teams was designed around three specific operator types we've watched lose money to outdated tooling. If you're any of these, this is the product.")}</p>
               <div className="tfaq-audience-grid">
                 <div className="tfaq-audience-card">
-                  <h3>LEAD VENDORS</h3>
+                  <h3>{t("LEAD VENDORS")}</h3>
                   <p>
-                    You generate premium leads. Instead of selling raw CSVs
-                    and losing the relationship, you keep the file and rent
-                    seat-based dialer access on your campaigns to buyer
-                    agents, turning a one-shot sale into recurring revenue.
-                  </p>
+                    {t("You generate premium leads. Instead of selling raw CSVs and losing the relationship, you keep the file and rent seat-based dialer access on your campaigns to buyer agents, turning a one-shot sale into recurring revenue.")}</p>
                 </div>
                 <div className="tfaq-audience-card">
-                  <h3>AGENCY OWNERS</h3>
+                  <h3>{t("AGENCY OWNERS")}</h3>
                   <p>
-                    You run a producer floor: insurance, B2B, lead-gen,
-                    debt, anywhere outbound matters. You need per-rep
-                    attribution, recording audit, and live floor visibility
-                    without enterprise prices or annual contracts.
-                  </p>
+                    {t("You run a producer floor: insurance, B2B, lead-gen, debt, anywhere outbound matters. You need per-rep attribution, recording audit, and live floor visibility without enterprise prices or annual contracts.")}</p>
                 </div>
                 <div className="tfaq-audience-card">
-                  <h3>SHARED-POOL OPS</h3>
+                  <h3>{t("SHARED-POOL OPS")}</h3>
                   <p>
-                    You have one big list and multiple dialers. You need
-                    everyone hitting the file without double-dialing,
-                    TCPA-safe across the whole team, with attempts and
-                    timestamps updating globally as agents work.
-                  </p>
+                    {t("You have one big list and multiple dialers. You need everyone hitting the file without double-dialing, TCPA-safe across the whole team, with attempts and timestamps updating globally as agents work.")}</p>
                 </div>
               </div>
             </div>
@@ -462,311 +431,183 @@ export default function DialerSeatTeamsFaqView() {
 
           {/* DEEP DIVE: LEAD VENDORS (PREMIUM LEADS) */}
           <section className="faq-section">
-            <div className="tfaq-label">▸ LEAD VENDORS</div>
-            <h2>Rent seats to your premium campaigns.</h2>
+            <div className="tfaq-label">{t("▸ LEAD VENDORS")}</div>
+            <h2>{t("Rent seats to your premium campaigns.")}</h2>
             <p>
-              You spend real marketing dollars generating premium leads.
-              Those leads have value. The old way of monetizing them caps
-              you at the first sale: ship the CSV, take the check, lose
-              the relationship. The buyer ghosts you, works the file out
-              their way, and you start over with the next buyer the next
-              month.
-            </p>
+              {t("You spend real marketing dollars generating premium leads. Those leads have value. The old way of monetizing them caps you at the first sale: ship the CSV, take the check, lose the relationship. The buyer ghosts you, works the file out their way, and you start over with the next buyer the next month.")}</p>
             <p>
-              DialerSeat Teams flips that. Upload your premium file to a
-              campaign you own, build a team around it, and rent seats to
-              your buyer agents. They dial inside your campaign on their
-              own DialerSeat account. You see every dial, every disposition,
-              every timestamp. Every call is recorded on your side. Attempt
-              counts update globally, no double-dialing across the buyer
-              pool, no TCPA risk from one buyer overworking the file.
-            </p>
+              {t("DialerSeat Teams flips that. Upload your premium file to a campaign you own, build a team around it, and rent seats to your buyer agents. They dial inside your campaign on their own DialerSeat account. You see every dial, every disposition, every timestamp. Every call is recorded on your side. Attempt counts update globally, no double-dialing across the buyer pool, no TCPA risk from one buyer overworking the file.")}</p>
             <div className="tfaq-pullquote">
-              The pitch isn&apos;t &quot;come buy my list.&quot; The pitch
-              is &quot;come dial my premium file on my platform, I keep
-              the data, you keep the appointments, we both stay
-              accountable.&quot; That&apos;s a recurring product. CSVs
-              aren&apos;t.
-            </div>
+              {t("The pitch isn't \"come buy my list.\" The pitch is \"come dial my premium file on my platform, I keep the data, you keep the appointments, we both stay accountable.\" That's a recurring product. CSVs aren't.")}</div>
 
-            <h3>FOUR PRICING MODELS</h3>
+            <h3>{t("FOUR PRICING MODELS")}</h3>
             <p>
-              The four billing modes (covered in detail below) map naturally
-              to the seat structure. Pick whichever matches how you want to
-              charge:
-            </p>
+              {t("The four billing modes (covered in detail below) map naturally to the seat structure. Pick whichever matches how you want to charge:")}</p>
             <ol style={{ paddingLeft: 22, marginTop: 14 }}>
               <li style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.65 }}>
-                <strong>Per-seat-per-week markup.</strong> You eat the $35
-                seat cost and charge buyers a flat weekly markup. Clean
-                recurring revenue per active dialing buyer.
-              </li>
+                <strong>{t("Per-seat-per-week markup.")}</strong> {t("You eat the $35 seat cost and charge buyers a flat weekly markup. Clean recurring revenue per active dialing buyer.")}</li>
               <li style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.65 }}>
-                <strong>Pass-through seat.</strong> Set the campaign to
-                AGENT PAYS. Each buyer covers their own $35 seat directly
-                to DialerSeat. You charge a separate access fee outside.
-              </li>
+                <strong>{t("Pass-through seat.")}</strong> {t("Set the campaign to AGENT PAYS. Each buyer covers their own $35 seat directly to DialerSeat. You charge a separate access fee outside.")}</li>
               <li style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.65 }}>
-                <strong>Flat membership, free dialing.</strong> Set the
-                campaign to FREE mode. Nobody pays per-seat. You charge a
-                recurring membership fee outside DialerSeat, best margins
-                if your buyers dial heavily.
-              </li>
+                <strong>{t("Flat membership, free dialing.")}</strong> {t("Set the campaign to FREE mode. Nobody pays per-seat. You charge a recurring membership fee outside DialerSeat, best margins if your buyers dial heavily.")}</li>
               <li style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.65 }}>
-                <strong>Pay-per-result.</strong> Bill on the back end using
-                the disposition feed, count CLOSED or APPOINTMENT marks
-                and charge per outcome.
-              </li>
+                <strong>{t("Pay-per-result.")}</strong> {t("Bill on the back end using the disposition feed, count CLOSED or APPOINTMENT marks and charge per outcome.")}</li>
             </ol>
 
             <p style={{ marginTop: 20 }}>
-              Your premium file never leaves your account. Buyers see one
-              lead at a time in the dialer UI. They don&apos;t get the
-              underlying CSV. They can&apos;t export. When you revoke
-              access, their visibility ends within seconds.
-            </p>
+              {t("Your premium file never leaves your account. Buyers see one lead at a time in the dialer UI. They don't get the underlying CSV. They can't export. When you revoke access, their visibility ends within seconds.")}</p>
 
             {/* AGED LEADS — tracked secondary capability */}
             <div className="tfaq-aged-callout">
-              <div className="label">▸ BONUS: AGED LEADS, TRACKED AUTOMATICALLY</div>
-              <h4>The platform knows which premium leads went un-worked.</h4>
+              <div className="label">{t("▸ BONUS: AGED LEADS, TRACKED AUTOMATICALLY")}</div>
+              <h4>{t("The platform knows which premium leads went un-worked.")}</h4>
               <p>
-                Premium leads that sit untouched for 30, 60, or 90 days
-                become aged. DialerSeat tracks every dial against every
-                lead: attempts, last-called timestamps, disposition
-                history, so at any point you know exactly which leads
-                from a premium batch were never worked.
-              </p>
+                {t("Premium leads that sit untouched for 30, 60, or 90 days become aged. DialerSeat tracks every dial against every lead: attempts, last-called timestamps, disposition history, so at any point you know exactly which leads from a premium batch were never worked.")}</p>
               <p>
-                Build a second team around those aged leads, rent seats to
-                a different buyer pool, and run the same playbook on the
-                untouched remainder. No manual list management, no separate
-                upload, no risk of stepping on the first buyer pool 
-                the platform handles the bookkeeping. Aged-lead resale is
-                a side effect of running premium properly, not a separate
-                product.
-              </p>
+                {t("Build a second team around those aged leads, rent seats to a different buyer pool, and run the same playbook on the untouched remainder. No manual list management, no separate upload, no risk of stepping on the first buyer pool the platform handles the bookkeeping. Aged-lead resale is a side effect of running premium properly, not a separate product.")}</p>
             </div>
           </section>
 
           {/* DEEP DIVE: AGENCY OWNERS */}
           <section className="faq-section alt">
             <div className="inner">
-              <div className="tfaq-label">▸ AGENCY OWNERS</div>
-              <h2>Your producers, your floor, your numbers.</h2>
+              <div className="tfaq-label">{t("▸ AGENCY OWNERS")}</div>
+              <h2>{t("Your producers, your floor, your numbers.")}</h2>
               <p>
-                You run a floor: five reps, fifty reps, doesn&apos;t matter.
-                Without Teams you&apos;d be either sharing a login (terrible
- no per-rep attribution), buying an enterprise dialer
-                (expensive, contract-heavy), or stitching together exports
-                manually.
-              </p>
+                {t("You run a floor: five reps, fifty reps, doesn't matter. Without Teams you'd be either sharing a login (terrible no per-rep attribution), buying an enterprise dialer (expensive, contract-heavy), or stitching together exports manually.")}</p>
               <p>
-                With Teams the owner holds the master account on MANAGER+.
-                Producers each hold their own DialerSeat account on PRO, or
-                you comp them via corporate billing. Campaigns get attached
-                to a team. Dialing happens. Analytics roll up.
-              </p>
+                {t("With Teams the owner holds the master account on MANAGER+. Producers each hold their own DialerSeat account on PRO, or you comp them via corporate billing. Campaigns get attached to a team. Dialing happens. Analytics roll up.")}</p>
 
-              <h3>WHAT YOU GET TO DO WITH THE DATA</h3>
+              <h3>{t("WHAT YOU GET TO DO WITH THE DATA")}</h3>
               <p>
-                Per-rep production: dials, connects, connect rate, appointments,
-                closes, dispositions mix, abandon rate, time on phone.
-                Per-campaign production: which lead source is converting,
-                where to spend your next ad dollar. Per-rep × per-campaign
-                hybrid: which rep crushes which source, so you assign
-                correctly. Recording audit on every call. TCPA timestamps
-                on every lead. Live floor visibility, see who&apos;s active
-                right now and what state they&apos;re in (ready, dialing,
-                on call, wrapping).
-              </p>
+                {t("Per-rep production: dials, connects, connect rate, appointments, closes, dispositions mix, abandon rate, time on phone. Per-campaign production: which lead source is converting, where to spend your next ad dollar. Per-rep × per-campaign hybrid: which rep crushes which source, so you assign correctly. Recording audit on every call. TCPA timestamps on every lead. Live floor visibility, see who's active right now and what state they're in (ready, dialing, on call, wrapping).")}</p>
               <div className="tfaq-pullquote">
-                Coach off real numbers, not hunches. The whole point of
-                running a floor instead of being a sole producer is the
-                economy of scale on data, Teams gives you the data.
-              </div>
+                {t("Coach off real numbers, not hunches. The whole point of running a floor instead of being a sole producer is the economy of scale on data, Teams gives you the data.")}</div>
               <p>
-                Multiple teams per owner account is supported. Common
-                setup: a &quot;Floor&quot; team with all your active
-                producers and full campaign access, a &quot;Bootcamp&quot;
-                team for trainees with restricted campaigns, a
-                &quot;Closers&quot; team for live transfers only.
-              </p>
+                {t("Multiple teams per owner account is supported. Common setup: a \"Floor\" team with all your active producers and full campaign access, a \"Bootcamp\" team for trainees with restricted campaigns, a \"Closers\" team for live transfers only.")}</p>
             </div>
           </section>
 
           {/* DEEP DIVE: SHARED POOLS */}
           <section className="faq-section">
-            <div className="tfaq-label">▸ SHARED LEAD POOL</div>
-            <h2>Many dialers, one file, zero collisions.</h2>
+            <div className="tfaq-label">{t("▸ SHARED LEAD POOL")}</div>
+            <h2>{t("Many dialers, one file, zero collisions.")}</h2>
             <p>
-              Whether you&apos;re a lead vendor or an agency, the dialer
-              needs to handle multiple humans hitting the same list at
-              once without stepping on each other. Teams handles this
-              automatically.
-            </p>
+              {t("Whether you're a lead vendor or an agency, the dialer needs to handle multiple humans hitting the same list at once without stepping on each other. Teams handles this automatically.")}</p>
             <p>
-              DialerSeat hands a different lead to each agent simultaneously.
-              <code style={{ background: '#e8eef8', padding: '2px 6px', borderRadius: 3, fontSize: 14 }}>last_called_at</code>
-              {' '}and{' '}
+              {t("DialerSeat hands a different lead to each agent simultaneously.")}<code style={{ background: '#e8eef8', padding: '2px 6px', borderRadius: 3, fontSize: 14 }}>last_called_at</code>
+              {' '}{t("and")}{' '}
               <code style={{ background: '#e8eef8', padding: '2px 6px', borderRadius: 3, fontSize: 14 }}>dial_attempts</code>
-              {' '}increment globally: once anyone on the team dials a lead,
-              every other agent sees the updated state. No double-dialing
-              within the platform&apos;s 24-hour cooldown unless the owner
-              explicitly allows it. TCPA window enforcement (8am-9pm local
-              to the lead) applies team-wide, not per-agent.
-            </p>
+              {' '}{t("increment globally: once anyone on the team dials a lead, every other agent sees the updated state. No double-dialing within the platform's 24-hour cooldown unless the owner explicitly allows it. TCPA window enforcement (8am-9pm local to the lead) applies team-wide, not per-agent.")}</p>
             <p>
-              Run the pool wide open and everyone gets the next available
-              lead. Or partition by attribute: state, source field, lead
-              score, vertical, so each agent works the slice that matches
-              their license, skill set, or assignment.
-            </p>
+              {t("Run the pool wide open and everyone gets the next available lead. Or partition by attribute: state, source field, lead score, vertical, so each agent works the slice that matches their license, skill set, or assignment.")}</p>
           </section>
 
           {/* BILLING MODES */}
           <section className="faq-section alt">
             <div className="inner">
-              <div className="tfaq-label">▸ BILLING MODES</div>
-              <h2>Four ways to handle the per-seat cost.</h2>
+              <div className="tfaq-label">{t("▸ BILLING MODES")}</div>
+              <h2>{t("Four ways to handle the per-seat cost.")}</h2>
               <p>
-                When the team owner attaches a campaign to a team, they pick
-                one of four access modes for that campaign. The mode
-                determines who, if anyone, pays the per-seat campaign fee on
-                top of the platform subscription.
-              </p>
+                {t("When the team owner attaches a campaign to a team, they pick one of four access modes for that campaign. The mode determines who, if anyone, pays the per-seat campaign fee on top of the platform subscription.")}</p>
 
               <div className="tfaq-mode-grid">
                 <div className="tfaq-mode-card">
-                  <h3>OWNER PAYS</h3>
-                  <div className="sub">$35/WK per active agent, owner billed</div>
+                  <h3>{t("OWNER PAYS")}</h3>
+                  <div className="sub">{t("$35/WK per active agent, owner billed")}</div>
                   <p>
-                    Owner&apos;s card is charged for one seat per dialing
-                    agent. Agents dial free of any per-campaign charge.
-                    Best for agencies baking seat into a retainer or
-                    vendors packaging access into a flat fee.
-                  </p>
+                    {t("Owner's card is charged for one seat per dialing agent. Agents dial free of any per-campaign charge. Best for agencies baking seat into a retainer or vendors packaging access into a flat fee.")}</p>
                 </div>
                 <div className="tfaq-mode-card">
-                  <h3>AGENT PAYS</h3>
-                  <div className="sub">$35/WK per agent, agents billed</div>
+                  <h3>{t("AGENT PAYS")}</h3>
+                  <div className="sub">{t("$35/WK per agent, agents billed")}</div>
                   <p>
-                    Each agent pays their own seat fee directly to
-                    DialerSeat. Owner pays nothing per-seat. Best for
-                    lead vendors selling premium campaign access where
-                    buyers cover their own usage cost.
-                  </p>
+                    {t("Each agent pays their own seat fee directly to DialerSeat. Owner pays nothing per-seat. Best for lead vendors selling premium campaign access where buyers cover their own usage cost.")}</p>
                 </div>
                 <div className="tfaq-mode-card">
-                  <h3>PUBLIC</h3>
-                  <div className="sub">No code required</div>
+                  <h3>{t("PUBLIC")}</h3>
+                  <div className="sub">{t("No code required")}</div>
                   <p>
-                    Any active DialerSeat subscriber can access the
-                    campaign without a team code. Rarely used, mostly
-                    for free-promo or community-list scenarios.
-                  </p>
+                    {t("Any active DialerSeat subscriber can access the campaign without a team code. Rarely used, mostly for free-promo or community-list scenarios.")}</p>
                 </div>
                 <div className="tfaq-mode-card free">
-                  <h3>FREE</h3>
-                  <div className="sub">No per-seat fee for anyone</div>
+                  <h3>{t("FREE")}</h3>
+                  <div className="sub">{t("No per-seat fee for anyone")}</div>
                   <p>
-                    Neither owner nor agents pay any per-campaign seat
-                    charge. Best for small agencies under corporate
-                    billing, internal training accounts, comping a
-                    seat, or premium-campaign memberships with a
-                    flat external access fee.
-                  </p>
+                    {t("Neither owner nor agents pay any per-campaign seat charge. Best for small agencies under corporate billing, internal training accounts, comping a seat, or premium-campaign memberships with a flat external access fee.")}</p>
                 </div>
               </div>
 
               <div className="tfaq-platform-notice">
-                <div className="label">PLATFORM SUB IS ALWAYS REQUIRED</div>
+                <div className="label">{t("PLATFORM SUB IS ALWAYS REQUIRED")}</div>
                 <p>
-                  Every team member, owner and agents both, needs an
-                  active personal DialerSeat subscription to actually dial:
-                  <strong> PRO ($35/wk)</strong> to dial as a member, or
-                  <strong> MANAGER+ ($75/wk)</strong> to own a team. The
-                  access mode only controls the optional per-campaign seat
-                  fee that sits on top of the platform sub. FREE mode means
-                  no per-seat fee, it does NOT mean free platform access.
-                </p>
+                  {t("Every team member, owner and agents both, needs an active personal DialerSeat subscription to actually dial:")}<strong> {t("PRO ($35/wk)")}</strong> {t("to dial as a member, or")}<strong> {t("MANAGER+ ($75/wk)")}</strong> {t("to own a team. The access mode only controls the optional per-campaign seat fee that sits on top of the platform sub. FREE mode means no per-seat fee, it does NOT mean free platform access.")}</p>
               </div>
             </div>
           </section>
 
           {/* STEP-BY-STEP SETUPS */}
           <section className="faq-section">
-            <div className="tfaq-label">▸ STEP-BY-STEP SETUPS</div>
-            <h2>How each use case actually goes.</h2>
+            <div className="tfaq-label">{t("▸ STEP-BY-STEP SETUPS")}</div>
+            <h2>{t("How each use case actually goes.")}</h2>
 
             <div className="tfaq-steps-grid">
               <div className="tfaq-step-block">
                 <div className="tfaq-step-head">
-                  <span className="title">PREMIUM LEAD VENDOR</span>
-                  <span className="badge">RECURRING REVENUE</span>
+                  <span className="title">{t("PREMIUM LEAD VENDOR")}</span>
+                  <span className="badge">{t("RECURRING REVENUE")}</span>
                 </div>
                 <div className="tfaq-step-body">
                   <ol>
-                    <li>Sign up for DialerSeat MANAGER+ ($75/wk).</li>
-                    <li>Upload your premium lead file to a campaign in your account.</li>
-                    <li>Create a team named after the offer, e.g. &quot;Q4 Refi Premium, Tier 1.&quot;</li>
-                    <li>Attach the campaign to the team.</li>
-                    <li>Pick the access mode that matches your pricing: AGENT PAYS, FREE, or OWNER PAYS.</li>
-                    <li>Generate a team code. Send to your buyer agents.</li>
-                    <li>Buyers create their own DialerSeat accounts (or use existing ones), redeem the code, start dialing.</li>
-                    <li>Watch analytics roll in. Pull QA on recordings. Kick non-performers or rule-breakers instantly.</li>
+                    <li>{t("Sign up for DialerSeat MANAGER+ ($75/wk).")}</li>
+                    <li>{t("Upload your premium lead file to a campaign in your account.")}</li>
+                    <li>{t("Create a team named after the offer, e.g. \"Q4 Refi Premium, Tier 1.\"")}</li>
+                    <li>{t("Attach the campaign to the team.")}</li>
+                    <li>{t("Pick the access mode that matches your pricing: AGENT PAYS, FREE, or OWNER PAYS.")}</li>
+                    <li>{t("Generate a team code. Send to your buyer agents.")}</li>
+                    <li>{t("Buyers create their own DialerSeat accounts (or use existing ones), redeem the code, start dialing.")}</li>
+                    <li>{t("Watch analytics roll in. Pull QA on recordings. Kick non-performers or rule-breakers instantly.")}</li>
                   </ol>
                   <p>
-                    Your premium file never leaves your account. Buyers
-                    see one lead at a time. When access is revoked, their
-                    visibility ends within seconds. Aged leads from the
-                    same file are tracked automatically, see the lead
-                    vendor section above.
-                  </p>
+                    {t("Your premium file never leaves your account. Buyers see one lead at a time. When access is revoked, their visibility ends within seconds. Aged leads from the same file are tracked automatically, see the lead vendor section above.")}</p>
                 </div>
               </div>
 
               <div className="tfaq-step-block">
                 <div className="tfaq-step-head">
-                  <span className="title">AGENCY OWNER</span>
-                  <span className="badge">FLOOR OPS</span>
+                  <span className="title">{t("AGENCY OWNER")}</span>
+                  <span className="badge">{t("FLOOR OPS")}</span>
                 </div>
                 <div className="tfaq-step-body">
                   <ol>
-                    <li>Sign up for DialerSeat MANAGER+ ($75/wk).</li>
-                    <li>Upload your campaigns and leads to your account.</li>
-                    <li>Create a team, e.g. &quot;[Your Agency] Floor.&quot;</li>
-                    <li>Attach the campaigns you want your reps dialing.</li>
-                    <li>Pick access mode: OWNER PAYS for clean line-item expense, or FREE if reps are on corporate-comped PRO subs.</li>
-                    <li>Email-invite each producer. They sign up for PRO ($35/wk) or accept your comped invite.</li>
-                    <li>Open team analytics every morning. Coach off real numbers.</li>
+                    <li>{t("Sign up for DialerSeat MANAGER+ ($75/wk).")}</li>
+                    <li>{t("Upload your campaigns and leads to your account.")}</li>
+                    <li>{t("Create a team, e.g. \"[Your Agency] Floor.\"")}</li>
+                    <li>{t("Attach the campaigns you want your reps dialing.")}</li>
+                    <li>{t("Pick access mode: OWNER PAYS for clean line-item expense, or FREE if reps are on corporate-comped PRO subs.")}</li>
+                    <li>{t("Email-invite each producer. They sign up for PRO ($35/wk) or accept your comped invite.")}</li>
+                    <li>{t("Open team analytics every morning. Coach off real numbers.")}</li>
                   </ol>
                   <p>
-                    Multiple teams per account is supported, use it to
-                    structure your floor, trainees, and closer tiers
-                    separately.
-                  </p>
+                    {t("Multiple teams per account is supported, use it to structure your floor, trainees, and closer tiers separately.")}</p>
                 </div>
               </div>
 
               <div className="tfaq-step-block">
                 <div className="tfaq-step-head">
-                  <span className="title">SHARED LEAD POOL</span>
-                  <span className="badge">MULTI-AGENT</span>
+                  <span className="title">{t("SHARED LEAD POOL")}</span>
+                  <span className="badge">{t("MULTI-AGENT")}</span>
                 </div>
                 <div className="tfaq-step-body">
                   <ol>
-                    <li>Attach a single large campaign (e.g. 50,000 leads) to a team.</li>
-                    <li>Multiple agents log in and select that campaign in their dialer.</li>
-                    <li>Each agent hits INITIATE DIAL SEQUENCE. DialerSeat hands each one a different lead.</li>
-                    <li>Attempt counts and last-called timestamps update globally as leads get dialed.</li>
-                    <li>Once a lead is dispositioned, it drops from the active queue per standard DialerSeat rules.</li>
+                    <li>{t("Attach a single large campaign (e.g. 50,000 leads) to a team.")}</li>
+                    <li>{t("Multiple agents log in and select that campaign in their dialer.")}</li>
+                    <li>{t("Each agent hits INITIATE DIAL SEQUENCE. DialerSeat hands each one a different lead.")}</li>
+                    <li>{t("Attempt counts and last-called timestamps update globally as leads get dialed.")}</li>
+                    <li>{t("Once a lead is dispositioned, it drops from the active queue per standard DialerSeat rules.")}</li>
                   </ol>
                   <p>
-                    Run wide-open if you don&apos;t care who dials what.
-                    Partition by state, source field, or lead score if
-                    you want each rep on a specific slice.
-                  </p>
+                    {t("Run wide-open if you don't care who dials what. Partition by state, source field, or lead score if you want each rep on a specific slice.")}</p>
                 </div>
               </div>
             </div>
@@ -775,95 +616,59 @@ export default function DialerSeatTeamsFaqView() {
           {/* COMMON QUESTIONS */}
           <section className="faq-section alt">
             <div className="inner">
-              <div className="tfaq-label">▸ COMMON QUESTIONS</div>
-              <h2>The ones that come up before signup.</h2>
+              <div className="tfaq-label">{t("▸ COMMON QUESTIONS")}</div>
+              <h2>{t("The ones that come up before signup.")}</h2>
 
               <div className="tfaq-qa-grid">
                 <div className="tfaq-qa-card">
-                  <h4>Do I need MANAGER+ to create a team?</h4>
+                  <h4>{t("Do I need MANAGER+ to create a team?")}</h4>
                   <p>
-                    Yes. Team ownership is a MANAGER+ feature ($75/week).
-                    Use code MANAGERTEST for 100% off if you want to try it
-                    before committing.
-                  </p>
+                    {t("Yes. Team ownership is a MANAGER+ feature ($75/week). Use code MANAGERTEST for 100% off if you want to try it before committing.")}</p>
                 </div>
                 <div className="tfaq-qa-card">
-                  <h4>Can a user be on multiple teams?</h4>
+                  <h4>{t("Can a user be on multiple teams?")}</h4>
                   <p>
-                    Yes. An agent can be invited to teams from different
-                    owners and switch between them in the dialer. One PRO
-                    subscription covers all their team activity.
-                  </p>
+                    {t("Yes. An agent can be invited to teams from different owners and switch between them in the dialer. One PRO subscription covers all their team activity.")}</p>
                 </div>
                 <div className="tfaq-qa-card">
-                  <h4>Can I charge different agents different rates?</h4>
+                  <h4>{t("Can I charge different agents different rates?")}</h4>
                   <p>
-                    DialerSeat sets one access mode per campaign-per-team.
-                    For tiered pricing, create separate teams (e.g.
-                    &quot;Premium&quot; with AGENT PAYS, &quot;Standard&quot;
-                    with OWNER PAYS) and put different members in each.
-                  </p>
+                    {t("DialerSeat sets one access mode per campaign-per-team. For tiered pricing, create separate teams (e.g. \"Premium\" with AGENT PAYS, \"Standard\" with OWNER PAYS) and put different members in each.")}</p>
                 </div>
                 <div className="tfaq-qa-card">
-                  <h4>Can team members export the lead CSV?</h4>
+                  <h4>{t("Can team members export the lead CSV?")}</h4>
                   <p>
-                    No. Members see leads one at a time in the dialer UI
-                    and in their own call history. Your master file is
-                    never exposed.
-                  </p>
+                    {t("No. Members see leads one at a time in the dialer UI and in their own call history. Your master file is never exposed.")}</p>
                 </div>
                 <div className="tfaq-qa-card">
-                  <h4>What happens if I cancel my subscription?</h4>
+                  <h4>{t("What happens if I cancel my subscription?")}</h4>
                   <p>
-                    Your team data is preserved. Members lose dialing access
-                    until you resubscribe. Once you&apos;re active again,
-                    everything resumes, no data is lost.
-                  </p>
+                    {t("Your team data is preserved. Members lose dialing access until you resubscribe. Once you're active again, everything resumes, no data is lost.")}</p>
                 </div>
                 <div className="tfaq-qa-card">
-                  <h4>What happens if a member cancels their sub?</h4>
+                  <h4>{t("What happens if a member cancels their sub?")}</h4>
                   <p>
-                    They can&apos;t dial. They keep their account in
-                    read-only mode but team campaigns require an active sub
-                    to launch a call.
-                  </p>
+                    {t("They can't dial. They keep their account in read-only mode but team campaigns require an active sub to launch a call.")}</p>
                 </div>
                 <div className="tfaq-qa-card">
-                  <h4>How does TCPA enforcement work across a team?</h4>
+                  <h4>{t("How does TCPA enforcement work across a team?")}</h4>
                   <p>
-                    Platform-wide. The 8am-9pm local-to-the-lead window
-                    applies to every dial regardless of which agent placed
-                    it. Cooldowns and attempt caps are calculated across
-                    the whole team, no agent can re-dial early to game
-                    the cap.
-                  </p>
+                    {t("Platform-wide. The 8am-9pm local-to-the-lead window applies to every dial regardless of which agent placed it. Cooldowns and attempt caps are calculated across the whole team, no agent can re-dial early to game the cap.")}</p>
                 </div>
                 <div className="tfaq-qa-card">
-                  <h4>Can I remove someone instantly?</h4>
+                  <h4>{t("Can I remove someone instantly?")}</h4>
                   <p>
-                    Yes. Open team settings, find the member, click Remove.
-                    Their access to all team campaigns is revoked within
-                    seconds. Their personal account is untouched.
-                  </p>
+                    {t("Yes. Open team settings, find the member, click Remove. Their access to all team campaigns is revoked within seconds. Their personal account is untouched.")}</p>
                 </div>
                 <div className="tfaq-qa-card">
-                  <h4>Who owns the recordings?</h4>
+                  <h4>{t("Who owns the recordings?")}</h4>
                   <p>
-                    The team owner owns recordings made by team members on
-                    team campaigns. Members can play and download their
-                    own recordings; the owner can play and download any
-                    team recording. Standard 30-day retention applies.
-                  </p>
+                    {t("The team owner owns recordings made by team members on team campaigns. Members can play and download their own recordings; the owner can play and download any team recording. Standard 30-day retention applies.")}</p>
                 </div>
                 <div className="tfaq-qa-card">
-                  <h4>Can I switch billing modes after attaching a campaign?</h4>
+                  <h4>{t("Can I switch billing modes after attaching a campaign?")}</h4>
                   <p>
-                    Yes. Owner can flip a campaign between OWNER PAYS,
-                    AGENT PAYS, PUBLIC, and FREE anytime from team settings.
-                    Switching to AGENT PAYS or FREE revokes any
-                    owner-paid access on that campaign, agents can be
-                    re-granted under the new mode.
-                  </p>
+                    {t("Yes. Owner can flip a campaign between OWNER PAYS, AGENT PAYS, PUBLIC, and FREE anytime from team settings. Switching to AGENT PAYS or FREE revokes any owner-paid access on that campaign, agents can be re-granted under the new mode.")}</p>
                 </div>
               </div>
             </div>
@@ -873,40 +678,30 @@ export default function DialerSeatTeamsFaqView() {
           <section className="tfaq-cta">
             <div className="tfaq-cta-inner">
               <div className="faq-cta-eyebrow">
-                {showSignedIn ? '▸ READY TO BUILD A TEAM' : '▸ START THE TEAM ON DAY ONE'}
+                {showSignedIn ? t("▸ READY TO BUILD A TEAM") : t("▸ START THE TEAM ON DAY ONE")}
               </div>
               {showSignedIn ? (
                 <>
-                  <h2>Open the teams page.</h2>
+                  <h2>{t("Open the teams page.")}</h2>
                   <p>
-                    Build your first team, attach a premium campaign,
-                    generate a code, send it. You&apos;ll be operational
-                    in under ten minutes.
-                  </p>
+                    {t("Build your first team, attach a premium campaign, generate a code, send it. You'll be operational in under ten minutes.")}</p>
                   <div className="tfaq-cta-row">
                     <Link href="/dashboard/teams" className="tfaq-btn-primary">
-                      OPEN TEAMS →
-                    </Link>
+                      {t("OPEN TEAMS →")}</Link>
                     <Link href="/faq" className="tfaq-btn-secondary">
-                      BACK TO FAQ
-                    </Link>
+                      {t("BACK TO FAQ")}</Link>
                   </div>
                 </>
               ) : (
                 <>
-                  <h2>Get your team running this week.</h2>
+                  <h2>{t("Get your team running this week.")}</h2>
                   <p>
-                    MANAGER+ is $75/week. No contract. Cancel any time.
-                    Use code MANAGERTEST for 100% off your first period
-                    if you want to test-drive teams before committing.
-                  </p>
+                    {t("MANAGER+ is $75/week. No contract. Cancel any time. Use code MANAGERTEST for 100% off your first period if you want to test-drive teams before committing.")}</p>
                   <div className="tfaq-cta-row">
                     <Link href="/sign-up" className="tfaq-btn-primary">
-                      GET STARTED →
-                    </Link>
+                      {t("GET STARTED →")}</Link>
                     <Link href="/faq" className="tfaq-btn-secondary">
-                      BACK TO FAQ
-                    </Link>
+                      {t("BACK TO FAQ")}</Link>
                   </div>
                 </>
               )}

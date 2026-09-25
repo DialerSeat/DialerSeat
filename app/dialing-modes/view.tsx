@@ -5,6 +5,7 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
+import { t } from '@/lib/i18n/client'
 
 const T = {
   bg: '#f0f1f4',
@@ -44,8 +45,7 @@ export default function DialingModesView() {
             fontWeight: 'bold',
             marginBottom: 16,
           }}>
-            ▸ DIALING MODES
-          </div>
+            {t("▸ DIALING MODES")}</div>
           <h1 style={{
             fontSize: 38,
             fontWeight: 'bold',
@@ -54,8 +54,7 @@ export default function DialingModesView() {
             margin: '0 0 16px 0',
             color: T.text,
           }}>
-            Four dialing modes. Pick by team size and risk tolerance.
-          </h1>
+            {t("Four dialing modes. Pick by team size and risk tolerance.")}</h1>
           <p style={{
             fontSize: 16,
             lineHeight: 1.65,
@@ -63,8 +62,7 @@ export default function DialingModesView() {
             margin: 0,
             maxWidth: 680,
           }}>
-            Preview, power, progressive, and predictive. Each trades speed against regulatory exposure. Here&apos;s what each one does, in plain terms, and what DialerSeat enforces to keep you compliant.
-          </p>
+            {t("Preview, power, progressive, and predictive. Each trades speed against regulatory exposure. Here's what each one does, in plain terms, and what DialerSeat enforces to keep you compliant.")}</p>
         </div>
 
         <section style={{ marginBottom: 48 }}>
@@ -83,11 +81,11 @@ export default function DialingModesView() {
             }}>
               <thead>
                 <tr style={{ background: T.dark }}>
-                  <th style={th}>MODE</th>
-                  <th style={th}>HOW IT WORKS</th>
-                  <th style={th}>SPEED</th>
-                  <th style={th}>ABANDONS</th>
-                  <th style={th}>BEST FOR</th>
+                  <th style={th}>{t("MODE")}</th>
+                  <th style={th}>{t("HOW IT WORKS")}</th>
+                  <th style={th}>{t("SPEED")}</th>
+                  <th style={th}>{t("ABANDONS")}</th>
+                  <th style={th}>{t("BEST FOR")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,12 +135,11 @@ export default function DialingModesView() {
             color: T.muted,
             textAlign: 'right',
           }}>
-            Click any mode for the full deep dive →
-          </div>
+            {t("Click any mode for the full deep dive →")}</div>
         </section>
 
         <section style={{ marginBottom: 48 }}>
-          <SectionLabel>THE MODES</SectionLabel>
+          <SectionLabel>{t("THE MODES")}</SectionLabel>
 
           <ModeCard
             label="PREVIEW"
@@ -175,45 +172,43 @@ export default function DialingModesView() {
         </section>
 
         <section style={{ marginBottom: 48 }}>
-          <SectionLabel>COMPLIANCE</SectionLabel>
-          <h2 style={h2}>What we enforce, and what&apos;s on you</h2>
+          <SectionLabel>{t("COMPLIANCE")}</SectionLabel>
+          <h2 style={h2}>{t("What we enforce, and what's on you")}</h2>
 
           <div style={cardStyle(T.accent)}>
-            <h3 style={h3}>Enforced in software</h3>
+            <h3 style={h3}>{t("Enforced in software")}</h3>
             <ul style={ul}>
-              <li style={li}><strong>3% abandon cap</strong> (FTC safe harbor), predictive auto-throttles at 2.5%, resumes below 2.0%.</li>
-              <li style={li}><strong>15-second minimum ring</strong> before a call is treated as unanswered.</li>
-              <li style={li}><strong>Recorded notice on abandons</strong> identifying the seller, per 16 CFR 310.4(b)(4)(iii).</li>
-              <li style={li}><strong>Calling windows</strong>, leads outside 8 AM-9 PM local time are skipped automatically.</li>
-              <li style={li}><strong>Full call records</strong>: every attempt, AMD result, and abandonment logged and exportable.</li>
+              <li style={li}><strong>{t("3% abandon cap")}</strong> {t("(FTC safe harbor), predictive auto-throttles at 2.5%, resumes below 2.0%.")}</li>
+              <li style={li}><strong>{t("15-second minimum ring")}</strong> {t("before a call is treated as unanswered.")}</li>
+              <li style={li}><strong>{t("Recorded notice on abandons")}</strong> {t("identifying the seller, per 16 CFR 310.4(b)(4)(iii).")}</li>
+              <li style={li}><strong>{t("Calling windows")}</strong>{t(", leads outside 8 AM-9 PM local time are skipped automatically.")}</li>
+              <li style={li}><strong>{t("Full call records")}</strong>{t(": every attempt, AMD result, and abandonment logged and exportable.")}</li>
             </ul>
           </div>
 
           <div style={cardStyle(T.red)}>
-            <h3 style={h3}>Your responsibility as the seller</h3>
+            <h3 style={h3}>{t("Your responsibility as the seller")}</h3>
             <ul style={ul}>
-              <li style={li}><strong>Consent.</strong> TCPA requires prior express written consent for autodialed marketing calls to wireless numbers, specific to your business under the one-to-one consent rule. We store consent metadata per lead, you supply it.</li>
-              <li style={li}><strong>DNC scrubbing.</strong> Scrub your lists against the National Do Not Call Registry before upload.</li>
-              <li style={li}><strong>Litigator scrubbing.</strong> Best practice at high volume; we don&apos;t currently integrate a scrub service.</li>
+              <li style={li}><strong>{t("Consent.")}</strong> {t("TCPA requires prior express written consent for autodialed marketing calls to wireless numbers, specific to your business under the one-to-one consent rule. We store consent metadata per lead, you supply it.")}</li>
+              <li style={li}><strong>{t("DNC scrubbing.")}</strong> {t("Scrub your lists against the National Do Not Call Registry before upload.")}</li>
+              <li style={li}><strong>{t("Litigator scrubbing.")}</strong> {t("Best practice at high volume; we don't currently integrate a scrub service.")}</li>
             </ul>
           </div>
 
           <p style={{ ...p, marginTop: 8 }}>
-            Any dialer that claims to handle all of TCPA compliance for you is either lying or charging far more than $35/week.
-          </p>
+            {t("Any dialer that claims to handle all of TCPA compliance for you is either lying or charging far more than $35/week.")}</p>
         </section>
 
         {isLoaded && isSignedIn ? (
           <section style={ctaSection}>
-            <div style={ctaLabel}>▸ READY TO DIAL</div>
+            <div style={ctaLabel}>{t("▸ READY TO DIAL")}</div>
             <p style={ctaText}>
-              Pick the mode that fits your campaign. You can change it anytime in Campaign Settings.
-            </p>
-            <Link href="/dashboard/campaigns" style={ctaButton}>GO TO CAMPAIGNS →</Link>
+              {t("Pick the mode that fits your campaign. You can change it anytime in Campaign Settings.")}</p>
+            <Link href="/dashboard/campaigns" style={ctaButton}>{t("GO TO CAMPAIGNS →")}</Link>
           </section>
         ) : (
           <section style={ctaSection}>
-            <div style={ctaLabel}>▸ DIALERSEAT</div>
+            <div style={ctaLabel}>{t("▸ DIALERSEAT")}</div>
             <h2 style={{
               fontSize: 22,
               fontWeight: 'bold',
@@ -221,12 +216,10 @@ export default function DialingModesView() {
               color: 'white',
               margin: '0 0 12px 0',
             }}>
-              $35/week. All four dialing modes. No call-volume limits.
-            </h2>
+              {t("$35/week. All four dialing modes. No call-volume limits.")}</h2>
             <p style={{ ...ctaText, maxWidth: 540 }}>
-              Cancel anytime. Your leads, recordings, and campaigns stay yours.
-            </p>
-            <Link href="/sign-up" style={ctaButton}>GET STARTED →</Link>
+              {t("Cancel anytime. Your leads, recordings, and campaigns stay yours.")}</p>
+            <Link href="/sign-up" style={ctaButton}>{t("GET STARTED →")}</Link>
           </section>
         )}
 
@@ -239,8 +232,7 @@ export default function DialingModesView() {
           borderTop: `1px solid ${T.border}`,
           letterSpacing: 0.3,
         }}>
-          <strong>Not legal advice.</strong> This page describes our software&apos;s technical behavior with respect to specific U.S. federal regulations. It is not a legal opinion, does not establish an attorney-client relationship, and does not guarantee compliance for any specific use case. Telemarketing law varies by state and circumstance. Consult qualified counsel for advice on your specific operations. Last updated: July 2026. Citations: 16 CFR 310.4(b)(4); 47 CFR 64.1200; 47 USC 227.
-        </p>
+          <strong>{t("Not legal advice.")}</strong> {t("This page describes our software's technical behavior with respect to specific U.S. federal regulations. It is not a legal opinion, does not establish an attorney-client relationship, and does not guarantee compliance for any specific use case. Telemarketing law varies by state and circumstance. Consult qualified counsel for advice on your specific operations. Last updated: July 2026. Citations: 16 CFR 310.4(b)(4); 47 CFR 64.1200; 47 USC 227.")}</p>
       </div>
       </GutsShell>
 
@@ -316,7 +308,7 @@ const ModeCard = ({ label, slug, color, body, bestFor }: {
       color: T.muted,
       margin: '0 0 14px 0',
     }}>
-      <strong style={{ color: T.text }}>Best for:</strong> {bestFor}
+      <strong style={{ color: T.text }}>{t("Best for:")}</strong> {bestFor}
     </p>
     <Link
       href={`/dialing-modes/${slug}`}
@@ -328,8 +320,7 @@ const ModeCard = ({ label, slug, color, body, bestFor }: {
         textDecoration: 'none',
       }}
     >
-      READ THE FULL {label} DEEP DIVE →
-    </Link>
+      {t("READ THE FULL")}{" "}{label} {t("DEEP DIVE →")}</Link>
   </div>
 )
 

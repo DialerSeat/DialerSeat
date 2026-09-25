@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { useBranding } from '@/components/ThemeProvider'
+import { t } from '@/lib/i18n/client'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
@@ -94,7 +95,7 @@ export default function BillingSuccessPage() {
             }}>
               <Image
                 src={logoUrl}
-                alt={brandName || 'Brand'}
+                alt={brandName || t("Brand")}
                 fill
                 sizes="200px"
                 style={{ objectFit: 'contain' }}
@@ -107,34 +108,30 @@ export default function BillingSuccessPage() {
 
         <div style={iconStyle}>✓</div>
 
-        <div style={titleStyle}>SUBSCRIPTION ACTIVE</div>
+        <div style={titleStyle}>{t("SUBSCRIPTION ACTIVE")}</div>
 
         <div style={subtitleStyle}>
           {isWl ? (
             <>
-              Your Manager+ subscription is live.<br />
-              You&apos;ll be charged <strong style={{ color: '#e0e2ea' }}>{price}/week</strong> weekly from today.
-              <br /><br />
-              Next: set up your tenant: subdomain, logo, and brand colors.
-            </>
+              {t("Your Manager+ subscription is live.")}<br />
+              {t("You'll be charged")}{" "}<strong style={{ color: '#e0e2ea' }}>{price}{t("/week")}</strong> {t("weekly from today.")}<br /><br />
+              {t("Next: set up your tenant: subdomain, logo, and brand colors.")}</>
           ) : (
             <>
-              Your subscription is live.<br />
-              You&apos;ll be charged <strong style={{ color: '#e0e2ea' }}>{price}/week</strong> weekly from today.
-              Cancel anytime in Settings.
-            </>
+              {t("Your subscription is live.")}<br />
+              {t("You'll be charged")}{" "}<strong style={{ color: '#e0e2ea' }}>{price}{t("/week")}</strong> {t("weekly from today. Cancel anytime in Settings.")}</>
           )}
         </div>
 
         <div style={countdownStyle}>
-          Redirecting to {teamMemberId ? 'the dialer' : isWl ? 'tenant setup' : 'dashboard'} in {countdown}…
+          {t("Redirecting to")}{" "}{teamMemberId ? t("the dialer") : isWl ? t("tenant setup") : t("dashboard")} {t("in")}{" "}{countdown}…
         </div>
 
         <button
           onClick={() => router.push(destination)}
           style={buttonStyle}
         >
-          ▶ {isWl ? 'CONTINUE TO SETUP' : 'GO TO DASHBOARD'}
+          ▶ {isWl ? t("CONTINUE TO SETUP") : t("GO TO DASHBOARD")}
         </button>
       </div>
     </main>

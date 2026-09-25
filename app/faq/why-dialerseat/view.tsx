@@ -28,6 +28,7 @@ import FaqTheme from '@/components/faq-theme'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
+import { t } from '@/lib/i18n/client'
 
 
 export default function WhyDialerSeatView() {
@@ -291,98 +292,54 @@ export default function WhyDialerSeatView() {
           {/* HERO */}
           <section className="why-hero">
             <div className="why-hero-inner">
-              <Link href="/faq" className="why-breadcrumb">← BACK TO FAQ</Link>
-              <div className="faq-eyebrow">WHY DIALERSEAT?</div>
-        <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
-              <h1>We built the dialer we wished existed.</h1>
+              <Link href="/faq" className="why-breadcrumb">{t("← BACK TO FAQ")}</Link>
+              <div className="faq-eyebrow">{t("WHY DIALERSEAT?")}</div>
+        <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>{t("LAST UPDATED 07/28/2026")}</span>
+              <h1>{t("We built the dialer we wished existed.")}</h1>
               <p className="why-lead">
-                DialerSeat exists because we got tired of paying enterprise
-                prices for tools that hadn&apos;t shipped a real feature in
-                years. We built it the way we&apos;d want to use it, and
-                then we kept building. This is the page where we tell you
-                the rest.
-              </p>
+                {t("DialerSeat exists because we got tired of paying enterprise prices for tools that hadn't shipped a real feature in years. We built it the way we'd want to use it, and then we kept building. This is the page where we tell you the rest.")}</p>
             </div>
           </section>
 
           {/* THESIS */}
           <section className="faq-section">
-            <div className="faq-section-label">▸ WHY WE EXIST</div>
-            <h2>The dialer market needed someone to actually care.</h2>
+            <div className="faq-section-label">{t("▸ WHY WE EXIST")}</div>
+            <h2>{t("The dialer market needed someone to actually care.")}</h2>
             <p>
-              The outbound dialer space is full of products that were built
-              a decade ago, repriced twice, and are now sold with annual
-              contracts and a feature roadmap that hasn&apos;t budged since
-              2014. The teams behind them aren&apos;t bad people. They just
-              stopped paying attention.
-            </p>
+              {t("The outbound dialer space is full of products that were built a decade ago, repriced twice, and are now sold with annual contracts and a feature roadmap that hasn't budged since 2014. The teams behind them aren't bad people. They just stopped paying attention.")}</p>
             <p>
-              DialerSeat was started by people who&apos;ve sat in the
-              dialing seat, lost deals to dropped calls, watched a quarter
-              of their workday disappear into voicemails, and gotten told
-              &quot;that&apos;s on the roadmap&quot; for the third year
-              running. We built the answer to those moments. And we kept
-              building.
-            </p>
+              {t("DialerSeat was started by people who've sat in the dialing seat, lost deals to dropped calls, watched a quarter of their workday disappear into voicemails, and gotten told \"that's on the roadmap\" for the third year running. We built the answer to those moments. And we kept building.")}</p>
             <div className="why-pullquote">
-              The thing we got from the competition wasn&apos;t inspiration 
-              it was motivation. Every clunky UI, every missing feature,
-              every two-year contract somebody got trapped in is the reason
-              this product exists.
-            </div>
+              {t("The thing we got from the competition wasn't inspiration it was motivation. Every clunky UI, every missing feature, every two-year contract somebody got trapped in is the reason this product exists.")}</div>
           </section>
 
           {/* WHO BUILDS IT */}
           <section className="faq-section alt">
             <div className="inner">
-              <div className="faq-section-label">▸ WHO BUILDS IT</div>
-              <h2>Seasoned developers, working alongside people who&apos;ve actually dialed.</h2>
+              <div className="faq-section-label">{t("▸ WHO BUILDS IT")}</div>
+              <h2>{t("Seasoned developers, working alongside people who've actually dialed.")}</h2>
               <p>
-                Every feature shipped on DialerSeat goes through the hands
-                of someone who has done outbound for real money. We don&apos;t
-                ship UI that demos well on a slide and breaks during a
-                Tuesday-afternoon shift. We ship things we&apos;d be willing
-                to use ourselves at the top of an hour with a dialing list
-                in front of us, because that&apos;s exactly where this
-                product gets used.
-              </p>
+                {t("Every feature shipped on DialerSeat goes through the hands of someone who has done outbound for real money. We don't ship UI that demos well on a slide and breaks during a Tuesday-afternoon shift. We ship things we'd be willing to use ourselves at the top of an hour with a dialing list in front of us, because that's exactly where this product gets used.")}</p>
               <div className="why-cards">
                 <div className="why-card">
-                  <h3>BUILT BY OPERATORS</h3>
+                  <h3>{t("BUILT BY OPERATORS")}</h3>
                   <p>
-                    The product is informed by people who&apos;ve spent
-                    real years on dialing floors: insurance, B2B, lead-gen,
-                    collections. The features we prioritize come from
-                    real-world friction, not market research decks.
-                  </p>
+                    {t("The product is informed by people who've spent real years on dialing floors: insurance, B2B, lead-gen, collections. The features we prioritize come from real-world friction, not market research decks.")}</p>
                 </div>
                 <div className="why-card">
-                  <h3>WRITTEN BY ENGINEERS</h3>
+                  <h3>{t("WRITTEN BY ENGINEERS")}</h3>
                   <p>
-                    The codebase is held to a standard. We use modern
-                    infrastructure (Telnyx for telephony, Supabase for
-                    data, Stripe for billing) and we keep the implementation
-                    tight enough to ship changes weekly without breaking
-                    things.
-                  </p>
+                    {t("The codebase is held to a standard. We use modern infrastructure (Telnyx for telephony, Supabase for data, Stripe for billing) and we keep the implementation tight enough to ship changes weekly without breaking things.")}</p>
                 </div>
                 <div className="why-card">
-                  <h3>WE USE IT OURSELVES</h3>
+                  <h3>{t("WE USE IT OURSELVES")}</h3>
                   <p>
-                    The team dials on DialerSeat. If something&apos;s broken
-                    for you, it&apos;s broken for us. That feedback loop is
-                    why bugs get fixed in days rather than the next quarterly
-                    release.
-                  </p>
+                    {t("The team dials on DialerSeat. If something's broken for you, it's broken for us. That feedback loop is why bugs get fixed in days rather than the next quarterly release.")}</p>
                 </div>
                 <div className="why-card">
-                  <h3>SMALL, FOCUSED, AVAILABLE</h3>
+                  <h3>{t("SMALL, FOCUSED, AVAILABLE")}</h3>
                   <p>
-                    No tiered support, no enterprise channel, no
-                    eighteen-touch ticket system. You email us, we answer.
-                    That&apos;s the whole support model and it&apos;s the
-                    one we plan to keep.
-                  </p>
+                    {t("No tiered support, no enterprise channel, no eighteen-touch ticket system. You email us, we answer. That's the whole support model and it's the one we plan to keep.")}</p>
                 </div>
               </div>
             </div>
@@ -390,110 +347,68 @@ export default function WhyDialerSeatView() {
 
           {/* HOW WE WORK */}
           <section className="faq-section">
-            <div className="faq-section-label">▸ HOW WE WORK</div>
-            <h2>Feedback isn&apos;t a roadmap item. It&apos;s the roadmap.</h2>
+            <div className="faq-section-label">{t("▸ HOW WE WORK")}</div>
+            <h2>{t("Feedback isn't a roadmap item. It's the roadmap.")}</h2>
             <p>
-              We&apos;ve shipped feature requests in the same week they
-              came in. That&apos;s not marketing, it&apos;s the actual
-              git history. The product evolves at the pace of real
-              customer use, not at the pace of a quarterly planning cycle
-              held in a conference room three states away from where
-              dialing actually happens.
-            </p>
+              {t("We've shipped feature requests in the same week they came in. That's not marketing, it's the actual git history. The product evolves at the pace of real customer use, not at the pace of a quarterly planning cycle held in a conference room three states away from where dialing actually happens.")}</p>
             <p>
-              When something&apos;s broken, we fix it. When something&apos;s
-              missing, we build it. When something&apos;s working, we make
-              it better. The product you&apos;re using a month from now
-              is meaningfully better than the one you signed up on, not
-              because we cycle through marketing campaigns, but because
-              we put the work in.
-            </p>
+              {t("When something's broken, we fix it. When something's missing, we build it. When something's working, we make it better. The product you're using a month from now is meaningfully better than the one you signed up on, not because we cycle through marketing campaigns, but because we put the work in.")}</p>
             <div className="why-pullquote">
-              We put our money where our mouth is on development. The
-              development budget isn&apos;t a line item we try to minimize 
-              it&apos;s the entire point of the company. Every dollar that
-              comes in goes back into making the product better for the
-              people paying.
-            </div>
+              {t("We put our money where our mouth is on development. The development budget isn't a line item we try to minimize it's the entire point of the company. Every dollar that comes in goes back into making the product better for the people paying.")}</div>
           </section>
 
           {/* SETTING THE RECORD STRAIGHT */}
           <section className="faq-section alt">
             <div className="inner">
-              <div className="faq-section-label">▸ SETTING THE RECORD STRAIGHT</div>
-              <h2>&quot;But what about [other dialer]?&quot;</h2>
+              <div className="faq-section-label">{t("▸ SETTING THE RECORD STRAIGHT")}</div>
+              <h2>{t("\"But what about [other dialer]?\"")}</h2>
               <p>
-                We don&apos;t really see the other dialers as competition.
-                We see them as the reason we exist. ReadyMode, Mojo,
-                PhoneBurner, CallTools, Convoso, Kixie, JustCall, they all
-                do parts of what we do, often at three or four times the
-                price, often locked behind annual contracts, often with
-                feature sets that haven&apos;t materially changed in a
-                decade.
-              </p>
+                {t("We don't really see the other dialers as competition. We see them as the reason we exist. ReadyMode, Mojo, PhoneBurner, CallTools, Convoso, Kixie, JustCall, they all do parts of what we do, often at three or four times the price, often locked behind annual contracts, often with feature sets that haven't materially changed in a decade.")}</p>
               <p>
-                When you build a dialer today with modern telephony,
-                modern AMD, browser-native calling, an honest abandon-rate
-                controller, and a team that ships weekly, you don&apos;t
-                end up looking like a 2014 product. You don&apos;t need to.
-              </p>
+                {t("When you build a dialer today with modern telephony, modern AMD, browser-native calling, an honest abandon-rate controller, and a team that ships weekly, you don't end up looking like a 2014 product. You don't need to.")}</p>
 
               <div className="why-comp-takedown">
                 <div className="why-comp-card">
-                  <h4>READYMODE</h4>
+                  <h4>{t("READYMODE")}</h4>
                   <p>
-                    Capable, enterprise-priced, contract-heavy. Built for
-                    big shops with big budgets and patience for long
-                    onboarding. We&apos;re built for the rest of the market.
-                  </p>
+                    {t("Capable, enterprise-priced, contract-heavy. Built for big shops with big budgets and patience for long onboarding. We're built for the rest of the market.")}</p>
                 </div>
                 <div className="why-comp-card">
-                  <h4>MOJO DIALER</h4>
+                  <h4>{t("MOJO DIALER")}</h4>
                   <p>
-                    Real-estate-focused. Bundled list manager + dialer.
-                    Locked into per-month tiers, no real predictive mode,
-                    interface dates the product more than the features do.
-                  </p>
+                    {t("Real-estate-focused. Bundled list manager + dialer. Locked into per-month tiers, no real predictive mode, interface dates the product more than the features do.")}</p>
                 </div>
                 <div className="why-comp-card">
-                  <h4>PHONEBURNER</h4>
+                  <h4>{t("PHONEBURNER")}</h4>
                   <p>
-                    Solo-agent friendly. No predictive. No multi-line.
-                    $149/month for what amounts to a power dialer with
-                    voicemail drops. We do more for less, and faster.
-                  </p>
+                    {t("Solo-agent friendly. No predictive. No multi-line. $149/month for what amounts to a power dialer with voicemail drops. We do more for less, and faster.")}</p>
                 </div>
               </div>
 
               <p style={{ marginTop: 28 }}>
-                There is, in our honest view, no real comparison. But you&apos;ll
-                want to see for yourself, and we respect that. We&apos;ve
-                written the full side-by-sides, they&apos;re linked below.
-                If you read them and disagree, send us an email; we&apos;ll
-                ship the missing thing.
-              </p>
+                {t("There is, in our honest view, no real comparison. But you'll want to see for yourself, and we respect that. We've written the full side-by-sides, they're linked below. If you read them and disagree, send us an email; we'll ship the missing thing.")}</p>
 
               <div className="why-comp-links">
-                <div className="why-comp-links-label">▸ FULL SIDE-BY-SIDES</div>
+                <div className="why-comp-links-label">{t("▸ FULL SIDE-BY-SIDES")}</div>
                 <div className="why-comp-links-grid">
                   <Link href="/vs" className="why-comp-link">
-                    <span>DialerSeat vs. the field</span>
+                    <span>{t("DialerSeat vs. the field")}</span>
                     <span className="arrow">→</span>
                   </Link>
                   <Link href="/vs/everyone" className="why-comp-link">
-                    <span>DialerSeat vs. everyone</span>
+                    <span>{t("DialerSeat vs. everyone")}</span>
                     <span className="arrow">→</span>
                   </Link>
                   <Link href="/vs/readymode" className="why-comp-link">
-                    <span>DialerSeat vs. ReadyMode</span>
+                    <span>{t("DialerSeat vs. ReadyMode")}</span>
                     <span className="arrow">→</span>
                   </Link>
                   <Link href="/vs/mojo" className="why-comp-link">
-                    <span>DialerSeat vs. Mojo Dialer</span>
+                    <span>{t("DialerSeat vs. Mojo Dialer")}</span>
                     <span className="arrow">→</span>
                   </Link>
                   <Link href="/vs/phoneburner" className="why-comp-link">
-                    <span>DialerSeat vs. PhoneBurner</span>
+                    <span>{t("DialerSeat vs. PhoneBurner")}</span>
                     <span className="arrow">→</span>
                   </Link>
                 </div>
@@ -503,46 +418,37 @@ export default function WhyDialerSeatView() {
 
           {/* OUR PROMISE */}
           <section className="faq-section">
-            <div className="faq-section-label">▸ OUR PROMISE</div>
-            <h2>What you&apos;re actually signing up for.</h2>
+            <div className="faq-section-label">{t("▸ OUR PROMISE")}</div>
+            <h2>{t("What you're actually signing up for.")}</h2>
             <p>
-              A lot of dialer companies bury the real terms in a 12-page
-              MSA. Ours fit on a page. Here they are.
-            </p>
+              {t("A lot of dialer companies bury the real terms in a 12-page MSA. Ours fit on a page. Here they are.")}</p>
             <div className="why-promise">
               <div className="why-promise-item">
                 <span className="check">✓</span>
                 <div className="body">
-                  <h3>$35 per week per seat. That&apos;s the whole price.</h3>
-                  <p>No setup fee, no per-call surcharge, no tier upcharge,
-                  no annual minimum. Cancel from your billing page anytime.</p>
+                  <h3>{t("$35 per week per seat. That's the whole price.")}</h3>
+                  <p>{t("No setup fee, no per-call surcharge, no tier upcharge, no annual minimum. Cancel from your billing page anytime.")}</p>
                 </div>
               </div>
               <div className="why-promise-item">
                 <span className="check">✓</span>
                 <div className="body">
-                  <h3>Your data stays yours.</h3>
-                  <p>Leads you uploaded, recordings you made, campaigns you
-                  configured, all of it remains accessible. Cancellation
-                  doesn&apos;t mean we lock the door behind you.</p>
+                  <h3>{t("Your data stays yours.")}</h3>
+                  <p>{t("Leads you uploaded, recordings you made, campaigns you configured, all of it remains accessible. Cancellation doesn't mean we lock the door behind you.")}</p>
                 </div>
               </div>
               <div className="why-promise-item">
                 <span className="check">✓</span>
                 <div className="body">
-                  <h3>The product gets better every week, not every quarter.</h3>
-                  <p>Real-feature releases on a continuous cadence. We don&apos;t
-                  batch fixes into &quot;maintenance windows&quot; we ship
-                  what&apos;s ready when it&apos;s ready.</p>
+                  <h3>{t("The product gets better every week, not every quarter.")}</h3>
+                  <p>{t("Real-feature releases on a continuous cadence. We don't batch fixes into \"maintenance windows\" we ship what's ready when it's ready.")}</p>
                 </div>
               </div>
               <div className="why-promise-item">
                 <span className="check">✓</span>
                 <div className="body">
-                  <h3>We pick up.</h3>
-                  <p>Email us, you get an answer from a person who knows the
-                  product. No bot deflection, no &quot;tier two&quot;
-                  handoffs, no eight-day SLAs.</p>
+                  <h3>{t("We pick up.")}</h3>
+                  <p>{t("Email us, you get an answer from a person who knows the product. No bot deflection, no \"tier two\" handoffs, no eight-day SLAs.")}</p>
                 </div>
               </div>
             </div>
@@ -551,30 +457,14 @@ export default function WhyDialerSeatView() {
           {/* WHERE WE'RE GOING */}
           <section className="faq-section alt">
             <div className="inner">
-              <div className="faq-section-label">▸ WHERE WE&apos;RE GOING</div>
-              <h2>Grateful for the present. Excited about the next year.</h2>
+              <div className="faq-section-label">{t("▸ WHERE WE'RE GOING")}</div>
+              <h2>{t("Grateful for the present. Excited about the next year.")}</h2>
               <p>
-                We&apos;re deeply grateful to the operators who took a chance
-                on a new tool in a category dominated by entrenched names.
-                Every paying customer has shaped this product, the codebase
-                has the receipts. The features you&apos;re using today
-                exist because someone asked for them in an email and we
-                shipped them the same week.
-              </p>
+                {t("We're deeply grateful to the operators who took a chance on a new tool in a category dominated by entrenched names. Every paying customer has shaped this product, the codebase has the receipts. The features you're using today exist because someone asked for them in an email and we shipped them the same week.")}</p>
               <p>
-                The future of DialerSeat is more of the same: deeper team
-                workflows, better visibility into what&apos;s actually
-                working on your campaigns, more compliance tooling that the
-                enterprise vendors hold behind enterprise prices, and the
-                kind of integrations that make this fit naturally into
-                whatever stack you already run. We&apos;ve got a lot of room
-                to grow, and we plan to keep showing up for the people who
-                help us get there.
-              </p>
+                {t("The future of DialerSeat is more of the same: deeper team workflows, better visibility into what's actually working on your campaigns, more compliance tooling that the enterprise vendors hold behind enterprise prices, and the kind of integrations that make this fit naturally into whatever stack you already run. We've got a lot of room to grow, and we plan to keep showing up for the people who help us get there.")}</p>
               <p>
-                If you&apos;re reading this and considering signing up: thanks
-                for being here. We&apos;ll do right by you.
-              </p>
+                {t("If you're reading this and considering signing up: thanks for being here. We'll do right by you.")}</p>
             </div>
           </section>
 
@@ -582,36 +472,29 @@ export default function WhyDialerSeatView() {
           <section className="why-cta">
             <div className="why-cta-inner">
               <div className="faq-cta-eyebrow">
-                {showSignedIn ? '▸ READY TO DIAL' : '▸ ONE WEEK. $35. THAT&apos;S IT.'}
+                {showSignedIn ? t("▸ READY TO DIAL") : t("▸ ONE WEEK. $35. THAT&apos;S IT.")}
               </div>
               {showSignedIn ? (
                 <>
-                  <h2>Hop back in.</h2>
-                  <p>The terminal&apos;s waiting.</p>
+                  <h2>{t("Hop back in.")}</h2>
+                  <p>{t("The terminal's waiting.")}</p>
                   <div className="why-cta-row">
                     <Link href="/dashboard/dialer" className="why-btn-primary">
-                      OPEN DIALER →
-                    </Link>
+                      {t("OPEN DIALER →")}</Link>
                     <Link href="/faq" className="why-btn-secondary">
-                      BACK TO FAQ
-                    </Link>
+                      {t("BACK TO FAQ")}</Link>
                   </div>
                 </>
               ) : (
                 <>
-                  <h2>Try us for a week.</h2>
+                  <h2>{t("Try us for a week.")}</h2>
                   <p>
-                    $35. No contract. Cancel any time. The dialer is the
-                    one we use ourselves: if you don&apos;t like it,
-                    leave, and your data stays yours.
-                  </p>
+                    {t("$35. No contract. Cancel any time. The dialer is the one we use ourselves: if you don't like it, leave, and your data stays yours.")}</p>
                   <div className="why-cta-row">
                     <Link href="/sign-up" className="why-btn-primary">
-                      GET STARTED →
-                    </Link>
+                      {t("GET STARTED →")}</Link>
                     <Link href="/faq" className="why-btn-secondary">
-                      BACK TO FAQ
-                    </Link>
+                      {t("BACK TO FAQ")}</Link>
                   </div>
                 </>
               )}

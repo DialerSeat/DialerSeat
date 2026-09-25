@@ -7,6 +7,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
+import { t } from '@/lib/i18n/client'
 
 
 
@@ -343,7 +344,7 @@ export default function AnalyticsPage({
         minHeight: '100vh',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 11, letterSpacing: 3, color: 'var(--brand-muted-text)',
-      }}>LOADING...</div>
+      }}>{t("LOADING...")}</div>
     )
   }
 
@@ -566,8 +567,7 @@ export default function AnalyticsPage({
 
       <div className="analytics-header">
         <span className="analytics-header-title" style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: 'var(--brand-primary)' }}>
-          ANALYTICS OVERVIEW
-        </span>
+          {t("ANALYTICS OVERVIEW")}</span>
         <div className="range-tabs">
           {ranges.map(r => (
             <button
@@ -604,8 +604,7 @@ export default function AnalyticsPage({
           The param tells page.tsx "render the landing for this visit".
         */}
         <Link href="/?view=landing" className="landing-page-btn">
-          LANDING PAGE →
-        </Link>
+          {t("LANDING PAGE →")}</Link>
       </div>
 
       <div className="welcome-row">
@@ -619,48 +618,48 @@ export default function AnalyticsPage({
       </div>
 
       {loading ? (
-        <div className="empty-state">LOADING ANALYTICS...</div>
+        <div className="empty-state">{t("LOADING ANALYTICS...")}</div>
       ) : (
         <>
           <div className="stat-grid">
             <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
-              <div className="stat-label">TOTAL CALLS</div>
+              <div className="stat-label">{t("TOTAL CALLS")}</div>
               <div className="stat-value">{(s.totalCalls || 0).toLocaleString()}</div>
               <div className="stat-sub">{secondaryLabel} {(sec.totalCalls || 0).toLocaleString()}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.accent }}>
-              <div className="stat-label">HOURS DIALED</div>
+              <div className="stat-label">{t("HOURS DIALED")}</div>
               <div className="stat-value" style={{ color: T.accent }}>{formatHours(s.totalDuration || 0)}</div>
               <div className="stat-sub">{secondaryLabel} {formatHours(sec.totalDuration || 0)}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
-              <div className="stat-label">CONVERSIONS</div>
+              <div className="stat-label">{t("CONVERSIONS")}</div>
               <div className="stat-value" style={{ color: T.green }}>{(s.conversions || 0).toLocaleString()}</div>
               <div className="stat-sub">{secondaryLabel} {(sec.conversions || 0).toLocaleString()}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
-              <div className="stat-label">CLOSED</div>
+              <div className="stat-label">{t("CLOSED")}</div>
               <div className="stat-value" style={{ color: T.green }}>{(s.closed || 0).toLocaleString()}</div>
               <div className="stat-sub">{secondaryLabel} {(sec.closed || 0).toLocaleString()}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
-              <div className="stat-label">TALK TIME</div>
+              <div className="stat-label">{t("TALK TIME")}</div>
               <div className="stat-value">{formatDuration(s.totalDuration || 0)}</div>
-              <div className="stat-sub">avg {formatDuration(s.avgCallLength || 0)}/call</div>
+              <div className="stat-sub">{t("avg")}{" "}{formatDuration(s.avgCallLength || 0)}{t("/call")}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.amber }}>
-              <div className="stat-label">BEST CAMPAIGN</div>
+              <div className="stat-label">{t("BEST CAMPAIGN")}</div>
               <div className="stat-value" style={{ fontSize: s.bestCampaign ? 13 : 22, color: T.amber }}>
                 {s.bestCampaign || '-'}
               </div>
-              <div className="stat-sub">{s.bestCampaign ? `${s.bestCampaignRate}% conv` : 'need 5+ calls'}</div>
+              <div className="stat-sub">{s.bestCampaign ? `${s.bestCampaignRate}% conv` : t("need 5+ calls")}</div>
             </div>
           </div>
 
           <div className="charts-grid">
 
             <div className="chart-card">
-              <div className="chart-title">▸ CALL VOLUME OVER TIME</div>
+              <div className="chart-title">{t("▸ CALL VOLUME OVER TIME")}</div>
               <div className={series.length === 0 ? 'chart-faded' : ''}>
                 <ResponsiveContainer width="100%" height={240}>
                   <LineChart data={seriesToRender}>
@@ -674,13 +673,13 @@ export default function AnalyticsPage({
               </div>
               {series.length === 0 && (
                 <div className="chart-empty-overlay">
-                  <div className="chart-empty-pill">AWAITING DATA</div>
+                  <div className="chart-empty-pill">{t("AWAITING DATA")}</div>
                 </div>
               )}
             </div>
 
             <div className="chart-card">
-              <div className="chart-title">▸ CONVERSION RATE OVER TIME</div>
+              <div className="chart-title">{t("▸ CONVERSION RATE OVER TIME")}</div>
               <div className={series.length === 0 ? 'chart-faded' : ''}>
                 <ResponsiveContainer width="100%" height={240}>
                   <LineChart data={seriesToRender}>
@@ -697,13 +696,13 @@ export default function AnalyticsPage({
               </div>
               {series.length === 0 && (
                 <div className="chart-empty-overlay">
-                  <div className="chart-empty-pill">AWAITING DATA</div>
+                  <div className="chart-empty-pill">{t("AWAITING DATA")}</div>
                 </div>
               )}
             </div>
 
             <div className="chart-card">
-              <div className="chart-title">▸ DISPOSITION BREAKDOWN</div>
+              <div className="chart-title">{t("▸ DISPOSITION BREAKDOWN")}</div>
               <div className={dispositions.length === 0 ? 'chart-faded' : ''}>
                 <ResponsiveContainer width="100%" height={240}>
                   <PieChart>
@@ -735,13 +734,13 @@ export default function AnalyticsPage({
               </div>
               {dispositions.length === 0 && (
                 <div className="chart-empty-overlay">
-                  <div className="chart-empty-pill">AWAITING DATA</div>
+                  <div className="chart-empty-pill">{t("AWAITING DATA")}</div>
                 </div>
               )}
             </div>
 
             <div className="chart-card">
-              <div className="chart-title">▸ CAMPAIGN PERFORMANCE</div>
+              <div className="chart-title">{t("▸ CAMPAIGN PERFORMANCE")}</div>
               <div className={campaigns.length === 0 ? 'chart-faded' : ''}>
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={campaignsToRender} layout="horizontal">
@@ -758,7 +757,7 @@ export default function AnalyticsPage({
               </div>
               {campaigns.length === 0 && (
                 <div className="chart-empty-overlay">
-                  <div className="chart-empty-pill">AWAITING DATA</div>
+                  <div className="chart-empty-pill">{t("AWAITING DATA")}</div>
                 </div>
               )}
             </div>

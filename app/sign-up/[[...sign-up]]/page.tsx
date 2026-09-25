@@ -4,6 +4,7 @@ import { SignUp } from '@clerk/nextjs'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useBranding } from '@/components/ThemeProvider'
+import { t } from '@/lib/i18n/client'
 
 
 
@@ -124,7 +125,7 @@ export default function SignUpPage() {
           letterSpacing: '3px',
           color: 'var(--brand-on-sidebar-muted)',
         }}>
-          {logoUrl ? `JOIN ${brandName}` : 'CREATE YOUR ACCOUNT'}
+          {logoUrl ? `JOIN ${brandName}` : t("CREATE YOUR ACCOUNT")}
         </p>
       </div>
       {/* ── EVERY SIGN-UP GOES THROUGH THE ROUTER. NO EXCEPTIONS. ───────

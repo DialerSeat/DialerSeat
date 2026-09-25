@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { t as tr } from '@/lib/i18n/client'
 
 // =============================================================================
 // PREDICTIVE'S TWO DETAILS, ASKED FOR WHERE PREDICTIVE IS PICKED
@@ -126,35 +127,30 @@ function SellerIdentityDialogBody({ ownerIsYou, onSaved, onUseProgressive, onClo
           id="seller-identity-title"
           style={{ fontSize: 13, fontWeight: 700, letterSpacing: 3, color: 'var(--brand-primary)', marginBottom: 12 }}
         >
-          {ownerIsYou ? 'PREDICTIVE NEEDS TWO DETAILS' : 'PREDICTIVE ISN’T SET UP ON THIS CAMPAIGN'}
+          {ownerIsYou ? tr("PREDICTIVE NEEDS TWO DETAILS") : tr("PREDICTIVE ISN’T SET UP ON THIS CAMPAIGN")}
         </div>
 
         {ownerIsYou ? (
           <>
             <p style={bodyStyle}>
-              Predictive dials more than one line at a time. When two people answer at
-              once and no agent is free, the law requires a short recorded message with
-              your business name and a number they can call back.
-            </p>
+              {tr("Predictive dials more than one line at a time. When two people answer at once and no agent is free, the law requires a short recorded message with your business name and a number they can call back.")}</p>
             <p style={bodyStyle}>
-              Enter them once. They apply to all your campaigns, and you can change
-              them in Settings.
-            </p>
+              {tr("Enter them once. They apply to all your campaigns, and you can change them in Settings.")}</p>
 
-            <label htmlFor="seller-identity-name" style={labelStyle}>BUSINESS NAME</label>
+            <label htmlFor="seller-identity-name" style={labelStyle}>{tr("BUSINESS NAME")}</label>
             <input
               id="seller-identity-name"
               ref={firstField}
               type="text"
               value={name}
               maxLength={80}
-              placeholder="Your Company LLC"
+              placeholder={tr("Your Company LLC")}
               autoComplete="organization"
               onChange={e => setName(e.target.value)}
               style={inputStyle}
             />
 
-            <label htmlFor="seller-identity-number" style={labelStyle}>CALLBACK NUMBER</label>
+            <label htmlFor="seller-identity-number" style={labelStyle}>{tr("CALLBACK NUMBER")}</label>
             <input
               id="seller-identity-number"
               type="tel"
@@ -175,11 +171,11 @@ function SellerIdentityDialogBody({ ownerIsYou, onSaved, onUseProgressive, onClo
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button type="button" onClick={() => void save()} disabled={saving} style={primaryButton(saving)}>
-                {saving ? 'SAVING…' : 'SAVE AND USE PREDICTIVE'}
+                {saving ? tr("SAVING…") : tr("SAVE AND USE PREDICTIVE")}
               </button>
               {leave && (
                 <button type="button" onClick={leave} disabled={saving} style={secondaryButton}>
-                  {onUseProgressive ? 'USE PROGRESSIVE INSTEAD' : 'CANCEL'}
+                  {onUseProgressive ? tr("USE PROGRESSIVE INSTEAD") : tr("CANCEL")}
                 </button>
               )}
             </div>
@@ -187,13 +183,11 @@ function SellerIdentityDialogBody({ ownerIsYou, onSaved, onUseProgressive, onClo
         ) : (
           <>
             <p style={bodyStyle}>
-              Predictive needs the campaign owner&apos;s business name and callback
-              number for its recorded message. The owner adds them once in Settings.
-            </p>
+              {tr("Predictive needs the campaign owner's business name and callback number for its recorded message. The owner adds them once in Settings.")}</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {leave && (
                 <button type="button" onClick={leave} style={primaryButton(false)}>
-                  {onUseProgressive ? 'USE PROGRESSIVE INSTEAD' : 'OK'}
+                  {onUseProgressive ? tr("USE PROGRESSIVE INSTEAD") : tr("OK")}
                 </button>
               )}
             </div>

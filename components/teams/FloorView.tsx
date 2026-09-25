@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { t } from '@/lib/i18n/client'
 
 const PANEL = 'var(--teams-panel, #232428)'
 const HAIRLINE = 'var(--teams-border, #1a1b1e)'
@@ -83,8 +84,8 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
             color: MUTED, borderRadius: 3, padding: '6px 12px',
             fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
           }}
-        >← Back</button>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600, flex: 1 }}>The Floor</h2>
+        >{t("← Back")}</button>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600, flex: 1 }}>{t("The Floor")}</h2>
         <div style={{ display: 'flex', gap: 4 }}>
           {RANGES.map(r => (
             <button
@@ -111,16 +112,14 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
         fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase',
         color: MUTED, fontWeight: 600, marginBottom: 10,
       }}>
-        Live now {live.length > 0 && <span style={{ color: GREEN }}>· {live.length}</span>}
+        {t("Live now")}{" "}{live.length > 0 && <span style={{ color: GREEN }}>· {live.length}</span>}
       </div>
 
       {loading && !data ? (
-        <div style={{ fontSize: 13, color: DIM }}>Loading…</div>
+        <div style={{ fontSize: 13, color: DIM }}>{t("Loading…")}</div>
       ) : live.length === 0 ? (
         <div style={{ fontSize: 13, color: DIM, lineHeight: 1.7 }}>
-          Nobody is dialing right now. Agents appear here within seconds of going
-          available.
-        </div>
+          {t("Nobody is dialing right now. Agents appear here within seconds of going available.")}</div>
       ) : (
         <div style={{ display: 'grid', gap: 8 }}>
           {live.map((a: any, i: number) => (
@@ -136,7 +135,7 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 500 }}>{a.name}</div>
                 <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
-                  {a.campaign || 'No campaign'}
+                  {a.campaign || t("No campaign")}
                   {a.teamName ? ` · ${a.teamName}` : ''}
                   {a.mode ? ` · ${a.mode}` : ''}
                 </div>
@@ -145,7 +144,7 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
                 fontSize: 11, color: a.onCall ? GREEN : MUTED,
                 textTransform: 'uppercase', letterSpacing: 0.8,
               }}>
-                {a.onCall ? 'On call' : (a.state || 'ready')}
+                {a.onCall ? t("On call") : (a.state || t("ready"))}
               </span>
             </div>
           ))}
@@ -159,7 +158,7 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
       <div style={{
         fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase',
         color: MUTED, fontWeight: 600, margin: '30px 0 6px',
-      }}>Seat usage</div>
+      }}>{t("Seat usage")}</div>
       <div style={{ fontSize: 12, color: DIM, marginBottom: 10, lineHeight: 1.7 }}>
         {/* Says which slice this is. A capped list presented as the whole roster
             is the same lie as a truncated one — an owner counting eight idle
@@ -167,23 +166,19 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
             first page. */}
         {quiet.length > 0 ? (
           <>
-            <strong style={{ color: AMBER }}>{quiet.length}</strong> of the{' '}
-            {usage.length} quietest {usage.length === 1 ? 'seat' : 'seats'} made fewer
-            than {QUIET_THRESHOLD} calls this {range === 'today' ? 'day' : range}. You are
-            paying for those. Pausing a seat stops the billing and is reversible.
-            {total > usage.length && (
+            <strong style={{ color: AMBER }}>{quiet.length}</strong> {t("of the")}{' '}
+            {usage.length} {t("quietest")}{" "}{usage.length === 1 ? t("seat") : t("seats")} {t("made fewer than")}{" "}{QUIET_THRESHOLD} {t("calls this")}{" "}{range === 'today' ? t("day") : range}{t(". You are paying for those. Pausing a seat stops the billing and is reversible.")}{total > usage.length && (
               <span style={{ display: 'block', marginTop: 3 }}>
-                Showing the {usage.length} quietest of {total.toLocaleString()} seats.
-              </span>
+                {t("Showing the")}{" "}{usage.length} {t("quietest of")}{" "}{total.toLocaleString()} {t("seats.")}</span>
             )}
           </>
         ) : (
-          <>Every seat is being used.</>
+          <>{t("Every seat is being used.")}</>
         )}
       </div>
 
       {usage.length === 0 ? (
-        <div style={{ fontSize: 13, color: DIM }}>No seats yet.</div>
+        <div style={{ fontSize: 13, color: DIM }}>{t("No seats yet.")}</div>
       ) : (
         <div style={{ display: 'grid', gap: 6 }}>
           {usage.map((u: any) => {
@@ -205,9 +200,9 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
                 </div>
                 <div style={{ textAlign: 'right', fontSize: 11.5, color: DIM }}>
                   <div style={{ color: isQuiet ? AMBER : TEXT, fontSize: 13 }}>
-                    {u.calls.toLocaleString()} {u.calls === 1 ? 'call' : 'calls'}
+                    {u.calls.toLocaleString()} {u.calls === 1 ? t("call") : t("calls")}
                   </div>
-                  <div>{dur(u.talkSeconds)} talking</div>
+                  <div>{dur(u.talkSeconds)} {t("talking")}</div>
                 </div>
               </div>
             )

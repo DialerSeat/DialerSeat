@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { usePredictiveGate } from '@/components/SellerIdentityDialog'
+import { t as tr } from '@/lib/i18n/client'
 
 // =============================================================================
 // CREATE TEAM / CREATE CAMPAIGN
@@ -149,37 +150,37 @@ export function CreateTeamModal({ onClose, onCreate, busy }: {
 
   return (
     <Shell
-      title="Create New Team"
+      title={tr("Create New Team")}
       subtitle="A team owns campaigns and the agents who work them. You can invite people once it exists."
       onClose={onClose}
       footer={
         <>
-          <button style={btn} onClick={onClose}>Cancel</button>
+          <button style={btn} onClick={onClose}>{tr("Cancel")}</button>
           <button
             style={{ ...btnPrimary, opacity: !name.trim() || busy ? 0.5 : 1 }}
             disabled={!name.trim() || busy}
             onClick={() => onCreate(name.trim(), description.trim())}
-          >{busy ? 'Creating…' : 'Create Team'}</button>
+          >{busy ? tr("Creating…") : tr("Create Team")}</button>
         </>
       }
     >
       <div style={{ marginBottom: 16 }}>
-        <label style={label}>Team Name</label>
+        <label style={label}>{tr("Team Name")}</label>
         <input
           autoFocus
           style={field}
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="Alias Agency"
+          placeholder={tr("Alias Agency")}
         />
       </div>
       <div>
-        <label style={label}>Description <span style={{ color: DIM }}>(optional)</span></label>
+        <label style={label}>{tr("Description")}{" "}<span style={{ color: DIM }}>{tr("(optional)")}</span></label>
         <input
           style={field}
           value={description}
           onChange={e => setDescription(e.target.value)}
-          placeholder="What this team works"
+          placeholder={tr("What this team works")}
         />
       </div>
     </Shell>
@@ -214,7 +215,7 @@ export function RenameModal({ kind, currentName, onClose, onSave, busy }: {
 
   return (
     <Shell
-      title={isMember ? 'Set Nickname' : `Rename ${noun}`}
+      title={isMember ? tr("Set Nickname") : `Rename ${noun}`}
       subtitle={
         kind === 'team'
           ? 'Everyone on this team sees the new name, including agents already dialing.'
@@ -226,17 +227,17 @@ export function RenameModal({ kind, currentName, onClose, onSave, busy }: {
       onClose={onClose}
       footer={
         <>
-          <button style={btn} onClick={onClose}>Cancel</button>
+          <button style={btn} onClick={onClose}>{tr("Cancel")}</button>
           <button
             style={{ ...btnPrimary, opacity: canSave ? 1 : 0.5 }}
             disabled={!canSave}
             onClick={() => onSave(trimmed)}
-          >{busy ? 'Saving…' : 'Save'}</button>
+          >{busy ? tr("Saving…") : tr("Save")}</button>
         </>
       }
     >
       <div>
-        <label style={label}>{isMember ? 'Nickname' : `${noun} Name`}</label>
+        <label style={label}>{isMember ? tr("Nickname") : `${noun} Name`}</label>
         <input
           autoFocus
           style={field}
@@ -286,14 +287,13 @@ export function CreateCampaignModal({
   if (teams.length === 0) {
     return (
       <Shell
-        title="Create New Campaign"
+        title={tr("Create New Campaign")}
         subtitle="A campaign has to belong to a team."
         onClose={onClose}
-        footer={<button style={btn} onClick={onClose}>Close</button>}
+        footer={<button style={btn} onClick={onClose}>{tr("Close")}</button>}
       >
         <p style={{ margin: 0, fontSize: 13.5, color: MUTED, lineHeight: 1.7 }}>
-          You do not have a team yet. Create one first, then add campaigns to it.
-        </p>
+          {tr("You do not have a team yet. Create one first, then add campaigns to it.")}</p>
       </Shell>
     )
   }
@@ -313,12 +313,12 @@ export function CreateCampaignModal({
 
   return (
     <Shell
-      title="Create New Campaign"
+      title={tr("Create New Campaign")}
       subtitle="Campaigns hold leads and belong to one team. Who can work it is set here and changed any time."
       onClose={onClose}
       footer={
         <>
-          <button style={btn} onClick={onClose}>Cancel</button>
+          <button style={btn} onClick={onClose}>{tr("Cancel")}</button>
           <button
             style={{ ...btnPrimary, opacity: blockedSubmit || busy ? 0.5 : 1 }}
             disabled={blockedSubmit || busy}
@@ -330,13 +330,13 @@ export function CreateCampaignModal({
               accessMode,
               existingCampaignId: mode === 'existing' ? existingId : undefined,
             })}
-          >{busy ? 'Saving…' : mode === 'new' ? 'Create Campaign' : 'Add To Team'}</button>
+          >{busy ? tr("Saving…") : mode === 'new' ? tr("Create Campaign") : tr("Add To Team")}</button>
         </>
       }
     >
       {/* Team first: it scopes everything below it. */}
       <div style={{ marginBottom: 16 }}>
-        <label style={label}>Team</label>
+        <label style={label}>{tr("Team")}</label>
         <select style={field} value={teamId} onChange={e => setTeamId(e.target.value)}>
           {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
@@ -348,29 +348,29 @@ export function CreateCampaignModal({
           an existing campaign is offered first-class rather than as a separate
           screen somewhere else. */}
       <div style={{ marginBottom: 16 }}>
-        <label style={label}>Campaign</label>
+        <label style={label}>{tr("Campaign")}</label>
         <select
           style={field}
           value={mode}
           onChange={e => setMode(e.target.value as 'new' | 'existing')}
         >
-          <option value="new">Create a new campaign</option>
-          <option value="existing">Add one of my existing campaigns</option>
+          <option value="new">{tr("Create a new campaign")}</option>
+          <option value="existing">{tr("Add one of my existing campaigns")}</option>
         </select>
       </div>
 
       {mode === 'new' ? (
         <div style={{ marginBottom: 16 }}>
           <label style={label}>
-            Campaign Name{' '}
-            <span style={{ color: ACCENT, letterSpacing: 0 }}>— type a name</span>
+            {tr("Campaign Name")}{' '}
+            <span style={{ color: ACCENT, letterSpacing: 0 }}>{tr("— type a name")}</span>
           </label>
           <input
             autoFocus
             style={textField}
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="e.g. September Mortgage Leads"
+            placeholder={tr("e.g. September Mortgage Leads")}
           />
           {/* ── SAY WHY THE BUTTON IS OFF, WHERE THE PROBLEM IS ───────────
               nameProblem already existed and was rendered only as `title` on
@@ -393,27 +393,24 @@ export function CreateCampaignModal({
         </div>
       ) : (
         <div style={{ marginBottom: 16 }}>
-          <label style={label}>Which Campaign</label>
+          <label style={label}>{tr("Which Campaign")}</label>
           {existingCampaigns.length === 0 ? (
             <p style={{ margin: 0, fontSize: 12.5, color: MUTED, lineHeight: 1.6 }}>
-              You have no campaigns yet. Create one here or on the Campaigns page.
-            </p>
+              {tr("You have no campaigns yet. Create one here or on the Campaigns page.")}</p>
           ) : (
             <select
               style={field}
               value={existingId}
               onChange={e => setExistingId(e.target.value)}
             >
-              <option value="">Choose a campaign…</option>
+              <option value="">{tr("Choose a campaign…")}</option>
               {existingCampaigns.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           )}
           <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
-            Its leads and history come with it. Adding it to a team does not move
-            it, it stays on your Campaigns page.
-          </p>
+            {tr("Its leads and history come with it. Adding it to a team does not move it, it stays on your Campaigns page.")}</p>
         </div>
       )}
 
@@ -421,7 +418,7 @@ export function CreateCampaignModal({
           it. Fixing it is what an owner does when the script, the list or the
           compliance posture depends on the mode. */}
       <div style={{ marginBottom: 16 }}>
-        <label style={label}>Dialer Mode</label>
+        <label style={label}>{tr("Dialer Mode")}</label>
         {predictiveGateDialog}
         <select
           style={field}
@@ -432,11 +429,11 @@ export function CreateCampaignModal({
             void requirePredictive(() => setDialerMode('predictive'), () => setDialerMode('progressive'))
           }}
         >
-          <option value="agent_choice">Agent chooses their own mode</option>
-          <option value="preview">Force Preview: see the lead, then dial</option>
-          <option value="progressive">Force Progressive: one at a time, automatic</option>
-          <option value="power">Force Power, continuous single line</option>
-          <option value="predictive">Force Predictive, multiple lines (beta)</option>
+          <option value="agent_choice">{tr("Agent chooses their own mode")}</option>
+          <option value="preview">{tr("Force Preview: see the lead, then dial")}</option>
+          <option value="progressive">{tr("Force Progressive: one at a time, automatic")}</option>
+          <option value="power">{tr("Force Power, continuous single line")}</option>
+          <option value="predictive">{tr("Force Predictive, multiple lines (beta)")}</option>
         </select>
       </div>
 
@@ -444,21 +441,21 @@ export function CreateCampaignModal({
           both who may dial and who is billed, because on this platform those
           are the same decision — a seat is what makes dialing possible. */}
       <div>
-        <label style={label}>Access &amp; Seats</label>
+        <label style={label}>{tr("Access & Seats")}</label>
         <select style={field} value={accessMode} onChange={e => setAccessMode(e.target.value)}>
-          <option value="free">Free to the whole team, no seat charged</option>
-          <option value="owner_pays">Whitelisted agents, you pay their seats</option>
-          <option value="agent_pays">Whitelisted agents, they pay their own</option>
-          <option value="public">Public: anyone in the team, seat still required</option>
+          <option value="free">{tr("Free to the whole team, no seat charged")}</option>
+          <option value="owner_pays">{tr("Whitelisted agents, you pay their seats")}</option>
+          <option value="agent_pays">{tr("Whitelisted agents, they pay their own")}</option>
+          <option value="public">{tr("Public: anyone in the team, seat still required")}</option>
         </select>
         <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
           {accessMode === 'free'
-            ? 'Every member dials it, nobody is billed for it.'
+            ? tr("Every member dials it, nobody is billed for it.")
             : accessMode === 'owner_pays'
-              ? 'You add agents one by one and cover their seats.'
+              ? tr("You add agents one by one and cover their seats.")
               : accessMode === 'agent_pays'
-                ? 'You add agents one by one; each pays for their own seat.'
-                : 'Open to the team, but each agent still needs a paid seat.'}
+                ? tr("You add agents one by one; each pays for their own seat.")
+                : tr("Open to the team, but each agent still needs a paid seat.")}
         </p>
         {/* The rule that overrides both settings, said once and plainly. Access
             is permission to dial; a seat is what makes dialing possible. An
@@ -469,9 +466,7 @@ export function CreateCampaignModal({
           background: 'var(--teams-inset, #111214)', border: `1px solid ${HAIRLINE}`,
           fontSize: 11.5, color: MUTED, lineHeight: 1.6,
         }}>
-          Access without a seat offers no campaign usage. An agent can only dial
-          once their seat is paid, by you or by them.
-        </p>
+          {tr("Access without a seat offers no campaign usage. An agent can only dial once their seat is paid, by you or by them.")}</p>
       </div>
     </Shell>
   )
@@ -517,12 +512,12 @@ export function CreateCodeModal({
 
   return (
     <Shell
-      title="New Join Code"
+      title={tr("New Join Code")}
       subtitle={`Anyone with this code joins ${teamName}. You can regenerate it later without removing whoever already used it.`}
       onClose={onClose}
       footer={
         <>
-          <button style={btn} onClick={onClose}>Cancel</button>
+          <button style={btn} onClick={onClose}>{tr("Cancel")}</button>
           <button
             style={{ ...btnPrimary, opacity: blocked || busy ? 0.5 : 1 }}
             disabled={blocked || busy}
@@ -533,34 +528,33 @@ export function CreateCodeModal({
               joinMode,
               maxUses: limited ? Math.max(1, parseInt(maxUses, 10) || 1) : undefined,
             })}
-          >{busy ? 'Creating…' : 'Create Code'}</button>
+          >{busy ? tr("Creating…") : tr("Create Code")}</button>
         </>
       }
     >
       <div style={{ marginBottom: 16 }}>
-        <label style={label}>What It Admits To</label>
+        <label style={label}>{tr("What It Admits To")}</label>
         <select
           style={field}
           value={codeType}
           onChange={e => setCodeType(e.target.value as 'recruit' | 'seat')}
         >
-          <option value="recruit">Team only, add them to campaigns yourself</option>
-          <option value="seat">A campaign, joins the team and that campaign at once</option>
+          <option value="recruit">{tr("Team only, add them to campaigns yourself")}</option>
+          <option value="seat">{tr("A campaign, joins the team and that campaign at once")}</option>
         </select>
         <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
           {codeType === 'recruit'
-            ? 'They land in the team with access to nothing until you grant it, or to any campaign already open to everyone.'
-            : 'Fastest route for someone you already know is working one list.'}
+            ? tr("They land in the team with access to nothing until you grant it, or to any campaign already open to everyone.")
+            : tr("Fastest route for someone you already know is working one list.")}
         </p>
       </div>
 
       {needsCampaign && (
         <div style={{ marginBottom: 16 }}>
-          <label style={label}>Campaign</label>
+          <label style={label}>{tr("Campaign")}</label>
           {campaigns.length === 0 ? (
             <p style={{ margin: 0, fontSize: 12.5, color: MUTED, lineHeight: 1.6 }}>
-              This team has no campaigns yet. Create one first, or make a team-only code.
-            </p>
+              {tr("This team has no campaigns yet. Create one first, or make a team-only code.")}</p>
           ) : (
             <select style={field} value={campaignId} onChange={e => setCampaignId(e.target.value)}>
               {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -570,37 +564,36 @@ export function CreateCodeModal({
       )}
 
       <div style={{ marginBottom: 16 }}>
-        <label style={label}>Who Pays The Seat</label>
+        <label style={label}>{tr("Who Pays The Seat")}</label>
         <select
           style={field}
           value={payer}
           onChange={e => setPayer(e.target.value as 'owner' | 'agent')}
         >
-          <option value="owner">You pay for their seat</option>
-          <option value="agent">They pay for their own seat</option>
+          <option value="owner">{tr("You pay for their seat")}</option>
+          <option value="agent">{tr("They pay for their own seat")}</option>
         </select>
         <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
-          Nobody can dial without a paid seat, whichever way round it is.
-        </p>
+          {tr("Nobody can dial without a paid seat, whichever way round it is.")}</p>
       </div>
 
       {/* Decides admission AND when the seat is charged, which is why it is one
           control rather than two: an owner letting someone in immediately is
           agreeing to pay for them immediately. */}
       <div style={{ marginBottom: 16 }}>
-        <label style={label}>Joining</label>
+        <label style={label}>{tr("Joining")}</label>
         <select
           style={field}
           value={joinMode}
           onChange={e => setJoinMode(e.target.value as 'instant' | 'approval')}
         >
-          <option value="approval">Hold for my approval</option>
-          <option value="instant">Let them straight in</option>
+          <option value="approval">{tr("Hold for my approval")}</option>
+          <option value="instant">{tr("Let them straight in")}</option>
         </select>
         <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
           {joinMode === 'instant'
-            ? 'They can dial as soon as they redeem it, and the seat is charged then.'
-            : 'They land in Requests and can look around read-only until you accept them. The seat is charged on approval.'}
+            ? tr("They can dial as soon as they redeem it, and the seat is charged then.")
+            : tr("They land in Requests and can look around read-only until you accept them. The seat is charged on approval.")}
         </p>
       </div>
 
@@ -614,8 +607,7 @@ export function CreateCodeModal({
             onChange={e => setLimited(e.target.checked)}
             style={{ accentColor: ACCENT }}
           />
-          Limit how many times it can be used
-        </label>
+          {tr("Limit how many times it can be used")}</label>
         {limited && (
           <input
             style={{ ...field, marginTop: 6 }}
@@ -667,26 +659,26 @@ export function ManageMemberModal({
       title={member.name}
       subtitle={`${member.email || 'No email on file'} · ${teamName}`}
       onClose={onClose}
-      footer={<button style={btn} onClick={onClose}>Close</button>}
+      footer={<button style={btn} onClick={onClose}>{tr("Close")}</button>}
     >
       <div style={{
         display: 'grid', gap: 10, marginBottom: 18,
         gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
       }}>
         <div style={{ background: 'var(--teams-inset, #111214)', borderRadius: 4, padding: '10px 12px' }}>
-          <div style={{ ...label, marginBottom: 4 }}>Seat</div>
+          <div style={{ ...label, marginBottom: 4 }}>{tr("Seat")}</div>
           <div style={{ fontSize: 14, fontWeight: 600, color: suspended ? '#fbbf24' : '#4ade80' }}>
-            {suspended ? 'Paused' : 'Active'}
+            {suspended ? tr("Paused") : tr("Active")}
           </div>
         </div>
         <div style={{ background: 'var(--teams-inset, #111214)', borderRadius: 4, padding: '10px 12px' }}>
-          <div style={{ ...label, marginBottom: 4 }}>Paid By</div>
+          <div style={{ ...label, marginBottom: 4 }}>{tr("Paid By")}</div>
           <div style={{ fontSize: 14, fontWeight: 600 }}>
-            {member.seatPaidBy === 'agent' ? 'Them' : 'You'}
+            {member.seatPaidBy === 'agent' ? tr("Them") : tr("You")}
           </div>
         </div>
         <div style={{ background: 'var(--teams-inset, #111214)', borderRadius: 4, padding: '10px 12px' }}>
-          <div style={{ ...label, marginBottom: 4 }}>Campaigns</div>
+          <div style={{ ...label, marginBottom: 4 }}>{tr("Campaigns")}</div>
           <div style={{ fontSize: 14, fontWeight: 600 }}>{member.campaignCount}</div>
         </div>
       </div>
@@ -697,11 +689,11 @@ export function ManageMemberModal({
           disabled={busy}
           onClick={() => onSeatAction(member.memberId, suspended ? 'resume' : 'pause')}
         >
-          <div style={{ fontWeight: 600 }}>{suspended ? 'Resume seat' : 'Pause seat'}</div>
+          <div style={{ fontWeight: 600 }}>{suspended ? tr("Resume seat") : tr("Pause seat")}</div>
           <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
             {suspended
-              ? 'They can dial again and billing restarts.'
-              : 'They keep their place but cannot dial, and the seat stops being billed.'}
+              ? tr("They can dial again and billing restarts.")
+              : tr("They keep their place but cannot dial, and the seat stops being billed.")}
           </div>
         </button>
 
@@ -711,10 +703,9 @@ export function ManageMemberModal({
             disabled={busy}
             onClick={() => setConfirmRemove(true)}
           >
-            <div style={{ fontWeight: 600, color: '#fca5a5' }}>Remove from team</div>
+            <div style={{ fontWeight: 600, color: '#fca5a5' }}>{tr("Remove from team")}</div>
             <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
-              Ends the membership and every campaign grant that came with it.
-            </div>
+              {tr("Ends the membership and every campaign grant that came with it.")}</div>
           </button>
         ) : (
           <div style={{
@@ -722,13 +713,10 @@ export function ManageMemberModal({
             borderRadius: 4, padding: '12px 14px',
           }}>
             <div style={{ fontSize: 13, color: '#fecaca', lineHeight: 1.6, marginBottom: 10 }}>
-              Remove <strong>{member.name}</strong> from {teamName}? Their call history
-              stays; their access does not.
-            </div>
+              {tr("Remove")}{" "}<strong>{member.name}</strong> {tr("from")}{" "}{teamName}{tr("? Their call history stays; their access does not.")}</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button style={btn} disabled={busy} onClick={() => setConfirmRemove(false)}>
-                Cancel
-              </button>
+                {tr("Cancel")}</button>
               <button
                 style={{
                   ...btn, background: '#da373c', borderColor: '#da373c',
@@ -736,7 +724,7 @@ export function ManageMemberModal({
                 }}
                 disabled={busy}
                 onClick={() => onRemove(member.memberId)}
-              >{busy ? 'Removing…' : 'Remove'}</button>
+              >{busy ? tr("Removing…") : tr("Remove")}</button>
             </div>
           </div>
         )}

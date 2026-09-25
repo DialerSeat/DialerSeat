@@ -18,6 +18,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { t as tr } from '@/lib/i18n/client'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
@@ -155,23 +156,23 @@ export default function DialerShowcase() {
   const script = SCRIPTS[scriptIdx]
 
   return (
-    <MacFrame title="DIALER" titleColor="#5a8a5a" bg={C.sidebar}>
+    <MacFrame title={tr("DIALER")} titleColor="#5a8a5a" bg={C.sidebar}>
       <div className="ds-showcase-row" style={{ display: 'flex', minHeight: 220 }}>
         <div className="ds-showcase-call" style={{ flex: 1, padding: 8, borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <div style={{ flex: 1, background: C.page, border: `1px solid ${C.cardBorder}`, borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '4px 12px', background: C.sidebar, borderBottom: `1px solid ${C.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>LEAD PROFILE</span>
-              <span style={{ fontSize: 9, fontFamily: MONO, color: C.primary }}>ID: 7a3f9c2e</span>
+              <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>{tr("LEAD PROFILE")}</span>
+              <span style={{ fontSize: 9, fontFamily: MONO, color: C.primary }}>{tr("ID: 7a3f9c2e")}</span>
             </div>
             <div style={{ flex: 1, padding: 6, display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '6px 12px', background: C.page, border: `2px solid ${GREEN}`, borderRadius: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                   <div>
-                    <div style={{ fontSize: 17, fontWeight: 800, fontFamily: MONO, color: C.onPage, letterSpacing: 1, marginBottom: 2 }}>JOHN DOE</div>
+                    <div style={{ fontSize: 17, fontWeight: 800, fontFamily: MONO, color: C.onPage, letterSpacing: 1, marginBottom: 2 }}>{tr("JOHN DOE")}</div>
                     <div style={{ fontSize: 14, fontFamily: MONO, color: ACCENT, fontWeight: 800, letterSpacing: 2 }}>+1 (713) 555-0142</div>
-                    <div style={{ fontSize: 9, fontFamily: MONO, color: C.muted, letterSpacing: 1, marginTop: 3 }}>HOUSTON, TX · {mm}:{ss}</div>
+                    <div style={{ fontSize: 9, fontFamily: MONO, color: C.muted, letterSpacing: 1, marginTop: 3 }}>{tr("HOUSTON, TX ·")}{" "}{mm}:{ss}</div>
                   </div>
-                  <div style={{ padding: '4px 10px', borderRadius: 2, background: '#e8f5e8', border: `1px solid ${GREEN}`, fontSize: 9, letterSpacing: 2, fontWeight: 800, color: GREEN }}>● LIVE</div>
+                  <div style={{ padding: '4px 10px', borderRadius: 2, background: '#e8f5e8', border: `1px solid ${GREEN}`, fontSize: 9, letterSpacing: 2, fontWeight: 800, color: GREEN }}>{tr("● LIVE")}</div>
                 </div>
               </div>
 
@@ -200,7 +201,7 @@ export default function DialerShowcase() {
                   ))}
                 </div>
                 <div style={{ flex: 1, padding: '6px 8px', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: 7, letterSpacing: 2, color: C.muted, marginBottom: 3 }}>CALL SCRIPT</div>
+                  <div style={{ fontSize: 7, letterSpacing: 2, color: C.muted, marginBottom: 3 }}>{tr("CALL SCRIPT")}</div>
                   <div key={script.key} style={{ height: 98, fontSize: 9.5, lineHeight: 1.5, color: C.onPage, fontFamily: MONO, whiteSpace: 'pre-wrap', animation: 'ds-showcase-rise 0.25s ease' }}>
                     {script.text}
                   </div>
@@ -211,7 +212,7 @@ export default function DialerShowcase() {
         </div>
         <div className="ds-showcase-metrics" style={{ width: 196, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
           <div style={{ padding: '6px 12px', background: C.sidebar, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>TODAY&apos;S METRICS</span>
+            <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>{tr("TODAY'S METRICS")}</span>
           </div>
           <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
             {METRICS.map(([label, value, color]) => {

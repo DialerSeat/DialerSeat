@@ -9,6 +9,7 @@ import ExplainerStyles from '@/components/ExplainerStyles'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 export const metadata: Metadata = {
   title: 'Do I Need 10DLC Registration to Make Outbound Calls? | DialerSeat',
@@ -62,7 +63,8 @@ const FAQS = [
   },
 ]
 
-export default function Page() {
+export default async function Page() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={breadcrumbSchema([
@@ -78,100 +80,55 @@ export default function Page() {
 
         <section className="exp-hero">
           <div className="exp-hero-inner">
-            <div className="exp-eyebrow">EXPLAINER · REGISTRATION</div>
-            <h1>Do you need 10DLC to make outbound calls?</h1>
+            <div className="exp-eyebrow">{t("EXPLAINER · REGISTRATION")}</div>
+            <h1>{t("Do you need 10DLC to make outbound calls?")}</h1>
             <p className="exp-lead">
-              No. 10DLC is a text-messaging framework and it does not apply to
-              voice. The confusion is understandable and it costs real teams real
-              weeks, so it is worth being precise about what governs what.
-            </p>
+              {t("No. 10DLC is a text-messaging framework and it does not apply to voice. The confusion is understandable and it costs real teams real weeks, so it is worth being precise about what governs what.")}</p>
           </div>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ THE SHORT VERSION</div>
-          <h2>10DLC is about texts. Calls are governed by something else.</h2>
+          <div className="exp-section-label">{t("▸ THE SHORT VERSION")}</div>
+          <h2>{t("10DLC is about texts. Calls are governed by something else.")}</h2>
           <p>
-            10DLC stands for <em>10-digit long code</em>, an ordinary ten-digit
-            phone number, as opposed to a short code. The registration framework
-            around it exists because carriers wanted accountability for
-            application-to-person <strong>text messages</strong> sent from those
-            numbers. You register a brand, you register a campaign describing what
-            you will send, and your messaging throughput and filtering follow from
-            that.
-          </p>
+            {t("10DLC stands for")}{" "}<em>{t("10-digit long code")}</em>{t(", an ordinary ten-digit phone number, as opposed to a short code. The registration framework around it exists because carriers wanted accountability for application-to-person")}{" "}<strong>{t("text messages")}</strong> {t("sent from those numbers. You register a brand, you register a campaign describing what you will send, and your messaging throughput and filtering follow from that.")}</p>
           <p>
-            None of it touches a voice call. A number can carry perfectly
-            registered 10DLC messaging traffic and still be labelled Spam Likely on
-            outbound calls, because the two systems do not talk to each other.
-          </p>
+            {t("None of it touches a voice call. A number can carry perfectly registered 10DLC messaging traffic and still be labelled Spam Likely on outbound calls, because the two systems do not talk to each other.")}</p>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ WHY EVERYONE SAYS OTHERWISE</div>
-          <h2>Most platforms sell both, so the checklist bundles both.</h2>
+          <div className="exp-section-label">{t("▸ WHY EVERYONE SAYS OTHERWISE")}</div>
+          <h2>{t("Most platforms sell both, so the checklist bundles both.")}</h2>
           <p>
-            If a vendor sells calling and texting on the same number, its
-            onboarding will walk you through brand and campaign registration
-            regardless of which half you intend to use. That is reasonable product
-            design and terrible general advice: it leaves people believing 10DLC is
-            a prerequisite for dialing.
-          </p>
+            {t("If a vendor sells calling and texting on the same number, its onboarding will walk you through brand and campaign registration regardless of which half you intend to use. That is reasonable product design and terrible general advice: it leaves people believing 10DLC is a prerequisite for dialing.")}</p>
           <p>
-            The costly version is a team whose answer rate has fallen, who
-            concludes the problem is registration, and who spends a month on brand
-            approval waiting for calls to improve. They will not, because the
-            framework was never in that path.
-          </p>
+            {t("The costly version is a team whose answer rate has fallen, who concludes the problem is registration, and who spends a month on brand approval waiting for calls to improve. They will not, because the framework was never in that path.")}</p>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ WHAT ACTUALLY GOVERNS VOICE</div>
-          <h2>Attestation and caller name.</h2>
+          <div className="exp-section-label">{t("▸ WHAT ACTUALLY GOVERNS VOICE")}</div>
+          <h2>{t("Attestation and caller name.")}</h2>
           <p>
-            <strong>STIR/SHAKEN</strong> is a signature travelling with the call.
-            The originating carrier attests to how confident it is that the caller
-            is entitled to the number they are displaying. A-attestation is the
-            strongest level: the carrier knows the customer and knows the number is
-            theirs. Terminating carriers weigh that signature when deciding whether
-            to label a call.
-          </p>
+            <strong>{t("STIR/SHAKEN")}</strong> {t("is a signature travelling with the call. The originating carrier attests to how confident it is that the caller is entitled to the number they are displaying. A-attestation is the strongest level: the carrier knows the customer and knows the number is theirs. Terminating carriers weigh that signature when deciding whether to label a call.")}</p>
           <p>
-            <strong>CNAM</strong> is the caller-name database, what appears under
-            the number on the handset. It is a separate system with its own
-            registration, and it is why one number shows a business name and
-            another shows nothing at all.
-          </p>
+            <strong>{t("CNAM")}</strong> {t("is the caller-name database, what appears under the number on the handset. It is a separate system with its own registration, and it is why one number shows a business name and another shows nothing at all.")}</p>
           <p>
-            Neither is a one-off registration for your company. Both are properties
-            of the individual numbers you dial from, which is why they are the
-            provider&apos;s job rather than yours.
-          </p>
+            {t("Neither is a one-off registration for your company. Both are properties of the individual numbers you dial from, which is why they are the provider's job rather than yours.")}</p>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ WHAT DIALERSEAT DOES</div>
-          <h2>Handled, with nothing to file.</h2>
+          <div className="exp-section-label">{t("▸ WHAT DIALERSEAT DOES")}</div>
+          <h2>{t("Handled, with nothing to file.")}</h2>
           <p>
-            Numbers in the DialerSeat pool carry A-attestation under STIR/SHAKEN
-            and are CNAM-registered. There is no form for you to submit and no
-            separate charge.
-          </p>
+            {t("Numbers in the DialerSeat pool carry A-attestation under STIR/SHAKEN and are CNAM-registered. There is no form for you to submit and no separate charge.")}</p>
           <p>
-            Attestation is necessary and not sufficient. A number that dials
-            heavily will eventually accumulate declines and reports regardless of
-            how well it is signed, which is why the pool rotates across numbers
-            rather than leaning on one, tracks answer rate per number, and retires
-            numbers whose delivery has degraded rather than dialing them into the
-            ground.{' '}
-            <Link href="/faq/numbers">How the number pool works</Link> covers the
-            mechanics.
-          </p>
+            {t("Attestation is necessary and not sufficient. A number that dials heavily will eventually accumulate declines and reports regardless of how well it is signed, which is why the pool rotates across numbers rather than leaning on one, tracks answer rate per number, and retires numbers whose delivery has degraded rather than dialing them into the ground.")}{' '}
+            <Link href="/faq/numbers">{t("How the number pool works")}</Link> {t("covers the mechanics.")}</p>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ COMMON QUESTIONS</div>
-          <h2>Registration, answered.</h2>
+          <div className="exp-section-label">{t("▸ COMMON QUESTIONS")}</div>
+          <h2>{t("Registration, answered.")}</h2>
           {FAQS.map(f => (
             <div key={f.question} style={{ marginBottom: 28 }}>
               <h3 style={{ fontSize: 18, marginBottom: 8 }}>{f.question}</h3>

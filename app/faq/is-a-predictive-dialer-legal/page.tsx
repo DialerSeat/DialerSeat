@@ -6,6 +6,7 @@ import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 // =============================================================================
 // /faq/is-a-predictive-dialer-legal
@@ -105,7 +106,8 @@ const FAQS = [
   },
 ]
 
-export default function Page() {
+export default async function Page() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={faqPageSchema(FAQS)} />
@@ -121,146 +123,99 @@ export default function Page() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ COMPLIANCE</div>
+            <div className="guts-eyebrow">{t("▸ COMPLIANCE")}</div>
             <h1>
-              Is a predictive dialer legal?
-              <span className="second">Yes, with four conditions.</span>
+              {t("Is a predictive dialer legal?")}<span className="second">{t("Yes, with four conditions.")}</span>
             </h1>
             <p>
-              Predictive dialing is legal in the US. The rules around it are specific, though, and
-              a dialer that ignores them puts every call you make at risk. Here is what they say,
-              and what DialerSeat handles for you.
-            </p>
+              {t("Predictive dialing is legal in the US. The rules around it are specific, though, and a dialer that ignores them puts every call you make at risk. Here is what they say, and what DialerSeat handles for you.")}</p>
           </div>
         </GutsSection>
 
-        <GutsSection icon="info" title="Why predictive dialing is regulated at all">
+        <GutsSection icon="info" title={t("Why predictive dialing is regulated at all")}>
           <p>
-            A predictive dialer calls more numbers than there are free agents, betting that most
-            won’t answer. Usually that bet pays off. Sometimes more people pick up than there are
-            agents to take them, and someone answers to silence.
-          </p>
+            {t("A predictive dialer calls more numbers than there are free agents, betting that most won’t answer. Usually that bet pays off. Sometimes more people pick up than there are agents to take them, and someone answers to silence.")}</p>
           <p>
-            The Telemarketing Sales Rule calls that an <strong>abandoned call</strong>: a person
-            answers and isn’t connected to a sales representative within two seconds of finishing
-            their greeting. The rules don’t ban abandoned calls outright. They cap how many you can
-            make, and set what has to happen when one occurs.
-          </p>
+            {t("The Telemarketing Sales Rule calls that an")}{" "}<strong>{t("abandoned call")}</strong>{t(": a person answers and isn’t connected to a sales representative within two seconds of finishing their greeting. The rules don’t ban abandoned calls outright. They cap how many you can make, and set what has to happen when one occurs.")}</p>
         </GutsSection>
 
-        <GutsSection icon="shield" title="The four conditions">
+        <GutsSection icon="shield" title={t("The four conditions")}>
           <p>
-            The FTC’s Telemarketing Sales Rule offers a “safe harbor” from liability for abandoned
-            calls if a telemarketer meets all four of these.
-          </p>
+            {t("The FTC’s Telemarketing Sales Rule offers a “safe harbor” from liability for abandoned calls if a telemarketer meets all four of these.")}</p>
           <div className="guts-grid-2">
             <div className="guts-panel">
-              <div className="role">1. THE 3% LIMIT</div>
-              <h3>Abandon no more than 3%</h3>
+              <div className="role">{t("1. THE 3% LIMIT")}</div>
+              <h3>{t("Abandon no more than 3%")}</h3>
               <p>
-                Of calls answered by a person, measured per campaign over its length if under 30
-                days, or over each 30-day period after that. The FCC sets the same 3% limit.
-              </p>
+                {t("Of calls answered by a person, measured per campaign over its length if under 30 days, or over each 30-day period after that. The FCC sets the same 3% limit.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">2. RING TIME</div>
-              <h3>At least 15 seconds or 4 rings</h3>
-              <p>Before hanging up on a call nobody has answered.</p>
+              <div className="role">{t("2. RING TIME")}</div>
+              <h3>{t("At least 15 seconds or 4 rings")}</h3>
+              <p>{t("Before hanging up on a call nobody has answered.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">3. THE MESSAGE</div>
-              <h3>Say who you are</h3>
+              <div className="role">{t("3. THE MESSAGE")}</div>
+              <h3>{t("Say who you are")}</h3>
               <p>
-                When no agent is free, promptly play a recorded message giving the seller’s name
-                and phone number. The FCC also requires an automated way to opt out.
-              </p>
+                {t("When no agent is free, promptly play a recorded message giving the seller’s name and phone number. The FCC also requires an automated way to opt out.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">4. RECORDS</div>
-              <h3>Keep the proof</h3>
-              <p>Retain records showing you met the first three.</p>
+              <div className="role">{t("4. RECORDS")}</div>
+              <h3>{t("Keep the proof")}</h3>
+              <p>{t("Retain records showing you met the first three.")}</p>
             </div>
           </div>
           <p style={{ marginTop: 24 }}>
-            Separately, the FCC limits telephone solicitation to between 8 a.m. and 9 p.m. in the
-            called person’s local time. That applies to every dialing mode, not just predictive.
-          </p>
+            {t("Separately, the FCC limits telephone solicitation to between 8 a.m. and 9 p.m. in the called person’s local time. That applies to every dialing mode, not just predictive.")}</p>
         </GutsSection>
 
-        <GutsSection icon="check" title="What DialerSeat enforces for you">
+        <GutsSection icon="check" title={t("What DialerSeat enforces for you")}>
           <ul className="guts-list good">
             <li>
-              <strong>The 3% limit.</strong> Every campaign’s abandon rate is tracked over a rolling
-              30 days. At 2.5%, below the limit, the dialer stops dialing extra lines for that
-              campaign and drops to one line per agent. It goes back to multi-line once the rate is
-              under 2.5% again.
+              <strong>{t("The 3% limit.")}</strong> {t("Every campaign’s abandon rate is tracked over a rolling 30 days. At 2.5%, below the limit, the dialer stops dialing extra lines for that campaign and drops to one line per agent. It goes back to multi-line once the rate is under 2.5% again.")}</li>
+            <li>
+              <strong>{t("Ring time.")}</strong> {t("An unanswered predictive call rings for 20 seconds before the dialer gives up, above the 15-second minimum.")}</li>
+            <li>
+              <strong>{t("The message and opt-out.")}</strong> {t("Set your business name and a callback number once in Settings, and the dialer plays the message when no agent is free, offering “press 9” to stop future calls. Pressing 9 blocks that number across your whole account. On a team campaign the message names the team owner’s business, because that is the seller the call is placed for.")}</li>
+            <li>
+              <strong>{t("Calling hours.")}</strong> {t("Calls are only placed inside the permitted window for each lead’s location. See")}{" "}<Link href="/faq/calling-hours">{t("calling hours by state")}</Link>.
             </li>
             <li>
-              <strong>Ring time.</strong> An unanswered predictive call rings for 20 seconds before
-              the dialer gives up, above the 15-second minimum.
-            </li>
-            <li>
-              <strong>The message and opt-out.</strong> Set your business name and a callback number
-              once in Settings, and the dialer plays the message when no agent is free, offering
-              “press 9” to stop future calls. Pressing 9 blocks that number across your whole
-              account. On a team campaign the message names the team owner’s business, because that
-              is the seller the call is placed for.
-            </li>
-            <li>
-              <strong>Calling hours.</strong> Calls are only placed inside the permitted window for
-              each lead’s location. See <Link href="/faq/calling-hours">calling hours by state</Link>.
-            </li>
-            <li>
-              <strong>Records.</strong> Call records are kept, and you can export them per campaign.
-              See <Link href="/faq/compliance-export">compliance export</Link>.
+              <strong>{t("Records.")}</strong> {t("Call records are kept, and you can export them per campaign. See")}{" "}<Link href="/faq/compliance-export">{t("compliance export")}</Link>.
             </li>
           </ul>
           <div className="guts-callout">
             <p>
-              <strong>Predictive is locked until those two details exist.</strong> Without a business
-              name and a callback number there is no lawful message to play, so DialerSeat does not
-              let predictive run at all: the mode can’t be saved on a campaign, and the dialer
-              refuses to start. Settings shows it as LOCKED or UNLOCKED. It is one field each, set
-              once for the account, and every campaign you own uses them.
-            </p>
+              <strong>{t("Predictive is locked until those two details exist.")}</strong> {t("Without a business name and a callback number there is no lawful message to play, so DialerSeat does not let predictive run at all: the mode can’t be saved on a campaign, and the dialer refuses to start. Settings shows it as LOCKED or UNLOCKED. It is one field each, set once for the account, and every campaign you own uses them.")}</p>
           </div>
         </GutsSection>
 
-        <GutsSection icon="alert" title="What the dialer can’t do for you">
+        <GutsSection icon="alert" title={t("What the dialer can’t do for you")}>
           <ul className="guts-list warn">
             <li>
-              <strong>Consent.</strong> Whether you may call someone at all depends on how you got
-              their number and what they agreed to.
-            </li>
+              <strong>{t("Consent.")}</strong> {t("Whether you may call someone at all depends on how you got their number and what they agreed to.")}</li>
             <li>
-              <strong>The National Do Not Call Registry.</strong> Scrubbing your list against it is
-              your responsibility. See{' '}
+              <strong>{t("The National Do Not Call Registry.")}</strong> {t("Scrubbing your list against it is your responsibility. See")}{' '}
               <Link href="/faq/how-to-scrub-the-do-not-call-registry">
-                how to scrub your list against the registry
-              </Link>.
+                {t("how to scrub your list against the registry")}</Link>.
             </li>
             <li>
-              <strong>State rules.</strong> Some states go further than the federal rules.
-            </li>
+              <strong>{t("State rules.")}</strong> {t("Some states go further than the federal rules.")}</li>
           </ul>
           <p className="guts-note">
-            This page explains the federal rules as written and what DialerSeat does. It isn’t legal
-            advice. For your specific situation, talk to a lawyer who knows telemarketing law. Rule
-            text is from the{' '}
+            {t("This page explains the federal rules as written and what DialerSeat does. It isn’t legal advice. For your specific situation, talk to a lawyer who knows telemarketing law. Rule text is from the")}{' '}
             <a href="https://www.law.cornell.edu/cfr/text/16/310.4" target="_blank" rel="noopener noreferrer">
-              Telemarketing Sales Rule, 16 CFR 310.4
-            </a>{' '}
-            and the{' '}
+              {t("Telemarketing Sales Rule, 16 CFR 310.4")}</a>{' '}
+            {t("and the")}{' '}
             <a href="https://www.law.cornell.edu/cfr/text/47/64.1200" target="_blank" rel="noopener noreferrer">
-              FCC’s rules, 47 CFR 64.1200
-            </a>
+              {t("FCC’s rules, 47 CFR 64.1200")}</a>
             .
           </p>
           <div className="guts-btns">
-            <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
+            <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
             <Link href="/faq/what-is-a-predictive-dialer" className="guts-btn secondary">
-              WHAT IS A PREDICTIVE DIALER?
-            </Link>
+              {t("WHAT IS A PREDICTIVE DIALER?")}</Link>
           </div>
         </GutsSection>
 

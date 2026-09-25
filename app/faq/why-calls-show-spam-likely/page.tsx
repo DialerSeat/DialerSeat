@@ -6,6 +6,7 @@ import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 // =============================================================================
 // /faq/why-calls-show-spam-likely — the outside view
@@ -73,7 +74,8 @@ const FAQS = [
   },
 ]
 
-export default function Page() {
+export default async function Page() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={faqPageSchema(FAQS)} />
@@ -89,177 +91,134 @@ export default function Page() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ SPAM-FREE NUMBERS</div>
+            <div className="guts-eyebrow">{t("▸ SPAM-FREE NUMBERS")}</div>
             <h1>
-              “Spam Likely” isn’t a verdict on you.
-              <span className="second">It’s a score on your number.</span>
+              {t("“Spam Likely” isn’t a verdict on you.")}<span className="second">{t("It’s a score on your number.")}</span>
             </h1>
             <p>
-              Before your call ever rings, something has already decided what the person on the
-              other end will see. Here is what that something is, what it looks at, and which
-              parts of it you can actually change.
-            </p>
+              {t("Before your call ever rings, something has already decided what the person on the other end will see. Here is what that something is, what it looks at, and which parts of it you can actually change.")}</p>
           </div>
         </GutsSection>
 
-        <GutsSection icon="phone" title="Who puts the label there">
+        <GutsSection icon="phone" title={t("Who puts the label there")}>
           <p>
-            The label doesn’t come from the person you’re calling, and it usually doesn’t come
-            from your own carrier either. It comes from call-protection providers that work with
-            the carrier on the <em>receiving</em> end, scoring numbers and flagging the ones that
-            look risky.
-          </p>
+            {t("The label doesn’t come from the person you’re calling, and it usually doesn’t come from your own carrier either. It comes from call-protection providers that work with the carrier on the")}{" "}<em>{t("receiving")}</em> {t("end, scoring numbers and flagging the ones that look risky.")}</p>
           <p>
-            Three of them, First Orion, Hiya and TNS, jointly run the{' '}
+            {t("Three of them, First Orion, Hiya and TNS, jointly run the")}{' '}
             <a href="https://www.freecallerregistry.com" target="_blank" rel="noopener noreferrer">
-              Free Caller Registry
-            </a>
-            , where businesses register their outbound numbers. Registering is worth doing, and
-            free. It is not a pass, though: the registry says plainly that each provider still runs
-            its own analysis on every call.
-          </p>
+              {t("Free Caller Registry")}</a>
+            {t(", where businesses register their outbound numbers. Registering is worth doing, and free. It is not a pass, though: the registry says plainly that each provider still runs its own analysis on every call.")}</p>
         </GutsSection>
 
-        <GutsSection icon="shield" title="What STIR/SHAKEN proves, and what it doesn’t">
+        <GutsSection icon="shield" title={t("What STIR/SHAKEN proves, and what it doesn’t")}>
           <p>
-            STIR/SHAKEN is the framework US carriers use to fight caller ID spoofing. Every call is
-            signed with a grade that says how much the originating carrier knows about it.
-          </p>
+            {t("STIR/SHAKEN is the framework US carriers use to fight caller ID spoofing. Every call is signed with a grade that says how much the originating carrier knows about it.")}</p>
           <div className="guts-grid-3">
             <div className="guts-panel">
-              <div className="role">ATTESTATION A</div>
-              <h3>Full</h3>
-              <p>The carrier knows the customer and gave them this number.</p>
+              <div className="role">{t("ATTESTATION A")}</div>
+              <h3>{t("Full")}</h3>
+              <p>{t("The carrier knows the customer and gave them this number.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">ATTESTATION B</div>
-              <h3>Partial</h3>
-              <p>The carrier knows the customer, but didn’t give them this number.</p>
+              <div className="role">{t("ATTESTATION B")}</div>
+              <h3>{t("Partial")}</h3>
+              <p>{t("The carrier knows the customer, but didn’t give them this number.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">ATTESTATION C</div>
-              <h3>Gateway</h3>
-              <p>The call came in from another network and the source can’t be vouched for.</p>
+              <div className="role">{t("ATTESTATION C")}</div>
+              <h3>{t("Gateway")}</h3>
+              <p>{t("The call came in from another network and the source can’t be vouched for.")}</p>
             </div>
           </div>
           <div className="guts-callout">
             <p>
-              <strong>A is necessary, not sufficient.</strong> Attestation proves your number isn’t
-              spoofed. It says nothing about whether anyone wants your call. A C-grade call is far
-              more likely to be labelled, but an A-grade call from a number people keep rejecting
-              can still be labelled. Attestation is about identity. The label is about reputation.
-            </p>
+              <strong>{t("A is necessary, not sufficient.")}</strong> {t("Attestation proves your number isn’t spoofed. It says nothing about whether anyone wants your call. A C-grade call is far more likely to be labelled, but an A-grade call from a number people keep rejecting can still be labelled. Attestation is about identity. The label is about reputation.")}</p>
           </div>
         </GutsSection>
 
-        <GutsSection icon="scale" title="What a number’s reputation is built from">
+        <GutsSection icon="scale" title={t("What a number’s reputation is built from")}>
           <p>
-            Reputation is behavioural. Hiya publishes the four factors it grades a number on, each
-            from A to D, and they are a useful map of what every provider is watching.
-          </p>
+            {t("Reputation is behavioural. Hiya publishes the four factors it grades a number on, each from A to D, and they are a useful map of what every provider is watching.")}</p>
           <ul className="guts-list good">
-            <li><strong>Maturity.</strong> Does the number have an established calling history, rather than being one of a string of fresh numbers rotated through?</li>
-            <li><strong>Connection.</strong> Do the people it calls choose to answer?</li>
-            <li><strong>Engagement.</strong> Once they answer, do they stay on the line?</li>
-            <li><strong>Sentiment.</strong> Do people rarely complain about it or block it?</li>
+            <li><strong>{t("Maturity.")}</strong> {t("Does the number have an established calling history, rather than being one of a string of fresh numbers rotated through?")}</li>
+            <li><strong>{t("Connection.")}</strong> {t("Do the people it calls choose to answer?")}</li>
+            <li><strong>{t("Engagement.")}</strong> {t("Once they answer, do they stay on the line?")}</li>
+            <li><strong>{t("Sentiment.")}</strong> {t("Do people rarely complain about it or block it?")}</li>
           </ul>
         </GutsSection>
 
-        <GutsSection icon="alert" title="The patterns that get a number labelled">
-          <p>Put those factors into practice and the usual causes are easy to name.</p>
+        <GutsSection icon="alert" title={t("The patterns that get a number labelled")}>
+          <p>{t("Put those factors into practice and the usual causes are easy to name.")}</p>
           <ul className="guts-list warn">
             <li>
-              <strong>Too many calls on one number.</strong> Volume concentrated on a single caller
-              ID looks like a robocall operation, and it burns through goodwill fast.
-            </li>
+              <strong>{t("Too many calls on one number.")}</strong> {t("Volume concentrated on a single caller ID looks like a robocall operation, and it burns through goodwill fast.")}</li>
             <li>
-              <strong>Low answer rates.</strong> A number people keep declining is telling the
-              providers something, whatever the reason.
-            </li>
+              <strong>{t("Low answer rates.")}</strong> {t("A number people keep declining is telling the providers something, whatever the reason.")}</li>
             <li>
-              <strong>Short calls and hang-ups.</strong> Answered calls that end in seconds read as
-              unwanted.
-            </li>
+              <strong>{t("Short calls and hang-ups.")}</strong> {t("Answered calls that end in seconds read as unwanted.")}</li>
             <li>
-              <strong>Complaints and blocks.</strong> People can report and block numbers in their
-              call-protection apps, and those reports count directly.
-            </li>
+              <strong>{t("Complaints and blocks.")}</strong> {t("People can report and block numbers in their call-protection apps, and those reports count directly.")}</li>
             <li>
-              <strong>Constantly swapping numbers.</strong> Burning through fresh numbers to dodge
-              labels works against the maturity factor instead of for it.
-            </li>
+              <strong>{t("Constantly swapping numbers.")}</strong> {t("Burning through fresh numbers to dodge labels works against the maturity factor instead of for it.")}</li>
           </ul>
         </GutsSection>
 
-        <GutsSection icon="chat" title="Where CNAM fits, and where it doesn’t">
+        <GutsSection icon="chat" title={t("Where CNAM fits, and where it doesn’t")}>
           <p>
-            CNAM is the caller name that can appear under a number: up to 15 characters, like a
-            business name. It is often sold as a spam fix. It mostly isn’t.
-          </p>
+            {t("CNAM is the caller name that can appear under a number: up to 15 characters, like a business name. It is often sold as a spam fix. It mostly isn’t.")}</p>
           <p>
-            According to the carrier{' '}
+            {t("According to the carrier")}{' '}
             <a
               href="https://support.telnyx.com/en/articles/1130720-caller-id-outbound-vs-cnam"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Telnyx
-            </a>
-            , wireless carriers generally don’t use the CNAM service, so a name may never display on
-            a mobile phone. On a consumer list, that is most of the people you call. CNAM helps on
-            landlines, and it can make a business line look legitimate there, but it doesn’t change
-            how any provider scores the number. The Free Caller Registry also notes that its
-            registration data isn’t used to deliver caller name.
-          </p>
+              {t("Telnyx")}</a>
+            {t(", wireless carriers generally don’t use the CNAM service, so a name may never display on a mobile phone. On a consumer list, that is most of the people you call. CNAM helps on landlines, and it can make a business line look legitimate there, but it doesn’t change how any provider scores the number. The Free Caller Registry also notes that its registration data isn’t used to deliver caller name.")}</p>
         </GutsSection>
 
-        <GutsSection icon="check" title="What a dialer should handle, and what’s yours">
+        <GutsSection icon="check" title={t("What a dialer should handle, and what’s yours")}>
           <div className="guts-grid-2">
             <div className="guts-panel">
-              <div className="role">THE PLATFORM’S JOB</div>
+              <div className="role">{t("THE PLATFORM’S JOB")}</div>
               <ul className="guts-list good">
-                <li>Signing every call at A-attestation</li>
-                <li>Registering numbers with the Free Caller Registry</li>
-                <li>Capping how much any single number dials</li>
-                <li>Spreading volume so no number runs hot</li>
-                <li>Spotting a struggling number and easing off it</li>
+                <li>{t("Signing every call at A-attestation")}</li>
+                <li>{t("Registering numbers with the Free Caller Registry")}</li>
+                <li>{t("Capping how much any single number dials")}</li>
+                <li>{t("Spreading volume so no number runs hot")}</li>
+                <li>{t("Spotting a struggling number and easing off it")}</li>
               </ul>
             </div>
             <div className="guts-panel">
-              <div className="role">YOURS</div>
+              <div className="role">{t("YOURS")}</div>
               <ul className="guts-list warn">
-                <li>Calling people who expect to hear from you</li>
-                <li>Scrubbing against the Do Not Call Registry</li>
-                <li>Keeping lists fresh rather than recycled</li>
-                <li>Opening in a way people stay on the line for</li>
+                <li>{t("Calling people who expect to hear from you")}</li>
+                <li>{t("Scrubbing against the Do Not Call Registry")}</li>
+                <li>{t("Keeping lists fresh rather than recycled")}</li>
+                <li>{t("Opening in a way people stay on the line for")}</li>
               </ul>
             </div>
           </div>
           <p style={{ marginTop: 24 }}>
-            DialerSeat does everything in the left column automatically, on every plan. How each
-            piece works, with the actual numbers, is on{' '}
-            <Link href="/faq/how-we-keep-numbers-clean">how we keep our numbers clean</Link>.
+            {t("DialerSeat does everything in the left column automatically, on every plan. How each piece works, with the actual numbers, is on")}{' '}
+            <Link href="/faq/how-we-keep-numbers-clean">{t("how we keep our numbers clean")}</Link>.
           </p>
           <div className="guts-btns">
-            <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
+            <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
             <Link href="/faq/how-we-keep-numbers-clean" className="guts-btn secondary">
-              HOW WE DO IT
-            </Link>
+              {t("HOW WE DO IT")}</Link>
           </div>
           <p className="guts-note">
-            Attestation grades are the STIR/SHAKEN framework’s own definitions. Reputation factors
-            are summarised from{' '}
+            {t("Attestation grades are the STIR/SHAKEN framework’s own definitions. Reputation factors are summarised from")}{' '}
             <a
               href="https://blog.hiya.com/caller-reputation-the-industrys-first-transparent-view-into-spam-labeling"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Hiya’s Caller Reputation report card
-            </a>
-            . Registry details are from the{' '}
+              {t("Hiya’s Caller Reputation report card")}</a>
+            {t(". Registry details are from the")}{' '}
             <a href="https://www.freecallerregistry.com" target="_blank" rel="noopener noreferrer">
-              Free Caller Registry
-            </a>
+              {t("Free Caller Registry")}</a>
             .
           </p>
         </GutsSection>

@@ -8,6 +8,7 @@ import RosterPanel from '@/components/teams/RosterPanel'
 import CampaignsAccessPanel from '@/components/teams/CampaignsAccessPanel'
 import WhitelabelTieIn from '@/components/teams/WhitelabelTieIn'
 import TeamOverview from '@/components/teams/TeamOverview'
+import { t as tr } from '@/lib/i18n/client'
 
 
 
@@ -719,11 +720,9 @@ export default function TeamsManager() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
-            TEAMS
-          </span>
+            {tr("TEAMS")}</span>
           <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--brand-on-header-muted)', letterSpacing: 1 }}>
-            {ownedTeams.length} OWNED · {memberTeams.length} MEMBER
-            {totalPending > 0 && ` · ${totalPending} PENDING`}
+            {ownedTeams.length} {tr("OWNED ·")}{" "}{memberTeams.length} {tr("MEMBER")}{totalPending > 0 && ` · ${totalPending} PENDING`}
           </span>
         </div>
         <button
@@ -740,7 +739,7 @@ export default function TeamsManager() {
             cursor: 'pointer',
             fontFamily: 'Futura PT, Futura, sans-serif',
           }}
-        >+ CREATE A TEAM</button>
+        >{tr("+ CREATE A TEAM")}</button>
       </div>
 
       <div style={{ flex: 1, padding: '16px 20px', maxWidth: 1000, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
@@ -753,11 +752,11 @@ export default function TeamsManager() {
           padding: '16px 20px',
           marginBottom: 16,
         }}>
-          <div style={{ fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold', marginBottom: 8 }}>▸ HAVE A CODE?</div>
+          <div style={{ fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold', marginBottom: 8 }}>{tr("▸ HAVE A CODE?")}</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <input
               type="text"
-              placeholder="Enter team code"
+              placeholder={tr("Enter team code")}
               value={redeemCode}
               onChange={e => setRedeemCode(e.target.value.toUpperCase())}
               onKeyDown={e => { if (e.key === 'Enter') handleRedeem() }}
@@ -780,7 +779,7 @@ export default function TeamsManager() {
                 opacity: !redeemCode.trim() || redeeming ? 0.5 : 1,
                 fontFamily: 'Futura PT, Futura, sans-serif',
               }}
-            >{redeeming ? '...' : 'REDEEM'}</button>
+            >{redeeming ? '...' : tr("REDEEM")}</button>
           </div>
           {redeemMessage && (
             <div style={{
@@ -818,7 +817,7 @@ export default function TeamsManager() {
             <div style={{
               fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold',
               marginBottom: 10, paddingLeft: 4,
-            }}>▸ TEAMS YOU&apos;VE JOINED</div>
+            }}>{tr("▸ TEAMS YOU'VE JOINED")}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {memberTeams.map(team => (
                 <Link key={team.id} href={`/dashboard/teams/${team.id}/analytics`} style={{ textDecoration: 'none' }}>
@@ -845,7 +844,7 @@ export default function TeamsManager() {
                       padding: '3px 10px', borderRadius: 3, fontSize: 9, fontWeight: 'bold', letterSpacing: 2,
                       background: 'rgba(42,74,138,0.12)', color: T.accent, border: `1px solid ${T.accent}`,
                       whiteSpace: 'nowrap',
-                    }}>MEMBER</div>
+                    }}>{tr("MEMBER")}</div>
                     <div style={{ fontSize: 16, color: T.muted }}>›</div>
                   </div>
                 </Link>
@@ -859,12 +858,11 @@ export default function TeamsManager() {
             <div style={{
               fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold',
               marginBottom: 10, paddingLeft: 4,
-            }}>▸ TEAMS YOU OWN</div>
+            }}>{tr("▸ TEAMS YOU OWN")}</div>
 
             {loading ? (
               <div style={{ padding: 20, textAlign: 'center', fontSize: 11, letterSpacing: 2, color: T.muted }}>
-                LOADING...
-              </div>
+                {tr("LOADING...")}</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {ownedTeams.map(team => {
@@ -900,9 +898,9 @@ export default function TeamsManager() {
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>{team.name}</div>
                           <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, fontFamily: 'monospace' }}>
-                            {memberCount} MEMBER{memberCount === 1 ? '' : 'S'} · {codeCount} CODE{codeCount === 1 ? '' : 'S'} · {campaignCount} CAMPAIGN{campaignCount === 1 ? '' : 'S'}
+                            {memberCount} {tr("MEMBER")}{memberCount === 1 ? '' : 'S'} · {codeCount} {tr("CODE")}{codeCount === 1 ? '' : 'S'} · {campaignCount} {tr("CAMPAIGN")}{campaignCount === 1 ? '' : 'S'}
                             {pendingCount > 0 && (
-                              <span style={{ color: T.amber, fontWeight: 'bold' }}> · {pendingCount} PENDING</span>
+                              <span style={{ color: T.amber, fontWeight: 'bold' }}> · {pendingCount} {tr("PENDING")}</span>
                             )}
                           </div>
                         </div>
@@ -915,12 +913,12 @@ export default function TeamsManager() {
                             fontSize: 9, fontWeight: 'bold', letterSpacing: 2,
                             textDecoration: 'none', whiteSpace: 'nowrap',
                           }}
-                        >OPEN ›</Link>
+                        >{tr("OPEN ›")}</Link>
                         <div style={{
                           padding: '3px 10px', borderRadius: 3, fontSize: 9, fontWeight: 'bold', letterSpacing: 2,
                           background: 'var(--brand-primary-soft)', color: T.blue, border: `1px solid ${T.blue}`,
                           whiteSpace: 'nowrap',
-                        }}>OWNER</div>
+                        }}>{tr("OWNER")}</div>
                       </div>
 
                       {/* Outside the isExpanded guard on purpose. The reason
@@ -955,7 +953,7 @@ export default function TeamsManager() {
                             </div>
                           )}
 
-                          <Section title="ROSTER" accent={T.accent}>
+                          <Section title={tr("ROSTER")} accent={T.accent}>
                             <RosterPanel
                               pendingMembers={team.pendingMembers}
                               activeMembers={team.members}
@@ -997,11 +995,9 @@ export default function TeamsManager() {
                             display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap',
                           }}>
                             <button onClick={() => openEditModal(team)} style={btnSubtle(false, T.muted)}>
-                              EDIT TEAM
-                            </button>
+                              {tr("EDIT TEAM")}</button>
                             <button onClick={() => startDeleteTeam(team)} style={btnSubtle(false, T.red)}>
-                              DELETE TEAM
-                            </button>
+                              {tr("DELETE TEAM")}</button>
                           </div>
 
                         </div>
@@ -1020,11 +1016,9 @@ export default function TeamsManager() {
             borderRadius: 4, padding: '32px 24px', textAlign: 'center', marginBottom: 16,
           }}>
             <div style={{ fontSize: 13, fontWeight: 'bold', letterSpacing: 3, color: T.muted, marginBottom: 6 }}>
-              NO TEAMS YET
-            </div>
+              {tr("NO TEAMS YET")}</div>
             <div style={{ fontSize: 12, color: T.muted, letterSpacing: 0.5 }}>
-              Redeem a code above to join a team, or create your own.
-            </div>
+              {tr("Redeem a code above to join a team, or create your own.")}</div>
           </div>
         )}
 
@@ -1044,7 +1038,7 @@ export default function TeamsManager() {
           }}>
             <div style={{
               fontSize: 13, letterSpacing: 4, color: T.muted, fontWeight: 'bold',
-            }}>▸ WHAT IS A DIALERSEAT TEAM?</div>
+            }}>{tr("▸ WHAT IS A DIALERSEAT TEAM?")}</div>
             <Link
               href="/faq/dialerseat-teams"
               target="_blank"
@@ -1063,31 +1057,26 @@ export default function TeamsManager() {
                 whiteSpace: 'nowrap',
                 fontFamily: FUTURA,
               }}
-            >READ THE FULL FAQ →</Link>
+            >{tr("READ THE FULL FAQ →")}</Link>
           </div>
 
           <p style={{
             fontSize: 18, lineHeight: 1.7, color: T.text, marginBottom: 24, marginTop: 0,
           }}>
-            DialerSeat Teams lets lead vendors and agency owners distribute their premium lead campaign access to other agents on the platform. There are two ways teams work:
-          </p>
+            {tr("DialerSeat Teams lets lead vendors and agency owners distribute their premium lead campaign access to other agents on the platform. There are two ways teams work:")}</p>
 
           <div style={{ marginBottom: 22 }}>
             <div style={{ fontSize: 15, fontWeight: 'bold', color: T.blue, letterSpacing: 2, marginBottom: 10 }}>
-              ▸ AS AN AGENT
-            </div>
+              {tr("▸ AS AN AGENT")}</div>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: T.text, margin: 0 }}>
-              A team owner can give you access to their lead campaigns by sending you a code. Some team owners pay your $35 weekly seat for you. Others require you to subscribe yourself for $35 to access their leads. Either way, you join with a code from the team owner.
-            </p>
+              {tr("A team owner can give you access to their lead campaigns by sending you a code. Some team owners pay your $35 weekly seat for you. Others require you to subscribe yourself for $35 to access their leads. Either way, you join with a code from the team owner.")}</p>
           </div>
 
           <div style={{ marginBottom: 22 }}>
             <div style={{ fontSize: 15, fontWeight: 'bold', color: T.blue, letterSpacing: 2, marginBottom: 10 }}>
-              ▸ AS AN OWNER
-            </div>
+              {tr("▸ AS AN OWNER")}</div>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: T.text, margin: 0 }}>
-              You generate your own leads and want to give other agents access to them, usually because you charge them above-cost as a lead vendor or agency. Build teams, attach your campaigns, generate codes for your agents. You decide per code: do you pay the $35 weekly seat for them, or do they pay it themselves?
-            </p>
+              {tr("You generate your own leads and want to give other agents access to them, usually because you charge them above-cost as a lead vendor or agency. Build teams, attach your campaigns, generate codes for your agents. You decide per code: do you pay the $35 weekly seat for them, or do they pay it themselves?")}</p>
           </div>
 
           <div style={{
@@ -1095,11 +1084,9 @@ export default function TeamsManager() {
             padding: '14px 18px', marginTop: 22,
           }}>
             <div style={{ fontSize: 13, fontWeight: 'bold', color: T.muted, letterSpacing: 2, marginBottom: 8 }}>
-              COST
-            </div>
+              {tr("COST")}</div>
             <p style={{ fontSize: 15, lineHeight: 1.6, color: T.text, margin: 0 }}>
-              <strong>$35 per active seat per week</strong>, paid to DialerSeat. Whether you (the owner) pay or your agent pays is up to you per agent and per campaign. Codes you create can be set to either payer.
-            </p>
+              <strong>{tr("$35 per active seat per week")}</strong>{tr(", paid to DialerSeat. Whether you (the owner) pay or your agent pays is up to you per agent and per campaign. Codes you create can be set to either payer.")}</p>
           </div>
         </div>
       </div>
@@ -1113,23 +1100,21 @@ export default function TeamsManager() {
           }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
             <div style={{ fontSize: 14, fontWeight: 'bold', letterSpacing: 4, color: '#ffaa3e', marginBottom: 12 }}>
-              SUBSCRIPTION REQUIRED
-            </div>
+              {tr("SUBSCRIPTION REQUIRED")}</div>
             <p style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1, marginBottom: 24 }}>
-              Creating teams requires an active personal subscription. Subscribe for $35/week to upload your own leads, build teams, and start selling seats to other agents.
-            </p>
+              {tr("Creating teams requires an active personal subscription. Subscribe for $35/week to upload your own leads, build teams, and start selling seats to other agents.")}</p>
             <Link href="/billing" style={{
               display: 'block', padding: '14px 24px',
               background: 'transparent',
               border: `1px solid #ffaa3e`, borderRadius: 4, color: '#ffaa3e',
               fontSize: 12, fontWeight: 'bold', letterSpacing: 4, textDecoration: 'none', marginBottom: 10,
               fontFamily: FUTURA,
-            }}>SUBSCRIBE, $35/WEEK</Link>
+            }}>{tr("SUBSCRIBE, $35/WEEK")}</Link>
             <button onClick={() => setShowSubGate(false)} style={{
               background: 'transparent', border: 'none', color: 'var(--brand-on-sidebar-muted)',
               fontSize: 11, letterSpacing: 2, cursor: 'pointer',
               fontFamily: 'Futura PT, Futura, sans-serif', padding: 8,
-            }}>CLOSE</button>
+            }}>{tr("CLOSE")}</button>
           </div>
         </div>
       )}
@@ -1138,24 +1123,24 @@ export default function TeamsManager() {
       {showCreateModal && (
         <div onClick={() => !creating && setShowCreateModal(false)} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={modalShellStyle}>
-            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 16 }}>+ CREATE A TEAM</div>
-            <FieldLabel>TEAM NAME</FieldLabel>
+            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 16 }}>{tr("+ CREATE A TEAM")}</div>
+            <FieldLabel>{tr("TEAM NAME")}</FieldLabel>
             <input
               type="text" value={createName} onChange={e => setCreateName(e.target.value)}
-              placeholder="Premium Leads" disabled={creating} autoFocus style={modalInput}
+              placeholder={tr("Premium Leads")} disabled={creating} autoFocus style={modalInput}
             />
             <div style={{ height: 12 }} />
-            <FieldLabel>DESCRIPTION</FieldLabel>
+            <FieldLabel>{tr("DESCRIPTION")}</FieldLabel>
             <textarea
               value={createDesc} onChange={e => setCreateDesc(e.target.value)}
-              placeholder="What's this team for?" disabled={creating} rows={3}
+              placeholder={tr("What's this team for?")} disabled={creating} rows={3}
               style={{ ...modalInput, fontSize: 12, resize: 'vertical' }}
             />
             {createError && <ErrorInline text={createError} />}
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-              <button onClick={() => setShowCreateModal(false)} disabled={creating} style={modalCancelBtn(creating)}>CANCEL</button>
+              <button onClick={() => setShowCreateModal(false)} disabled={creating} style={modalCancelBtn(creating)}>{tr("CANCEL")}</button>
               <button onClick={handleCreateSubmit} disabled={!createName.trim() || creating} style={modalConfirmBtn(!createName.trim() || creating, T.blue)}>
-                {creating ? '...' : '▶ CREATE TEAM'}
+                {creating ? '...' : tr("▶ CREATE TEAM")}
               </button>
             </div>
           </div>
@@ -1166,14 +1151,14 @@ export default function TeamsManager() {
       {editTeam && (
         <div onClick={() => !editSubmitting && setEditTeam(null)} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={modalShellStyle}>
-            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 16 }}>EDIT TEAM</div>
-            <FieldLabel>TEAM NAME</FieldLabel>
+            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 16 }}>{tr("EDIT TEAM")}</div>
+            <FieldLabel>{tr("TEAM NAME")}</FieldLabel>
             <input
               type="text" value={editName} onChange={e => setEditName(e.target.value)}
               disabled={editSubmitting} autoFocus style={modalInput}
             />
             <div style={{ height: 12 }} />
-            <FieldLabel>DESCRIPTION</FieldLabel>
+            <FieldLabel>{tr("DESCRIPTION")}</FieldLabel>
             <textarea
               value={editDesc} onChange={e => setEditDesc(e.target.value)}
               disabled={editSubmitting} rows={3}
@@ -1181,9 +1166,9 @@ export default function TeamsManager() {
             />
             {editError && <ErrorInline text={editError} />}
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-              <button onClick={() => setEditTeam(null)} disabled={editSubmitting} style={modalCancelBtn(editSubmitting)}>CANCEL</button>
+              <button onClick={() => setEditTeam(null)} disabled={editSubmitting} style={modalCancelBtn(editSubmitting)}>{tr("CANCEL")}</button>
               <button onClick={submitEdit} disabled={!editName.trim() || editSubmitting} style={modalConfirmBtn(!editName.trim() || editSubmitting, T.blue)}>
-                {editSubmitting ? '...' : '▶ SAVE'}
+                {editSubmitting ? '...' : tr("▶ SAVE")}
               </button>
             </div>
           </div>
@@ -1197,43 +1182,39 @@ export default function TeamsManager() {
             {deleteTeamStage.stage === 'confirm' ? (
               <>
                 <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.red, marginBottom: 14 }}>
-                  DELETE TEAM
-                </div>
+                  {tr("DELETE TEAM")}</div>
                 <p style={{ fontSize: 14, lineHeight: 1.6, color: T.text, margin: '0 0 8px 0' }}>
-                  Are you sure you want to delete <strong>{deleteTeamStage.team.name}</strong>?
+                  {tr("Are you sure you want to delete")}{" "}<strong>{deleteTeamStage.team.name}</strong>?
                 </p>
                 <p style={{ fontSize: 12, lineHeight: 1.6, color: T.muted, margin: '0 0 16px 0' }}>
-                  All members lose access. Owner-paid seat subscriptions end at period close. This cannot be undone.
-                </p>
+                  {tr("All members lose access. Owner-paid seat subscriptions end at period close. This cannot be undone.")}</p>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setDeleteTeamStage(null)} style={modalCancelBtn(false)}>NO, KEEP TEAM</button>
-                  <button onClick={proceedToDeleteType} style={modalConfirmBtn(false, T.red)}>YES, DELETE →</button>
+                  <button onClick={() => setDeleteTeamStage(null)} style={modalCancelBtn(false)}>{tr("NO, KEEP TEAM")}</button>
+                  <button onClick={proceedToDeleteType} style={modalConfirmBtn(false, T.red)}>{tr("YES, DELETE →")}</button>
                 </div>
               </>
             ) : (
               <>
                 <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.red, marginBottom: 14 }}>
-                  CONFIRM DELETE
-                </div>
+                  {tr("CONFIRM DELETE")}</div>
                 <p style={{ fontSize: 13, lineHeight: 1.6, color: T.text, margin: '0 0 14px 0' }}>
-                  Type <strong style={{ color: T.red, fontFamily: 'monospace' }}>delete</strong> to permanently remove <strong>{deleteTeamStage.team.name}</strong>.
+                  {tr("Type")}{" "}<strong style={{ color: T.red, fontFamily: 'monospace' }}>{tr("delete")}</strong> {tr("to permanently remove")}{" "}<strong>{deleteTeamStage.team.name}</strong>.
                 </p>
                 <input
                   type="text" value={deleteTypedConfirm}
                   onChange={e => setDeleteTypedConfirm(e.target.value)}
-                  placeholder='type "delete"' autoFocus disabled={deleteSubmitting}
+                  placeholder={tr("type \"delete\"")} autoFocus disabled={deleteSubmitting}
                   style={modalInput}
                 />
                 {actionError && <ErrorInline text={actionError} />}
                 <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
                   <button onClick={() => { setDeleteTeamStage(null); setDeleteTypedConfirm('') }} disabled={deleteSubmitting} style={modalCancelBtn(deleteSubmitting)}>
-                    CANCEL
-                  </button>
+                    {tr("CANCEL")}</button>
                   <button
                     onClick={submitDeleteTeam}
                     disabled={deleteSubmitting || deleteTypedConfirm.trim().toLowerCase() !== 'delete'}
                     style={modalConfirmBtn(deleteSubmitting || deleteTypedConfirm.trim().toLowerCase() !== 'delete', T.red)}
-                  >{deleteSubmitting ? '...' : '▶ DELETE FOREVER'}</button>
+                  >{deleteSubmitting ? '...' : tr("▶ DELETE FOREVER")}</button>
                 </div>
               </>
             )}
@@ -1246,30 +1227,30 @@ export default function TeamsManager() {
       {attachModalTeam && (
         <div onClick={() => !attachSubmitting && setAttachModalTeam(null)} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={modalShellStyle}>
-            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>+ ATTACH CAMPAIGN</div>
+            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>{tr("+ ATTACH CAMPAIGN")}</div>
             <div style={{ fontSize: 11, color: T.muted, marginBottom: 18, letterSpacing: 1 }}>
-              to {attachModalTeam.name}
+              {tr("to")}{" "}{attachModalTeam.name}
             </div>
 
             {attachCampaigns.length === 0 ? (
               <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6, padding: '16px 0' }}>
-                You have no remaining campaigns to attach. Either all your campaigns are already attached, or you haven&apos;t created any yet.{' '}
-                <Link href="/dashboard/campaigns" style={{ color: T.blue }}>Go to campaigns →</Link>
+                {tr("You have no remaining campaigns to attach. Either all your campaigns are already attached, or you haven't created any yet.")}{' '}
+                <Link href="/dashboard/campaigns" style={{ color: T.blue }}>{tr("Go to campaigns →")}</Link>
               </div>
             ) : (
               <>
-                <FieldLabel>CAMPAIGN</FieldLabel>
+                <FieldLabel>{tr("CAMPAIGN")}</FieldLabel>
                 <select
                   value={attachCampaignId}
                   onChange={e => setAttachCampaignId(e.target.value)}
                   disabled={attachSubmitting}
                   style={{ ...modalInput, fontSize: 12, padding: '10px 12px', marginBottom: 14 }}
                 >
-                  <option value="">Select a campaign…</option>
+                  <option value="">{tr("Select a campaign…")}</option>
                   {attachCampaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
 
-                <FieldLabel>ACCESS MODE</FieldLabel>
+                <FieldLabel>{tr("ACCESS MODE")}</FieldLabel>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
                   {([
                     { v: 'owner_pays', t: 'OWNER PAYS', d: 'You pay $35/wk per agent who joins. Agents dial without paying.' },
@@ -1302,13 +1283,13 @@ export default function TeamsManager() {
             {attachError && <ErrorInline text={attachError} />}
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setAttachModalTeam(null)} disabled={attachSubmitting} style={modalCancelBtn(attachSubmitting)}>CANCEL</button>
+              <button onClick={() => setAttachModalTeam(null)} disabled={attachSubmitting} style={modalCancelBtn(attachSubmitting)}>{tr("CANCEL")}</button>
               {attachCampaigns.length > 0 && (
                 <button
                   onClick={submitAttach}
                   disabled={attachSubmitting || !attachCampaignId}
                   style={modalConfirmBtn(attachSubmitting || !attachCampaignId, T.blue)}
-                >{attachSubmitting ? '...' : '▶ ATTACH'}</button>
+                >{attachSubmitting ? '...' : tr("▶ ATTACH")}</button>
               )}
             </div>
           </div>
@@ -1325,19 +1306,17 @@ export default function TeamsManager() {
           <div onClick={() => !grantSubmitting && setGrantTarget(null)} style={overlayStyle}>
             <div onClick={e => e.stopPropagation()} style={modalShellStyle}>
               <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>
-                + ADD CAMPAIGN ACCESS
-              </div>
+                {tr("+ ADD CAMPAIGN ACCESS")}</div>
               <div style={{ fontSize: 11, color: T.muted, marginBottom: 18, letterSpacing: 1 }}>
-                for {displayName(grantTarget.member.user, grantTarget.member.user_id.slice(0, 12))}
+                {tr("for")}{" "}{displayName(grantTarget.member.user, grantTarget.member.user_id.slice(0, 12))}
               </div>
 
               {remaining.length === 0 ? (
                 <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6, padding: '12px 0' }}>
-                  This member already has access to all campaigns attached to this team.
-                </div>
+                  {tr("This member already has access to all campaigns attached to this team.")}</div>
               ) : (
                 <>
-                  <FieldLabel>CAMPAIGN</FieldLabel>
+                  <FieldLabel>{tr("CAMPAIGN")}</FieldLabel>
                   <select
                     value={grantCampaignId}
                     onChange={e => {
@@ -1348,11 +1327,11 @@ export default function TeamsManager() {
                     disabled={grantSubmitting}
                     style={{ ...modalInput, fontSize: 12, padding: '10px 12px', marginBottom: 14 }}
                   >
-                    <option value="">Select a campaign…</option>
+                    <option value="">{tr("Select a campaign…")}</option>
                     {remaining.map(tc => (
                       <option key={tc.campaignId} value={tc.campaignId}>
                         {tc.campaign?.name || tc.campaignId}
-                        {tc.accessMode === 'free' ? ', FREE' : ''}
+                        {tc.accessMode === 'free' ? tr(", FREE") : ''}
                       </option>
                     ))}
                   </select>
@@ -1364,11 +1343,10 @@ export default function TeamsManager() {
                       border: `1px solid ${T.accent}`, borderRadius: 3,
                       fontSize: 11, color: T.accent, lineHeight: 1.5,
                     }}>
-                      ▸ FREE campaign, no per-seat charge to you or the agent. Agent still needs their own $35/wk DialerSeat sub to dial.
-                    </div>
+                      {tr("▸ FREE campaign, no per-seat charge to you or the agent. Agent still needs their own $35/wk DialerSeat sub to dial.")}</div>
                   ) : (
                     <>
-                      <FieldLabel>WHO PAYS THE $35/WEEK?</FieldLabel>
+                      <FieldLabel>{tr("WHO PAYS THE $35/WEEK?")}</FieldLabel>
                       <SegmentedTwo
                         left={{ label: 'OWNER PAYS', value: 'owner', desc: 'Charged to your card immediately.' }}
                         right={{ label: 'AGENT PAYS', value: 'agent', desc: 'Uses their existing $35/wk sub.' }}
@@ -1383,8 +1361,7 @@ export default function TeamsManager() {
                           border: `1px solid ${T.amber}`, borderRadius: 3,
                           fontSize: 11, color: T.amber, lineHeight: 1.5,
                         }}>
-                          ⚠ This will start a $35/wk charge on your card on file at the next billing cycle.
-                        </div>
+                          {tr("⚠ This will start a $35/wk charge on your card on file at the next billing cycle.")}</div>
                       )}
                     </>
                   )}
@@ -1395,14 +1372,13 @@ export default function TeamsManager() {
 
               <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
                 <button onClick={() => setGrantTarget(null)} disabled={grantSubmitting} style={modalCancelBtn(grantSubmitting)}>
-                  CANCEL
-                </button>
+                  {tr("CANCEL")}</button>
                 {remaining.length > 0 && (
                   <button
                     onClick={submitGrant}
                     disabled={grantSubmitting || !grantCampaignId}
                     style={modalConfirmBtn(grantSubmitting || !grantCampaignId, T.blue)}
-                  >{grantSubmitting ? '...' : '▶ GRANT ACCESS'}</button>
+                  >{grantSubmitting ? '...' : tr("▶ GRANT ACCESS")}</button>
                 )}
               </div>
             </div>
@@ -1430,8 +1406,7 @@ export default function TeamsManager() {
             {actionError && <ErrorInline text={actionError} />}
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
               <button onClick={() => { setConfirmState(null); setConfirmInput('') }} disabled={confirmSubmitting} style={modalCancelBtn(confirmSubmitting)}>
-                CANCEL
-              </button>
+                {tr("CANCEL")}</button>
               <button
                 onClick={submitConfirm}
                 disabled={confirmSubmitting || confirmInput.trim().toLowerCase() !== confirmState.confirmWord.toLowerCase()}
@@ -1439,7 +1414,7 @@ export default function TeamsManager() {
                   confirmSubmitting || confirmInput.trim().toLowerCase() !== confirmState.confirmWord.toLowerCase(),
                   confirmState.danger ? T.red : T.blue
                 )}
-              >{confirmSubmitting ? '...' : '▶ CONFIRM'}</button>
+              >{confirmSubmitting ? '...' : tr("▶ CONFIRM")}</button>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { t } from '@/lib/i18n/client'
 
 // ─────────────────────────────────────────────────────────────────────────
 // A TABLE THAT DOES NOT CARE HOW BIG THE DATA IS
@@ -129,7 +130,7 @@ export default function DataTable<T>({
                   colSpan={columns.length}
                   style={{ padding: '22px 12px', color: T_.dim, fontSize: 13, textAlign: 'center' }}
                 >
-                  {loading ? 'Loading…' : emptyMessage}
+                  {loading ? t("Loading…") : emptyMessage}
                 </td>
               </tr>
             ) : (
@@ -168,7 +169,7 @@ export default function DataTable<T>({
         flexWrap: 'wrap', fontSize: 12, color: T_.dim,
       }}>
         <span>
-          {total === 0 ? 'No rows' : `${from.toLocaleString()}, ${to.toLocaleString()} of ${total.toLocaleString()}`}
+          {total === 0 ? t("No rows") : `${from.toLocaleString()}, ${to.toLocaleString()} of ${total.toLocaleString()}`}
         </span>
         <div style={{ flex: 1 }} />
         {onPage && pages > 1 && (
@@ -182,7 +183,7 @@ export default function DataTable<T>({
                 padding: '5px 11px', fontSize: 12, fontFamily: 'inherit',
                 cursor: page === 0 ? 'not-allowed' : 'pointer',
               }}
-            >Previous</button>
+            >{t("Previous")}</button>
             <span style={{ color: T_.muted }}>
               {page + 1} / {pages.toLocaleString()}
             </span>
@@ -195,7 +196,7 @@ export default function DataTable<T>({
                 padding: '5px 11px', fontSize: 12, fontFamily: 'inherit',
                 cursor: page + 1 >= pages ? 'not-allowed' : 'pointer',
               }}
-            >Next</button>
+            >{t("Next")}</button>
           </div>
         )}
       </div>

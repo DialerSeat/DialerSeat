@@ -1,6 +1,7 @@
 'use client'
 
 import type { CSSProperties } from 'react'
+import { t } from '@/lib/i18n/client'
 
 
 
@@ -123,7 +124,7 @@ export function WhitelabelLivePreview({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={logoUrl}
-              alt={brandName || 'Brand'}
+              alt={brandName || t("Brand")}
               style={{
                 width: '100%',
                 height: '100%',
@@ -183,8 +184,7 @@ export function WhitelabelLivePreview({
               display: 'inline-block',
             }}
           >
-            MANAGER+
-          </div>
+            {t("MANAGER+")}</div>
         </div>
       </div>
 
@@ -217,8 +217,7 @@ export function WhitelabelLivePreview({
               fontWeight: 700,
             }}
           >
-            ANALYTICS OVERVIEW
-          </div>
+            {t("ANALYTICS OVERVIEW")}</div>
           <div style={{ display: 'flex', gap: 2 }}>
             {['TODAY', 'WEEK', 'MONTH'].map((label, i) => (
               <div
@@ -258,8 +257,7 @@ export function WhitelabelLivePreview({
                 marginBottom: 4,
               }}
             >
-              WELCOME BACK.
-            </div>
+              {t("WELCOME BACK.")}</div>
             <div
               style={{
                 fontSize: 10,
@@ -268,9 +266,7 @@ export function WhitelabelLivePreview({
                 letterSpacing: 0.3,
               }}
             >
-              Body text on your chosen background. Auto-contrast keeps it
-              readable on any color.
-            </div>
+              {t("Body text on your chosen background. Auto-contrast keeps it readable on any color.")}</div>
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>
@@ -293,8 +289,7 @@ export function WhitelabelLivePreview({
                   fontWeight: 700,
                 }}
               >
-                CONVERSIONS
-              </div>
+                {t("CONVERSIONS")}</div>
               <div
                 style={{
                   fontSize: 18,
@@ -325,8 +320,7 @@ export function WhitelabelLivePreview({
                   fontWeight: 700,
                 }}
               >
-                BEST CAMPAIGN
-              </div>
+                {t("BEST CAMPAIGN")}</div>
               <div
                 style={{
                   fontSize: 18,
@@ -366,8 +360,7 @@ export function WhitelabelLivePreview({
                 borderRadius: 3,
               }}
             >
-              AWAITING DATA
-            </div>
+              {t("AWAITING DATA")}</div>
           </div>
 
           <button
@@ -388,8 +381,7 @@ export function WhitelabelLivePreview({
               opacity: 1,
             }}
           >
-            INITIATE DIAL SEQUENCE
-          </button>
+            {t("INITIATE DIAL SEQUENCE")}</button>
         </div>
       </div>
     </div>

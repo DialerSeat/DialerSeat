@@ -7,6 +7,7 @@ import FaqTheme from '@/components/faq-theme'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
+import { t } from '@/lib/i18n/client'
 
 
 export default function ScriptsFaqView() {
@@ -47,37 +48,27 @@ export default function ScriptsFaqView() {
         `}</style>
 
         <article className="faq-root">
-          <div className="faq-eyebrow">▸ CALL SCRIPTS</div>
-          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
+          <div className="faq-eyebrow">{t("▸ CALL SCRIPTS")}</div>
+          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>{t("LAST UPDATED 07/28/2026")}</span>
 
           <h1 className="faq-h1">
-            Write it once. See it on <em>every</em> call, without alt-tabbing.
-          </h1>
+            {t("Write it once. See it on")}{" "}<em>{t("every")}</em> {t("call, without alt-tabbing.")}</h1>
 
           <p className="faq-deck">
-            Scripts live inside the dialer itself, right next to the lead
-            profile, not in a separate doc you keep switching to mid-call.
-            Write as many as you want, attach them to whichever campaigns
-            need them, and control which one shows first.
-          </p>
+            {t("Scripts live inside the dialer itself, right next to the lead profile, not in a separate doc you keep switching to mid-call. Write as many as you want, attach them to whichever campaigns need them, and control which one shows first.")}</p>
 
           <div className="faq-badge-row">
-            <span className="faq-badge hi">INCLUDED ON EVERY PLAN</span>
-            <span className="faq-badge">PERSONAL OR TEAM-SHARED</span>
-            <span className="faq-badge">MULTIPLE SCRIPTS PER CAMPAIGN</span>
-            <span className="faq-badge">REORDERABLE</span>
+            <span className="faq-badge hi">{t("INCLUDED ON EVERY PLAN")}</span>
+            <span className="faq-badge">{t("PERSONAL OR TEAM-SHARED")}</span>
+            <span className="faq-badge">{t("MULTIPLE SCRIPTS PER CAMPAIGN")}</span>
+            <span className="faq-badge">{t("REORDERABLE")}</span>
           </div>
 
           {/* ── WHAT IT LOOKS LIKE ─────────────────────────────────────────── */}
           <section className="faq-section">
-            <h2>▸ WHAT AN AGENT ACTUALLY SEES</h2>
+            <h2>{t("▸ WHAT AN AGENT ACTUALLY SEES")}</h2>
             <p>
-              The active script for a campaign shows up in the lead profile
-              panel, right there during the call. If a campaign has more
-              than one script attached: say, different angles for
-              different lead types, they show as tabs an agent can flip
-              between without breaking their flow.
-            </p>
+              {t("The active script for a campaign shows up in the lead profile panel, right there during the call. If a campaign has more than one script attached: say, different angles for different lead types, they show as tabs an agent can flip between without breaking their flow.")}</p>
 
             <div className="scr-mockup">
               <div className="scr-mockup-bar">
@@ -87,129 +78,99 @@ export default function ScriptsFaqView() {
               </div>
               <div className="scr-mockup-body">
                 <div className="scr-mockup-tabs">
-                  <span className="scr-mockup-tab">LIFE</span>
-                  <span className="scr-mockup-tab">HEALTH</span>
-                  <span className="scr-mockup-tab active">REAL ESTATE</span>
-                  <span className="scr-mockup-tab">SOLAR</span>
+                  <span className="scr-mockup-tab">{t("LIFE")}</span>
+                  <span className="scr-mockup-tab">{t("HEALTH")}</span>
+                  <span className="scr-mockup-tab active">{t("REAL ESTATE")}</span>
+                  <span className="scr-mockup-tab">{t("SOLAR")}</span>
                 </div>
                 <div className="scr-mockup-text">
-                  &quot;Hi (client), this is (your name), I saw you were
-                  curious what your home might be worth.
-                  <br /><br />
-                  I can get you a real number today, and if you ever decide
-                  to sell, walk...&quot;
-                </div>
+                  {t("\"Hi (client), this is (your name), I saw you were curious what your home might be worth.")}<br /><br />
+                  {t("I can get you a real number today, and if you ever decide to sell, walk...\"")}</div>
               </div>
             </div>
             <p className="muted" style={{ marginTop: 12 }}>
-              This is a real script layout, not a mockup, tabbed by
-              vertical, plain text, no formatting to fight with.
-            </p>
+              {t("This is a real script layout, not a mockup, tabbed by vertical, plain text, no formatting to fight with.")}</p>
           </section>
 
           {/* ── PERSONAL VS TEAM ───────────────────────────────────────────── */}
           <section className="faq-section">
-            <h2>▸ PERSONAL SCRIPTS VS. TEAM SCRIPTS</h2>
+            <h2>{t("▸ PERSONAL SCRIPTS VS. TEAM SCRIPTS")}</h2>
             <p>
-              Every script belongs to either you personally or to a team you
-              own, there&apos;s no separate &ldquo;company library&rdquo;
-              concept beyond that.
-            </p>
+              {t("Every script belongs to either you personally or to a team you own, there's no separate “company library” concept beyond that.")}</p>
 
             <div className="scr-owner-grid">
               <div className="scr-owner-card">
-                <h4>PERSONAL SCRIPT</h4>
-                <p>Belongs to your account. Only you can attach it to your own campaigns. Anyone can write these, Pro or Manager+.</p>
+                <h4>{t("PERSONAL SCRIPT")}</h4>
+                <p>{t("Belongs to your account. Only you can attach it to your own campaigns. Anyone can write these, Pro or Manager+.")}</p>
               </div>
               <div className="scr-owner-card">
-                <h4>TEAM SCRIPT</h4>
-                <p>Belongs to a team you own (Manager+ required to own a team). Every agent on that team can see and use it on campaigns it&apos;s attached to: write it once, the whole floor is on the same script.</p>
+                <h4>{t("TEAM SCRIPT")}</h4>
+                <p>{t("Belongs to a team you own (Manager+ required to own a team). Every agent on that team can see and use it on campaigns it's attached to: write it once, the whole floor is on the same script.")}</p>
               </div>
             </div>
 
             <p className="muted" style={{ marginTop: 16 }}>
-              Only the team owner can create a script scoped to the team.
-              Individual agents on a team can still write their own personal
-              scripts for their own campaigns; they just can&apos;t publish
-              one to the whole team unless they own it.
-            </p>
+              {t("Only the team owner can create a script scoped to the team. Individual agents on a team can still write their own personal scripts for their own campaigns; they just can't publish one to the whole team unless they own it.")}</p>
           </section>
 
           {/* ── ATTACHING TO CAMPAIGNS ─────────────────────────────────────── */}
           <section className="faq-section">
-            <h2>▸ HOW SCRIPTS ATTACH TO CAMPAIGNS</h2>
+            <h2>{t("▸ HOW SCRIPTS ATTACH TO CAMPAIGNS")}</h2>
             <p>
-              A script and a campaign are two separate things until you
-              link them. One script can be attached to several campaigns at
-              once, and one campaign can have several scripts attached, it&apos;s
-              a many-to-many relationship, not a strict one-to-one.
-            </p>
+              {t("A script and a campaign are two separate things until you link them. One script can be attached to several campaigns at once, and one campaign can have several scripts attached, it's a many-to-many relationship, not a strict one-to-one.")}</p>
 
             <div className="faq-flow">
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
-                  <h4>1. WRITE THE SCRIPT</h4>
-                  <p>Create it once, name it, save it. It exists independently of any campaign until you attach it somewhere.</p>
+                  <h4>{t("1. WRITE THE SCRIPT")}</h4>
+                  <p>{t("Create it once, name it, save it. It exists independently of any campaign until you attach it somewhere.")}</p>
                 </div>
               </div>
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
-                  <h4>2. TOGGLE IT ONTO A CAMPAIGN</h4>
-                  <p>Turn it on for whichever campaign(s) should use it. Turning it off removes the link without deleting the script itself.</p>
+                  <h4>{t("2. TOGGLE IT ONTO A CAMPAIGN")}</h4>
+                  <p>{t("Turn it on for whichever campaign(s) should use it. Turning it off removes the link without deleting the script itself.")}</p>
                 </div>
               </div>
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
-                  <h4>3. REORDER IF MORE THAN ONE IS ATTACHED</h4>
-                  <p>Whichever script sits first in the order is what agents see by default on that campaign, drag to reorder any time.</p>
+                  <h4>{t("3. REORDER IF MORE THAN ONE IS ATTACHED")}</h4>
+                  <p>{t("Whichever script sits first in the order is what agents see by default on that campaign, drag to reorder any time.")}</p>
                 </div>
               </div>
             </div>
 
             <p className="muted" style={{ marginTop: 20 }}>
-              Only a campaign&apos;s owner can attach or detach scripts on
-              it, and you can only attach a script you actually have access
-              to: your own, or one shared by a team you&apos;re an active
-              member of.
-            </p>
+              {t("Only a campaign's owner can attach or detach scripts on it, and you can only attach a script you actually have access to: your own, or one shared by a team you're an active member of.")}</p>
           </section>
 
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>Keep it simple: </strong> scripts are plain text, on
-              purpose. No rich formatting, no branching logic, no
-              conditional paths based on lead answers. If your process needs
-              that level of complexity, most teams keep the DialerSeat
-              script as the opening hook and lean on the{' '}
-              <Link href="/faq/leads">lead record</Link> itself: name,
-              state, custom fields from your upload, for the rest of the
-              call.
-            </p>
+              <strong>{t("Keep it simple:")}{" "}</strong> {t("scripts are plain text, on purpose. No rich formatting, no branching logic, no conditional paths based on lead answers. If your process needs that level of complexity, most teams keep the DialerSeat script as the opening hook and lean on the")}{' '}
+              <Link href="/faq/leads">{t("lead record")}</Link> {t("itself: name, state, custom fields from your upload, for the rest of the call.")}</p>
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
           <div className="faq-related">
-            <div className="faq-related-label">▸ RELATED READING</div>
+            <div className="faq-related-label">{t("▸ RELATED READING")}</div>
             <div className="faq-related-links">
-              <Link href="/faq/campaigns">Setting up a campaign</Link>
-              <Link href="/faq/leads">Uploading &amp; managing leads</Link>
-              <Link href="/faq/dialerseat-teams">DialerSeat for teams</Link>
-              <Link href="/faq/dialer-modes">Dialer modes explained</Link>
-              <Link href="/faq">FAQ</Link>
+              <Link href="/faq/campaigns">{t("Setting up a campaign")}</Link>
+              <Link href="/faq/leads">{t("Uploading & managing leads")}</Link>
+              <Link href="/faq/dialerseat-teams">{t("DialerSeat for teams")}</Link>
+              <Link href="/faq/dialer-modes">{t("Dialer modes explained")}</Link>
+              <Link href="/faq">{t("FAQ")}</Link>
             </div>
           </div>
 
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
           <div className="faq-cta">
-            <div className="faq-cta-eyebrow">▸ WRITE YOUR FIRST SCRIPT</div>
-            <h3 className="faq-cta-h">Included on every seat. No extra cost.</h3>
+            <div className="faq-cta-eyebrow">{t("▸ WRITE YOUR FIRST SCRIPT")}</div>
+            <h3 className="faq-cta-h">{t("Included on every seat. No extra cost.")}</h3>
             <p>
-              Scripts live in the dialer, not in a separate tab you have to
-              keep switching to.
-            </p>
+              {t("Scripts live in the dialer, not in a separate tab you have to keep switching to.")}</p>
             <a href={isSignedIn ? '/dashboard/dialer' : '/sign-up'} className="faq-cta-btn">
-              {isSignedIn ? 'GO TO DIALER →' : 'GET STARTED →'}
+              {isSignedIn ? t("GO TO DIALER →") : t("GET STARTED →")}
             </a>
           </div>
         </article>

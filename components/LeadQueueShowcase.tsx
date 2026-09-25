@@ -45,6 +45,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { t as tr } from '@/lib/i18n/client'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
@@ -448,18 +449,14 @@ export default function LeadQueueShowcase() {
       {/* ── TITLE BAR ─────────────────────────────────────────────────── */}
       <div className="lq-bar">
         <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 3, color: D.barAccent }}>
-          DIALERSEAT TERMINAL
-        </span>
+          {tr("DIALERSEAT TERMINAL")}</span>
         <span style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 1.4, color: '#4ade80', whiteSpace: 'nowrap' }}>
-          ● LIVE
-        </span>
+          {tr("● LIVE")}</span>
         <span className="lq-help" style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 1.4, color: '#6b6f85', whiteSpace: 'nowrap' }}>
-          ● AUDIO
-        </span>
+          {tr("● AUDIO")}</span>
         <div style={{ flex: 1 }} />
         <span style={{ fontSize: 9, letterSpacing: 1.2, color: '#8b8fa3', fontFamily: MONO, whiteSpace: 'nowrap' }}>
-          {q.dials} DIALS
-        </span>
+          {q.dials} {tr("DIALS")}</span>
         {/* Inert on purpose. It shows the real panel has a filter without
             inviting a click that does nothing useful on a marketing page —
             and without a visitor stopping the demo by narrowing it to one
@@ -477,8 +474,7 @@ export default function LeadQueueShowcase() {
             padding: '2px 6px', whiteSpace: 'nowrap', marginLeft: 8,
           }}
         >
-          ▾ FILTER
-        </span>
+          {tr("▾ FILTER")}</span>
       </div>
 
       {/* ── CONTROLS STRIP — the live line count ───────────────────────── */}
@@ -491,8 +487,7 @@ export default function LeadQueueShowcase() {
             whiteSpace: 'nowrap', marginLeft: 4,
           }}
         >
-          ● DIALING 1 LINE
-        </span>
+          {tr("● DIALING 1 LINE")}</span>
         <div className="lq-spacer" style={{ flex: 1 }} />
       </div>
 
@@ -589,8 +584,7 @@ export default function LeadQueueShowcase() {
                   className="lq-tag"
                   style={{ color: D.muted, background: D.idleBg, border: `1px solid ${D.border}` }}
                 >
-                  NEW
-                </span>
+                  {tr("NEW")}</span>
               )}
             </div>
           )

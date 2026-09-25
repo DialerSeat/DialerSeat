@@ -13,6 +13,7 @@ import {
   matchupSlug,
   type Competitor,
 } from '@/lib/competitors'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 // =============================================================================
 // HEAD-TO-HEAD COMPARISONS — "<A> vs <B>", where neither one is us
@@ -159,7 +160,7 @@ function Column({ c }: { c: Competitor }) {
           text to a crawler; an h3 is a signal. Same visual as before. */}
       <div style={{ marginTop: 20 }}>
         <h3 style={{ margin: 0, fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#16a34a', textTransform: 'uppercase' }}>
-          Pros of {c.name}
+          {t("Pros of")}{" "}{c.name}
         </h3>
         <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 14, lineHeight: 1.8, color: INK }}>
           {c.wins.map(w => <li key={w}>{w}</li>)}
@@ -168,7 +169,7 @@ function Column({ c }: { c: Competitor }) {
 
       <div style={{ marginTop: 18 }}>
         <h3 style={{ margin: 0, fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a', textTransform: 'uppercase' }}>
-          Cons of {c.name}
+          {t("Cons of")}{" "}{c.name}
         </h3>
         <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 14, lineHeight: 1.8, color: INK }}>
           {c.friction.map(f => <li key={f}>{f}</li>)}
@@ -181,6 +182,7 @@ function Column({ c }: { c: Competitor }) {
 export default async function MatchupPage(
   { params }: { params: Promise<{ matchup: string }> }
 ) {
+  await primeLocale()
   const { matchup } = await params
   const m = resolveMatchup(matchup)
   if (!m) {
@@ -225,22 +227,18 @@ export default async function MatchupPage(
       <GutsShell rail={vsRail()} activeHref="/vs">
         <div className="guts-sec">
           <nav style={{ fontSize: 11, letterSpacing: 1.5, color: MUTED, marginBottom: 22 }}>
-            <Link href="/" style={{ color: MUTED }}>HOME</Link>
+            <Link href="/" style={{ color: MUTED }}>{t("HOME")}</Link>
             {' · '}
-            <Link href="/vs" style={{ color: MUTED }}>COMPARISONS</Link>
+            <Link href="/vs" style={{ color: MUTED }}>{t("COMPARISONS")}</Link>
           </nav>
 
           <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: ACCENT, marginBottom: 14 }}>
-            ▸ Head to head
-          </div>
+            {t("▸ Head to head")}</div>
           <h1 style={{ fontSize: 44, fontWeight: 'bold', letterSpacing: -1, lineHeight: 1.12, margin: 0 }}>
-            {a.name} vs {b.name}
+            {a.name} {t("vs")}{" "}{b.name}
           </h1>
           <p style={{ fontSize: 16, lineHeight: 1.8, color: MUTED, maxWidth: 760, marginTop: 18 }}>
-            Both are real options and each is the right answer for someone. Below is what each one
-            costs, which dialing modes you actually get for that money, and the buyer each genuinely
-            suits: followed by a note on where our own product fits, clearly marked as ours.
-          </p>
+            {t("Both are real options and each is the right answer for someone. Below is what each one costs, which dialing modes you actually get for that money, and the buyer each genuinely suits: followed by a note on where our own product fits, clearly marked as ours.")}</p>
 
           <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
@@ -255,18 +253,15 @@ export default async function MatchupPage(
             marginTop: 40, background: SURFACE, border: `1px solid ${BORDER}`,
             borderRadius: 8, padding: 28,
           }}>
-            <h2 style={{ fontSize: 20, fontWeight: 'bold', margin: 0 }}>Which one to pick</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 'bold', margin: 0 }}>{t("Which one to pick")}</h2>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: INK, marginTop: 12 }}>
-              <strong>Choose {a.name}</strong> if you are {a.bestFor.charAt(0).toLowerCase()}{a.bestFor.slice(1)}
+              <strong>{t("Choose")}{" "}{a.name}</strong> {t("if you are")}{" "}{a.bestFor.charAt(0).toLowerCase()}{a.bestFor.slice(1)}
             </p>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: INK, marginTop: 8 }}>
-              <strong>Choose {b.name}</strong> if you are {b.bestFor.charAt(0).toLowerCase()}{b.bestFor.slice(1)}
+              <strong>{t("Choose")}{" "}{b.name}</strong> {t("if you are")}{" "}{b.bestFor.charAt(0).toLowerCase()}{b.bestFor.slice(1)}
             </p>
             <p style={{ fontSize: 14, lineHeight: 1.8, color: MUTED, marginTop: 14 }}>
-              The most common mistake in this comparison is reading the advertised rate as the bill.
-              Add the seat minimum, the tier the dialer actually lives on, per-number charges, and any
-              setup fee before deciding which is cheaper.
-            </p>
+              {t("The most common mistake in this comparison is reading the advertised rate as the bill. Add the seat minimum, the tier the dialer actually lives on, per-number charges, and any setup fee before deciding which is cheaper.")}</p>
           </section>
 
           {/* ── Disclosed self-mention. Last, and labelled. ───────────────── */}
@@ -275,30 +270,28 @@ export default async function MatchupPage(
             borderLeft: `4px solid ${ACCENT}`, borderRadius: 8, padding: 28,
           }}>
             <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: ACCENT }}>
-              DISCLOSURE, THIS IS OUR PRODUCT
-            </div>
+              {t("DISCLOSURE, THIS IS OUR PRODUCT")}</div>
             <h2 style={{ fontSize: 20, fontWeight: 'bold', margin: '10px 0 0' }}>
-              Where DialerSeat fits
-            </h2>
+              {t("Where DialerSeat fits")}</h2>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: INK, marginTop: 12 }}>
-              We publish this page, so weigh it accordingly. {DIALERSEAT.pricing} {DIALERSEAT.contract}{' '}
+              {t("We publish this page, so weigh it accordingly.")}{" "}{DIALERSEAT.pricing} {DIALERSEAT.contract}{' '}
               {DIALERSEAT.dialing}
             </p>
             <p style={{ fontSize: 14, lineHeight: 1.8, color: MUTED, marginTop: 12 }}>
-              Where we are <em>not</em> the right answer: {DIALERSEAT.friction.join('; ')}.
+              {t("Where we are")}{" "}<em>{t("not")}</em> {t("the right answer:")}{" "}{DIALERSEAT.friction.join('; ')}.
             </p>
             <div style={{ marginTop: 18, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <Link href={`/vs/${a.slug}`} style={{
                 fontSize: 11, letterSpacing: 1.5, fontWeight: 'bold', color: ACCENT,
                 border: `1px solid ${ACCENT}`, borderRadius: 4, padding: '10px 16px', textDecoration: 'none',
               }}>
-                DIALERSEAT VS {a.name.toUpperCase()}
+                {t("DIALERSEAT VS")}{" "}{a.name.toUpperCase()}
               </Link>
               <Link href={`/vs/${b.slug}`} style={{
                 fontSize: 11, letterSpacing: 1.5, fontWeight: 'bold', color: ACCENT,
                 border: `1px solid ${ACCENT}`, borderRadius: 4, padding: '10px 16px', textDecoration: 'none',
               }}>
-                DIALERSEAT VS {b.name.toUpperCase()}
+                {t("DIALERSEAT VS")}{" "}{b.name.toUpperCase()}
               </Link>
             </div>
           </section>
@@ -306,8 +299,7 @@ export default async function MatchupPage(
           {/* ── Internal links: the other matchups these two appear in ────── */}
           <section style={{ marginTop: 44 }}>
             <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: MUTED }}>
-              OTHER COMPARISONS
-            </div>
+              {t("OTHER COMPARISONS")}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
               {crossShoppedPairs()
                 .filter(([x, y]) =>
@@ -324,16 +316,14 @@ export default async function MatchupPage(
                       padding: '7px 11px', textDecoration: 'none',
                     }}
                   >
-                    {x.name} vs {y.name}
+                    {x.name} {t("vs")}{" "}{y.name}
                   </Link>
                 ))}
             </div>
           </section>
 
           <p style={{ fontSize: 12, lineHeight: 1.8, color: MUTED, marginTop: 40, maxWidth: 760 }}>
-            Pricing and packaging for other vendors change without notice and are summarised here from
-            their public materials. Verify current terms with the vendor before buying. Corrections are
-            welcome, we would rather be accurate than flattering. Competitors listed:{' '}
+            {t("Pricing and packaging for other vendors change without notice and are summarised here from their public materials. Verify current terms with the vendor before buying. Corrections are welcome, we would rather be accurate than flattering. Competitors listed:")}{' '}
             {COMPETITORS.filter(c => c.crossShopped).map(c => c.name).join(', ')}.
           </p>
         </div>

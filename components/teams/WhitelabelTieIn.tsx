@@ -1,5 +1,6 @@
 'use client'
 
+import { t } from '@/lib/i18n/client'
 interface TenantInfo {
   id: string
   slug: string
@@ -50,12 +51,10 @@ export default function WhitelabelTieIn({ tenant }: { tenant: TenantInfo | null 
 
       <div style={{ flex: '1 1 240px', minWidth: 0 }}>
         <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: T.muted }}>
-          THIS TEAM IS SCOPED TO
-        </div>
+          {t("THIS TEAM IS SCOPED TO")}</div>
         <div style={{ fontSize: 15, fontWeight: 800, marginTop: 2 }}>{brandName}</div>
         <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>
-          Every agent who joins through a seat link sees this brand, not default DialerSeat.
-        </div>
+          {t("Every agent who joins through a seat link sees this brand, not default DialerSeat.")}</div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
@@ -64,14 +63,14 @@ export default function WhitelabelTieIn({ tenant }: { tenant: TenantInfo | null 
           target="_blank"
           rel="noreferrer"
           style={{ fontSize: 11, color: T.primary, textDecoration: 'underline' }}
-        >{tenant.slug}.dialerseat.com ↗</a>
+        >{tenant.slug}{t(".dialerseat.com ↗")}</a>
         {tenant.custom_domain && (
           <span style={{ fontSize: 10, color: T.muted }}>+ {tenant.custom_domain}</span>
         )}
         <a
           href="/dashboard/manager/desktop"
           style={{ fontSize: 10, color: T.muted, textDecoration: 'underline' }}
-        >Edit logo & colors</a>
+        >{t("Edit logo & colors")}</a>
       </div>
     </div>
   )

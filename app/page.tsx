@@ -15,6 +15,7 @@ import {
   PhoneOutgoing, Voicemail, ClipboardList, BookmarkCheck, MousePointerClick,
   Users, Globe, Plug, Lock, UserPlus, Upload, PhoneCall, ChartColumn,
 } from 'lucide-react'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 /**
  * One cell of the comparison table.
@@ -66,6 +67,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function Home({ searchParams }: PageProps) {
+  await primeLocale()
   const { userId } = await auth()
   const params = await searchParams
   const wantsLanding = params.view === 'landing'
@@ -452,15 +454,15 @@ export default async function Home({ searchParams }: PageProps) {
             </div>
 
             <div className="ds-nav-links">
-              <Link href="#features" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>FEATURES</Link>
-              <Link href="#pricing" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>PRICING</Link>
-              <Link href="#compare" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>COMPARE</Link>
-              <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)', textDecoration: 'none', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap' }}>SIGN IN</Link>
+              <Link href="#features" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{t("FEATURES")}</Link>
+              <Link href="#pricing" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{t("PRICING")}</Link>
+              <Link href="#compare" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{t("COMPARE")}</Link>
+              <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)', textDecoration: 'none', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap' }}>{t("SIGN IN")}</Link>
               {/* Phones only. GET STARTED is hidden below 768px, so a visitor on
                   a phone (95% of Instagram traffic) had only SIGN IN, for an
                   account they did not have yet. Same styling as GET STARTED. */}
-              <Link href="/sign-up" className="ds-nav-link ds-mobile-only" style={{ fontSize: '11px', letterSpacing: '2px', color: '#4a9eff', textDecoration: 'none', padding: '8px 12px', borderRadius: '6px', background: 'transparent', border: '1px solid #4a9eff', borderTop: '3px solid #4a9eff', whiteSpace: 'nowrap' }}>START NOW</Link>
-              <Link href="/sign-up" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: '#4a9eff', textDecoration: 'none', padding: '10px 20px', borderRadius: '6px', background: 'transparent', border: '1px solid #4a9eff', borderTop: '3px solid #4a9eff', whiteSpace: 'nowrap' }}>GET STARTED</Link>
+              <Link href="/sign-up" className="ds-nav-link ds-mobile-only" style={{ fontSize: '11px', letterSpacing: '2px', color: '#4a9eff', textDecoration: 'none', padding: '8px 12px', borderRadius: '6px', background: 'transparent', border: '1px solid #4a9eff', borderTop: '3px solid #4a9eff', whiteSpace: 'nowrap' }}>{t("START NOW")}</Link>
+              <Link href="/sign-up" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: '#4a9eff', textDecoration: 'none', padding: '10px 20px', borderRadius: '6px', background: 'transparent', border: '1px solid #4a9eff', borderTop: '3px solid #4a9eff', whiteSpace: 'nowrap' }}>{t("GET STARTED")}</Link>
               <LanguageDropdown />
             </div>
           </nav>
@@ -473,8 +475,7 @@ export default async function Home({ searchParams }: PageProps) {
             letterSpacing: '3px',
             fontWeight: 'bold',
           }}>
-            $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
-          </div>
+            {t("$35/WEEK · NO CONTRACTS · CANCEL ANYTIME")}</div>
         </div>
       )}
 
@@ -489,8 +490,7 @@ export default async function Home({ searchParams }: PageProps) {
               color: '#2a4a8a',
               marginBottom: '20px',
             }}>
-              ▸ The dialer for people who live on the phone
-            </div>
+              {t("▸ The dialer for people who live on the phone")}</div>
 
             <h1 className="ds-hero-h1" style={{
               fontSize: 'var(--hero-fs)',
@@ -499,9 +499,9 @@ export default async function Home({ searchParams }: PageProps) {
               lineHeight: '1.05',
               maxWidth: '700px',
             }}>
-              <span style={{ color: '#1a1c24' }}>DIAL SMARTER.</span>
+              <span style={{ color: '#1a1c24' }}>{t("DIAL SMARTER.")}</span>
               <br />
-              <span style={{ color: '#2a4a8a' }}>CLOSE FASTER.</span>
+              <span style={{ color: '#2a4a8a' }}>{t("CLOSE FASTER.")}</span>
             </h1>
           </div>
 
@@ -554,8 +554,7 @@ export default async function Home({ searchParams }: PageProps) {
               color: 'var(--brand-muted-text, #5a5e6a)',
               maxWidth: '520px',
             }}>
-              The professional outbound dialer built for <u>ANYONE</u> who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting, for a fraction of what everyone else charges.
-            </p>
+              {t("The professional outbound dialer built for")}{" "}<u>{t("ANYONE")}</u> {t("who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting, for a fraction of what everyone else charges.")}</p>
           </div>
 
           <div className="ds-hero-copy-buttons" style={{ textAlign: 'left' }}>
@@ -591,13 +590,11 @@ export default async function Home({ searchParams }: PageProps) {
                 border: '1px solid #c4c8d0',
                 borderTop: '3px solid #1a1c24',
               }}>
-                SEE HOW WE COMPARE
-              </Link>
+                {t("SEE HOW WE COMPARE")}</Link>
             </div>
 
             <p className="ds-hero-fineprint" style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--brand-muted-text, #5a5e6a)' }}>
-              $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
-            </p>
+              {t("$35/WEEK · NO CONTRACTS · CANCEL ANYTIME")}</p>
           </div>
         </div>
       </section>
@@ -630,8 +627,7 @@ export default async function Home({ searchParams }: PageProps) {
               textAlign: 'center',
               color: 'var(--brand-muted-text, #5a5e6a)',
             }}>
-              LIVE DEMO &middot; THE QUEUE WORKS ITSELF TOP-DOWN
-            </p>
+              {t("LIVE DEMO · THE QUEUE WORKS ITSELF TOP-DOWN")}</p>
           </div>
 
           <div className="ds-volume-copy">
@@ -643,8 +639,7 @@ export default async function Home({ searchParams }: PageProps) {
               color: '#1a1c24',
               margin: 0,
             }}>
-              FOR SALES TEAMS, CALL CENTERS, AGENCIES, AND <u>ANYONE</u> WHO WORKS LEADS.
-            </h2>
+              {t("FOR SALES TEAMS, CALL CENTERS, AGENCIES, AND")}{" "}<u>{t("ANYONE")}</u> {t("WHO WORKS LEADS.")}</h2>
           </div>
         </div>
         </div>
@@ -657,8 +652,7 @@ export default async function Home({ searchParams }: PageProps) {
             the section it names, so arriving at it lands on the label. */}
         <div id="features" style={{ textAlign: 'center', marginBottom: '64px' }}>
           <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a' }}>
-            ▸ Built for volume
-          </div>
+            {t("▸ Built for volume")}</div>
         </div>
 
         {/* Each card ends in a real link. A feature grid that only asserts
@@ -710,7 +704,7 @@ export default async function Home({ searchParams }: PageProps) {
                 fontSize: '12.5px',
                 color: '#2a4a8a',
                 textDecoration: 'underline',
-              }}>Learn more &raquo;</Link>
+              }}>{t("Learn more »")}</Link>
             </div>
           ))}
         </div>
@@ -721,8 +715,7 @@ export default async function Home({ searchParams }: PageProps) {
         <div className="ds-section" style={{ maxWidth: '900px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
-            ▸ How it works
-          </div>
+            {t("▸ How it works")}</div>
           <h2 style={{
             fontSize: 'var(--section-fs)',
             fontWeight: 'bold',
@@ -732,8 +725,7 @@ export default async function Home({ searchParams }: PageProps) {
             maxWidth: '900px',
             margin: '0 auto',
           }}>
-            FROM ZERO TO DIALING IN UNDER 2 MINUTES.
-          </h2>
+            {t("FROM ZERO TO DIALING IN UNDER 2 MINUTES.")}</h2>
         </div>
 
         {/* One bordered table rather than four floating cards. The steps are
@@ -801,8 +793,7 @@ export default async function Home({ searchParams }: PageProps) {
         <div className="ds-section" style={{ maxWidth: '900px', margin: '0 auto' }}>
         <div id="compare" style={{ textAlign: 'center', marginBottom: '64px' }}>
           <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
-            ▸ Why DialerSeat
-          </div>
+            {t("▸ Why DialerSeat")}</div>
           <h2 style={{
             fontSize: 'var(--section-fs)',
             fontWeight: 'bold',
@@ -812,8 +803,7 @@ export default async function Home({ searchParams }: PageProps) {
             maxWidth: '900px',
             margin: '0 auto',
           }}>
-            THE NUMBERS SPEAK FOR THEMSELVES.
-          </h2>
+            {t("THE NUMBERS SPEAK FOR THEMSELVES.")}</h2>
         </div>
 
         {/* A tick and a cross carry the meaning here, so they are coloured
@@ -828,10 +818,10 @@ export default async function Home({ searchParams }: PageProps) {
             padding: '15px 26px',
             background: '#2a4a8a',
           }}>
-            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: '#ffffff' }}>FEATURE</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: '#ffffff' }}>{t("FEATURE")}</div>
             <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: '#ffffff', textAlign: 'center' }}>DIALERSEAT</div>
-            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>READYMODE</div>
-            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>OTHERS</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>{t("READYMODE")}</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>{t("OTHERS")}</div>
           </div>
 
           {[
@@ -881,8 +871,7 @@ export default async function Home({ searchParams }: PageProps) {
             border: '1px solid #c4c8d0',
             borderTop: '3px solid #2a4a8a',
           }}>
-            SEE ALL COMPARISONS →
-          </Link>
+            {t("SEE ALL COMPARISONS →")}</Link>
         </div>
         </div>
       </section>
@@ -891,8 +880,7 @@ export default async function Home({ searchParams }: PageProps) {
         <div className="ds-section">
         <div id="pricing" style={{ textAlign: 'center', marginBottom: '64px' }}>
           <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
-            ▸ Simple pricing
-          </div>
+            {t("▸ Simple pricing")}</div>
           <h2 style={{
             fontSize: 'var(--section-fs)',
             fontWeight: 'bold',
@@ -902,8 +890,7 @@ export default async function Home({ searchParams }: PageProps) {
             maxWidth: '900px',
             margin: '0 auto',
           }}>
-            ONE PLAN. EVERYTHING INCLUDED. NO SURPRISES.
-          </h2>
+            {t("ONE PLAN. EVERYTHING INCLUDED. NO SURPRISES.")}</h2>
         </div>
 
         <div className="ds-pricing-grid">
@@ -921,11 +908,11 @@ export default async function Home({ searchParams }: PageProps) {
               letterSpacing: '4px',
               color: '#4a9eff',
               marginBottom: '24px',
-            }}>DIALERSEAT PRO</div>
+            }}>{t("DIALERSEAT PRO")}</div>
 
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
               <span style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1, color: '#ffffff' }}>$35</span>
-              <span style={{ fontSize: '16px', color: 'rgba(255,255,255,0.6)', marginBottom: '10px' }}>/week</span>
+              <span style={{ fontSize: '16px', color: 'rgba(255,255,255,0.6)', marginBottom: '10px' }}>{t("/week")}</span>
             </div>
 
             <p style={{
@@ -933,7 +920,7 @@ export default async function Home({ searchParams }: PageProps) {
               letterSpacing: '3px',
               color: 'rgba(255,255,255,0.6)',
               marginBottom: '16px',
-            }}>PER SEAT · BILLED WEEKLY · CANCEL ANYTIME</p>
+            }}>{t("PER SEAT · BILLED WEEKLY · CANCEL ANYTIME")}</p>
 
             <div style={{
               display: 'inline-block',
@@ -946,8 +933,7 @@ export default async function Home({ searchParams }: PageProps) {
               color: '#4a9eff',
               marginBottom: '40px',
             }}>
-              FIRST CHARGE TODAY · CANCEL ANYTIME
-            </div>
+              {t("FIRST CHARGE TODAY · CANCEL ANYTIME")}</div>
 
             <div style={{ marginBottom: '40px', textAlign: 'left', flex: 1 }}>
               {[
@@ -1003,8 +989,7 @@ export default async function Home({ searchParams }: PageProps) {
               {ctaLabel}
             </Link>
             <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'rgba(255,255,255,0.5)' }}>
-              $35 CHARGED TODAY · CANCEL ANYTIME
-            </p>
+              {t("$35 CHARGED TODAY · CANCEL ANYTIME")}</p>
           </div>
 
           {/* MANAGER+ TIER - white, amber accent */}
@@ -1020,11 +1005,11 @@ export default async function Home({ searchParams }: PageProps) {
               letterSpacing: '4px',
               color: '#8a6a1a',
               marginBottom: '24px',
-            }}>DIALERSEAT MANAGER+</div>
+            }}>{t("DIALERSEAT MANAGER+")}</div>
 
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
               <span style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1, color: '#1a1c24' }}>$75</span>
-              <span style={{ fontSize: '16px', color: '#5a5e6a', marginBottom: '10px' }}>/week</span>
+              <span style={{ fontSize: '16px', color: '#5a5e6a', marginBottom: '10px' }}>{t("/week")}</span>
             </div>
 
             <p style={{
@@ -1032,7 +1017,7 @@ export default async function Home({ searchParams }: PageProps) {
               letterSpacing: '3px',
               color: '#5a5e6a',
               marginBottom: '16px',
-            }}>PER OWNER · BILLED WEEKLY · CANCEL ANYTIME</p>
+            }}>{t("PER OWNER · BILLED WEEKLY · CANCEL ANYTIME")}</p>
 
             <div style={{
               display: 'inline-block',
@@ -1045,8 +1030,7 @@ export default async function Home({ searchParams }: PageProps) {
               color: '#8a6a1a',
               marginBottom: '40px',
             }}>
-              CUSTOMIZE YOUR WHITELABEL DIALER
-            </div>
+              {t("CUSTOMIZE YOUR WHITELABEL DIALER")}</div>
 
             <div style={{ marginBottom: '40px', textAlign: 'left', flex: 1 }}>
               {[
@@ -1104,8 +1088,7 @@ export default async function Home({ searchParams }: PageProps) {
               {wlCtaLabel}
             </Link>
             <p style={{ fontSize: '11px', letterSpacing: '2px', color: '#5a5e6a' }}>
-              $75 CHARGED TODAY · CANCEL ANYTIME
-            </p>
+              {t("$75 CHARGED TODAY · CANCEL ANYTIME")}</p>
           </div>
 
         </div>
@@ -1126,8 +1109,8 @@ export default async function Home({ searchParams }: PageProps) {
           marginBottom: '24px',
           lineHeight: '1.1',
         }}>
-          STOP PAYING TOO MUCH.<br />
-          <span style={{ color: '#4a9eff' }}>START CLOSING MORE.</span>
+          {t("STOP PAYING TOO MUCH.")}<br />
+          <span style={{ color: '#4a9eff' }}>{t("START CLOSING MORE.")}</span>
         </h2>
         <p style={{
           fontSize: '15px',
@@ -1136,8 +1119,7 @@ export default async function Home({ searchParams }: PageProps) {
           marginBottom: '40px',
           lineHeight: '1.7',
         }}>
-          Join the dialer built for the people actually making the calls. No fluff, no bloat, no contracts. Just pure dialing power at a price that makes sense.
-        </p>
+          {t("Join the dialer built for the people actually making the calls. No fluff, no bloat, no contracts. Just pure dialing power at a price that makes sense.")}</p>
         <Link href={ctaHref} style={{
           display: 'inline-block',
           padding: '20px 60px',
@@ -1154,8 +1136,7 @@ export default async function Home({ searchParams }: PageProps) {
           {ctaLabel} →
         </Link>
         <p style={{ marginTop: '20px', fontSize: '11px', letterSpacing: '3px', color: 'rgba(255,255,255,0.5)' }}>
-          $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
-        </p>
+          {t("$35/WEEK · NO CONTRACTS · CANCEL ANYTIME")}</p>
         </div>
       </section>
 

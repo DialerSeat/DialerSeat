@@ -7,6 +7,7 @@ import SiteFooter from '@/components/site-footer'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -33,7 +34,8 @@ export const metadata: Metadata = {
 const MODE_COLOR = '#8a1a1a'
 const MODE_BG = '#f8e8e8'
 
-export default function PredictiveDialerPage() {
+export default async function PredictiveDialerPage() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={breadcrumbSchema([
@@ -377,165 +379,88 @@ export default function PredictiveDialerPage() {
         {/* HERO */}
         <section className="dm-hero">
           <div className="dm-hero-inner">
-            <div className="dm-eyebrow">PREDICTIVE DIALER</div>
-            <h1>An algorithm dressed as a dialer.</h1>
+            <div className="dm-eyebrow">{t("PREDICTIVE DIALER")}</div>
+            <h1>{t("An algorithm dressed as a dialer.")}</h1>
             <p className="dm-lead">
-              The predictive dialer doesn&apos;t ring one phone at a time. It
-              fires a fan of outbound calls, 1.5, 2, sometimes 3 lines per
-              ready agent, and routes whichever one a human picks up first.
-              Invented in the early 1980s, regulated since 2003, and still
-              the highest-throughput outbound mode in existence.
-            </p>
+              {t("The predictive dialer doesn't ring one phone at a time. It fires a fan of outbound calls, 1.5, 2, sometimes 3 lines per ready agent, and routes whichever one a human picks up first. Invented in the early 1980s, regulated since 2003, and still the highest-throughput outbound mode in existence.")}</p>
           </div>
         </section>
 
         {/* MECHANISM */}
         <section className="dm-section">
-          <h2>How predictive dialing works</h2>
+          <h2>{t("How predictive dialing works")}</h2>
           <p>
-            Every dialing mode before this one was reactive. An agent
-            triggers a call, the system places it, the agent waits. The
-            queue is a pipeline of size one. Predictive breaks that. Instead
-            of one line per agent, predictive runs a controller, a small
-            algorithm that looks at how many agents are ready, how many
-            calls are already in flight, and how many people typically
-            answer, and fires <em>more</em> outbound calls than it has
-            agents to handle.
-          </p>
+            {t("Every dialing mode before this one was reactive. An agent triggers a call, the system places it, the agent waits. The queue is a pipeline of size one. Predictive breaks that. Instead of one line per agent, predictive runs a controller, a small algorithm that looks at how many agents are ready, how many calls are already in flight, and how many people typically answer, and fires")}{" "}<em>{t("more")}</em> {t("outbound calls than it has agents to handle.")}</p>
           <ol className="dm-steps">
-            <li><div>Set yourself available, pick a campaign, click <em>Initiate Dial Sequence</em>. You enter the engine&apos;s pool of ready agents.</div></li>
-            <li><div>The controller runs every few seconds. It checks: how many ready agents are there? How many calls are currently dialing or being detected? How aggressive is the configured pace?</div></li>
-            <li><div>Based on that math (below), it fires N new outbound lines. Multiple lines per agent. The agents don&apos;t see anything happen yet.</div></li>
-            <li><div>Each line goes through AMD on pickup. Machines, faxes, and unknowns get dropped silently.</div></li>
-            <li><div>The first line where AMD says <em>human</em>, the system grabs the next ready agent and routes the call. That agent&apos;s screen pops with the lead profile mid-greeting.</div></li>
-            <li><div>The other lines that connected to humans, if any, get the abandon treatment: ring then drop. Those count against the abandon-rate ceiling.</div></li>
-            <li><div>The controller runs again. Refills the lines. The agent finishes the call, dispositions, returns to the ready pool. The engine pulls them into the next routed human within seconds.</div></li>
+            <li><div>{t("Set yourself available, pick a campaign, click")}{" "}<em>{t("Initiate Dial Sequence")}</em>{t(". You enter the engine's pool of ready agents.")}</div></li>
+            <li><div>{t("The controller runs every few seconds. It checks: how many ready agents are there? How many calls are currently dialing or being detected? How aggressive is the configured pace?")}</div></li>
+            <li><div>{t("Based on that math (below), it fires N new outbound lines. Multiple lines per agent. The agents don't see anything happen yet.")}</div></li>
+            <li><div>{t("Each line goes through AMD on pickup. Machines, faxes, and unknowns get dropped silently.")}</div></li>
+            <li><div>{t("The first line where AMD says")}{" "}<em>{t("human")}</em>{t(", the system grabs the next ready agent and routes the call. That agent's screen pops with the lead profile mid-greeting.")}</div></li>
+            <li><div>{t("The other lines that connected to humans, if any, get the abandon treatment: ring then drop. Those count against the abandon-rate ceiling.")}</div></li>
+            <li><div>{t("The controller runs again. Refills the lines. The agent finishes the call, dispositions, returns to the ready pool. The engine pulls them into the next routed human within seconds.")}</div></li>
           </ol>
-          <h3>The math</h3>
+          <h3>{t("The math")}</h3>
           <p>
-            Every predictive controller is some variant of the same equation:
-          </p>
+            {t("Every predictive controller is some variant of the same equation:")}</p>
           <div className="dm-math">{`target_lines = configured_multiplier        // e.g. 1.5x, 2.0x, 3.0x
 desired_calls = active_agents * target_lines
 in_flight = calls_currently_dialing
 should_dial = max(0, desired_calls - in_flight)`}</div>
           <p>
-            That&apos;s the entire core algorithm. The intelligence lives in
-            picking the multiplier, too low and you&apos;re basically running
-            progressive; too high and you blow the abandon-rate cap and the
-            FTC eventually notices.
-          </p>
+            {t("That's the entire core algorithm. The intelligence lives in picking the multiplier, too low and you're basically running progressive; too high and you blow the abandon-rate cap and the FTC eventually notices.")}</p>
           <div className="dm-pullquote">
-            The defining property of predictive is <strong>multiple lines per
-            agent</strong>. Everything else: the prediction math, the AMD,
-            the abandon-rate monitoring, exists in service of making that
-            structurally aggressive choice survive contact with the real
-            world and the law.
-          </div>
+            {t("The defining property of predictive is")}{" "}<strong>{t("multiple lines per agent")}</strong>{t(". Everything else: the prediction math, the AMD, the abandon-rate monitoring, exists in service of making that structurally aggressive choice survive contact with the real world and the law.")}</div>
         </section>
 
         {/* ORIGINS */}
         <section className="dm-section alt">
           <div className="inner">
-            <h2>Where it came from</h2>
+            <h2>{t("Where it came from")}</h2>
             <p>
-              The predictive dialer is older than most people think. The
-              foundational US patent, Doug Samuelson&apos;s
-              &quot;Method for Predictive Dialing&quot; (US patent 4,829,563,
-              filed 1987, granted 1989), formalized the prediction algorithm
-              that everything since has been some variant of. But the
-              mechanism predates the patent. Mid-1980s call centers at
-              Citibank, Sears, and large collection agencies were already
-              running early predictive systems built on minicomputers and
-              custom hardware.
-            </p>
+              {t("The predictive dialer is older than most people think. The foundational US patent, Doug Samuelson's \"Method for Predictive Dialing\" (US patent 4,829,563, filed 1987, granted 1989), formalized the prediction algorithm that everything since has been some variant of. But the mechanism predates the patent. Mid-1980s call centers at Citibank, Sears, and large collection agencies were already running early predictive systems built on minicomputers and custom hardware.")}</p>
             <p>
-              EIS International (acquired by SER Systems, which in turn
-              became SER Solutions) was the early dominant vendor.
-              Through the late 80s and early 90s, EIS sold predictive
-              dialing systems that cost six figures and required dedicated
-              hardware: T1 trunks, proprietary call-processing cards, and
-              software running on Unix workstations. Aspect Communications
-              followed with the Aspect CallCenter. Rockwell with the
-              Spectrum. Davox (later Concerto, later part of Aspect) with
-              the Unison. These were big boxes in big rooms in big call
-              centers.
-            </p>
+              {t("EIS International (acquired by SER Systems, which in turn became SER Solutions) was the early dominant vendor. Through the late 80s and early 90s, EIS sold predictive dialing systems that cost six figures and required dedicated hardware: T1 trunks, proprietary call-processing cards, and software running on Unix workstations. Aspect Communications followed with the Aspect CallCenter. Rockwell with the Spectrum. Davox (later Concerto, later part of Aspect) with the Unison. These were big boxes in big rooms in big call centers.")}</p>
             <p>
-              The 1990s were the predictive dialer&apos;s wild west. Outbound
-              call centers ran at abandon rates that today would generate
-              an FTC investigation: 10%, 15%, sometimes 25% of calls
-              dropped because no agent was free when a human picked up.
-              The downstream consumer experience was, in the literal sense
-              of the word, untenable: phones ringing across America, picked
-              up, and met with silence or a click. The complaints piled up
-              through the late 90s.
-            </p>
+              {t("The 1990s were the predictive dialer's wild west. Outbound call centers ran at abandon rates that today would generate an FTC investigation: 10%, 15%, sometimes 25% of calls dropped because no agent was free when a human picked up. The downstream consumer experience was, in the literal sense of the word, untenable: phones ringing across America, picked up, and met with silence or a click. The complaints piled up through the late 90s.")}</p>
             <p>
-              The regulatory response landed in steps. The TCPA had passed
-              in 1991 but didn&apos;t initially constrain predictive
-              specifically. The FCC&apos;s 2003 implementing rules and the
-              FTC&apos;s simultaneous Telemarketing Sales Rule revisions
-              were what actually changed the industry. The TSR&apos;s
-              16 CFR §310.4(b)(1)(iv) drew the line: <strong>no more than
-              3% abandoned calls per 30-day window per campaign</strong>,
-              measured against answered calls. If a human picks up and no
-              agent is available within 2 seconds of the greeting, that&apos;s
-              an abandoned call.
-            </p>
+              {t("The regulatory response landed in steps. The TCPA had passed in 1991 but didn't initially constrain predictive specifically. The FCC's 2003 implementing rules and the FTC's simultaneous Telemarketing Sales Rule revisions were what actually changed the industry. The TSR's 16 CFR §310.4(b)(1)(iv) drew the line:")}{" "}<strong>{t("no more than 3% abandoned calls per 30-day window per campaign")}</strong>{t(", measured against answered calls. If a human picks up and no agent is available within 2 seconds of the greeting, that's an abandoned call.")}</p>
             <p>
-              Everything since has been some adaptation to that 3% cap.
-              Better AMD to avoid wasting lines on voicemails. Smarter
-              pacing algorithms that back off when abandon rate creeps up.
-              Server-side controllers that monitor abandon rate in real
-              time and degrade the multiplier automatically before any
-              human in the loop notices a problem.
-            </p>
+              {t("Everything since has been some adaptation to that 3% cap. Better AMD to avoid wasting lines on voicemails. Smarter pacing algorithms that back off when abandon rate creeps up. Server-side controllers that monitor abandon rate in real time and degrade the multiplier automatically before any human in the loop notices a problem.")}</p>
             <p>
-              The market itself consolidated through the 2000s. EIS folded
-              into SER, SER into other vendors. Aspect, Avaya, Genesys
-              became the enterprise players. A second tier: Five9,
-              Noble Systems, CallTools, ReadyMode, Convoso, grew up to
-              serve the mid-market. By the 2010s, predictive had moved off
-              the on-prem boxes and onto cloud platforms, but the
-              underlying algorithm is still the one Doug Samuelson described
-              in 1987.
-            </p>
+              {t("The market itself consolidated through the 2000s. EIS folded into SER, SER into other vendors. Aspect, Avaya, Genesys became the enterprise players. A second tier: Five9, Noble Systems, CallTools, ReadyMode, Convoso, grew up to serve the mid-market. By the 2010s, predictive had moved off the on-prem boxes and onto cloud platforms, but the underlying algorithm is still the one Doug Samuelson described in 1987.")}</p>
           </div>
         </section>
 
         {/* WHEN IT SHINES */}
         <section className="dm-section">
-          <h2>When predictive wins</h2>
+          <h2>{t("When predictive wins")}</h2>
           <p>
-            Predictive earns its keep when volume is the constraint, not
-            quality, and when you have enough agents on the same campaign
-            for the math to work.
-          </p>
+            {t("Predictive earns its keep when volume is the constraint, not quality, and when you have enough agents on the same campaign for the math to work.")}</p>
           <div className="dm-shines-grid">
             <div className="dm-shines-card">
-              <h4>HIGH-VOLUME B2C</h4>
-              <p>Big consumer lead lists where every minute of agent talk time produces revenue. This is the home turf.</p>
+              <h4>{t("HIGH-VOLUME B2C")}</h4>
+              <p>{t("Big consumer lead lists where every minute of agent talk time produces revenue. This is the home turf.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>TEAMS OF 5+</h4>
-              <p>Predictive math breaks down below ~3 active agents on the same campaign. With 5+, the multiplier really starts paying.</p>
+              <h4>{t("TEAMS OF 5+")}</h4>
+              <p>{t("Predictive math breaks down below ~3 active agents on the same campaign. With 5+, the multiplier really starts paying.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>ESTABLISHED CAMPAIGNS</h4>
-              <p>You know your historical contact and pickup rates. The controller tunes itself faster on data it&apos;s seen before.</p>
+              <h4>{t("ESTABLISHED CAMPAIGNS")}</h4>
+              <p>{t("You know your historical contact and pickup rates. The controller tunes itself faster on data it's seen before.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>THIN-MARGIN OUTBOUND</h4>
-              <p>Lead-gen at scale, debt buying, opt-in B2C, anywhere unit economics demand 35+ talk-minutes per agent-hour.</p>
+              <h4>{t("THIN-MARGIN OUTBOUND")}</h4>
+              <p>{t("Lead-gen at scale, debt buying, opt-in B2C, anywhere unit economics demand 35+ talk-minutes per agent-hour.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>FRESH LISTS</h4>
-              <p>Pickup rates are higher on fresh data. Predictive captures the contact-rate spike before the list cools off.</p>
+              <h4>{t("FRESH LISTS")}</h4>
+              <p>{t("Pickup rates are higher on fresh data. Predictive captures the contact-rate spike before the list cools off.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>MULTI-SHIFT OPERATIONS</h4>
-              <p>Day-shift, evening-shift, weekend coverage. Predictive&apos;s pace lets you cover more list per shift without burning out the agents.</p>
+              <h4>{t("MULTI-SHIFT OPERATIONS")}</h4>
+              <p>{t("Day-shift, evening-shift, weekend coverage. Predictive's pace lets you cover more list per shift without burning out the agents.")}</p>
             </div>
           </div>
         </section>
@@ -543,56 +468,32 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
         {/* TRADE-OFFS */}
         <section className="dm-section alt">
           <div className="inner">
-            <h2>What you give up</h2>
+            <h2>{t("What you give up")}</h2>
             <p>
-              Calm. Predictive is by design an over-dialing system. It&apos;s
-              firing more calls than it has agents to answer, and trusting
-              that probability and AMD will sort it out. The system feels
-              busy. When the math tips even slightly wrong, a busy spell of
-              high-pickup minutes, a slow disposition cycle on a hard call 
-              you can hear it in the abandon-rate counter ticking up.
-            </p>
+              {t("Calm. Predictive is by design an over-dialing system. It's firing more calls than it has agents to answer, and trusting that probability and AMD will sort it out. The system feels busy. When the math tips even slightly wrong, a busy spell of high-pickup minutes, a slow disposition cycle on a hard call you can hear it in the abandon-rate counter ticking up.")}</p>
             <p>
-              You also give up a clean conscience about the dropped calls.
-              Even a perfectly-tuned predictive campaign is going to abandon
-              some calls. The legal cap is 3%, the practical target is
-              1-2%, and that means out of every 100 humans who pick up, one
-              or two of them hear silence and a click. That&apos;s the
-              tradeoff that bought you the throughput, and there&apos;s no
-              way around it.
-            </p>
+              {t("You also give up a clean conscience about the dropped calls. Even a perfectly-tuned predictive campaign is going to abandon some calls. The legal cap is 3%, the practical target is 1-2%, and that means out of every 100 humans who pick up, one or two of them hear silence and a click. That's the tradeoff that bought you the throughput, and there's no way around it.")}</p>
             <p>
-              Predictive also requires real agents on real schedules.
-              You can&apos;t flip predictive on at noon, walk away for
-              twenty minutes, and have it gracefully recover. The
-              controller wants steady state. Agents flickering in and out
-              of available causes pacing oscillation. Predictive likes
-              shifts; preview and power don&apos;t care.
-            </p>
+              {t("Predictive also requires real agents on real schedules. You can't flip predictive on at noon, walk away for twenty minutes, and have it gracefully recover. The controller wants steady state. Agents flickering in and out of available causes pacing oscillation. Predictive likes shifts; preview and power don't care.")}</p>
           </div>
         </section>
 
         {/* ON DIALERSEAT */}
         <section className="dm-on-ds">
           <div className="inner">
-            <h2>Predictive on DialerSeat</h2>
+            <h2>{t("Predictive on DialerSeat")}</h2>
             <p>
-              Predictive on DialerSeat is built around one principle: the
-              system should never let you blow past the legal cap, even if
-              you&apos;re not watching. The controller monitors abandon
-              rate in real time and auto-degrades long before you would
-              notice a problem.
-            </p>
+              {t("Predictive on DialerSeat is built around one principle: the system should never let you blow past the legal cap, even if you're not watching. The controller monitors abandon rate in real time and auto-degrades long before you would notice a problem.")}</p>
             <ul className="dm-bullets">
-              <li>Per-campaign lines-per-agent setting (1-5). Default 1.5-3 depending on campaign maturity.</li>
-              <li>Per-agent lines override. If you want to run 1.5 while the rest of the team runs 2.0, you can.</li>
-              <li>Server-side controller fires lines on a 5-second heartbeat. Predictable cadence, no client-side guesswork.</li>
-              <li>30-day rolling abandon-rate calculation per campaign, recomputed every controller tick.</li>
-              <li>Auto-degrade at 2.5%, the engine drops to 1× lines (progressive-equivalent) before you hit the 3% legal cap.</li>
-              <li>Recovery threshold at 2.0%, stays degraded with a 0.5% safety buffer until the rate clearly drops.</li>
-              <li>Live abandon-rate display in the agent terminal so you always know where the campaign is sitting.</li>
-              <li>AMD pre-screen so machine pickups never count as abandons against your number.</li>
-              <li>TCPA window check on every dial. CNAM-aware caller-ID routing. National DNC scrubbing is still on you, see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link> for the full split.</li>
+              <li>{t("Per-campaign lines-per-agent setting (1-5). Default 1.5-3 depending on campaign maturity.")}</li>
+              <li>{t("Per-agent lines override. If you want to run 1.5 while the rest of the team runs 2.0, you can.")}</li>
+              <li>{t("Server-side controller fires lines on a 5-second heartbeat. Predictable cadence, no client-side guesswork.")}</li>
+              <li>{t("30-day rolling abandon-rate calculation per campaign, recomputed every controller tick.")}</li>
+              <li>{t("Auto-degrade at 2.5%, the engine drops to 1× lines (progressive-equivalent) before you hit the 3% legal cap.")}</li>
+              <li>{t("Recovery threshold at 2.0%, stays degraded with a 0.5% safety buffer until the rate clearly drops.")}</li>
+              <li>{t("Live abandon-rate display in the agent terminal so you always know where the campaign is sitting.")}</li>
+              <li>{t("AMD pre-screen so machine pickups never count as abandons against your number.")}</li>
+              <li>{t("TCPA window check on every dial. CNAM-aware caller-ID routing. National DNC scrubbing is still on you, see")}{" "}<Link href="/faq/how-we-keep-compliance">{t("how we keep compliance")}</Link> {t("for the full split.")}</li>
             </ul>
           </div>
         </section>
@@ -600,22 +501,22 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
         {/* OTHER MODES */}
         <section className="dm-other">
           <div className="inner">
-            <h2>The other three modes</h2>
+            <h2>{t("The other three modes")}</h2>
             <div className="dm-other-grid">
               <Link href="/dialing-modes/preview" className="dm-other-card preview">
-                <span className="pill">PREVIEW</span>
-                <h3>Agent reviews, then dials</h3>
-                <p>The original outbound mode. Slow by design: right for high-touch, high-value calls.</p>
+                <span className="pill">{t("PREVIEW")}</span>
+                <h3>{t("Agent reviews, then dials")}</h3>
+                <p>{t("The original outbound mode. Slow by design: right for high-touch, high-value calls.")}</p>
               </Link>
               <Link href="/dialing-modes/power" className="dm-other-card power">
-                <span className="pill">POWER</span>
-                <h3>Auto-dial, one line per agent</h3>
-                <p>The inside-sales workhorse since the mid-1990s. Faster than preview, simpler than progressive.</p>
+                <span className="pill">{t("POWER")}</span>
+                <h3>{t("Auto-dial, one line per agent")}</h3>
+                <p>{t("The inside-sales workhorse since the mid-1990s. Faster than preview, simpler than progressive.")}</p>
               </Link>
               <Link href="/dialing-modes/progressive" className="dm-other-card progressive">
-                <span className="pill">PROGRESSIVE</span>
-                <h3>Auto-dial with voicemail filtering</h3>
-                <p>Same compliance profile as power, but AMD pre-screens the pickup. Humans only.</p>
+                <span className="pill">{t("PROGRESSIVE")}</span>
+                <h3>{t("Auto-dial with voicemail filtering")}</h3>
+                <p>{t("Same compliance profile as power, but AMD pre-screens the pickup. Humans only.")}</p>
               </Link>
             </div>
           </div>

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
 import { SITE } from '@/lib/siteTheme'
 import { inter } from '@/lib/fonts'
+import { t } from '@/lib/i18n/client'
 
 // =============================================================================
 // THE ARTICLE SHELL — the /vs/everyone layout, made the blueprint
@@ -450,8 +451,7 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((v) => !v)}
             >
-              MAIN MENU
-              <span className="caret" aria-hidden>▾</span>
+              {t("MAIN MENU")}<span className="caret" aria-hidden>▾</span>
             </button>
 
             <div className={`guts-rail-body${menuOpen ? ' is-open' : ''}`}>

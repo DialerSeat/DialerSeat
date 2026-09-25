@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import TeamFloor from '@/components/teams/TeamFloor'
+import { t } from '@/lib/i18n/client'
 
 // =============================================================================
 // /dashboard/teams/floor — the rebuilt Teams surface, live but not yet the
@@ -39,13 +40,13 @@ export default function TeamFloorPage() {
   }, [])
 
   if (state === 'loading') {
-    return <Msg>LOADING…</Msg>
+    return <Msg>{t("LOADING…")}</Msg>
   }
   if (state === 'error') {
-    return <Msg>Could not load your teams.</Msg>
+    return <Msg>{t("Could not load your teams.")}</Msg>
   }
   if (state === 'none' || !team) {
-    return <Msg>You are not on a team yet. Create one from the Teams page first.</Msg>
+    return <Msg>{t("You are not on a team yet. Create one from the Teams page first.")}</Msg>
   }
 
   return <TeamFloor teamId={team.id} teamName={team.name} />

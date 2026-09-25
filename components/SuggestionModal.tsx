@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { SITE } from '@/lib/siteTheme'
 import { inter } from '@/lib/fonts'
+import { t as tr } from '@/lib/i18n/client'
 
 // =============================================================================
 // THE "ASK US DIRECTLY" BOX
@@ -250,28 +251,27 @@ export default function SuggestionModal({
         {state === 'sent' ? (
           <div className="sg-sent">
             <div className="sg-sent-mark" aria-hidden>✓</div>
-            <h3>Got it.</h3>
+            <h3>{tr("Got it.")}</h3>
             <p>
               {email
-                ? "We read every one of these. If it needs an answer, you'll get one at that address."
-                : 'We read every one of these. Thanks for taking the time.'}
+                ? tr("We read every one of these. If it needs an answer, you'll get one at that address.")
+                : tr("We read every one of these. Thanks for taking the time.")}
             </p>
             <button type="button" className="sg-submit" onClick={close}>
-              Close
-            </button>
+              {tr("Close")}</button>
           </div>
         ) : (
           <>
             <div className="sg-head">
               <h2>{title}</h2>
-              <button type="button" className="sg-close" onClick={close} aria-label="Close">
+              <button type="button" className="sg-close" onClick={close} aria-label={tr("Close")}>
                 ×
               </button>
             </div>
             <p className="sg-intro">{intro}</p>
 
             <form className="sg-body" onSubmit={submit}>
-              <span className="sg-label">WHAT IS THIS?</span>
+              <span className="sg-label">{tr("WHAT IS THIS?")}</span>
               <div className="sg-kinds">
                 {KINDS.map((k) => (
                   <button
@@ -287,8 +287,7 @@ export default function SuggestionModal({
               </div>
 
               <label className="sg-label" htmlFor="sg-message">
-                YOUR MESSAGE
-              </label>
+                {tr("YOUR MESSAGE")}</label>
               <textarea
                 id="sg-message"
                 ref={textareaRef}
@@ -296,13 +295,12 @@ export default function SuggestionModal({
                 value={message}
                 maxLength={4000}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Ask anything, or tell us what's missing."
+                placeholder={tr("Ask anything, or tell us what's missing.")}
               />
               <div className="sg-count">{message.length}/4000</div>
 
               <label className="sg-label" htmlFor="sg-email">
-                EMAIL (OPTIONAL)
-              </label>
+                {tr("EMAIL (OPTIONAL)")}</label>
               <input
                 id="sg-email"
                 className="sg-input"
@@ -312,17 +310,16 @@ export default function SuggestionModal({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
               />
-              <p className="sg-hint">Only used to reply. Leave it blank to stay anonymous.</p>
+              <p className="sg-hint">{tr("Only used to reply. Leave it blank to stay anonymous.")}</p>
 
               {state === 'error' && error && <div className="sg-error">{error}</div>}
 
               <div className="sg-actions">
                 <button type="submit" className="sg-submit" disabled={state === 'sending'}>
-                  {state === 'sending' ? 'Sending…' : 'Send it'}
+                  {state === 'sending' ? tr("Sending…") : tr("Send it")}
                 </button>
                 <button type="button" className="sg-cancel" onClick={close}>
-                  Cancel
-                </button>
+                  {tr("Cancel")}</button>
               </div>
             </form>
           </>

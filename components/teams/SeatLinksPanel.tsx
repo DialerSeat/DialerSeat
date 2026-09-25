@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { t } from '@/lib/i18n/client'
 
 export interface TeamCode {
   id: string
@@ -147,8 +148,7 @@ export default function SeatLinksPanel({
           padding: 20, marginBottom: 20,
         }}>
           <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: T.green, marginBottom: 10 }}>
-            ✓ SEAT LINK CREATED, SHARE THIS
-          </div>
+            {t("✓ SEAT LINK CREATED, SHARE THIS")}</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
               readOnly
@@ -160,31 +160,28 @@ export default function SeatLinksPanel({
               }}
             />
             <button onClick={() => copy(justCreated.id, justCreated.code)} style={primaryBtnStyle}>
-              {copiedId === justCreated.id ? 'COPIED ✓' : 'COPY LINK'}
+              {copiedId === justCreated.id ? t("COPIED ✓") : t("COPY LINK")}
             </button>
           </div>
           <div style={{ marginTop: 10, fontSize: 12, color: T.muted }}>
-            Whoever opens this link will be asked to confirm before joining, nothing happens
-            until they accept.
-          </div>
-          <button onClick={() => setJustCreated(null)} style={dismissLinkStyle}>Dismiss</button>
+            {t("Whoever opens this link will be asked to confirm before joining, nothing happens until they accept.")}</div>
+          <button onClick={() => setJustCreated(null)} style={dismissLinkStyle}>{t("Dismiss")}</button>
         </div>
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: T.muted }}>
-          ▸ SEAT LINKS ({codes.filter(c => c.is_active).length})
+          {t("▸ SEAT LINKS (")}{codes.filter(c => c.is_active).length})
         </div>
         {!creating && (
           <button onClick={() => { setCreating(true); setJustCreated(null) }} style={primaryBtnStyle}>
-            + NEW SEAT LINK
-          </button>
+            {t("+ NEW SEAT LINK")}</button>
         )}
       </div>
 
       {creating && (
         <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, padding: 20, marginBottom: 20 }}>
-          <FieldLabel>WHAT DOES THIS LINK DO?</FieldLabel>
+          <FieldLabel>{t("WHAT DOES THIS LINK DO?")}</FieldLabel>
           <SegmentedTwo
             value={codeType}
             onChange={v => setCodeType(v as 'seat' | 'recruit')}
@@ -196,23 +193,23 @@ export default function SeatLinksPanel({
 
           {codeType === 'seat' && (
             <>
-              <FieldLabel style={{ marginTop: 16 }}>WHICH CAMPAIGN?</FieldLabel>
+              <FieldLabel style={{ marginTop: 16 }}>{t("WHICH CAMPAIGN?")}</FieldLabel>
               <select
                 value={campaignId}
                 onChange={e => setCampaignId(e.target.value)}
                 style={selectStyle}
               >
-                <option value="">All campaigns currently on this team</option>
+                <option value="">{t("All campaigns currently on this team")}</option>
                 {teamCampaigns.map(tc => (
                   <option key={tc.campaignId} value={tc.campaignId}>
-                    {tc.campaign?.name || 'Untitled campaign'}
+                    {tc.campaign?.name || t("Untitled campaign")}
                   </option>
                 ))}
               </select>
             </>
           )}
 
-          <FieldLabel style={{ marginTop: 16 }}>WHO PAYS FOR THE SEAT?</FieldLabel>
+          <FieldLabel style={{ marginTop: 16 }}>{t("WHO PAYS FOR THE SEAT?")}</FieldLabel>
           <SegmentedTwo
             value={payer}
             onChange={v => setPayer(v as 'owner' | 'agent')}
@@ -224,23 +221,20 @@ export default function SeatLinksPanel({
 
           {payer === 'owner' && (
             <div style={{ marginTop: 10, fontSize: 12, color: T.muted, lineHeight: 1.5 }}>
-              Charged to your card the moment someone redeems a single-use link, they're set up
-              and dialing without ever entering payment info.
-            </div>
+              {t("Charged to your card the moment someone redeems a single-use link, they're set up and dialing without ever entering payment info.")}</div>
           )}
           {payer === 'agent' && (
             <div style={{ marginTop: 10, fontSize: 12, color: T.muted, lineHeight: 1.5 }}>
-              They complete their own checkout before access turns on, nothing is billed to you.
-            </div>
+              {t("They complete their own checkout before access turns on, nothing is billed to you.")}</div>
           )}
 
           {payer === 'owner' && (
             <>
-              <FieldLabel style={{ marginTop: 16 }}>PRICE OVERRIDE (OPTIONAL)</FieldLabel>
+              <FieldLabel style={{ marginTop: 16 }}>{t("PRICE OVERRIDE (OPTIONAL)")}</FieldLabel>
               <input
                 type="number"
                 step="0.01"
-                placeholder="35.00 (default)"
+                placeholder={t("35.00 (default)")}
                 value={priceOverride}
                 onChange={e => setPriceOverride(e.target.value)}
                 style={selectStyle}
@@ -248,7 +242,7 @@ export default function SeatLinksPanel({
             </>
           )}
 
-          <FieldLabel style={{ marginTop: 16 }}>USES</FieldLabel>
+          <FieldLabel style={{ marginTop: 16 }}>{t("USES")}</FieldLabel>
           <SegmentedTwo
             value={singleUse ? 'single' : 'multi'}
             onChange={v => setSingleUse(v === 'single')}
@@ -259,24 +253,22 @@ export default function SeatLinksPanel({
           />
           {!singleUse && payer === 'owner' && (
             <div style={{ marginTop: 10, fontSize: 12, color: T.amber, lineHeight: 1.5 }}>
-              Reusable owner-pays links need your manual approval per person before their access
-              turns on, so charges don't happen without you seeing them first.
-            </div>
+              {t("Reusable owner-pays links need your manual approval per person before their access turns on, so charges don't happen without you seeing them first.")}</div>
           )}
 
           {error && <ErrorInline>{error}</ErrorInline>}
 
           <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
             <button onClick={handleCreate} disabled={submitting} style={{ ...primaryBtnStyle, opacity: submitting ? 0.6 : 1 }}>
-              {submitting ? 'CREATING…' : 'CREATE LINK'}
+              {submitting ? t("CREATING…") : t("CREATE LINK")}
             </button>
-            <button onClick={() => { setCreating(false); resetForm() }} style={subtleBtnStyle}>CANCEL</button>
+            <button onClick={() => { setCreating(false); resetForm() }} style={subtleBtnStyle}>{t("CANCEL")}</button>
           </div>
         </div>
       )}
 
       {codes.length === 0 ? (
-        <EmptyHint>No seat links yet. Create one to invite an agent.</EmptyHint>
+        <EmptyHint>{t("No seat links yet. Create one to invite an agent.")}</EmptyHint>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {codes.map(code => (
@@ -288,20 +280,20 @@ export default function SeatLinksPanel({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <Badge color={code.payer === 'owner' ? T.green : T.amber}>
-                    {code.payer === 'owner' ? 'YOU PAY' : 'THEY PAY'}
+                    {code.payer === 'owner' ? t("YOU PAY") : t("THEY PAY")}
                   </Badge>
-                  <Badge color={T.muted}>{code.code_type === 'seat' ? 'SEAT' : 'ROSTER ONLY'}</Badge>
-                  <Badge color={T.muted}>{code.max_uses === 1 ? 'SINGLE USE' : 'REUSABLE'}</Badge>
+                  <Badge color={T.muted}>{code.code_type === 'seat' ? t("SEAT") : t("ROSTER ONLY")}</Badge>
+                  <Badge color={T.muted}>{code.max_uses === 1 ? t("SINGLE USE") : t("REUSABLE")}</Badge>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 'bold', marginTop: 6 }}>
-                  {code.code_type === 'seat' ? campaignNameFor(teamCampaigns, code.campaign_id) : 'Roster only, no campaign yet'}
+                  {code.code_type === 'seat' ? campaignNameFor(teamCampaigns, code.campaign_id) : t("Roster only, no campaign yet")}
                 </div>
                 <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{usageLabel(code)}</div>
               </div>
               <button onClick={() => copy(code.id, code.code)} style={subtleBtnStyle}>
-                {copiedId === code.id ? 'COPIED ✓' : 'COPY LINK'}
+                {copiedId === code.id ? t("COPIED ✓") : t("COPY LINK")}
               </button>
-              <button onClick={() => setDeleteTarget(code)} style={dangerBtnStyle}>DELETE</button>
+              <button onClick={() => setDeleteTarget(code)} style={dangerBtnStyle}>{t("DELETE")}</button>
             </div>
           ))}
         </div>
@@ -316,15 +308,13 @@ export default function SeatLinksPanel({
             onClick={e => e.stopPropagation()}
             style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, padding: 24, width: 360, maxWidth: '90vw' }}
           >
-            <div style={{ fontSize: 13, fontWeight: 'bold', color: T.red, marginBottom: 10 }}>DELETE THIS SEAT LINK?</div>
+            <div style={{ fontSize: 13, fontWeight: 'bold', color: T.red, marginBottom: 10 }}>{t("DELETE THIS SEAT LINK?")}</div>
             <p style={{ fontSize: 13, lineHeight: 1.5, color: T.muted, marginBottom: 20 }}>
-              This link stops working immediately. Anyone who already joined through it keeps
-              their access, this only affects future use of the link itself.
-            </p>
+              {t("This link stops working immediately. Anyone who already joined through it keeps their access, this only affects future use of the link itself.")}</p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setDeleteTarget(null)} disabled={deleting} style={subtleBtnStyle}>CANCEL</button>
+              <button onClick={() => setDeleteTarget(null)} disabled={deleting} style={subtleBtnStyle}>{t("CANCEL")}</button>
               <button onClick={handleDelete} disabled={deleting} style={dangerBtnStyle}>
-                {deleting ? 'DELETING…' : 'DELETE LINK'}
+                {deleting ? t("DELETING…") : t("DELETE LINK")}
               </button>
             </div>
           </div>

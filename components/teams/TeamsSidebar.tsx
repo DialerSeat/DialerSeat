@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { readTeamsView, writeTeamsView } from '@/lib/rememberTeamsView'
 import ArrangePanel from '@/components/teams/ArrangePanel'
+import { t as tr } from '@/lib/i18n/client'
 
 // =============================================================================
 // TEAMS SIDEBAR — the navigation spine of the Teams page
@@ -596,15 +597,14 @@ export default function TeamsSidebar({
           flex: 1, margin: 0, fontSize: 22, fontWeight: 400,
           color: TEXT, letterSpacing: 0.2,
         }}>
-          My Teams
-        </h2>
+          {tr("My Teams")}</h2>
         <div className="ts-head-actions">
           <div style={{ position: 'relative' }}>
             <button
               className="ts-icon-btn"
               onClick={() => setMoreMenuOpen(o => !o)}
-              title="More"
-              aria-label="More actions"
+              title={tr("More")}
+              aria-label={tr("More actions")}
               aria-expanded={moreMenuOpen}
             >⋮</button>
             {moreMenuOpen && (
@@ -635,7 +635,7 @@ export default function TeamsSidebar({
                       }}
                     >
                       {renameTarget.kind === 'member'
-                        ? 'Set nickname'
+                        ? tr("Set nickname")
                         : `Rename ${renameTarget.kind}`}
                       <span className="ts-menu-hint">{renameTarget.name}</span>
                     </button>
@@ -649,8 +649,7 @@ export default function TeamsSidebar({
                       role="menuitem"
                       onClick={() => { setMoreMenuOpen(false); setArranging(true) }}
                     >
-                      Rearrange
-                      <span className="ts-menu-hint">Drag teams and campaigns into order</span>
+                      {tr("Rearrange")}<span className="ts-menu-hint">{tr("Drag teams and campaigns into order")}</span>
                     </button>
                   )}
                   <button
@@ -658,8 +657,7 @@ export default function TeamsSidebar({
                     role="menuitem"
                     onClick={() => { setMoreMenuOpen(false); setSelectMode(true) }}
                   >
-                    Select
-                    <span className="ts-menu-hint">Tick teams, campaigns or agents</span>
+                    {tr("Select")}<span className="ts-menu-hint">{tr("Tick teams, campaigns or agents")}</span>
                   </button>
                   {/* Statements live behind the ⋮ rather than in the tree: they
                       are not a thing you browse, they are a thing you go and
@@ -672,8 +670,7 @@ export default function TeamsSidebar({
                     role="menuitem"
                     onClick={() => { setMoreMenuOpen(false); onOpenFloor?.() }}
                   >
-                    The Floor
-                    <span className="ts-menu-hint">Who is dialing now, and which seats are idle</span>
+                    {tr("The Floor")}<span className="ts-menu-hint">{tr("Who is dialing now, and which seats are idle")}</span>
                   </button>
                   <a
                     className="ts-menu-item"
@@ -682,8 +679,7 @@ export default function TeamsSidebar({
                     onClick={() => setMoreMenuOpen(false)}
                     style={{ textDecoration: 'none', display: 'block' }}
                   >
-                    Seat Reports
-                    <span className="ts-menu-hint">Billing statements for your records</span>
+                    {tr("Seat Reports")}<span className="ts-menu-hint">{tr("Billing statements for your records")}</span>
                   </a>
                 </div>
               </>
@@ -698,8 +694,8 @@ export default function TeamsSidebar({
             <button
               className="ts-icon-btn"
               onClick={() => setAddMenuOpen(o => !o)}
-              title="Create"
-              aria-label="Create a team or campaign"
+              title={tr("Create")}
+              aria-label={tr("Create a team or campaign")}
               aria-expanded={addMenuOpen}
             >+</button>
             {addMenuOpen && (
@@ -714,16 +710,14 @@ export default function TeamsSidebar({
                     role="menuitem"
                     onClick={() => { setAddMenuOpen(false); onCreateTeam?.() }}
                   >
-                    Create New Team
-                    <span className="ts-menu-hint">A new agency or floor</span>
+                    {tr("Create New Team")}<span className="ts-menu-hint">{tr("A new agency or floor")}</span>
                   </button>
                   <button
                     className="ts-menu-item"
                     role="menuitem"
                     onClick={() => { setAddMenuOpen(false); onCreateCampaign?.() }}
                   >
-                    Create New Campaign
-                    <span className="ts-menu-hint">A lead list inside a team</span>
+                    {tr("Create New Campaign")}<span className="ts-menu-hint">{tr("A lead list inside a team")}</span>
                   </button>
                 </div>
               </>
@@ -759,9 +753,7 @@ export default function TeamsSidebar({
       <div className="ts-scroll">
         {teams.length === 0 ? (
           <div style={{ padding: '10px 12px', fontSize: 13, color: TEXT_DIM, lineHeight: 1.6 }}>
-            No teams yet. Create one with <strong style={{ color: TEXT_MUTED }}>+</strong>,
-            or join an existing one with a code below.
-          </div>
+            {tr("No teams yet. Create one with")}{" "}<strong style={{ color: TEXT_MUTED }}>+</strong>{tr(", or join an existing one with a code below.")}</div>
         ) : teams.map(team => {
           const teamOpen = !collapsedTeams.has(team.id)
           return (
@@ -775,7 +767,7 @@ export default function TeamsSidebar({
                 <button
                   className="ts-caret-btn"
                   onClick={() => toggle(collapsedTeams, team.id, setCollapsedTeams)}
-                  aria-label={teamOpen ? 'Collapse' : 'Expand'}
+                  aria-label={teamOpen ? tr("Collapse") : tr("Expand")}
                   aria-expanded={teamOpen}
                 >
                   <Caret open={teamOpen} />
@@ -799,7 +791,7 @@ export default function TeamsSidebar({
                       marked before, so a member's teams carried no label at
                       all — and an absent badge reads as missing information
                       rather than as the other case. */}
-                  <span className="ts-tag">{team.isOwner ? 'Owner' : 'User'}</span>
+                  <span className="ts-tag">{team.isOwner ? tr("Owner") : tr("User")}</span>
                 </button>
               </div>
 
@@ -814,7 +806,7 @@ export default function TeamsSidebar({
                   Above the campaigns because it answers the first question an
                   owner has, which is who is on this team. */}
               {teamOpen && team.agents.length > 0 && (
-                <div className="ts-section-label ts-indent-1">PEOPLE</div>
+                <div className="ts-section-label ts-indent-1">{tr("PEOPLE")}</div>
               )}
               {teamOpen && team.agents.map(agent => (
                 <div
@@ -852,12 +844,12 @@ export default function TeamsSidebar({
               {teamOpen && team.campaigns.length === 0 && team.agents.length === 0 && (
                 <div className="ts-empty ts-indent-1">
                   {team.isOwner
-                    ? 'Nobody on this team yet'
-                    : 'Nothing shared with you on this team yet'}
+                    ? tr("Nobody on this team yet")
+                    : tr("Nothing shared with you on this team yet")}
                 </div>
               )}
               {teamOpen && team.campaigns.length > 0 && (
-                <div className="ts-section-label ts-indent-1">CAMPAIGNS</div>
+                <div className="ts-section-label ts-indent-1">{tr("CAMPAIGNS")}</div>
               )}
 
               {teamOpen && team.campaigns.map(campaign => {
@@ -883,7 +875,7 @@ export default function TeamsSidebar({
                         <button
                           className="ts-caret-btn"
                           onClick={() => toggle(collapsedCampaigns, key, setCollapsedCampaigns)}
-                          aria-label={campaignOpen ? 'Collapse' : 'Expand'}
+                          aria-label={campaignOpen ? tr("Collapse") : tr("Expand")}
                           aria-expanded={campaignOpen}
                         >
                           <Caret open={campaignOpen} />
@@ -909,7 +901,7 @@ export default function TeamsSidebar({
                         <span className="ts-row-label">{campaign.name}</span>
                         {/* An open campaign needs no per-agent grants, which
                             changes how the owner reads the roster under it. */}
-                        {campaign.openToTeam && <span className="ts-tag">Open</span>}
+                        {campaign.openToTeam && <span className="ts-tag">{tr("Open")}</span>}
                       </button>
                     </div>
 
@@ -925,7 +917,7 @@ export default function TeamsSidebar({
                       // accurately, and keeps the tree short on a team with
                       // thirty agents and six open campaigns.
                       campaign.openToTeam ? (
-                        <div className="ts-empty">Whole team has access</div>
+                        <div className="ts-empty">{tr("Whole team has access")}</div>
                       ) : campaign.agents.length === 0 ? (
                         // ── AN EMPTY LIST MEANS TWO DIFFERENT THINGS ──────
                         // On a campaign open to the whole team there are no
@@ -935,7 +927,7 @@ export default function TeamsSidebar({
                         // than the situation, and reads as a warning that
                         // nobody can dial the campaign when the opposite is
                         // true.
-                        <div className="ts-empty">No agents assigned</div>
+                        <div className="ts-empty">{tr("No agents assigned")}</div>
                       ) : campaign.agents.map(agent => (
                         <div
                           key={agent.id}
@@ -984,10 +976,10 @@ export default function TeamsSidebar({
         <div className="ts-select-bar">
           <span style={{ flex: 1, fontSize: 11.5, color: TEXT_MUTED }}>
             {selectedList.length === 0
-              ? 'Tick what you want to change'
+              ? tr("Tick what you want to change")
               : `${selectedList.length} selected`}
           </span>
-          <button className="ts-mini-btn" onClick={leaveSelectMode}>Cancel</button>
+          <button className="ts-mini-btn" onClick={leaveSelectMode}>{tr("Cancel")}</button>
           {/* ── RENAME LIVES HERE TOO ──────────────────────────────────────
               Ticking a team and finding only Delete makes select mode read as
               a delete mode, and sends somebody who wanted to rename back out
@@ -1005,7 +997,7 @@ export default function TeamsSidebar({
                 leaveSelectMode()
                 onRename?.(renameSelection.kind, renameSelection.id, renameSelection.name)
               }}
-            >Rename</button>
+            >{tr("Rename")}</button>
           )}
           {selectedList.length > 0 && agentMode && (
             <>
@@ -1014,20 +1006,20 @@ export default function TeamsSidebar({
                 onClick={() => {
                   setRemoveMode('campaign'); setConfirmText(''); setConfirmOpen(true)
                 }}
-              >Remove from campaign</button>
+              >{tr("Remove from campaign")}</button>
               <button
                 className="ts-mini-btn is-danger"
                 onClick={() => {
                   setRemoveMode('team'); setConfirmText(''); setConfirmOpen(true)
                 }}
-              >Remove from team</button>
+              >{tr("Remove from team")}</button>
             </>
           )}
           {selectedList.length > 0 && !agentMode && (
             <button
               className="ts-mini-btn is-danger"
               onClick={() => { setConfirmText(''); setConfirmOpen(true) }}
-            >{leaveMode ? 'Leave' : 'Delete'}</button>
+            >{leaveMode ? tr("Leave") : tr("Delete")}</button>
           )}
         </div>
       )}
@@ -1071,7 +1063,7 @@ export default function TeamsSidebar({
                 : agentMode
                 ? 'They come off the team entirely: every campaign, and the seat you were ' +
                   'paying for. They would need a new code to come back.'
-                : 'This cannot be undone.'}
+                : tr("This cannot be undone.")}
             </p>
             <ul style={{
               margin: '0 0 14px', padding: '10px 12px 10px 26px', maxHeight: 150,
@@ -1083,8 +1075,7 @@ export default function TeamsSidebar({
               ))}
             </ul>
             <label style={{ display: 'block', fontSize: 11.5, color: TEXT_MUTED, marginBottom: 6 }}>
-              Type <strong style={{ color: TEXT }}>{confirmWord}</strong> to confirm
-            </label>
+              {tr("Type")}{" "}<strong style={{ color: TEXT }}>{confirmWord}</strong> {tr("to confirm")}</label>
             <input
               autoFocus
               value={confirmText}
@@ -1101,7 +1092,7 @@ export default function TeamsSidebar({
                 className="ts-mini-btn"
                 disabled={deleting}
                 onClick={() => setConfirmOpen(false)}
-              >Cancel</button>
+              >{tr("Cancel")}</button>
               <button
                 className="ts-mini-btn is-danger"
                 disabled={confirmText !== confirmWord || deleting}
@@ -1119,8 +1110,8 @@ export default function TeamsSidebar({
                   }
                 }}
               >{deleting
-                ? (leaveMode ? 'Leaving…' : agentMode ? 'Removing…' : 'Deleting…')
-                : (leaveMode ? 'Leave' : agentMode ? 'Remove' : 'Delete')}</button>
+                ? (leaveMode ? tr("Leaving…") : agentMode ? tr("Removing…") : tr("Deleting…"))
+                : (leaveMode ? tr("Leave") : agentMode ? tr("Remove") : tr("Delete"))}</button>
             </div>
           </div>
         </div>
@@ -1136,7 +1127,7 @@ export default function TeamsSidebar({
             className="ts-foot-btn"
             onClick={() => onScopeChange({ kind: 'requests' })}
           >
-            <span style={{ flex: 1, textAlign: 'left' }}>Requests</span>
+            <span style={{ flex: 1, textAlign: 'left' }}>{tr("Requests")}</span>
             {/* Corner badge, because pending work is an interruption — it
                 should read as something stuck to the button rather than a
                 field within it. Caps at 99+; past that the exact figure stops
@@ -1152,7 +1143,7 @@ export default function TeamsSidebar({
             className="ts-foot-btn"
             onClick={() => onScopeChange({ kind: 'all' })}
           >
-            <span style={{ flex: 1, textAlign: 'left' }}>All Users</span>
+            <span style={{ flex: 1, textAlign: 'left' }}>{tr("All Users")}</span>
             {/* Inline count, not a badge: this is a fact about the roster, not
                 a task. Blank at zero — "0" is the same information as no
                 number, spent on more ink. */}
@@ -1167,7 +1158,7 @@ export default function TeamsSidebar({
             usually a new agent who has been sent a code and has no team yet,
             so it must not be hidden inside team-owner tooling. */}
         <div className="ts-join">
-          <div className="ts-join-label">Have a Code? Join a Team:</div>
+          <div className="ts-join-label">{tr("Have a Code? Join a Team:")}</div>
           {/* Enter submits. Blur does NOT — it used to, which meant clicking
               anywhere after typing fired a join attempt nobody asked for. */}
           <input
@@ -1176,8 +1167,8 @@ export default function TeamsSidebar({
             onChange={e => setCodeInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') submitCode() }}
             disabled={joining}
-            placeholder={joining ? 'Joining…' : 'Enter Team Code Here'}
-            aria-label="Team or campaign join code"
+            placeholder={joining ? tr("Joining…") : tr("Enter Team Code Here")}
+            aria-label={tr("Team or campaign join code")}
           />
           {joinMessage && (
             <div

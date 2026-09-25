@@ -8,6 +8,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -34,7 +35,8 @@ export const metadata: Metadata = {
 const MODE_COLOR = '#5a5e6a'
 const MODE_BG = '#f0f0f4'
 
-export default function PreviewDialerPage() {
+export default async function PreviewDialerPage() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={breadcrumbSchema([
@@ -395,113 +397,74 @@ export default function PreviewDialerPage() {
         {/* HERO */}
         <section className="dm-hero">
           <div className="dm-hero-inner">
-            <div className="dm-eyebrow">PREVIEW DIALER</div>
-          <span style={{ fontSize: 11, color: '${SITE.muted}', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
-            <h1>The original outbound mode.</h1>
+            <div className="dm-eyebrow">{t("PREVIEW DIALER")}</div>
+          <span style={{ fontSize: 11, color: '${SITE.muted}', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>{t("LAST UPDATED 07/28/2026")}</span>
+            <h1>{t("The original outbound mode.")}</h1>
             <p className="dm-lead">
-              One lead at a time. The agent reads first, then clicks dial.
-              Slow by design, and that&apos;s exactly the point. It&apos;s
-              the mode that built modern outbound sales, and it&apos;s still
-              the right answer for a surprising number of campaigns.
-            </p>
+              {t("One lead at a time. The agent reads first, then clicks dial. Slow by design, and that's exactly the point. It's the mode that built modern outbound sales, and it's still the right answer for a surprising number of campaigns.")}</p>
           </div>
         </section>
 
         {/* INTRO + MECHANISM */}
         <section className="dm-section">
-          <h2>How preview dialing works</h2>
+          <h2>{t("How preview dialing works")}</h2>
           <p>
-            Preview is the simplest semi-automated dialer. There&apos;s no
-            algorithm pacing anything, no lines fired in parallel, no
-            voicemail detection deciding your fate. The agent stays in
-            charge of every dial.
-          </p>
+            {t("Preview is the simplest semi-automated dialer. There's no algorithm pacing anything, no lines fired in parallel, no voicemail detection deciding your fate. The agent stays in charge of every dial.")}</p>
           <ol className="dm-steps">
-            <li><div>The system pulls the next lead from your campaign queue and displays it on your screen: name, phone number, location, any custom fields you uploaded with the list.</div></li>
-            <li><div>You read it. Maybe glance at the LinkedIn, maybe re-read your last note, maybe pull up their account history. Take as long as you need.</div></li>
-            <li><div>You click <em>Dial This Lead</em>. The outbound call goes out. You hear the ring.</div></li>
-            <li><div>If a human answers: the call connects and you talk. If it&apos;s voicemail or no-answer, you hang up and disposition.</div></li>
-            <li><div>The system pulls the next lead. Loop.</div></li>
+            <li><div>{t("The system pulls the next lead from your campaign queue and displays it on your screen: name, phone number, location, any custom fields you uploaded with the list.")}</div></li>
+            <li><div>{t("You read it. Maybe glance at the LinkedIn, maybe re-read your last note, maybe pull up their account history. Take as long as you need.")}</div></li>
+            <li><div>{t("You click")}{" "}<em>{t("Dial This Lead")}</em>{t(". The outbound call goes out. You hear the ring.")}</div></li>
+            <li><div>{t("If a human answers: the call connects and you talk. If it's voicemail or no-answer, you hang up and disposition.")}</div></li>
+            <li><div>{t("The system pulls the next lead. Loop.")}</div></li>
           </ol>
           <div className="dm-pullquote">
-            The defining property of preview is that <strong>nothing happens
-            without the agent</strong>. No call leaves the system unless a
-            human clicked dial. That single property is what makes preview
-            the safest and the slowest dialing mode there is.
-          </div>
+            {t("The defining property of preview is that")}{" "}<strong>{t("nothing happens without the agent")}</strong>{t(". No call leaves the system unless a human clicked dial. That single property is what makes preview the safest and the slowest dialing mode there is.")}</div>
         </section>
 
         {/* ORIGINS */}
         <section className="dm-section alt">
           <div className="inner">
-            <h2>Where it came from</h2>
+            <h2>{t("Where it came from")}</h2>
             <p>
-              Preview dialing predates almost every other call-center
-              concept you can name. In the 1970s, when telemarketing operations
-              first started buying calling lists in bulk, the dialer was a
-              human finger and a rotary phone. The first &quot;preview
-              systems&quot; were just CRT terminals showing the next record
-              from a mainframe-stored list while the agent dialed by hand.
-            </p>
+              {t("Preview dialing predates almost every other call-center concept you can name. In the 1970s, when telemarketing operations first started buying calling lists in bulk, the dialer was a human finger and a rotary phone. The first \"preview systems\" were just CRT terminals showing the next record from a mainframe-stored list while the agent dialed by hand.")}</p>
             <p>
-              Through the 1980s and into the 1990s, as PC-based call-center
-              software matured, the workflow stayed: <em>display the lead,
-              wait for the agent, place the call, log the disposition</em>.
-              The phone system was now picking up the dialing, but the
-              human was still the trigger. This was &quot;agent-controlled
-              dialing&quot; the textbook term you&apos;ll find in old AT&amp;T
-              and Aspect Communications documentation.
-            </p>
+              {t("Through the 1980s and into the 1990s, as PC-based call-center software matured, the workflow stayed:")}{" "}<em>{t("display the lead, wait for the agent, place the call, log the disposition")}</em>{t(". The phone system was now picking up the dialing, but the human was still the trigger. This was \"agent-controlled dialing\" the textbook term you'll find in old AT&T and Aspect Communications documentation.")}</p>
             <p>
-              When predictive and progressive modes arrived and started
-              chasing throughput, preview stuck around because some industries
-              fundamentally need the pause. Debt collectors had to review
-              account histories before opening their mouths. Insurance
-              agents had to confirm policy details. B2B sellers had to
-              actually research the prospect. The slow mode never went away
- it just got pushed up-market.
-            </p>
+              {t("When predictive and progressive modes arrived and started chasing throughput, preview stuck around because some industries fundamentally need the pause. Debt collectors had to review account histories before opening their mouths. Insurance agents had to confirm policy details. B2B sellers had to actually research the prospect. The slow mode never went away it just got pushed up-market.")}</p>
             <p>
-              Today preview is the default in collections, complex B2B, and
-              any vertical where the call is too high-touch to start cold.
-              It&apos;s also the mode most new agents start on, because it
-              teaches you to read a lead before you talk to one.
-            </p>
+              {t("Today preview is the default in collections, complex B2B, and any vertical where the call is too high-touch to start cold. It's also the mode most new agents start on, because it teaches you to read a lead before you talk to one.")}</p>
           </div>
         </section>
 
         {/* WHEN IT SHINES */}
         <section className="dm-section">
-          <h2>When preview wins</h2>
+          <h2>{t("When preview wins")}</h2>
           <p>
-            Preview gets dismissed as &quot;the slow one&quot;, but it earns its
-            place in any campaign where the cost of a bad opening is higher
-            than the cost of a few extra seconds between dials.
-          </p>
+            {t("Preview gets dismissed as \"the slow one\", but it earns its place in any campaign where the cost of a bad opening is higher than the cost of a few extra seconds between dials.")}</p>
           <div className="dm-shines-grid">
             <div className="dm-shines-card">
-              <h4>HIGH-TICKET B2B</h4>
-              <p>Calling a VP of Sales without knowing what their company does is worse than not calling at all. Read first, then dial.</p>
+              <h4>{t("HIGH-TICKET B2B")}</h4>
+              <p>{t("Calling a VP of Sales without knowing what their company does is worse than not calling at all. Read first, then dial.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>DEBT COLLECTION</h4>
-              <p>Account history, last contact date, payment plan status, you need all of it open before the conversation starts.</p>
+              <h4>{t("DEBT COLLECTION")}</h4>
+              <p>{t("Account history, last contact date, payment plan status, you need all of it open before the conversation starts.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>INSURANCE RENEWALS</h4>
-              <p>Coverage, deductible, last quote, family status. Walking in cold costs you the renewal.</p>
+              <h4>{t("INSURANCE RENEWALS")}</h4>
+              <p>{t("Coverage, deductible, last quote, family status. Walking in cold costs you the renewal.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>WARM FOLLOW-UPS</h4>
-              <p>The lead already filled out a form or attended a webinar. Reviewing what they said before calling is the whole job.</p>
+              <h4>{t("WARM FOLLOW-UPS")}</h4>
+              <p>{t("The lead already filled out a form or attended a webinar. Reviewing what they said before calling is the whole job.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>TRAINING</h4>
-              <p>New agents on power or predictive flame out fast. Preview teaches you to read a lead before you talk to one.</p>
+              <h4>{t("TRAINING")}</h4>
+              <p>{t("New agents on power or predictive flame out fast. Preview teaches you to read a lead before you talk to one.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>LOW-VOLUME LISTS</h4>
-              <p>If your list is 200 leads, not 20,000, the speed difference doesn&apos;t matter. Use the time to do it right.</p>
+              <h4>{t("LOW-VOLUME LISTS")}</h4>
+              <p>{t("If your list is 200 leads, not 20,000, the speed difference doesn't matter. Use the time to do it right.")}</p>
             </div>
           </div>
         </section>
@@ -509,41 +472,27 @@ export default function PreviewDialerPage() {
         {/* TRADE-OFFS */}
         <section className="dm-section alt">
           <div className="inner">
-            <h2>What you give up</h2>
+            <h2>{t("What you give up")}</h2>
             <p>
-              Throughput. Preview agents do somewhere between 5 and 15 dials
-              per hour depending on call length and review time. Power
-              dialers in the same hour will do 30-60. Predictive can push
-              that into triple digits. If your campaign is volume-bound
-              instead of context-bound, preview is the wrong tool.
-            </p>
+              {t("Throughput. Preview agents do somewhere between 5 and 15 dials per hour depending on call length and review time. Power dialers in the same hour will do 30-60. Predictive can push that into triple digits. If your campaign is volume-bound instead of context-bound, preview is the wrong tool.")}</p>
             <p>
-              The other thing you give up is consistency. Two agents on the
-              same list in preview mode can have wildly different pace
-              depending on how thorough they are. That&apos;s a feature if
-              you&apos;re paying for quality; it&apos;s a bug if you&apos;re
-              paying for connects.
-            </p>
+              {t("The other thing you give up is consistency. Two agents on the same list in preview mode can have wildly different pace depending on how thorough they are. That's a feature if you're paying for quality; it's a bug if you're paying for connects.")}</p>
           </div>
         </section>
 
         {/* ON DIALERSEAT */}
         <section className="dm-on-ds">
           <div className="inner">
-            <h2>Preview on DialerSeat</h2>
+            <h2>{t("Preview on DialerSeat")}</h2>
             <p>
-              Preview is available on every account, every campaign, every
-              tier. There&apos;s no extra setting to enable it, just pick
-              <em> PREVIEW</em> from the mode selector on the campaign or in
-              the dialer terminal.
-            </p>
+              {t("Preview is available on every account, every campaign, every tier. There's no extra setting to enable it, just pick")}<em> {t("PREVIEW")}</em> {t("from the mode selector on the campaign or in the dialer terminal.")}</p>
             <ul className="dm-bullets">
-              <li>Lead profile shows every custom field you uploaded with the list, not just name and phone.</li>
-              <li>If the campaign has a script, it sits beside the profile so you can read both before dialing.</li>
-              <li><em>Skip This Lead</em> dispositions cleanly and pulls the next one, no penalty for passing.</li>
-              <li>Auto-pull next lead after disposition (toggle on/off in your settings).</li>
-              <li>TCPA window check still runs, leads outside their local 8 AM-9 PM window are skipped automatically.</li>
-              <li>National DNC scrubbing is on you, scrub your list against the registry before you upload it. See <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link> for the full split of what we enforce vs. what's yours.</li>
+              <li>{t("Lead profile shows every custom field you uploaded with the list, not just name and phone.")}</li>
+              <li>{t("If the campaign has a script, it sits beside the profile so you can read both before dialing.")}</li>
+              <li><em>{t("Skip This Lead")}</em> {t("dispositions cleanly and pulls the next one, no penalty for passing.")}</li>
+              <li>{t("Auto-pull next lead after disposition (toggle on/off in your settings).")}</li>
+              <li>{t("TCPA window check still runs, leads outside their local 8 AM-9 PM window are skipped automatically.")}</li>
+              <li>{t("National DNC scrubbing is on you, scrub your list against the registry before you upload it. See")}{" "}<Link href="/faq/how-we-keep-compliance">{t("how we keep compliance")}</Link> {t("for the full split of what we enforce vs. what's yours.")}</li>
             </ul>
           </div>
         </section>
@@ -551,22 +500,22 @@ export default function PreviewDialerPage() {
         {/* OTHER MODES */}
         <section className="dm-other">
           <div className="inner">
-            <h2>The other three modes</h2>
+            <h2>{t("The other three modes")}</h2>
             <div className="dm-other-grid">
               <Link href="/dialing-modes/power" className="dm-other-card power">
-                <span className="pill">POWER</span>
-                <h3>Auto-dial, one line per agent</h3>
-                <p>Click once, system handles the queue. Same compliance profile as preview, 2-3× the volume.</p>
+                <span className="pill">{t("POWER")}</span>
+                <h3>{t("Auto-dial, one line per agent")}</h3>
+                <p>{t("Click once, system handles the queue. Same compliance profile as preview, 2-3× the volume.")}</p>
               </Link>
               <Link href="/dialing-modes/progressive" className="dm-other-card progressive">
-                <span className="pill">PROGRESSIVE</span>
-                <h3>Auto-dial with voicemail filtering</h3>
-                <p>One line per agent, but the system listens to the pickup. Voicemails never reach you.</p>
+                <span className="pill">{t("PROGRESSIVE")}</span>
+                <h3>{t("Auto-dial with voicemail filtering")}</h3>
+                <p>{t("One line per agent, but the system listens to the pickup. Voicemails never reach you.")}</p>
               </Link>
               <Link href="/dialing-modes/predictive" className="dm-other-card predictive">
-                <span className="pill">PREDICTIVE</span>
-                <h3>Multiple lines, agent prediction</h3>
-                <p>1.5-3× lines per agent, routed by algorithm. Highest throughput, closest to the legal abandon-rate line, kept in check by auto-degrade.</p>
+                <span className="pill">{t("PREDICTIVE")}</span>
+                <h3>{t("Multiple lines, agent prediction")}</h3>
+                <p>{t("1.5-3× lines per agent, routed by algorithm. Highest throughput, closest to the legal abandon-rate line, kept in check by auto-degrade.")}</p>
               </Link>
             </div>
           </div>

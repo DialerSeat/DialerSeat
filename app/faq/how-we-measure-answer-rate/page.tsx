@@ -6,6 +6,7 @@ import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 // =============================================================================
 // /faq/how-we-measure-answer-rate
@@ -80,7 +81,8 @@ const FAQS = [
   },
 ]
 
-export default function Page() {
+export default async function Page() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={faqPageSchema(FAQS)} />
@@ -96,111 +98,84 @@ export default function Page() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ METRICS</div>
+            <div className="guts-eyebrow">{t("▸ METRICS")}</div>
             <h1>
-              A dial that never rang
-              <span className="second">isn’t a missed call.</span>
+              {t("A dial that never rang")}<span className="second">{t("isn’t a missed call.")}</span>
             </h1>
             <p>
-              An answer rate is only as honest as what it’s divided by. We count every dial you paid
-              for, and we calculate your rates only over the dials that actually reached a phone.
-            </p>
+              {t("An answer rate is only as honest as what it’s divided by. We count every dial you paid for, and we calculate your rates only over the dials that actually reached a phone.")}</p>
           </div>
         </GutsSection>
 
-        <GutsSection icon="info" title="The three numbers">
+        <GutsSection icon="info" title={t("The three numbers")}>
           <div className="guts-grid-3">
             <div className="guts-panel">
-              <div className="role">DIALS</div>
-              <h3>Every attempt</h3>
+              <div className="role">{t("DIALS")}</div>
+              <h3>{t("Every attempt")}</h3>
               <p>
-                Every call the dialer placed, whatever happened next. This is what you pay for, so
-                it is what your dial counts and costs are built on.
-              </p>
+                {t("Every call the dialer placed, whatever happened next. This is what you pay for, so it is what your dial counts and costs are built on.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">DIALS THAT RANG</div>
-              <h3>The denominator</h3>
+              <div className="role">{t("DIALS THAT RANG")}</div>
+              <h3>{t("The denominator")}</h3>
               <p>
-                Dials that reached the other end. Only these gave anyone the chance to answer.
-              </p>
+                {t("Dials that reached the other end. Only these gave anyone the chance to answer.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">ANSWERED</div>
-              <h3>Somebody picked up</h3>
+              <div className="role">{t("ANSWERED")}</div>
+              <h3>{t("Somebody picked up")}</h3>
               <p>
-                Recorded once, at the moment the carrier reports the call was answered. Not inferred
-                from how long the call lasted.
-              </p>
+                {t("Recorded once, at the moment the carrier reports the call was answered. Not inferred from how long the call lasted.")}</p>
             </div>
           </div>
           <p style={{ marginTop: 24 }}>
-            Answer rate is <strong>answered ÷ dials that rang</strong>. Connect and contact rates use
-            the same denominator.
-          </p>
+            {t("Answer rate is")}{" "}<strong>{t("answered ÷ dials that rang")}</strong>{t(". Connect and contact rates use the same denominator.")}</p>
         </GutsSection>
 
-        <GutsSection icon="alert" title="What “never rang” means">
+        <GutsSection icon="alert" title={t("What “never rang” means")}>
           <p>
-            A dial can fail on the way out before it ever reaches a phone. When that happens there is
-            no answer and no ring time at all: zero seconds. A phone that nobody picks up still rings
-            for twenty seconds or more, so the two are easy to tell apart.
-          </p>
+            {t("A dial can fail on the way out before it ever reaches a phone. When that happens there is no answer and no ring time at all: zero seconds. A phone that nobody picks up still rings for twenty seconds or more, so the two are easy to tell apart.")}</p>
           <p>
-            A dial like that is left out of the rate, because no one had the chance to answer it. It
-            stays in your dial count and your costs, because it really was attempted and billed.
-            Hiding it from those would make your costs look lower than they are.
-          </p>
+            {t("A dial like that is left out of the rate, because no one had the chance to answer it. It stays in your dial count and your costs, because it really was attempted and billed. Hiding it from those would make your costs look lower than they are.")}</p>
         </GutsSection>
 
-        <GutsSection icon="table" title="Why it matters: an example">
+        <GutsSection icon="table" title={t("Why it matters: an example")}>
           <p>
-            An invented campaign, to show the arithmetic. Not our data.
-          </p>
+            {t("An invented campaign, to show the arithmetic. Not our data.")}</p>
           <div className="guts-grid-2">
             <div className="guts-panel">
-              <div className="role">DIVIDED BY EVERY DIAL</div>
+              <div className="role">{t("DIVIDED BY EVERY DIAL")}</div>
               <h3>32%</h3>
-              <p>1,000 dials, 320 answered. But 200 of those dials failed before they rang.</p>
+              <p>{t("1,000 dials, 320 answered. But 200 of those dials failed before they rang.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">DIVIDED BY DIALS THAT RANG</div>
+              <div className="role">{t("DIVIDED BY DIALS THAT RANG")}</div>
               <h3>40%</h3>
-              <p>800 dials rang, 320 answered. This is how the list actually performed.</p>
+              <p>{t("800 dials rang, 320 answered. This is how the list actually performed.")}</p>
             </div>
           </div>
           <p style={{ marginTop: 24 }}>
-            The first figure would send you to change your list, your calling hours or your caller
-            ID, when none of them was the problem. The second tells you how people actually
-            responded.
-          </p>
+            {t("The first figure would send you to change your list, your calling hours or your caller ID, when none of them was the problem. The second tells you how people actually responded.")}</p>
         </GutsSection>
 
-        <GutsSection icon="check" title="Two more rules">
+        <GutsSection icon="check" title={t("Two more rules")}>
           <ul className="guts-list good">
             <li>
-              <strong>Calls still ringing don’t count yet.</strong> Until a call has finished it isn’t
-              evidence either way, so it isn’t counted as answered or unanswered.
-            </li>
+              <strong>{t("Calls still ringing don’t count yet.")}</strong> {t("Until a call has finished it isn’t evidence either way, so it isn’t counted as answered or unanswered.")}</li>
             <li>
-              <strong>Small samples get a dash, not a number.</strong> Our public{' '}
-              <Link href="/data/connect-rates">connect-rate data</Link> shows a rate only where at
-              least 250 dials rang. Below that, ordinary chance would move the figure by several
-              points, and we would be publishing noise.
-            </li>
+              <strong>{t("Small samples get a dash, not a number.")}</strong> {t("Our public")}{' '}
+              <Link href="/data/connect-rates">{t("connect-rate data")}</Link> {t("shows a rate only where at least 250 dials rang. Below that, ordinary chance would move the figure by several points, and we would be publishing noise.")}</li>
           </ul>
         </GutsSection>
 
-        <GutsSection icon="phone" title="The same rule for your numbers">
+        <GutsSection icon="phone" title={t("The same rule for your numbers")}>
           <p>
-            Each caller ID’s answer rate is compared with the rest of the pool to catch numbers that
-            carriers have started flagging. That comparison uses only calls that rang, so a number is
-            never held back because of dials that never reached anyone. See{' '}
-            <Link href="/faq/how-we-keep-numbers-clean">how we keep numbers clean</Link>.
+            {t("Each caller ID’s answer rate is compared with the rest of the pool to catch numbers that carriers have started flagging. That comparison uses only calls that rang, so a number is never held back because of dials that never reached anyone. See")}{' '}
+            <Link href="/faq/how-we-keep-numbers-clean">{t("how we keep numbers clean")}</Link>.
           </p>
           <div className="guts-btns">
-            <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
-            <Link href="/data/connect-rates" className="guts-btn secondary">SEE CONNECT-RATE DATA</Link>
+            <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
+            <Link href="/data/connect-rates" className="guts-btn secondary">{t("SEE CONNECT-RATE DATA")}</Link>
           </div>
         </GutsSection>
 

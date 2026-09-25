@@ -9,6 +9,7 @@ import FaqTheme from '@/components/faq-theme'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
+import { t } from '@/lib/i18n/client'
 
 
 type Slide = { src: string; alt: string; caption: string; isJpg?: boolean }
@@ -46,7 +47,7 @@ function MobileCarousel() {
   return (
     <div className="mob-carousel">
       <div className="mob-carousel-frame">
-        <button className="mob-carousel-arrow left" onClick={() => go(-1)} aria-label="Previous screenshot">‹</button>
+        <button className="mob-carousel-arrow left" onClick={() => go(-1)} aria-label={t("Previous screenshot")}>‹</button>
         <div className="mob-phone-shell">
           <div className="mob-phone-notch" />
           <div className="mob-phone-imgwrap">
@@ -61,7 +62,7 @@ function MobileCarousel() {
             />
           </div>
         </div>
-        <button className="mob-carousel-arrow right" onClick={() => go(1)} aria-label="Next screenshot">›</button>
+        <button className="mob-carousel-arrow right" onClick={() => go(1)} aria-label={t("Next screenshot")}>›</button>
       </div>
       <p className="mob-carousel-caption">{slide.caption}</p>
       <div className="mob-carousel-dots">
@@ -171,166 +172,123 @@ export default function MobileFaqView() {
         `}</style>
 
         <article className="faq-root">
-          <div className="faq-eyebrow">▸ DIALERSEAT ON YOUR PHONE</div>
-          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
+          <div className="faq-eyebrow">{t("▸ DIALERSEAT ON YOUR PHONE")}</div>
+          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>{t("LAST UPDATED 07/28/2026")}</span>
 
           <h1 className="faq-h1">
-            The full dialer. Installed to your <em>home screen.</em>
+            {t("The full dialer. Installed to your")}{" "}<em>{t("home screen.")}</em>
           </h1>
 
           <p className="faq-deck">
-            DialerSeat runs as a complete Progressive Web App (PWA) on
-            mobile: the same terminal, the same analytics, the same teams
-            tools you get on desktop, installed to your phone in under a
-            minute. No App Store, no separate download, no stripped-down
-            &ldquo;mobile version.&rdquo;
-          </p>
+            {t("DialerSeat runs as a complete Progressive Web App (PWA) on mobile: the same terminal, the same analytics, the same teams tools you get on desktop, installed to your phone in under a minute. No App Store, no separate download, no stripped-down “mobile version.”")}</p>
 
           <div className="faq-badge-row">
-            <span className="faq-badge hi">FREE ON EVERY PLAN</span>
-            <span className="faq-badge">NO APP STORE REQUIRED</span>
-            <span className="faq-badge">INSTALLS IN UNDER A MINUTE</span>
-            <span className="faq-badge">SAME FEATURES AS DESKTOP</span>
+            <span className="faq-badge hi">{t("FREE ON EVERY PLAN")}</span>
+            <span className="faq-badge">{t("NO APP STORE REQUIRED")}</span>
+            <span className="faq-badge">{t("INSTALLS IN UNDER A MINUTE")}</span>
+            <span className="faq-badge">{t("SAME FEATURES AS DESKTOP")}</span>
           </div>
 
           {/* ── STRONGLY RECOMMENDED ───────────────────────────────────────── */}
           <div className="mob-recommend">
-            <div className="mob-recommend-eyebrow">▸ BEFORE YOU DIAL FROM YOUR PHONE</div>
+            <div className="mob-recommend-eyebrow">{t("▸ BEFORE YOU DIAL FROM YOUR PHONE")}</div>
             <p>
-              <strong>We strongly recommend installing the PWA rather than
-              using DialerSeat in a regular browser tab</strong> if you plan
-              to dial from mobile at all. Installed mode runs full-screen
-              with no browser address bar eating into your screen space,
-              launches instantly from your home screen instead of requiring
-              you to navigate back to the site, and keeps your session
-              persistent instead of getting reloaded every time your browser
-              app gets backgrounded by iOS or Android. If you&apos;re going
-              to run a shift from your phone, install it first, it takes
-              under a minute and the instructions are right below.
-            </p>
+              <strong>{t("We strongly recommend installing the PWA rather than using DialerSeat in a regular browser tab")}</strong> {t("if you plan to dial from mobile at all. Installed mode runs full-screen with no browser address bar eating into your screen space, launches instantly from your home screen instead of requiring you to navigate back to the site, and keeps your session persistent instead of getting reloaded every time your browser app gets backgrounded by iOS or Android. If you're going to run a shift from your phone, install it first, it takes under a minute and the instructions are right below.")}</p>
           </div>
 
           {/* ── SEE IT ─────────────────────────────────────────────────────── */}
           <section className="faq-section">
-            <h2>▸ SEE IT RUNNING</h2>
+            <h2>{t("▸ SEE IT RUNNING")}</h2>
             <p>
-              Real screenshots, standard Pro plan, no white-labeling, this
-              is exactly what every DialerSeat account gets on mobile.
-            </p>
+              {t("Real screenshots, standard Pro plan, no white-labeling, this is exactly what every DialerSeat account gets on mobile.")}</p>
 
             <MobileCarousel />
           </section>
 
           {/* ── HOW TO INSTALL ─────────────────────────────────────────────── */}
           <section className="faq-section">
-            <h2>▸ HOW TO INSTALL IT</h2>
+            <h2>{t("▸ HOW TO INSTALL IT")}</h2>
             <p>
-              &ldquo;Installing&rdquo; a PWA doesn&apos;t mean an app store
-              download, it means telling your phone&apos;s browser to save
-              a home-screen shortcut that opens full-screen, with no address
-              bar. Here&apos;s exactly how, on both platforms.
-            </p>
+              {t("“Installing” a PWA doesn't mean an app store download, it means telling your phone's browser to save a home-screen shortcut that opens full-screen, with no address bar. Here's exactly how, on both platforms.")}</p>
 
             <div className="mob-install-grid">
               <div className="mob-install-card">
                 <div className="mob-install-platform ios">
                   <div className="icon">i</div>
-                  <span className="name">iPHONE (SAFARI)</span>
+                  <span className="name">{t("iPHONE (SAFARI)")}</span>
                 </div>
                 <ol>
-                  <li>Open <code>dialerseat.com</code> in <strong>Safari</strong> (this only works in Safari, not Chrome, on iOS: that&apos;s an Apple restriction, not ours).</li>
-                  <li>Sign in to your account.</li>
-                  <li>Tap the <strong>Share</strong> icon in the bottom toolbar (the square with an arrow pointing up).</li>
-                  <li>Scroll down and tap <strong>&ldquo;Add to Home Screen.&rdquo;</strong></li>
-                  <li>Tap <strong>&ldquo;Add&rdquo;</strong> in the top-right corner.</li>
-                  <li>The DialerSeat icon now sits on your home screen: tap it any time to launch full-screen, already signed in.</li>
+                  <li>{t("Open")}{" "}<code>dialerseat.com</code> {t("in")}{" "}<strong>{t("Safari")}</strong> {t("(this only works in Safari, not Chrome, on iOS: that's an Apple restriction, not ours).")}</li>
+                  <li>{t("Sign in to your account.")}</li>
+                  <li>{t("Tap the")}{" "}<strong>{t("Share")}</strong> {t("icon in the bottom toolbar (the square with an arrow pointing up).")}</li>
+                  <li>{t("Scroll down and tap")}{" "}<strong>{t("“Add to Home Screen.”")}</strong></li>
+                  <li>{t("Tap")}{" "}<strong>{t("“Add”")}</strong> {t("in the top-right corner.")}</li>
+                  <li>{t("The DialerSeat icon now sits on your home screen: tap it any time to launch full-screen, already signed in.")}</li>
                 </ol>
               </div>
 
               <div className="mob-install-card">
                 <div className="mob-install-platform android">
                   <div className="icon">A</div>
-                  <span className="name">ANDROID (CHROME)</span>
+                  <span className="name">{t("ANDROID (CHROME)")}</span>
                 </div>
                 <ol>
-                  <li>Open <code>dialerseat.com</code> in <strong>Chrome</strong>.</li>
-                  <li>Sign in to your account.</li>
-                  <li>Tap the <strong>three-dot menu</strong> in the top-right corner.</li>
-                  <li>Tap <strong>&ldquo;Install app&rdquo;</strong> or <strong>&ldquo;Add to Home screen&rdquo;</strong> (wording varies slightly by Chrome version).</li>
-                  <li>Confirm by tapping <strong>&ldquo;Install.&rdquo;</strong></li>
-                  <li>The DialerSeat icon now sits on your home screen and in your app drawer, launching full-screen like any other installed app.</li>
+                  <li>{t("Open")}{" "}<code>dialerseat.com</code> {t("in")}{" "}<strong>{t("Chrome")}</strong>.</li>
+                  <li>{t("Sign in to your account.")}</li>
+                  <li>{t("Tap the")}{" "}<strong>{t("three-dot menu")}</strong> {t("in the top-right corner.")}</li>
+                  <li>{t("Tap")}{" "}<strong>{t("“Install app”")}</strong> {t("or")}{" "}<strong>{t("“Add to Home screen”")}</strong> {t("(wording varies slightly by Chrome version).")}</li>
+                  <li>{t("Confirm by tapping")}{" "}<strong>{t("“Install.”")}</strong></li>
+                  <li>{t("The DialerSeat icon now sits on your home screen and in your app drawer, launching full-screen like any other installed app.")}</li>
                 </ol>
               </div>
             </div>
 
             <p className="muted">
-              Once installed, updates happen automatically in the background
- the same way the website updates. There&apos;s nothing to
-              manually update and no separate release you&apos;re waiting
-              on.
-            </p>
+              {t("Once installed, updates happen automatically in the background the same way the website updates. There's nothing to manually update and no separate release you're waiting on.")}</p>
           </section>
 
           {/* ── WHAT YOU GET ───────────────────────────────────────────────── */}
           <section className="faq-section">
-            <h2>▸ WHAT&apos;S ACTUALLY THERE ON MOBILE</h2>
+            <h2>{t("▸ WHAT'S ACTUALLY THERE ON MOBILE")}</h2>
             <p>
-              Nothing is held back for the smaller screen. Everything a
-              Pro-plan account gets on desktop is present and fully
-              functional on mobile:
-            </p>
+              {t("Nothing is held back for the smaller screen. Everything a Pro-plan account gets on desktop is present and fully functional on mobile:")}</p>
             <ul>
-              <li><strong>Full dialer terminal</strong>: all four dialer modes, manual dial pad, live campaign selection, lead profile view</li>
-              <li><strong>Analytics overview</strong>: the same call volume, conversion rate, disposition breakdown, and campaign performance panels as desktop</li>
-              <li><strong>Campaigns, Recordings, and Leads</strong>: browse, manage, and review from your phone exactly like you would at a desk</li>
-              <li><strong>Teams</strong>: for Manager+ accounts, the same team management tools carry over too; see <Link href="/faq/white-label-mobile">white-label on mobile</Link> if you&apos;re running a branded account</li>
-              <li><strong>Settings</strong>: account and campaign configuration, unchanged from desktop</li>
+              <li><strong>{t("Full dialer terminal")}</strong>{t(": all four dialer modes, manual dial pad, live campaign selection, lead profile view")}</li>
+              <li><strong>{t("Analytics overview")}</strong>{t(": the same call volume, conversion rate, disposition breakdown, and campaign performance panels as desktop")}</li>
+              <li><strong>{t("Campaigns, Recordings, and Leads")}</strong>{t(": browse, manage, and review from your phone exactly like you would at a desk")}</li>
+              <li><strong>{t("Teams")}</strong>{t(": for Manager+ accounts, the same team management tools carry over too; see")}{" "}<Link href="/faq/white-label-mobile">{t("white-label on mobile")}</Link> {t("if you're running a branded account")}</li>
+              <li><strong>{t("Settings")}</strong>{t(": account and campaign configuration, unchanged from desktop")}</li>
             </ul>
             <p className="muted">
-              The one place mobile intentionally trades convenience for
-              practicality is dense side-by-side views, the desktop app&apos;s
-              multi-window layout (analytics and teams open next to each
-              other) doesn&apos;t translate to a phone screen, so those stay
-              single-view on mobile and swap via the sidebar instead.
-            </p>
+              {t("The one place mobile intentionally trades convenience for practicality is dense side-by-side views, the desktop app's multi-window layout (analytics and teams open next to each other) doesn't translate to a phone screen, so those stay single-view on mobile and swap via the sidebar instead.")}</p>
           </section>
 
           {/* ── HONEST LIMITATION ──────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>One honest note: </strong> like any PWA, this
-              isn&apos;t a listing in the App Store or Play Store, so there&apos;s
-              no storefront search visibility and iOS in particular restricts
-              installation to Safari specifically (Chrome and other iOS
-              browsers can&apos;t trigger the install prompt, that&apos;s
-              an Apple platform rule, not a DialerSeat limitation). For
-              actually running your dialer day to day, none of that changes
-              the experience once it&apos;s installed.
-            </p>
+              <strong>{t("One honest note:")}{" "}</strong> {t("like any PWA, this isn't a listing in the App Store or Play Store, so there's no storefront search visibility and iOS in particular restricts installation to Safari specifically (Chrome and other iOS browsers can't trigger the install prompt, that's an Apple platform rule, not a DialerSeat limitation). For actually running your dialer day to day, none of that changes the experience once it's installed.")}</p>
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
           <div className="faq-related">
-            <div className="faq-related-label">▸ RELATED READING</div>
+            <div className="faq-related-label">{t("▸ RELATED READING")}</div>
             <div className="faq-related-links">
-              <Link href="/faq/white-label-mobile">White-label on mobile</Link>
-              <Link href="/faq/manager-plus">What Manager+ adds over Pro</Link>
-              <Link href="/faq/why-dialerseat">Why I built DialerSeat</Link>
-              <Link href="/faq/dialerseat-teams">DialerSeat for teams</Link>
-              <Link href="/faq">FAQ</Link>
+              <Link href="/faq/white-label-mobile">{t("White-label on mobile")}</Link>
+              <Link href="/faq/manager-plus">{t("What Manager+ adds over Pro")}</Link>
+              <Link href="/faq/why-dialerseat">{t("Why I built DialerSeat")}</Link>
+              <Link href="/faq/dialerseat-teams">{t("DialerSeat for teams")}</Link>
+              <Link href="/faq">{t("FAQ")}</Link>
             </div>
           </div>
 
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
           <div className="faq-cta">
-            <div className="faq-cta-eyebrow">▸ TRY IT ON YOUR PHONE RIGHT NOW</div>
-            <h3 className="faq-cta-h">$35/week. No contract. Cancel any time.</h3>
+            <div className="faq-cta-eyebrow">{t("▸ TRY IT ON YOUR PHONE RIGHT NOW")}</div>
+            <h3 className="faq-cta-h">{t("$35/week. No contract. Cancel any time.")}</h3>
             <p>
-              Sign up, sign in on your phone&apos;s browser, and install it
-              to your home screen in the next sixty seconds.
-            </p>
+              {t("Sign up, sign in on your phone's browser, and install it to your home screen in the next sixty seconds.")}</p>
             <a href={isSignedIn ? '/dashboard/dialer' : '/sign-up'} className="faq-cta-btn">
-              {isSignedIn ? 'GO TO DIALER →' : 'GET STARTED →'}
+              {isSignedIn ? t("GO TO DIALER →") : t("GET STARTED →")}
             </a>
           </div>
         </article>

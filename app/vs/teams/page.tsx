@@ -6,6 +6,7 @@ import { vsRail } from '@/lib/gutsRail'
 import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { COMPETITORS, DIALERSEAT } from '@/lib/competitors'
 import { FACTS } from '@/lib/canonicalFacts'
+import { primeLocale, t as tr } from '@/lib/i18n/server'
 
 // =============================================================================
 // /vs/teams — what a five-agent floor actually costs, across every tool
@@ -117,7 +118,8 @@ function Td({ children, bold }: { children: React.ReactNode; bold?: boolean }) {
   )
 }
 
-export default function TeamsComparisonPage() {
+export default async function TeamsComparisonPage() {
+  await primeLocale()
   const rows = COMPETITORS.filter(c => c.crossShopped)
 
   return (
@@ -133,31 +135,26 @@ export default function TeamsComparisonPage() {
       <GutsShell rail={vsRail()} activeHref="/vs/teams">
         <div className="guts-sec">
           <nav style={{ fontSize: 11, letterSpacing: 1.5, color: MUTED, marginBottom: 22 }}>
-            <Link href="/" style={{ color: MUTED }}>HOME</Link>{' · '}
-            <Link href="/vs" style={{ color: MUTED }}>COMPARISONS</Link>
+            <Link href="/" style={{ color: MUTED }}>{tr("HOME")}</Link>{' · '}
+            <Link href="/vs" style={{ color: MUTED }}>{tr("COMPARISONS")}</Link>
           </nav>
 
           <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: ACCENT, marginBottom: 14 }}>
-            ▸ Dialers for teams
-          </div>
+            {tr("▸ Dialers for teams")}</div>
           <h1 style={{ fontSize: 44, fontWeight: 'bold', letterSpacing: -1, lineHeight: 1.12, margin: 0, maxWidth: 820 }}>
-            What a five-agent floor actually costs.
-          </h1>
+            {tr("What a five-agent floor actually costs.")}</h1>
           <p style={{ fontSize: 16, lineHeight: 1.8, color: MUTED, maxWidth: 760, marginTop: 18 }}>
-            Every vendor publishes a per-seat rate. Almost none publish the seat minimum, the contract
-            term, or what it takes to add the sixth agent, which is the part that decides whether a
-            growing floor is an afternoon decision or a procurement event.
-          </p>
+            {tr("Every vendor publishes a per-seat rate. Almost none publish the seat minimum, the contract term, or what it takes to add the sixth agent, which is the part that decides whether a growing floor is an afternoon decision or a procurement event.")}</p>
 
           {/* ── THE TABLE ─────────────────────────────────────────────────── */}
           <div style={{ overflowX: 'auto', marginTop: 36 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', minWidth: 780 }}>
               <thead>
                 <tr>
-                  <Th w="16%">Tool</Th>
-                  <Th w="16%">Smallest team</Th>
-                  <Th w="34%">Adding one more agent</Th>
-                  <Th w="34%">Five agents</Th>
+                  <Th w="16%">{tr("Tool")}</Th>
+                  <Th w="16%">{tr("Smallest team")}</Th>
+                  <Th w="34%">{tr("Adding one more agent")}</Th>
+                  <Th w="34%">{tr("Five agents")}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -184,22 +181,14 @@ export default function TeamsComparisonPage() {
           </div>
 
           <p style={{ fontSize: 12, lineHeight: 1.8, color: MUTED, marginTop: 14, maxWidth: 820 }}>
-            Other vendors&apos; pricing is summarised from their public materials and changes without
-            notice, verify current terms before buying. Where a vendor does not publish pricing, that
-            is stated rather than guessed. Corrections welcome; we would rather be accurate than
-            flattering.
-          </p>
+            {tr("Other vendors' pricing is summarised from their public materials and changes without notice, verify current terms before buying. Where a vendor does not publish pricing, that is stated rather than guessed. Corrections welcome; we would rather be accurate than flattering.")}</p>
 
           {/* ── THE PART PRICE DOESN'T COVER ──────────────────────────────── */}
           <section style={{ marginTop: 56 }}>
             <h2 style={{ fontSize: 26, fontWeight: 'bold', letterSpacing: -0.5, margin: 0 }}>
-              The part a price comparison misses
-            </h2>
+              {tr("The part a price comparison misses")}</h2>
             <p style={{ fontSize: 15, lineHeight: 1.8, color: MUTED, marginTop: 12, maxWidth: 780 }}>
-              Cost is the easy question. What actually goes wrong on a shared floor is mechanical, and
-              it is worth knowing exactly how a tool handles each of these before five people depend
-              on it.
-            </p>
+              {tr("Cost is the easy question. What actually goes wrong on a shared floor is mechanical, and it is worth knowing exactly how a tool handles each of these before five people depend on it.")}</p>
 
             <div style={{
               display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
@@ -231,12 +220,9 @@ export default function TeamsComparisonPage() {
             borderLeft: `4px solid #8a6a1a`, borderRadius: 8, padding: 26,
           }}>
             <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a' }}>
-              WHAT DIALERSEAT DOES NOT DO FOR TEAMS
-            </div>
+              {tr("WHAT DIALERSEAT DOES NOT DO FOR TEAMS")}</div>
             <p style={{ fontSize: 14, lineHeight: 1.75, color: MUTED, marginTop: 10 }}>
-              If any of these is a requirement, one of the enterprise platforms above is the better
-              buy and we would rather you found that out here than after paying us.
-            </p>
+              {tr("If any of these is a requirement, one of the enterprise platforms above is the better buy and we would rather you found that out here than after paying us.")}</p>
             <ul style={{ margin: '10px 0 0', paddingLeft: 17, fontSize: 14, lineHeight: 1.8 }}>
               {FACTS.teams.notYet.map(l => <li key={l} style={{ marginBottom: 5 }}>{l}</li>)}
             </ul>
@@ -245,28 +231,23 @@ export default function TeamsComparisonPage() {
           {/* ── OFFSHORE ──────────────────────────────────────────────────── */}
           <section style={{ marginTop: 56 }}>
             <h2 style={{ fontSize: 26, fontWeight: 'bold', letterSpacing: -0.5, margin: 0 }}>
-              Remote and offshore agents
-            </h2>
+              {tr("Remote and offshore agents")}</h2>
             <p style={{ fontSize: 15, lineHeight: 1.8, color: MUTED, marginTop: 12, maxWidth: 780 }}>
-              At $95-$250 per seat per month, an offshore floor costs more in software than in wages,
-              which is why most teams never build one. At $35 per week the arithmetic changes.
-            </p>
+              {tr("At $95-$250 per seat per month, an offshore floor costs more in software than in wages, which is why most teams never build one. At $35 per week the arithmetic changes.")}</p>
             <ul style={{ margin: '16px 0 0', paddingLeft: 17, fontSize: 14.5, lineHeight: 1.85, maxWidth: 800 }}>
               {FACTS.teams.offshore.map(l => <li key={l} style={{ marginBottom: 7 }}>{l}</li>)}
             </ul>
             <p style={{ fontSize: 14, lineHeight: 1.8, color: MUTED, marginTop: 16, maxWidth: 800 }}>
-              More detail:{' '}
+              {tr("More detail:")}{' '}
               <Link href="/faq/dialer-for-offshore-agents" style={{ color: ACCENT }}>
-                running a dialer with remote or offshore agents
-              </Link>.
+                {tr("running a dialer with remote or offshore agents")}</Link>.
             </p>
           </section>
 
           {/* ── FAQ ───────────────────────────────────────────────────────── */}
           <section style={{ marginTop: 56 }}>
             <h2 style={{ fontSize: 26, fontWeight: 'bold', letterSpacing: -0.5, margin: 0 }}>
-              Questions
-            </h2>
+              {tr("Questions")}</h2>
             <div style={{ marginTop: 20 }}>
               {FAQS.map(f => (
                 <div key={f.question} style={{ marginBottom: 22, maxWidth: 830 }}>
@@ -284,14 +265,12 @@ export default function TeamsComparisonPage() {
               fontSize: 11, letterSpacing: 1.5, fontWeight: 'bold', color: '#fff',
               background: ACCENT, borderRadius: 4, padding: '13px 20px', textDecoration: 'none',
             }}>
-              HOW TEAMS WORK
-            </Link>
+              {tr("HOW TEAMS WORK")}</Link>
             <Link href="/vs" style={{
               fontSize: 11, letterSpacing: 1.5, fontWeight: 'bold', color: ACCENT,
               border: `1px solid ${ACCENT}`, borderRadius: 4, padding: '13px 20px', textDecoration: 'none',
             }}>
-              ALL COMPARISONS
-            </Link>
+              {tr("ALL COMPARISONS")}</Link>
           </div>
         </div>
       </GutsShell>

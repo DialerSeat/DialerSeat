@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { labelFor } from '@/lib/dispositions'
+import { t as tr } from '@/lib/i18n/client'
 
 
 
@@ -847,13 +848,11 @@ export default function RecordingsPage() {
       <div className="rec-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
-            CALL RECORDINGS
-          </span>
+            {tr("CALL RECORDINGS")}</span>
           <span style={{
             fontSize: 10, fontFamily: 'monospace', color: 'var(--brand-on-header-muted)', letterSpacing: 1,
           }}>
-            {total.toLocaleString()} TOTAL · {recordings.length} LOADED
-          </span>
+            {total.toLocaleString()} {tr("TOTAL ·")}{" "}{recordings.length} {tr("LOADED")}</span>
         </div>
         <button
           onClick={handleSync}
@@ -870,7 +869,7 @@ export default function RecordingsPage() {
             cursor: syncing ? 'wait' : 'pointer',
             fontFamily: 'Futura PT, Futura, sans-serif',
           }}
-        >{syncing ? '⟳ SYNCING...' : '⟳ SYNC'}</button>
+        >{syncing ? tr("⟳ SYNCING...") : tr("⟳ SYNC")}</button>
       </div>
 
       {syncMessage && (
@@ -884,40 +883,34 @@ export default function RecordingsPage() {
           role="button"
           aria-expanded={disclosureOpen}
         >
-          <span>⚠️ DISCLOSURE & 30-DAY RECORDINGS BACKUP:</span>
+          <span>{tr("⚠️ DISCLOSURE & 30-DAY RECORDINGS BACKUP:")}</span>
           <span className="chev">▾</span>
         </div>
         {disclosureOpen && (
           <div className="rec-disclosure-body">
             <p>
-              <strong>RECORDING DISCLOSURE:</strong> You must verbally inform the
-              other party they are on a recorded line by law in CA, CT, FL, IL, MD,
-              MA, MI, MT, NV, NH, PA, WA.
-            </p>
+              <strong>{tr("RECORDING DISCLOSURE:")}</strong> {tr("You must verbally inform the other party they are on a recorded line by law in CA, CT, FL, IL, MD, MA, MI, MT, NV, NH, PA, WA.")}</p>
             <p>
-              <strong>30-DAY BACKUP:</strong> Recordings are kept for 30 days, then
-              auto-removed. Click DOWNLOAD to save permanently.
-            </p>
+              <strong>{tr("30-DAY BACKUP:")}</strong> {tr("Recordings are kept for 30 days, then auto-removed. Click DOWNLOAD to save permanently.")}</p>
           </div>
         )}
       </div>
 
       <div className="rec-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>
-        <span>{filtersOpen ? '▲ HIDE' : '▼ SHOW'} FILTERS</span>
+        <span>{filtersOpen ? tr("▲ HIDE") : tr("▼ SHOW")} {tr("FILTERS")}</span>
         <span style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace' }}>
-          {total.toLocaleString()} recordings
-        </span>
+          {total.toLocaleString()} {tr("recordings")}</span>
       </div>
 
       <div className={`rec-controls ${filtersOpen ? 'open-mobile' : 'closed-mobile'}`}>
         <div className="field">
-          <label>SEARCH NAME OR PHONE</label>
-          <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} />
+          <label>{tr("SEARCH NAME OR PHONE")}</label>
+          <input type="text" placeholder={tr("Search...")} value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div className="field">
-          <label>CAMPAIGN</label>
+          <label>{tr("CAMPAIGN")}</label>
           <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}>
-            <option value="all">[ ALL CAMPAIGNS ]</option>
+            <option value="all">{tr("[ ALL CAMPAIGNS ]")}</option>
             {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
@@ -927,9 +920,9 @@ export default function RecordingsPage() {
             offering one name is a control that cannot do anything. */}
         {teamView && agents.length > 0 && (
           <div className="field">
-            <label>AGENT</label>
+            <label>{tr("AGENT")}</label>
             <select value={agentFilter} onChange={e => setAgentFilter(e.target.value)}>
-              <option value="">[ EVERYONE ]</option>
+              <option value="">{tr("[ EVERYONE ]")}</option>
               {agents.map(a => (
                 <option key={a.userId} value={a.userId}>
                   {a.name} ({a.recordings})
@@ -939,36 +932,36 @@ export default function RecordingsPage() {
           </div>
         )}
         <div className="field">
-          <label>DISPOSITION</label>
+          <label>{tr("DISPOSITION")}</label>
           <select value={dispositionFilter} onChange={e => setDispositionFilter(e.target.value)}>
-            <option value="all">[ ALL ]</option>
+            <option value="all">{tr("[ ALL ]")}</option>
             {DISPOSITIONS.map(d => (
               <option key={d} value={d}>{labelFor(d).toUpperCase()}</option>
             ))}
           </select>
         </div>
         <div className="field">
-          <label>TIME</label>
+          <label>{tr("TIME")}</label>
           <select value={timeFilter} onChange={e => setTimeFilter(e.target.value)}>
-            <option value="all">ALL TIME</option>
-            <option value="today">TODAY</option>
-            <option value="7d">LAST 7 DAYS</option>
-            <option value="30d">LAST 30 DAYS</option>
-            <option value="90d">LAST 90 DAYS</option>
-            <option value="year">LAST YEAR</option>
-            <option value="custom">CUSTOM RANGE</option>
+            <option value="all">{tr("ALL TIME")}</option>
+            <option value="today">{tr("TODAY")}</option>
+            <option value="7d">{tr("LAST 7 DAYS")}</option>
+            <option value="30d">{tr("LAST 30 DAYS")}</option>
+            <option value="90d">{tr("LAST 90 DAYS")}</option>
+            <option value="year">{tr("LAST YEAR")}</option>
+            <option value="custom">{tr("CUSTOM RANGE")}</option>
           </select>
         </div>
         {timeFilter === 'custom' && (
           <div className="field rec-custom-range">
-            <label>CUSTOM RANGE</label>
+            <label>{tr("CUSTOM RANGE")}</label>
             <div className="rec-custom-inputs">
               <input
                 type="date"
                 value={customStart}
                 max={customEnd || undefined}
                 onChange={e => setCustomStart(e.target.value)}
-                aria-label="Start date"
+                aria-label={tr("Start date")}
               />
               <span className="rec-range-sep">→</span>
               <input
@@ -976,7 +969,7 @@ export default function RecordingsPage() {
                 value={customEnd}
                 min={customStart || undefined}
                 onChange={e => setCustomEnd(e.target.value)}
-                aria-label="End date"
+                aria-label={tr("End date")}
               />
             </div>
           </div>
@@ -990,7 +983,7 @@ export default function RecordingsPage() {
             fontSize: 11, letterSpacing: 3, color: T.muted,
           }}>
             {recordings.length > 0 && timeFilter !== 'all' ? (
-              <>NO RECORDINGS IN THIS TIME RANGE</>
+              <>{tr("NO RECORDINGS IN THIS TIME RANGE")}</>
             ) : (
               /* Recording is opt-in per campaign and defaults to OFF, so the
                  overwhelmingly likely reason this page is empty is not a sync
@@ -998,12 +991,11 @@ export default function RecordingsPage() {
                  "make a call then hit sync" first sends people to re-dial and
                  re-sync for something that was never going to appear. Name
                  the setting, and where it lives, before the sync advice. */
-              <>NO RECORDINGS YET<br />
+              <>{tr("NO RECORDINGS YET")}<br />
               <span style={{ fontSize: 10, marginTop: 8, display: 'inline-block', lineHeight: 1.7 }}>
-                RECORDING IS OFF BY DEFAULT ON EVERY CAMPAIGN.<br />
-                TURN IT ON IN CAMPAIGNS → SETTINGS → CALL RECORDING,<br />
-                THEN MAKE A CALL. HIT SYNC IF IT STILL DOESN&apos;T APPEAR.
-              </span></>
+                {tr("RECORDING IS OFF BY DEFAULT ON EVERY CAMPAIGN.")}<br />
+                {tr("TURN IT ON IN CAMPAIGNS → SETTINGS → CALL RECORDING,")}<br />
+                {tr("THEN MAKE A CALL. HIT SYNC IF IT STILL DOESN'T APPEAR.")}</span></>
             )}
           </div>
         )}
@@ -1069,7 +1061,7 @@ export default function RecordingsPage() {
                     <span className="rec-disp-badge" style={{
                       background: '#e8e8ec', color: T.muted,
                       border: `1px solid ${T.border}`,
-                    }}>NO DISPOSITION</span>
+                    }}>{tr("NO DISPOSITION")}</span>
                   )}
                 </div>
 
@@ -1078,11 +1070,11 @@ export default function RecordingsPage() {
                     <button
                       className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`}
                       onClick={() => setPlayingId(isPlaying ? null : r.id)}
-                    >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
+                    >{isPlaying ? tr("✕ CLOSE") : tr("▶ PLAY")}</button>
                     <button
                       className="rec-btn"
                       onClick={() => handleDownload(r.id)}
-                    >↓ SAVE</button>
+                    >{tr("↓ SAVE")}</button>
                   </div>
                   {hasLead && (
                     <div className="rec-actions-row">
@@ -1090,7 +1082,7 @@ export default function RecordingsPage() {
                         className="rec-btn"
                         style={{ width: '100%', borderColor: T.dark, color: T.dark }}
                         onClick={() => router.push(`/dashboard/dialer?leadId=${r.lead_id}`)}
-                      >☎ DIAL LEAD</button>
+                      >{tr("☎ DIAL LEAD")}</button>
                     </div>
                   )}
                   <div className="rec-actions-row">
@@ -1101,19 +1093,19 @@ export default function RecordingsPage() {
                           disabled={isDeleting}
                           onClick={() => handleDelete(r.id)}
                           style={{ background: isDeleting ? 'transparent' : T.red, color: isDeleting ? T.red : '#fff' }}
-                        >{isDeleting ? '...' : '✓ CONFIRM'}</button>
+                        >{isDeleting ? '...' : tr("✓ CONFIRM")}</button>
                         <button
                           className="rec-btn"
                           disabled={isDeleting}
                           onClick={() => setConfirmDeleteId(null)}
-                        >CANCEL</button>
+                        >{tr("CANCEL")}</button>
                       </>
                     ) : (
                       <button
                         className="rec-btn rec-btn-danger"
                         onClick={() => setConfirmDeleteId(r.id)}
                         style={{ width: '100%' }}
-                      >🗑 DELETE</button>
+                      >{tr("🗑 DELETE")}</button>
                     )}
                   </div>
                 </div>
@@ -1131,7 +1123,7 @@ export default function RecordingsPage() {
                     <span className="rec-disp-badge" style={{
                       background: '#e8e8ec', color: T.muted,
                       border: `1px solid ${T.border}`,
-                    }}>NO DISP</span>
+                    }}>{tr("NO DISP")}</span>
                   )}
                 </div>
                 <div className="col-phone rec-phone">{phone}</div>
@@ -1145,11 +1137,11 @@ export default function RecordingsPage() {
                     <button
                       className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`}
                       onClick={() => setPlayingId(isPlaying ? null : r.id)}
-                    >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
+                    >{isPlaying ? tr("✕ CLOSE") : tr("▶ PLAY")}</button>
                     <button
                       className="rec-btn"
                       onClick={() => handleDownload(r.id)}
-                    >↓ SAVE</button>
+                    >{tr("↓ SAVE")}</button>
                   </div>
                   {hasLead && (
                     <div className="rec-actions-row">
@@ -1157,7 +1149,7 @@ export default function RecordingsPage() {
                         className="rec-btn"
                         style={{ width: '100%', borderColor: T.dark, color: T.dark }}
                         onClick={() => router.push(`/dashboard/dialer?leadId=${r.lead_id}`)}
-                      >☎ DIAL LEAD</button>
+                      >{tr("☎ DIAL LEAD")}</button>
                     </div>
                   )}
                   <div className="rec-actions-row">
@@ -1168,18 +1160,18 @@ export default function RecordingsPage() {
                           disabled={isDeleting}
                           onClick={() => handleDelete(r.id)}
                           style={{ background: isDeleting ? 'transparent' : T.red, color: isDeleting ? T.red : '#fff' }}
-                        >{isDeleting ? '...' : '✓ CONFIRM'}</button>
+                        >{isDeleting ? '...' : tr("✓ CONFIRM")}</button>
                         <button
                           className="rec-btn"
                           disabled={isDeleting}
                           onClick={() => setConfirmDeleteId(null)}
-                        >CANCEL</button>
+                        >{tr("CANCEL")}</button>
                       </>
                     ) : (
                       <button
                         className="rec-btn rec-btn-danger"
                         onClick={() => setConfirmDeleteId(r.id)}
-                      >🗑 DELETE</button>
+                      >{tr("🗑 DELETE")}</button>
                     )}
                   </div>
                 </div>
@@ -1189,48 +1181,47 @@ export default function RecordingsPage() {
               {isExpanded && (
                 <div className="rec-expand">
                   <div>
-                    <div className="rec-expand-section-label">CALL DETAILS</div>
+                    <div className="rec-expand-section-label">{tr("CALL DETAILS")}</div>
                     <div className="rec-expand-row">
-                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>DISPOSITION</span>
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>{tr("DISPOSITION")}</span>
                       <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: dispColor(r.disposition) }}>
                         {r.disposition || '-'}
                       </span>
                     </div>
                     <div className="rec-expand-row">
-                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>CAMPAIGN</span>
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>{tr("CAMPAIGN")}</span>
                       <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{campName}</span>
                     </div>
                     <div className="rec-expand-row">
-                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>DURATION</span>
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>{tr("DURATION")}</span>
                       <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{dur}</span>
                     </div>
                     <div className="rec-expand-row">
-                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>RECORDED</span>
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>{tr("RECORDED")}</span>
                       <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{date} · {time}</span>
                     </div>
                     {expDays !== null && (
                       <div className="rec-expand-row">
-                        <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>EXPIRES</span>
+                        <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>{tr("EXPIRES")}</span>
                         <span style={{
                           fontFamily: 'monospace', fontWeight: 'bold',
                           color: expDays < 7 ? T.red : T.text,
                         }}>
-                          {expDays} day{expDays === 1 ? '' : 's'}
+                          {expDays} {tr("day")}{expDays === 1 ? '' : 's'}
                         </span>
                       </div>
                     )}
                   </div>
                   <div>
-                    <div className="rec-expand-section-label">CALL NOTES</div>
+                    <div className="rec-expand-section-label">{tr("CALL NOTES")}</div>
                     <div className={`rec-notes-block ${!notes ? 'rec-notes-empty' : ''}`}>
-                      {notes || 'No notes recorded for this call.'}
+                      {notes || tr("No notes recorded for this call.")}
                     </div>
                   </div>
                   {hasLead && (
                     <div>
                       <div className="rec-expand-section-label">
-                        EDIT DISPOSITION, SYNCED WITH LEADS PAGE
-                      </div>
+                        {tr("EDIT DISPOSITION, SYNCED WITH LEADS PAGE")}</div>
                       <div className="disp-grid">
                         {EDIT_DISPOSITIONS
                           .filter(d => d.value !== 'NO_ANSWER' && d.value !== 'SKIPPED')
@@ -1254,7 +1245,7 @@ export default function RecordingsPage() {
                             color: editDisposition === '' ? 'white' : T.muted,
                             borderColor: T.border,
                           }}
-                        >CLEAR</button>
+                        >{tr("CLEAR")}</button>
                       </div>
                       <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
                         <button
@@ -1270,7 +1261,7 @@ export default function RecordingsPage() {
                             fontWeight: 'bold',
                             cursor: 'pointer',
                             fontFamily: FUTURA,
-                          }}>CANCEL</button>
+                          }}>{tr("CANCEL")}</button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleSaveDisposition(r) }}
                           disabled={savingDisposition}
@@ -1285,7 +1276,7 @@ export default function RecordingsPage() {
                             cursor: savingDisposition ? 'not-allowed' : 'pointer',
                             opacity: savingDisposition ? 0.6 : 1,
                             fontFamily: FUTURA,
-                          }}>{savingDisposition ? 'SAVING...' : 'SAVE DISPOSITION'}</button>
+                          }}>{savingDisposition ? tr("SAVING...") : tr("SAVE DISPOSITION")}</button>
                       </div>
                     </div>
                   )}
@@ -1314,8 +1305,7 @@ export default function RecordingsPage() {
                       marginTop: 6, fontSize: 10, letterSpacing: 1,
                       color: T.red, fontFamily: 'monospace',
                     }}>
-                      THIS RECORDING COULD NOT BE LOADED, IT MAY HAVE PASSED THE CARRIER&apos;S RETENTION WINDOW
-                    </div>
+                      {tr("THIS RECORDING COULD NOT BE LOADED, IT MAY HAVE PASSED THE CARRIER'S RETENTION WINDOW")}</div>
                   )}
                   {expDays !== null && (
                     <div style={{
@@ -1325,8 +1315,7 @@ export default function RecordingsPage() {
                       color: expDays < 7 ? T.red : T.muted,
                       fontFamily: 'monospace',
                     }}>
-                      EXPIRES IN {expDays} DAY{expDays === 1 ? '' : 'S'} · DOWNLOAD TO KEEP
-                    </div>
+                      {tr("EXPIRES IN")}{" "}{expDays} {tr("DAY")}{expDays === 1 ? '' : 'S'} {tr("· DOWNLOAD TO KEEP")}</div>
                   )}
                 </div>
               )}
@@ -1339,7 +1328,7 @@ export default function RecordingsPage() {
             padding: 20, textAlign: 'center',
             fontSize: 10, letterSpacing: 2, color: T.muted,
           }}>
-            {loading ? 'LOADING MORE...' : 'SCROLL TO LOAD MORE'}
+            {loading ? tr("LOADING MORE...") : tr("SCROLL TO LOAD MORE")}
           </div>
         )}
       </div>

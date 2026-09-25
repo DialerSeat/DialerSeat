@@ -22,6 +22,7 @@
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
+import { t } from '@/lib/i18n/client'
 
 interface Props {
   headline: string
@@ -39,16 +40,13 @@ export default function DialingModeCTA({ headline, description }: Props) {
       <div style={btnRowStyle}>
         {showSignedIn ? (
           <Link href="/dashboard/dialer" style={primaryBtnStyle}>
-            OPEN DIALER →
-          </Link>
+            {t("OPEN DIALER →")}</Link>
         ) : (
           <Link href="/sign-up" style={primaryBtnStyle}>
-            START DIALING →
-          </Link>
+            {t("START DIALING →")}</Link>
         )}
         <Link href="/dialing-modes" style={secondaryBtnStyle}>
-          ALL MODES
-        </Link>
+          {t("ALL MODES")}</Link>
       </div>
     </section>
   )

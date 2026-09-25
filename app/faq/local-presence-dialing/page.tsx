@@ -6,6 +6,7 @@ import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 // =============================================================================
 // /faq/local-presence-dialing
@@ -95,7 +96,8 @@ const FAQS = [
   },
 ]
 
-export default function Page() {
+export default async function Page() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={faqPageSchema(FAQS)} />
@@ -111,125 +113,90 @@ export default function Page() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ NUMBERS</div>
+            <div className="guts-eyebrow">{t("▸ NUMBERS")}</div>
             <h1>
-              A local number on every call.
-              <span className="second">Without burning one out.</span>
+              {t("A local number on every call.")}<span className="second">{t("Without burning one out.")}</span>
             </h1>
             <p>
-              Local presence dialing means calling each prospect from a number in their own area.
-              DialerSeat does it on every call, in every dialing mode, with no add-on. Here is exactly
-              how it picks the number.
-            </p>
+              {t("Local presence dialing means calling each prospect from a number in their own area. DialerSeat does it on every call, in every dialing mode, with no add-on. Here is exactly how it picks the number.")}</p>
           </div>
         </GutsSection>
 
-        <GutsSection icon="info" title="Why local matters">
+        <GutsSection icon="info" title={t("Why local matters")}>
           <p>
-            People decide whether to answer from a glance at the caller ID. An area code they
-            recognise looks like someone nearby. One from across the country looks like a call center,
-            and often gets ignored.
-          </p>
+            {t("People decide whether to answer from a glance at the caller ID. An area code they recognise looks like someone nearby. One from across the country looks like a call center, and often gets ignored.")}</p>
           <p>
-            Many dialers sell local presence as an add-on. On DialerSeat it is simply how every number
-            is chosen.
-          </p>
+            {t("Many dialers sell local presence as an add-on. On DialerSeat it is simply how every number is chosen.")}</p>
         </GutsSection>
 
-        <GutsSection icon="list" title="How a number is picked, in order">
-          <p>For every single call, the pool is sorted like this and the top number is used.</p>
+        <GutsSection icon="list" title={t("How a number is picked, in order")}>
+          <p>{t("For every single call, the pool is sorted like this and the top number is used.")}</p>
           <div className="guts-grid-2">
             <div className="guts-panel">
-              <div className="role">1. SHARE THE LOAD</div>
-              <h3>Under 40 calls today</h3>
+              <div className="role">{t("1. SHARE THE LOAD")}</div>
+              <h3>{t("Under 40 calls today")}</h3>
               <p>
-                A number that has already made 40 calls today goes to the back of the queue, however
-                good its match. This comes first on purpose, so one number never carries a whole area.
-              </p>
+                {t("A number that has already made 40 calls today goes to the back of the queue, however good its match. This comes first on purpose, so one number never carries a whole area.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">2. MATCH THE PROSPECT</div>
-              <h3>Area code, state, region</h3>
+              <div className="role">{t("2. MATCH THE PROSPECT")}</div>
+              <h3>{t("Area code, state, region")}</h3>
               <p>
-                Same area code first. Then the same state. Then the same part of the country. Then any
-                number with room.
-              </p>
+                {t("Same area code first. Then the same state. Then the same part of the country. Then any number with room.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">3. REGISTERED FIRST</div>
-              <h3>Numbers on the registry</h3>
+              <div className="role">{t("3. REGISTERED FIRST")}</div>
+              <h3>{t("Numbers on the registry")}</h3>
               <p>
-                Among equal matches, numbers registered with the{' '}
-                <Link href="/faq/how-we-keep-numbers-clean">Free Caller Registry</Link> go first.
-              </p>
+                {t("Among equal matches, numbers registered with the")}{' '}
+                <Link href="/faq/how-we-keep-numbers-clean">{t("Free Caller Registry")}</Link> {t("go first.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">4. SPREAD EVENLY</div>
-              <h3>Least used, longest idle</h3>
+              <div className="role">{t("4. SPREAD EVENLY")}</div>
+              <h3>{t("Least used, longest idle")}</h3>
               <p>
-                Then the number with the fewest calls today, and among those the one that has rested
-                longest.
-              </p>
+                {t("Then the number with the fewest calls today, and among those the one that has rested longest.")}</p>
             </div>
           </div>
           <p style={{ marginTop: 24 }}>
-            No number places more than 60 calls a day. Once it reaches its limit, it rests until the
-            next day.
-          </p>
+            {t("No number places more than 60 calls a day. Once it reaches its limit, it rests until the next day.")}</p>
         </GutsSection>
 
-        <GutsSection icon="swap" title="Where they live beats where they got their number">
+        <GutsSection icon="swap" title={t("Where they live beats where they got their number")}>
           <p>
-            Mobile numbers don’t move when people do. Someone who moved from New York to Florida may
-            keep their 212 number for years, but a New York caller ID no longer looks local to them.
-          </p>
+            {t("Mobile numbers don’t move when people do. Someone who moved from New York to Florida may keep their 212 number for years, but a New York caller ID no longer looks local to them.")}</p>
           <p>
-            So when the state in your lead list disagrees with the lead’s area code, DialerSeat
-            matches the <strong>state</strong>, and falls back to that state’s region. When the two
-            agree, or your list has no state, the area code decides, because it pins a city rather
-            than a whole state.
-          </p>
+            {t("So when the state in your lead list disagrees with the lead’s area code, DialerSeat matches the")}{" "}<strong>{t("state")}</strong>{t(", and falls back to that state’s region. When the two agree, or your list has no state, the area code decides, because it pins a city rather than a whole state.")}</p>
         </GutsSection>
 
-        <GutsSection icon="phone" title="One exception: the quick redial">
+        <GutsSection icon="phone" title={t("One exception: the quick redial")}>
           <p>
-            On an iPhone with <strong>Allow Repeated Calls</strong> switched on in Focus, a second
-            call from the same caller within three minutes gets through even when the phone is
-            silencing calls. That is a big part of what 2x and 3x dialing is for.
-          </p>
+            {t("On an iPhone with")}{" "}<strong>{t("Allow Repeated Calls")}</strong> {t("switched on in Focus, a second call from the same caller within three minutes gets through even when the phone is silencing calls. That is a big part of what 2x and 3x dialing is for.")}</p>
           <p>
-            It only works if the second call comes from the same number. So when DialerSeat redials a
-            lead within three minutes, it asks for the number that lead just saw. If that number is
-            busy or at its limit, the redial goes out on the next best local number instead, because a
-            redial from a different number is still better than no redial.
-          </p>
+            {t("It only works if the second call comes from the same number. So when DialerSeat redials a lead within three minutes, it asks for the number that lead just saw. If that number is busy or at its limit, the redial goes out on the next best local number instead, because a redial from a different number is still better than no redial.")}</p>
           <p className="guts-note">
-            Apple’s description of the setting is in its{' '}
+            {t("Apple’s description of the setting is in its")}{' '}
             <a
               href="https://support.apple.com/guide/iphone/allow-or-silence-notifications-for-a-focus-iph21d43af5b/ios"
               target="_blank"
               rel="noopener noreferrer"
             >
-              iPhone user guide
-            </a>
+              {t("iPhone user guide")}</a>
             .
           </p>
         </GutsSection>
 
-        <GutsSection icon="check" title="Every mode, every plan">
+        <GutsSection icon="check" title={t("Every mode, every plan")}>
           <ul className="guts-list good">
-            <li>Preview, power, progressive and predictive all match locally.</li>
+            <li>{t("Preview, power, progressive and predictive all match locally.")}</li>
             <li>
-              Predictive included. Each call in a predictive round is its own call to its own lead,
-              so each gets its own local number.
-            </li>
-            <li>No add-on and no separate fee. It is part of every seat.</li>
+              {t("Predictive included. Each call in a predictive round is its own call to its own lead, so each gets its own local number.")}</li>
+            <li>{t("No add-on and no separate fee. It is part of every seat.")}</li>
           </ul>
           <div className="guts-btns">
-            <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
+            <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
             <Link href="/faq/why-calls-show-spam-likely" className="guts-btn secondary">
-              WHY CALLS SHOW SPAM LIKELY
-            </Link>
+              {t("WHY CALLS SHOW SPAM LIKELY")}</Link>
           </div>
         </GutsSection>
 

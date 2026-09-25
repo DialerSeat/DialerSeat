@@ -6,6 +6,7 @@ import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { vsRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 // =============================================================================
 // /vs/manual-dialing — "is a dialer even worth it?"
@@ -79,7 +80,8 @@ const FAQS = [
   },
 ]
 
-export default function Page() {
+export default async function Page() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={faqPageSchema(FAQS)} />
@@ -95,101 +97,79 @@ export default function Page() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ COMPARISON</div>
+            <div className="guts-eyebrow">{t("▸ COMPARISON")}</div>
             <h1>
-              Dialing by hand works.
-              <span className="second">Until it’s your whole day.</span>
+              {t("Dialing by hand works.")}<span className="second">{t("Until it’s your whole day.")}</span>
             </h1>
             <p>
-              A phone and a spreadsheet will get you started. The question is what happens
-              between the conversations, and how much of your afternoon that turns out to be.
-            </p>
+              {t("A phone and a spreadsheet will get you started. The question is what happens between the conversations, and how much of your afternoon that turns out to be.")}</p>
             <div className="guts-btns">
-              <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
-              <Link href="/vs" className="guts-btn secondary">ALL COMPARISONS</Link>
+              <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
+              <Link href="/vs" className="guts-btn secondary">{t("ALL COMPARISONS")}</Link>
             </div>
           </div>
         </GutsSection>
 
-        <GutsSection icon="swap" title="What a dialer actually removes">
+        <GutsSection icon="swap" title={t("What a dialer actually removes")}>
           <p>
-            The conversation is the only part of a call that earns anything. Everything around
-            it is overhead, and dialing by hand, all of it is yours.
-          </p>
+            {t("The conversation is the only part of a call that earns anything. Everything around it is overhead, and dialing by hand, all of it is yours.")}</p>
           <div className="guts-grid-2">
             <div className="guts-panel">
-              <div className="role">BY HAND</div>
+              <div className="role">{t("BY HAND")}</div>
               <ul className="guts-list warn">
-                <li>Find the next number and type it in</li>
-                <li>Wait through every ring, including the ones nobody answers</li>
-                <li>Sit through voicemail greetings to find out it was a machine</li>
-                <li>Write down what happened before moving on</li>
+                <li>{t("Find the next number and type it in")}</li>
+                <li>{t("Wait through every ring, including the ones nobody answers")}</li>
+                <li>{t("Sit through voicemail greetings to find out it was a machine")}</li>
+                <li>{t("Write down what happened before moving on")}</li>
               </ul>
             </div>
             <div className="guts-panel">
-              <div className="role">WITH A DIALER</div>
+              <div className="role">{t("WITH A DIALER")}</div>
               <ul className="guts-list good">
-                <li>The next lead is dialed the moment you finish the last one</li>
-                <li>Predictive mode dials several leads at once and connects you to whoever answers</li>
-                <li>Answering machine detection screens out voicemail greetings</li>
-                <li>The outcome is logged to the lead as you set it</li>
+                <li>{t("The next lead is dialed the moment you finish the last one")}</li>
+                <li>{t("Predictive mode dials several leads at once and connects you to whoever answers")}</li>
+                <li>{t("Answering machine detection screens out voicemail greetings")}</li>
+                <li>{t("The outcome is logged to the lead as you set it")}</li>
               </ul>
             </div>
           </div>
           <p style={{ marginTop: 24 }}>
-            We don’t quote a talk-time multiplier here, because nobody in this industry publishes
-            how theirs was measured. Time your own next hour of calling and count the minutes you
-            actually spent talking. That number is the real comparison.
+            {t("We don’t quote a talk-time multiplier here, because nobody in this industry publishes how theirs was measured. Time your own next hour of calling and count the minutes you actually spent talking. That number is the real comparison.")}</p>
+        </GutsSection>
+
+        <GutsSection icon="alert" title={t("The problem with calling from your own number")}>
+          <p>
+            {t("Dialing a list from your cell puts every call on one caller ID. Call-protection providers score numbers on how people respond to them, and one number placing a high volume of calls to people who decline or hang up builds a poor reputation quickly.")}</p>
+          <p>
+            {t("On a business line that is a nuisance. On your personal cell, the label follows you onto every call you make, including the ones to people who know you.")}</p>
+          <p>
+            {t("DialerSeat places calls from a pool of numbers, signed with STIR/SHAKEN A-attestation, and no single number places more than 60 calls a day. How that works is on")}{' '}
+            <Link href="/faq/how-we-keep-numbers-clean">{t("how we keep our numbers clean")}</Link>.
           </p>
         </GutsSection>
 
-        <GutsSection icon="alert" title="The problem with calling from your own number">
+        <GutsSection icon="shield" title={t("Calling hours you don’t have to check")}>
           <p>
-            Dialing a list from your cell puts every call on one caller ID. Call-protection
-            providers score numbers on how people respond to them, and one number placing a high
-            volume of calls to people who decline or hang up builds a poor reputation quickly.
-          </p>
+            {t("Federal rules limit telemarketing calls to between 8 AM and 9 PM in the time zone of the person being called, and some states are stricter. Dialing by hand, checking each lead’s local time is on you, lead by lead, all day.")}</p>
           <p>
-            On a business line that is a nuisance. On your personal cell, the label follows you onto
-            every call you make, including the ones to people who know you.
-          </p>
-          <p>
-            DialerSeat places calls from a pool of numbers, signed with STIR/SHAKEN A-attestation,
-            and no single number places more than 60 calls a day. How that works is on{' '}
-            <Link href="/faq/how-we-keep-numbers-clean">how we keep our numbers clean</Link>.
+            {t("DialerSeat enforces calling windows on every call, based on the lead’s location, so a call outside the window is never placed. The full breakdown is on")}{' '}
+            <Link href="/faq/calling-hours">{t("telemarketing calling hours by state")}</Link>.
           </p>
         </GutsSection>
 
-        <GutsSection icon="shield" title="Calling hours you don’t have to check">
+        <GutsSection icon="check" title={t("When dialing by hand is the right call")}>
           <p>
-            Federal rules limit telemarketing calls to between 8 AM and 9 PM in the time zone of the
-            person being called, and some states are stricter. Dialing by hand, checking each lead’s
-            local time is on you, lead by lead, all day.
-          </p>
-          <p>
-            DialerSeat enforces calling windows on every call, based on the lead’s location, so a
-            call outside the window is never placed. The full breakdown is on{' '}
-            <Link href="/faq/calling-hours">telemarketing calling hours by state</Link>.
-          </p>
-        </GutsSection>
-
-        <GutsSection icon="check" title="When dialing by hand is the right call">
-          <p>
-            Honestly, often. There is no reason to pay for a dialer to make ten calls.
-          </p>
+            {t("Honestly, often. There is no reason to pay for a dialer to make ten calls.")}</p>
           <ul className="guts-list good">
-            <li>You make a handful of calls a day</li>
-            <li>Every call is a warm callback to someone expecting to hear from you</li>
-            <li>You are still testing whether outbound calling works for your business at all</li>
+            <li>{t("You make a handful of calls a day")}</li>
+            <li>{t("Every call is a warm callback to someone expecting to hear from you")}</li>
+            <li>{t("You are still testing whether outbound calling works for your business at all")}</li>
           </ul>
           <p style={{ marginTop: 18 }}>
-            When calling becomes most of your day, that is the point a dialer pays for itself.
-            DialerSeat is $35 a week per seat with every dialer mode included, no contract, and you
-            can stop any week.
-          </p>
+            {t("When calling becomes most of your day, that is the point a dialer pays for itself. DialerSeat is $35 a week per seat with every dialer mode included, no contract, and you can stop any week.")}</p>
           <div className="guts-btns">
-            <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
-            <Link href="/dialing-modes" className="guts-btn secondary">SEE THE DIALER MODES</Link>
+            <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
+            <Link href="/dialing-modes" className="guts-btn secondary">{t("SEE THE DIALER MODES")}</Link>
           </div>
         </GutsSection>
 

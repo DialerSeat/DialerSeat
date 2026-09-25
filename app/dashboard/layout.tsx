@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
 import DashboardBanners from '@/components/DashboardBanners'
 import LanguageDropdown from '@/components/LanguageDropdown'
+import { t as tr } from '@/lib/i18n/client'
 
 const userNavItems = [
   { label: 'ANALYTICS', href: '/dashboard/analytics' },
@@ -361,7 +362,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             letterSpacing: '3px',
             color: '#4a9eff',
             marginTop: 2,
-          }}>ADMIN CONSOLE</span>
+          }}>{tr("ADMIN CONSOLE")}</span>
         )}
       </div>
     </>
@@ -502,10 +503,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}>
           <span style={{
             fontSize: 9, letterSpacing: 2, fontWeight: 'bold', color: '#ffaa3e',
-          }}>▸ RESUBSCRIBE</span>
+          }}>{tr("▸ RESUBSCRIBE")}</span>
           <span style={{
             fontSize: 9, color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1,
-          }}>Restore dialing access</span>
+          }}>{tr("Restore dialing access")}</span>
         </Link>
       )}
 
@@ -531,7 +532,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             letterSpacing: '2px',
             fontWeight: 'bold',
             color: 'var(--brand-on-sidebar-muted)',
-          }}>GO TO DESKTOP</span>
+          }}>{tr("GO TO DESKTOP")}</span>
         </Link>
       )}
 
@@ -607,7 +608,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         className="ds-drawer-checkbox"
         defaultChecked={false}
         onChange={e => setDrawer(e.target.checked)}
-        aria-label="Open menu"
+        aria-label={tr("Open menu")}
         style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
       />
 
@@ -635,7 +636,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             id="ds-menu-btn"
             htmlFor="ds-drawer-toggle"
             role="button"
-            aria-label="Open menu"
+            aria-label={tr("Open menu")}
             aria-controls="ds-menu-drawer"
             style={{
               width: 40, height: 40, border: '1px solid var(--brand-sidebar-active-bg)',
@@ -697,12 +698,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {seatsTakenOver.length === 1
               ? `${seatsTakenOver[0].agentName} stopped paying for their own seat on ${seatsTakenOver[0].teamName}, so you are covering it now.`
               : `${seatsTakenOver.length} agents stopped paying for their own seats, so you are covering them now.`}
-            {' '}They keep dialing until you say otherwise.
-            <span style={{ display: 'block', marginTop: 4, color: '#4a86c4', fontSize: 12 }}>
-              To stop paying for a seat, pause or remove that member in{' '}
+            {' '}{tr("They keep dialing until you say otherwise.")}<span style={{ display: 'block', marginTop: 4, color: '#4a86c4', fontSize: 12 }}>
+              {tr("To stop paying for a seat, pause or remove that member in")}{' '}
               <Link href="/dashboard/teams" style={{ color: '#7cc0ff', textDecoration: 'underline' }}>
-                Teams
-              </Link>.
+                {tr("Teams")}</Link>.
               {/* Dismiss is not "stop paying" — that is pausing the member,
                   a different button with a different consequence. This only
                   says the owner has seen it. */}
@@ -718,7 +717,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   color: '#7cc0ff', borderRadius: 4, padding: '2px 10px',
                   fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
                 }}
-              >Got it</button>
+              >{tr("Got it")}</button>
             </span>
           </div>
         )}
@@ -747,30 +746,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 owner and it points the agent at the wrong person to ask. */}
             {seatLapsed.every(t => t.reason === 'canceled') ? (
               <>
-                Your subscription has ended, so dialing is paused.
-                {' '}Your account, leads, recordings and dispositions are all still here —
-                subscribe again to pick up where you left off.
-              </>
+                {tr("Your subscription has ended, so dialing is paused.")}{' '}{tr("Your account, leads, recordings and dispositions are all still here — subscribe again to pick up where you left off.")}</>
             ) : seatLapsed.some(t => t.reason === 'paused') ? (
               <>
                 {seatLapsed.filter(t => t.reason === 'paused').map(t => t.teamName).join(', ')}
-                {' '}paused your seat, so dialing is paused.
-                {' '}Your account and all your data are still here — ask them to resume it,
-                or subscribe on your own plan to keep dialing.
-              </>
+                {' '}{tr("paused your seat, so dialing is paused.")}{' '}{tr("Your account and all your data are still here — ask them to resume it, or subscribe on your own plan to keep dialing.")}</>
             ) : (
               <>
-                {seatLapsed.map(t => t.teamName).join(', ')} is no longer paying for your seat.
-                {' '}Your account and all your data are still here, subscribe on your own plan
-                to keep dialing.
-              </>
+                {seatLapsed.map(t => t.teamName).join(', ')} {tr("is no longer paying for your seat.")}{' '}{tr("Your account and all your data are still here, subscribe on your own plan to keep dialing.")}</>
             )}
             <Link
               href="/billing"
               style={{ color: '#ffd96a', marginLeft: 8, textDecoration: 'underline' }}
             >
-              Subscribe
-            </Link>
+              {tr("Subscribe")}</Link>
           </div>
         )}
 
@@ -793,16 +782,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             borderBottom: '1px solid #78350f', color: '#fbbf24',
             fontSize: 13, lineHeight: 1.5,
           }}>
-            Waiting on {awaitingApproval.map(t => t.teamName).join(', ')} to approve you.
-            {' '}You will be able to dial their campaigns as soon as they do, nothing
-            to pay, the seat is on them.
-            {/* The only person who can resolve this is whoever sent the code,
+            {tr("Waiting on")}{" "}{awaitingApproval.map(t => t.teamName).join(', ')} {tr("to approve you.")}{' '}{tr("You will be able to dial their campaigns as soon as they do, nothing to pay, the seat is on them.")}{/* The only person who can resolve this is whoever sent the code,
                 and DialerSeat cannot chase them. Saying so turns an open-ended
                 wait into a next step the person can actually take. */}
             <span style={{ display: 'block', marginTop: 4, color: '#a1731a', fontSize: 12 }}>
-              If access does not arrive, contact whoever sent you the invite code 
-              only they can approve it.
-            </span>
+              {tr("If access does not arrive, contact whoever sent you the invite code only they can approve it.")}</span>
           </div>
         )}
         {children}

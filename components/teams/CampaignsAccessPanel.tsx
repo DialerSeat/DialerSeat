@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { t } from '@/lib/i18n/client'
 
 interface TeamCampaignRow {
   campaignId: string
@@ -104,15 +105,14 @@ export default function CampaignsAccessPanel({
     <div style={{ fontFamily: FUTURA, color: T.text }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: T.muted }}>
-          ▸ CAMPAIGNS ({teamCampaigns.length})
+          {t("▸ CAMPAIGNS (")}{teamCampaigns.length})
         </div>
-        <button onClick={onAttach} style={primaryBtnStyle}>+ ATTACH CAMPAIGN</button>
+        <button onClick={onAttach} style={primaryBtnStyle}>{t("+ ATTACH CAMPAIGN")}</button>
       </div>
 
       {teamCampaigns.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '32px 16px', color: T.muted, fontSize: 13, border: `1px dashed ${T.border}`, borderRadius: 6 }}>
-          No campaigns attached. Attach one to give the team something to dial.
-        </div>
+          {t("No campaigns attached. Attach one to give the team something to dial.")}</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {teamCampaigns.map(tc => {
@@ -132,14 +132,12 @@ export default function CampaignsAccessPanel({
                     <div style={{
                       fontSize: 13, fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     }}>
-                      {tc.campaign?.name || '(deleted campaign)'}
+                      {tc.campaign?.name || t("(deleted campaign)")}
                     </div>
                     {tc.campaign && (
                       <>
                         <div style={{ fontSize: 10, color: T.muted, marginTop: 4 }}>
-                          {tc.campaign.called_leads.toLocaleString()} / {tc.campaign.total_leads.toLocaleString()} called
-                          {' · '}{memberCount} member{memberCount === 1 ? '' : 's'} with access
-                        </div>
+                          {tc.campaign.called_leads.toLocaleString()} / {tc.campaign.total_leads.toLocaleString()} {t("called")}{' · '}{memberCount} {t("member")}{memberCount === 1 ? '' : 's'} {t("with access")}</div>
                         <div style={{ width: '100%', maxWidth: 220, height: 4, borderRadius: 4, background: T.bg, marginTop: 6, overflow: 'hidden' }}>
                           <div style={{ width: `${progressPct}%`, height: '100%', background: T.primary, borderRadius: 4 }} />
                         </div>
@@ -162,22 +160,22 @@ export default function CampaignsAccessPanel({
                     onClick={() => onDetach(tc.campaignId, tc.campaign?.name || 'this campaign')}
                     disabled={busy}
                     style={subtleBtnStyle(busy, T.red)}
-                  >DETACH</button>
+                  >{t("DETACH")}</button>
                 </div>
 
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, fontSize: 11 }}>
                   {pool ? (
                     <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <span style={{ color: T.green, fontWeight: 'bold' }}>● LIVE, {pool.total} dialing now</span>
-                      <span style={{ color: T.muted }}>{pool.ready} ready</span>
-                      <span style={{ color: T.muted }}>{pool.dialing} dialing out</span>
-                      <span style={{ color: T.muted }}>{pool.onCall} on a call</span>
+                      <span style={{ color: T.green, fontWeight: 'bold' }}>{t("● LIVE,")}{" "}{pool.total} {t("dialing now")}</span>
+                      <span style={{ color: T.muted }}>{pool.ready} {t("ready")}</span>
+                      <span style={{ color: T.muted }}>{pool.dialing} {t("dialing out")}</span>
+                      <span style={{ color: T.muted }}>{pool.onCall} {t("on a call")}</span>
                       {pool.total >= 2 && (
-                        <span style={{ color: T.primary }}>predictive pool active, surplus calls route to any ready agent</span>
+                        <span style={{ color: T.primary }}>{t("predictive pool active, surplus calls route to any ready agent")}</span>
                       )}
                     </div>
                   ) : (
-                    <span style={{ color: T.muted }}>No one dialing this campaign right now.</span>
+                    <span style={{ color: T.muted }}>{t("No one dialing this campaign right now.")}</span>
                   )}
                 </div>
               </div>

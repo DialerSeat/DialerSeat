@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import JsonLd from '@/components/json-ld'
 import { organizationSchema, breadcrumbSchema } from '@/lib/schema'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 // =============================================================================
 // /status — a real, public health page
@@ -130,6 +131,7 @@ const ACCENT = '#2a4a8a'
 const FUTURA = "'Futura PT', Futura, 'Trebuchet MS', sans-serif"
 
 export default async function StatusPage() {
+  await primeLocale()
   const checks: Check[] = [
     // The application answered this request, so it is up by construction. Said
     // plainly rather than dressed up as a measurement.
@@ -170,12 +172,11 @@ export default async function StatusPage() {
       }}>
         <div style={{ maxWidth: 820, margin: '0 auto', padding: '80px 24px 96px' }}>
           <nav style={{ fontSize: 11, letterSpacing: 1.5, color: MUTED, marginBottom: 22 }}>
-            <Link href="/" style={{ color: MUTED }}>HOME</Link>
+            <Link href="/" style={{ color: MUTED }}>{t("HOME")}</Link>
           </nav>
 
           <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: ACCENT, marginBottom: 14 }}>
-            ▸ System status
-          </div>
+            {t("▸ System status")}</div>
 
           <div style={{
             display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
@@ -190,9 +191,7 @@ export default async function StatusPage() {
           </div>
 
           <p style={{ fontSize: 14, lineHeight: 1.8, color: MUTED, marginTop: 14, maxWidth: 640 }}>
-            Every indicator below is checked live when this page loads. Nothing here is published from
-            a static file, so it can report a problem before we have noticed one.
-          </p>
+            {t("Every indicator below is checked live when this page loads. Nothing here is published from a static file, so it can report a problem before we have noticed one.")}</p>
 
           <div style={{ marginTop: 34, border: `1px solid ${BORDER}`, borderRadius: 8, overflow: 'hidden' }}>
             {checks.map((c, i) => (
@@ -222,16 +221,13 @@ export default async function StatusPage() {
           </div>
 
           <p style={{ fontSize: 12, color: MUTED, marginTop: 16, fontFamily: 'monospace' }}>
-            CHECKED {checkedAt}
+            {t("CHECKED")}{" "}{checkedAt}
           </p>
 
           <section style={{ marginTop: 44 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 'bold', margin: 0 }}>What we do not show</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 'bold', margin: 0 }}>{t("What we do not show")}</h2>
             <p style={{ fontSize: 14, lineHeight: 1.8, color: MUTED, marginTop: 10, maxWidth: 660 }}>
-              There is no uptime percentage on this page. We have not been operating long enough for one
-              to mean anything, and a figure computed over a short window would imply a track record we
-              do not yet have. It will appear here when there is a year of measurement behind it.
-            </p>
+              {t("There is no uptime percentage on this page. We have not been operating long enough for one to mean anything, and a figure computed over a short window would imply a track record we do not yet have. It will appear here when there is a year of measurement behind it.")}</p>
           </section>
         </div>
       </main>

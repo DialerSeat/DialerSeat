@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { t } from '@/lib/i18n/client'
 
 
 
@@ -92,8 +95,7 @@ export default function SiteFooter() {
             padding: '4px 10px',
           }}
         >
-          PRIVACY
-        </Link>
+          {t("PRIVACY")}</Link>
         <span style={{ color: 'rgba(255,255,255,0.3)' }}>·</span>
         <Link
           href="/terms"
@@ -103,8 +105,7 @@ export default function SiteFooter() {
             padding: '4px 10px',
           }}
         >
-          TERMS
-        </Link>
+          {t("TERMS")}</Link>
         <span style={{ color: 'rgba(255,255,255,0.3)' }}>·</span>
         <Link
           href="/faq"
@@ -114,8 +115,7 @@ export default function SiteFooter() {
             padding: '4px 10px',
           }}
         >
-          FAQ
-        </Link>
+          {t("FAQ")}</Link>
         <span style={{ color: 'rgba(255,255,255,0.3)' }}>·</span>
         <Link
           href="/vs"
@@ -125,8 +125,7 @@ export default function SiteFooter() {
             padding: '4px 10px',
           }}
         >
-          COMPARISONS
-        </Link>
+          {t("COMPARISONS")}</Link>
       </div>
 
       {/* Copyright row */}
@@ -138,8 +137,7 @@ export default function SiteFooter() {
           margin: 0,
         }}
       >
-        © {new Date().getFullYear()} DIALERSEAT™ · ALL RIGHTS RESERVED
-      </p>
+        © {new Date().getFullYear()} {t("DIALERSEAT™ · ALL RIGHTS RESERVED")}</p>
     </footer>
   )
 }

@@ -22,6 +22,7 @@ import {
   CreateCodeModal,
   RenameModal,
 } from '@/components/teams/TeamModals'
+import { t as tr } from '@/lib/i18n/client'
 
 // =============================================================================
 // TEAMS — OVERVIEW, ALL USERS, REQUESTS
@@ -237,14 +238,13 @@ function RecordingsFeed({ recordings, total, agents }: {
             display: 'inline-block', fontSize: 10, color: MUTED,
             transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform .15s',
           }}>▶</span>
-          Recordings
-          <span style={{ color: MUTED, fontWeight: 400 }}>
+          {tr("Recordings")}<span style={{ color: MUTED, fontWeight: 400 }}>
             {matching.length}{total > recordings.length ? ` of ${total}` : ''}
             {!expanded && hidden > 0 && ` · showing ${shown.length}`}
           </span>
         </button>
         <label style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 11, color: MUTED }}>Agent</span>
+          <span style={{ fontSize: 11, color: MUTED }}>{tr("Agent")}</span>
           <select
             value={who}
             onChange={e => setWho(e.target.value)}
@@ -253,7 +253,7 @@ function RecordingsFeed({ recordings, total, agents }: {
               color: TEXT, fontSize: 12, padding: '5px 8px',
             }}
           >
-            <option value="all">Everyone</option>
+            <option value="all">{tr("Everyone")}</option>
             {agents.map(a => (
               <option key={a.id} value={a.id}>{a.name || a.id.slice(0, 12)}</option>
             ))}
@@ -266,10 +266,7 @@ function RecordingsFeed({ recordings, total, agents }: {
           background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
           padding: '14px 16px', fontSize: 12.5, color: MUTED, lineHeight: 1.7,
         }}>
-          No recordings in this range. Recording is on for every campaign, and a
-          call gets audio once detection confirms a human answered, so voicemails
-          and no-answers leave nothing to play.
-        </div>
+          {tr("No recordings in this range. Recording is on for every campaign, and a call gets audio once detection confirms a human answered, so voicemails and no-answers leave nothing to play.")}</div>
       ) : (
         <div style={{ display: 'grid', gap: 6 }}>
           {shown.map(r => (
@@ -305,7 +302,7 @@ function RecordingsFeed({ recordings, total, agents }: {
                   borderRadius: 4, color: MUTED, fontSize: 11,
                   padding: '5px 10px', cursor: 'pointer',
                 }}
-              >{playingId === r.id ? 'Close' : 'Play'}</button>
+              >{playingId === r.id ? tr("Close") : tr("Play")}</button>
               {playingId === r.id && (
                 <audio
                   style={{ flexBasis: '100%', width: '100%', marginTop: 6 }}
@@ -316,9 +313,7 @@ function RecordingsFeed({ recordings, total, agents }: {
               )}
               {playErrors[r.id] && (
                 <div style={{ flexBasis: '100%', fontSize: 11, color: '#b45309', marginTop: 4 }}>
-                  Recording unavailable. Telnyx deletes audio on its own retention
-                  schedule, so an older call can have a row here and no audio behind it.
-                </div>
+                  {tr("Recording unavailable. Telnyx deletes audio on its own retention schedule, so an older call can have a row here and no audio behind it.")}</div>
               )}
             </div>
           ))}
@@ -330,7 +325,7 @@ function RecordingsFeed({ recordings, total, agents }: {
                 borderRadius: 4, color: MUTED, fontSize: 12,
                 padding: '9px 12px', cursor: 'pointer', textAlign: 'center',
               }}
-            >Show {hidden} more</button>
+            >{tr("Show")}{" "}{hidden} {tr("more")}</button>
           )}
         </div>
       )}
@@ -392,8 +387,7 @@ function ChartCard({ title }: { title: string }) {
         color: MUTED, marginBottom: 12,
       }}>▾ {title}</div>
       <div style={{ height: 200, display: 'grid', placeItems: 'center', color: DIM, fontSize: 12 }}>
-        No data for this range
-      </div>
+        {tr("No data for this range")}</div>
     </div>
   )
 }
@@ -405,7 +399,7 @@ function ViewHeader({ title, onBack }: { title: string; onBack: () => void }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 22 }}>
       <button
         onClick={onBack}
-        aria-label="Back to overview"
+        aria-label={tr("Back to overview")}
         style={{
           display: 'grid', placeItems: 'center', width: 34, height: 34,
           borderRadius: 4, border: `1px solid ${HAIRLINE}`, background: PANEL,
@@ -477,14 +471,13 @@ function HelpModal({ onClose }: { onClose: () => void }) {
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 22, fontWeight: 600 }}>Things you should know</div>
+            <div style={{ fontSize: 22, fontWeight: 600 }}>{tr("Things you should know")}</div>
             <div style={{ fontSize: 12.5, color: DIM, marginTop: 4 }}>
-              Running a floor, selling seats, and what you earn at volume.
-            </div>
+              {tr("Running a floor, selling seats, and what you earn at volume.")}</div>
           </div>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={tr("Close")}
             style={{
               background: 'transparent', border: `1px solid ${HAIRLINE}`,
               color: MUTED, borderRadius: 4, width: 28, height: 28,
@@ -494,66 +487,33 @@ function HelpModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <P>
-          Teams is for running a floor. Whether you have sold twenty-five seats to
-          an agency, staffed one room yourself, or you are a vendor handing lists
-          to closers you do not employ: this is where you decide who dials what,
-          and who pays for the privilege.
-        </P>
+          {tr("Teams is for running a floor. Whether you have sold twenty-five seats to an agency, staffed one room yourself, or you are a vendor handing lists to closers you do not employ: this is where you decide who dials what, and who pays for the privilege.")}</P>
 
-        <H>Sharing or selling your campaigns</H>
+        <H>{tr("Sharing or selling your campaigns")}</H>
         <P>
-          Your leads stay yours. Putting a campaign on a team does not give it
-          away: it lets people you choose dial it, and you can pull that back at
-          any time.
-        </P>
+          {tr("Your leads stay yours. Putting a campaign on a team does not give it away: it lets people you choose dial it, and you can pull that back at any time.")}</P>
         <P>
-          You hand out access with a code. A <B>team code</B> puts someone on your
-          roster and nothing more, so you can vet them before pointing them at a
-          list. A <B>campaign code</B> puts them on the roster and straight onto
-          that one campaign, which is what you want when you are staffing a
-          specific list.
-        </P>
+          {tr("You hand out access with a code. A")}{" "}<B>{tr("team code")}</B> {tr("puts someone on your roster and nothing more, so you can vet them before pointing them at a list. A")}{" "}<B>{tr("campaign code")}</B> {tr("puts them on the roster and straight onto that one campaign, which is what you want when you are staffing a specific list.")}</P>
         <P>
-          Every code says who pays for the seat: <B>you</B>, or <B>them</B>. That is
-          how you sell a seat: hand out a code set to &quot;they pay&quot;, and
-          their own checkout covers it. Set it to &quot;you pay&quot; when the seat
-          is part of what you are providing.
-        </P>
+          {tr("Every code says who pays for the seat:")}{" "}<B>{tr("you")}</B>{tr(", or")}{" "}<B>{tr("them")}</B>{tr(". That is how you sell a seat: hand out a code set to \"they pay\", and their own checkout covers it. Set it to \"you pay\" when the seat is part of what you are providing.")}</P>
         <P>
-          Once somebody has a seat, adding them to more of your campaigns is{' '}
-          <B>free</B>, to you and to them. The seat is what gets billed, not the
-          list. Select people under All Users and use Add to campaign; forty agents
-          onto a new list is one click, not forty seats.
-        </P>
+          {tr("Once somebody has a seat, adding them to more of your campaigns is")}{' '}
+          <B>{tr("free")}</B>{tr(", to you and to them. The seat is what gets billed, not the list. Select people under All Users and use Add to campaign; forty agents onto a new list is one click, not forty seats.")}</P>
 
-        <H>When somebody stops paying</H>
+        <H>{tr("When somebody stops paying")}</H>
         <P>
-          If an agent who was paying for their own seat cancels, <B>you pick it up
-          automatically</B> and they keep dialing. Your floor does not lose a chair
-          mid-shift because somebody&apos;s card expired. We tell you it happened,
-          and you decide when to stop: pause or remove them, and the billing stops
-          with it.
-        </P>
+          {tr("If an agent who was paying for their own seat cancels,")}{" "}<B>{tr("you pick it up automatically")}</B> {tr("and they keep dialing. Your floor does not lose a chair mid-shift because somebody's card expired. We tell you it happened, and you decide when to stop: pause or remove them, and the billing stops with it.")}</P>
         <P>
-          If your card is the one that fails, nobody gets thrown out. You have a
-          week to sort it out while your people keep working.
-        </P>
+          {tr("If your card is the one that fails, nobody gets thrown out. You have a week to sort it out while your people keep working.")}</P>
 
-        <H>What you earn at volume</H>
+        <H>{tr("What you earn at volume")}</H>
         <P>
-          Seats bill weekly and cancel anytime. Ten seats <B>you pay for</B> earns
-          5% off your weekly seat cost, twenty-five earns 10%, counted across
-          every team you own, not per team.
-        </P>
+          {tr("Seats bill weekly and cancel anytime. Ten seats")}{" "}<B>{tr("you pay for")}</B> {tr("earns 5% off your weekly seat cost, twenty-five earns 10%, counted across every team you own, not per team.")}</P>
         <P>
-          It only counts seats you fund, because it is a reduction of your bill 
-          a seat an agent pays for themselves costs you nothing to begin with.
-        </P>
+          {tr("It only counts seats you fund, because it is a reduction of your bill a seat an agent pays for themselves costs you nothing to begin with.")}</P>
         <P>
-          Once you are past fifty people, rates stop being a formula: email{' '}
-          <B>sales@dialerseat.com</B> and we will build something around how you
-          actually run.
-        </P>
+          {tr("Once you are past fifty people, rates stop being a formula: email")}{' '}
+          <B>sales@dialerseat.com</B> {tr("and we will build something around how you actually run.")}</P>
       </div>
     </div>
   )
@@ -1611,14 +1571,14 @@ export default function TeamsPage() {
         id="ts-drawer-toggle"
         className="ts-drawer-checkbox"
         defaultChecked={false}
-        aria-label="Open teams menu"
+        aria-label={tr("Open teams menu")}
       />
 
       <label
         className="ts-fab"
         htmlFor="ts-drawer-toggle"
         role="button"
-        aria-label="Open teams menu"
+        aria-label={tr("Open teams menu")}
         aria-controls="ts-side"
       >‹</label>
 
@@ -1640,7 +1600,7 @@ export default function TeamsPage() {
             <span style={{
               fontSize: 12, letterSpacing: 2, textTransform: 'uppercase',
               color: '#93c5fd', fontWeight: 600, marginRight: 8,
-            }}>Teams Overview</span>
+            }}>{tr("Teams Overview")}</span>
             {RANGES.map(r => (
               <button
                 key={r.key}
@@ -1696,7 +1656,7 @@ export default function TeamsPage() {
 
           {view === 'all_users' && (
             <>
-              <ViewHeader title="All Users" onBack={goOverview} />
+              <ViewHeader title={tr("All Users")} onBack={goOverview} />
 
               {/* ── ACTION BAR ────────────────────────────────────────────
                   Appears only once something is selected. An owner just reading
@@ -1713,8 +1673,7 @@ export default function TeamsPage() {
                   borderRadius: 4, padding: '10px 12px', marginBottom: 12,
                 }}>
                   <span style={{ fontSize: 12, color: TEXT }}>
-                    {selectedMembers.size} selected
-                  </span>
+                    {selectedMembers.size} {tr("selected")}</span>
                   <select
                     value={assignTo}
                     onChange={e => setAssignTo(e.target.value)}
@@ -1724,7 +1683,7 @@ export default function TeamsPage() {
                       padding: '6px 8px', fontFamily: 'inherit',
                     }}
                   >
-                    <option value="">Add to campaign…</option>
+                    <option value="">{tr("Add to campaign…")}</option>
                     {assignableCampaigns.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
@@ -1739,7 +1698,7 @@ export default function TeamsPage() {
                       fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
                       cursor: !assignTo || assigning ? 'not-allowed' : 'pointer',
                     }}
-                  >{assigning ? 'Adding…' : 'Add'}</button>
+                  >{assigning ? tr("Adding…") : tr("Add")}</button>
                   <select
                     value={addToTeamId}
                     onChange={e => setAddToTeamId(e.target.value)}
@@ -1749,7 +1708,7 @@ export default function TeamsPage() {
                       padding: '6px 8px', fontFamily: 'inherit',
                     }}
                   >
-                    <option value="">Add to team…</option>
+                    <option value="">{tr("Add to team…")}</option>
                     {rawTeams.filter(t => t.isOwner).map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
@@ -1764,7 +1723,7 @@ export default function TeamsPage() {
                       fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
                       cursor: !addToTeamId || addingToTeam ? 'not-allowed' : 'pointer',
                     }}
-                  >{addingToTeam ? 'Adding…' : 'Add to team'}</button>
+                  >{addingToTeam ? tr("Adding…") : tr("Add to team")}</button>
                   {/* ── PARK THE WHOLE SELECTION ────────────────────────
                       An owner standing a team down for a week is doing one
                       thing, not thirty. Each button only appears when there
@@ -1784,7 +1743,7 @@ export default function TeamsPage() {
                         cursor: seatBusy ? 'wait' : 'pointer',
                         opacity: seatBusy ? 0.5 : 1,
                       }}
-                    >{seatBusy ? 'Working…' : `Park ${selectedSeats.live.length}`}</button>
+                    >{seatBusy ? tr("Working…") : `Park ${selectedSeats.live.length}`}</button>
                   )}
                   {selectedSeats.parked.length > 0 && (
                     <button
@@ -1798,7 +1757,7 @@ export default function TeamsPage() {
                         cursor: seatBusy ? 'wait' : 'pointer',
                         opacity: seatBusy ? 0.5 : 1,
                       }}
-                    >{seatBusy ? 'Working…' : `Resume ${selectedSeats.parked.length}`}</button>
+                    >{seatBusy ? tr("Working…") : `Resume ${selectedSeats.parked.length}`}</button>
                   )}
                   <button
                     onClick={() => {
@@ -1809,13 +1768,9 @@ export default function TeamsPage() {
                       background: 'transparent', color: DIM, border: 'none',
                       fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
                     }}
-                  >Clear</button>
+                  >{tr("Clear")}</button>
                   <span style={{ fontSize: 11, color: DIM, width: '100%' }}>
-                    Adding to a campaign costs nothing, those seats are already paid for.
-                    Adding to a team opens a new seat and bills you weekly, unless they
-                    already hold a seat with you or pay for DialerSeat themselves, you
-                    are never charged twice for the same person.
-                  </span>
+                    {tr("Adding to a campaign costs nothing, those seats are already paid for. Adding to a team opens a new seat and bills you weekly, unless they already hold a seat with you or pay for DialerSeat themselves, you are never charged twice for the same person.")}</span>
                 </div>
               )}
 
@@ -1867,7 +1822,7 @@ export default function TeamsPage() {
                         color: MUTED, borderRadius: 3, padding: '7px 12px',
                         fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
                       }}
-                    >Select page</button>
+                    >{tr("Select page")}</button>
                   ) : undefined
                 }
                 columns={[
@@ -1942,14 +1897,13 @@ export default function TeamsPage() {
                       if (billable.length > 0) {
                         return (
                           <span style={{ fontSize: 12, color: DIM }}>
-                            {billable.some(m => m.pickedUp) ? 'You picked this up' : 'You pay'}
+                            {billable.some(m => m.pickedUp) ? tr("You picked this up") : tr("You pay")}
                             {/* More than one billable seat means duplicates
                                 predating the one-seat rule. Said out loud
                                 rather than silently summed — it is money. */}
                             {billable.length > 1 && (
                               <span style={{ display: 'block', color: '#fbbf24' }}>
-                                billed {billable.length}×, duplicate seats
-                              </span>
+                                {tr("billed")}{" "}{billable.length}{tr("×, duplicate seats")}</span>
                             )}
                           </span>
                         )
@@ -1957,13 +1911,12 @@ export default function TeamsPage() {
                       if (selfFunded) {
                         return (
                           <span style={{ fontSize: 12, color: DIM }}>
-                            Paying for themselves
-                            <span style={{ display: 'block', color: '#5a6070' }}>costs you nothing</span>
+                            {tr("Paying for themselves")}<span style={{ display: 'block', color: '#5a6070' }}>{tr("costs you nothing")}</span>
                           </span>
                         )
                       }
                       if (parked.length > 0) {
-                        return <span style={{ fontSize: 12, color: '#fbbf24' }}>Parked, not billed</span>
+                        return <span style={{ fontSize: 12, color: '#fbbf24' }}>{tr("Parked, not billed")}</span>
                       }
                       return <span style={{ fontSize: 12, color: DIM }}>-</span>
                     },
@@ -2024,7 +1977,7 @@ export default function TeamsPage() {
                                 fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit',
                                 whiteSpace: 'nowrap',
                               }}
-                            >Manage</button>
+                            >{tr("Manage")}</button>
                           )}
 
                           {(canPark || canResume) && (
@@ -2038,8 +1991,8 @@ export default function TeamsPage() {
                               }}
                               disabled={seatBusy}
                               title={canPark
-                                ? 'Stop the weekly charge and stop them dialing, on every team'
-                                : 'Restart weekly billing and let them dial again'}
+                                ? tr("Stop the weekly charge and stop them dialing, on every team")
+                                : tr("Restart weekly billing and let them dial again")}
                               style={{
                                 background: 'transparent',
                                 border: `1px solid ${canResume ? '#4ade80' : '#fbbf24'}`,
@@ -2050,7 +2003,7 @@ export default function TeamsPage() {
                                 opacity: seatBusy ? 0.5 : 1,
                                 whiteSpace: 'nowrap',
                               }}
-                            >{canResume ? 'Resume' : 'Park'}</button>
+                            >{canResume ? tr("Resume") : tr("Park")}</button>
                           )}
 
                           {/* A button that is simply absent reads as broken.
@@ -2060,8 +2013,7 @@ export default function TeamsPage() {
                               "this is missing". */}
                           {!canPark && !canResume && selfFunded && (
                             <span style={{ fontSize: 10.5, color: DIM, whiteSpace: 'nowrap' }}>
-                              self-funded
-                            </span>
+                              {tr("self-funded")}</span>
                           )}
                         </span>
                       )
@@ -2074,7 +2026,7 @@ export default function TeamsPage() {
 
           {view === 'requests' && (
             <>
-              <ViewHeader title="Requests" onBack={goOverview} />
+              <ViewHeader title={tr("Requests")} onBack={goOverview} />
 
               {/* ── WHAT CAME BACK ───────────────────────────────────────────
                   Above everything, because an answer to a question you asked
@@ -2094,15 +2046,15 @@ export default function TeamsPage() {
                       }}>
                         <div style={{ fontSize: 13.5, color: TEXT }}>
                           {ok ? (
-                            <>You were accepted onto <strong>{d.teamName}</strong>.</>
+                            <>{tr("You were accepted onto")}{" "}<strong>{d.teamName}</strong>.</>
                           ) : (
-                            <><strong>{d.teamName}</strong> declined your request.</>
+                            <><strong>{d.teamName}</strong> {tr("declined your request.")}</>
                           )}
                         </div>
                         <div style={{ fontSize: 11.5, color: DIM, marginTop: 3 }}>
                           {ok
-                            ? 'Their campaigns are in your sidebar now.'
-                            : 'Ask whoever sent you the code if you think this was a mistake.'}
+                            ? tr("Their campaigns are in your sidebar now.")
+                            : tr("Ask whoever sent you the code if you think this was a mistake.")}
                         </div>
                       </div>
                     )
@@ -2121,7 +2073,7 @@ export default function TeamsPage() {
                   <h3 style={{
                     margin: '0 0 10px', fontSize: 11, letterSpacing: 1.4,
                     textTransform: 'uppercase', color: MUTED, fontWeight: 600,
-                  }}>Waiting On Approval</h3>
+                  }}>{tr("Waiting On Approval")}</h3>
                   <div style={{ display: 'grid', gap: 8 }}>
                     {myPending.map(p => (
                       <div key={p.id} style={{
@@ -2133,14 +2085,13 @@ export default function TeamsPage() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 14, fontWeight: 500 }}>{p.teamName}</div>
                           <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
-                            Your request is with the team owner
-                          </div>
+                            {tr("Your request is with the team owner")}</div>
                         </div>
                         <span style={{
                           fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase',
                           color: '#fbbf24', border: '1px solid #78350f',
                           background: '#2a1a05', borderRadius: 3, padding: '3px 8px',
-                        }}>Pending</span>
+                        }}>{tr("Pending")}</span>
                       </div>
                     ))}
                   </div>
@@ -2151,13 +2102,13 @@ export default function TeamsPage() {
                 <h3 style={{
                   margin: '0 0 10px', fontSize: 11, letterSpacing: 1.4,
                   textTransform: 'uppercase', color: MUTED, fontWeight: 600,
-                }}>Awaiting Your Decision</h3>
+                }}>{tr("Awaiting Your Decision")}</h3>
               )}
 
               {pendingList.length === 0 ? (
                 myPending.length === 0 && (
                   <div style={{ color: DIM, fontSize: 13 }}>
-                    {loading ? 'Loading…' : 'No pending requests.'}
+                    {loading ? tr("Loading…") : tr("No pending requests.")}
                   </div>
                 )
               ) : (
@@ -2171,7 +2122,7 @@ export default function TeamsPage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 500 }}>{r.name}</div>
                         <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
-                          wants to join {r.team}
+                          {tr("wants to join")}{" "}{r.team}
                         </div>
                       </div>
                       {/* Decline first, Approve last and emphasised. Approve is
@@ -2186,7 +2137,7 @@ export default function TeamsPage() {
                           border: `1px solid ${HAIRLINE}`, background: RAISED,
                           color: MUTED, fontSize: 12, fontFamily: 'inherit',
                         }}
-                      >Decline</button>
+                      >{tr("Decline")}</button>
                       <button
                         disabled={busy}
                         onClick={() => decideRequest(r.memberId, 'accept')}
@@ -2195,7 +2146,7 @@ export default function TeamsPage() {
                           border: '1px solid #16a34a', background: '#16a34a',
                           color: '#fff', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
                         }}
-                      >Approve</button>
+                      >{tr("Approve")}</button>
                     </div>
                   ))}
                 </div>
@@ -2210,7 +2161,7 @@ export default function TeamsPage() {
                   are separate questions and the page should not need reloading
                   to change the second one. */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 22, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 24, color: TEXT }}>Viewing:</span>
+                <span style={{ fontSize: 24, color: TEXT }}>{tr("Viewing:")}</span>
                 <div style={{ position: 'relative' }}>
                   <button
                     onClick={() => setMetricOpen(o => !o)}
@@ -2281,8 +2232,8 @@ export default function TeamsPage() {
                 <div style={{ marginLeft: 'auto', position: 'relative' }}>
                   <button
                     onClick={() => setHelpOpen(true)}
-                    aria-label="Things you should know"
-                    title="Things you should know"
+                    aria-label={tr("Things you should know")}
+                    title={tr("Things you should know")}
                     style={{
                       width: 30, height: 30, borderRadius: '50%',
                       background: 'var(--teams-inset, #111214)', border: `1px solid ${HAIRLINE}`,

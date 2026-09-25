@@ -9,6 +9,7 @@ import FaqTheme from '@/components/faq-theme'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
+import { t } from '@/lib/i18n/client'
 
 
 type Slide = { src: string; alt: string; caption: string; theme: string }
@@ -61,7 +62,7 @@ function MobileCarousel() {
   return (
     <div className="wlm-carousel">
       <div className="wlm-carousel-frame">
-        <button className="wlm-carousel-arrow left" onClick={() => go(-1)} aria-label="Previous screenshot">‹</button>
+        <button className="wlm-carousel-arrow left" onClick={() => go(-1)} aria-label={t("Previous screenshot")}>‹</button>
         <div className="wlm-phone-shell">
           <div className="wlm-phone-notch" />
           <div className="wlm-phone-imgwrap">
@@ -76,7 +77,7 @@ function MobileCarousel() {
             />
           </div>
         </div>
-        <button className="wlm-carousel-arrow right" onClick={() => go(1)} aria-label="Next screenshot">›</button>
+        <button className="wlm-carousel-arrow right" onClick={() => go(1)} aria-label={t("Next screenshot")}>›</button>
       </div>
       <div className="wlm-carousel-theme-tag">{slide.theme}</div>
       <p className="wlm-carousel-caption">{slide.caption}</p>
@@ -98,11 +99,11 @@ function ThemeCompare() {
   return (
     <div className="wlm-compare">
       <div className="wlm-compare-col">
-        <div className="wlm-compare-label">CHROME THEME</div>
+        <div className="wlm-compare-label">{t("CHROME THEME")}</div>
         <div className="wlm-compare-frame">
           <Image
             src="/faq-images/manager-plus/pwa-sidebar-chrome.png"
-            alt="Chrome themed white-label sidebar"
+            alt={t("Chrome themed white-label sidebar")}
             fill
             sizes="(max-width: 768px) 45vw, 220px"
             style={{ objectFit: 'cover', objectPosition: 'top' }}
@@ -110,11 +111,11 @@ function ThemeCompare() {
         </div>
       </div>
       <div className="wlm-compare-col">
-        <div className="wlm-compare-label neon">NEON THEME</div>
+        <div className="wlm-compare-label neon">{t("NEON THEME")}</div>
         <div className="wlm-compare-frame">
           <Image
             src="/faq-images/manager-plus/pwa-sidebar-neon.png"
-            alt="Neon themed white-label sidebar"
+            alt={t("Neon themed white-label sidebar")}
             fill
             sizes="(max-width: 768px) 45vw, 220px"
             style={{ objectFit: 'cover', objectPosition: 'top' }}
@@ -220,128 +221,78 @@ export default function WhiteLabelMobileFaqView() {
         `}</style>
 
         <article className="faq-root">
-          <div className="faq-eyebrow">▸ WHITE-LABEL, ON MOBILE</div>
-          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
+          <div className="faq-eyebrow">{t("▸ WHITE-LABEL, ON MOBILE")}</div>
+          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>{t("LAST UPDATED 07/28/2026")}</span>
 
           <h1 className="faq-h1">
-            Your brand doesn&apos;t stop at the browser tab. It follows onto the phone.
-          </h1>
+            {t("Your brand doesn't stop at the browser tab. It follows onto the phone.")}</h1>
 
           <p className="faq-deck">
-            White-labeling on desktop is table stakes for most resellers.
-            Mobile is where it usually falls apart, either there&apos;s no
-            real mobile experience at all, or the &ldquo;mobile app&rdquo;
-            quietly drops your branding and shows the vendor&apos;s name the
-            moment it opens. DialerSeat&apos;s white-label carries all the
-            way onto the phone, installed to the home screen, with your
-            theme intact from the login screen to the dialer itself.
-          </p>
+            {t("White-labeling on desktop is table stakes for most resellers. Mobile is where it usually falls apart, either there's no real mobile experience at all, or the “mobile app” quietly drops your branding and shows the vendor's name the moment it opens. DialerSeat's white-label carries all the way onto the phone, installed to the home screen, with your theme intact from the login screen to the dialer itself.")}</p>
 
           <div className="faq-badge-row">
-            <span className="faq-badge hi">PART OF MANAGER+ ($75/WK)</span>
-            <span className="faq-badge">NO APP STORE REQUIRED</span>
-            <span className="faq-badge">INSTALLS TO HOME SCREEN</span>
-            <span className="faq-badge">SAME CODEBASE AS DESKTOP</span>
+            <span className="faq-badge hi">{t("PART OF MANAGER+ ($75/WK)")}</span>
+            <span className="faq-badge">{t("NO APP STORE REQUIRED")}</span>
+            <span className="faq-badge">{t("INSTALLS TO HOME SCREEN")}</span>
+            <span className="faq-badge">{t("SAME CODEBASE AS DESKTOP")}</span>
           </div>
 
           {/* ── HOW IT WORKS ───────────────────────────────────────────────── */}
           <section className="faq-section">
-            <h2>▸ HOW IT ACTUALLY WORKS</h2>
+            <h2>{t("▸ HOW IT ACTUALLY WORKS")}</h2>
             <p>
-              DialerSeat&apos;s mobile experience is a <strong>Progressive
-              Web App (PWA)</strong>, not a native iOS or Android app
-              downloaded from an app store, but a web app that installs to
-              the home screen, runs full-screen with no browser chrome, and
-              behaves like a native app in every way that matters: an icon
-              on the home screen, an app-style launch, offline-friendly
-              caching, and no address bar in sight once it&apos;s open.
-            </p>
+              {t("DialerSeat's mobile experience is a")}{" "}<strong>{t("Progressive Web App (PWA)")}</strong>{t(", not a native iOS or Android app downloaded from an app store, but a web app that installs to the home screen, runs full-screen with no browser chrome, and behaves like a native app in every way that matters: an icon on the home screen, an app-style launch, offline-friendly caching, and no address bar in sight once it's open.")}</p>
             <p>
-              When you white-label your DialerSeat account, that branding 
-              your logo, your color palette, your custom domain, carries
-              straight through to the PWA. Your agents visit your domain on
-              their phone, tap &ldquo;Add to Home Screen,&rdquo; and from
-              that point on they&apos;re opening <em>your</em> app icon,
-              with <em>your</em> theme, every time.
-            </p>
+              {t("When you white-label your DialerSeat account, that branding your logo, your color palette, your custom domain, carries straight through to the PWA. Your agents visit your domain on their phone, tap “Add to Home Screen,” and from that point on they're opening")}{" "}<em>{t("your")}</em> {t("app icon, with")}{" "}<em>{t("your")}</em> {t("theme, every time.")}</p>
             <p className="muted">
-              The install steps themselves, Safari&apos;s Share menu on
-              iPhone, Chrome&apos;s install prompt on Android, are the same
-              whether an account is white-labeled or not. See{' '}
-              <Link href="/faq/mobile">DialerSeat on mobile</Link> for the
-              exact step-by-step if you need it spelled out.
-            </p>
+              {t("The install steps themselves, Safari's Share menu on iPhone, Chrome's install prompt on Android, are the same whether an account is white-labeled or not. See")}{' '}
+              <Link href="/faq/mobile">{t("DialerSeat on mobile")}</Link> {t("for the exact step-by-step if you need it spelled out.")}</p>
 
-            <p style={{ marginTop: 8 }}>Swipe through a real white-labeled account below: same account, same features, two completely different themes.</p>
+            <p style={{ marginTop: 8 }}>{t("Swipe through a real white-labeled account below: same account, same features, two completely different themes.")}</p>
 
             <MobileCarousel />
           </section>
 
           {/* ── SAME CODEBASE, DIFFERENT SKIN ──────────────────────────────── */}
           <section className="faq-section">
-            <h2>▸ SAME CODEBASE, COMPLETELY DIFFERENT SKIN</h2>
+            <h2>{t("▸ SAME CODEBASE, COMPLETELY DIFFERENT SKIN")}</h2>
             <p>
-              The two screenshots below are the exact same navigation menu,
-              on the exact same account type (Manager+), running the exact
-              same code. The only thing that changed is the white-label
-              theme configuration: colors, background treatment, and logo
-              styling.
-            </p>
+              {t("The two screenshots below are the exact same navigation menu, on the exact same account type (Manager+), running the exact same code. The only thing that changed is the white-label theme configuration: colors, background treatment, and logo styling.")}</p>
 
             <ThemeCompare />
 
             <p className="muted" style={{ textAlign: 'center', marginTop: 8 }}>
-              Light and airy, or dark with a neon glow: the layout, the
-              links, and the permissions underneath never change. Only the
-              skin does.
-            </p>
+              {t("Light and airy, or dark with a neon glow: the layout, the links, and the permissions underneath never change. Only the skin does.")}</p>
           </section>
 
           {/* ── HOW OTHERS DON'T ───────────────────────────────────────────── */}
           <section className="faq-section">
-            <h2>▸ WHY MOST WHITE-LABEL DIALERS DON&apos;T DO THIS ON MOBILE</h2>
+            <h2>{t("▸ WHY MOST WHITE-LABEL DIALERS DON'T DO THIS ON MOBILE")}</h2>
             <p>
-              This isn&apos;t a shot at the competition for the sake of it 
-              it&apos;s a real, well-documented constraint. Apple and Google
-              both restrict publishing multiple near-identical
-              &ldquo;boilerplate&rdquo; native apps from the same underlying
-              codebase under different names and branding. A dialer vendor
-              that wants to give every reseller their own branded native app
-              in the App Store and Play Store runs straight into that
-              policy, it&apos;s the reason so few white-label platforms of
-              any kind bother trying anymore.
-            </p>
+              {t("This isn't a shot at the competition for the sake of it it's a real, well-documented constraint. Apple and Google both restrict publishing multiple near-identical “boilerplate” native apps from the same underlying codebase under different names and branding. A dialer vendor that wants to give every reseller their own branded native app in the App Store and Play Store runs straight into that policy, it's the reason so few white-label platforms of any kind bother trying anymore.")}</p>
             <p>
-              The usual workarounds are worse than the problem: charge
-              resellers a large one-time fee to get a lightly-rebranded
-              native app submitted under their own developer account (slow,
-              expensive, and it goes stale the moment the platform ships an
-              update), or skip mobile branding entirely and just show
-              resellers&apos; agents the vendor&apos;s own app with the
-              vendor&apos;s own name on it, which is the most common
-              outcome in this industry.
-            </p>
+              {t("The usual workarounds are worse than the problem: charge resellers a large one-time fee to get a lightly-rebranded native app submitted under their own developer account (slow, expensive, and it goes stale the moment the platform ships an update), or skip mobile branding entirely and just show resellers' agents the vendor's own app with the vendor's own name on it, which is the most common outcome in this industry.")}</p>
 
             <div className="wlm-vs-table">
               <div className="wlm-vs-row head">
                 <div className="wlm-vs-cell label">&nbsp;</div>
-                <div className="wlm-vs-cell">TYPICAL APPROACH</div>
+                <div className="wlm-vs-cell">{t("TYPICAL APPROACH")}</div>
               </div>
               <div className="wlm-vs-row">
-                <div className="wlm-vs-cell label">Mobile branding</div>
-                <div className="wlm-vs-cell them">Usually drops to the vendor&apos;s own name and logo, or isn&apos;t offered at all</div>
+                <div className="wlm-vs-cell label">{t("Mobile branding")}</div>
+                <div className="wlm-vs-cell them">{t("Usually drops to the vendor's own name and logo, or isn't offered at all")}</div>
               </div>
               <div className="wlm-vs-row">
-                <div className="wlm-vs-cell label">Getting it installed</div>
-                <div className="wlm-vs-cell them">App Store / Play Store submission and review, per reseller, if offered at all</div>
+                <div className="wlm-vs-cell label">{t("Getting it installed")}</div>
+                <div className="wlm-vs-cell them">{t("App Store / Play Store submission and review, per reseller, if offered at all")}</div>
               </div>
               <div className="wlm-vs-row">
-                <div className="wlm-vs-cell label">Update cycle</div>
-                <div className="wlm-vs-cell them">Separate app store review for every update, per branded build</div>
+                <div className="wlm-vs-cell label">{t("Update cycle")}</div>
+                <div className="wlm-vs-cell them">{t("Separate app store review for every update, per branded build")}</div>
               </div>
               <div className="wlm-vs-row">
-                <div className="wlm-vs-cell label">Cost to reseller</div>
-                <div className="wlm-vs-cell them">Often a separate one-time or enterprise fee on top of the base plan</div>
+                <div className="wlm-vs-cell label">{t("Cost to reseller")}</div>
+                <div className="wlm-vs-cell them">{t("Often a separate one-time or enterprise fee on top of the base plan")}</div>
               </div>
             </div>
 
@@ -351,20 +302,20 @@ export default function WhiteLabelMobileFaqView() {
                 <div className="wlm-vs-cell">DIALERSEAT</div>
               </div>
               <div className="wlm-vs-row">
-                <div className="wlm-vs-cell label">Mobile branding</div>
-                <div className="wlm-vs-cell us">Your logo, colors, and custom domain carry through automatically, same theme as desktop</div>
+                <div className="wlm-vs-cell label">{t("Mobile branding")}</div>
+                <div className="wlm-vs-cell us">{t("Your logo, colors, and custom domain carry through automatically, same theme as desktop")}</div>
               </div>
               <div className="wlm-vs-row">
-                <div className="wlm-vs-cell label">Getting it installed</div>
-                <div className="wlm-vs-cell us">&ldquo;Add to Home Screen&rdquo; from the browser: seconds, no review process</div>
+                <div className="wlm-vs-cell label">{t("Getting it installed")}</div>
+                <div className="wlm-vs-cell us">{t("“Add to Home Screen” from the browser: seconds, no review process")}</div>
               </div>
               <div className="wlm-vs-row">
-                <div className="wlm-vs-cell label">Update cycle</div>
-                <div className="wlm-vs-cell us">Instant, it&apos;s the same live codebase as the browser and desktop app</div>
+                <div className="wlm-vs-cell label">{t("Update cycle")}</div>
+                <div className="wlm-vs-cell us">{t("Instant, it's the same live codebase as the browser and desktop app")}</div>
               </div>
               <div className="wlm-vs-row">
-                <div className="wlm-vs-cell label">Cost to reseller</div>
-                <div className="wlm-vs-cell us">Included in Manager+ ($75/wk), no separate mobile fee</div>
+                <div className="wlm-vs-cell label">{t("Cost to reseller")}</div>
+                <div className="wlm-vs-cell us">{t("Included in Manager+ ($75/wk), no separate mobile fee")}</div>
               </div>
             </div>
           </section>
@@ -372,44 +323,30 @@ export default function WhiteLabelMobileFaqView() {
           {/* ── HONEST LIMITATION ──────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>One honest limitation, </strong> a PWA is not a
-              listing in the App Store or Play Store. There&apos;s no
-              storefront presence, no App Store search visibility, and no
-              push-notification behavior identical to a fully native app on
-              every device (iOS PWA support in particular trails Android in
-              a few areas, like background sync). For a branded internal
-              tool your agents install once and use daily, none of that
-              matters. If your business model depends specifically on
-              public App Store discoverability for an end-consumer app,
-              that&apos;s a different product need than what white-labeling
-              a dialer solves.
-            </p>
+              <strong>{t("One honest limitation,")}{" "}</strong> {t("a PWA is not a listing in the App Store or Play Store. There's no storefront presence, no App Store search visibility, and no push-notification behavior identical to a fully native app on every device (iOS PWA support in particular trails Android in a few areas, like background sync). For a branded internal tool your agents install once and use daily, none of that matters. If your business model depends specifically on public App Store discoverability for an end-consumer app, that's a different product need than what white-labeling a dialer solves.")}</p>
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
           <div className="faq-related">
-            <div className="faq-related-label">▸ RELATED READING</div>
+            <div className="faq-related-label">{t("▸ RELATED READING")}</div>
             <div className="faq-related-links">
-              <Link href="/faq/white-label">White-label your dialer</Link>
-              <Link href="/faq/manager-plus">What Manager+ adds over Pro</Link>
-              <Link href="/faq/mobile">DialerSeat on mobile (standard accounts)</Link>
-              <Link href="/faq/managers">For managers, agency owners &amp; lead vendors</Link>
-              <Link href="/faq/dialerseat-teams">DialerSeat for teams</Link>
-              <Link href="/faq">FAQ</Link>
+              <Link href="/faq/white-label">{t("White-label your dialer")}</Link>
+              <Link href="/faq/manager-plus">{t("What Manager+ adds over Pro")}</Link>
+              <Link href="/faq/mobile">{t("DialerSeat on mobile (standard accounts)")}</Link>
+              <Link href="/faq/managers">{t("For managers, agency owners & lead vendors")}</Link>
+              <Link href="/faq/dialerseat-teams">{t("DialerSeat for teams")}</Link>
+              <Link href="/faq">{t("FAQ")}</Link>
             </div>
           </div>
 
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
           <div className="faq-cta">
-            <div className="faq-cta-eyebrow">▸ SEE IT ON YOUR OWN PHONE</div>
-            <h3 className="faq-cta-h">Set up your theme, then add it to your home screen.</h3>
+            <div className="faq-cta-eyebrow">{t("▸ SEE IT ON YOUR OWN PHONE")}</div>
+            <h3 className="faq-cta-h">{t("Set up your theme, then add it to your home screen.")}</h3>
             <p>
-              White-labeling is part of Manager+, $75/week. Once your theme
-              is configured, installing to mobile takes one tap from any
-              browser.
-            </p>
+              {t("White-labeling is part of Manager+, $75/week. Once your theme is configured, installing to mobile takes one tap from any browser.")}</p>
             <a href={isSignedIn ? '/dashboard/teams' : '/sign-up'} className="faq-cta-btn">
-              {isSignedIn ? 'GO TO DASHBOARD →' : 'START MANAGER+ →'}
+              {isSignedIn ? t("GO TO DASHBOARD →") : t("START MANAGER+ →")}
             </a>
           </div>
         </article>

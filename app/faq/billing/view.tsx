@@ -7,6 +7,7 @@ import FaqTheme from '@/components/faq-theme'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
+import { t } from '@/lib/i18n/client'
 
 
 export default function BillingFaqView() {
@@ -35,114 +36,79 @@ export default function BillingFaqView() {
         `}</style>
 
         <article className="faq-root">
-          <div className="faq-eyebrow">▸ BILLING &amp; CANCELLATION</div>
-          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
+          <div className="faq-eyebrow">{t("▸ BILLING & CANCELLATION")}</div>
+          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>{t("LAST UPDATED 07/28/2026")}</span>
 
           <h1 className="faq-h1">
-            &ldquo;Cancel anytime&rdquo; is a real button, not a phone call. <em>Here&apos;s exactly what it does.</em>
+            {t("“Cancel anytime” is a real button, not a phone call.")}{" "}<em>{t("Here's exactly what it does.")}</em>
           </h1>
 
           <p className="faq-deck">
-            Every dialer says &ldquo;no contracts.&rdquo; Fewer explain what
-            actually happens the moment you click cancel, what a failed
-            card does to your account, or how billing works when you add a
-            seat mid-week. Here&apos;s the real mechanics, not just the
-            marketing line.
-          </p>
+            {t("Every dialer says “no contracts.” Fewer explain what actually happens the moment you click cancel, what a failed card does to your account, or how billing works when you add a seat mid-week. Here's the real mechanics, not just the marketing line.")}</p>
 
           <div className="faq-badge-row">
-            <span className="faq-badge hi">BILLED WEEKLY VIA STRIPE</span>
-            <span className="faq-badge">NO ANNUAL COMMITMENT</span>
-            <span className="faq-badge">CANCEL KEEPS ACCESS THROUGH THE WEEK</span>
+            <span className="faq-badge hi">{t("BILLED WEEKLY VIA STRIPE")}</span>
+            <span className="faq-badge">{t("NO ANNUAL COMMITMENT")}</span>
+            <span className="faq-badge">{t("CANCEL KEEPS ACCESS THROUGH THE WEEK")}</span>
           </div>
 
           {/* ── WHAT CANCEL ACTUALLY DOES ──────────────────────────────────── */}
           <section className="faq-section">
-            <h2>▸ WHAT HAPPENS THE MOMENT YOU CLICK CANCEL</h2>
+            <h2>{t("▸ WHAT HAPPENS THE MOMENT YOU CLICK CANCEL")}</h2>
             <p>
-              Cancellation doesn&apos;t cut your access off immediately.
-              It schedules the subscription to end at the close of the
-              current billing period, meaning if you cancel on day 2 of a
-              paid week, you keep full access through day 7. You&apos;re not
-              charged again after that, and nothing auto-renews.
-            </p>
+              {t("Cancellation doesn't cut your access off immediately. It schedules the subscription to end at the close of the current billing period, meaning if you cancel on day 2 of a paid week, you keep full access through day 7. You're not charged again after that, and nothing auto-renews.")}</p>
 
             <div className="faq-flow">
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
-                  <h4>YOU CLICK CANCEL</h4>
-                  <p>The subscription is marked to end at period close. No refund is issued for the current week: you already paid for it, so you keep it.</p>
+                  <h4>{t("YOU CLICK CANCEL")}</h4>
+                  <p>{t("The subscription is marked to end at period close. No refund is issued for the current week: you already paid for it, so you keep it.")}</p>
                 </div>
               </div>
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
-                  <h4>YOU KEEP DIALING</h4>
-                  <p>Full access continues completely normally for the rest of the paid week, nothing is restricted or downgraded early.</p>
+                  <h4>{t("YOU KEEP DIALING")}</h4>
+                  <p>{t("Full access continues completely normally for the rest of the paid week, nothing is restricted or downgraded early.")}</p>
                 </div>
               </div>
               <div className="faq-flow-step">
                 <div className="faq-flow-body">
-                  <h4>THE WEEK ENDS</h4>
-                  <p>Access stops. No further charge happens. There&apos;s nothing else to do: no retention call, no confirmation email you have to click through.</p>
+                  <h4>{t("THE WEEK ENDS")}</h4>
+                  <p>{t("Access stops. No further charge happens. There's nothing else to do: no retention call, no confirmation email you have to click through.")}</p>
                 </div>
               </div>
             </div>
 
             <p className="muted" style={{ marginTop: 20 }}>
-              Changed your mind before the week ends? Reactivating just
-              un-schedules the cancellation, you&apos;re not treated as a
-              new signup and don&apos;t lose anything.
-            </p>
+              {t("Changed your mind before the week ends? Reactivating just un-schedules the cancellation, you're not treated as a new signup and don't lose anything.")}</p>
           </section>
 
           {/* ── FAILED PAYMENT ─────────────────────────────────────────────── */}
           <section className="faq-section">
-            <h2>▸ WHAT A FAILED CARD ACTUALLY DOES</h2>
+            <h2>{t("▸ WHAT A FAILED CARD ACTUALLY DOES")}</h2>
             <p>
-              If a weekly charge fails: expired card, insufficient funds,
-              bank decline, the subscription moves to a{' '}
-              <strong>past due</strong> state rather than canceling
-              immediately. Stripe automatically retries the charge on its
-              standard retry schedule.
-            </p>
+              {t("If a weekly charge fails: expired card, insufficient funds, bank decline, the subscription moves to a")}{' '}
+              <strong>{t("past due")}</strong> {t("state rather than canceling immediately. Stripe automatically retries the charge on its standard retry schedule.")}</p>
 
             <div className="bil-scenario">
-              <div className="bil-scenario-eyebrow">IF YOU&apos;RE ON MANAGER+ WITH WHITE-LABEL ACTIVE</div>
-              <h4>Your branded domain deactivates immediately on past-due.</h4>
+              <div className="bil-scenario-eyebrow">{t("IF YOU'RE ON MANAGER+ WITH WHITE-LABEL ACTIVE")}</div>
+              <h4>{t("Your branded domain deactivates immediately on past-due.")}</h4>
               <p>
-                This is the one place a failed payment has an immediate,
-                visible effect: white-label goes inactive the moment a
-                charge fails, not after a grace period. The moment payment
-                succeeds again, whether from an automatic retry or you
-                updating your card: it reactivates on its own, no support
-                ticket required.
-              </p>
+                {t("This is the one place a failed payment has an immediate, visible effect: white-label goes inactive the moment a charge fails, not after a grace period. The moment payment succeeds again, whether from an automatic retry or you updating your card: it reactivates on its own, no support ticket required.")}</p>
             </div>
 
             <p className="muted">
-              You can still cancel a past-due subscription yourself if
-              you&apos;d rather stop retrying than fix the card, canceling
-              isn&apos;t blocked just because a payment failed.
-            </p>
+              {t("You can still cancel a past-due subscription yourself if you'd rather stop retrying than fix the card, canceling isn't blocked just because a payment failed.")}</p>
           </section>
 
           {/* ── MID-WEEK SEAT CHANGES ──────────────────────────────────────── */}
           <section className="faq-section">
-            <h2>▸ ADDING OR REMOVING A SEAT MID-WEEK</h2>
+            <h2>{t("▸ ADDING OR REMOVING A SEAT MID-WEEK")}</h2>
             <p>
-              Each seat: Pro, Manager+, or an agent seat under a
-              Manager+ team, is its own Stripe subscription. Adding a
-              seat starts billing for that seat from the moment it&apos;s
-              created; removing one follows the same cancel-at-period-end
-              rule as canceling your own account, so you don&apos;t lose
-              access to a seat you already paid for that week.
-            </p>
+              {t("Each seat: Pro, Manager+, or an agent seat under a Manager+ team, is its own Stripe subscription. Adding a seat starts billing for that seat from the moment it's created; removing one follows the same cancel-at-period-end rule as canceling your own account, so you don't lose access to a seat you already paid for that week.")}</p>
             <p>
-              For the manager-side mechanics of this, who pays for which
-              seat, owner-pays vs. agent-pays, see{' '}
-              <Link href="/faq/manager-plus">what Manager+ adds over
-              Pro</Link> and <Link href="/faq/dialerseat-teams">DialerSeat
-              for teams</Link>.
+              {t("For the manager-side mechanics of this, who pays for which seat, owner-pays vs. agent-pays, see")}{' '}
+              <Link href="/faq/manager-plus">{t("what Manager+ adds over Pro")}</Link> {t("and")}{" "}<Link href="/faq/dialerseat-teams">{t("DialerSeat for teams")}</Link>.
             </p>
           </section>
 
@@ -155,87 +121,53 @@ export default function BillingFaqView() {
               a buyer and a lost charge. Same policy, stated in the order that
               reflects what is actually at stake. */}
           <section className="faq-section">
-            <h2>▸ WHAT YOU CAN ACTUALLY LOSE</h2>
+            <h2>{t("▸ WHAT YOU CAN ACTUALLY LOSE")}</h2>
             <p>
-              <strong>One week. $35.</strong> There is no free trial, which is
-              deliberate, a card up front is the cheapest way to filter out
-              signups that were never going to dial. What it means for you is
-              that the most you can ever be out is a single week.
-            </p>
+              <strong>{t("One week. $35.")}</strong> {t("There is no free trial, which is deliberate, a card up front is the cheapest way to filter out signups that were never going to dial. What it means for you is that the most you can ever be out is a single week.")}</p>
             <p>
-              <strong>After that: one week. $35.</strong> That is the whole
-              downside, and it is worth saying plainly, because most of this
-              industry does not let you find out this cheaply. There is no
-              annual contract to break, no setup fee to write off and no
-              implementation project to walk away from, the incumbents
-              commonly charge $500-$2,000 before the first call is placed.
-            </p>
+              <strong>{t("After that: one week. $35.")}</strong> {t("That is the whole downside, and it is worth saying plainly, because most of this industry does not let you find out this cheaply. There is no annual contract to break, no setup fee to write off and no implementation project to walk away from, the incumbents commonly charge $500-$2,000 before the first call is placed.")}</p>
             <p>
-              Cancel in Settings and you keep access through the week you have
-              already paid for. You are not charged again, and nothing
-              auto-renews.
-            </p>
+              {t("Cancel in Settings and you keep access through the week you have already paid for. You are not charged again, and nothing auto-renews.")}</p>
             <p>
-              Your <strong>lead data is preserved</strong> if a subscription
-              lapses. Campaigns, leads, dispositions and call history stay
-              where they are, so coming back later means signing in rather than
-              rebuilding, which also means leaving is not a decision you have
-              to be certain about.
-            </p>
+              {t("Your")}{" "}<strong>{t("lead data is preserved")}</strong> {t("if a subscription lapses. Campaigns, leads, dispositions and call history stay where they are, so coming back later means signing in rather than rebuilding, which also means leaving is not a decision you have to be certain about.")}</p>
 
             <h3 style={{ fontSize: 17, marginTop: 28, marginBottom: 10 }}>
-              And if it is wrong within the first day
-            </h3>
+              {t("And if it is wrong within the first day")}</h3>
             <p>
-              Not what you expected? Email{' '}
+              {t("Not what you expected? Email")}{' '}
               <a href="mailto:support@dialerseat.com">support@dialerseat.com</a>{' '}
-              within <strong>24 hours</strong> of the charge and we will refund
-              it. After that window the charge is final, canceling stops
-              future billing but does not refund the period you are already in.
-            </p>
+              {t("within")}{" "}<strong>{t("24 hours")}</strong> {t("of the charge and we will refund it. After that window the charge is final, canceling stops future billing but does not refund the period you are already in.")}</p>
             <p className="muted">
-              Which is the part worth remembering: past 24 hours, the most you
-              are out is the week you are standing in. Not a quarter, not a
-              year.
-            </p>
+              {t("Which is the part worth remembering: past 24 hours, the most you are out is the week you are standing in. Not a quarter, not a year.")}</p>
           </section>
 
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>One thing worth knowing, </strong> there&apos;s no
-              annual or upfront billing option today. Every plan bills
-              weekly, which means no discount for committing longer term,
-              but also means you&apos;re never sitting on months of prepaid
-              access you can&apos;t get back if your situation changes. See{' '}
-              <Link href="/faq/why-we-charge">why we charge what we
-              charge</Link> for the fuller reasoning behind weekly billing
-              as the default.
-            </p>
+              <strong>{t("One thing worth knowing,")}{" "}</strong> {t("there's no annual or upfront billing option today. Every plan bills weekly, which means no discount for committing longer term, but also means you're never sitting on months of prepaid access you can't get back if your situation changes. See")}{' '}
+              <Link href="/faq/why-we-charge">{t("why we charge what we charge")}</Link> {t("for the fuller reasoning behind weekly billing as the default.")}</p>
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
           <div className="faq-related">
-            <div className="faq-related-label">▸ RELATED READING</div>
+            <div className="faq-related-label">{t("▸ RELATED READING")}</div>
             <div className="faq-related-links">
-              <Link href="/faq/why-we-charge">Why we charge what we charge</Link>
-              <Link href="/faq/manager-plus">What Manager+ adds over Pro</Link>
-              <Link href="/faq/dialerseat-teams">DialerSeat for teams</Link>
-              <Link href="/faq/data-and-recordings">Recordings &amp; your data</Link>
-              <Link href="/faq">FAQ</Link>
+              <Link href="/faq/why-we-charge">{t("Why we charge what we charge")}</Link>
+              <Link href="/faq/manager-plus">{t("What Manager+ adds over Pro")}</Link>
+              <Link href="/faq/dialerseat-teams">{t("DialerSeat for teams")}</Link>
+              <Link href="/faq/data-and-recordings">{t("Recordings & your data")}</Link>
+              <Link href="/faq">{t("FAQ")}</Link>
             </div>
           </div>
 
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
           <div className="faq-cta">
-            <div className="faq-cta-eyebrow">▸ NO CONTRACT, NO RETENTION CALL</div>
-            <h3 className="faq-cta-h">$35/week. Cancel with one click, any time.</h3>
+            <div className="faq-cta-eyebrow">{t("▸ NO CONTRACT, NO RETENTION CALL")}</div>
+            <h3 className="faq-cta-h">{t("$35/week. Cancel with one click, any time.")}</h3>
             <p>
-              You keep access through what you already paid for, nothing
-              cut off early, nothing to negotiate.
-            </p>
+              {t("You keep access through what you already paid for, nothing cut off early, nothing to negotiate.")}</p>
             <a href={isSignedIn ? '/dashboard' : '/sign-up'} className="faq-cta-btn">
-              {isSignedIn ? 'GO TO DASHBOARD →' : 'GET STARTED →'}
+              {isSignedIn ? t("GO TO DASHBOARD →") : t("GET STARTED →")}
             </a>
           </div>
         </article>

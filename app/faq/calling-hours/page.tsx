@@ -10,6 +10,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { STATE_TIMEZONES } from '@/lib/timezones'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 export const metadata: Metadata = {
   title: 'Telemarketing Calling Hours by State: What DialerSeat Enforces | DialerSeat',
@@ -95,7 +96,8 @@ const STRICTER = [
   { state: 'Texas', rule: 'Narrower Sunday window, commonly reported as noon-9:00pm' },
 ]
 
-export default function Page() {
+export default async function Page() {
+  await primeLocale()
   const zones = Object.entries(BY_ZONE).sort((a, b) => b[1].length - a[1].length)
 
   return (
@@ -113,79 +115,47 @@ export default function Page() {
 
         <section className="exp-hero">
           <div className="exp-hero-inner">
-            <div className="exp-eyebrow">REFERENCE · CALLING HOURS</div>
-            <h1>What hours can you legally call a lead?</h1>
+            <div className="exp-eyebrow">{t("REFERENCE · CALLING HOURS")}</div>
+            <h1>{t("What hours can you legally call a lead?")}</h1>
             <p className="exp-lead">
-              The window belongs to the person you are calling, not to you. That
-              single fact is where most calling-hour violations come from, and it
-              is the reason enforcement has to happen per lead rather than per
-              agent.
-            </p>
+              {t("The window belongs to the person you are calling, not to you. That single fact is where most calling-hour violations come from, and it is the reason enforcement has to happen per lead rather than per agent.")}</p>
           </div>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ THE FEDERAL RULE</div>
-          <h2>8:00am to 9:00pm, in the lead&apos;s time zone.</h2>
+          <div className="exp-section-label">{t("▸ THE FEDERAL RULE")}</div>
+          <h2>{t("8:00am to 9:00pm, in the lead's time zone.")}</h2>
           <p>
-            The TCPA sets the outer boundary at 8:00am-9:00pm <em>local to the
-            called party</em>. Not local to the agent, not local to the company,
-            not local to wherever the server is.
-          </p>
+            {t("The TCPA sets the outer boundary at 8:00am-9:00pm")}{" "}<em>{t("local to the called party")}</em>{t(". Not local to the agent, not local to the company, not local to wherever the server is.")}</p>
           <p>
-            The practical consequence catches teams out in both directions. An
-            agent in California starting at 6:00am is calling 9:00am on the East
-            Coast: legal, and often the best hour of their day. The same agent
-            finishing at 6:15pm Pacific is calling 9:15pm Eastern, which is a
-            violation, on a call that felt like the middle of the afternoon.
-          </p>
+            {t("The practical consequence catches teams out in both directions. An agent in California starting at 6:00am is calling 9:00am on the East Coast: legal, and often the best hour of their day. The same agent finishing at 6:15pm Pacific is calling 9:15pm Eastern, which is a violation, on a call that felt like the middle of the afternoon.")}</p>
           <p>
-            A floor with agents in more than one time zone, or offshore, cannot
-            solve this with a shift schedule. It has to be enforced against each
-            individual lead.
-          </p>
+            {t("A floor with agents in more than one time zone, or offshore, cannot solve this with a shift schedule. It has to be enforced against each individual lead.")}</p>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ WHAT DIALERSEAT ENFORCES</div>
-          <h2>9:00am to 9:00pm, per lead, server-side.</h2>
+          <div className="exp-section-label">{t("▸ WHAT DIALERSEAT ENFORCES")}</div>
+          <h2>{t("9:00am to 9:00pm, per lead, server-side.")}</h2>
           <p>
-            One hour stricter than the federal rule at the start of the day. That
-            is deliberate: answer rates before 9:00am are poor enough that the
-            hour is not worth much, and the margin removes any argument about
-            whether a borderline call was inside the window.
-          </p>
+            {t("One hour stricter than the federal rule at the start of the day. That is deliberate: answer rates before 9:00am are poor enough that the hour is not worth much, and the margin removes any argument about whether a borderline call was inside the window.")}</p>
           <p>
-            Enforcement lives on the server, in the same code path that places the
-            call. There is no client-side check to disable, no mode that skips it,
-            and no way for an agent to dial past it by choosing different settings.
-            A lead outside its window is simply not handed to anyone.
-          </p>
+            {t("Enforcement lives on the server, in the same code path that places the call. There is no client-side check to disable, no mode that skips it, and no way for an agent to dial past it by choosing different settings. A lead outside its window is simply not handed to anyone.")}</p>
           <p>
-            The time zone comes from the lead&apos;s state column when it has one,
-            and from the area code when it does not. When neither resolves, the
-            check <strong>fails closed</strong>, the lead is held rather than
-            dialed. A system that guesses a time zone in order to place a call is
-            not enforcing anything.
-          </p>
+            {t("The time zone comes from the lead's state column when it has one, and from the area code when it does not. When neither resolves, the check")}{" "}<strong>{t("fails closed")}</strong>{t(", the lead is held rather than dialed. A system that guesses a time zone in order to place a call is not enforcing anything.")}</p>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ TIME ZONE BY STATE</div>
-          <h2>The map the dialer actually uses.</h2>
+          <div className="exp-section-label">{t("▸ TIME ZONE BY STATE")}</div>
+          <h2>{t("The map the dialer actually uses.")}</h2>
           <p>
-            Generated from the same table the calling-window check reads at dial
-            time, so it cannot describe behaviour the product does not have.
-            Arizona and Hawaii do not observe daylight saving, which is why their
-            offset relative to everyone else moves twice a year.
-          </p>
+            {t("Generated from the same table the calling-window check reads at dial time, so it cannot describe behaviour the product does not have. Arizona and Hawaii do not observe daylight saving, which is why their offset relative to everyone else moves twice a year.")}</p>
           <div className="exp-table-wrap" style={{ overflowX: 'auto', margin: '24px 0' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #2a4a8a', color: '#8888aa', fontSize: 11, letterSpacing: 2 }}>ZONE</th>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #2a4a8a', color: '#8888aa', fontSize: 11, letterSpacing: 2 }}>STATES &amp; TERRITORIES</th>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #2a4a8a', color: '#8888aa', fontSize: 11, letterSpacing: 2 }}>WINDOW</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #2a4a8a', color: '#8888aa', fontSize: 11, letterSpacing: 2 }}>{t("ZONE")}</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #2a4a8a', color: '#8888aa', fontSize: 11, letterSpacing: 2 }}>{t("STATES & TERRITORIES")}</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #2a4a8a', color: '#8888aa', fontSize: 11, letterSpacing: 2 }}>{t("WINDOW")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -198,8 +168,7 @@ export default function Page() {
                       {states.sort().join(', ')}
                     </td>
                     <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', whiteSpace: 'nowrap', color: '#4ade80' }}>
-                      9am-9pm local
-                    </td>
+                      {t("9am-9pm local")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -208,13 +177,10 @@ export default function Page() {
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ STATES THAT GO FURTHER</div>
-          <h2>Where the baseline is not enough.</h2>
+          <div className="exp-section-label">{t("▸ STATES THAT GO FURTHER")}</div>
+          <h2>{t("Where the baseline is not enough.")}</h2>
           <p>
-            A number of states impose rules stricter than the federal window, and
-            more have added them since 2021 under so-called mini-TCPA statutes.
-            The ones most consistently reported:
-          </p>
+            {t("A number of states impose rules stricter than the federal window, and more have added them since 2021 under so-called mini-TCPA statutes. The ones most consistently reported:")}</p>
           <div className="exp-table-wrap" style={{ overflowX: 'auto', margin: '24px 0' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <tbody>
@@ -236,20 +202,12 @@ export default function Page() {
             paddingLeft: 16,
             color: '#c4c8d8',
           }}>
-            <strong>Read this part carefully.</strong> DialerSeat enforces the
-            9am-9pm baseline. It does <em>not</em> currently apply these
-            state-specific variations automatically, and this page is a starting
-            point rather than legal advice: state statutes change, and the
-            summaries above are drawn from secondary sources. If your list is
-            concentrated in a stricter state, confirm the current rule with
-            counsel and schedule around it. We would rather tell you that plainly
-            than let you assume a protection the product does not provide.
-          </p>
+            <strong>{t("Read this part carefully.")}</strong> {t("DialerSeat enforces the 9am-9pm baseline. It does")}{" "}<em>{t("not")}</em> {t("currently apply these state-specific variations automatically, and this page is a starting point rather than legal advice: state statutes change, and the summaries above are drawn from secondary sources. If your list is concentrated in a stricter state, confirm the current rule with counsel and schedule around it. We would rather tell you that plainly than let you assume a protection the product does not provide.")}</p>
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ COMMON QUESTIONS</div>
-          <h2>Calling hours, answered.</h2>
+          <div className="exp-section-label">{t("▸ COMMON QUESTIONS")}</div>
+          <h2>{t("Calling hours, answered.")}</h2>
           {FAQS.map(f => (
             <div key={f.question} style={{ marginBottom: 28 }}>
               <h3 style={{ fontSize: 18, marginBottom: 8 }}>{f.question}</h3>
@@ -259,16 +217,13 @@ export default function Page() {
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ RELATED</div>
-          <h2>Compliance, in practice.</h2>
+          <div className="exp-section-label">{t("▸ RELATED")}</div>
+          <h2>{t("Compliance, in practice.")}</h2>
           <p>
-            <Link href="/faq/how-we-keep-compliance">How DialerSeat keeps you compliant</Link>{' '}
-            covers the rest of the enforcement surface: abandon-rate caps, DNC
-            suppression and consent records.{' '}
-            <Link href="/faq/dialer-for-offshore-agents">Dialing US leads from offshore</Link>{' '}
-            covers the case where the agent&apos;s own clock is the furthest thing
-            from the lead&apos;s.
-          </p>
+            <Link href="/faq/how-we-keep-compliance">{t("How DialerSeat keeps you compliant")}</Link>{' '}
+            {t("covers the rest of the enforcement surface: abandon-rate caps, DNC suppression and consent records.")}{' '}
+            <Link href="/faq/dialer-for-offshore-agents">{t("Dialing US leads from offshore")}</Link>{' '}
+            {t("covers the case where the agent's own clock is the furthest thing from the lead's.")}</p>
         </section>
 
         <DialingModeCTA

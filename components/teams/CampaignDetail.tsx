@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { usePredictiveGate } from '@/components/SellerIdentityDialog'
+import { t as tr } from '@/lib/i18n/client'
 
 const PANEL = 'var(--teams-panel, #232428)'
 const HAIRLINE = 'var(--teams-border, #1a1b1e)'
@@ -363,15 +364,15 @@ export default function CampaignDetail({
   }
 
   if (loading && !data) {
-    return <div style={{ color: DIM, fontSize: 13 }}>Loading campaign…</div>
+    return <div style={{ color: DIM, fontSize: 13 }}>{tr("Loading campaign…")}</div>
   }
 
   if (!data) {
     return (
       <div>
-        <button style={btn} onClick={onBack}>← Back</button>
+        <button style={btn} onClick={onBack}>{tr("← Back")}</button>
         <div style={{ color: '#ff6464', fontSize: 13, marginTop: 14 }}>
-          {error || 'Campaign not available.'}
+          {error || tr("Campaign not available.")}
         </div>
       </div>
     )
@@ -458,19 +459,19 @@ export default function CampaignDetail({
     return (
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-          <button style={btn} onClick={onBack}>← Back</button>
+          <button style={btn} onClick={onBack}>{tr("← Back")}</button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 22, fontWeight: 600, color: TEXT }}>
               {data.name}
               {paused && (
-                <span style={{ color: '#fbbf24', fontSize: 12, marginLeft: 10 }}>paused</span>
+                <span style={{ color: '#fbbf24', fontSize: 12, marginLeft: 10 }}>{tr("paused")}</span>
               )}
             </div>
             <div style={{ fontSize: 12, color: DIM, marginTop: 2 }}>
               {team?.name ? `${team.name} · ` : ''}
               {canDial
-                ? 'You dial this campaign'
-                : 'Not opened to you yet'}
+                ? tr("You dial this campaign")
+                : tr("Not opened to you yet")}
             </div>
           </div>
           {!paused && canDial && (
@@ -480,7 +481,7 @@ export default function CampaignDetail({
                 ...btn, textDecoration: 'none',
                 borderColor: ACCENT, color: '#fff', background: ACCENT,
               }}
-            >Dial</a>
+            >{tr("Dial")}</a>
           )}
         </div>
 
@@ -491,14 +492,11 @@ export default function CampaignDetail({
             borderRadius: 4, padding: '12px 14px', marginBottom: 20,
             fontSize: 12.5, color: DIM, lineHeight: 1.7,
           }}>
-            This campaign belongs to your team, but you have not been added to it
-            yet. Whoever runs the team can open it to you.
-          </div>
+            {tr("This campaign belongs to your team, but you have not been added to it yet. Whoever runs the team can open it to you.")}</div>
         )}
 
         <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
-          YOUR NUMBERS ON THIS CAMPAIGN
-        </div>
+          {tr("YOUR NUMBERS ON THIS CAMPAIGN")}</div>
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
           gap: 8, marginBottom: 20,
@@ -519,8 +517,7 @@ export default function CampaignDetail({
         {myDaily.length > 0 && (
           <>
             <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
-              YOUR LAST 7 DAYS
-            </div>
+              {tr("YOUR LAST 7 DAYS")}</div>
             <div style={{
               display: 'flex', alignItems: 'flex-end', gap: 6, height: 64,
               background: PANEL, border: `1px solid ${HAIRLINE}`,
@@ -554,8 +551,7 @@ export default function CampaignDetail({
         {myScripts.length > 0 && (
           <>
             <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
-              SCRIPTS
-            </div>
+              {tr("SCRIPTS")}</div>
             <div style={{ display: 'grid', gap: 6, marginBottom: 20 }}>
               {myScripts.map(sc => (
                 <div key={sc.id} style={{
@@ -589,8 +585,7 @@ export default function CampaignDetail({
         {myRecent.length > 0 && (
           <>
             <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
-              YOUR RECENT CALLS
-            </div>
+              {tr("YOUR RECENT CALLS")}</div>
             <div style={{
               background: PANEL, border: `1px solid ${HAIRLINE}`,
               borderRadius: 4, marginBottom: 20,
@@ -602,7 +597,7 @@ export default function CampaignDetail({
                   borderTop: i === 0 ? 'none' : `1px solid ${HAIRLINE}`,
                   fontSize: 12.5,
                 }}>
-                  <span style={{ color: TEXT }}>{c.disposition || 'No disposition'}</span>
+                  <span style={{ color: TEXT }}>{c.disposition || tr("No disposition")}</span>
                   <span style={{ color: DIM, fontFamily: 'monospace', fontSize: 11.5 }}>
                     {Math.floor(c.seconds / 60)}:{String(c.seconds % 60).padStart(2, '0')}
                     {'  ·  '}
@@ -616,12 +611,9 @@ export default function CampaignDetail({
 
         <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.7, marginBottom: 22 }}>
           {memberRecording && (
-            <>Calls on this campaign are recorded.{' '}</>
+            <>{tr("Calls on this campaign are recorded.")}{' '}</>
           )}
-          How this campaign dials, what it records, and who else is on it are set
-          by whoever runs it. If something here looks wrong, they are the ones
-          who can change it.
-        </div>
+          {tr("How this campaign dials, what it records, and who else is on it are set by whoever runs it. If something here looks wrong, they are the ones who can change it.")}</div>
 
         {/* ── THEIR OWN SCRIPTS ────────────────────────────────────────────
             Separate from the campaign's scripts above, and deliberately so.
@@ -637,21 +629,18 @@ export default function CampaignDetail({
           marginBottom: 10,
         }}>
           <span style={{ fontSize: 11, letterSpacing: 2, color: DIM }}>
-            YOUR OWN SCRIPTS
-          </span>
+            {tr("YOUR OWN SCRIPTS")}</span>
           {!editingScript && (
             <button
               style={{ ...btn, padding: '5px 10px', fontSize: 11.5 }}
               onClick={() => setEditingScript({ name: '', body: '' })}
-            >+ Add</button>
+            >{tr("+ Add")}</button>
           )}
         </div>
 
         <div style={{ marginBottom: 22 }}>
           <div style={{ fontSize: 11.5, color: DIM, lineHeight: 1.6, marginBottom: 10 }}>
-            Only you can see these. Not the other agents on this campaign, and
-            not whoever runs it.
-          </div>
+            {tr("Only you can see these. Not the other agents on this campaign, and not whoever runs it.")}</div>
 
           {editingScript && (
             <div style={{
@@ -662,7 +651,7 @@ export default function CampaignDetail({
                 autoFocus
                 value={editingScript.name}
                 onChange={e => setEditingScript({ ...editingScript, name: e.target.value })}
-                placeholder="What is this for? e.g. Gatekeeper"
+                placeholder={tr("What is this for? e.g. Gatekeeper")}
                 maxLength={100}
                 style={{
                   width: '100%', boxSizing: 'border-box', marginBottom: 8,
@@ -674,7 +663,7 @@ export default function CampaignDetail({
               <textarea
                 value={editingScript.body}
                 onChange={e => setEditingScript({ ...editingScript, body: e.target.value })}
-                placeholder="Write it how you would say it."
+                placeholder={tr("Write it how you would say it.")}
                 rows={6}
                 style={{
                   width: '100%', boxSizing: 'border-box', resize: 'vertical',
@@ -691,8 +680,8 @@ export default function CampaignDetail({
                   }}
                   disabled={!editingScript.name.trim() || scriptBusy}
                   onClick={savePersonalScript}
-                >{scriptBusy ? 'Saving…' : 'Save'}</button>
-                <button style={btn} onClick={() => setEditingScript(null)}>Cancel</button>
+                >{scriptBusy ? tr("Saving…") : tr("Save")}</button>
+                <button style={btn} onClick={() => setEditingScript(null)}>{tr("Cancel")}</button>
                 {editingScript.id && (
                   <button
                     style={{ ...btn, marginLeft: 'auto', borderColor: '#7f1d1d', color: '#ff6464' }}
@@ -702,7 +691,7 @@ export default function CampaignDetail({
                       setEditingScript(null)
                       await deletePersonalScript(id)
                     }}
-                  >Delete</button>
+                  >{tr("Delete")}</button>
                 )}
               </div>
             </div>
@@ -713,10 +702,7 @@ export default function CampaignDetail({
               background: PANEL, border: `1px dashed ${HAIRLINE}`, borderRadius: 4,
               padding: 14, fontSize: 12.5, color: DIM, lineHeight: 1.7,
             }}>
-              Nothing here yet. Keep your own opener, a rebuttal that keeps
-              working, or a note about this list, whatever you want in front of
-              you when the call connects.
-            </div>
+              {tr("Nothing here yet. Keep your own opener, a rebuttal that keeps working, or a note about this list, whatever you want in front of you when the call connects.")}</div>
           ) : (
             <div style={{ display: 'grid', gap: 6 }}>
               {myScriptsPersonal.map(sc => (
@@ -739,13 +725,13 @@ export default function CampaignDetail({
                         fontSize: 11.5, padding: '12px 14px', cursor: 'pointer',
                         fontFamily: 'inherit',
                       }}
-                    >Edit</button>
+                    >{tr("Edit")}</button>
                   </div>
                   {openScript === sc.id && (
                     <div style={{
                       padding: '0 14px 14px', fontSize: 13, lineHeight: 1.7,
                       color: DIM, whiteSpace: 'pre-wrap',
-                    }}>{sc.body || <span style={{ opacity: 0.6 }}>Empty</span>}</div>
+                    }}>{sc.body || <span style={{ opacity: 0.6 }}>{tr("Empty")}</span>}</div>
                   )}
                 </div>
               ))}
@@ -763,17 +749,13 @@ export default function CampaignDetail({
             which is a different fact from "not recorded" and must not render
             as a play button that does nothing. */}
         <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
-          YOUR ACTIVITY ON THIS CAMPAIGN
-        </div>
+          {tr("YOUR ACTIVITY ON THIS CAMPAIGN")}</div>
         {myRecent.length === 0 ? (
           <div style={{
             background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
             padding: '16px', fontSize: 12.5, color: DIM, lineHeight: 1.7,
           }}>
-            You have not dialed anything on this campaign yet. Calls you make
-            will show up here with their outcome, and the recording where there
-            is one.
-          </div>
+            {tr("You have not dialed anything on this campaign yet. Calls you make will show up here with their outcome, and the recording where there is one.")}</div>
         ) : (
           <div style={{
             background: PANEL, border: `1px solid ${HAIRLINE}`,
@@ -787,7 +769,7 @@ export default function CampaignDetail({
                 fontSize: 12.5,
               }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ color: TEXT }}>{c.disposition || 'No disposition'}</div>
+                  <div style={{ color: TEXT }}>{c.disposition || tr("No disposition")}</div>
                   <div style={{ color: DIM, fontSize: 11, marginTop: 2 }}>
                     {new Date(c.at).toLocaleString(undefined, {
                       month: 'short', day: 'numeric',
@@ -804,7 +786,7 @@ export default function CampaignDetail({
                       fontSize: 11.5, color: ACCENT, textDecoration: 'none',
                       whiteSpace: 'nowrap', flexShrink: 0,
                     }}
-                  >▶ Recording</a>
+                  >{tr("▶ Recording")}</a>
                 ) : (
                   <span style={{ fontSize: 11, color: DIM, flexShrink: 0 }}>-</span>
                 )}
@@ -819,16 +801,16 @@ export default function CampaignDetail({
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-        <button style={btn} onClick={onBack}>← Back</button>
+        <button style={btn} onClick={onBack}>{tr("← Back")}</button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 22, fontWeight: 600, color: TEXT }}>
             {data.name}
             {paused && (
-              <span style={{ color: '#fbbf24', fontSize: 12, marginLeft: 10 }}>paused</span>
+              <span style={{ color: '#fbbf24', fontSize: 12, marginLeft: 10 }}>{tr("paused")}</span>
             )}
           </div>
           {team && (
-            <div style={{ fontSize: 12, color: DIM, marginTop: 2 }}>on {team.name}</div>
+            <div style={{ fontSize: 12, color: DIM, marginTop: 2 }}>{tr("on")}{" "}{team.name}</div>
           )}
         </div>
         {/* ── STATE, NOT INSTRUCTION ──────────────────────────────────────
@@ -847,11 +829,11 @@ export default function CampaignDetail({
           }}
           disabled={busy}
           onClick={() => patch({ status: paused ? 'active' : 'inactive' })}
-        >{paused ? 'Inactive' : 'Active'}</button>
+        >{paused ? tr("Inactive") : tr("Active")}</button>
         <a
           href={`/dashboard/dialer?campaign=${encodeURIComponent(data.id)}`}
           style={{ ...btn, textDecoration: 'none', borderColor: ACCENT, color: '#fff', background: ACCENT }}
-        >Dial</a>
+        >{tr("Dial")}</a>
       </div>
 
       {error && (
@@ -880,24 +862,23 @@ export default function CampaignDetail({
             <div style={{ width: `${pct}%`, height: '100%', background: ACCENT }} />
           </div>
           <div style={{ fontSize: 11, color: DIM, marginTop: 5 }}>
-            {pct}% dialed
-            {data.remainingLeads === 0 && ', this list is finished. Add leads or pause it.'}
+            {pct}{tr("% dialed")}{data.remainingLeads === 0 && tr(", this list is finished. Add leads or pause it.")}
           </div>
         </div>
       )}
 
       <Section
-        title="Leads"
+        title={tr("Leads")}
         action={
           <a
             href={`/dashboard/campaigns?edit=${encodeURIComponent(data.id)}`}
             style={{ ...btn, textDecoration: 'none' }}
-          >Manage campaign</a>
+          >{tr("Manage campaign")}</a>
         }
       >
         <div style={{ color: DIM, fontSize: 12.5, lineHeight: 1.7 }}>
           {data.remainingLeads === 0 && data.totalLeads > 0
-            ? 'Every lead here has been dialed. Adding a fresh list starts the queue again without touching call history.'
+            ? tr("Every lead here has been dialed. Adding a fresh list starts the queue again without touching call history.")
             : `${data.remainingLeads.toLocaleString()} left to dial.`}
         </div>
       </Section>
@@ -911,9 +892,7 @@ export default function CampaignDetail({
           padding: '11px 14px', marginTop: 26,
           fontSize: 12.5, color: DIM, lineHeight: 1.7,
         }}>
-          This campaign belongs to whoever created it, so its settings are theirs
-          to change. You can still manage who on your team dials it.
-        </div>
+          {tr("This campaign belongs to whoever created it, so its settings are theirs to change. You can still manage who on your team dials it.")}</div>
       )}
 
       {/* Three sections share this gate, so it needs a fragment — a bare
@@ -928,19 +907,19 @@ export default function CampaignDetail({
             style={btn}
             onClick={() => onRename('campaign', data.id, data.name)}
             disabled={busy}
-          >Rename campaign</button>
+          >{tr("Rename campaign")}</button>
         </div>
       )}
 
       {isCampaignOwner && (<>
       {predictiveGateDialog}
-      <Section title="How It Dials">
+      <Section title={tr("How It Dials")}>
         <div style={{ display: 'grid', gap: 8 }}>
           <div style={{
             background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
             padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
           }}>
-            <span style={{ flex: 1, fontSize: 13.5, color: TEXT }}>Dialer mode</span>
+            <span style={{ flex: 1, fontSize: 13.5, color: TEXT }}>{tr("Dialer mode")}</span>
             <select
               value={data.dialerMode}
               disabled={busy}
@@ -1009,7 +988,7 @@ export default function CampaignDetail({
                 display: 'inline-block', marginTop: 10,
                 fontSize: 12.5, color: ACCENT, textDecoration: 'none',
               }}
-            >Listen to this campaign&apos;s recordings →</a>
+            >{tr("Listen to this campaign's recordings →")}</a>
           )}
         </div>
       </Section>
@@ -1020,21 +999,17 @@ export default function CampaignDetail({
           URL" — building a GoHighLevel connector, then a HubSpot one, then a
           Salesforce one is three integrations that each break on somebody
           else's release schedule. */}
-      <Section title="Lead Drip">
+      <Section title={tr("Lead Drip")}>
         {!data.ingestEnabled ? (
           <div>
             <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.75, marginBottom: 10 }}>
-              Give your lead source a URL and leads land here as they come in 
-              including in the middle of a live session. Agents already dialing
-              this campaign will reach them without restarting anything.
-              <br />
-              Works with any CRM, Zapier, Make, a Google Sheet, or a script.
-            </div>
+              {tr("Give your lead source a URL and leads land here as they come in including in the middle of a live session. Agents already dialing this campaign will reach them without restarting anything.")}<br />
+              {tr("Works with any CRM, Zapier, Make, a Google Sheet, or a script.")}</div>
             <button
               style={{ ...btn, borderColor: ACCENT, color: '#fff', background: ACCENT }}
               disabled={busy}
               onClick={() => setIngest('enable')}
-            >Turn on lead drip</button>
+            >{tr("Turn on lead drip")}</button>
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
@@ -1045,7 +1020,7 @@ export default function CampaignDetail({
               <div style={{
                 fontSize: 10, letterSpacing: 1, textTransform: 'uppercase',
                 color: MUTED, marginBottom: 6,
-              }}>Send leads here</div>
+              }}>{tr("Send leads here")}</div>
               {data.ingestToken ? (
                 <>
                   <code style={{
@@ -1061,29 +1036,22 @@ export default function CampaignDetail({
                         setCopied(true)
                         setTimeout(() => setCopied(false), 1600)
                       }}
-                    >{copied ? 'Copied' : 'Copy URL'}</button>
+                    >{copied ? tr("Copied") : tr("Copy URL")}</button>
                     {/* Rotating is how you cut off a vendor you have stopped
                         working with. Named for what it does to them, not for
                         what it does to the string. */}
                     <button style={btn} disabled={busy} onClick={() => setIngest('rotate')}>
-                      New URL
-                    </button>
+                      {tr("New URL")}</button>
                     <button style={btn} disabled={busy} onClick={() => setIngest('disable')}>
-                      Turn off
-                    </button>
+                      {tr("Turn off")}</button>
                   </div>
                   <div style={{ fontSize: 11, color: DIM, marginTop: 9, lineHeight: 1.7 }}>
-                    Treat this URL as a password, anyone holding it can add leads
-                    to this campaign. <strong style={{ color: MUTED }}>New URL</strong>{' '}
-                    stops the old one working immediately, which is how you cut off
-                    a source you have finished with.
-                  </div>
+                    {tr("Treat this URL as a password, anyone holding it can add leads to this campaign.")}{" "}<strong style={{ color: MUTED }}>{tr("New URL")}</strong>{' '}
+                    {tr("stops the old one working immediately, which is how you cut off a source you have finished with.")}</div>
                 </>
               ) : (
                 <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.7 }}>
-                  Lead drip is on for this campaign. Only the person who created
-                  the campaign can see the URL.
-                </div>
+                  {tr("Lead drip is on for this campaign. Only the person who created the campaign can see the URL.")}</div>
               )}
             </div>
 
@@ -1096,7 +1064,7 @@ export default function CampaignDetail({
                 <div style={{
                   fontSize: 10, letterSpacing: 1, textTransform: 'uppercase',
                   color: MUTED, marginBottom: 6,
-                }}>What to send</div>
+                }}>{tr("What to send")}</div>
                 <code style={{
                   display: 'block', fontSize: 11, color: TEXT,
                   background: 'var(--teams-inset, #111214)', padding: '9px 11px', borderRadius: 3,
@@ -1109,17 +1077,12 @@ export default function CampaignDetail({
                     failing: most senders assume our field names must match
                     theirs exactly, and give up on the second rejection. */}
                 <div style={{ marginTop: 8 }}>
-                  Only the phone number is required. Field names are matched
-                  loosely: <code>Phone Number</code>, <code>mobile</code> and{' '}
-                  <code>cell</code> all work, as do <code>firstName</code> and{' '}
-                  <code>First Name</code>. Anything we do not recognise is kept
-                  on the lead rather than dropped. Send one lead, an array, or{' '}
-                  <code>{'{"leads":[...]}'}</code>, up to 500 at a time.
-                </div>
+                  {tr("Only the phone number is required. Field names are matched loosely:")}{" "}<code>Phone Number</code>, <code>mobile</code> {tr("and")}{' '}
+                  <code>cell</code> {tr("all work, as do")}{" "}<code>firstName</code> {tr("and")}{' '}
+                  <code>First Name</code>{tr(". Anything we do not recognise is kept on the lead rather than dropped. Send one lead, an array, or")}{' '}
+                  <code>{'{"leads":[...]}'}</code>{tr(", up to 500 at a time.")}</div>
                 <div style={{ marginTop: 6 }}>
-                  Repeat numbers already on this campaign are ignored, so a source
-                  that resends will not call anyone twice.
-                </div>
+                  {tr("Repeat numbers already on this campaign are ignored, so a source that resends will not call anyone twice.")}</div>
               </div>
             )}
 
@@ -1128,7 +1091,7 @@ export default function CampaignDetail({
                 <div style={{
                   fontSize: 10, letterSpacing: 1, textTransform: 'uppercase',
                   color: MUTED, margin: '4px 0 6px',
-                }}>Recent deliveries</div>
+                }}>{tr("Recent deliveries")}</div>
                 <div style={{ display: 'grid', gap: 5 }}>
                   {ingestLog.map((e: any) => (
                     <div key={e.id} style={{
@@ -1143,10 +1106,10 @@ export default function CampaignDetail({
                       <span style={{ flex: 1, minWidth: 0, color: TEXT }}>
                         {e.message}
                         {e.duplicates > 0 && (
-                          <span style={{ color: DIM }}> · {e.duplicates} already here</span>
+                          <span style={{ color: DIM }}> · {e.duplicates} {tr("already here")}</span>
                         )}
                         {e.rejected > 0 && (
-                          <span style={{ color: DIM }}> · {e.rejected} unusable</span>
+                          <span style={{ color: DIM }}> · {e.rejected} {tr("unusable")}</span>
                         )}
                       </span>
                       <span style={{ color: DIM, flexShrink: 0 }}>
@@ -1164,7 +1127,7 @@ export default function CampaignDetail({
         )}
       </Section>
 
-      <Section title="Protecting The List">
+      <Section title={tr("Protecting The List")}>
         {/* The reason a lead vendor asks for this is specific and worth naming:
             they are handing a list to closers they do not employ, and a visible
             phone number is a list that can walk out the door. Saying so is the
@@ -1180,19 +1143,17 @@ export default function CampaignDetail({
       </>)}
 
       <Section
-        title="Who Can Dial It"
+        title={tr("Who Can Dial It")}
         action={team ? (
           <button
             style={{ ...btn, borderColor: ACCENT, color: '#fff', background: ACCENT }}
             onClick={() => setPickerOpen(true)}
-          >+ Add People</button>
+          >{tr("+ Add People")}</button>
         ) : undefined}
       >
         {agents.length === 0 ? (
           <div style={{ color: DIM, fontSize: 13, lineHeight: 1.7 }}>
-            Nobody yet. Select people under All Users and use Add to campaign, it
-            costs nothing extra, their seats are already paid for.
-          </div>
+            {tr("Nobody yet. Select people under All Users and use Add to campaign, it costs nothing extra, their seats are already paid for.")}</div>
         ) : (
           <div style={{ display: 'grid', gap: 8 }}>
             {agents.map(a => (
@@ -1228,12 +1189,12 @@ export default function CampaignDetail({
                   )}
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
                     {a.suspended
-                      ? 'Seat paused, cannot dial'
+                      ? tr("Seat paused, cannot dial")
                       : a.payer === 'owner'
-                      ? 'You pay this seat'
+                      ? tr("You pay this seat")
                       : a.payer === 'agent'
-                      ? 'Paying for themselves, costs you nothing'
-                      : 'Added at no extra cost'}
+                      ? tr("Paying for themselves, costs you nothing")
+                      : tr("Added at no extra cost")}
                   </div>
                 </div>
                 {/* ── STRAIGHT TO THIS AGENT'S CALLS ────────────────────
@@ -1256,13 +1217,13 @@ export default function CampaignDetail({
                       ...btn, textDecoration: 'none',
                       whiteSpace: 'nowrap', flexShrink: 0,
                     }}
-                  >Recordings</a>
+                  >{tr("Recordings")}</a>
                 )}
                 <button
                   style={btn}
                   disabled={busy || !a.accessId}
                   onClick={() => removeAgent(a.accessId)}
-                >Remove</button>
+                >{tr("Remove")}</button>
               </div>
             ))}
           </div>
@@ -1287,10 +1248,9 @@ export default function CampaignDetail({
               borderRadius: 6, padding: '20px 22px',
             }}
           >
-            <div style={{ fontSize: 17, fontWeight: 600, color: TEXT }}>Add people</div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: TEXT }}>{tr("Add people")}</div>
             <div style={{ fontSize: 12, color: DIM, marginTop: 3, marginBottom: 14 }}>
-              Adding somebody costs nothing, their seat is already paid for.
-            </div>
+              {tr("Adding somebody costs nothing, their seat is already paid for.")}</div>
 
             {/* The standing rule sits above the name list, because if it is what
                 they want then the list below is beside the point. */}
@@ -1308,32 +1268,25 @@ export default function CampaignDetail({
               />
               <span>
                 <span style={{ display: 'block', fontSize: 13, color: TEXT }}>
-                  Anyone who joins {team.name} can use it
-                </span>
+                  {tr("Anyone who joins")}{" "}{team.name} {tr("can use it")}</span>
                 <span style={{ display: 'block', fontSize: 11.5, color: DIM, marginTop: 3, lineHeight: 1.6 }}>
-                  A standing rule, not a one-off, people who join later get it
-                  automatically. Ticking every name below only covers the people
-                  who are here today.
-                </span>
+                  {tr("A standing rule, not a one-off, people who join later get it automatically. Ticking every name below only covers the people who are here today.")}</span>
               </span>
             </label>
 
             {team.accessMode === 'free' ? (
               <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.7 }}>
-                This campaign is open to the whole team, so there is nobody left
-                to add individually.
-              </div>
+                {tr("This campaign is open to the whole team, so there is nobody left to add individually.")}</div>
             ) : available.length === 0 ? (
               <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.7 }}>
-                Everyone on {team.name} is already on this campaign.
-              </div>
+                {tr("Everyone on")}{" "}{team.name} {tr("is already on this campaign.")}</div>
             ) : (
               <>
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   fontSize: 11.5, color: DIM, marginBottom: 6,
                 }}>
-                  <span>{available.length} on {team.name}</span>
+                  <span>{available.length} {tr("on")}{" "}{team.name}</span>
                   <button
                     onClick={() => setPicked(
                       picked.size === available.length
@@ -1344,7 +1297,7 @@ export default function CampaignDetail({
                       background: 'transparent', border: 'none', color: ACCENT,
                       fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit',
                     }}
-                  >{picked.size === available.length ? 'Clear all' : 'Select all'}</button>
+                  >{picked.size === available.length ? tr("Clear all") : tr("Select all")}</button>
                 </div>
 
                 <div style={{ overflowY: 'auto', display: 'grid', gap: 5, minHeight: 0 }}>
@@ -1386,8 +1339,7 @@ export default function CampaignDetail({
 
             <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
               <button style={btn} onClick={() => { setPickerOpen(false); setPicked(new Set()) }}>
-                Close
-              </button>
+                {tr("Close")}</button>
               {team.accessMode !== 'free' && available.length > 0 && (
                 <button
                   onClick={addPicked}
@@ -1399,7 +1351,7 @@ export default function CampaignDetail({
                     color: picked.size === 0 || busy ? DIM : '#fff',
                     cursor: picked.size === 0 || busy ? 'not-allowed' : 'pointer',
                   }}
-                >{busy ? 'Adding…' : `Add ${picked.size || ''}`.trim()}</button>
+                >{busy ? tr("Adding…") : `Add ${picked.size || ''}`.trim()}</button>
               )}
             </div>
           </div>

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { t } from '@/lib/i18n/server'
 
 // Shown when a join link is no longer usable — regenerated, deactivated, or it
 // never existed. Deliberately identical in all three cases: someone guessing
@@ -38,18 +39,13 @@ export default function DeadInvite({ code }: { code: string }) {
         <div style={{ fontSize: 44, lineHeight: 1, marginBottom: 20 }}>⛔</div>
 
         <h1 style={{ fontSize: 26, margin: '0 0 14px', fontWeight: 600 }}>
-          This invite link no longer works
-        </h1>
+          {t("This invite link no longer works")}</h1>
 
         <p style={{ fontSize: 15, lineHeight: 1.6, opacity: 0.75, margin: '0 0 10px' }}>
-          Invite codes are replaced whenever a team owner regenerates them, which
-          turns off every link built on the old one.
-        </p>
+          {t("Invite codes are replaced whenever a team owner regenerates them, which turns off every link built on the old one.")}</p>
 
         <p style={{ fontSize: 15, lineHeight: 1.6, opacity: 0.75, margin: '0 0 28px' }}>
-          Ask whoever invited you for a new link, it takes them a few seconds.
-          Nothing has been created on your side, so there is nothing to undo.
-        </p>
+          {t("Ask whoever invited you for a new link, it takes them a few seconds. Nothing has been created on your side, so there is nothing to undo.")}</p>
 
         {code ? (
           <div
@@ -60,7 +56,7 @@ export default function DeadInvite({ code }: { code: string }) {
               marginBottom: 30,
             }}
           >
-            code: {code}
+            {t("code:")}{" "}{code}
           </div>
         ) : null}
 
@@ -78,8 +74,7 @@ export default function DeadInvite({ code }: { code: string }) {
             letterSpacing: '0.04em',
           }}
         >
-          GO TO DIALERSEAT
-        </Link>
+          {t("GO TO DIALERSEAT")}</Link>
       </div>
     </main>
   )

@@ -5,6 +5,7 @@ import { useUser, useClerk } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 import LoginLinkSection from '@/components/LoginLinkSection'
+import { t as tr } from '@/lib/i18n/client'
 
 
 
@@ -655,8 +656,7 @@ export default function WhitelabelOnboardingPage() {
           letterSpacing: 3,
         }}
       >
-        LOADING...
-      </div>
+        {tr("LOADING...")}</div>
     )
   }
 
@@ -683,45 +683,44 @@ export default function WhitelabelOnboardingPage() {
       <div style={cardStyle}>
         <div style={{ marginBottom: 28 }}>
           <div style={titleStyle}>
-            {editMode ? 'EDIT YOUR WHITELABEL DIALER' : 'CUSTOMIZE YOUR WHITELABEL DIALER'}
+            {editMode ? tr("EDIT YOUR WHITELABEL DIALER") : tr("CUSTOMIZE YOUR WHITELABEL DIALER")}
           </div>
           <div style={subtitleStyle}>
             {editMode
-              ? 'Your tenant is live. Make changes anytime, they propagate within 60 seconds.'
-              : 'Pick your brand, your subdomain, your colors. Your customers see your dialer, not ours.'}
+              ? tr("Your tenant is live. Make changes anytime, they propagate within 60 seconds.")
+              : tr("Pick your brand, your subdomain, your colors. Your customers see your dialer, not ours.")}
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
           {/* ── BRAND NAME ── */}
           <div style={sectionStyle}>
-            <label style={sectionLabelStyle}>▸ BRAND NAME</label>
+            <label style={sectionLabelStyle}>{tr("▸ BRAND NAME")}</label>
             <input
               type="text"
               value={brandName}
               onChange={e => setBrandName(e.target.value)}
-              placeholder="Your Company"
+              placeholder={tr("Your Company")}
               maxLength={64}
               style={inputStyle}
             />
             <div style={hintStyle}>
-              Shown in your dashboard sidebar header and on your sign-in page.
-            </div>
+              {tr("Shown in your dashboard sidebar header and on your sign-in page.")}</div>
           </div>
 
           {/* ── SUBDOMAIN ── */}
           <div style={sectionStyle}>
-            <label style={sectionLabelStyle}>▸ SUBDOMAIN</label>
+            <label style={sectionLabelStyle}>{tr("▸ SUBDOMAIN")}</label>
             <div style={subdomainRowStyle}>
               <input
                 type="text"
                 value={slug}
                 onChange={e => setSlug(e.target.value.toLowerCase())}
-                placeholder="yourcompany"
+                placeholder={tr("yourcompany")}
                 maxLength={30}
                 style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
               />
-              <div style={subdomainSuffixStyle}>.dialerseat.com</div>
+              <div style={subdomainSuffixStyle}>{tr(".dialerseat.com")}</div>
             </div>
             <div style={hintStyle}>
               {renderSlugStatus(slugStatus, slug, editMode && slug === originalSlug)}
@@ -730,12 +729,9 @@ export default function WhitelabelOnboardingPage() {
 
           {/* ── LOGO — v8: hint reframed as a permanent recommendation ── */}
           <div style={sectionStyle}>
-            <label style={sectionLabelStyle}>▸ LOGO</label>
+            <label style={sectionLabelStyle}>{tr("▸ LOGO")}</label>
             <div style={hintStyle}>
-              PNG, SVG, GIF, JPEG, or WEBP. Recommended 512×148 px, under
-              200KB, but any dimensions work; mobile auto-scales to fit.
-              Transparent backgrounds blend best.
-            </div>
+              {tr("PNG, SVG, GIF, JPEG, or WEBP. Recommended 512×148 px, under 200KB, but any dimensions work; mobile auto-scales to fit. Transparent backgrounds blend best.")}</div>
             <input
               type="file"
               accept="image/*"
@@ -753,11 +749,10 @@ export default function WhitelabelOnboardingPage() {
                 display: 'flex', flexDirection: 'column', gap: 8,
               }}>
                 <div style={{ fontSize: 10, letterSpacing: 2, color: 'var(--text-secondary, #888)', fontWeight: 700 }}>
-                  PREVIEW
-                </div>
+                  {tr("PREVIEW")}</div>
                 <img
                   src={displayLogo}
-                  alt="Logo preview"
+                  alt={tr("Logo preview")}
                   style={{ maxWidth: '100%', maxHeight: 120, objectFit: 'contain', alignSelf: 'flex-start' }}
                 />
                 {logoFile && (
@@ -770,7 +765,7 @@ export default function WhitelabelOnboardingPage() {
                       border: '1px solid var(--border, rgba(0,0,0,0.15))', borderRadius: 4,
                       padding: '4px 8px', cursor: 'pointer', fontWeight: 700,
                     }}
-                  >REMOVE</button>
+                  >{tr("REMOVE")}</button>
                 )}
               </div>
             )}
@@ -778,7 +773,7 @@ export default function WhitelabelOnboardingPage() {
 
           {/* ── THEME — presets + Custom + color pickers ── */}
           <div style={sectionStyle}>
-            <div style={sectionLabelStyle}>▸ THEME</div>
+            <div style={sectionLabelStyle}>{tr("▸ THEME")}</div>
 
             <div style={presetGridStyle}>
               {PRESETS.map(p => (
@@ -789,10 +784,10 @@ export default function WhitelabelOnboardingPage() {
                   style={presetCardStyle(presetKey === p.key)}
                 >
                   <div style={presetSwatchRowStyle}>
-                    <div style={{ ...presetSwatchStyle, background: p.sidebar }} title="Sidebar" />
-                    <div style={{ ...presetSwatchStyle, background: p.headerBg }} title="Header" />
-                    <div style={{ ...presetSwatchStyle, background: p.primary }} title="Primary" />
-                    <div style={{ ...presetSwatchStyle, background: p.pageBg }} title="Page background" />
+                    <div style={{ ...presetSwatchStyle, background: p.sidebar }} title={tr("Sidebar")} />
+                    <div style={{ ...presetSwatchStyle, background: p.headerBg }} title={tr("Header")} />
+                    <div style={{ ...presetSwatchStyle, background: p.primary }} title={tr("Primary")} />
+                    <div style={{ ...presetSwatchStyle, background: p.pageBg }} title={tr("Page background")} />
                   </div>
                   <div style={presetNameStyle(presetKey === p.key)}>{p.label}</div>
                 </button>
@@ -815,7 +810,7 @@ export default function WhitelabelOnboardingPage() {
                 >
                   ✎
                 </div>
-                <div style={presetNameStyle(presetKey === 'custom')}>Custom</div>
+                <div style={presetNameStyle(presetKey === 'custom')}>{tr("Custom")}</div>
               </button>
             </div>
 
@@ -853,19 +848,17 @@ export default function WhitelabelOnboardingPage() {
 
           {/* ── SAVED THEMES — its own section right above EXACT PREVIEW ── */}
           <div style={sectionStyle}>
-            <div style={sectionLabelStyle}>▸ MY SAVED THEMES</div>
+            <div style={sectionLabelStyle}>{tr("▸ MY SAVED THEMES")}</div>
             <button
               type="button"
               onClick={() => setSavedThemesOpen(o => !o)}
               style={savedThemesToggleStyle}
             >
               <span>
-                {savedThemesOpen ? '▾' : '▸'} {savedThemes.length} SAVED
-              </span>
+                {savedThemesOpen ? '▾' : '▸'} {savedThemes.length} {tr("SAVED")}</span>
               {savedThemes.length === 0 && (
                 <span style={savedThemesToggleHintStyle}>
-                  none yet, save your current look below
-                </span>
+                  {tr("none yet, save your current look below")}</span>
               )}
             </button>
             {savedThemesOpen && savedThemes.length > 0 && (
@@ -887,7 +880,7 @@ export default function WhitelabelOnboardingPage() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={t.logo_url} alt="" style={savedThemeLogoStyle} />
                       ) : (
-                        <div style={savedThemeNoLogoStyle}>NO LOGO</div>
+                        <div style={savedThemeNoLogoStyle}>{tr("NO LOGO")}</div>
                       )}
                       <div style={presetNameStyle(presetKey === `theme-${t.id}`)}>
                         {t.name}
@@ -912,21 +905,15 @@ export default function WhitelabelOnboardingPage() {
             )}
             {savedThemesOpen && savedThemes.length === 0 && (
               <div style={savedThemesEmptyStyle}>
-                You haven't saved any themes yet. Configure your colors and
-                logo, then use SAVE AS NEW THEME below to create one. You
-                can save up to {MAX_SAVED_THEMES} themes per account.
-              </div>
+                {tr("You haven't saved any themes yet. Configure your colors and logo, then use SAVE AS NEW THEME below to create one. You can save up to")}{" "}{MAX_SAVED_THEMES} {tr("themes per account.")}</div>
             )}
           </div>
 
           {/* ── EXACT PREVIEW ── */}
           <div style={sectionStyle}>
-            <div style={sectionLabelStyle}>▸ EXACT PREVIEW</div>
+            <div style={sectionLabelStyle}>{tr("▸ EXACT PREVIEW")}</div>
             <div style={{ ...hintStyle, marginBottom: 12 }}>
-              This is exactly what your dashboard will look like with the colors and
-              logo you&apos;ve picked. Body text auto-picks white or near-black so it&apos;s
-              always readable on your chosen background.
-            </div>
+              {tr("This is exactly what your dashboard will look like with the colors and logo you've picked. Body text auto-picks white or near-black so it's always readable on your chosen background.")}</div>
             <WhitelabelLivePreview
               primary={primary}
               sidebar={sidebar}
@@ -957,13 +944,9 @@ export default function WhitelabelOnboardingPage() {
 
           {/* ── PROPAGATION DISCLAIMER ── */}
           <div style={disclaimerBoxStyle}>
-            <strong style={disclaimerHeadingStyle}>ⓘ HEADS UP</strong>
+            <strong style={disclaimerHeadingStyle}>{tr("ⓘ HEADS UP")}</strong>
             <div style={{ marginTop: 6 }}>
-              Color and logo changes propagate site-wide within 60 seconds. Your own
-              browser updates instantly on save. Other users (your team, your
-              customers) will see the new look after their next page load, up to a
-              minute later.
-            </div>
+              {tr("Color and logo changes propagate site-wide within 60 seconds. Your own browser updates instantly on save. Other users (your team, your customers) will see the new look after their next page load, up to a minute later.")}</div>
           </div>
 
           {error && <div style={errorBoxStyle}>{error}</div>}
@@ -980,11 +963,11 @@ export default function WhitelabelOnboardingPage() {
           >
             {submitting
               ? editMode
-                ? 'SAVING...'
-                : 'CONFIRMING...'
+                ? tr("SAVING...")
+                : tr("CONFIRMING...")
               : editMode
-                ? 'SAVE CHANGES'
-                : 'CONFIRM'}
+                ? tr("SAVE CHANGES")
+                : tr("CONFIRM")}
           </button>
 
           {/* ── EDIT-MODE THEME PERSISTENCE ACTIONS ── */}
@@ -1002,7 +985,7 @@ export default function WhitelabelOnboardingPage() {
                   }}
                 >
                   {overwritingTheme
-                    ? 'OVERWRITING...'
+                    ? tr("OVERWRITING...")
                     : `↻ OVERWRITE "${activeSavedTheme.name}"`}
                 </button>
               )}
@@ -1031,19 +1014,19 @@ export default function WhitelabelOnboardingPage() {
                 }
               >
                 {saveAsNewOpen
-                  ? '× CANCEL'
+                  ? tr("× CANCEL")
                   : `+ SAVE AS NEW THEME (${savedThemes.length}/${MAX_SAVED_THEMES})`}
               </button>
 
               {saveAsNewOpen && (
                 <div style={saveAsNewPanelStyle}>
-                  <div style={saveAsNewLabelStyle}>NAME THIS THEME</div>
+                  <div style={saveAsNewLabelStyle}>{tr("NAME THIS THEME")}</div>
                   <div style={saveAsNewInputRowStyle}>
                     <input
                       type="text"
                       value={newThemeName}
                       onChange={e => setNewThemeName(e.target.value)}
-                      placeholder="e.g. Winter Brand, Holiday Variant..."
+                      placeholder={tr("e.g. Winter Brand, Holiday Variant...")}
                       maxLength={40}
                       style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
                       autoFocus
@@ -1059,17 +1042,14 @@ export default function WhitelabelOnboardingPage() {
                           savingAsNew || !newThemeName.trim() ? 'wait' : 'pointer',
                       }}
                     >
-                      {savingAsNew ? 'SAVING...' : 'SAVE'}
+                      {savingAsNew ? tr("SAVING...") : tr("SAVE")}
                     </button>
                   </div>
                   {saveAsNewError && (
                     <div style={saveAsNewErrorStyle}>{saveAsNewError}</div>
                   )}
                   <div style={saveAsNewHintStyle}>
-                    Saves the current colors and logo as a named theme.
-                    Doesn&apos;t change what your dashboard currently looks
-                    like, use SAVE CHANGES above to apply.
-                  </div>
+                    {tr("Saves the current colors and logo as a named theme. Doesn't change what your dashboard currently looks like, use SAVE CHANGES above to apply.")}</div>
                 </div>
               )}
 
@@ -1081,8 +1061,7 @@ export default function WhitelabelOnboardingPage() {
 
           {!editMode && (
             <div style={{ ...hintStyle, textAlign: 'center', marginTop: 12 }}>
-              You can change everything later from this same page.
-            </div>
+              {tr("You can change everything later from this same page.")}</div>
           )}
 
           {/* ── CANCEL, v8: moved to absolute bottom of form ── */}
@@ -1097,7 +1076,7 @@ export default function WhitelabelOnboardingPage() {
               marginTop: 20,
             }}
           >
-            {abandoning ? 'CANCELING...' : 'Cancel'}
+            {abandoning ? tr("CANCELING...") : tr("Cancel")}
           </button>
         </form>
       </div>
@@ -1155,30 +1134,28 @@ function renderSlugStatus(
   isUnchangedEdit: boolean,
 ): React.ReactNode {
   if (status.kind === 'idle') {
-    return <>Pick something memorable. 2-30 chars, lowercase, dashes ok.</>
+    return <>{tr("Pick something memorable. 2-30 chars, lowercase, dashes ok.")}</>
   }
   if (status.kind === 'checking') {
-    return <span style={{ color: 'var(--text-muted)' }}>Checking availability...</span>
+    return <span style={{ color: 'var(--text-muted)' }}>{tr("Checking availability...")}</span>
   }
   if (status.kind === 'available') {
     return (
       <span style={{ color: 'var(--color-success)' }}>
-        ✓ {slug}.dialerseat.com {isUnchangedEdit ? '(your current subdomain)' : 'is available'}
+        ✓ {slug}{tr(".dialerseat.com")}{" "}{isUnchangedEdit ? tr("(your current subdomain)") : tr("is available")}
       </span>
     )
   }
   if (status.kind === 'taken') {
     return (
       <span style={{ color: 'var(--color-error)' }}>
-        ✗ {slug}.dialerseat.com is taken
-      </span>
+        ✗ {slug}{tr(".dialerseat.com is taken")}</span>
     )
   }
   if (status.kind === 'reserved') {
     return (
       <span style={{ color: 'var(--color-error)' }}>
-        ✗ {slug} is reserved by DialerSeat
-      </span>
+        ✗ {slug} {tr("is reserved by DialerSeat")}</span>
     )
   }
   if (status.kind === 'invalid') {

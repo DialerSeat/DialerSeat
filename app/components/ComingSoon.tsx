@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { t } from '@/lib/i18n/server'
 
 interface ComingSoonProps {
   title: string
@@ -35,8 +36,7 @@ export default function ComingSoon({ title, description, icon = '🚧' }: Coming
           marginBottom: '20px',
           fontWeight: 'bold',
         }}>
-          COMING SOON
-        </div>
+          {t("COMING SOON")}</div>
 
         <h1 style={{
           fontSize: '28px',
@@ -69,7 +69,7 @@ export default function ComingSoon({ title, description, icon = '🚧' }: Coming
           letterSpacing: '2px',
           textDecoration: 'none',
           fontFamily: 'Futura PT, Futura, sans-serif',
-        }}>← BACK TO DASHBOARD</Link>
+        }}>{t("← BACK TO DASHBOARD")}</Link>
       </div>
     </div>
   )

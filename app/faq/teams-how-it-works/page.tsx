@@ -5,6 +5,7 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
+import { primeLocale, t as tr } from '@/lib/i18n/server'
 
 // =============================================================================
 // /faq/teams-how-it-works — the canonical Teams page
@@ -111,7 +112,8 @@ function Section({ title, lead, items }: { title: string; lead: string; items: r
   )
 }
 
-export default function TeamsHowItWorksPage() {
+export default async function TeamsHowItWorksPage() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={organizationSchema()} />
@@ -125,42 +127,37 @@ export default function TeamsHowItWorksPage() {
       <GutsShell rail={faqRail('/faq/teams-how-it-works')} activeHref="/faq/teams-how-it-works">
         <div className="guts-sec">
           <nav style={{ fontSize: 11, letterSpacing: 1.5, color: MUTED, marginBottom: 22 }}>
-            <Link href="/" style={{ color: MUTED }}>HOME</Link>{' · '}
-            <Link href="/faq" style={{ color: MUTED }}>FAQ</Link>
+            <Link href="/" style={{ color: MUTED }}>{tr("HOME")}</Link>{' · '}
+            <Link href="/faq" style={{ color: MUTED }}>{tr("FAQ")}</Link>
           </nav>
 
           <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: ACCENT, marginBottom: 14 }}>
-            ▸ Running a floor
-          </div>
+            {tr("▸ Running a floor")}</div>
           <h1 style={{ fontSize: 44, fontWeight: 'bold', letterSpacing: -1, lineHeight: 1.12, margin: 0, maxWidth: 840 }}>
-            How DialerSeat teams actually work.
-          </h1>
+            {tr("How DialerSeat teams actually work.")}</h1>
           <p style={{ fontSize: 16.5, lineHeight: 1.8, color: MUTED, maxWidth: 780, marginTop: 18 }}>
-            The price is the easy part and it is on every other page. This one is about the mechanics 
-            what happens when five people share a lead list, who gets billed, what breaks when an agent
-            disappears mid-call, and what we have deliberately not built.
-          </p>
+            {tr("The price is the easy part and it is on every other page. This one is about the mechanics what happens when five people share a lead list, who gets billed, what breaks when an agent disappears mid-call, and what we have deliberately not built.")}</p>
 
           <Section
-            title="Lead distribution"
+            title={tr("Lead distribution")}
             lead="The failure every shared dialer floor has been burned by is two agents calling the same person a second apart. Here is exactly how that is prevented, rather than an assurance that it is."
             items={FACTS.teams.distribution}
           />
 
           <Section
-            title="Seats and billing"
+            title={tr("Seats and billing")}
             lead="A seat costs the same whether it is your first or your fifteenth, and a team of two is a supported configuration rather than an exception."
             items={FACTS.teams.seats}
           />
 
           <Section
-            title="What the owner sees"
+            title={tr("What the owner sees")}
             lead="Enough to run a floor: who is working, on what, and how it is going."
             items={FACTS.teams.visibility}
           />
 
           <Section
-            title="Remote and offshore agents"
+            title={tr("Remote and offshore agents")}
             lead="At $95-$250 per seat per month an offshore floor costs more in software than in wages, which is why most teams never build one. At $35 per week the arithmetic changes."
             items={FACTS.teams.offshore}
           />
@@ -170,21 +167,18 @@ export default function TeamsHowItWorksPage() {
             borderLeft: '4px solid #8a6a1a', borderRadius: 8, padding: 26,
           }}>
             <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a' }}>
-              WHAT WE HAVE NOT BUILT
-            </div>
+              {tr("WHAT WE HAVE NOT BUILT")}</div>
             <p style={{ fontSize: 14.5, lineHeight: 1.8, color: MUTED, marginTop: 10, maxWidth: 780 }}>
-              Named here rather than discovered after you pay. If one of these is a requirement, an
-              enterprise contact-centre platform is genuinely the better buy, see the{' '}
-              <Link href="/vs/five9" style={{ color: ACCENT }}>Five9</Link> and{' '}
-              <Link href="/vs/convoso" style={{ color: ACCENT }}>Convoso</Link> comparisons.
-            </p>
+              {tr("Named here rather than discovered after you pay. If one of these is a requirement, an enterprise contact-centre platform is genuinely the better buy, see the")}{' '}
+              <Link href="/vs/five9" style={{ color: ACCENT }}>{tr("Five9")}</Link> {tr("and")}{' '}
+              <Link href="/vs/convoso" style={{ color: ACCENT }}>{tr("Convoso")}</Link> {tr("comparisons.")}</p>
             <ul style={{ margin: '12px 0 0', paddingLeft: 18, fontSize: 14.5, lineHeight: 1.85 }}>
               {FACTS.teams.notYet.map(l => <li key={l} style={{ marginBottom: 6 }}>{l}</li>)}
             </ul>
           </section>
 
           <section style={{ marginTop: 52 }}>
-            <h2 style={{ fontSize: 25, fontWeight: 'bold', letterSpacing: -0.4, margin: 0 }}>Questions</h2>
+            <h2 style={{ fontSize: 25, fontWeight: 'bold', letterSpacing: -0.4, margin: 0 }}>{tr("Questions")}</h2>
             <div style={{ marginTop: 20 }}>
               {FAQS.map(f => (
                 <div key={f.question} style={{ marginBottom: 24, maxWidth: 840 }}>
@@ -200,14 +194,12 @@ export default function TeamsHowItWorksPage() {
               fontSize: 11, letterSpacing: 1.5, fontWeight: 'bold', color: '#fff',
               background: ACCENT, borderRadius: 4, padding: '13px 20px', textDecoration: 'none',
             }}>
-              WHAT 5 AGENTS COST ELSEWHERE
-            </Link>
+              {tr("WHAT 5 AGENTS COST ELSEWHERE")}</Link>
             <Link href="/faq/dialer-for-offshore-agents" style={{
               fontSize: 11, letterSpacing: 1.5, fontWeight: 'bold', color: ACCENT,
               border: `1px solid ${ACCENT}`, borderRadius: 4, padding: '13px 20px', textDecoration: 'none',
             }}>
-              OFFSHORE AGENTS
-            </Link>
+              {tr("OFFSHORE AGENTS")}</Link>
           </div>
         </div>
       </GutsShell>

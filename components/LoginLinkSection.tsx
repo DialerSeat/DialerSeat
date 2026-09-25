@@ -21,6 +21,7 @@
 
 
 import { useState } from 'react'
+import { t } from '@/lib/i18n/client'
 
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 
@@ -125,14 +126,11 @@ export default function LoginLinkSection({
       >
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.5, color: 'var(--text-primary)', textTransform: 'uppercase' }}>
-            ▸ Login page link
-            <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, letterSpacing: 1, color: 'var(--text-muted)' }}>
-              OPTIONAL
-            </span>
+            {t("▸ Login page link")}<span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, letterSpacing: 1, color: 'var(--text-muted)' }}>
+              {t("OPTIONAL")}</span>
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, letterSpacing: 0.3 }}>
-            Add one link under your sign-in mark: your site, agent portal, or lead packages.
-          </div>
+            {t("Add one link under your sign-in mark: your site, agent portal, or lead packages.")}</div>
         </div>
         <span
           aria-hidden="true"
@@ -150,22 +148,21 @@ export default function LoginLinkSection({
         <div style={{ padding: '4px 16px 18px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Fields */}
           <div>
-            <label style={labelCss}>Clickable text</label>
+            <label style={labelCss}>{t("Clickable text")}</label>
             <input
               type="text"
               value={text}
               maxLength={48}
-              placeholder="Visit our agent portal"
+              placeholder={t("Visit our agent portal")}
               onChange={(e) => onTextChange(e.target.value)}
               style={inputCss}
             />
             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
-              The words people click. Required if you add a link.
-            </div>
+              {t("The words people click. Required if you add a link.")}</div>
           </div>
 
           <div>
-            <label style={labelCss}>Link URL</label>
+            <label style={labelCss}>{t("Link URL")}</label>
             <input
               type="url"
               value={url}
@@ -178,31 +175,28 @@ export default function LoginLinkSection({
             />
             {!urlLooksValid && (
               <div style={{ fontSize: 10, color: 'var(--color-error, #c0392b)', marginTop: 4 }}>
-                Must start with http:// or https://
-              </div>
+                {t("Must start with http:// or https://")}</div>
             )}
           </div>
 
           <div>
-            <label style={labelCss}>Heading <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
+            <label style={labelCss}>{t("Heading")}{" "}<span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{t("(optional)")}</span></label>
             <input
               type="text"
               value={label}
               maxLength={40}
-              placeholder="New to your brand?"
+              placeholder={t("New to your brand?")}
               onChange={(e) => onLabelChange(e.target.value)}
               style={inputCss}
             />
             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
-              A small line above the link. Leave blank to show just the link.
-            </div>
+              {t("A small line above the link. Leave blank to show just the link.")}</div>
           </div>
 
           {/* ── LIVE PREVIEW — keeps the partner's LITERAL brand colors ──────── */}
           <div>
             <div style={{ fontSize: 9, letterSpacing: 2, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>
-              ▸ Live preview
-            </div>
+              {t("▸ Live preview")}</div>
             <div
               style={{
                 
@@ -229,7 +223,7 @@ export default function LoginLinkSection({
 
               {/* mark — on-dark: brand white, DialerSeat muted-on-dark */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, letterSpacing: 2.5, fontWeight: 700, textTransform: 'uppercase' }}>
-                <span style={{ color: '#ffffff' }}>{brandName || 'Your brand'}</span>
+                <span style={{ color: '#ffffff' }}>{brandName || t("Your brand")}</span>
                 <span style={{ color: primaryColor || '#4a9eff', fontSize: 13, fontWeight: 400, transform: 'translateY(-1px)' }}>×</span>
                 <span style={{ color: 'rgba(255,255,255,0.55)' }}>DialerSeat</span>
               </div>
@@ -257,8 +251,7 @@ export default function LoginLinkSection({
                 </div>
               ) : (
                 <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontStyle: 'italic', opacity: 0.9 }}>
-                  Your link appears here once it has text and a URL.
-                </div>
+                  {t("Your link appears here once it has text and a URL.")}</div>
               )}
 
               {/* faux login card — lifted surface on the dark bg, like the real Clerk card */}
@@ -274,14 +267,14 @@ export default function LoginLinkSection({
                   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)',
                   display: 'flex', alignItems: 'center', paddingLeft: 10,
                 }}>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>Email address</span>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{t("Email address")}</span>
                 </div>
                 <div style={{
                   width: '100%', height: 34, borderRadius: 4,
                   background: primaryColor || '#4a9eff',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: '#fff', textTransform: 'uppercase' }}>Sign in</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: '#fff', textTransform: 'uppercase' }}>{t("Sign in")}</span>
                 </div>
               </div>
             </div>

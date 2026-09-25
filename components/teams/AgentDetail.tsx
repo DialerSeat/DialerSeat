@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { t } from '@/lib/i18n/client'
 
 const PANEL = 'var(--teams-panel, #232428)'
 const HAIRLINE = 'var(--teams-border, #1a1b1e)'
@@ -171,12 +172,12 @@ export default function AgentDetail({
   )
 
   if (loading && !data) {
-    return <div style={{ color: DIM, fontSize: 13 }}>Loading…</div>
+    return <div style={{ color: DIM, fontSize: 13 }}>{t("Loading…")}</div>
   }
   if (!data) {
     return (
       <div>
-        <button style={btn} onClick={onBack}>← Back</button>
+        <button style={btn} onClick={onBack}>{t("← Back")}</button>
         <div style={{ color: '#ff6464', fontSize: 13, marginTop: 14 }}>{error}</div>
       </div>
     )
@@ -189,7 +190,7 @@ export default function AgentDetail({
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
-        <button style={btn} onClick={onBack}>← Back</button>
+        <button style={btn} onClick={onBack}>{t("← Back")}</button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 22, fontWeight: 600, color: TEXT }}>{a.name}</div>
           {a.email && a.email !== a.name && (
@@ -228,7 +229,7 @@ export default function AgentDetail({
             background: live.onCall ? GREEN : ACCENT, flexShrink: 0,
           }} />
           <span style={{ fontSize: 13, color: TEXT }}>
-            {live.onCall ? 'On a call now' : `Dialing now, ${live.state || 'ready'}`}
+            {live.onCall ? t("On a call now") : `Dialing now, ${live.state || 'ready'}`}
             {live.campaign && <span style={{ color: DIM }}> · {live.campaign}</span>}
             {live.mode && <span style={{ color: DIM }}> · {live.mode}</span>}
           </span>
@@ -262,8 +263,7 @@ export default function AgentDetail({
           It is the person's whole dialing now, which is also what makes it
           agree with what the agent sees on their own page. */}
       <div style={{ fontSize: 11.5, color: DIM, marginTop: 10, lineHeight: 1.7 }}>
-        {st.scope}. These are the same figures they see on their own analytics.
-      </div>
+        {st.scope}{t(". These are the same figures they see on their own analytics.")}</div>
 
       {/* ── RECORDINGS ────────────────────────────────────────────────────
           The reason an owner opens somebody's page. Newest first, played
@@ -280,10 +280,7 @@ export default function AgentDetail({
             background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
             padding: '14px 16px', fontSize: 12.5, color: DIM, lineHeight: 1.7,
           }}>
-            Nothing recorded in this range. Recording is on for every campaign,
-            and a call gets audio once detection confirms a human answered, so
-            voicemails and no-answers leave nothing to play.
-          </div>
+            {t("Nothing recorded in this range. Recording is on for every campaign, and a call gets audio once detection confirms a human answered, so voicemails and no-answers leave nothing to play.")}</div>
         ) : (
           <div style={{ display: 'grid', gap: 6 }}>
             {/* Shaped inline rather than left as any: `data` is untyped here,
@@ -310,7 +307,7 @@ export default function AgentDetail({
                 {/* Talk time, not call duration: for a recording, how long
                     somebody spoke is the number worth seeing. */}
                 <div style={{ fontSize: 12, color: DIM, fontFamily: 'monospace' }}>
-                  {r.talkSeconds > 0 ? dur(r.talkSeconds) : 'no answer'}
+                  {r.talkSeconds > 0 ? dur(r.talkSeconds) : t("no answer")}
                 </div>
                 <button
                   onClick={() => setPlayingId(playingId === r.id ? null : r.id)}
@@ -320,7 +317,7 @@ export default function AgentDetail({
                     borderColor: playingId === r.id ? ACCENT : HAIRLINE,
                     color: playingId === r.id ? ACCENT : MUTED,
                   }}
-                >{playingId === r.id ? 'Close' : 'Play'}</button>
+                >{playingId === r.id ? t("Close") : t("Play")}</button>
                 {playingId === r.id && (
                   <audio
                     style={{ flexBasis: '100%', width: '100%', marginTop: 6 }}
@@ -331,9 +328,7 @@ export default function AgentDetail({
                 )}
                 {playErrors[r.id] && (
                   <div style={{ flexBasis: '100%', fontSize: 11, color: AMBER, marginTop: 4 }}>
-                    Recording unavailable. Telnyx deletes audio on its own retention
-                    schedule, so an older call can have a row here and no audio behind it.
-                  </div>
+                    {t("Recording unavailable. Telnyx deletes audio on its own retention schedule, so an older call can have a row here and no audio behind it.")}</div>
                 )}
               </div>
             ))}
@@ -341,7 +336,7 @@ export default function AgentDetail({
         )}
       </Section>
 
-      <Section title="Seat">
+      <Section title={t("Seat")}>
         <div style={{ display: 'grid', gap: 8 }}>
           {data.memberships.map((m: any) => (
             <div key={m.memberId} style={{
@@ -354,7 +349,7 @@ export default function AgentDetail({
                 <div style={{ fontSize: 14, fontWeight: 500 }}>{m.teamName}</div>
                 <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
                   {m.status === 'pending'
-                    ? 'Waiting on your approval'
+                    ? t("Waiting on your approval")
                     : m.suspended
                     ? `Seat paused${m.suspendReason ? `, ${m.suspendReason}` : ''}`
                     // Before every other case. Somebody funding their own
@@ -362,33 +357,31 @@ export default function AgentDetail({
                     // and calling that "Seat active" invited the reasonable
                     // conclusion that it was on the bill.
                     : data.selfFunded || m.billingOverride === 'agent'
-                    ? 'Paying for themselves, costs you nothing'
+                    ? t("Paying for themselves, costs you nothing")
                     : m.seatCoveredBy
                     ? `No charge, covered by their seat on ${m.coveredByTeam || 'another of your teams'}`
                     : m.pickedUp
-                    ? 'You picked this seat up automatically'
+                    ? t("You picked this seat up automatically")
                     : m.billingOverride === 'owner'
-                    ? 'You pay this seat'
-                    : 'Seat active'}
+                    ? t("You pay this seat")
+                    : t("Seat active")}
                   {m.joinedViaCode && (
-                    <span style={{ color: '#5a6070' }}> · joined with {m.joinedViaCode}</span>
+                    <span style={{ color: '#5a6070' }}> {t("· joined with")}{" "}{m.joinedViaCode}</span>
                   )}
                 </div>
               </div>
               {onManageMember && (
-                <button style={btn} onClick={() => onManageMember(m.memberId)}>Manage</button>
+                <button style={btn} onClick={() => onManageMember(m.memberId)}>{t("Manage")}</button>
               )}
             </div>
           ))}
         </div>
       </Section>
 
-      <Section title="Campaigns they can dial">
+      <Section title={t("Campaigns they can dial")}>
         {data.campaigns.length === 0 ? (
           <div style={{ fontSize: 13, color: DIM, lineHeight: 1.7 }}>
-            They are on your team but not on any campaign yet. Adding them costs
-            nothing, their seat is already paid for.
-          </div>
+            {t("They are on your team but not on any campaign yet. Adding them costs nothing, their seat is already paid for.")}</div>
         ) : (
           <div style={{ display: 'grid', gap: 6 }}>
             {data.campaigns.map((c: any) => (
@@ -401,7 +394,7 @@ export default function AgentDetail({
                   <div style={{ fontSize: 13.5, color: c.status === 'inactive' ? DIM : TEXT }}>
                     {c.name}
                     {c.status === 'inactive' && (
-                      <span style={{ color: AMBER, fontSize: 11, marginLeft: 8 }}>paused</span>
+                      <span style={{ color: AMBER, fontSize: 11, marginLeft: 8 }}>{t("paused")}</span>
                     )}
                   </div>
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>{c.teamName}</div>
@@ -410,7 +403,7 @@ export default function AgentDetail({
                   <div style={{ color: TEXT, fontSize: 13 }}>
                     {c.calls ? c.calls.toLocaleString() : '-'}
                   </div>
-                  <div>{c.conversions > 0 ? `${c.conversions} converted` : 'no conversions'}</div>
+                  <div>{c.conversions > 0 ? `${c.conversions} converted` : t("no conversions")}</div>
                 </div>
               </div>
             ))}
@@ -427,7 +420,7 @@ export default function AgentDetail({
           be on two of your teams, and "deactivate their subscription" would
           have to pick one silently. */}
       {billableSeats.length > 0 && (
-        <Section title="Weekly billing">
+        <Section title={t("Weekly billing")}>
           <div style={{ display: 'grid', gap: 8 }}>
             {billableSeats.map((m: any) => (
               <div key={m.memberId} style={{
@@ -440,8 +433,8 @@ export default function AgentDetail({
                   <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.teamName}</div>
                   <div style={{ fontSize: 11.5, color: m.suspended ? AMBER : DIM, marginTop: 2 }}>
                     {m.suspended
-                      ? 'Deactivated: not billed, and they cannot dial'
-                      : 'Active, billed weekly'}
+                      ? t("Deactivated: not billed, and they cannot dial")
+                      : t("Active, billed weekly")}
                   </div>
                 </div>
                 <button
@@ -457,8 +450,8 @@ export default function AgentDetail({
                   }}
                 >
                   {seatBusy === m.memberId
-                    ? 'Working…'
-                    : m.suspended ? 'Activate' : 'Deactivate'}
+                    ? t("Working…")
+                    : m.suspended ? t("Activate") : t("Deactivate")}
                 </button>
               </div>
             ))}
@@ -467,10 +460,7 @@ export default function AgentDetail({
             <div style={{ fontSize: 12, color: DIM, marginTop: 10 }}>{seatNote}</div>
           )}
           <div style={{ fontSize: 11.5, color: DIM, marginTop: 10, lineHeight: 1.6 }}>
-            Deactivating stops the weekly charge and stops them dialing. They stay on
-            the team with their campaigns and history intact, and activating starts
-            the billing again.
-          </div>
+            {t("Deactivating stops the weekly charge and stops them dialing. They stay on the team with their campaigns and history intact, and activating starts the billing again.")}</div>
         </Section>
       )}
     </div>

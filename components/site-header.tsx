@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useUser, UserButton } from '@clerk/nextjs'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { t } from '@/lib/i18n/client'
 
 const T = {
   bg: '#f0f1f4',
@@ -264,7 +265,7 @@ export default function SiteHeader({ tenantSlug = null }: { tenantSlug?: string 
                 e.currentTarget.style.background = 'rgba(74,158,255,0.06)'
               }}
             >
-              <span className="site-header-dashboard-btn-full">← DASHBOARD</span>
+              <span className="site-header-dashboard-btn-full">{t("← DASHBOARD")}</span>
               <span className="site-header-dashboard-btn-short" aria-hidden>←</span>
             </Link>
           )}
@@ -330,7 +331,7 @@ export default function SiteHeader({ tenantSlug = null }: { tenantSlug?: string 
                   type="button"
                   onClick={openUserMenu}
                   className="site-header-username"
-                  aria-label="Open account menu"
+                  aria-label={t("Open account menu")}
                   style={{
                     fontSize: 12,
                     fontWeight: 'bold',
@@ -366,8 +367,7 @@ export default function SiteHeader({ tenantSlug = null }: { tenantSlug?: string 
                   whiteSpace: 'nowrap',
                 }}
               >
-                LOG IN
-              </Link>
+                {t("LOG IN")}</Link>
               <Link
                 href="/sign-up"
                 className="site-header-auth-btn"
@@ -383,8 +383,7 @@ export default function SiteHeader({ tenantSlug = null }: { tenantSlug?: string 
                   whiteSpace: 'nowrap',
                 }}
               >
-                SIGN UP
-              </Link>
+                {t("SIGN UP")}</Link>
             </>
           ) : null}
         </div>

@@ -6,6 +6,7 @@ import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { primeLocale, t } from '@/lib/i18n/server'
 
 // =============================================================================
 // /faq/how-we-keep-numbers-clean — the number-health system, end to end
@@ -79,7 +80,8 @@ const FAQS = [
   },
 ]
 
-export default function Page() {
+export default async function Page() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={faqPageSchema(FAQS)} />
@@ -95,190 +97,115 @@ export default function Page() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ SPAM-FREE NUMBERS</div>
+            <div className="guts-eyebrow">{t("▸ SPAM-FREE NUMBERS")}</div>
             <h1>
-              No number dials itself into the ground.
-              <span className="second">Here’s how we make sure.</span>
+              {t("No number dials itself into the ground.")}<span className="second">{t("Here’s how we make sure.")}</span>
             </h1>
             <p>
-              A flagged caller ID doesn’t cost a fraction of a cent. It costs every
-              conversation it would have carried. So our number pool is run on answer
-              rate, not on how many calls a number can physically place.
-            </p>
+              {t("A flagged caller ID doesn’t cost a fraction of a cent. It costs every conversation it would have carried. So our number pool is run on answer rate, not on how many calls a number can physically place.")}</p>
             <div className="guts-btns">
-              <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
+              <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
               <Link href="/faq/why-calls-show-spam-likely" className="guts-btn secondary">
-                WHY “SPAM LIKELY” HAPPENS
-              </Link>
+                {t("WHY “SPAM LIKELY” HAPPENS")}</Link>
             </div>
           </div>
         </GutsSection>
 
-        <GutsSection icon="shield" title="Every call is signed at the highest level">
+        <GutsSection icon="shield" title={t("Every call is signed at the highest level")}>
           <p>
-            STIR/SHAKEN is the carrier framework that stops caller ID spoofing. Every call
-            carries a signature, graded A, B or C, saying how much the originating carrier
-            knows about who placed it. A is the top grade: the carrier knows the customer
-            and gave them the number.
-          </p>
+            {t("STIR/SHAKEN is the carrier framework that stops caller ID spoofing. Every call carries a signature, graded A, B or C, saying how much the originating carrier knows about who placed it. A is the top grade: the carrier knows the customer and gave them the number.")}</p>
           <p>
-            Our carrier signs a call from a number owned on our account with A. Every number
-            in the DialerSeat pool is bought and owned there, and the tool that brings an
-            existing number into the pool only accepts one that is already owned. So there is
-            no path for a B or C signature to reach your calls.
-          </p>
+            {t("Our carrier signs a call from a number owned on our account with A. Every number in the DialerSeat pool is bought and owned there, and the tool that brings an existing number into the pool only accepts one that is already owned. So there is no path for a B or C signature to reach your calls.")}</p>
           <p>
-            Numbers are also registered with the{' '}
+            {t("Numbers are also registered with the")}{' '}
             <a href="https://www.freecallerregistry.com" target="_blank" rel="noopener noreferrer">
-              Free Caller Registry
-            </a>
-            , run jointly by call-protection providers First Orion, Hiya and TNS so they can
-            identify legitimate business numbers. It helps, but it isn’t a pass: each provider
-            still runs its own analysis on every call.
-          </p>
+              {t("Free Caller Registry")}</a>
+            {t(", run jointly by call-protection providers First Orion, Hiya and TNS so they can identify legitimate business numbers. It helps, but it isn’t a pass: each provider still runs its own analysis on every call.")}</p>
           <div className="guts-callout">
             <p>
-              <strong>What attestation does not do.</strong> It proves your number is not
-              spoofed. It says nothing about whether anyone wants the call. A perfectly signed
-              call from a number people keep rejecting can still be labelled. That is what the
-              rest of this page is about.
-            </p>
+              <strong>{t("What attestation does not do.")}</strong> {t("It proves your number is not spoofed. It says nothing about whether anyone wants the call. A perfectly signed call from a number people keep rejecting can still be labelled. That is what the rest of this page is about.")}</p>
           </div>
         </GutsSection>
 
-        <GutsSection icon="calendar" title="A hard cap of 60 calls per number, per day">
+        <GutsSection icon="calendar" title={t("A hard cap of 60 calls per number, per day")}>
           <p>
-            The more calls one number places in a day, the faster carriers start treating it
-            as spam. So no number in the pool places more than 60.
-          </p>
+            {t("The more calls one number places in a day, the faster carriers start treating it as spam. So no number in the pool places more than 60.")}</p>
           <p>
-            That number came from our own calls. Two separate analyses in September both found
-            that numbers dialing lightly were answered roughly 1.8 to 1.9 times as often as
-            numbers dialing heavily. The heaviest days partly overlapped with a period when the
-            dialer itself had problems, so treat the size of the gap with some caution. The
-            direction held both times.
-          </p>
+            {t("That number came from our own calls. Two separate analyses in September both found that numbers dialing lightly were answered roughly 1.8 to 1.9 times as often as numbers dialing heavily. The heaviest days partly overlapped with a period when the dialer itself had problems, so treat the size of the gap with some caution. The direction held both times.")}</p>
           <p>
-            <strong>We scale by adding numbers, not by raising the cap.</strong> Raising it
-            would trade answer rate for capacity, which is backwards: numbers are the cheap
-            input, and the conversation is the expensive output.
-          </p>
+            <strong>{t("We scale by adding numbers, not by raising the cap.")}</strong> {t("Raising it would trade answer rate for capacity, which is backwards: numbers are the cheap input, and the conversation is the expensive output.")}</p>
         </GutsSection>
 
-        <GutsSection icon="swap" title="Load spreads before any number runs hot">
+        <GutsSection icon="swap" title={t("Load spreads before any number runs hot")}>
           <p>
-            A hard cap on its own still lets one number carry 59 calls while its neighbours sit
-            idle. So there is a second, lower line. Past 40 calls in a day, a number drops to
-            the back of the queue, however well its area code matches the lead.
-          </p>
+            {t("A hard cap on its own still lets one number carry 59 calls while its neighbours sit idle. So there is a second, lower line. Past 40 calls in a day, a number drops to the back of the queue, however well its area code matches the lead.")}</p>
           <p>
-            Forty is roughly the pool’s average, which means load starts spreading across every
-            number before any single one gets hot, rather than after. The hard cap then only has
-            to catch the rare outlier.
-          </p>
+            {t("Forty is roughly the pool’s average, which means load starts spreading across every number before any single one gets hot, rather than after. The hard cap then only has to catch the rare outlier.")}</p>
           <p>
-            <strong>Local presence works the same way.</strong> A number in the lead’s own area
-            code or state is preferred, but that is an ordering, not a filter. If a state runs
-            out of fresh numbers, the dialer falls back to the rest of the pool with a slightly
-            worse match. It never stops dialing because one area code is busy.
-          </p>
+            <strong>{t("Local presence works the same way.")}</strong> {t("A number in the lead’s own area code or state is preferred, but that is an ordering, not a filter. If a state runs out of fresh numbers, the dialer falls back to the rest of the pool with a slightly worse match. It never stops dialing because one area code is busy.")}</p>
         </GutsSection>
 
-        <GutsSection icon="scale" title="Every number is checked against its peers, daily">
+        <GutsSection icon="scale" title={t("Every number is checked against its peers, daily")}>
           <p>
-            Once a day, every number’s answer rate over the last three days is compared with the
-            rest of the pool. A number answering below 40% of the pool median is treated as
-            struggling.
-          </p>
+            {t("Once a day, every number’s answer rate over the last three days is compared with the rest of the pool. A number answering below 40% of the pool median is treated as struggling.")}</p>
           <p>
-            <strong>Why compare against the pool instead of a fixed target?</strong> Because
-            answer rates swing enormously by industry, time of day and list quality. Twelve
-            percent is excellent on aged internet leads and poor on fresh inbound. What is never
-            normal is one number answering far below the others dialing the same lists on the
-            same days. That is a property of the number, not of your campaign.
-          </p>
+            <strong>{t("Why compare against the pool instead of a fixed target?")}</strong> {t("Because answer rates swing enormously by industry, time of day and list quality. Twelve percent is excellent on aged internet leads and poor on fresh inbound. What is never normal is one number answering far below the others dialing the same lists on the same days. That is a property of the number, not of your campaign.")}</p>
           <p>
-            A number needs at least 40 calls in the window before it is judged at all, so a quiet
-            day or a single bad hour can’t condemn it.
-          </p>
+            {t("A number needs at least 40 calls in the window before it is judged at all, so a quiet day or a single bad hour can’t condemn it.")}</p>
         </GutsSection>
 
-        <GutsSection icon="alert" title="A struggling number is slowed down, not pulled">
+        <GutsSection icon="alert" title={t("A struggling number is slowed down, not pulled")}>
           <p>
-            When a number falls behind, its daily cap drops from 60 to 15. It stays in the pool
-            and keeps calling, just far less. When its answer rate recovers, the same daily check
-            puts it back to full volume on its own.
-          </p>
+            {t("When a number falls behind, its daily cap drops from 60 to 15. It stays in the pool and keeps calling, just far less. When its answer rate recovers, the same daily check puts it back to full volume on its own.")}</p>
           <p>
-            That is the opposite of the usual advice, which is to pull a flagged number and let it
-            cool off. We did that, and the numbers came back worse. The full story, with our data,
-            is on{' '}
+            {t("That is the opposite of the usual advice, which is to pull a flagged number and let it cool off. We did that, and the numbers came back worse. The full story, with our data, is on")}{' '}
             <Link href="/faq/why-we-dont-rest-flagged-numbers">
-              why we slow a flagged number down instead of resting it
-            </Link>.
+              {t("why we slow a flagged number down instead of resting it")}</Link>.
           </p>
         </GutsSection>
 
-        <GutsSection icon="info" title="Built so a glitch can’t become an outage">
+        <GutsSection icon="info" title={t("Built so a glitch can’t become an outage")}>
           <p>
-            A health check that acts on bad data is worse than none. So this one has limits.
-          </p>
+            {t("A health check that acts on bad data is worse than none. So this one has limits.")}</p>
           <ul className="guts-list good">
             <li>
-              It never slows down more than a quarter of the pool at once. If a quarter of the pool
-              looks bad on the same day, the likeliest cause is something platform-wide, like
-              answered calls briefly going unrecorded, and throttling everything would turn a
-              reporting problem into a capacity problem.
-            </li>
-            <li>It never buys or releases a number on its own. It adjusts volume, nothing else.</li>
+              {t("It never slows down more than a quarter of the pool at once. If a quarter of the pool looks bad on the same day, the likeliest cause is something platform-wide, like answered calls briefly going unrecorded, and throttling everything would turn a reporting problem into a capacity problem.")}</li>
+            <li>{t("It never buys or releases a number on its own. It adjusts volume, nothing else.")}</li>
             <li>
-              It lets a number back up on a lower bar than it takes to slow one down, so the penalty
-              can never quietly become permanent. If it restores one too early, the next check is a
-              day away.
-            </li>
+              {t("It lets a number back up on a lower bar than it takes to slow one down, so the penalty can never quietly become permanent. If it restores one too early, the next check is a day away.")}</li>
           </ul>
         </GutsSection>
 
-        <GutsSection icon="chat" title="What’s still on you">
+        <GutsSection icon="chat" title={t("What’s still on you")}>
           <p>
-            No infrastructure makes a number permanently immune. Call-analytics apps also score
-            numbers on how the people you call respond, including complaints and blocks. The
-            platform removes every carrier-level and volume-level cause of flagging; these are the
-            ones only you control.
-          </p>
+            {t("No infrastructure makes a number permanently immune. Call-analytics apps also score numbers on how the people you call respond, including complaints and blocks. The platform removes every carrier-level and volume-level cause of flagging; these are the ones only you control.")}</p>
           <ul className="guts-list warn">
-            <li>Call people who expect to hear from you. Consent is the single biggest factor.</li>
+            <li>{t("Call people who expect to hear from you. Consent is the single biggest factor.")}</li>
             <li>
-              Scrub against the National Do Not Call Registry. That stays the seller’s
-              responsibility, covered on{' '}
-              <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link>.
+              {t("Scrub against the National Do Not Call Registry. That stays the seller’s responsibility, covered on")}{' '}
+              <Link href="/faq/how-we-keep-compliance">{t("how we keep compliance")}</Link>.
             </li>
-            <li>Keep lists fresh. Stale, recycled data is what gets hung up on and reported.</li>
-            <li>Open well. People who stay on the line are a signal that you are worth answering.</li>
+            <li>{t("Keep lists fresh. Stale, recycled data is what gets hung up on and reported.")}</li>
+            <li>{t("Open well. People who stay on the line are a signal that you are worth answering.")}</li>
           </ul>
         </GutsSection>
 
-        <GutsSection icon="check" title="You never manage any of this">
+        <GutsSection icon="check" title={t("You never manage any of this")}>
           <p>
-            There is no number dashboard to babysit and no setting to tune. Caps, load spreading,
-            daily checks and throttling all run on their own, on every plan, at $35 per seat per
-            week.
-          </p>
+            {t("There is no number dashboard to babysit and no setting to tune. Caps, load spreading, daily checks and throttling all run on their own, on every plan, at $35 per seat per week.")}</p>
           <div className="guts-btns">
-            <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
-            <Link href="/faq/numbers" className="guts-btn secondary">PHONE NUMBERS &amp; CALLER ID</Link>
+            <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
+            <Link href="/faq/numbers" className="guts-btn secondary">{t("PHONE NUMBERS & CALLER ID")}</Link>
           </div>
           <p className="guts-note">
-            Attestation behaviour is from{' '}
+            {t("Attestation behaviour is from")}{' '}
             <a
               href="https://developers.telnyx.com/docs/voice/stir-shaken/attestation-behavior"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Telnyx’s STIR/SHAKEN documentation
-            </a>
-            . Caps, thresholds and windows are the values the dialer enforces today.
-          </p>
+              {t("Telnyx’s STIR/SHAKEN documentation")}</a>
+            {t(". Caps, thresholds and windows are the values the dialer enforces today.")}</p>
         </GutsSection>
 
       </GutsShell>

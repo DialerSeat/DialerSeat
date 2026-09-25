@@ -4,6 +4,7 @@ import { SignIn } from '@clerk/nextjs'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useBranding } from '@/components/ThemeProvider'
+import { t } from '@/lib/i18n/client'
 
 
 
@@ -137,8 +138,7 @@ export default function SignInPage() {
             letterSpacing: '3px',
             color: 'var(--brand-on-sidebar-muted)',
           }}>
-            WELCOME BACK
-          </p>
+            {t("WELCOME BACK")}</p>
         )}
       </div>
       {/* ── THE JOIN CODE USED TO DIE HERE ──────────────────────────────

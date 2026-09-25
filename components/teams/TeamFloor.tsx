@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AgentCard from './AgentCard'
 import type { LiveState, TeamMemberRow } from '@/app/api/teams/[id]/members/route'
+import { t as tr } from '@/lib/i18n/client'
 
 // =============================================================================
 // TeamFloor — the control room
@@ -180,8 +181,7 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
 
           <span style={{ fontSize: 11, color: 'var(--brand-muted-text)', flexShrink: 0 }}>
             <strong style={{ color: 'var(--brand-on-page-bg)', fontSize: 14 }}>{online.length}</strong>
-            {' '}online · {onCall} on call
-          </span>
+            {' '}{tr("online ·")}{" "}{onCall} {tr("on call")}</span>
         </div>
 
         <div className="tf-floor">
@@ -208,11 +208,10 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
           </div>
 
           {!loaded ? (
-            <div style={{ fontSize: 12, color: 'var(--brand-muted-text)' }}>LOADING FLOOR…</div>
+            <div style={{ fontSize: 12, color: 'var(--brand-muted-text)' }}>{tr("LOADING FLOOR…")}</div>
           ) : members.length === 0 ? (
             <div style={{ fontSize: 12, color: 'var(--brand-muted-text)' }}>
-              No members yet. Share a join code to fill the floor.
-            </div>
+              {tr("No members yet. Share a join code to fill the floor.")}</div>
           ) : (
             <>
               <div className="tf-grid">
@@ -232,12 +231,12 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
               <div style={{
                 fontSize: 9.5, letterSpacing: 1.6, fontWeight: 700,
                 color: 'var(--brand-muted-text)', margin: '26px 0 10px',
-              }}>ROSTER</div>
+              }}>{tr("ROSTER")}</div>
 
               <div className="tf-roster">
                 <div className="tf-head">
-                  <span>AGENT</span><span>STATUS</span><span>CALLS</span>
-                  <span>CONNECT</span><span>TALK</span><span>SEAT</span>
+                  <span>{tr("AGENT")}</span><span>{tr("STATUS")}</span><span>{tr("CALLS")}</span>
+                  <span>{tr("CONNECT")}</span><span>{tr("TALK")}</span><span>{tr("SEAT")}</span>
                 </div>
                 {members.map(m => (
                   <div
@@ -253,7 +252,7 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
                     <span>{m.connectRatePct === null ? '-' : `${m.connectRatePct}%`}</span>
                     <span>{mmss(m.talkSecondsToday)}</span>
                     <span style={{ color: 'var(--brand-muted-text)', fontSize: 11 }}>
-                      {m.seatSuspended ? 'PAUSED' : m.status === 'pending' ? 'PENDING' : 'ACTIVE'}
+                      {m.seatSuspended ? tr("PAUSED") : m.status === 'pending' ? tr("PENDING") : tr("ACTIVE")}
                     </span>
                   </div>
                 ))}
@@ -275,7 +274,7 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
                   borderRadius: 3, padding: '4px 10px', fontSize: 9.5, letterSpacing: 1.5,
                   fontWeight: 700, cursor: 'pointer', color: 'var(--brand-muted-text)',
                 }}
-              >CLOSE</button>
+              >{tr("CLOSE")}</button>
             </div>
 
             {/* The same card component, rendered narrow. Container queries do

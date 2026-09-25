@@ -7,6 +7,7 @@ import SiteFooter from '@/components/site-footer'
 import SuggestionModal from '@/components/SuggestionModal'
 import { SITE } from '@/lib/siteTheme'
 import { inter } from '@/lib/fonts'
+import { t } from '@/lib/i18n/client'
 
 // =============================================================================
 // /vs/everyone — the industry-wide breakdown
@@ -520,20 +521,19 @@ export default function VsEveryoneView() {
                 aria-expanded={menuOpen}
                 onClick={() => setMenuOpen((v) => !v)}
               >
-                MAIN MENU
-                <span className="caret" aria-hidden>▾</span>
+                {t("MAIN MENU")}<span className="caret" aria-hidden>▾</span>
               </button>
 
               <div className={`vse-rail-body${menuOpen ? ' is-open' : ''}`}>
                 <div className="vse-rail-group">
-                  <p className="vse-rail-label vse-rail-label-wide">MAIN MENU</p>
-                  <Link href="/?view=landing"><RailChevron /> Home</Link>
-                  <Link href="/vs" className="here"><RailChevron /> All Comparisons</Link>
-                  <Link href="/faq"><RailChevron /> FAQ</Link>
+                  <p className="vse-rail-label vse-rail-label-wide">{t("MAIN MENU")}</p>
+                  <Link href="/?view=landing"><RailChevron /> {t("Home")}</Link>
+                  <Link href="/vs" className="here"><RailChevron /> {t("All Comparisons")}</Link>
+                  <Link href="/faq"><RailChevron /> {t("FAQ")}</Link>
                 </div>
 
                 <div className="vse-rail-group">
-                  <p className="vse-rail-label">OTHER VS PAGES</p>
+                  <p className="vse-rail-label">{t("OTHER VS PAGES")}</p>
                   {OTHER_VS.map((item) => (
                     <Link key={item.href} href={item.href}>
                       <RailChevron /> {item.label}
@@ -542,7 +542,7 @@ export default function VsEveryoneView() {
                 </div>
 
                 <div className="vse-rail-group">
-                  <p className="vse-rail-label">SITE INFO</p>
+                  <p className="vse-rail-label">{t("SITE INFO")}</p>
                   {SITE_INFO.map((item) => (
                     <Link key={item.href} href={item.href}>
                       <RailChevron /> {item.label}
@@ -556,82 +556,58 @@ export default function VsEveryoneView() {
             <div className="vse-card">
 
               <section className="vse-sec vse-hero">
-                <div className="eyebrow">▸ DIALERSEAT™ VS EVERYONE</div>
+                <div className="eyebrow">{t("▸ DIALERSEAT™ VS EVERYONE")}</div>
                 <h1>
-                  The industry is broken.
-                  <span className="second">We fixed it.</span>
+                  {t("The industry is broken.")}<span className="second">{t("We fixed it.")}</span>
                 </h1>
                 <p>
-                  The outbound dialer industry was built by enterprise sales teams for
-                  enterprise budgets. DialerSeat was built for the people actually making
-                  the calls.
-                </p>
+                  {t("The outbound dialer industry was built by enterprise sales teams for enterprise budgets. DialerSeat was built for the people actually making the calls.")}</p>
                 <div className="vse-btns">
                   <Link href={showSignedIn ? '/dashboard' : '/sign-up'} className="vse-btn primary">
-                    {showSignedIn ? 'GO TO DASHBOARD →' : 'GET STARTED →'}
+                    {showSignedIn ? t("GO TO DASHBOARD →") : t("GET STARTED →")}
                   </Link>
-                  <a href="#failures" className="vse-btn secondary">THE SIX FAILURES</a>
+                  <a href="#failures" className="vse-btn secondary">{t("THE SIX FAILURES")}</a>
                 </div>
-                <p className="stamp">Last updated 07/28/2026</p>
+                <p className="stamp">{t("Last updated 07/28/2026")}</p>
               </section>
 
               <section className="vse-sec">
                 <div className="vse-icon"><IconVerdict /></div>
-                <h2>Legacy dialers are bloated, dated, and overpriced.</h2>
+                <h2>{t("Legacy dialers are bloated, dated, and overpriced.")}</h2>
                 <p>
-                  Most of our customers switch from ReadyMode, Mojo, or Five9 because
-                  they&apos;re tired of paying for features they don&apos;t use, UI they
-                  don&apos;t like, and contracts they can&apos;t escape.
-                </p>
+                  {t("Most of our customers switch from ReadyMode, Mojo, or Five9 because they're tired of paying for features they don't use, UI they don't like, and contracts they can't escape.")}</p>
                 <p>
-                  We took the core predictive and power dialing technology that enterprise
-                  tools charge hundreds for, stripped away the sales-demo bloat, and packaged
-                  it into a modern interface that works on any device. Then we priced it at
-                  $35/week with no contract. It&apos;s not a &quot;budget&quot; alternative,
-                  it&apos;s a more capable tool built for a modern workflow.
-                </p>
+                  {t("We took the core predictive and power dialing technology that enterprise tools charge hundreds for, stripped away the sales-demo bloat, and packaged it into a modern interface that works on any device. Then we priced it at $35/week with no contract. It's not a \"budget\" alternative, it's a more capable tool built for a modern workflow.")}</p>
               </section>
 
               <section className="vse-sec">
                 <div className="vse-icon"><IconWeek /></div>
-                <h2>Nobody else sells a week.</h2>
+                <h2>{t("Nobody else sells a week.")}</h2>
                 <p>
-                  Say you want to dial for one week: a push before a deadline, a trial run on
-                  a new list, a single busy stretch. Everywhere else, the smallest thing you
-                  can buy is a month, so a week of dialing costs you a month&apos;s
-                  subscription. Month to month, on the dialers that actually run multi-line
-                  predictive, that&apos;s roughly $120 to $250 a seat before setup fees.
-                </p>
+                  {t("Say you want to dial for one week: a push before a deadline, a trial run on a new list, a single busy stretch. Everywhere else, the smallest thing you can buy is a month, so a week of dialing costs you a month's subscription. Month to month, on the dialers that actually run multi-line predictive, that's roughly $120 to $250 a seat before setup fees.")}</p>
                 <p>
-                  DialerSeat sells the week. $35, and if you don&apos;t want the next one you
-                  don&apos;t buy it. Four weeks of DialerSeat still costs less than one month
-                  almost anywhere on this page.
-                </p>
+                  {t("DialerSeat sells the week. $35, and if you don't want the next one you don't buy it. Four weeks of DialerSeat still costs less than one month almost anywhere on this page.")}</p>
                 <div className="vse-tiles">
                   <div className="vse-tile">
                     <div className="vse-tile-num">$120-$250</div>
-                    <div className="vse-tile-label">EVERYWHERE ELSE</div>
+                    <div className="vse-tile-label">{t("EVERYWHERE ELSE")}</div>
                     <div className="vse-tile-sub">
-                      One month, because a month is the smallest unit sold. Setup fees extra.
-                    </div>
+                      {t("One month, because a month is the smallest unit sold. Setup fees extra.")}</div>
                   </div>
                   <div className="vse-tile ours">
                     <div className="vse-tile-num">$35</div>
                     <div className="vse-tile-label">DIALERSEAT</div>
                     <div className="vse-tile-sub">
-                      One week. Cancel before the next one and that is the whole bill.
-                    </div>
+                      {t("One week. Cancel before the next one and that is the whole bill.")}</div>
                   </div>
                 </div>
               </section>
 
               <section className="vse-sec" id="failures">
                 <div className="vse-icon"><IconFailures /></div>
-                <h2>Why the industry needs a reset.</h2>
+                <h2>{t("Why the industry needs a reset.")}</h2>
                 <p>
-                  Six failures every legacy dialer shares. Not one of them is a technical
-                  limit; each is a pricing or packaging decision somebody made on purpose.
-                </p>
+                  {t("Six failures every legacy dialer shares. Not one of them is a technical limit; each is a pricing or packaging decision somebody made on purpose.")}</p>
                 <div className="vse-failures">
                   {INDUSTRY_FAILURES.map((f) => (
                     <div key={f.num} className="vse-failure">
@@ -647,22 +623,20 @@ export default function VsEveryoneView() {
 
               <section className="vse-sec">
                 <div className="vse-icon"><IconTable /></div>
-                <h2>Every feature. Every competitor.</h2>
+                <h2>{t("Every feature. Every competitor.")}</h2>
                 <p>
-                  Where a competitor is genuinely better, the row says so. A table where one
-                  column wins everything is marketing, not a comparison.
-                </p>
+                  {t("Where a competitor is genuinely better, the row says so. A table where one column wins everything is marketing, not a comparison.")}</p>
                 <div className="vse-tablewrap">
                   <table>
                     <thead>
                       <tr>
-                        <th>FEATURE</th>
+                        <th>{t("FEATURE")}</th>
                         <th className="ds-head">DIALERSEAT</th>
-                        <th>READYMODE</th>
-                        <th>MOJO</th>
-                        <th>PHONEBURNER</th>
-                        <th>FIVE9</th>
-                        <th>CONVOSO</th>
+                        <th>{t("READYMODE")}</th>
+                        <th>{t("MOJO")}</th>
+                        <th>{t("PHONEBURNER")}</th>
+                        <th>{t("FIVE9")}</th>
+                        <th>{t("CONVOSO")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -684,23 +658,20 @@ export default function VsEveryoneView() {
 
               <section className="vse-sec">
                 <div className="vse-icon"><IconTeam /></div>
-                <h2>What happens when you add the fifth agent.</h2>
+                <h2>{t("What happens when you add the fifth agent.")}</h2>
                 <p>
-                  The headline seat rate is the number everyone compares. What decides the
-                  purchase is whether growing the floor is an afternoon decision or a
-                  procurement event.
-                </p>
+                  {t("The headline seat rate is the number everyone compares. What decides the purchase is whether growing the floor is an afternoon decision or a procurement event.")}</p>
                 <div className="vse-tablewrap">
                   <table>
                     <thead>
                       <tr>
-                        <th>SCALING</th>
+                        <th>{t("SCALING")}</th>
                         <th className="ds-head">DIALERSEAT</th>
-                        <th>READYMODE</th>
-                        <th>MOJO</th>
-                        <th>PHONEBURNER</th>
-                        <th>FIVE9</th>
-                        <th>CONVOSO</th>
+                        <th>{t("READYMODE")}</th>
+                        <th>{t("MOJO")}</th>
+                        <th>{t("PHONEBURNER")}</th>
+                        <th>{t("FIVE9")}</th>
+                        <th>{t("CONVOSO")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -722,11 +693,9 @@ export default function VsEveryoneView() {
 
               <section className="vse-sec">
                 <div className="vse-icon"><IconSwitch /></div>
-                <h2>Direct head-to-heads.</h2>
+                <h2>{t("Direct head-to-heads.")}</h2>
                 <p>
-                  Every tool above gets its own page, with the pricing written the way that
-                  vendor writes it and the things they genuinely do better left in.
-                </p>
+                  {t("Every tool above gets its own page, with the pricing written the way that vendor writes it and the things they genuinely do better left in.")}</p>
                 <div className="vse-switch">
                   {SWITCHING_FROM.map((s) => (
                     <Link key={s.name} href={s.href}>
@@ -739,19 +708,17 @@ export default function VsEveryoneView() {
 
               <section className="vse-sec">
                 <div className="vse-icon"><IconAsk /></div>
-                <h2>Still have questions?</h2>
+                <h2>{t("Still have questions?")}</h2>
                 <p>
-                  If your dialer isn&apos;t on this page, or something here doesn&apos;t match
-                  what you were quoted, tell us. A real person reads every one of these.{' '}
+                  {t("If your dialer isn't on this page, or something here doesn't match what you were quoted, tell us. A real person reads every one of these.")}{' '}
                   <button type="button" className="vse-inline" onClick={() => setAskOpen(true)}>
-                    Send us a request here.
-                  </button>
+                    {t("Send us a request here.")}</button>
                 </p>
                 <div className="vse-btns">
                   <Link href={showSignedIn ? '/dashboard' : '/sign-up'} className="vse-btn primary">
-                    {showSignedIn ? 'GO TO DASHBOARD →' : 'GET STARTED →'}
+                    {showSignedIn ? t("GO TO DASHBOARD →") : t("GET STARTED →")}
                   </Link>
-                  <Link href="/vs" className="vse-btn secondary">ALL COMPARISONS</Link>
+                  <Link href="/vs" className="vse-btn secondary">{t("ALL COMPARISONS")}</Link>
                 </div>
               </section>
 
@@ -762,7 +729,7 @@ export default function VsEveryoneView() {
         <SuggestionModal
           open={askOpen}
           onClose={() => setAskOpen(false)}
-          title="Send us a request"
+          title={t("Send us a request")}
           intro="Tell us which dialer to compare next, or what this page got wrong. A real person reads these."
           defaultKind="comparison"
         />

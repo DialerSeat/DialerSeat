@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { t } from '@/lib/i18n/client'
 
 // =============================================================================
 // TEAM OVERVIEW — the command-center strip at the top of an owned team
@@ -218,32 +219,30 @@ export default function TeamOverview({
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
       }}>
         <span style={{ fontSize: 10, letterSpacing: 1.5, fontWeight: 'bold', color: T.muted }}>
-          SEAT LINK
-        </span>
+          {t("SEAT LINK")}</span>
         <button
           className="tov-btn is-solid"
           disabled={generating !== null}
           onClick={() => quickLink('owner')}
         >
-          {generating === 'owner' ? 'CREATING…' : 'MY BILLING, COPY LINK'}
+          {generating === 'owner' ? t("CREATING…") : t("MY BILLING, COPY LINK")}
         </button>
         <button
           className="tov-btn"
           disabled={generating !== null}
           onClick={() => quickLink('agent')}
         >
-          {generating === 'agent' ? 'CREATING…' : 'THEY PAY, COPY LINK'}
+          {generating === 'agent' ? t("CREATING…") : t("THEY PAY, COPY LINK")}
         </button>
         <span style={{ fontSize: 10.5, color: T.muted }}>
-          Reusable. Send it to anyone, they land on a join page and they&apos;re in.
-        </span>
+          {t("Reusable. Send it to anyone, they land on a join page and they're in.")}</span>
 
         {copied && (
           <div style={{
             flexBasis: '100%', marginTop: 4, fontSize: 11, color: T.green,
             wordBreak: 'break-all',
           }}>
-            ✓ Copied, {copied}
+            {t("✓ Copied,")}{" "}{copied}
           </div>
         )}
         {genError && (
@@ -261,7 +260,7 @@ export default function TeamOverview({
           border: `1px solid ${T.border}`, borderRadius: 6,
         }}>
           <div style={{ fontSize: 10, letterSpacing: 1.5, fontWeight: 'bold', color: T.muted, marginBottom: 8 }}>
-            WAITING TO JOIN ({pending.length})
+            {t("WAITING TO JOIN (")}{pending.length})
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {pending.map(p => (
@@ -277,7 +276,7 @@ export default function TeamOverview({
                   disabled={acceptingId === p.id}
                   onClick={() => onAccept(p.id)}
                 >
-                  {acceptingId === p.id ? 'ADDING…' : 'ADD TO TEAM'}
+                  {acceptingId === p.id ? t("ADDING…") : t("ADD TO TEAM")}
                 </button>
               </div>
             ))}
@@ -287,8 +286,7 @@ export default function TeamOverview({
 
       {failed && !data && (
         <div style={{ marginTop: 8, fontSize: 11, color: T.muted }}>
-          Couldn&apos;t load this team&apos;s numbers. Everything below still works.
-        </div>
+          {t("Couldn't load this team's numbers. Everything below still works.")}</div>
       )}
     </div>
   )

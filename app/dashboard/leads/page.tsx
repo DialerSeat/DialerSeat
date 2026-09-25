@@ -4,6 +4,7 @@ import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { canonical, labelFor } from '@/lib/dispositions'
+import { t as tr } from '@/lib/i18n/client'
 
 
 
@@ -780,22 +781,20 @@ export default function LeadsPage() {
       <div className="leads-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
-            LEADS DATABASE
-          </span>
+            {tr("LEADS DATABASE")}</span>
           <span className="leads-header-stats" style={{
             fontSize: 10, fontFamily: 'monospace', color: 'var(--brand-on-header-muted)', letterSpacing: 1,
           }}>
-            {total.toLocaleString()} TOTAL · {leads.length} LOADED
-          </span>
+            {total.toLocaleString()} {tr("TOTAL ·")}{" "}{leads.length} {tr("LOADED")}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             onClick={openAddModal}
             disabled={isLapsed || campaigns.length === 0}
             title={
-              isLapsed ? 'Subscription required'
-              : campaigns.length === 0 ? 'Create a campaign first'
-              : 'Add a new lead'
+              isLapsed ? tr("Subscription required")
+              : campaigns.length === 0 ? tr("Create a campaign first")
+              : tr("Add a new lead")
             }
             style={{
               padding: '6px 14px',
@@ -810,7 +809,7 @@ export default function LeadsPage() {
               opacity: (isLapsed || campaigns.length === 0) ? 0.5 : 1,
               fontFamily: FUTURA,
             }}
-          >+ ADD LEAD</button>
+          >{tr("+ ADD LEAD")}</button>
           <button onClick={handleExport} style={{
             padding: '6px 14px',
             background: 'transparent',
@@ -822,16 +821,15 @@ export default function LeadsPage() {
             fontWeight: 'bold',
             cursor: 'pointer',
             fontFamily: FUTURA,
-          }}>↓ EXPORT CSV</button>
+          }}>{tr("↓ EXPORT CSV")}</button>
         </div>
       </div>
 
       {isLapsed && (
         <div className="leads-lapsed-banner">
           <span>
-            <strong style={{ marginRight: 6 }}>▸ READ-ONLY</strong>
-            Export anytime. Editing disabled
-            {awaitingSeat
+            <strong style={{ marginRight: 6 }}>{tr("▸ READ-ONLY")}</strong>
+            {tr("Export anytime. Editing disabled")}{awaitingSeat
               ? ' until the team owner approves your seat.'
               : hasLapsedPlan ? ' until you resubscribe.' : ' until you subscribe.'}
           </span>
@@ -846,41 +844,40 @@ export default function LeadsPage() {
             fontWeight: 'bold',
             textDecoration: 'none',
             fontFamily: FUTURA,
-          }}>↻ {hasLapsedPlan ? 'RESUBSCRIBE' : 'SUBSCRIBE'}</Link>
+          }}>↻ {hasLapsedPlan ? tr("RESUBSCRIBE") : tr("SUBSCRIBE")}</Link>
         </div>
       )}
 
       <div className="leads-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>
-        <span>{filtersOpen ? '▲ HIDE' : '▼ SHOW'} FILTERS</span>
+        <span>{filtersOpen ? tr("▲ HIDE") : tr("▼ SHOW")} {tr("FILTERS")}</span>
         <span style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace' }}>
-          {total.toLocaleString()} leads
-        </span>
+          {total.toLocaleString()} {tr("leads")}</span>
       </div>
 
       <div className={`leads-controls ${filtersOpen ? 'open-mobile' : 'closed-mobile'}`}>
         <div className="field search-field">
-          <label>SEARCH NAME OR PHONE</label>
+          <label>{tr("SEARCH NAME OR PHONE")}</label>
           <input
             type="text"
-            placeholder="e.g. Brown, 8033..."
+            placeholder={tr("e.g. Brown, 8033...")}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
         <div className="field">
-          <label>CAMPAIGN</label>
+          <label>{tr("CAMPAIGN")}</label>
           <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}>
-            <option value="all">[ ALL CAMPAIGNS ]</option>
+            <option value="all">{tr("[ ALL CAMPAIGNS ]")}</option>
             {campaigns.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>
         <div className="field">
-          <label>DISPOSITION</label>
+          <label>{tr("DISPOSITION")}</label>
           <select value={dispositionFilter} onChange={e => setDispositionFilter(e.target.value)}>
-            <option value="all">[ ALL ]</option>
-            <option value="uncalled">UNCALLED</option>
+            <option value="all">{tr("[ ALL ]")}</option>
+            <option value="uncalled">{tr("UNCALLED")}</option>
             {DISPOSITIONS.map(d => (
               <option key={d.value} value={d.value}>{dispText(d.value)}</option>
             ))}
@@ -890,16 +887,16 @@ export default function LeadsPage() {
                 of the dispositions above, because reaching a machine on
                 Tuesday does not undo a conversation on Monday. */}
             <option disabled>──────────</option>
-            <option value="reached_voicemail">REACHED VOICEMAIL</option>
+            <option value="reached_voicemail">{tr("REACHED VOICEMAIL")}</option>
           </select>
         </div>
         <div className="field">
-          <label>SORT</label>
+          <label>{tr("SORT")}</label>
           <select value={sort} onChange={e => setSort(e.target.value)}>
-            <option value="created_desc">NEWEST FIRST</option>
-            <option value="created_asc">OLDEST FIRST</option>
-            <option value="last_called_desc">RECENTLY CALLED</option>
-            <option value="attempts_desc">MOST ATTEMPTS</option>
+            <option value="created_desc">{tr("NEWEST FIRST")}</option>
+            <option value="created_asc">{tr("OLDEST FIRST")}</option>
+            <option value="last_called_desc">{tr("RECENTLY CALLED")}</option>
+            <option value="attempts_desc">{tr("MOST ATTEMPTS")}</option>
           </select>
         </div>
         <div className="field export-btn-cell"></div>
@@ -911,8 +908,7 @@ export default function LeadsPage() {
             textAlign: 'center', padding: 60,
             fontSize: 11, letterSpacing: 3, color: T.muted,
           }}>
-            NO LEADS MATCH YOUR FILTERS
-          </div>
+            {tr("NO LEADS MATCH YOUR FILTERS")}</div>
         )}
 
         {leads.map(lead => {
@@ -982,12 +978,12 @@ export default function LeadsPage() {
                       background: 'rgba(139, 92, 246, 0.10)',
                       color: '#7c3aed',
                       border: '1px solid rgba(139, 92, 246, 0.45)',
-                    }} title="Last call reached an answering machine">VOICEMAIL</span>
+                    }} title={tr("Last call reached an answering machine")}>{tr("VOICEMAIL")}</span>
                   ) : (
                     <span className="disp-badge" style={{
                       background: '#e8e8ec', color: T.muted,
                       border: `1px solid ${T.border}`,
-                    }}>NEW</span>
+                    }}>{tr("NEW")}</span>
                   )}
                 </div>
               </div>
@@ -997,7 +993,7 @@ export default function LeadsPage() {
                   <div className="lead-extra">
                     <div style={{
                       fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 4, fontWeight: 'bold',
-                    }}>LEAD DATA</div>
+                    }}>{tr("LEAD DATA")}</div>
                     {Object.entries(lead.extra_data || {})
                       .filter(([k, v]) => v && String(v).trim())
                       .slice(0, 8)
@@ -1008,11 +1004,11 @@ export default function LeadsPage() {
                         </div>
                       ))}
                     <div className="lead-extra-row">
-                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>CALL ATTEMPTS</span>
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>{tr("CALL ATTEMPTS")}</span>
                       <span style={{ fontFamily: 'monospace', color: T.text, fontWeight: 'bold' }}>{lead.dial_attempts}</span>
                     </div>
                     <div className="lead-extra-row">
-                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>LAST CALLED</span>
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>{tr("LAST CALLED")}</span>
                       <span style={{ fontFamily: 'monospace', color: T.text, fontWeight: 'bold' }}>
                         {lead.last_called_at ? new Date(lead.last_called_at).toLocaleString() : '-'}
                       </span>
@@ -1031,13 +1027,12 @@ export default function LeadsPage() {
                         <div style={{
                           fontSize: 10, letterSpacing: 3, fontWeight: 'bold',
                           color: T.warn, marginBottom: 6,
-                        }}>▸ EDITING LOCKED</div>
+                        }}>{tr("▸ EDITING LOCKED")}</div>
                         <div style={{
                           fontSize: 11, lineHeight: 1.6, color: T.text,
                           marginBottom: 12,
                         }}>
-                          {hasLapsedPlan ? 'Resubscribe' : 'Subscribe'} to update dispositions and notes. Your current data is preserved exactly as it was.
-                        </div>
+                          {hasLapsedPlan ? tr("Resubscribe") : tr("Subscribe")} {tr("to update dispositions and notes. Your current data is preserved exactly as it was.")}</div>
                         <Link href="/billing" style={{
                           display: 'block',
                           padding: '10px 14px',
@@ -1052,14 +1047,14 @@ export default function LeadsPage() {
                           textAlign: 'center',
                           textDecoration: 'none',
                           fontFamily: FUTURA,
-                        }}>{hasLapsedPlan ? 'RESUBSCRIBE' : 'SUBSCRIBE'}, $35/WEEK</Link>
+                        }}>{hasLapsedPlan ? tr("RESUBSCRIBE") : tr("SUBSCRIBE")}{tr(", $35/WEEK")}</Link>
                       </div>
                     ) : (
                       <>
                         <div>
                           <div style={{
                             fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 6, fontWeight: 'bold',
-                          }}>SET DISPOSITION</div>
+                          }}>{tr("SET DISPOSITION")}</div>
                           <div className="disp-grid">
                             {/* Neither of these is an agent's choice. NO_ANSWER
                                 and SKIPPED are things the dialer records about
@@ -1088,18 +1083,18 @@ export default function LeadsPage() {
                                 color: editDisposition === '' ? 'white' : T.muted,
                                 borderColor: T.border,
                               }}
-                            >CLEAR</button>
+                            >{tr("CLEAR")}</button>
                           </div>
                         </div>
 
                         <div>
                           <div style={{
                             fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 6, fontWeight: 'bold',
-                          }}>NOTES</div>
+                          }}>{tr("NOTES")}</div>
                           <textarea
                             value={editNotes}
                             onChange={e => setEditNotes(e.target.value)}
-                            placeholder="Add notes about this lead..."
+                            placeholder={tr("Add notes about this lead...")}
                             rows={4}
                             style={{
                               width: '100%',
@@ -1131,7 +1126,7 @@ export default function LeadsPage() {
                               fontWeight: 'bold',
                               cursor: 'pointer',
                               fontFamily: FUTURA,
-                            }}>DIAL LEAD</button>
+                            }}>{tr("DIAL LEAD")}</button>
                           <button
                             onClick={() => requestDelete(lead)}
                             disabled={saving}
@@ -1147,7 +1142,7 @@ export default function LeadsPage() {
                               cursor: saving ? 'not-allowed' : 'pointer',
                               opacity: saving ? 0.5 : 1,
                               fontFamily: FUTURA,
-                            }}>DELETE</button>
+                            }}>{tr("DELETE")}</button>
                           <button
                             onClick={() => setExpandedId(null)}
                             style={{
@@ -1161,7 +1156,7 @@ export default function LeadsPage() {
                               fontWeight: 'bold',
                               cursor: 'pointer',
                               fontFamily: FUTURA,
-                            }}>CANCEL</button>
+                            }}>{tr("CANCEL")}</button>
                           <button
                             onClick={() => handleSave(lead.id)}
                             disabled={saving}
@@ -1176,7 +1171,7 @@ export default function LeadsPage() {
                               fontWeight: 'bold',
                               cursor: saving ? 'wait' : 'pointer',
                               fontFamily: FUTURA,
-                            }}>{saving ? 'SAVING...' : '▶ SAVE'}</button>
+                            }}>{saving ? tr("SAVING...") : tr("▶ SAVE")}</button>
                         </div>
                       </>
                     )}
@@ -1192,14 +1187,14 @@ export default function LeadsPage() {
             padding: 20, textAlign: 'center',
             fontSize: 10, letterSpacing: 2, color: T.muted,
           }}>
-            {loading ? 'LOADING MORE...' : 'SCROLL TO LOAD MORE'}
+            {loading ? tr("LOADING MORE...") : tr("SCROLL TO LOAD MORE")}
           </div>
         )}
         {cursor === null && leads.length > 0 && (
           <div style={{
             padding: 20, textAlign: 'center',
             fontSize: 10, letterSpacing: 2, color: T.muted,
-          }}>END OF LIST · {leads.length} OF {total.toLocaleString()}</div>
+          }}>{tr("END OF LIST ·")}{" "}{leads.length} {tr("OF")}{" "}{total.toLocaleString()}</div>
         )}
       </div>
 
@@ -1207,19 +1202,19 @@ export default function LeadsPage() {
         <div className="leads-modal-overlay" onClick={closeAddModal}>
           <div className="leads-modal" onClick={e => e.stopPropagation()}>
             <div className="leads-modal-head">
-              <span className="leads-modal-title">+ ADD LEAD</span>
+              <span className="leads-modal-title">{tr("+ ADD LEAD")}</span>
               <button className="leads-modal-close" onClick={closeAddModal}>×</button>
             </div>
             <div className="leads-modal-body">
               <div className="leads-modal-field">
-                <label className="leads-modal-label">CAMPAIGN *</label>
+                <label className="leads-modal-label">{tr("CAMPAIGN *")}</label>
                 <select
                   className="leads-modal-select"
                   value={newLead.campaign_id}
                   onChange={e => setNewLead(l => ({ ...l, campaign_id: e.target.value }))}
                   disabled={adding}
                 >
-                  <option value="">Select a campaign</option>
+                  <option value="">{tr("Select a campaign")}</option>
                   {campaigns.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -1228,7 +1223,7 @@ export default function LeadsPage() {
 
               <div className="leads-modal-row-2">
                 <div className="leads-modal-field">
-                  <label className="leads-modal-label">FIRST NAME</label>
+                  <label className="leads-modal-label">{tr("FIRST NAME")}</label>
                   <input
                     className="leads-modal-input"
                     type="text"
@@ -1239,7 +1234,7 @@ export default function LeadsPage() {
                   />
                 </div>
                 <div className="leads-modal-field">
-                  <label className="leads-modal-label">LAST NAME</label>
+                  <label className="leads-modal-label">{tr("LAST NAME")}</label>
                   <input
                     className="leads-modal-input"
                     type="text"
@@ -1252,7 +1247,7 @@ export default function LeadsPage() {
               </div>
 
               <div className="leads-modal-field">
-                <label className="leads-modal-label">PHONE *</label>
+                <label className="leads-modal-label">{tr("PHONE *")}</label>
                 <input
                   className="leads-modal-input"
                   type="tel"
@@ -1265,7 +1260,7 @@ export default function LeadsPage() {
               </div>
 
               <div className="leads-modal-field">
-                <label className="leads-modal-label">EMAIL</label>
+                <label className="leads-modal-label">{tr("EMAIL")}</label>
                 <input
                   className="leads-modal-input"
                   type="email"
@@ -1278,7 +1273,7 @@ export default function LeadsPage() {
 
               <div className="leads-modal-row-2">
                 <div className="leads-modal-field">
-                  <label className="leads-modal-label">STATE</label>
+                  <label className="leads-modal-label">{tr("STATE")}</label>
                   <input
                     className="leads-modal-input"
                     type="text"
@@ -1289,7 +1284,7 @@ export default function LeadsPage() {
                   />
                 </div>
                 <div className="leads-modal-field">
-                  <label className="leads-modal-label">CITY</label>
+                  <label className="leads-modal-label">{tr("CITY")}</label>
                   <input
                     className="leads-modal-input"
                     type="text"
@@ -1302,14 +1297,14 @@ export default function LeadsPage() {
               </div>
 
               <div className="leads-modal-field">
-                <label className="leads-modal-label">NOTES</label>
+                <label className="leads-modal-label">{tr("NOTES")}</label>
                 <textarea
                   className="leads-modal-textarea"
                   value={newLead.notes}
                   onChange={e => setNewLead(l => ({ ...l, notes: e.target.value }))}
                   disabled={adding}
                   rows={3}
-                  placeholder="Anything you want to remember about this lead..."
+                  placeholder={tr("Anything you want to remember about this lead...")}
                 />
               </div>
 
@@ -1334,7 +1329,7 @@ export default function LeadsPage() {
                   cursor: adding ? 'not-allowed' : 'pointer',
                   fontFamily: FUTURA,
                 }}
-              >CANCEL</button>
+              >{tr("CANCEL")}</button>
               <button
                 onClick={handleAdd}
                 disabled={adding || !newLead.campaign_id || !newLead.phone.trim()}
@@ -1352,7 +1347,7 @@ export default function LeadsPage() {
                   opacity: (adding || !newLead.campaign_id || !newLead.phone.trim()) ? 0.5 : 1,
                   fontFamily: FUTURA,
                 }}
-              >{adding ? 'ADDING...' : '▶ ADD LEAD'}</button>
+              >{adding ? tr("ADDING...") : tr("▶ ADD LEAD")}</button>
             </div>
           </div>
         </div>
@@ -1362,22 +1357,21 @@ export default function LeadsPage() {
         <div className="leads-modal-overlay" onClick={cancelDelete}>
           <div className="leads-modal danger" onClick={e => e.stopPropagation()}>
             <div className="leads-modal-head">
-              <span className="leads-modal-title danger">DELETE LEAD</span>
+              <span className="leads-modal-title danger">{tr("DELETE LEAD")}</span>
               <button className="leads-modal-close" onClick={cancelDelete}>×</button>
             </div>
             <div className="leads-modal-body">
               <div style={{
                 fontSize: 13, lineHeight: 1.6, color: T.text, letterSpacing: 0.3,
               }}>
-                Permanently delete <strong style={{ fontFamily: 'monospace' }}>
+                {tr("Permanently delete")}{" "}<strong style={{ fontFamily: 'monospace' }}>
                   {deleteConfirmLead.first_name} {deleteConfirmLead.last_name}
                 </strong> ({deleteConfirmLead.phone})?
               </div>
               <div style={{
                 fontSize: 11, color: T.muted, lineHeight: 1.6, marginTop: 4,
               }}>
-                This removes the lead and all its dial history. Cannot be undone.
-              </div>
+                {tr("This removes the lead and all its dial history. Cannot be undone.")}</div>
               {deleteError && (
                 <div className="leads-modal-error">{deleteError}</div>
               )}
@@ -1398,7 +1392,7 @@ export default function LeadsPage() {
                   cursor: deleting ? 'not-allowed' : 'pointer',
                   fontFamily: FUTURA,
                 }}
-              >CANCEL</button>
+              >{tr("CANCEL")}</button>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
@@ -1416,7 +1410,7 @@ export default function LeadsPage() {
                   opacity: deleting ? 0.5 : 1,
                   fontFamily: FUTURA,
                 }}
-              >{deleting ? 'DELETING...' : '▶ DELETE FOREVER'}</button>
+              >{deleting ? tr("DELETING...") : tr("▶ DELETE FOREVER")}</button>
             </div>
           </div>
         </div>
