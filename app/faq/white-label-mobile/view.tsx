@@ -80,7 +80,7 @@ function MobileCarousel() {
         </div>
         <button className="wlm-carousel-arrow right" onClick={() => go(1)} aria-label={t("Next screenshot")}>›</button>
       </div>
-      <div className="wlm-carousel-theme-tag">{slide.theme}</div>
+      <div className="wlm-carousel-theme-tag">{t(slide.theme)}</div>
       <p className="wlm-carousel-caption">{t(slide.caption)}</p>
       <div className="wlm-carousel-dots">
         {MOBILE_SLIDES.map((s, i) => (

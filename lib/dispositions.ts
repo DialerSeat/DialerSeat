@@ -20,6 +20,8 @@
 // offered them: nobody tags a call "abandoned".
 // ─────────────────────────────────────────────────────────────────────────
 
+import { msg } from '@/lib/i18n/msg'
+
 export interface DispositionDef {
   /** Stored value written by the current dialer. */
   value: string
@@ -47,13 +49,13 @@ export const DISPOSITIONS: DispositionDef[] = [
   // sub-queue filters and counted by the analytics, and renaming it would
   // rewrite call history to change a word people read. The label is the only
   // part anybody sees, so the label is the part that changes.
-  { value: 'APPOINTMENT', aliases: ['APPOINTMENT_SET'], label: 'Call Back',
+  { value: 'APPOINTMENT', aliases: ['APPOINTMENT_SET'], label: msg('Call Back'),
     agentChosen: true, contact: true, conversion: true },
-  { value: 'CLOSED', aliases: [], label: 'Closed',
+  { value: 'CLOSED', aliases: [], label: msg('Closed'),
     agentChosen: true, contact: true, conversion: true },
-  { value: 'NOT INTERESTED', aliases: ['NOT_INTERESTED'], label: 'Not interested',
+  { value: 'NOT INTERESTED', aliases: ['NOT_INTERESTED'], label: msg('Not interested'),
     agentChosen: true, contact: true, conversion: false },
-  { value: 'DO NOT CALL', aliases: ['DNC', 'DO_NOT_CALL'], label: 'Do not call',
+  { value: 'DO NOT CALL', aliases: ['DNC', 'DO_NOT_CALL'], label: msg('Do not call'),
     agentChosen: true, contact: true, conversion: false },
 
   // ── System outcomes ───────────────────────────────────────────────────
@@ -62,9 +64,9 @@ export const DISPOSITIONS: DispositionDef[] = [
   // disposition and the breakdown read "No disposition · 88%". A voicemail is
   // a real, useful outcome — it says the number is live and someone may call
   // back — and it is the single most common thing that happens on a dial.
-  { value: 'VOICEMAIL', aliases: ['NO_ANSWER_AMD', 'MACHINE', 'machine'], label: 'Voicemail',
+  { value: 'VOICEMAIL', aliases: ['NO_ANSWER_AMD', 'MACHINE', 'machine'], label: msg('Voicemail'),
     agentChosen: false, contact: false, conversion: false },
-  { value: 'NO_ANSWER', aliases: ['NO ANSWER'], label: 'No answer',
+  { value: 'NO_ANSWER', aliases: ['NO ANSWER'], label: msg('No answer'),
     agentChosen: false, contact: false, conversion: false },
   // ── NOT A NO-ANSWER. OUR OWN PLUMBING. ────────────────────────────────
   // The agent's browser lost its SIP socket, so its own leg went unanswered,
@@ -72,7 +74,7 @@ export const DISPOSITIONS: DispositionDef[] = [
   // lead's phone ever rang. Kept as a separate value precisely so it cannot
   // hide inside NO_ANSWER again: it spent a month there, accounting for 67%
   // of every dial on the platform, looking exactly like people not picking up.
-  { value: 'AGENT_LEG_FAILED', aliases: [], label: 'Dialer disconnected',
+  { value: 'AGENT_LEG_FAILED', aliases: [], label: msg('Dialer disconnected'),
     agentChosen: false, contact: false, conversion: false },
   // Skipped is the dialer moving on - a lead outside calling hours, a queue
   // advancing, an agent passing. It is the largest bucket by far and says
@@ -88,11 +90,11 @@ export const DISPOSITIONS: DispositionDef[] = [
   // work: `calls` finds the row to close with `.is('disposition', null)`, so
   // a null here would leave every skipped call permanently open and matchable
   // by the next disposition that came along.
-  { value: 'SKIPPED', aliases: [], label: 'No disposition',
+  { value: 'SKIPPED', aliases: [], label: msg('No disposition'),
     agentChosen: false, contact: false, conversion: false, hideFromBreakdown: true },
-  { value: 'ABANDONED', aliases: [], label: 'Abandoned',
+  { value: 'ABANDONED', aliases: [], label: msg('Abandoned'),
     agentChosen: false, contact: false, conversion: false },
-  { value: 'TCPA_BLOCKED', aliases: ['TCPA BLOCKED'], label: 'Outside calling hours',
+  { value: 'TCPA_BLOCKED', aliases: ['TCPA BLOCKED'], label: msg('Outside calling hours'),
     agentChosen: false, contact: false, conversion: false },
 ]
 

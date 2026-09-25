@@ -937,7 +937,7 @@ export default function RecordingsPage() {
           <select value={dispositionFilter} onChange={e => setDispositionFilter(e.target.value)}>
             <option value="all">{tr("[ ALL ]")}</option>
             {DISPOSITIONS.map(d => (
-              <option key={d} value={d}>{labelFor(d).toUpperCase()}</option>
+              <option key={d} value={d}>{tr(labelFor(d)).toUpperCase()}</option>
             ))}
           </select>
         </div>
@@ -1057,7 +1057,7 @@ export default function RecordingsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                   <div className="rec-camp">{tr(campName)}</div>
                   {r.disposition ? (
-                    <span className="rec-disp-badge" style={dispBadgeStyle}>{labelFor(r.disposition).toUpperCase()}</span>
+                    <span className="rec-disp-badge" style={dispBadgeStyle}>{tr(labelFor(r.disposition)).toUpperCase()}</span>
                   ) : (
                     <span className="rec-disp-badge" style={{
                       background: '#e8e8ec', color: T.muted,
@@ -1119,7 +1119,7 @@ export default function RecordingsPage() {
                 </div>
                 <div className="col-disp">
                   {r.disposition ? (
-                    <span className="rec-disp-badge" style={dispBadgeStyle}>{labelFor(r.disposition).toUpperCase()}</span>
+                    <span className="rec-disp-badge" style={dispBadgeStyle}>{tr(labelFor(r.disposition)).toUpperCase()}</span>
                   ) : (
                     <span className="rec-disp-badge" style={{
                       background: '#e8e8ec', color: T.muted,
@@ -1236,7 +1236,7 @@ export default function RecordingsPage() {
                               color: editDisposition === d.value ? 'white' : d.color,
                               borderColor: d.color,
                             }}
-                          >{labelFor(d.value).toUpperCase()}</button>
+                          >{tr(labelFor(d.value)).toUpperCase()}</button>
                         ))}
                         <button
                           className="disp-btn"

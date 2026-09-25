@@ -166,20 +166,20 @@ export default async function TeamsComparisonPage() {
               <tbody>
                 <tr style={{ background: 'rgba(42, 74, 138, 0.06)' }}>
                   <Td bold>DialerSeat</Td>
-                  <Td>{DIALERSEAT.team.minimum}</Td>
-                  <Td>{DIALERSEAT.team.addingASeat}</Td>
-                  <Td bold>{DIALERSEAT.team.fiveSeats}</Td>
+                  <Td>{tr(DIALERSEAT.team.minimum)}</Td>
+                  <Td>{tr(DIALERSEAT.team.addingASeat)}</Td>
+                  <Td bold>{tr(DIALERSEAT.team.fiveSeats)}</Td>
                 </tr>
                 {rows.map(c => (
                   <tr key={c.slug}>
                     <Td bold>
                       <Link href={`/vs/${c.slug}`} style={{ color: ACCENT, textDecoration: 'none' }}>
-                        {c.name}
+                        {tr(c.name)}
                       </Link>
                     </Td>
-                    <Td>{c.team.minimum}</Td>
-                    <Td>{c.team.addingASeat}</Td>
-                    <Td>{c.team.fiveSeats}</Td>
+                    <Td>{tr(c.team.minimum)}</Td>
+                    <Td>{tr(c.team.addingASeat)}</Td>
+                    <Td>{tr(c.team.fiveSeats)}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -213,7 +213,7 @@ export default async function TeamsComparisonPage() {
                     {title as string}
                   </div>
                   <ul style={{ margin: '12px 0 0', paddingLeft: 17, fontSize: 13.5, lineHeight: 1.75 }}>
-                    {(items as readonly string[]).map(t => <li key={t} style={{ marginBottom: 8 }}>{t}</li>)}
+                    {(items as readonly string[]).map(t => <li key={t} style={{ marginBottom: 8 }}>{tr(t)}</li>)}
                   </ul>
                 </div>
               ))}
@@ -230,7 +230,7 @@ export default async function TeamsComparisonPage() {
             <p style={{ fontSize: 14, lineHeight: 1.75, color: MUTED, marginTop: 10 }}>
               {tr("If any of these is a requirement, one of the enterprise platforms above is the better buy and we would rather you found that out here than after paying us.")}</p>
             <ul style={{ margin: '10px 0 0', paddingLeft: 17, fontSize: 14, lineHeight: 1.8 }}>
-              {FACTS.teams.notYet.map(l => <li key={l} style={{ marginBottom: 5 }}>{l}</li>)}
+              {FACTS.teams.notYet.map(l => <li key={l} style={{ marginBottom: 5 }}>{tr(l)}</li>)}
             </ul>
           </section>
 
@@ -241,7 +241,7 @@ export default async function TeamsComparisonPage() {
             <p style={{ fontSize: 15, lineHeight: 1.8, color: MUTED, marginTop: 12, maxWidth: 780 }}>
               {tr("At $95-$250 per seat per month, an offshore floor costs more in software than in wages, which is why most teams never build one. At $35 per week the arithmetic changes.")}</p>
             <ul style={{ margin: '16px 0 0', paddingLeft: 17, fontSize: 14.5, lineHeight: 1.85, maxWidth: 800 }}>
-              {FACTS.teams.offshore.map(l => <li key={l} style={{ marginBottom: 7 }}>{l}</li>)}
+              {FACTS.teams.offshore.map(l => <li key={l} style={{ marginBottom: 7 }}>{tr(l)}</li>)}
             </ul>
             <p style={{ fontSize: 14, lineHeight: 1.8, color: MUTED, marginTop: 16, maxWidth: 800 }}>
               {tr("More detail:")}{' '}

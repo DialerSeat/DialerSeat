@@ -278,8 +278,8 @@ function TermList({ terms }: { terms: Term[] }) {
     <div className="guts-grid-2">
       {terms.map(t => (
         <div className="guts-panel" key={t.term}>
-          <h3>{t.term}</h3>
-          <p>{t.def}</p>
+          <h3>{tr(t.term)}</h3>
+          <p>{tr(t.def)}</p>
           {t.see && (
             <p>
               <Link href={t.see.href}>{tr(t.see.label)} →</Link>

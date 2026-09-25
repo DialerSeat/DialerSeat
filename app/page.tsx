@@ -42,7 +42,7 @@ function CompareCell({ value, ours = false }: { value: string; ours?: boolean })
         textAlign: 'center',
       }}
     >
-      {value}
+      {t(value)}
     </div>
   )
 }
@@ -541,7 +541,7 @@ export default async function Home({ searchParams }: PageProps) {
                     color: '#4a9eff',
                     letterSpacing: '-1px',
                     marginBottom: '4px',
-                  }}>{stat.number}</div>
+                  }}>{t(stat.number)}</div>
                   <div className="ds-stats-label" style={{
                     fontSize: '9px',
                     letterSpacing: '2px',
@@ -771,7 +771,7 @@ export default async function Home({ searchParams }: PageProps) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-              }}>{step.step}</div>
+              }}>{t(step.step)}</div>
               <div style={{ flexShrink: 0, color: '#2a4a8a', lineHeight: 0 }} aria-hidden="true">
                 <step.icon size={24} strokeWidth={1.75} />
               </div>
@@ -973,7 +973,7 @@ export default async function Home({ searchParams }: PageProps) {
                   }}>
                     <span style={{ fontSize: '10px', color: '#4a9eff' }}>✓</span>
                   </div>
-                  <span style={{ fontSize: '13px', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.75)' }}>{feature}</span>
+                  <span style={{ fontSize: '13px', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.75)' }}>{t(feature)}</span>
                 </div>
               ))}
             </div>
@@ -1073,7 +1073,7 @@ export default async function Home({ searchParams }: PageProps) {
                     letterSpacing: '0.5px',
                     color: '#5a5e6a',
                     fontWeight: i === 0 ? 'bold' : 'normal',
-                  }}>{feature}</span>
+                  }}>{t(feature)}</span>
                 </div>
               ))}
             </div>

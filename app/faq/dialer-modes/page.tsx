@@ -305,7 +305,7 @@ export default async function DialerModesTldrPage() {
               <span className="dmt-pill">{t(m.label)}</span>
               <h2 className="dmt-tagline">{t(m.tagline)}</h2>
               <p className="dmt-body">{t(m.body)}</p>
-              <p className="dmt-best">{m.best}</p>
+              <p className="dmt-best">{t(m.best)}</p>
               <Link href={m.href} className="dmt-link">{t("FULL BREAKDOWN ↗")}</Link>
             </div>
           ))}

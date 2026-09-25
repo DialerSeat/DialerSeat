@@ -22,7 +22,7 @@ export default function ComingSoon({ title, description, icon = '🚧' }: Coming
         maxWidth: '480px',
         width: '100%',
       }}>
-        <div style={{ fontSize: '64px', marginBottom: '24px' }}>{icon}</div>
+        <div style={{ fontSize: '64px', marginBottom: '24px' }}>{t(icon)}</div>
 
         <div style={{
           display: 'inline-block',

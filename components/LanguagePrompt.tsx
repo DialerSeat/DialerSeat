@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { useUser } from '@clerk/nextjs'
 import { Globe } from 'lucide-react'
 import { useLocale } from '@/lib/i18n/client'
-import { PROMPT_COOKIE, localeInfo, type Locale } from '@/lib/i18n/locales'
+import { PROMPT_COOKIE, isEnabledLocale, localeInfo, type Locale } from '@/lib/i18n/locales'
 
 // ── ASK ONCE, IN THEIR LANGUAGE ─────────────────────────────────────
 // The server decides whether to ask (layout.tsx: no language chosen yet, never
@@ -38,8 +39,14 @@ export default function LanguagePrompt({ suggested }: { suggested: Locale | null
   const router = useRouter()
   const { locale, setLocale } = useLocale()
   const [dismissed, setDismissed] = useState(false)
+  const { isLoaded: userLoaded, user } = useUser()
 
   if (!suggested || suggested === 'en' || dismissed || locale !== 'en') return null
+  // The language belongs to the account. Someone signed in who has already
+  // chosen, English included, answered this on another device: never ask
+  // again. Wait for Clerk rather than flash the question and withdraw it.
+  if (!userLoaded) return null
+  if (user && isEnabledLocale(user.unsafeMetadata?.locale)) return null
   // Never over the dialer: a modal there could sit on top of a live call.
   if (pathname?.startsWith('/dashboard/dialer')) return null
 

@@ -27,13 +27,19 @@ const isClient = (f) => {
   }
   return clientFile.get(f)
 }
-const clientKeys = Object.keys(catalog).filter((k) => catalog[k].some(isClient))
+// Shared data in lib/ (competitor facts, dispositions, product facts) is not a
+// 'use client' file, but client components render it, so it ships too. So do
+// dictionary entries the catalog no longer lists: the live wording of a page
+// someone is rewriting, kept translated until the rewrite ships.
+const isShared = (f) => f.startsWith('lib/')
+const clientKeys = Object.keys(catalog).filter((k) => catalog[k].some((f) => isClient(f) || isShared(f)))
 
 fs.mkdirSync(path.join(DIR, 'dictionaries', 'client'), { recursive: true })
 for (const file of fs.readdirSync(path.join(DIR, 'dictionaries')).filter((f) => f.endsWith('.json'))) {
   const dict = JSON.parse(fs.readFileSync(path.join(DIR, 'dictionaries', file), 'utf8'))
   const sub = {}
   for (const k of clientKeys) if (dict[k]) sub[k] = dict[k]
+  for (const k of Object.keys(dict)) if (!(k in catalog)) sub[k] = dict[k]
   fs.writeFileSync(path.join(DIR, 'dictionaries', 'client', file), JSON.stringify(sub) + '\n')
   console.log(`${file}: ${Object.keys(sub).length} client strings`)
 }

@@ -348,12 +348,12 @@ export default function VsHookedCrmView() {
                     <td className="ds-cell">
                       {f.dialerseat === true ? <span className="yes">✓</span>
                         : f.dialerseat === false ? <span className="no">✕</span>
-                        : <span style={{ color: T.text, fontSize: 12 }}>{f.dialerseat}</span>}
+                        : <span style={{ color: T.text, fontSize: 12 }}>{t(f.dialerseat)}</span>}
                     </td>
                     <td>
                       {f.competitor === true ? <span className="yes">✓</span>
                         : f.competitor === false ? <span className="no">✕</span>
-                        : <span className="partial">{f.competitor}</span>}
+                        : <span className="partial">{t(f.competitor)}</span>}
                     </td>
                   </tr>
                 ))}

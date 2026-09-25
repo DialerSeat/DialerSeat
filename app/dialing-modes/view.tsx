@@ -268,13 +268,13 @@ const ModeRow = ({ mode, slug, modeColor, how, speed, abandons, bestFor }: {
         }}
         title={t("Read the full {mode} deep dive", { mode: mode.toLowerCase() })}
       >
-        {mode}
+        {t(mode)}
       </Link>
     </td>
-    <td style={td}>{how}</td>
-    <td style={{ ...td, fontFamily: 'monospace', fontSize: 11 }}>{speed}</td>
-    <td style={{ ...td, fontFamily: 'monospace', fontSize: 11 }}>{abandons}</td>
-    <td style={{ ...td, fontSize: 12 }}>{bestFor}</td>
+    <td style={td}>{t(how)}</td>
+    <td style={{ ...td, fontFamily: 'monospace', fontSize: 11 }}>{t(speed)}</td>
+    <td style={{ ...td, fontFamily: 'monospace', fontSize: 11 }}>{t(abandons)}</td>
+    <td style={{ ...td, fontSize: 12 }}>{t(bestFor)}</td>
   </tr>
 )
 
@@ -308,7 +308,7 @@ const ModeCard = ({ label, slug, color, body, bestFor }: {
       color: T.muted,
       margin: '0 0 14px 0',
     }}>
-      <strong style={{ color: T.text }}>{t("Best for:")}</strong> {bestFor}
+      <strong style={{ color: T.text }}>{t("Best for:")}</strong> {t(bestFor)}
     </p>
     <Link
       href={`/dialing-modes/${slug}`}

@@ -167,7 +167,7 @@ function StatusCell({ value }: { value: Cell }) {
   if (lower.includes('add-on') || lower.includes('partial') || lower.includes('variable') || lower.includes('inconsistent') || lower.includes('limited') || lower.includes('only') || lower.includes('tier') || lower.includes('premium') || lower.includes('misses') || lower.includes('custom')) {
     color = T.amber
   }
-  return <span style={{ color, fontSize: 11, fontStyle: lower.includes('add-on') || lower.includes('partial') ? 'italic' : 'normal', letterSpacing: 0.3 }}>{value}</span>
+  return <span style={{ color, fontSize: 11, fontStyle: lower.includes('add-on') || lower.includes('partial') ? 'italic' : 'normal', letterSpacing: 0.3 }}>{t(value)}</span>
 }
 
 /* ── SECTION ICONS ─────────────────────────────────────────────────────── */
@@ -612,7 +612,7 @@ export default function VsEveryoneView() {
                 <div className="vse-failures">
                   {INDUSTRY_FAILURES.map((f) => (
                     <div key={f.num} className="vse-failure">
-                      <div className="num">{f.num}</div>
+                      <div className="num">{t(f.num)}</div>
                       <div>
                         <h3>{t(f.title)}</h3>
                         <p>{t(f.body)}</p>

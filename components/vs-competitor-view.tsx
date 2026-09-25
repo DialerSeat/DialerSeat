@@ -34,7 +34,7 @@ function Cell({ value, ours }: { value: true | false | string; ours?: boolean })
   if (value === false) return <span className="guts-no">✕</span>
   return (
     <span className={ours ? undefined : 'guts-partial'} style={ours ? { fontSize: 12 } : undefined}>
-      {value}
+      {t(value)}
     </span>
   )
 }
@@ -104,7 +104,7 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
                 <tbody>
                   {matrix.rows.map((f, i) => (
                     <tr key={i}>
-                      <td>{f.feature}</td>
+                      <td>{t(f.feature)}</td>
                       <td className="ds-cell"><Cell value={f.dialerseat} ours /></td>
                       <td><Cell value={f.competitor} /></td>
                     </tr>
@@ -128,37 +128,37 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
             <div className="guts-panel">
               <h3>{t("Pros of {name}", { name: c.name })}</h3>
               <ul className="guts-list good">
-                {c.wins.map((w) => <li key={w}>{w}</li>)}
+                {c.wins.map((w) => <li key={w}>{t(w)}</li>)}
               </ul>
             </div>
             <div className="guts-panel">
               <h3>{t("Cons of {name}", { name: c.name })}</h3>
               <ul className="guts-list warn">
-                {c.friction.map((f) => <li key={f}>{f}</li>)}
+                {c.friction.map((f) => <li key={f}>{t(f)}</li>)}
               </ul>
             </div>
           </div>
           <div className="guts-callout">
             <h3>{t("Who should pick {name}", { name: c.name })}</h3>
-            <p>{c.bestFor}</p>
+            <p>{t(c.bestFor)}</p>
             <p>
               {t("If that describes you, take {name}. It is a real product with real strengths and no comparison page should talk you out of the right tool.", { name: c.name })}</p>
           </div>
         </GutsSection>
 
         <GutsSection icon="check" title={t("Who should pick DialerSeat")}>
-          <p>{DIALERSEAT.bestFor}</p>
+          <p>{t(DIALERSEAT.bestFor)}</p>
           <div className="guts-grid-2">
             <div className="guts-panel">
               <h3>{t("Pros of DialerSeat")}</h3>
               <ul className="guts-list good">
-                {DIALERSEAT.wins.map((w) => <li key={w}>{w}</li>)}
+                {DIALERSEAT.wins.map((w) => <li key={w}>{t(w)}</li>)}
               </ul>
             </div>
             <div className="guts-panel">
               <h3>{t("Cons of DialerSeat")}</h3>
               <ul className="guts-list warn">
-                {DIALERSEAT.friction.map((f) => <li key={f}>{f}</li>)}
+                {DIALERSEAT.friction.map((f) => <li key={f}>{t(f)}</li>)}
               </ul>
             </div>
           </div>
@@ -203,7 +203,7 @@ function FactRow({ label, value }: { label: string; value: string }) {
         .vsfact-value { font-size: 13.5px; line-height: 1.6; color: #1a1c24; }
       `}</style>
       <div className="vsfact-label">{t(label)}</div>
-      <div className="vsfact-value">{value}</div>
+      <div className="vsfact-value">{t(value)}</div>
     </div>
   )
 }

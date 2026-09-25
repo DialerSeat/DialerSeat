@@ -110,9 +110,9 @@ function Section({ title, lead, items }: { title: string; lead: string; items: r
   return (
     <section style={{ marginTop: 46 }}>
       <h2 style={{ fontSize: 25, fontWeight: 'bold', letterSpacing: -0.4, margin: 0 }}>{tr(title)}</h2>
-      <p style={{ fontSize: 15, lineHeight: 1.8, color: MUTED, marginTop: 10, maxWidth: 780 }}>{lead}</p>
+      <p style={{ fontSize: 15, lineHeight: 1.8, color: MUTED, marginTop: 10, maxWidth: 780 }}>{tr(lead)}</p>
       <ul style={{ margin: '16px 0 0', paddingLeft: 18, fontSize: 14.5, lineHeight: 1.85, maxWidth: 830 }}>
-        {items.map(t => <li key={t} style={{ marginBottom: 8 }}>{t}</li>)}
+        {items.map(t => <li key={t} style={{ marginBottom: 8 }}>{tr(t)}</li>)}
       </ul>
     </section>
   )
@@ -179,7 +179,7 @@ export default async function TeamsHowItWorksPage() {
               <Link href="/vs/five9" style={{ color: ACCENT }}>{tr("Five9")}</Link> {tr("and")}{' '}
               <Link href="/vs/convoso" style={{ color: ACCENT }}>{tr("Convoso")}</Link> {tr("comparisons.")}</p>
             <ul style={{ margin: '12px 0 0', paddingLeft: 18, fontSize: 14.5, lineHeight: 1.85 }}>
-              {FACTS.teams.notYet.map(l => <li key={l} style={{ marginBottom: 6 }}>{l}</li>)}
+              {FACTS.teams.notYet.map(l => <li key={l} style={{ marginBottom: 6 }}>{tr(l)}</li>)}
             </ul>
           </section>
 

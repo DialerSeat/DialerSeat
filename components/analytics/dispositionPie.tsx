@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n/client'
 // =============================================================================
 // THE DISPOSITION PIE, IN ONE PLACE
 // =============================================================================
@@ -116,7 +117,7 @@ export function renderDispositionLabels(props: {
       // here — recharts passes nameKey to its own built-in label renderer,
       // and this replaces that renderer entirely. The teams page set nameKey
       // and got raw stored values on screen for exactly that reason.
-      name: d.label || d.disposition,
+      name: t(d.label || d.disposition),
       value,
       fraction,
       color: DISPOSITION_COLORS[d.disposition] || '#bbb',

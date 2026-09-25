@@ -269,7 +269,7 @@ export default function SuggestionModal({
                 ×
               </button>
             </div>
-            <p className="sg-intro">{intro}</p>
+            <p className="sg-intro">{tr(intro)}</p>
 
             <form className="sg-body" onSubmit={submit}>
               <span className="sg-label">{tr("WHAT IS THIS?")}</span>

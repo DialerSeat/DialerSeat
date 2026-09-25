@@ -106,7 +106,7 @@ const DISPOSITIONS = [
 /** Upper case for this page's terminal styling, but from the canonical label
  *  rather than the raw value — so it reads CALL BACK and NO ANSWER, never
  *  APPOINTMENT or NO_ANSWER. */
-const dispText = (stored: string | null | undefined) => labelFor(stored).toUpperCase()
+const dispText = (stored: string | null | undefined) => tr(labelFor(stored)).toUpperCase()
 
 const T = {
   bg: 'var(--brand-page-bg)',

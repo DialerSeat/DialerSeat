@@ -554,7 +554,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
       {/* ── HERO ── */}
       <section className="hub-hero">
         <h1>
-          <span className="l1">{props.headlineTop}</span>
+          <span className="l1">{t(props.headlineTop)}</span>
           <span className="l2">
             <Underlined text={props.headlineBottom} word={props.underline} />
           </span>
@@ -620,7 +620,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
               <span className="hub-nav-caret" aria-hidden>▾</span>
             </button>
             <div className="hub-nav-body">
-              <div className="hub-divider">{props.navDivider}</div>
+              <div className="hub-divider">{t(props.navDivider)}</div>
               {props.navItems.map((item) => (
                 <Link key={item.href} href={item.href} className="hub-row">
                   <Chevron className="hub-chev-left" />

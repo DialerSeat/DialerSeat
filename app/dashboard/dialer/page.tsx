@@ -15,6 +15,8 @@ import { recordAgentLegOutcome, needsReregister, type AgentLegHistory } from '@/
 import { reachedAHuman as didReachAHuman, shouldRedial, shouldResetAttemptCount, agentLegFailed } from '@/lib/redialDecision'
 import { PREDICTIVE_MIN_LINES, PREDICTIVE_MAX_LINES } from '@/lib/predictive/pacing'
 import SellerIdentityDialog from '@/components/SellerIdentityDialog'
+import { t as tr } from '@/lib/i18n/client'
+import { msg as msgText } from '@/lib/i18n/msg'
 
 /**
  * Whole seconds since a start timestamp, 0 when never started.
@@ -337,10 +339,10 @@ function agentSafeLine(line: string): string | null {
 // Watch Admin → Numbers → SURCHARGE while this runs. If abandonment approaches
 // 20%, drop the ceiling to 1 (progressive parity) rather than debating it.
 const MODE_OPTIONS: { value: DialerMode; label: string; color: string }[] = [
-  { value: 'preview', label: 'PREVIEW', color: '#5a5e6a' },
-  { value: 'power', label: 'POWER', color: '#2a4a8a' },
-  { value: 'progressive', label: 'PROGRESSIVE', color: '#1a6a1a' },
-  { value: 'predictive', label: 'PREDICTIVE', color: '#7a3a9a' },
+  { value: 'preview', label: msgText("PREVIEW"), color: '#5a5e6a' },
+  { value: 'power', label: msgText("POWER"), color: '#2a4a8a' },
+  { value: 'progressive', label: msgText("PROGRESSIVE"), color: '#1a6a1a' },
+  { value: 'predictive', label: msgText("PREDICTIVE"), color: '#7a3a9a' },
 ]
 
 const HEARTBEAT_INTERVAL_MS = 5_000
@@ -1593,10 +1595,10 @@ function DialerPageInner() {
           setStatus('preview_ready')
           setNoLeads(false)
         } else {
-          setAmdActivity(prev => [`DIAL LEAD FAILED: lead not found or not yours`, ...prev].slice(0, 5))
+          setAmdActivity(prev => [msgText("DIAL LEAD FAILED: lead not found or not yours"), ...prev].slice(0, 5))
         }
       } catch {
-        setAmdActivity(prev => [`DIAL LEAD FAILED: network error`, ...prev].slice(0, 5))
+        setAmdActivity(prev => [msgText("DIAL LEAD FAILED: network error"), ...prev].slice(0, 5))
       }
     })()
   }, [user, searchParams, status])
@@ -1807,7 +1809,7 @@ function DialerPageInner() {
           console.warn(
             '[sip] this browser no longer supports rtcpMuxPolicy "negotiate". If calls fail with ' +
             '"RTCP-MUX is not enabled when it is required", Telnyx must be configured to offer ' +
-            'rtcp-mux for WebRTC endpoints, it cannot be worked around from the browser.'
+            msgText("rtcp-mux for WebRTC endpoints, it cannot be worked around from the browser.")
           )
         }
 
@@ -1962,7 +1964,7 @@ function DialerPageInner() {
             if (cancelled) return
             markSip(false)
             setAgentLegError(
-              'DIALER DISCONNECTED, reconnecting. Calls cannot connect until this clears.'
+              tr("DIALER DISCONNECTED, reconnecting. Calls cannot connect until this clears.")
             )
             console.error(`[sip #${sipInstanceId}] transport disconnected:`, err?.message || err)
             scheduleReconnect()
@@ -2034,7 +2036,7 @@ function DialerPageInner() {
                   // can be told apart from one this page dropped.
                   if (!isSeat && !agentLegsEndedByUsRef.current.has(invitation)) {
                     reportAgentLegEnded({
-                      why: 'ended by the far end',
+                      why: msgText("ended by the far end"),
                       leadSid: activeCallSidRef.current,
                       byUs: false,
                       immediate: false,
@@ -2079,17 +2081,17 @@ function DialerPageInner() {
               // logged above, which is where it is diagnosed from.
               setAgentLegError(
                 micBlocked
-                  ? 'MICROPHONE BLOCKED: allow mic access for this site, then reload. Calls cannot connect until then.'
-                  : 'COULD NOT CONNECT THIS CALL. Reconnecting your line — nothing you need to do.'
+                  ? tr("MICROPHONE BLOCKED: allow mic access for this site, then reload. Calls cannot connect until then.")
+                  : tr("COULD NOT CONNECT THIS CALL. Reconnecting your line — nothing you need to do.")
               )
               if (micBlocked) {
                 console.error(
                   '[sip] ^ that is a MICROPHONE problem, not a SIP problem. The browser refused ' +
                   'or could not open the mic, so no answer could be built and this call has no ' +
-                  'audio. Allow the microphone for this site and reload.'
+                  msgText("audio. Allow the microphone for this site and reload.")
                 )
                 setAmdActivity(prev =>
-                  ['⚠ MICROPHONE BLOCKED: allow mic access, no audio until then', ...prev].slice(0, 5)
+                  [msgText("⚠ MICROPHONE BLOCKED: allow mic access, no audio until then"), ...prev].slice(0, 5)
                 )
               }
             }
@@ -2371,7 +2373,7 @@ function DialerPageInner() {
               console.error(
                 `[sip] ICE ${state}: no media path to Telnyx, so this call has no audio. ` +
                 `STUN alone did not work from this network; a TURN server is needed ` +
-                `(TELNYX_TURN_URLS / TELNYX_TURN_USERNAME / TELNYX_TURN_CREDENTIAL).`
+                msgText("(TELNYX_TURN_URLS / TELNYX_TURN_USERNAME / TELNYX_TURN_CREDENTIAL).")
               )
             } else {
               console.log(`[sip] ICE ${state}`)
@@ -2684,7 +2686,7 @@ function DialerPageInner() {
               startHangupPolling(ac.call_control_id)
             }
             setAmdActivity(prev => {
-              const line = 'LINE CONNECTED, AWAITING AMD VERDICT'
+              const line = msgText("LINE CONNECTED, AWAITING AMD VERDICT")
               return prev[0] === line ? prev : [line, ...prev].slice(0, 5)
             })
           } else if (!ac?.call_id && statusRef.current === 'connected' && !showDisposition) {
@@ -2699,10 +2701,10 @@ function DialerPageInner() {
             //
             // Same call progressive makes, at the same point in the flow.
             if (swCallRef.current) {
-              releaseAgentLeg(swCallRef.current, { why: 'server shows no active call' })
+              releaseAgentLeg(swCallRef.current, { why: msgText("server shows no active call") })
               swCallRef.current = null
             }
-            disarmDialing('server shows no active call')
+            disarmDialing(msgText("server shows no active call"))
 
             // Released — machine verdict, or the call ended. Back to the queue
             // exactly as it was.
@@ -2724,7 +2726,7 @@ function DialerPageInner() {
           const seatState = summary?.seat ?? data.predictive_seat ?? null
           if (seatState && seatState !== 'live') {
             const line = seatState === 'placing'
-              ? 'CONNECTING YOUR LINE'
+              ? msgText("CONNECTING YOUR LINE")
               : `YOUR LINE DID NOT CONNECT${summary?.reason ? `, ${String(summary.reason).toUpperCase()}` : ''}`
             setAmdActivity(prev => (prev[0] === line ? prev : [line, ...prev].slice(0, 5)))
           }
@@ -2810,7 +2812,7 @@ function DialerPageInner() {
             // leave them wondering why LINES 3 dials one.
             const held = summary.lines && summary.lines.limitedBy !== 'cap'
               ? summary.lines.limitedBy === 'no_seller_message'
-                ? `HELD TO 1 LINE: ADD YOUR BUSINESS NAME AND CALLBACK NUMBER IN SETTINGS`
+                ? msgText("HELD TO 1 LINE: ADD YOUR BUSINESS NAME AND CALLBACK NUMBER IN SETTINGS")
                 : summary.lines.limitedBy === 'degraded'
                   ? `HELD TO 1 LINE: 30-DAY ABANDON RATE ${summary.lines.measuredPct}%`
                   : `HELD TO ${summary.lines.count} LINE${summary.lines.count === 1 ? '' : 'S'} BY THE 3% ABANDON RULE`
@@ -2827,7 +2829,7 @@ function DialerPageInner() {
             })
           } else if (summary.degraded) {
             setAmdActivity(prev => [
-              `⚠ AUTO-DEGRADED: abandon rate trigger`,
+              msgText("⚠ AUTO-DEGRADED: abandon rate trigger"),
               ...prev,
             ].slice(0, 5))
           }
@@ -2968,7 +2970,7 @@ function DialerPageInner() {
     const handleUnload = () => {
       // Disarm immediately and tear down SIP so a refresh/close can't leave a
       // registered endpoint that auto-answers a ghost call after reload.
-      disarmDialing('page closed', { force: true })
+      disarmDialing(msgText("page closed"), { force: true })
       releasePredictiveSeat()
       try { registererRef.current?.unregister?.() } catch {}
       try { swClientRef.current?.stop?.() } catch {}
@@ -3111,7 +3113,7 @@ function DialerPageInner() {
       // Going offline must stop everything immediately: disarm dialing so no
       // INVITE can ever connect, cancel every pending auto-chain dial, and hang
       // up any call currently attached. This is what makes "unavailable" mean it.
-      disarmDialing('went offline', { force: true })
+      disarmDialing(msgText("went offline"), { force: true })
       // Predictive's seat too. Lines still ringing are not cut (the server
       // never sweeps them); a person answering one now hears the abandon
       // message rather than an agent who has left.
@@ -3489,7 +3491,7 @@ function DialerPageInner() {
     // waiting on the lead's leg and the fastest teardown is the right one.
     if (swCallRef.current) {
       if (reason === 'immediate') {
-        releaseAgentLeg(swCallRef.current, { why: 'hang up (immediate)', immediate: true })
+        releaseAgentLeg(swCallRef.current, { why: msgText("hang up (immediate)"), immediate: true })
         swCallRef.current = null
       } else {
         // ── FREE THE AGENT WITHOUT LOSING THE HANDLE ────────────────────
@@ -3792,7 +3794,7 @@ function DialerPageInner() {
         } catch {
           console.error(
             `[queue] pagination failed for campaign ${campaignId} after ${all.length} leads, ` +
-            `the panel is SHORT of the full list`
+            msgText("the panel is SHORT of the full list")
           )
           break // return what we have rather than lose everything
         }
@@ -4172,7 +4174,7 @@ function DialerPageInner() {
       lead_id: previewLead.id,
       campaign_id: previewLead.campaign_id,
       user_id: user?.id,
-      disposition: 'SKIPPED',
+      disposition: msgText("SKIPPED"),
       duration: 0,
       source: 'preview_skip',
     })
@@ -4224,7 +4226,7 @@ function DialerPageInner() {
         lead_id: lead.id,
         campaign_id: lead.campaign_id,
         user_id: user?.id,
-        disposition: 'SKIPPED',
+        disposition: msgText("SKIPPED"),
         duration: 0,
       })
       setCurrentLead(null)
@@ -4266,7 +4268,7 @@ function DialerPageInner() {
 
     setAmdActivity(prev => [
       `DIALING ${lead.first_name || ''} ${lead.last_name || ''}, ${lead.phone}`.trim(),
-      `AMD ENABLED: analyzing pickup`,
+      msgText("AMD ENABLED: analyzing pickup"),
       ...prev,
     ].slice(0, 5))
 
@@ -4294,7 +4296,7 @@ function DialerPageInner() {
               body: JSON.stringify({ sid: data.callSid }),
             })
           } catch {}
-          disarmDialing('dial returned after stop', { force: true })
+          disarmDialing(msgText("dial returned after stop"), { force: true })
           setStatus('idle')
           return
         }
@@ -4322,7 +4324,7 @@ function DialerPageInner() {
           // The server's own reason, not a generic one — "Invalid phone
           // number — 7 digits" is actionable where "outside calling window"
           // sends the agent to wait for a window that will never help.
-          showQueueOutcome(lead.id, data.detail || 'Outside calling window…')
+          showQueueOutcome(lead.id, data.detail || msgText("Outside calling window…"))
           setStatus('idle')
           setCurrentLead(null)
           // Paced like every other advance. No call was placed here, but the
@@ -4343,12 +4345,12 @@ function DialerPageInner() {
         // from /api/calls/outbound and names the carrier, SIP configuration
         // and credentials by design — useful in a log, not on a floor. The
         // console.error above keeps every word of it.
-        showQueueOutcome(lead.id, 'Could not place this call…')
+        showQueueOutcome(lead.id, msgText("Could not place this call…"))
         await disposeLead({
           lead_id: lead.id,
           campaign_id: lead.campaign_id,
           user_id: user?.id,
-          disposition: 'SKIPPED',
+          disposition: msgText("SKIPPED"),
           duration: 0,
         })
         setStatus('idle')
@@ -4357,7 +4359,7 @@ function DialerPageInner() {
       }
     } catch (error) {
       console.error('Call error:', error)
-      showQueueOutcome(lead.id, 'Call failed…')
+      showQueueOutcome(lead.id, msgText("Call failed…"))
       setStatus('idle')
       setCurrentLead(null)
     }
@@ -4436,12 +4438,12 @@ function DialerPageInner() {
           activePollRef.current = null
           setActiveCallSid(null)
           if (swCallRef.current) {
-            releaseAgentLeg(swCallRef.current, { why: 'call over (hangup poll)' })
+            releaseAgentLeg(swCallRef.current, { why: msgText("call over (hangup poll)") })
             swCallRef.current = null
           }
           // Call is over. Disarm so nothing can bridge audio to us during wrap-up
           // / the disposition sheet. An auto-chained next dial re-arms itself.
-          disarmDialing('call over (hangup poll)')
+          disarmDialing(msgText("call over (hangup poll)"))
 
           // ── NOW IT HAS BEEN TRIED ──────────────────────────────────────
           // This is the one place every ending converges: rang out, skipped,
@@ -4531,7 +4533,7 @@ function DialerPageInner() {
           if (nobodyReached) {
             setAmdActivity(prev => [
               legFailed
-                ? 'CALL DID NOT REACH YOUR HEADSET'
+                ? msgText("CALL DID NOT REACH YOUR HEADSET")
                 : `VOICEMAIL FILTERED LATE, ${d.amd_result}`,
               ...prev,
             ].slice(0, 5))
@@ -4625,7 +4627,7 @@ function DialerPageInner() {
             })) {
               leadAttemptCountRef.current = attemptsSoFar + 1
               setActiveCallSid(null)
-              disarmDialing('voicemail, redialing')
+              disarmDialing(msgText("voicemail, redialing"))
               setStatus('idle')
               // Same lead, same position. No rotation until attempts are gone.
               redialQueuedRef.current = true
@@ -4643,14 +4645,14 @@ function DialerPageInner() {
             setAmdActivity(prev =>
               [`VOICEMAIL FILTERED, ${statusData.amd_result}`, ...prev].slice(0, 5)
             )
-            showQueueOutcome(ld?.id, 'Voicemail detected…')
+            showQueueOutcome(ld?.id, msgText("Voicemail detected…"))
             // AMD skip writes NO disposition, so it never reaches
             // disposeLead — and therefore never rotated the lead out of the
             // way. The next dial 600ms later would resend the same order and
             // get the same lead back. Rotate it explicitly.
             markLeadDialedLocally(ld?.id)
             setActiveCallSid(null)
-            disarmDialing('voicemail, next lead') // machine — drop the browser leg; next dial re-arms
+            disarmDialing(msgText("voicemail, next lead")) // machine — drop the browser leg; next dial re-arms
             setStatus('idle')
             setCurrentLead(null)
             leadAttemptCountRef.current = 1; redialQueuedRef.current = false // next lead starts its own count
@@ -4660,7 +4662,7 @@ function DialerPageInner() {
 
           if (isUndecided(statusData.amd_result)) {
             setAmdActivity(prev =>
-              ['⚠ AMD COULD NOT TELL: LISTEN AND SKIP IF IT IS A MACHINE', ...prev].slice(0, 5)
+              [msgText("⚠ AMD COULD NOT TELL: LISTEN AND SKIP IF IT IS A MACHINE"), ...prev].slice(0, 5)
             )
           }
 
@@ -4748,7 +4750,7 @@ function DialerPageInner() {
               // directly instead of dispositioning + fetching a new one.
               leadAttemptCountRef.current = attemptsSoFar + 1
               setActiveCallSid(null)
-              disarmDialing('no answer, redialing')
+              disarmDialing(msgText("no answer, redialing"))
               setStatus('idle')
               // Same lead object, same id — currentLead/currentLeadRef
               // stay pointed at it, no fetchNextLead involved.
@@ -4771,11 +4773,11 @@ function DialerPageInner() {
               // server-side AMD handler follows in
               // app/api/calls/events/route.ts. The agent is never asked to
               // tag a call they never actually had.
-              showQueueOutcome(ld.id, 'Voicemail detected…')
+              showQueueOutcome(ld.id, msgText("Voicemail detected…"))
             } else {
               showQueueOutcome(
                 ld.id,
-                statusData.status === 'busy' ? 'Line busy…' : 'Sorry, couldn\u2019t answer…'
+                statusData.status === 'busy' ? msgText("Line busy…") : msgText("Sorry, couldn’t answer…")
               )
               await disposeLead({
                 lead_id: ld.id,
@@ -4801,7 +4803,7 @@ function DialerPageInner() {
           markLeadDialedLocally(ld?.id)
           setStatus('idle')
           setCurrentLead(null)
-          disarmDialing('no answer or busy, next lead') // call ended without a human; next dial re-arms
+          disarmDialing(msgText("no answer or busy, next lead")) // call ended without a human; next dial re-arms
           leadAttemptCountRef.current = 1; redialQueuedRef.current = false // moving to a new lead next — reset for it
 
           // 800ms here was buying time for the rotation above to settle into
@@ -4836,7 +4838,7 @@ function DialerPageInner() {
         const attemptsSoFar = leadAttemptCountRef.current
 
         setActiveCallSid(null)
-        disarmDialing('call status unavailable')
+        disarmDialing(msgText("call status unavailable"))
         setStatus('idle')
 
         // ── UNKNOWN OUTCOME, SO DO NOT GAMBLE ON A PERSON ────────────────
@@ -4868,7 +4870,7 @@ function DialerPageInner() {
           return
         }
 
-        setAmdActivity(prev => ['⚠ CALL STATUS UNAVAILABLE, MOVING ON', ...prev].slice(0, 5))
+        setAmdActivity(prev => [msgText("⚠ CALL STATUS UNAVAILABLE, MOVING ON"), ...prev].slice(0, 5))
         markLeadDialedLocally(ld?.id)
         setCurrentLead(null)
         leadAttemptCountRef.current = 1; redialQueuedRef.current = false
@@ -5040,9 +5042,9 @@ function DialerPageInner() {
     // reach.
     if (!isSipReachable()) {
       setAgentLegError(
-        'NOT CONNECTED TO THE CALL SERVER, reconnecting. No leads will be dialled until this clears.'
+        tr("NOT CONNECTED TO THE CALL SERVER, reconnecting. No leads will be dialled until this clears.")
       )
-      setAmdActivity(prev => ['⚠ DIAL BLOCKED: phone line not connected', ...prev].slice(0, 5))
+      setAmdActivity(prev => [msgText("⚠ DIAL BLOCKED: phone line not connected"), ...prev].slice(0, 5))
       return
     }
 
@@ -5066,10 +5068,10 @@ function DialerPageInner() {
       // fix it — which for this fault means reloading at random.
       setAgentLegError(
         'CALLS ARE NOT REACHING YOUR HEADSET. Reconnecting your line — dialing '
-        + 'is paused until it clears. Nothing you need to do.'
+        + msgText("is paused until it clears. Nothing you need to do.")
       )
       setAmdActivity(prev =>
-        ['⚠ DIALING PAUSED, RECONNECTING YOUR LINE', ...prev].slice(0, 5))
+        [msgText("⚠ DIALING PAUSED, RECONNECTING YOUR LINE"), ...prev].slice(0, 5))
       agentLegPendingRef.current = false
       agentLegFailStreakRef.current = 0
       // Cleared too, or the same window would trip the rate again on the very
@@ -5120,7 +5122,7 @@ function DialerPageInner() {
     // bug it was added to fix.
     if (dialerModeRef.current !== 'predictive' && isOnLiveCall()) {
       setAmdActivity(prev =>
-        ['ALREADY ON A CALL — finish or skip it first', ...prev].slice(0, 5))
+        [msgText("ALREADY ON A CALL — finish or skip it first"), ...prev].slice(0, 5))
       return
     }
 
@@ -5173,7 +5175,7 @@ function DialerPageInner() {
       armDialing() // predictive engine running — incoming-route may bridge a human to us
       lastIncomingCallSidRef.current = null
       setAmdActivity(prev => [
-        `PREDICTIVE ENGINE STARTED`,
+        msgText("PREDICTIVE ENGINE STARTED"),
         ...prev,
       ].slice(0, 5))
       return
@@ -5316,7 +5318,7 @@ function DialerPageInner() {
     setActiveCallSid(null)
     activeCallSidRef.current = null
     setDialSequenceActive(false)
-    setAmdActivity(prev => ['■ DIALING ABORTED: idle, still live', ...prev].slice(0, 5))
+    setAmdActivity(prev => [msgText("■ DIALING ABORTED: idle, still live"), ...prev].slice(0, 5))
   }
 
   /**
@@ -5416,7 +5418,7 @@ function DialerPageInner() {
       await disposeLead({
         lead_id: currentLead.id,
         campaign_id: currentLead.campaign_id,
-        disposition: 'SKIPPED',
+        disposition: msgText("SKIPPED"),
         duration: Math.floor((Date.now() - (callStartRef.current || callStart)) / 1000),
         notes: notes.trim() || undefined,
         source: 'skip',
@@ -5492,7 +5494,7 @@ function DialerPageInner() {
     // Telnyx tears it down at about a second. See the note in runDial.
     if (!isSipReachable()) {
       setAgentLegError(
-        'NOT CONNECTED TO THE CALL SERVER, reconnecting. Nothing was dialed.'
+        tr("NOT CONNECTED TO THE CALL SERVER, reconnecting. Nothing was dialed.")
       )
       release()
       return
@@ -5517,7 +5519,7 @@ function DialerPageInner() {
       if (!live) {
         setAgentLegError(
           'MICROPHONE BLOCKED: allow mic access for this site, then reload. ' +
-          'Nothing was dialed.'
+          msgText("Nothing was dialed.")
         )
         release()
         return
@@ -5556,7 +5558,7 @@ function DialerPageInner() {
           return
         }
         console.error('Manual dial failed:', res.status, data)
-        alert(`Call failed${data?.error ? `, ${data.error}` : ''}${data?.detail ? `\n\n${data.detail}` : ''}`)
+        alert(tr("Call failed{value}{value2}", { value: data?.error ? `, ${data.error}` : '', value2: data?.detail ? `\n\n${data.detail}` : '' }))
         setStatus('idle')
       }
     } catch {
@@ -5670,12 +5672,12 @@ function DialerPageInner() {
     if (agentPicks || isAllActive) {
       onProgressive = () => {
         setAllActiveOverrideMode('progressive')
-        setAmdActivity(prev => ['MODE SET TO PROGRESSIVE (THIS SESSION)', ...prev].slice(0, 5))
+        setAmdActivity(prev => [msgText("MODE SET TO PROGRESSIVE (THIS SESSION)"), ...prev].slice(0, 5))
       }
     } else if (viewerOwns) {
       onProgressive = () => {
         void persistModeToCampaign(campaignId, 'progressive').then(ok => {
-          if (ok) setAmdActivity(prev => ['MODE SET TO PROGRESSIVE', ...prev].slice(0, 5))
+          if (ok) setAmdActivity(prev => [msgText("MODE SET TO PROGRESSIVE"), ...prev].slice(0, 5))
         })
       }
     }
@@ -5757,7 +5759,7 @@ function DialerPageInner() {
         setModeDropdownOpen(false)
         setAmdActivity(prev => [
           activeCampaigns.length === 0
-            ? 'PREDICTIVE NEEDS AN ACTIVE CAMPAIGN, NONE ARE ACTIVE'
+            ? msgText("PREDICTIVE NEEDS AN ACTIVE CAMPAIGN, NONE ARE ACTIVE")
             : `PREDICTIVE NEEDS ONE CAMPAIGN, PICK ONE OF ${activeCampaigns.length} ABOVE`,
           ...prev,
         ].slice(0, 5))
@@ -5782,7 +5784,7 @@ function DialerPageInner() {
       // nothing, which looks identical to the click not registering.
       setModeDropdownOpen(false)
       setAmdActivity(prev => [
-        'PICK A CAMPAIGN BEFORE CHANGING MODE',
+        msgText("PICK A CAMPAIGN BEFORE CHANGING MODE"),
         ...prev,
       ].slice(0, 5))
       return
@@ -5816,7 +5818,7 @@ function DialerPageInner() {
           setModeDropdownOpen(false)
           openPredictiveGate(currentCampaign.id, allowed.ownerIsYou, () => {
             setAllActiveOverrideMode('predictive')
-            setAmdActivity(prev => ['MODE SET TO PREDICTIVE (THIS SESSION)', ...prev].slice(0, 5))
+            setAmdActivity(prev => [msgText("MODE SET TO PREDICTIVE (THIS SESSION)"), ...prev].slice(0, 5))
           })
           return
         }
@@ -5837,7 +5839,7 @@ function DialerPageInner() {
         const id = currentCampaign.id
         openPredictiveGate(id, allowed.ownerIsYou, () => {
           void persistModeToCampaign(id, 'predictive').then(ok => {
-            if (ok) setAmdActivity(prev => ['MODE SET TO PREDICTIVE', ...prev].slice(0, 5))
+            if (ok) setAmdActivity(prev => [msgText("MODE SET TO PREDICTIVE"), ...prev].slice(0, 5))
           })
         })
         return
@@ -5926,11 +5928,11 @@ function DialerPageInner() {
   // buttons come from labelFor, so this reads CALL BACK without the stored
   // string changing under a hundred thousand existing rows.
   const dispositions = [
-    { value: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
-    { value: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
-    { value: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7' },
-    { value: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2' },
-    { value: 'SKIP', color: '#64748b', bg: '#f1f5f9' },
+    { value: msgText("CLOSED"), color: '#16a34a', bg: '#dcfce7' },
+    { value: msgText("APPOINTMENT"), color: '#2563eb', bg: '#dbeafe' },
+    { value: msgText("NOT INTERESTED"), color: '#d97706', bg: '#fef3c7' },
+    { value: msgText("DO NOT CALL"), color: '#dc2626', bg: '#fee2e2' },
+    { value: msgText("SKIP"), color: '#64748b', bg: '#f1f5f9' },
   ]
 
   // Build the raw set of script tabs from each campaign's enabled scripts
@@ -6087,15 +6089,15 @@ function DialerPageInner() {
               word quietly tells them they had something and lost it. */}
           <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 5, color: '#ffaa3e', marginBottom: 12 }}>
             {awaitingTeams.length > 0
-              ? 'AWAITING APPROVAL'
-              : tier === 'lapsed' ? 'SUBSCRIPTION LAPSED' : 'SUBSCRIBE TO DIAL'}
+              ? tr("AWAITING APPROVAL")
+              : tier === 'lapsed' ? tr("SUBSCRIPTION LAPSED") : tr("SUBSCRIBE TO DIAL")}
           </div>
           <div style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1, marginBottom: 28 }}>
             {awaitingTeams.length > 0
               ? `${awaitingTeams.map(t => t.teamName).join(', ')} has not accepted your seat yet. Dialing opens as soon as they do, there is nothing for you to pay.`
               : tier === 'lapsed'
-              ? 'Your subscription has lapsed. Resubscribe to restore dialing access.'
-              : 'An active subscription is required to make outbound calls.'}
+              ? tr("Your subscription has lapsed. Resubscribe to restore dialing access.")
+              : tr("An active subscription is required to make outbound calls.")}
           </div>
           {/* No checkout for somebody whose seat somebody else is buying.
               A button here would take their money for a second seat and
@@ -6109,19 +6111,18 @@ function DialerPageInner() {
                 fontSize: 13, fontWeight: 700, letterSpacing: 4,
                 textDecoration: 'none', boxShadow: '0 0 20px color-mix(in srgb, var(--brand-primary) 30%, transparent)',
                 marginBottom: 16, fontFamily: FUTURA,
-              }}>{tier === 'lapsed' ? 'RESUBSCRIBE' : 'SUBSCRIBE'}, $35/WEEK</Link>
+              }}>{tr("{value}, $35/WEEK", { value: tier === 'lapsed' ? tr("RESUBSCRIBE") : tr("SUBSCRIBE") })}</Link>
               <div style={{ fontSize: 9, letterSpacing: 3, color: 'var(--brand-on-sidebar-muted)', marginBottom: 24 }}>
-                NO CONTRACTS · CANCEL ANYTIME
-              </div>
+                {tr("NO CONTRACTS · CANCEL ANYTIME")}</div>
             </>
           )}
           <div style={{
             paddingTop: 20, borderTop: '1px solid var(--brand-sidebar-active-bg)',
             display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap',
           }}>
-            <Link href="/dashboard/leads" style={navLinkStyle}>VIEW LEADS</Link>
-            <Link href="/dashboard/recordings" style={navLinkStyle}>RECORDINGS</Link>
-            <Link href="/dashboard/analytics" style={navLinkStyle}>ANALYTICS</Link>
+            <Link href="/dashboard/leads" style={navLinkStyle}>{tr("VIEW LEADS")}</Link>
+            <Link href="/dashboard/recordings" style={navLinkStyle}>{tr("RECORDINGS")}</Link>
+            <Link href="/dashboard/analytics" style={navLinkStyle}>{tr("ANALYTICS")}</Link>
           </div>
         </div>
       </div>
@@ -6136,7 +6137,7 @@ function DialerPageInner() {
         minHeight: 'calc(100vh - 64px)',
         fontFamily: FUTURA,
       }}>
-        <div style={{ fontSize: 11, letterSpacing: 4, color: terminalMuted }}>LOADING TERMINAL...</div>
+        <div style={{ fontSize: 11, letterSpacing: 4, color: terminalMuted }}>{tr("LOADING TERMINAL...")}</div>
       </div>
     )
   }
@@ -6153,7 +6154,7 @@ function DialerPageInner() {
         <span style={{
           fontSize: inOverlay ? '11px' : '9px', letterSpacing: '3px',
           color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold',
-        }}>MANUAL DIAL</span>
+        }}>{tr("MANUAL DIAL")}</span>
         <button
           className="dialer-manual-fs-btn"
           onClick={() => {
@@ -6164,7 +6165,7 @@ function DialerPageInner() {
             if (!inOverlay && window.matchMedia('(min-width: 769px)').matches) return
             setDialZoomed(!inOverlay)
           }}
-          aria-label={inOverlay ? 'Close fullscreen dialer' : 'Open fullscreen dialer'}
+          aria-label={inOverlay ? tr("Close fullscreen dialer") : tr("Open fullscreen dialer")}
           style={{
             // The OPEN button takes no inline display, so the
             // .dialer-manual-fs-btn rules own it: none on desktop, flex on a
@@ -6206,7 +6207,7 @@ function DialerPageInner() {
         </div>
 
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+          display: 'grid', gridTemplateColumns: msgText("repeat(3, 1fr)"),
           gap: inOverlay ? '12px' : '6px', marginBottom: inOverlay ? '12px' : '6px',
           flex: inOverlay ? '0 0 auto' : 1,
         }}>
@@ -6257,19 +6258,18 @@ function DialerPageInner() {
                 transform: manualSettingsOpen ? 'rotate(90deg)' : 'none',
                 transition: 'transform 0.12s',
               }}>&#9656;</span>
-              MANUAL DIALER SETTINGS
-            </span>
+              {tr("MANUAL DIALER SETTINGS")}</span>
             {!manualSettingsOpen && (
               <span style={{
                 fontSize: inOverlay ? '9px' : '7.5px', letterSpacing: '1px',
                 whiteSpace: 'nowrap', flexShrink: 0,
               }}>
                 <span style={{ color: manualAmd ? '#4a9eff' : terminalMuted }}>
-                  DETECTION {manualAmd ? 'ON' : 'OFF'}
+                  {tr("DETECTION {value}", { value: manualAmd ? tr("ON") : tr("OFF") })}
                 </span>
                 <span style={{ color: terminalMuted }}> &middot; </span>
                 <span style={{ color: manualRecord ? '#f87171' : terminalMuted }}>
-                  REC {manualRecord ? 'ON' : 'OFF'}
+                  {tr("REC {value}", { value: manualRecord ? tr("ON") : tr("OFF") })}
                 </span>
               </span>
             )}
@@ -6312,15 +6312,14 @@ function DialerPageInner() {
                   boxShadow: manualAmd ? '0 0 6px rgba(74, 158, 255, 0.75)' : 'none',
                 }}
               />
-              MACHINE DETECTION
-            </span>
+              {tr("MACHINE DETECTION")}</span>
             <span style={{
               fontSize: inOverlay ? '10px' : '8px', letterSpacing: '1.5px',
               padding: '2px 7px', borderRadius: 2,
               background: manualAmd ? '#4a9eff' : 'transparent',
               border: `1px solid ${manualAmd ? '#4a9eff' : terminalBorder}`,
               color: manualAmd ? '#fff' : terminalMuted,
-            }}>{manualAmd ? 'ON' : 'OFF'}</span>
+            }}>{manualAmd ? tr("ON") : tr("OFF")}</span>
           </button>
           {/* Second of the two, and the one closest to DIAL, because it is
               the answer with consequences outside this call: a recording is
@@ -6357,15 +6356,14 @@ function DialerPageInner() {
                   boxShadow: manualRecord ? '0 0 6px rgba(220, 38, 38, 0.75)' : 'none',
                 }}
               />
-              RECORD CALL
-            </span>
+              {tr("RECORD CALL")}</span>
             <span style={{
               fontSize: inOverlay ? '10px' : '8px', letterSpacing: '1.5px',
               padding: '2px 7px', borderRadius: 2,
               background: manualRecord ? '#dc2626' : 'transparent',
               border: `1px solid ${manualRecord ? '#dc2626' : terminalBorder}`,
               color: manualRecord ? '#fff' : terminalMuted,
-            }}>{manualRecord ? 'ON' : 'OFF'}</span>
+            }}>{manualRecord ? tr("ON") : tr("OFF")}</span>
           </button>
             </div>
           )}
@@ -6373,7 +6371,7 @@ function DialerPageInner() {
 
 
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 2fr',
+          display: 'grid', gridTemplateColumns: msgText("1fr 2fr"),
           gap: inOverlay ? '12px' : '6px', flexShrink: 0,
         }}>
           <button className="dialer-md-action" onClick={handleBackspace} style={{
@@ -6393,7 +6391,7 @@ function DialerPageInner() {
             fontSize: inOverlay ? '14px' : '11px', fontWeight: 'bold', letterSpacing: '2px',
             cursor: manualDialArmed ? 'pointer' : 'not-allowed',
             fontFamily: FUTURA,
-          }}>{manualDialing ? 'DIALING' : 'DIAL'}</button>
+          }}>{manualDialing ? tr("DIALING") : tr("DIAL")}</button>
         </div>
       </div>
     </>
@@ -6410,19 +6408,19 @@ function DialerPageInner() {
     return (
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', padding: '0 14px 10px' }}>
         <div style={{ textAlign: 'left' }}>
-          <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>LINES IN FLIGHT</div>
+          <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>{tr("LINES IN FLIGHT")}</div>
           <div style={{ fontSize: 16, fontFamily: 'monospace', fontWeight: 'bold', color: terminalText }}>
             {linesActive} / {linesTarget}
           </div>
         </div>
         <div style={{ textAlign: 'left' }}>
-          <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>CONNECTED TODAY</div>
+          <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>{tr("CONNECTED TODAY")}</div>
           <div style={{ fontSize: 16, fontFamily: 'monospace', fontWeight: 'bold', color: terminalAccent }}>
             {sessionStats.connected}
           </div>
         </div>
         <div style={{ textAlign: 'left' }}>
-          <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>30D ABANDON</div>
+          <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>{tr("30D ABANDON")}</div>
           <div style={{
             fontSize: 16, fontFamily: 'monospace', fontWeight: 'bold',
             color: pacingInfo?.abandonRate == null ? terminalMuted
@@ -6619,8 +6617,7 @@ function DialerPageInner() {
               border: `1px solid ${terminalBorder}`, borderRadius: 3,
               padding: '3px 7px', whiteSpace: 'nowrap',
             }}>
-              Beta
-            </span>
+              {tr("Beta")}</span>
           )}
           {/* ── REDIAL COUNT, BACK AND ACTUALLY WIRED ────────────────────
               This was removed once, for a good reason recorded at the time:
@@ -6641,16 +6638,15 @@ function DialerPageInner() {
               reach the row and not just this selector. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ fontSize: 9, letterSpacing: 1.2, color: terminalMuted, fontFamily: FUTURA }}>
-              REDIAL
-            </span>
+              {tr("REDIAL")}</span>
             {([1, 2, 3] as const).map(n => (
               <button
                 key={n}
                 className="dialer-queue-btn"
                 onClick={() => handleDialRepeatChange(n)}
                 title={n === 1
-                  ? 'Dial each lead once, then move on'
-                  : `Dial each lead up to ${n} times if they do not pick up, then move on`}
+                  ? tr("Dial each lead once, then move on")
+                  : tr("Dial each lead up to {n} times if they do not pick up, then move on", { n })}
                 style={{
                   border: `1px solid ${dialRepeatCount === n ? terminalAccent : terminalBorder}`,
                   color: dialRepeatCount === n ? terminalAccent : terminalText,
@@ -6669,16 +6665,16 @@ function DialerPageInner() {
                 already picked up". */}
             <span
               title={[
-                'REDIAL: how many times in a row a lead is dialed before the queue moves on.',
+                msgText("REDIAL: how many times in a row a lead is dialed before the queue moves on."),
                 '',
-                '2x - dial, and if nobody picks up, dial that same lead once more, then move on.',
-                '3x - same, up to three times.',
+                msgText("2x - dial, and if nobody picks up, dial that same lead once more, then move on."),
+                msgText("3x - same, up to three times."),
                 '',
-                'Voicemail COUNTS as not picking up: AMD detects the machine, hangs up, and the lead is dialed again.',
+                msgText("Voicemail COUNTS as not picking up: AMD detects the machine, hangs up, and the lead is dialed again."),
                 '',
-                'A HUMAN answering ends it. The lead is never redialed once somebody picks up, whatever this is set to.',
+                msgText("A HUMAN answering ends it. The lead is never redialed once somebody picks up, whatever this is set to."),
                 '',
-                'Applies to the campaign, not just this screen - predictive reads it server-side. A lead still stops for good at 9 lifetime attempts.',
+                msgText("Applies to the campaign, not just this screen - predictive reads it server-side. A lead still stops for good at 9 lifetime attempts."),
               ].join('\n')}
               style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -6697,7 +6693,7 @@ function DialerPageInner() {
               {/* Only predictive dials more than one line, so only predictive
                   has a number worth printing. "DIALING 1 LINE" on progressive
                   states the only thing that was ever possible. */}
-              ● DIALING{isPredictive ? ` ${dialingCount || 1} LINE${dialingCount === 1 || dialingCount === 0 ? '' : 'S'}` : ''}
+              {tr("● DIALING{value}", { value: isPredictive ? ` ${dialingCount || 1} LINE${dialingCount === 1 || dialingCount === 0 ? '' : 'S'}` : '' })}
             </span>
           )}
 
@@ -6713,7 +6709,7 @@ function DialerPageInner() {
                 background: isQueueFiltered ? 'rgba(42, 74, 138, 0.08)' : 'transparent',
               }}
             >
-              ▾ FILTER{isQueueFiltered ? ' •' : ''}
+              {tr("▾ FILTER{value}", { value: isQueueFiltered ? ' •' : '' })}
             </button>
             {queueFilterOpen && (
               <div style={{
@@ -6723,13 +6719,13 @@ function DialerPageInner() {
                 display: 'flex', flexDirection: 'column', gap: 10,
               }}>
                 <div>
-                  <div style={{ fontSize: 9, letterSpacing: 1.5, color: terminalMuted, marginBottom: 5, fontFamily: FUTURA, fontWeight: 'bold' }}>SEARCH NAME / PHONE</div>
+                  <div style={{ fontSize: 9, letterSpacing: 1.5, color: terminalMuted, marginBottom: 5, fontFamily: FUTURA, fontWeight: 'bold' }}>{tr("SEARCH NAME / PHONE")}</div>
                   <input
                     autoFocus
                     className="dialer-queue-search-input"
                     value={queueSearch}
                     onChange={(e) => setQueueSearch(e.target.value)}
-                    placeholder="e.g. Arlene or (447)…"
+                    placeholder={tr("e.g. Arlene or (447)…")}
                     style={{
                       width: '100%', padding: '7px 9px', borderRadius: 3,
                       border: `1px solid ${terminalBorder}`, background: terminalBg,
@@ -6739,12 +6735,12 @@ function DialerPageInner() {
                   />
                 </div>
                 <div>
-                  <div style={{ fontSize: 9, letterSpacing: 1.5, color: terminalMuted, marginBottom: 5, fontFamily: FUTURA, fontWeight: 'bold' }}>STATE</div>
+                  <div style={{ fontSize: 9, letterSpacing: 1.5, color: terminalMuted, marginBottom: 5, fontFamily: FUTURA, fontWeight: 'bold' }}>{tr("STATE")}</div>
                   <input
                     className="dialer-queue-search-input"
                     value={queueStateFilter}
                     onChange={(e) => setQueueStateFilter(e.target.value.toUpperCase())}
-                    placeholder="e.g. TX"
+                    placeholder={tr("e.g. TX")}
                     maxLength={4}
                     style={{
                       width: '100%', padding: '7px 9px', borderRadius: 3,
@@ -6756,14 +6752,13 @@ function DialerPageInner() {
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, letterSpacing: 0.5, color: terminalMuted, cursor: 'pointer', fontFamily: FUTURA }}>
                   <input type="checkbox" checked={queueSortDesc} onChange={(e) => setQueueSortDesc(e.target.checked)} />
-                  NEWEST LEADS FIRST
-                </label>
+                  {tr("NEWEST LEADS FIRST")}</label>
 
                 <div style={{ borderTop: `1px solid ${terminalBorder}`, paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <button
                     className="dialer-queue-btn"
                     onClick={() => setQueueShuffleSeed(Math.floor(Math.random() * 2147483647) || 1)}
-                    title="Randomize the order of the currently visible rows, also changes dialing priority: leads earlier in the shuffled order are dialed first"
+                    title={tr("Randomize the order of the currently visible rows, also changes dialing priority: leads earlier in the shuffled order are dialed first")}
                     style={{
                       border: `1px solid ${queueShuffleSeed !== 0 ? terminalAccent : terminalBorder}`,
                       color: queueShuffleSeed !== 0 ? terminalAccent : terminalText,
@@ -6771,8 +6766,7 @@ function DialerPageInner() {
                       fontSize: 9, padding: '6px 10px',
                     }}
                   >
-                    ⇄ SHUFFLE
-                  </button>
+                    {tr("⇄ SHUFFLE")}</button>
                   {queueShuffleSeed !== 0 && (
                     <button
                       onClick={() => setQueueShuffleSeed(0)}
@@ -6782,15 +6776,13 @@ function DialerPageInner() {
                         cursor: 'pointer', textDecoration: 'underline',
                       }}
                     >
-                      UNSHUFFLE
-                    </button>
+                      {tr("UNSHUFFLE")}</button>
                   )}
                 </div>
 
                 {isQueueFiltered && (
                   <div style={{ fontSize: 10, color: terminalMuted, fontFamily: FUTURA, lineHeight: 1.5 }}>
-                    Only leads matching this filter will be dialed{isPredictive ? ' in Power/Progressive/Preview modes' : ''}.
-                  </div>
+                    {tr("Only leads matching this filter will be dialed{value}.", { value: isPredictive ? ' in Power/Progressive/Preview modes' : '' })}</div>
                 )}
                 {(queueSearch || queueStateFilter || queueSortDesc || queueShuffleSeed !== 0) && (
                   <button
@@ -6801,8 +6793,7 @@ function DialerPageInner() {
                       fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline',
                     }}
                   >
-                    RESET FILTERS
-                  </button>
+                    {tr("RESET FILTERS")}</button>
                 )}
               </div>
             )}
@@ -6822,8 +6813,7 @@ function DialerPageInner() {
             letterSpacing: '0.2px',
             flexShrink: 0,
           }}>
-            ⚠ Predictive's background dialer pulls from the full active queue and does not currently respect this filter, the filter only restricts what's shown here and what Power/Progressive/Preview will dial.
-          </div>
+            {tr("⚠ Predictive's background dialer pulls from the full active queue and does not currently respect this filter, the filter only restricts what's shown here and what Power/Progressive/Preview will dial.")}</div>
         )}
 
         {isPredictive && isQueueDialingArmed && QueueStatsStrip()}
@@ -6862,9 +6852,9 @@ function DialerPageInner() {
                     calling window is just the time of day and carried a clock
                     that said nothing the sentence does not. */}
                 {hasPermanent ? '⚠ ' : ''}
-                {queueDiagnosis?.summary
-                  || (tcpaBlockedReason ? `${tcpaBlockedReason}, queue shown for review.` : null)
-                  || 'Outside the calling window: queue shown for review, dialing will resume automatically once the window opens.'}
+                {tr(queueDiagnosis?.summary)
+                  || (tcpaBlockedReason ? tr("{tcpaBlockedReason}, queue shown for review.", { tcpaBlockedReason }) : null)
+                  || tr("Outside the calling window: queue shown for review, dialing will resume automatically once the window opens.")}
               </div>
 
               {/* Per-reason lines with a real example, so the user can go and
@@ -6873,7 +6863,7 @@ function DialerPageInner() {
                 <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2, opacity: 0.85 }}>
                   {queueDiagnosis.reasons.map(r => (
                     <div key={r.code} style={{ fontSize: 10 }}>
-                      · {r.count.toLocaleString()}, {QUEUE_REASON_LABELS[r.code] ?? r.code}
+                      · {r.count.toLocaleString()}, {tr(QUEUE_REASON_LABELS[r.code]) ?? r.code}
                       {r.example ? ` (e.g. ${r.example})` : ''}
                     </div>
                   ))}
@@ -6883,8 +6873,7 @@ function DialerPageInner() {
               {/* Only promise a resume when waiting actually delivers one. */}
               {!hasPermanent && queueDiagnosis?.waitingOnClock && (
                 <div style={{ marginTop: 4, fontSize: 10, opacity: 0.8 }}>
-                  Dialing resumes automatically once the window opens.
-                </div>
+                  {tr("Dialing resumes automatically once the window opens.")}</div>
               )}
             </div>
           )
@@ -6894,15 +6883,14 @@ function DialerPageInner() {
         <div className="dialer-queue-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
           {queuedLeadsLoading && visibleQueuedLeads.length === 0 ? (
             <div style={{ fontFamily: FUTURA, fontSize: 12, color: terminalMuted, letterSpacing: '0.3px', padding: '48px 0', textAlign: 'center' }}>
-              Loading queue…
-            </div>
+              {tr("Loading queue…")}</div>
           ) : visibleQueuedLeads.length === 0 ? (
             <div style={{ fontFamily: FUTURA, fontSize: 12, color: terminalMuted, letterSpacing: '0.3px', padding: '48px 0', textAlign: 'center' }}>
               {isQueueFiltered
-                ? 'No leads match this filter.'
+                ? tr("No leads match this filter.")
                 : noLeads
-                  ? 'No dialable leads right now.'
-                  : 'Queue is empty.'}
+                  ? tr("No dialable leads right now.")
+                  : tr("Queue is empty.")}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', padding: '10px 16px 16px', gap: 6 }}>
@@ -6916,13 +6904,13 @@ function DialerPageInner() {
                 // guess, so a lead's badge here looks and reads identically
                 // to how it appears on the leads tab.
                 const dispInfo: { label: string; color: string; bg: string; tint: string } | null =
-                  lead.disposition === 'CLOSED' ? { label: 'CLOSED', color: '#16a34a', bg: '#dcfce7', tint: 'rgba(22, 163, 74, 0.08)' }
-                  : lead.disposition === 'APPOINTMENT' ? { label: 'CALL BACK', color: '#2563eb', bg: '#dbeafe', tint: 'rgba(37, 99, 235, 0.08)' }
-                  : lead.disposition === 'NOT INTERESTED' ? { label: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7', tint: 'rgba(217, 119, 6, 0.08)' }
-                  : lead.disposition === 'DO NOT CALL' ? { label: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2', tint: 'rgba(220, 38, 38, 0.08)' }
-                  : lead.disposition === 'SKIPPED' ? { label: 'SKIPPED', color: '#64748b', bg: '#f1f5f9', tint: 'rgba(100, 116, 139, 0.05)' }
-                  : lead.disposition === 'NO_ANSWER' ? { label: 'NO ANSWER', color: '#64748b', bg: '#f1f5f9', tint: 'rgba(100, 116, 139, 0.05)' }
-                  : lead.disposition === 'TCPA_BLOCKED' ? { label: 'TIME BLOCKED', color: terminalAmber, bg: '#fef3c7', tint: 'rgba(217, 119, 6, 0.06)' }
+                  lead.disposition === 'CLOSED' ? { label: msgText("CLOSED"), color: '#16a34a', bg: '#dcfce7', tint: 'rgba(22, 163, 74, 0.08)' }
+                  : lead.disposition === 'APPOINTMENT' ? { label: msgText("CALL BACK"), color: '#2563eb', bg: '#dbeafe', tint: 'rgba(37, 99, 235, 0.08)' }
+                  : lead.disposition === 'NOT INTERESTED' ? { label: msgText("NOT INTERESTED"), color: '#d97706', bg: '#fef3c7', tint: 'rgba(217, 119, 6, 0.08)' }
+                  : lead.disposition === 'DO NOT CALL' ? { label: msgText("DO NOT CALL"), color: '#dc2626', bg: '#fee2e2', tint: 'rgba(220, 38, 38, 0.08)' }
+                  : lead.disposition === 'SKIPPED' ? { label: msgText("SKIPPED"), color: '#64748b', bg: '#f1f5f9', tint: 'rgba(100, 116, 139, 0.05)' }
+                  : lead.disposition === 'NO_ANSWER' ? { label: msgText("NO ANSWER"), color: '#64748b', bg: '#f1f5f9', tint: 'rgba(100, 116, 139, 0.05)' }
+                  : lead.disposition === 'TCPA_BLOCKED' ? { label: msgText("TIME BLOCKED"), color: terminalAmber, bg: '#fef3c7', tint: 'rgba(217, 119, 6, 0.06)' }
                   : null
 
                 return (
@@ -6939,8 +6927,8 @@ function DialerPageInner() {
                   >
                     <div className="dialer-queue-row-grid" style={{
                       display: 'grid',
-                      gridTemplateColumns: '1.6fr 1fr 0.5fr 0.6fr',
-                      gridTemplateAreas: '"name phone state badge"',
+                      gridTemplateColumns: msgText("1.6fr 1fr 0.5fr 0.6fr"),
+                      gridTemplateAreas: msgText("\"name phone state badge\""),
                       gap: 10,
                       alignItems: 'center', fontFamily: FUTURA, fontSize: 13,
                     }}>
@@ -6968,8 +6956,7 @@ function DialerPageInner() {
                             background: 'rgba(42, 74, 138, 0.16)', color: terminalAccent,
                             border: `1px solid ${terminalAccent}`,
                           }}>
-                            DIALING
-                          </span>
+                            {tr("DIALING")}</span>
                         ) : dispInfo ? (
                           <span style={{
                             fontSize: 9, fontWeight: 'bold', letterSpacing: 0.5,
@@ -6978,7 +6965,7 @@ function DialerPageInner() {
                             border: `1px solid ${dispInfo.color}`,
                             whiteSpace: 'nowrap',
                           }}>
-                            {dispInfo.label}
+                            {tr(dispInfo.label)}
                           </span>
                         ) : (
                           <span style={{
@@ -6987,8 +6974,7 @@ function DialerPageInner() {
                             background: '#e8e8ec', color: terminalMuted,
                             border: `1px solid ${terminalBorder}`,
                           }}>
-                            NEW
-                          </span>
+                            {tr("NEW")}</span>
                         )}
                       </span>
                     </div>
@@ -7028,13 +7014,12 @@ function DialerPageInner() {
                     }}
                   >
                     {queuedLeadsLoading
-                      ? 'LOADING…'
-                      : `LOAD MORE LEADS (${visibleQueuedLeads.length.toLocaleString()} SHOWN)`}
+                      ? tr("LOADING…")
+                      : tr("LOAD MORE LEADS ({length} SHOWN)", { length: visibleQueuedLeads.length.toLocaleString() })}
                   </button>
                 ) : (
                   <div style={{ color: terminalMuted }}>
-                    ■ THAT'S ALL {visibleQueuedLeads.length.toLocaleString()} OF YOUR LEADS ■
-                  </div>
+                    {tr("■ THAT'S ALL {length} OF YOUR LEADS ■", { length: visibleQueuedLeads.length.toLocaleString() })}</div>
                 )}
               </div>
             </div>
@@ -7058,7 +7043,7 @@ function DialerPageInner() {
         onSaved={() => {
           const g = predictiveGate
           setPredictiveGate(null)
-          setAmdActivity(prev => ['PREDICTIVE UNLOCKED', ...prev].slice(0, 5))
+          setAmdActivity(prev => [msgText("PREDICTIVE UNLOCKED"), ...prev].slice(0, 5))
           g?.onReady?.()
         }}
         onUseProgressive={predictiveGate?.onProgressive
@@ -7281,8 +7266,7 @@ function DialerPageInner() {
       }}>
         <div className="dialer-status-bar-left">
           <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '4px', color: 'var(--brand-primary)' }}>
-            DIALERSEAT TERMINAL
-          </span>
+            {tr("DIALERSEAT TERMINAL")}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div onClick={handleSetAvailable} style={{
               width: '36px', height: '20px', borderRadius: '10px',
@@ -7301,13 +7285,13 @@ function DialerPageInner() {
               boxShadow: available ? '0 0 6px #32ff7e' : '0 0 6px #ff6464',
             }} />
             <span style={{ fontSize: '10px', letterSpacing: '2px', color: available ? '#32ff7e' : '#ff6464' }}>
-              {available ? 'LIVE' : 'OFFLINE'}
+              {available ? tr("LIVE") : tr("OFFLINE")}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: swReady ? 'var(--brand-primary)' : 'var(--brand-on-header-muted)' }} />
             <span style={{ fontSize: '9px', letterSpacing: '2px', color: swReady ? 'var(--brand-primary)' : 'var(--brand-on-header-muted)' }}>
-              {swReady ? 'AUDIO' : '...'}
+              {swReady ? tr("AUDIO") : '...'}
             </span>
           </div>
           {/* ── THE STATE THAT WAS INVISIBLE ────────────────────────────
@@ -7323,15 +7307,14 @@ function DialerPageInner() {
                 boxShadow: '0 0 6px #ff6464',
               }} />
               <span style={{ fontSize: '9px', letterSpacing: '2px', color: '#ff6464', fontWeight: 'bold' }}>
-                RECONNECTING
-              </span>
+                {tr("RECONNECTING")}</span>
             </div>
           )}
 
         </div>
         <div className="dialer-status-bar-right">
-          <div className="dialer-connected-pill" title="Connected calls today">
-            <span style={{ fontSize: 8, letterSpacing: 2, opacity: 0.75 }}>CONNECTED TODAY</span>
+          <div className="dialer-connected-pill" title={tr("Connected calls today")}>
+            <span style={{ fontSize: 8, letterSpacing: 2, opacity: 0.75 }}>{tr("CONNECTED TODAY")}</span>
             <span>{sessionStats.connected}</span>
           </div>
           <div className="dialer-time-block" style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
@@ -7352,8 +7335,7 @@ function DialerPageInner() {
           textAlign: 'center',
           fontWeight: 'bold',
         }}>
-          ⚠ AUTO-DEGRADED TO PROGRESSIVE, abandon rate {formatAbandonRate(pacingInfo.abandonRate)} (legal cap 3%)
-        </div>
+          {tr("⚠ AUTO-DEGRADED TO PROGRESSIVE, abandon rate {abandonRate} (legal cap 3%)", { abandonRate: formatAbandonRate(pacingInfo.abandonRate) })}</div>
       )}
 
       {isPredictive && shouldYield && !pacingInfo?.isDegraded && (
@@ -7367,8 +7349,7 @@ function DialerPageInner() {
           textAlign: 'center',
           fontWeight: 'bold',
         }}>
-          ⚠ YIELDING, abandon rate approaching FTC 3% cap. Dialing paused briefly.
-        </div>
+          {tr("⚠ YIELDING, abandon rate approaching FTC 3% cap. Dialing paused briefly.")}</div>
       )}
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
@@ -7387,23 +7368,23 @@ function DialerPageInner() {
             </div>
           )}
 
-          <div className="dialer-stat-grid dialer-collapse-on-fs" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', flexShrink: 0 }}>
+          <div className="dialer-stat-grid dialer-collapse-on-fs" style={{ display: 'grid', gridTemplateColumns: msgText("repeat(4, 1fr)"), gap: '8px', flexShrink: 0 }}>
             <div style={{
               padding: '8px 12px', background: terminalSurface,
               border: `1px solid ${terminalBorder}`, borderRadius: '4px',
             }}>
-              <div style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px' }}>STATUS</div>
+              <div style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px' }}>{tr("STATUS")}</div>
               <div style={{
                 fontSize: '12px', fontWeight: 'bold', fontFamily: 'monospace',
                 color: status === 'connected' ? terminalGreen : status === 'calling' ? '#8a6a1a' : status === 'preview_ready' ? terminalAccent : terminalMuted,
                 letterSpacing: '1px',
-              }}>{status === 'preview_ready' ? 'PREVIEW' : status.toUpperCase()}</div>
+              }}>{status === 'preview_ready' ? tr("PREVIEW") : status.toUpperCase()}</div>
             </div>
             <div style={{
               padding: '8px 12px', background: terminalSurface,
               border: `1px solid ${terminalBorder}`, borderRadius: '4px',
             }}>
-              <div style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px' }}>DURATION</div>
+              <div style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px' }}>{tr("DURATION")}</div>
               <div style={{ fontSize: '12px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalAccent, letterSpacing: '1px' }}>
                 {status === 'connected' ? formatTime(seconds) : '--:--'}
               </div>
@@ -7412,7 +7393,7 @@ function DialerPageInner() {
               padding: '8px 12px', background: terminalSurface,
               border: `1px solid ${terminalBorder}`, borderRadius: '4px',
             }}>
-              <div style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px' }}>CONNECTED RATE</div>
+              <div style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px' }}>{tr("CONNECTED RATE")}</div>
               <div style={{ fontSize: '12px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalAccent, letterSpacing: '1px' }}>
                 {connectedRate}
               </div>
@@ -7433,17 +7414,17 @@ function DialerPageInner() {
               }}
               title={
                 isAllActive
-                  ? 'Click to change mode for ALL ACTIVE session (does not modify individual campaign settings)'
+                  ? tr("Click to change mode for ALL ACTIVE session (does not modify individual campaign settings)")
                   : isSpecificCampaign
-                    ? 'Click to change mode for this campaign'
-                    : 'Select a campaign to change mode'
+                    ? tr("Click to change mode for this campaign")
+                    : tr("Select a campaign to change mode")
               }
             >
               <div style={{
                 fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}>
-                <span>MODE{isAllActive ? ' (SESSION)' : ''}</span>
+                <span>{tr("MODE{value}", { value: isAllActive ? ' (SESSION)' : '' })}</span>
                 {modeTileInteractive && (
                   <span style={{ fontSize: 8, opacity: 0.7 }}>{modeDropdownOpen ? '▲' : '▼'}</span>
                 )}
@@ -7467,7 +7448,7 @@ function DialerPageInner() {
                         width: 8, height: 8, borderRadius: '50%',
                         background: opt.color, flexShrink: 0,
                       }} />
-                      {opt.label}
+                      {tr(opt.label)}
                       {opt.value === dialerMode && (
                         <span style={{ marginLeft: 'auto', color: 'var(--brand-primary)' }}>✓</span>
                       )}
@@ -7483,18 +7464,18 @@ function DialerPageInner() {
               padding: '10px 14px', background: terminalSurface,
               border: `1px solid ${terminalBorder}`, borderLeft: `3px solid ${pacingInfo.isDegraded ? terminalRed : terminalAccent}`,
               borderRadius: '4px', flexShrink: 0,
-              display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10,
+              display: 'grid', gridTemplateColumns: msgText("repeat(4, 1fr)"), gap: 10,
             }}>
               <div>
-                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>ACTIVE AGENTS</div>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>{tr("ACTIVE AGENTS")}</div>
                 <div style={{ fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace', color: terminalText }}>
                   {pacingInfo.activeAgents}{pacingInfo.isPredictiveTeam && (
-                    <span style={{ fontSize: 9, color: terminalGreen, marginLeft: 6, letterSpacing: 1 }}>TEAM</span>
+                    <span style={{ fontSize: 9, color: terminalGreen, marginLeft: 6, letterSpacing: 1 }}>{tr("TEAM")}</span>
                   )}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>MY LINES</div>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>{tr("MY LINES")}</div>
                 {linesPref ? (
                   <div className="lines-selector" style={{ padding: '2px 8px', opacity: linesPrefSaving ? 0.5 : 1 }}>
                     <select
@@ -7509,7 +7490,7 @@ function DialerPageInner() {
                         ))}
                     </select>
                     <span style={{ fontSize: 9, color: terminalMuted, letterSpacing: 1 }}>
-                      {linesPref.preferred_lines === null ? '(default)' : ''}
+                      {linesPref.preferred_lines === null ? tr("(default)") : ''}
                     </span>
                   </div>
                 ) : (
@@ -7517,13 +7498,13 @@ function DialerPageInner() {
                 )}
               </div>
               <div>
-                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>EFFECTIVE LINES</div>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>{tr("EFFECTIVE LINES")}</div>
                 <div style={{ fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace', color: pacingInfo.isDegraded ? terminalRed : terminalAccent }}>
                   {pacingInfo.effectiveLines.toFixed(1)}×{pacingInfo.isDegraded && ' (degraded)'}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>30D ABANDON RATE</div>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>{tr("30D ABANDON RATE")}</div>
                 <div style={{
                   fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace',
                   color: pacingInfo.abandonRate == null ? terminalMuted
@@ -7536,7 +7517,7 @@ function DialerPageInner() {
           )}
 
           <div className="dialer-collapse-on-fs" style={{ padding: '10px 14px', background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: '4px', flexShrink: 0 }}>
-            <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ SELECT CAMPAIGN</div>
+            <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>{tr("▸ SELECT CAMPAIGN")}</div>
             <select value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)} style={{
               width: '100%', padding: '6px 10px', borderRadius: '4px',
               background: terminalBg, border: `1px solid ${selectedCampaign ? terminalBorder : '#ffaa3e'}`,
@@ -7544,14 +7525,13 @@ function DialerPageInner() {
               fontSize: '12px', outline: 'none',
               fontFamily: FUTURA, cursor: 'pointer',
             }}>
-              <option value="">SELECT A CAMPAIGN</option>
+              <option value="">{tr("SELECT A CAMPAIGN")}</option>
               {activeCampaignsCount > 0 && (
-                <option value={ALL_ACTIVE}>ALL ACTIVE CAMPAIGNS ({activeCampaignsCount})</option>
+                <option value={ALL_ACTIVE}>{tr("ALL ACTIVE CAMPAIGNS ({activeCampaignsCount})", { activeCampaignsCount })}</option>
               )}
               {activeScopeCampaigns.map(c => (
                 <option key={c.id} value={c.id}>
-                  {c.name}{c.teamName ? ` (${c.teamName})` : ''}, {c.total_leads} leads
-                </option>
+                  {tr("{name}{value}, {total_leads} leads", { name: c.name, value: c.teamName ? ` (${c.teamName})` : '', total_leads: c.total_leads })}</option>
               ))}
             </select>
             {activeScopeCampaigns.length === 0 && (
@@ -7561,8 +7541,8 @@ function DialerPageInner() {
                 fontSize: '10px', letterSpacing: '2px', color: terminalRed,
               }}>
                 ⚠ {scopeCampaigns.length === 0
-                    ? (isPersonalScope ? 'NO CAMPAIGNS FOUND' : 'NO CAMPAIGNS ACCESSIBLE FROM THIS TEAM')
-                    : 'NO ACTIVE CAMPAIGNS, ACTIVATE A CAMPAIGN TO START DIALING'}
+                    ? (isPersonalScope ? tr("NO CAMPAIGNS FOUND") : tr("NO CAMPAIGNS ACCESSIBLE FROM THIS TEAM"))
+                    : tr("NO ACTIVE CAMPAIGNS, ACTIVATE A CAMPAIGN TO START DIALING")}
               </div>
             )}
             {showSelectCampaignMsg && (
@@ -7574,8 +7554,7 @@ function DialerPageInner() {
                 borderRadius: 4,
                 fontSize: 11, color: terminalAmber, letterSpacing: 0.5, fontWeight: 'bold',
               }}>
-                ⚠ YOU MUST SELECT A CAMPAIGN BEFORE DIALING
-              </div>
+                {tr("⚠ YOU MUST SELECT A CAMPAIGN BEFORE DIALING")}</div>
             )}
           </div>
 
@@ -7597,8 +7576,8 @@ function DialerPageInner() {
             }}>
               <p style={{ fontSize: 11, letterSpacing: 3, color: terminalMuted, textAlign: 'center' }}>
                 {!isSpecificCampaign && activeScopeCampaigns.length === 0
-                  ? 'SELECT A CAMPAIGN TO BEGIN'
-                  : 'SET AVAILABLE TO BEGIN'}
+                  ? tr("SELECT A CAMPAIGN TO BEGIN")
+                  : tr("SET AVAILABLE TO BEGIN")}
               </p>
             </div>
           ) : (
@@ -7611,17 +7590,17 @@ function DialerPageInner() {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
               }}>
                 <span style={{ fontSize: '10px', letterSpacing: '3px', color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold' }}>
-                  {previewLead ? 'LEAD PREVIEW, REVIEW BEFORE DIALING' : 'LEAD PROFILE'}
+                  {previewLead ? tr("LEAD PREVIEW, REVIEW BEFORE DIALING") : tr("LEAD PROFILE")}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   {displayLead && (status === 'connected' || status === 'preview_ready') && (
-                    <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'var(--brand-primary)' }}>ID: {displayLead.id.substring(0, 8)}</span>
+                    <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'var(--brand-primary)' }}>{tr("ID: {substring}", { substring: displayLead.id.substring(0, 8) })}</span>
                   )}
                   <button
                     className="dialer-profile-fs-btn"
                     onClick={() => setProfileFullscreen(v => !v)}
-                    title={profileFullscreen ? 'Exit full screen' : 'Full screen lead profile'}
-                    aria-label="Toggle full screen lead profile"
+                    title={profileFullscreen ? tr("Exit full screen") : tr("Full screen lead profile")}
+                    aria-label={tr("Toggle full screen lead profile")}
                     style={{
                       background: 'transparent', border: '1px solid var(--brand-on-sidebar-muted)',
                       borderRadius: 3, color: 'var(--brand-on-sidebar-muted)', cursor: 'pointer',
@@ -7636,8 +7615,7 @@ function DialerPageInner() {
                   status === 'calling' ? (
                     <div className="dialer-live-activity" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <div className="dialer-live-activity-label" style={{ fontSize: '10px', letterSpacing: '3px', color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold' }}>
-                        LIVE ACTIVITY
-                      </div>
+                        {tr("LIVE ACTIVITY")}</div>
 
                       {/* ── CURRENT / IN-FLIGHT NUMBER(S) ─────────────────────────
                           Power/Progressive/Preview: one number, the exact one
@@ -7650,8 +7628,7 @@ function DialerPageInner() {
                       {isPredictive && activeDialingNumbers.length > 0 ? (
                         <div>
                           <div className="dialer-live-activity-sublabel" style={{ fontSize: '9px', letterSpacing: '2px', color: terminalAccent, fontFamily: FUTURA, fontWeight: 'bold', marginBottom: 6 }}>
-                            DIALING {activeDialingNumbers.length} LINE{activeDialingNumbers.length === 1 ? '' : 'S'} SIMULTANEOUSLY
-                          </div>
+                            {tr("DIALING {length} LINE{value} SIMULTANEOUSLY", { length: activeDialingNumbers.length, value: activeDialingNumbers.length === 1 ? '' : 'S' })}</div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                             {activeDialingNumbers.map((num, i) => (
                               <div key={`${num}-${i}`} className="dialer-live-number-chip" style={{
@@ -7682,14 +7659,13 @@ function DialerPageInner() {
                           borderRadius: 4,
                         }}>
                           <div className="dialer-live-activity-sublabel" style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, fontFamily: FUTURA, marginBottom: 4 }}>
-                            NOW DIALING
-                          </div>
+                            {tr("NOW DIALING")}</div>
                           <div className="dialer-live-now-dialing-number" style={{ fontFamily: FUTURA, fontSize: 17, fontWeight: 'bold', color: terminalText, letterSpacing: '1px', overflowWrap: 'anywhere' }}>
                             {previewLead?.phone || activeDialingNumbers[0] || '-'}
                           </div>
                           {(previewLead?.first_name || previewLead?.last_name) && (
                             <div style={{ fontFamily: FUTURA, fontSize: 12, color: terminalMuted, marginTop: 2, overflowWrap: 'anywhere' }}>
-                              {previewLead.first_name} {previewLead.last_name}
+                              {tr(previewLead.first_name)} {tr(previewLead.last_name)}
                             </div>
                           )}
                         </div>
@@ -7703,8 +7679,7 @@ function DialerPageInner() {
                       }}>
                         {agentActivity.length === 0 ? (
                           <div style={{ fontFamily: FUTURA, fontSize: 11, color: terminalMuted, letterSpacing: '1px' }}>
-                            Waiting for activity…
-                          </div>
+                            {tr("Waiting for activity…")}</div>
                         ) : (
                           agentActivity.map((line, i) => (
                             <div key={i} className="dialer-live-activity-line" style={{
@@ -7725,7 +7700,7 @@ function DialerPageInner() {
                   ) : (
                     <div style={{ textAlign: 'center', padding: '40px 0' }}>
                       <p style={{ fontSize: '11px', letterSpacing: '3px', color: terminalMuted, fontFamily: FUTURA }}>
-                        {noLeads ? 'NO MORE LEADS AVAILABLE' : 'AWAITING DIAL COMMAND'}
+                        {noLeads ? tr("NO MORE LEADS AVAILABLE") : tr("AWAITING DIAL COMMAND")}
                       </p>
                       {noLeads && (
                         <p style={{
@@ -7749,10 +7724,10 @@ function DialerPageInner() {
                           {noLeadsReason
                             ? noLeadsReason.toUpperCase()
                             : tcpaBlockedAll
-                              ? 'ALL LEADS OUTSIDE CALLING WINDOW, TRY LATER'
+                              ? tr("ALL LEADS OUTSIDE CALLING WINDOW, TRY LATER")
                               : isPersonalScope
-                                ? 'UPLOAD MORE LEADS TO CONTINUE'
-                                : 'NO MORE TEAM LEADS, TRY ANOTHER CAMPAIGN OR SCOPE'}
+                                ? tr("UPLOAD MORE LEADS TO CONTINUE")
+                                : tr("NO MORE TEAM LEADS, TRY ANOTHER CAMPAIGN OR SCOPE")}
                         </p>
                       )}
                     </div>
@@ -7768,7 +7743,7 @@ function DialerPageInner() {
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                           <div>
                             <div style={{ fontSize: '19px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText, letterSpacing: '1px', marginBottom: '3px' }}>
-                              {displayLead.first_name} {displayLead.last_name}
+                              {tr(displayLead.first_name)} {tr(displayLead.last_name)}
                             </div>
                             <div style={{ fontSize: '15px', fontFamily: 'monospace', color: terminalAccent, fontWeight: 'bold', letterSpacing: '2px' }}>
                               {displayLead.phone}
@@ -7798,12 +7773,12 @@ function DialerPageInner() {
                             fontSize: '9px', letterSpacing: '2px', fontWeight: 'bold',
                             color: status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalMuted,
                           }}>
-                            {status === 'connected' ? '● LIVE' : status === 'preview_ready' ? '◉ PREVIEW' : '○ IDLE'}
+                            {status === 'connected' ? tr("● LIVE") : status === 'preview_ready' ? tr("◉ PREVIEW") : tr("○ IDLE")}
                           </div>
                         </div>
                       </div>
                       {displayLead.extra_data && Object.keys(displayLead.extra_data).length > 0 && (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '5px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: msgText("repeat(2, 1fr)"), gap: '5px' }}>
                           {filteredExtraData(displayLead.extra_data).map(([key, value]) => (
                             <div key={key} style={{ padding: '7px 10px', background: terminalBg, border: `1px solid ${terminalBorder}`, borderRadius: '3px' }}>
                               <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '2px', textTransform: 'uppercase' }}>{key}</div>
@@ -7834,7 +7809,7 @@ function DialerPageInner() {
                                 setScriptDragKey(null)
                               }}
                               onDragEnd={() => setScriptDragKey(null)}
-                              title="Drag to reorder"
+                              title={tr("Drag to reorder")}
                               style={{
                                 padding: '5px 10px',
                                 cursor: scriptDragKey ? 'grabbing' : 'grab',
@@ -7849,11 +7824,11 @@ function DialerPageInner() {
                           ))}
                         </div>
                         <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                          <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>CALL SCRIPT</div>
+                          <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>{tr("CALL SCRIPT")}</div>
                           <div className="dialer-script-body" style={{
                             fontSize: '11px', lineHeight: '1.7', color: activeScript ? terminalText : terminalMuted,
                             fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
-                          }}>{activeScript || 'This script is empty, add content from Manage Scripts.'}</div>
+                          }}>{activeScript || tr("This script is empty, add content from Manage Scripts.")}</div>
                         </div>
                       </div>
                     )}
@@ -7876,17 +7851,17 @@ function DialerPageInner() {
                   fontSize: '10px', letterSpacing: '2px', color: terminalMuted,
                 }}>
                   <span>⏱</span>
-                  <span>CALL LASTED</span>
+                  <span>{tr("CALL LASTED")}</span>
                   <span style={{ color: terminalAccent, fontWeight: 'bold', letterSpacing: '1px' }}>
                     {formatDurationLong(lastCallDuration)}
                   </span>
                 </div>
               )}
-              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ NOTES <span style={{ opacity: 0.6 }}>(OPTIONAL)</span></div>
+              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>{tr("▸ NOTES")}{" "}<span style={{ opacity: 0.6 }}>{tr("(OPTIONAL)")}</span></div>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Anything to remember about this call..."
+                placeholder={tr("Anything to remember about this call...")}
                 rows={2}
                 style={{
                   width: '100%', padding: '8px 10px',
@@ -7903,10 +7878,9 @@ function DialerPageInner() {
                   borderLeft: `3px solid ${terminalAccent}`,
                   fontSize: 10, color: terminalAccent, letterSpacing: 0.5,
                 }}>
-                  ⓘ System is still dialing in background. Next human routes automatically.
-                </div>
+                  {tr("ⓘ System is still dialing in background. Next human routes automatically.")}</div>
               )}
-              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '8px' }}>▸ SELECT DISPOSITION</div>
+              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '8px' }}>{tr("▸ SELECT DISPOSITION")}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px' }}>
                 {dispositions.map((d) => (
                   <button key={d.value} onClick={() => handleDisposition(d.value)} style={{
@@ -7916,7 +7890,7 @@ function DialerPageInner() {
                     color: disposition === d.value ? 'white' : d.color,
                     fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px',
                     cursor: 'pointer', fontFamily: FUTURA,
-                  }}>{labelFor(d.value).toUpperCase()}</button>
+                  }}>{tr(labelFor(d.value)).toUpperCase()}</button>
                 ))}
               </div>
             </div>
@@ -7941,7 +7915,7 @@ function DialerPageInner() {
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                     cursor: 'pointer', fontFamily: FUTURA,
                     borderTop: `3px solid ${terminalBorder}`, transition: 'all 0.15s',
-                  }}>[ SET AVAILABLE TO DIAL ]</button>
+                  }}>{tr("[ SET AVAILABLE TO DIAL ]")}</button>
                 </div>
               )}
 
@@ -7951,7 +7925,7 @@ function DialerPageInner() {
                     padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                     textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
-                  }}>[ NO ACTIVE CAMPAIGNS TO DIAL ]</div>
+                  }}>{tr("[ NO ACTIVE CAMPAIGNS TO DIAL ]")}</div>
                 </div>
               )}
 
@@ -7963,7 +7937,7 @@ function DialerPageInner() {
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                     cursor: 'pointer', fontFamily: FUTURA,
                     borderTop: `3px solid var(--brand-primary)`, transition: 'all 0.15s',
-                  }}>INITIATE DIAL SEQUENCE</button>
+                  }}>{tr("INITIATE DIAL SEQUENCE")}</button>
                 </div>
               )}
 
@@ -7974,7 +7948,7 @@ function DialerPageInner() {
                     // process (ringing/connecting fanout), not just prevent new
                     // ones. Route through the full kill switch so in-flight calls
                     // are swept and hung up server-side across the board.
-                    setAmdActivity(prev => [`PREDICTIVE ENGINE STOPPED`, ...prev].slice(0, 5))
+                    setAmdActivity(prev => [msgText("PREDICTIVE ENGINE STOPPED"), ...prev].slice(0, 5))
                     // abortDialing, not a full offline: stopping the engine
                     // should leave the agent live and one click from starting
                     // again, not flip them offline.
@@ -7985,7 +7959,7 @@ function DialerPageInner() {
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                     cursor: 'pointer', fontFamily: FUTURA,
                     borderTop: `3px solid ${terminalRed}`,
-                  }}>■ STOP DIAL SEQUENCE</button>
+                  }}>{tr("■ STOP DIAL SEQUENCE")}</button>
                 </div>
               )}
 
@@ -7999,26 +7973,26 @@ function DialerPageInner() {
                   line is parked in the background until it clears the
                   threshold. Neither makes the agent wait. */}
               {status === 'connected' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: msgText("1fr 1fr"), gap: 8, flexShrink: 0 }}>
                   <button onClick={handleSkip} style={{
                     padding: '14px', borderRadius: '4px',
                     background: '#f8f4e8', border: `1px solid #8a6a1a`,
                     borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
                     fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
                     cursor: 'pointer', fontFamily: FUTURA,
-                  }}>SKIP / NEXT</button>
+                  }}>{tr("SKIP / NEXT")}</button>
                   <button onClick={() => { terminateCall() }} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
                     color: terminalRed, fontSize: '11px', fontWeight: 'bold',
                     letterSpacing: '3px', cursor: 'pointer',
                     fontFamily: FUTURA,
-                  }}>■ TERMINATE CALL</button>
+                  }}>{tr("■ TERMINATE CALL")}</button>
                 </div>
               )}
             </>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : status === 'preview_ready' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? msgText("1fr 1fr") : status === 'preview_ready' ? msgText("1fr 1fr") : '1fr', gap: '8px', flexShrink: 0 }}>
               {status === 'idle' && !available && (
                 <button onClick={handleSetAvailable} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
@@ -8026,14 +8000,14 @@ function DialerPageInner() {
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                   cursor: 'pointer', fontFamily: FUTURA,
                   borderTop: `3px solid ${terminalBorder}`, transition: 'all 0.15s',
-                }}>[ SET AVAILABLE TO DIAL ]</button>
+                }}>{tr("[ SET AVAILABLE TO DIAL ]")}</button>
               )}
               {status === 'idle' && available && activeScopeCampaigns.length === 0 && (
                 <div style={{
                   padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                   textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
-                }}>[ NO ACTIVE CAMPAIGNS IN SCOPE ]</div>
+                }}>{tr("[ NO ACTIVE CAMPAIGNS IN SCOPE ]")}</div>
               )}
               {status === 'idle' && available && activeScopeCampaigns.length > 0
                 && !dialSequenceActive && (
@@ -8044,7 +8018,7 @@ function DialerPageInner() {
                   cursor: 'pointer', fontFamily: FUTURA,
                   borderTop: `3px solid var(--brand-primary)`, transition: 'all 0.15s',
                 }}>
-                  {isPreview ? 'LOAD NEXT LEAD' : 'INITIATE DIAL SEQUENCE'}
+                  {isPreview ? tr("LOAD NEXT LEAD") : tr("INITIATE DIAL SEQUENCE")}
                 </button>
               )}
               {status === 'preview_ready' && previewLead && (
@@ -8055,14 +8029,14 @@ function DialerPageInner() {
                     borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
                     fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
                     cursor: 'pointer', fontFamily: FUTURA,
-                  }}>SKIP THIS LEAD</button>
+                  }}>{tr("SKIP THIS LEAD")}</button>
                   <button onClick={dialPreviewLead} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: terminalDark, color: 'var(--brand-primary)',
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '3px',
                     cursor: 'pointer', fontFamily: FUTURA,
                     borderTop: `3px solid var(--brand-primary)`,
-                  }}>DIAL THIS LEAD</button>
+                  }}>{tr("DIAL THIS LEAD")}</button>
                 </>
               )}
               {/* Shown while a call is up AND in the gaps between leads, so the
@@ -8075,7 +8049,7 @@ function DialerPageInner() {
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                   cursor: 'pointer', fontFamily: FUTURA,
                   borderTop: `3px solid ${terminalRed}`,
-                }}>■ ABORT CALL</button>
+                }}>{tr("■ ABORT CALL")}</button>
               )}
               {status === 'connected' && (
                 <>
@@ -8088,14 +8062,14 @@ function DialerPageInner() {
                     borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
                     fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
                     cursor: 'pointer', fontFamily: FUTURA,
-                  }}>SKIP / NEXT</button>
+                  }}>{tr("SKIP / NEXT")}</button>
                   <button onClick={() => { terminateCall() }} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
                     color: terminalRed, fontSize: '11px', fontWeight: 'bold',
                     letterSpacing: '3px', cursor: 'pointer',
                     fontFamily: FUTURA,
-                  }}>■ TERMINATE CALL</button>
+                  }}>{tr("■ TERMINATE CALL")}</button>
                 </>
               )}
               {status === 'ended' && !showDisposition && (
@@ -8105,7 +8079,7 @@ function DialerPageInner() {
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                   cursor: 'pointer', fontFamily: FUTURA,
                   borderTop: `3px solid var(--brand-primary)`,
-                }}>NEXT LEAD</button>
+                }}>{tr("NEXT LEAD")}</button>
               )}
             </div>
           )}
@@ -8118,7 +8092,7 @@ function DialerPageInner() {
 
         <aside className={`dialer-right-sidebar ${rightSidebarOpen ? 'open' : ''}`}>
           <div className="dialer-metrics-header" style={{ background: terminalDark, padding: '8px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '9px', letterSpacing: '3px', color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold' }}>TODAY&apos;S METRICS</span>
+            <span style={{ fontSize: '9px', letterSpacing: '3px', color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold' }}>{tr("TODAY'S METRICS")}</span>
           </div>
 
           {/* ── SIX TILES, THREE ROWS, NOT SIX STACKED BARS ──────────────────
@@ -8133,14 +8107,14 @@ function DialerPageInner() {
               tile exactly one line tall and the grid honest. */}
           <div className="dialer-metric-grid" style={{
             padding: '8px 10px', display: 'grid',
-            gridTemplateColumns: '1fr 1fr', gap: '4px', flexShrink: 0,
+            gridTemplateColumns: msgText("1fr 1fr"), gap: '4px', flexShrink: 0,
           }}>
             {[
-              { label: 'CONNECTED', value: sessionStats.connected, color: 'var(--brand-primary)' },
-              { label: 'CLOSED', value: sessionStats.closed, color: '#16a34a' },
-              { label: 'CALL BACKS', value: sessionStats.appointments, color: '#2563eb' },
-              { label: 'NOT INTERESTED', value: sessionStats.notInterested, color: '#d97706' },
-              { label: 'DO NOT CALL', value: sessionStats.dnc, color: '#dc2626' },
+              { label: msgText("CONNECTED"), value: sessionStats.connected, color: 'var(--brand-primary)' },
+              { label: msgText("CLOSED"), value: sessionStats.closed, color: '#16a34a' },
+              { label: msgText("CALL BACKS"), value: sessionStats.appointments, color: '#2563eb' },
+              { label: msgText("NOT INTERESTED"), value: sessionStats.notInterested, color: '#d97706' },
+              { label: msgText("DO NOT CALL"), value: sessionStats.dnc, color: '#dc2626' },
             ].map((stat) => (
               <div key={stat.label} className="dialer-metric-tile" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -8152,11 +8126,11 @@ function DialerPageInner() {
                 <span className="dialer-metric-label" style={{
                   fontSize: '8px', letterSpacing: '1px', color: terminalMuted,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{stat.label}</span>
+                }}>{tr(stat.label)}</span>
                 <span className="dialer-metric-value" style={{
                   fontSize: '15px', fontWeight: 'bold', fontFamily: 'monospace',
                   color: stat.color, flexShrink: 0,
-                }}>{stat.value}</span>
+                }}>{tr(stat.value)}</span>
               </div>
             ))}
 
@@ -8172,7 +8146,7 @@ function DialerPageInner() {
               <span className="dialer-metric-label" style={{
                 fontSize: '8px', letterSpacing: '1px', color: terminalMuted,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>CONV RATE</span>
+              }}>{tr("CONV RATE")}</span>
               <span className="dialer-metric-value" style={{
                 fontSize: '15px', fontWeight: 'bold', fontFamily: 'monospace',
                 color: terminalAccent, flexShrink: 0,
@@ -8190,8 +8164,8 @@ function DialerPageInner() {
               // Connected first: it is the figure that says whether the day
               // went anywhere. Dialing time is the input, and reads as the
               // smaller number beside it.
-              { label: 'TIME CONNECTED', seconds: sessionStats.talkSeconds, color: 'var(--brand-primary)' },
-              { label: 'TIME DIALED', seconds: sessionStats.dialSeconds, color: terminalAccent },
+              { label: msgText("TIME CONNECTED"), seconds: sessionStats.talkSeconds, color: 'var(--brand-primary)' },
+              { label: msgText("TIME DIALED"), seconds: sessionStats.dialSeconds, color: terminalAccent },
             ].map((stat) => (
               <div key={stat.label} className="dialer-metric-tile" style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',
@@ -8203,7 +8177,7 @@ function DialerPageInner() {
                 <span className="dialer-metric-label" style={{
                   fontSize: '8px', letterSpacing: '1px', color: terminalMuted, lineHeight: 1.1,
                   maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{stat.label}</span>
+                }}>{tr(stat.label)}</span>
                 <span className="dialer-metric-value" style={{
                   fontSize: '15px', fontWeight: 'bold', fontFamily: 'monospace', lineHeight: 1.1,
                   color: stat.color,
@@ -8215,7 +8189,7 @@ function DialerPageInner() {
           <ManualDialer />
 
           <div style={{ background: terminalDark, padding: '6px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0 }}>
-            <span style={{ fontSize: '9px', letterSpacing: '3px', color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold' }}>SYSTEM LOG</span>
+            <span style={{ fontSize: '9px', letterSpacing: '3px', color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold' }}>{tr("SYSTEM LOG")}</span>
           </div>
           <div style={{ padding: '5px 12px', background: '#1a1c24', height: '88px', overflowY: 'auto', flexShrink: 0 }}>
             {[
@@ -8391,8 +8365,7 @@ export default function DialerPage() {
         fontFamily: 'Futura PT, Futura, sans-serif',
       }}>
         <div style={{ fontSize: 11, letterSpacing: 4, color: 'var(--brand-muted-text)' }}>
-          LOADING TERMINAL...
-        </div>
+          {tr("LOADING TERMINAL...")}</div>
       </div>
     }>
       <DialerPageInner />

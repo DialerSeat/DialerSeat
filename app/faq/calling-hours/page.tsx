@@ -193,10 +193,10 @@ export default async function Page() {
                 {STRICTER.map(r => (
                   <tr key={r.state}>
                     <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', whiteSpace: 'nowrap', fontWeight: 'bold' }}>
-                      {r.state}
+                      {t(r.state)}
                     </td>
                     <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', color: '#c4c8d8' }}>
-                      {r.rule}
+                      {t(r.rule)}
                     </td>
                   </tr>
                 ))}

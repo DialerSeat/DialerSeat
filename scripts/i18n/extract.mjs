@@ -14,6 +14,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import ts from 'typescript'
+import { isProse } from './prose.mjs'
 
 const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'app', 'components', 'lib'], { encoding: 'utf8' })
   .split(/\r?\n/)
@@ -63,6 +64,77 @@ for (const file of files) {
       const v = n.initializer
       if ((ts.isStringLiteral(v) || ts.isNoSubstitutionTemplateLiteral(v)) && /\s/.test(v.text) && /^[A-Z]/.test(v.text)) add(v.text, file)
     }
+    ts.forEachChild(n, visit)
+  }
+  visit(sf)
+}
+
+// ── TEXT THE PUBLIC PAGES SHOW WITHOUT A LITERAL t("…") ─────────────
+// The public pages pass text around: headline="…" into a shared call to action,
+// arrays of facts rendered as {t(item)}, and the competitor and product facts
+// in lib/competitors.ts, lib/competitorFeatures.ts and lib/canonicalFacts.ts,
+// which stay free of i18n calls because the markdown mirrors and llms-full.txt
+// read them too. The places that show them go through t() (wrap-types.mjs),
+// so the text itself belongs here: prose string literals that are JSX
+// attribute values, object property values or array elements, in the public
+// pages, the components they import, and those three data files.
+const DATA_FILES = ['lib/competitors.ts', 'lib/competitorFeatures.ts', 'lib/canonicalFacts.ts']
+const isPublicPage = (f) => /^app\/.*\.tsx$/.test(f) &&
+  !/^app\/(dashboard|api|admin|sign-in|sign-up|onboarding|billing|welcome|join|invite|embed)\b/.test(f) &&
+  !/admin-desktop|\/manager\/desktop/.test(f)
+// Keys and attributes whose values are never shown as text.
+const NOT_TEXT_KEY = /^(className|class|href|src|srcSet|id|key|slug|icon|color|colour|background|style|sx|url|path|segment|as|type|variant|tone|opens|rel|target|fill|stroke|d|viewBox|role|name|method|action|lang|dir|htmlFor|fontFamily|keywords|sameAs|logo|image|images|email|telephone|width|height|size|mode|value|defaultValue|pattern|autoComplete|inputMode|activeHref|rail|canonical|locale|code|hash|query|matchup)$/
+// Never translated: the dialer demos show an English call script on purpose
+// (agents read it to US leads), and language names stay in their own language.
+const KEEP_ENGLISH = new Set(['components/DialerShowcase.tsx', 'components/LeadQueueShowcase.tsx', 'components/LanguageDropdown.tsx', 'components/LanguagePrompt.tsx'])
+const NEVER_ALONE = new Set(['DialerSeat', 'DIALERSEAT', 'Dialerseat'])
+
+const publicScope = new Set()
+{
+  const queue = files.filter(isPublicPage)
+  while (queue.length) {
+    const f = queue.pop()
+    if (publicScope.has(f) || !fs.existsSync(f)) continue
+    publicScope.add(f)
+    const src = fs.readFileSync(f, 'utf8')
+    for (const m of src.matchAll(/from ['"](@\/components\/[^'"]+|\.{1,2}\/[^'"]+)['"]/g)) {
+      const spec = m[1].startsWith('@/') ? m[1].slice(2) : path.posix.join(path.posix.dirname(f), m[1])
+      for (const cand of [spec + '.tsx', spec + '/index.tsx']) {
+        if (fs.existsSync(cand) && (cand.startsWith('components/') || isPublicPage(cand))) queue.push(cand)
+      }
+    }
+  }
+}
+
+const literalText = (e) => {
+  if (ts.isParenthesizedExpression(e)) return literalText(e.expression)
+  if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return e.text
+  if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+    const l = literalText(e.left), r = literalText(e.right)
+    return l != null && r != null ? l + r : null
+  }
+  return null
+}
+
+for (const file of [...publicScope, ...DATA_FILES].sort()) {
+  if (KEEP_ENGLISH.has(file)) continue
+  const src = fs.readFileSync(file, 'utf8')
+  const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true, file.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
+  const visit = (n) => {
+    // Styles are not text; metadata is handled above; keywords are never shown.
+    if (ts.isPropertyAssignment(n) && /^(style|sx|keywords|openGraph|twitter|alternates|robots|icons)$/.test(n.name.getText(sf))) return
+    if (ts.isJsxAttribute(n) && /^(style|className)$/.test(n.name.getText(sf))) return
+    if (ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) return
+    let text = null
+    if (ts.isJsxAttribute(n) && n.initializer && !NOT_TEXT_KEY.test(n.name.getText(sf))) {
+      const init = ts.isJsxExpression(n.initializer) ? n.initializer.expression : n.initializer
+      if (init) text = literalText(init)
+    } else if (ts.isPropertyAssignment(n) && !NOT_TEXT_KEY.test(n.name.getText(sf).replace(/['"]/g, ''))) {
+      text = literalText(n.initializer)
+    } else if (n.parent && ts.isArrayLiteralExpression(n.parent) && (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n) || ts.isBinaryExpression(n))) {
+      text = literalText(n)
+    }
+    if (text != null && isProse(text.trim()) && !NEVER_ALONE.has(text.trim())) add(text, file)
     ts.forEachChild(n, visit)
   }
   visit(sf)

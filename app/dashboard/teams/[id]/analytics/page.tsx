@@ -911,7 +911,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                             color: dispColor(c.disposition),
                             background: `${dispColor(c.disposition)}1f`,
                           }}>
-                            {c.disposition}
+                            {t(c.disposition)}
                           </span>
                         ) : (
                           <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>-</span>
@@ -964,7 +964,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                           <div className="ta-rec-meta">
                             {r.agentName}
                             {r.campaignName && <> · {r.campaignName}</>}
-                            {r.disposition && <> · {r.disposition}</>}
+                            {r.disposition && <> · {t(r.disposition)}</>}
                           </div>
                         </div>
                         <div className="ta-rec-right">

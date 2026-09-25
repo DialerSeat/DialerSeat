@@ -158,7 +158,7 @@ function Column({ c }: { c: Competitor }) {
         ].map(([label, value]) => (
           <div key={label} style={{ marginBottom: 14 }}>
             <dt style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: ACCENT }}>{t(label)}</dt>
-            <dd style={{ margin: '4px 0 0', fontSize: 14, lineHeight: 1.65, color: INK }}>{value}</dd>
+            <dd style={{ margin: '4px 0 0', fontSize: 14, lineHeight: 1.65, color: INK }}>{t(value)}</dd>
           </div>
         ))}
       </dl>
@@ -171,7 +171,7 @@ function Column({ c }: { c: Competitor }) {
           {t("Pros of {name}", { name: c.name })}
         </h3>
         <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 14, lineHeight: 1.8, color: INK }}>
-          {c.wins.map(w => <li key={w}>{w}</li>)}
+          {c.wins.map(w => <li key={w}>{t(w)}</li>)}
         </ul>
       </div>
 
@@ -180,7 +180,7 @@ function Column({ c }: { c: Competitor }) {
           {t("Cons of {name}", { name: c.name })}
         </h3>
         <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 14, lineHeight: 1.8, color: INK }}>
-          {c.friction.map(f => <li key={f}>{f}</li>)}
+          {c.friction.map(f => <li key={f}>{t(f)}</li>)}
         </ul>
       </div>
     </div>
@@ -263,10 +263,10 @@ export default async function MatchupPage(
           }}>
             <h2 style={{ fontSize: 20, fontWeight: 'bold', margin: 0 }}>{t("Which one to pick")}</h2>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: INK, marginTop: 12 }}>
-              <strong>{t("Choose {name}", { name: a.name })}</strong> {t("if you are {charAt}{slice}", { charAt: a.bestFor.charAt(0).toLowerCase(), slice: a.bestFor.slice(1) })}
+              <strong>{t("Choose {name}", { name: a.name })}</strong> {t("if you are {charAt}{slice}", { charAt: t(a.bestFor).charAt(0).toLowerCase(), slice: t(a.bestFor).slice(1) })}
             </p>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: INK, marginTop: 8 }}>
-              <strong>{t("Choose {name}", { name: b.name })}</strong> {t("if you are {charAt}{slice}", { charAt: b.bestFor.charAt(0).toLowerCase(), slice: b.bestFor.slice(1) })}
+              <strong>{t("Choose {name}", { name: b.name })}</strong> {t("if you are {charAt}{slice}", { charAt: t(b.bestFor).charAt(0).toLowerCase(), slice: t(b.bestFor).slice(1) })}
             </p>
             <p style={{ fontSize: 14, lineHeight: 1.8, color: MUTED, marginTop: 14 }}>
               {t("The most common mistake in this comparison is reading the advertised rate as the bill. Add the seat minimum, the tier the dialer actually lives on, per-number charges, and any setup fee before deciding which is cheaper.")}</p>
@@ -282,10 +282,10 @@ export default async function MatchupPage(
             <h2 style={{ fontSize: 20, fontWeight: 'bold', margin: '10px 0 0' }}>
               {t("Where DialerSeat fits")}</h2>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: INK, marginTop: 12 }}>
-              {t("We publish this page, so weigh it accordingly. {pricing} {contract} {dialing}", { pricing: DIALERSEAT.pricing, contract: DIALERSEAT.contract, dialing: DIALERSEAT.dialing })}
+              {t("We publish this page, so weigh it accordingly. {pricing} {contract} {dialing}", { pricing: t(DIALERSEAT.pricing), contract: t(DIALERSEAT.contract), dialing: t(DIALERSEAT.dialing) })}
             </p>
             <p style={{ fontSize: 14, lineHeight: 1.8, color: MUTED, marginTop: 12 }}>
-              {t("Where we are")}{" "}<em>{t("not")}</em> {t("the right answer: {friction}.", { friction: DIALERSEAT.friction.join('; ') })}</p>
+              {t("Where we are")}{" "}<em>{t("not")}</em> {t("the right answer: {friction}.", { friction: DIALERSEAT.friction.map((f) => t(f)).join('; ') })}</p>
             <div style={{ marginTop: 18, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <Link href={`/vs/${a.slug}`} style={{
                 fontSize: 11, letterSpacing: 1.5, fontWeight: 'bold', color: ACCENT,
