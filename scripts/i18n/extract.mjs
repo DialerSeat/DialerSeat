@@ -18,7 +18,7 @@ import ts from 'typescript'
 const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'app', 'components', 'lib'], { encoding: 'utf8' })
   .split(/\r?\n/)
   .filter((f) => /\.(tsx?|mjs)$/.test(f))
-  .filter((f) => !/admin-desktop|^app\/dashboard\/admin\/|^app\/dashboard\/manager\/desktop|^lib\/i18n\//.test(f))
+  .filter((f) => !/admin-desktop|^app\/api\/admin\/|^app\/dashboard\/admin\/|^app\/dashboard\/manager\/desktop|^lib\/i18n\//.test(f))
 
 const catalog = new Map() // text → Set(files)
 const add = (text, file) => {

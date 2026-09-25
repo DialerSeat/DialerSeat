@@ -2186,9 +2186,6 @@
  "A campaign, joins the team and that campaign at once": [
   "components/teams/TeamModals.tsx"
  ],
- "A CNAM name is required (max 15 characters).": [
-  "app/api/admin/pool/audit/route.ts"
- ],
  "A comparison where the competitor loses at everything is marketing, and it reads like marketing. These are real advantages, and real drawbacks.": [
   "components/vs-competitor-view.tsx"
  ],
@@ -2593,10 +2590,6 @@
  ],
  "Add": [
   "app/dashboard/teams/page.tsx"
- ],
- "Add a message before publishing.": [
-  "app/api/admin/dialer-down/route.ts",
-  "app/api/admin/promo-banner/route.ts"
  ],
  "Add a new lead": [
   "app/dashboard/leads/page.tsx"
@@ -3384,9 +3377,6 @@
  "audio. Allow the microphone for this site and reload.": [
   "app/dashboard/dialer/page.tsx"
  ],
- "Audit failed": [
-  "app/api/admin/pool/audit/route.ts"
- ],
  "Authenticate you:": [
   "app/privacy/page.tsx"
  ],
@@ -3493,10 +3483,6 @@
  ],
  "Back to overview": [
   "app/dashboard/teams/page.tsx"
- ],
- "Bad JSON": [
-  "app/api/admin/pool/register/route.ts",
-  "app/api/admin/users/delete/route.ts"
  ],
  "Bad period": [
   "app/api/reports/seat-report/route.ts"
@@ -3698,9 +3684,6 @@
  "Both offer predictive dialing. The difference is packaging: DialerSeat includes predictive, power, progressive and preview at the base price with no tier to climb, selectable per campaign.": [
   "app/vs/dialedin/page.tsx"
  ],
- "Both VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are set.": [
-  "app/api/admin/push/diagnose/route.ts"
- ],
  "Both, depending on the bundle: single-line on Connect at $299 a month and triple-line on Pro at $349. The Core bundle does not include the dialer.": [
   "app/vs/redx/page.tsx"
  ],
@@ -3714,12 +3697,6 @@
   "app/billing/success/page.tsx",
   "app/sign-in/[[...sign-in]]/page.tsx",
   "components/WhitelabelLivePreview.tsx"
- ],
- "Brand name cannot be empty": [
-  "app/api/admin/tenants/[id]/route.ts"
- ],
- "Brand name is required": [
-  "app/api/admin/tenants/route.ts"
  ],
  "Brand name is required.": [
   "app/onboarding/whitelabel/page.tsx"
@@ -4109,7 +4086,6 @@
   "app/api/campaigns/update/route.ts"
  ],
  "Campaign is already attached to this team": [
-  "app/api/admin/campaigns/assign-team/route.ts",
   "app/api/manager/campaigns/assign-team/route.ts"
  ],
  "Campaign is not attached to this team": [
@@ -4123,7 +4099,6 @@
   "components/teams/TeamModals.tsx"
  ],
  "Campaign name is too long (120 characters max).": [
-  "app/api/admin/user-data/campaigns/create/route.ts",
   "app/api/campaigns/create/route.ts"
  ],
  "Campaign not attached to this team": [
@@ -4133,12 +4108,6 @@
   "components/teams/CampaignDetail.tsx"
  ],
  "Campaign not found": [
-  "app/api/admin/campaigns/assign-team/route.ts",
-  "app/api/admin/campaigns/status/route.ts",
-  "app/api/admin/user-data/campaigns/delete/route.ts",
-  "app/api/admin/user-data/campaigns/dialer-mode/route.ts",
-  "app/api/admin/user-data/campaigns/recording/route.ts",
-  "app/api/admin/user-data/leads/route.ts",
   "app/api/campaigns/compliance-export/route.ts",
   "app/api/campaigns/compliance-stats/route.ts",
   "app/api/campaigns/script-links/list/route.ts",
@@ -4380,11 +4349,7 @@
  "Cancellation doesn't cut your access off immediately. It schedules the subscription to end at the close of the current billing period, meaning if you cancel on day 2 of a paid week, you keep full access through day 7. You're not charged again after that, and nothing auto-renews.": [
   "app/faq/billing/view.tsx"
  ],
- "Cannot delete admin user. Remove admin flag first.": [
-  "app/api/admin/users/delete/route.ts"
- ],
  "Cannot update a virtual sub-campaign. Update the parent instead.": [
-  "app/api/admin/campaigns/status/route.ts",
   "app/api/campaigns/update/route.ts",
   "app/api/manager/campaigns/status/route.ts"
  ],
@@ -4577,9 +4542,6 @@
  "CNAM is the caller name that can appear under a number: up to 15 characters, like a business name. It is often sold as a spam fix. It mostly isn’t.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
- "CNAM update failed": [
-  "app/api/admin/pool/audit/route.ts"
- ],
  "Coach off real numbers, not hunches. The whole point of running a floor instead of being a sole producer is the economy of scale on data, Teams gives you the data.": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
@@ -4606,9 +4568,6 @@
  ],
  "Color and logo changes propagate site-wide within 60 seconds. Your own browser updates instantly on save. Other users (your team, your customers) will see the new look after their next page load, up to a minute later.": [
   "app/onboarding/whitelabel/page.tsx"
- ],
- "Colors must be valid hex codes, e.g. #FFAA00.": [
-  "app/api/admin/promo-banner/route.ts"
  ],
  "COLUMN": [
   "app/faq/compliance-export/view.tsx"
@@ -4770,9 +4729,6 @@
  ],
  "CONFIRM DELETE": [
   "components/teams/TeamsManager.tsx"
- ],
- "Confirmation required: send { numberId, confirm: \"release\" }": [
-  "app/api/admin/pool/release/route.ts"
  ],
  "CONFIRMING...": [
   "app/onboarding/whitelabel/page.tsx"
@@ -5028,9 +4984,6 @@
  "Could not load campaign": [
   "components/teams/CampaignDetail.tsx"
  ],
- "Could not load suggestions.": [
-  "app/api/admin/suggestions/route.ts"
- ],
  "Could not load the floor.": [
   "components/teams/TeamFloor.tsx"
  ],
@@ -5102,9 +5055,6 @@
  ],
  "Could not update that request": [
   "app/dashboard/teams/page.tsx"
- ],
- "Could not update that.": [
-  "app/api/admin/suggestions/route.ts"
  ],
  "Could not update your subscription": [
   "app/dashboard/settings/page.tsx"
@@ -5231,9 +5181,6 @@
  ],
  "CSV format, fields, and the retry cycle": [
   "app/faq/view.tsx"
- ],
- "Current password is incorrect.": [
-  "app/api/admin/dialer-down/route.ts"
  ],
  "currently apply these state-specific variations automatically, and this page is a starting point rather than legal advice: state statutes change, and the summaries above are drawn from secondary sources. If your list is concentrated in a stricter state, confirm the current rule with counsel and schedule around it. We would rather tell you that plainly than let you assume a protection the product does not provide.": [
   "app/faq/calling-hours/page.tsx"
@@ -6954,7 +6901,6 @@
   "components/teams/TeamsSidebar.tsx"
  ],
  "Expected JSON.": [
-  "app/api/admin/suggestions/route.ts",
   "app/api/suggestions/route.ts"
  ],
  "EXPIRES": [
@@ -6993,9 +6939,6 @@
  "Export, deletion, and retention windows": [
   "app/faq/view.tsx"
  ],
- "Exposure check failed": [
-  "app/api/admin/surcharge-exposure/route.ts"
- ],
  "Failed cards, mid-week seat changes, what cancel does": [
   "app/faq/view.tsx"
  ],
@@ -7009,20 +6952,13 @@
   "app/api/manager/campaigns/assign-team/route.ts",
   "components/teams/TeamsManager.tsx"
  ],
- "Failed to build logs": [
-  "app/api/admin/logs/route.ts"
- ],
  "Failed to cancel": [
   "app/dashboard/settings/page.tsx"
  ],
  "Failed to cancel seat": [
   "app/dashboard/settings/page.tsx"
  ],
- "Failed to check subscription": [
-  "app/api/admin/push/subscribe/route.ts"
- ],
  "Failed to create note": [
-  "app/api/admin/notes/route.ts",
   "app/api/manager/notes/route.ts"
  ],
  "Failed to create team": [
@@ -7041,7 +6977,6 @@
   "app/dashboard/leads/page.tsx"
  ],
  "Failed to delete note": [
-  "app/api/admin/notes/[id]/route.ts",
   "app/api/manager/notes/[id]/route.ts"
  ],
  "Failed to delete team": [
@@ -7067,18 +7002,10 @@
   "app/dashboard/teams/[id]/analytics/page.tsx"
  ],
  "Failed to load notes": [
-  "app/api/admin/notes/route.ts",
   "app/api/manager/notes/route.ts"
  ],
- "Failed to load preferences": [
-  "app/api/admin/push/prefs/route.ts"
- ],
  "Failed to load prefs": [
-  "app/api/admin/desktop-prefs/route.ts",
   "app/api/manager/desktop-prefs/route.ts"
- ],
- "Failed to load recordings": [
-  "app/api/admin/recordings/list/route.ts"
  ],
  "Failed to load subscription status": [
   "app/dashboard/settings/page.tsx"
@@ -7102,12 +7029,6 @@
  "Failed to remove": [
   "components/teams/TeamsManager.tsx"
  ],
- "Failed to remove subscription": [
-  "app/api/admin/push/subscribe/route.ts"
- ],
- "Failed to reorder": [
-  "app/api/admin/notes/reorder/route.ts"
- ],
  "Failed to resume subscription": [
   "app/dashboard/settings/page.tsx"
  ],
@@ -7117,15 +7038,8 @@
  "Failed to save campaign settings": [
   "app/dashboard/campaigns/page.tsx"
  ],
- "Failed to save preferences": [
-  "app/api/admin/push/prefs/route.ts"
- ],
  "Failed to save prefs": [
-  "app/api/admin/desktop-prefs/route.ts",
   "app/api/manager/desktop-prefs/route.ts"
- ],
- "Failed to save subscription": [
-  "app/api/admin/push/subscribe/route.ts"
  ],
  "Failed to save.": [
   "app/onboarding/whitelabel/page.tsx"
@@ -7149,7 +7063,6 @@
   "app/api/manager/campaigns/status/route.ts"
  ],
  "Failed to update note": [
-  "app/api/admin/notes/[id]/route.ts",
   "app/api/manager/notes/[id]/route.ts"
  ],
  "fails closed": [
@@ -7720,11 +7633,7 @@
   "app/dashboard/campaigns/page.tsx",
   "components/teams/TeamModals.tsx"
  ],
- "Give one or more 3-digit area codes, separated by commas.": [
-  "app/api/admin/pool/buy/route.ts"
- ],
  "Give the campaign a real name, not \"Untitled\".": [
-  "app/api/admin/user-data/campaigns/create/route.ts",
   "app/api/campaigns/create/route.ts"
  ],
  "Give the script a name": [
@@ -8748,9 +8657,6 @@
  "Included, no extra cost, no separate compliance-reporting add-on.": [
   "app/faq/compliance-export/view.tsx"
  ],
- "Incorrect password.": [
-  "app/api/admin/dialer-down/route.ts"
- ],
  "increment globally: once anyone on the team dials a lead, every other agent sees the updated state. No double-dialing within the platform's 24-hour cooldown unless the owner explicitly allows it. TCPA window enforcement (8am-9pm local to the lead) applies team-wide, not per-agent.": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
@@ -8821,20 +8727,10 @@
   "app/api/ingest/leads/[token]/route.ts"
  ],
  "Invalid JSON": [
-  "app/api/admin/desktop-prefs/route.ts",
-  "app/api/admin/notes/[id]/route.ts",
-  "app/api/admin/notes/reorder/route.ts",
-  "app/api/admin/platform-config/route.ts",
   "app/api/manager/desktop-prefs/route.ts",
   "app/api/stripe/pause/route.ts",
   "app/api/suppression/route.ts",
   "app/api/teams/members/seat/route.ts"
- ],
- "Invalid JSON body": [
-  "app/api/admin/dialer-down/route.ts",
-  "app/api/admin/promo-banner/route.ts",
-  "app/api/admin/push/prefs/route.ts",
-  "app/api/admin/push/subscribe/route.ts"
  ],
  "Invalid logo URL": [
   "app/api/whitelabel/branding/update/route.ts"
@@ -9331,9 +9227,6 @@
   "app/dialing-modes/predictive/page.tsx",
   "app/faq/what-is-a-predictive-dialer/page.tsx"
  ],
- "Lead(s) not found": [
-  "app/api/admin/user-data/leads/delete/route.ts"
- ],
  "Leads": [
   "app/faq/data-and-recordings/view.tsx",
   "app/faq/view.tsx",
@@ -9817,9 +9710,6 @@
  "MAXED": [
   "app/faq/leads/view.tsx"
  ],
- "Measured from answer to hangup, not from dial. Ring time is excluded.": [
-  "app/api/admin/compliance/route.ts"
- ],
  "Measured on the DialerSeat platform over the last 90 days, from anonymized call records. No lead, customer, or campaign is identifiable here. Free to cite with attribution.": [
   "app/data/connect-rates/page.tsx"
  ],
@@ -9878,34 +9768,13 @@
   "app/api/campaigns/delete/route.ts"
  ],
  "Missing campaign_id": [
-  "app/api/admin/user-data/campaigns/delete/route.ts",
-  "app/api/admin/user-data/leads/route.ts",
   "app/api/leads/upload/route.ts"
  ],
  "Missing destination": [
   "app/api/calls/outbound/route.ts"
  ],
- "Missing endpoint": [
-  "app/api/admin/push/subscribe/route.ts"
- ],
- "Missing endpoint or keys": [
-  "app/api/admin/push/subscribe/route.ts"
- ],
- "Missing endpoint query param": [
-  "app/api/admin/push/subscribe/route.ts"
- ],
- "Missing id.": [
-  "app/api/admin/suggestions/route.ts"
- ],
- "Missing lead_id(s)": [
-  "app/api/admin/user-data/leads/delete/route.ts"
- ],
  "Missing stripe-signature header": [
   "app/api/stripe/webhook/route.ts"
- ],
- "Missing user_id": [
-  "app/api/admin/user-data/campaigns/route.ts",
-  "app/api/admin/user-data/recordings/route.ts"
  ],
  "Mobile branding": [
   "app/faq/white-label-mobile/view.tsx"
@@ -10134,9 +10003,6 @@
  "Name must be 40 characters or fewer.": [
   "app/onboarding/whitelabel/page.tsx"
  ],
- "Name the campaign before saving it.": [
-  "app/api/admin/user-data/campaigns/create/route.ts"
- ],
  "NAME THIS THEME": [
   "app/onboarding/whitelabel/page.tsx"
  ],
@@ -10249,9 +10115,6 @@
  ],
  "NO ACCESS": [
   "components/teams/RosterPanel.tsx"
- ],
- "No account with that id. Pick the user from the list rather than typing an id.": [
-  "app/api/admin/user-data/campaigns/create/route.ts"
  ],
  "No active campaigns": [
   "app/api/leads/next/route.ts"
@@ -10412,14 +10275,8 @@
  "No email on user": [
   "app/api/stripe/create-subscription/route.ts"
  ],
- "No fields to update": [
-  "app/api/admin/platform-config/route.ts"
- ],
  "No file provided": [
   "app/api/manager/desktop-prefs/wallpaper/route.ts"
- ],
- "No ids given": [
-  "app/api/admin/notifications/route.ts"
  ],
  "No infrastructure makes a number permanently immune. Call-analytics apps also score numbers on how the people you call respond, including complaints and blocks. The platform removes every carrier-level and volume-level cause of flagging; these are the ones only you control.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
@@ -10498,9 +10355,6 @@
  "No number places more than 60 calls a day. Once it reaches its limit, it rests until the next day.": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
- "No numbers available in this area code": [
-  "app/api/admin/pool/seed/route.ts"
- ],
  "No numbers provided": [
   "app/api/suppression/route.ts"
  ],
@@ -10533,9 +10387,6 @@
  ],
  "No per-seat fee for owner or agents. Members still need their own $35/wk DialerSeat sub to dial: free here means free campaign access, not free platform access.": [
   "components/teams/TeamsManager.tsx"
- ],
- "No phone_number provided in request body and TELNYX_PHONE_NUMBER env var not set": [
-  "app/api/admin/pool/import-existing/route.ts"
  ],
  "NO PLAN": [
   "app/dashboard/layout.tsx"
@@ -10598,9 +10449,6 @@
  "No such members": [
   "app/api/teams/access/grant-bulk/route.ts"
  ],
- "No such user": [
-  "app/api/admin/seat-discount/route.ts"
- ],
  "No system is perfectly secure. If we become aware of a data breach affecting your data, we will notify you without undue delay as required by applicable law.": [
   "app/privacy/page.tsx"
  ],
@@ -10631,17 +10479,8 @@
  "No usage-based call/number charges": [
   "app/vs/hookedcrm/view.tsx"
  ],
- "No users row for that": [
-  "app/api/admin/billing-check/route.ts",
-  "app/api/admin/profile-check/route.ts"
- ],
  "No valid fields to update": [
-  "app/api/admin/pool/config/route.ts",
-  "app/api/admin/tenants/[id]/route.ts",
   "app/api/campaigns/update/route.ts"
- ],
- "No valid preference fields in body": [
-  "app/api/admin/push/prefs/route.ts"
  ],
  "No weekly billing option": [
   "app/vs/hookedcrm/view.tsx"
@@ -10863,7 +10702,6 @@
   "app/status/page.tsx"
  ],
  "Not signed in": [
-  "app/api/admin/desktop-prefs/route.ts",
   "app/api/teams/members/nickname/route.ts"
  ],
  "Not sure on the mode? Start with POWER.": [
@@ -10892,7 +10730,6 @@
   "app/api/teams/members/list/route.ts"
  ],
  "Note not found": [
-  "app/api/admin/notes/[id]/route.ts",
   "app/api/manager/notes/[id]/route.ts"
  ],
  "NOTES": [
@@ -10951,10 +10788,6 @@
  ],
  "NOW DIALING": [
   "app/dashboard/dialer/page.tsx"
- ],
- "Number not found": [
-  "app/api/admin/pool/register/route.ts",
-  "app/api/admin/pool/rest/route.ts"
  ],
  "NUMBER POOL": [
   "components/ExplainerCrossLinks.tsx"
@@ -11087,9 +10920,6 @@
  "on top of that, completely outside our platform.": [
   "app/faq/managers/view.tsx"
  ],
- "On-net SIP legs count toward this cap, so an agent-attended call consumes two slots, the lead leg and the agent leg.": [
-  "app/api/admin/compliance/route.ts"
- ],
  "Once a day, every number’s answer rate over the last three days is compared with the rest of the pool. A number answering below 40% of the pool median is treated as struggling.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
  ],
@@ -11192,9 +11022,6 @@
  ],
  "one once detected. DialerSeat does not do voicemail drops today. When AMD calls a machine, the call ends and the queue advances nothing is left behind. It is on the list rather than shipped, and we would rather say that than have you plan a campaign around it.": [
   "app/faq/how-does-amd-work/page.tsx"
- ],
- "One or more callControlIds are not valid call control ids": [
-  "app/api/admin/calls/live-legs/route.ts"
  ],
  "One or more leads not found or not owned by you": [
   "app/api/leads/delete/route.ts"
@@ -11547,9 +11374,6 @@
   "app/dashboard/teams/[id]/analytics/page.tsx",
   "components/teams/TeamsManager.tsx"
  ],
- "Owner must be a Clerk user id (user_...)": [
-  "app/api/admin/tenants/route.ts"
- ],
  "Owner only": [
   "app/api/campaigns/script-links/reorder/route.ts",
   "app/api/campaigns/script-links/toggle/route.ts",
@@ -11622,15 +11446,8 @@
  "Pass accessId, or campaignId with memberId or teamId": [
   "app/api/teams/access/revoke/route.ts"
  ],
- "Pass clerk_id or email": [
-  "app/api/admin/billing-check/route.ts",
-  "app/api/admin/profile-check/route.ts"
- ],
  "Pass-through seat.": [
   "app/faq/dialerseat-teams/view.tsx"
- ],
- "Password must be at least 8 characters.": [
-  "app/api/admin/dialer-down/route.ts"
  ],
  "past due": [
   "app/faq/billing/view.tsx"
@@ -12533,9 +12350,6 @@
  "Provide accurate registration information": [
   "app/terms/page.tsx"
  ],
- "Provide callControlIds[] or olderThanSeconds": [
-  "app/api/admin/calls/live-legs/route.ts"
- ],
  "Proving it, not just claiming it": [
   "app/faq/view.tsx"
  ],
@@ -13346,9 +13160,6 @@
   "app/dashboard/settings/page.tsx",
   "components/SellerIdentityDialog.tsx"
  ],
- "Say which recordings: maxRecordingSeconds, maxTalkSeconds, or all: true.": [
-  "app/api/admin/recordings/bulk-delete/route.ts"
- ],
  "Say who you are": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
@@ -13663,9 +13474,6 @@
  "sent from those numbers. You register a brand, you register a campaign describing what you will send, and your messaging throughput and filtering follow from that.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
- "Sent successfully.": [
-  "app/api/admin/push/diagnose/route.ts"
- ],
  "Sentiment": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
  ],
@@ -13684,9 +13492,6 @@
  "Separately, the FCC limits telephone solicitation to between 8 a.m. and 9 p.m. in the called person’s local time. That applies to every dialing mode, not just predictive.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
- "Server and client public keys match.": [
-  "app/api/admin/push/diagnose/route.ts"
- ],
  "server shows no active call": [
   "app/dashboard/dialer/page.tsx"
  ],
@@ -13702,9 +13507,6 @@
  ],
  "Serving this page": [
   "app/status/page.tsx"
- ],
- "Set a publish/remove password first, before publishing or removing the banner.": [
-  "app/api/admin/dialer-down/route.ts"
  ],
  "SET AVAILABLE TO BEGIN": [
   "app/dashboard/dialer/page.tsx"
@@ -13976,12 +13778,6 @@
  "Slate teal: deep blue-gray chrome with a bright teal accent, monochrome page wash.": [
   "app/onboarding/whitelabel/page.tsx"
  ],
- "Slug must be 1-40 chars, lowercase letters/numbers/hyphens": [
-  "app/api/admin/tenants/[id]/route.ts"
- ],
- "Slug must be 1-40 chars, lowercase letters/numbers/hyphens, no leading or trailing hyphen": [
-  "app/api/admin/tenants/route.ts"
- ],
  "Small samples get a dash, not a number.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
@@ -14225,9 +14021,6 @@
  ],
  "Stop wasting your day on dead air. DialerSeat knows when a machine answers and skips ahead to the next live human.": [
   "app/page.tsx"
- ],
- "Stopped: daily or pool cap reached": [
-  "app/api/admin/pool/buy/route.ts"
  ],
  "Stopping for a while? Pause instead of cancelling. You keep the week you've already paid for, your leads, campaigns and call history stay untouched, and": [
   "app/dashboard/settings/page.tsx"
@@ -14495,9 +14288,6 @@
   "app/api/teams/create/route.ts"
  ],
  "Team not found": [
-  "app/api/admin/campaigns/assign-team/route.ts",
-  "app/api/admin/impersonate/route.ts",
-  "app/api/admin/teams/delete/route.ts",
   "app/api/leads/next/route.ts",
   "app/api/manager/campaigns/assign-team/route.ts",
   "app/api/manager/teams/delete/route.ts",
@@ -14529,9 +14319,6 @@
  ],
  "Team performance + campaign oversight": [
   "app/vs/hookedcrm/view.tsx"
- ],
- "Team references a tenant that no longer exists": [
-  "app/api/admin/impersonate/route.ts"
  ],
  "TEAM SCRIPT": [
   "app/faq/scripts/view.tsx"
@@ -14636,24 +14423,11 @@
  "Telnyx credentials missing": [
   "app/api/recordings/sync/route.ts"
  ],
- "Telnyx is not configured": [
-  "app/api/admin/pool/audit/route.ts"
- ],
- "Telnyx said a further increase from 100 to 200 concurrent calls needs higher answer rates and longer average call durations. No fixed number was given.": [
-  "app/api/admin/compliance/route.ts"
- ],
  "Telnyx telephony credential not configured on server": [
   "app/api/calls/token/route.ts"
  ],
  "TELNYX_API_KEY is not configured": [
   "app/api/cron/telnyx-compliance-sync/route.ts"
- ],
- "TELNYX_API_KEY is not configured on this deployment.": [
-  "app/api/admin/telnyx-charges/route.ts",
-  "app/api/admin/telnyx-ledger/route.ts"
- ],
- "TELNYX_API_KEY not set": [
-  "app/api/admin/pool/import-existing/route.ts"
  ],
  "Telnyx’s STIR/SHAKEN documentation": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
@@ -14668,10 +14442,6 @@
   "app/api/manager/campaigns/status/route.ts",
   "app/api/manager/teams/delete/route.ts",
   "app/api/manager/teams/route.ts"
- ],
- "Tenant not found": [
-  "app/api/admin/billing/route.ts",
-  "app/api/admin/tenants/[id]/route.ts"
  ],
  "tenant setup": [
   "app/billing/success/page.tsx"
@@ -14752,12 +14522,6 @@
  ],
  "That number came from our own calls. Two separate analyses in September both found that numbers dialing lightly were answered roughly 1.8 to 1.9 times as often as numbers dialing heavily. The heaviest days partly overlapped with a period when the dialer itself had problems, so treat the size of the gap with some caution. The direction held both times.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
- ],
- "That number has been released. It would have to be bought again.": [
-  "app/api/admin/pool/rest/route.ts"
- ],
- "That number is already resting.": [
-  "app/api/admin/pool/rest/route.ts"
  ],
  "That principle is the whole point. If you'd like the broader context: why these rules exist, who wrote them, and why so many incumbents treat the fines as a cost of doing business, read": [
   "app/faq/how-we-keep-compliance/page.tsx"
@@ -15998,9 +15762,6 @@
  "Too many calls on one number.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
- "Too many ids": [
-  "app/api/admin/notes/reorder/route.ts"
- ],
  "Tool": [
   "app/vs/teams/page.tsx"
  ],
@@ -16099,7 +15860,6 @@
   "app/api/teams/leave/route.ts"
  ],
  "Type \"remove\" to confirm": [
-  "app/api/admin/teams/delete/route.ts",
   "app/api/manager/teams/delete/route.ts"
  ],
  "Type \"remove\" to confirm deletion": [
@@ -16147,7 +15907,6 @@
   "app/status/page.tsx"
  ],
  "Unknown action": [
-  "app/api/admin/notifications/route.ts",
   "app/api/teams/campaigns/ingest/route.ts"
  ],
  "Unknown agent": [
@@ -16163,9 +15922,6 @@
  ],
  "Unknown lead": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
- ],
- "Unknown status.": [
-  "app/api/admin/suggestions/route.ts"
  ],
  "Unlike ReadyMode or Five9, Hooked CRM's per-seat price goes down as headcount grows, not up: $169 at 1-20 seats, down to $129 at 50-99. That's a genuinely fair structure for a growing team. What it doesn't include is whitelabel: we found no whitelabel or reseller program anywhere on their site. DialerSeat™ Manager+ is a flat $75/month add-on with full whitelabel included, on top of a price that never changes with seats either way: no bulk discount to chase, but no per-seat penalty to hit.": [
   "app/vs/hookedcrm/view.tsx"
