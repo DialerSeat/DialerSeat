@@ -78,13 +78,19 @@ of the working AMD configuration is taken before either starts** (the detector
 settings in platform_config, in a migration that can be replayed, plus a git
 tag on the code).
 
-1. **AMD accuracy tuning.** Every machine called a human is a recording paid
-   for; every human called a machine is a lead hung up on. Same detector
-   settings for progressive and predictive (docs/AMD.md).
-2. **Recordings start about 10 seconds after a person picks up** (Joshua, 25
-   Sept), not at the verdict. Telnyx bills each recording a 60-second minimum,
-   rounding down to the minute after that (Telnyx support, 25 Sept), so a
-   recording that starts on a false human verdict costs a full minute.
+0. **Backup.** DONE 25 Sept: `platform_config_backups` row, the restore
+   UPDATE in db/migrations/2026-09-25-amd-baseline-backup.sql, and git tag
+   `amd-baseline-2026-09-25`.
+1. **AMD accuracy tuning.** MEASURED, NOT CHANGED, 25 Sept (see AMD.md tuning
+   log). 67% of human verdicts were skipped by agents, which looks like
+   voicemail passed as people, but the data has no ground truth, and the
+   obvious setting (longer confirm-a-human silence) is recorded as having hung
+   up on real people before. Waiting on a listen to ~15 of the 103 recorded
+   skipped-human calls; then one step, measured.
+2. **Recordings start 10 seconds after a person picks up.** DONE 25 Sept
+   (3180f4b6). Only if the call is still up and the agent has not skipped it.
+   Telnyx bills each recording a 60-second minimum, so this removes the
+   recordings of calls over in seconds.
 
 ## Cost per dial: where it stands
 

@@ -260,6 +260,41 @@ and never 11. **0 disables it**, so it can be turned off instantly without a
 deploy — but note the shipped fallback is 8, not 0: a failed config read must
 not silently switch compliance off.
 
+## TUNING LOG
+
+### 25 Sept 2026: measured, not changed
+
+Backed up first: `platform_config_backups` row `amd-baseline-2026-09-25`
+(the whole config row), the restore UPDATE in
+db/migrations/2026-09-25-amd-baseline-backup.sql, and git tag
+`amd-baseline-2026-09-25`.
+
+What the 15-24 Sept data says (2,518 dials):
+
+- 1,319 machine, 290 human, 20 not_sure verdicts.
+- **193 of the 290 human verdicts (67%) were SKIPPED by the agent**, most within
+  seconds of pickup. That looks like voicemail passed as a person, most likely
+  a greeting that pauses after a name ("Hi, you've reached John Smith," is five
+  words, then 800 ms of silence confirms a human).
+- Human verdict timing does not separate them: kept and skipped humans both
+  land at ~3 s. There is no ground truth in the data.
+
+The obvious fix, raising `amd_after_greeting_silence_ms` from 800, was NOT made.
+It is the confirm-a-human wait: longer lets the word and duration rules fire
+first on real people, which the note in lib/placeOutboundCall records as a
+mistake already made once (the column's own default is 1600). That trades
+connects for accuracy, which is the one trade not to make.
+
+The money those false humans cost was mostly their recording (a 60-second
+minimum each). That is handled at the source now: recordings start ten seconds
+after pickup and only on a call still up and not skipped (3180f4b6).
+
+**To settle it:** listen to ~15 of the 103 recorded SKIPPED human-verdict calls
+(Recordings, filter SKIPPED). Mostly voicemail: try ONE step, 800 → 1000, and
+measure a live day against this baseline (human-verdict skip rate 67%; real
+outcomes, APPOINTMENT/NOT INTERESTED/DO NOT CALL, 3.0% of dials). Mostly
+people who hung up or were the wrong person: AMD is right and stays.
+
 ## KNOWN-GOOD CONFIG
 
 Verified working in production 2026-08-13. Return here before debugging
