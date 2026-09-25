@@ -92,7 +92,12 @@ export default function LanguageDropdown({
   return (
     <div
       ref={rootRef}
-      style={{ position: 'relative', flexShrink: 0 }}
+      style={{
+        position: 'relative', flexShrink: 0,
+        // In the sidebar, sit hard against the rail's right edge rather than
+        // inside the profile row's 24px padding.
+        ...(onSidebar ? { marginRight: '-14px' } : {}),
+      }}
       // The sidebar row opens the Clerk menu on click; this must not.
       onClick={(e) => e.stopPropagation()}
     >
@@ -108,11 +113,11 @@ export default function LanguageDropdown({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '3px',
+          gap: '1px',
           background: 'transparent',
           border: onSidebar ? 'none' : '1px solid var(--border)',
           borderRadius: onSidebar ? '6px' : '8px',
-          padding: onSidebar ? '6px' : '8px 10px',
+          padding: onSidebar ? '6px 4px' : '7px 6px',
           cursor: 'pointer',
           color: onSidebar ? 'var(--brand-on-sidebar-muted)' : 'var(--text-secondary)',
           lineHeight: 0,
@@ -120,8 +125,8 @@ export default function LanguageDropdown({
       >
         {/* Icon only, so it fits a phone's nav bar. The chevron is what says
             "this opens a list", pointing the way the list will open. */}
-        <Globe size={onSidebar ? 18 : 17} strokeWidth={2} />
-        {opens === 'up' ? <ChevronUp size={13} strokeWidth={2.5} /> : <ChevronDown size={13} strokeWidth={2.5} />}
+        <Globe size={16} strokeWidth={1.5} />
+        {opens === 'up' ? <ChevronUp size={11} strokeWidth={2} /> : <ChevronDown size={11} strokeWidth={2} />}
       </button>
 
       {open && anchor && createPortal(
@@ -150,7 +155,9 @@ export default function LanguageDropdown({
             zIndex: 1000,
           }}
         >
-          {ENABLED_LOCALES.map((code) => {
+          {/* Opening upward, the list runs bottom to top, so English, the
+              first choice, sits nearest the button either way. */}
+          {(opens === 'up' ? [...ENABLED_LOCALES].reverse() : ENABLED_LOCALES).map((code) => {
             const info = localeInfo(code)
             const selected = code === locale
             return (
