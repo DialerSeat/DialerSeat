@@ -332,13 +332,22 @@ async function playAbandonMessage(leg: LeadLeg, why: string): Promise<void> {
     optOutDigit: ABANDON_OPT_OUT_DIGIT,
     waitMs: ABANDON_OPT_OUT_WAIT_MS,
   })
+  // The exact words, so what a person heard can be read back: the business
+  // name and callback number as spoken, not just that something played.
   void logCallEvent({
     event_type: 'tsr_abandon_message',
     call_control_id: leg.call_control_id,
     campaign_id: leg.campaign_id,
+    lead_id: leg.lead_id,
     status: g.ok ? 'played' : 'speak_failed',
     source: 'webhook',
-    detail: { why, error: g.error },
+    detail: {
+      why,
+      error: g.error,
+      text: msg.text,
+      seller_name: seller?.name ?? null,
+      callback_number: seller?.callbackNumber ?? null,
+    },
   })
 
   if (!g.ok) {
@@ -366,6 +375,18 @@ export async function onGatherEnded(
 ): Promise<boolean> {
   const leg = await readLeadLeg({ callControlId })
   if (!leg?.abandon_message_at) return false
+
+  // How the message ended: heard out, 9 pressed, hung up on, or cut off by a
+  // late machine verdict. Recorded before acting on it.
+  void logCallEvent({
+    event_type: 'tsr_abandon_message',
+    call_control_id: callControlId,
+    campaign_id: leg.campaign_id,
+    lead_id: leg.lead_id,
+    status: 'ended',
+    source: 'webhook',
+    detail: { gather_status: status ?? null, digits: digits ?? null },
+  })
 
   if (status === 'cancelled_amd') {
     // Telnyx stopped the message because the detector heard a machine. A

@@ -12,6 +12,28 @@ import {
 } from '@/lib/predictive/pacing'
 import { ensureSeat, readSession, rotateSeatIfOld, linesInFlight } from '@/lib/predictive/seat'
 
+// Accounts flagged predictive_test_lines (see the migration of that name).
+// Cached per instance for a minute: the controller runs several times a second
+// per armed agent, and the flag is changed by hand in SQL.
+const testAccountCache = new Map<string, { value: boolean; expires: number }>()
+async function isPredictiveTestAccount(clerkId: string): Promise<boolean> {
+  const hit = testAccountCache.get(clerkId)
+  if (hit && hit.expires > Date.now()) return hit.value
+  let value = false
+  try {
+    const { data } = await supabase
+      .from('users')
+      .select('predictive_test_lines')
+      .eq('clerk_id', clerkId)
+      .maybeSingle()
+    value = data?.predictive_test_lines === true
+  } catch {
+    value = false
+  }
+  testAccountCache.set(clerkId, { value, expires: Date.now() + 60_000 })
+  return value
+}
+
 // =============================================================================
 // THE PREDICTIVE ENGINE — one tick (v2, docs/PREDICTIVE.md)
 // =============================================================================
@@ -345,6 +367,25 @@ async function placeRound(input: RunControllerInput, snap: Snapshot): Promise<Co
       }
     })
     binding = perCampaign.reduce((a, b) => (b.result.lines < a.result.lines ? b : a))
+  }
+
+  // ── TEST ACCOUNTS RUN THE LINES THEY PICK ─────────────────────────────────
+  // users.predictive_test_lines, set by an admin in SQL for accounts that dial
+  // their own phones. Without it every thin test campaign is held to one line
+  // and the multi-line paths (two people answering, the recorded message, the
+  // teammate hand-off) cannot be tested at all. The seller-details gate above
+  // still applies. Said in the reason, so the dialer shows the law check was
+  // skipped rather than silently passing it.
+  if (await isPredictiveTestAccount(clerkId)) {
+    binding = {
+      id: binding.id,
+      result: {
+        ...binding.result,
+        lines: cap,
+        limitedBy: 'cap',
+        reason: `TEST ACCOUNT: ${cap} line${cap === 1 ? '' : 's'} as chosen, 30-day abandon check skipped`,
+      },
+    }
   }
   const lines = binding.result.lines
   const degraded = binding.result.limitedBy === 'degraded'
