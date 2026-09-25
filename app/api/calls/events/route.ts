@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { verifyTelnyxWebhook } from '@/lib/verifyTelnyxWebhook'
 import {
@@ -1353,7 +1353,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   const [{ data: callRow }] = await Promise.all([
     supabaseAdmin
       .from('calls')
-      .select('id, dial_group_id, campaign_id, team_id, user_id, agent_call_control_id, dial_source, recording_status')
+      .select('id, dial_group_id, campaign_id, team_id, user_id, agent_call_control_id, dial_source, recording_status, answered_at')
       .eq('call_control_id', callControlId)
       .maybeSingle(),
     amdWrite,
@@ -1383,11 +1383,20 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   // Deliberately not started at the bridge. The bridge happens at pickup,
   // seconds BEFORE any verdict exists, so starting there would record every
   // voicemail exactly as the old 'pending_bridge' did.
-  const recordingStart =
+  //
+  // ── AND NOT AT THE VERDICT EITHER: TEN SECONDS AFTER PICKUP ─────────────
+  // Joshua, 25 Sept 2026. Telnyx bills every recording a 60-second minimum
+  // (their support, same day), so one started on a call that is over in
+  // seconds costs a full minute: the voicemail AMD passed as a person that the
+  // agent skipped at once (193 skipped 'human' verdicts, 15-24 Sept), and the
+  // person who hangs up on hello. Scheduled rather than awaited, and it only
+  // starts if the call is still worth recording when the moment comes.
+  if (
     callRow.recording_status === 'pending_amd' ||
     callRow.recording_status === 'pending_amd_advisory'
-      ? startRecordingForCall(callControlId, callRow.id)
-      : Promise.resolve()
+  ) {
+    scheduleRecordingAfterPickup(callControlId, callRow.id, callRow.answered_at)
+  }
 
   if (!callRow.dial_group_id) {
     // ── user_dial IS ALREADY BRIDGED. NOTHING HAPPENS HERE. ──────────────
@@ -1427,7 +1436,6 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
         await hangupCallControlId(callControlId)
       }
     }
-    await recordingStart
     return
   }
 
@@ -1437,7 +1445,6 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   // abandon message. The recording owed on a person starts above, in every
   // mode alike.
   await onPersonVerdict(callRow.id)
-  await recordingStart
 }
 
 /**
@@ -1498,6 +1505,67 @@ async function startRecordingIfOwedAtBridge(
       .eq('id', callRowId)
       .eq('recording_status', 'starting')
   }
+}
+
+/** How long after the lead picks up a recording owed on a person begins. */
+const RECORDING_START_AFTER_PICKUP_MS = 10_000
+
+/**
+ * Start the recording owed on a person once the call is ten seconds past
+ * pickup, and only if it is still a call worth recording by then: the lead's
+ * leg still up, the agent has not skipped or ended it, and it is not a
+ * predictive surplus answer hearing the abandon message.
+ *
+ * The claim is a conditional UPDATE, so a duplicate verdict webhook cannot
+ * start a second recording, and a call that ended in the meantime is simply
+ * not claimed. That call keeps 'pending_amd', as every call that ended without
+ * a recording already does.
+ */
+function scheduleRecordingAfterPickup(
+  callControlId: string,
+  callRowId: string,
+  answeredAt: string | null
+): void {
+  after(async () => {
+    const pickedUp = answeredAt ? Date.parse(answeredAt) : NaN
+    const wait = Number.isFinite(pickedUp)
+      ? RECORDING_START_AFTER_PICKUP_MS - (Date.now() - pickedUp)
+      : RECORDING_START_AFTER_PICKUP_MS
+    if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait))
+
+    const { data: claimed } = await supabaseAdmin
+      .from('calls')
+      .update({ recording_status: 'starting' })
+      .eq('id', callRowId)
+      .in('recording_status', ['pending_amd', 'pending_amd_advisory'])
+      // Still up: duration is written when the lead's leg ends, and 0 is this
+      // codebase's "still in flight".
+      .or('duration.is.null,duration.eq.0')
+      .is('ended_by_agent_at', null)
+      .not('was_abandoned', 'is', true)
+      .select('id')
+
+    if (!claimed || claimed.length === 0) {
+      void logCallEvent({
+        event_type: 'recording_started',
+        call_control_id: callControlId,
+        status: 'skipped_short',
+        source: 'webhook',
+        detail: { reason: 'call over, skipped or abandoned before 10 s after pickup' },
+      })
+      return
+    }
+
+    const ok = await startRecordingForCall(callControlId, callRowId)
+    if (!ok) {
+      // Owed and never began: say so rather than leave 'starting' forever.
+      await supabaseAdmin
+        .from('calls')
+        .update({ recording_status: 'failed' })
+        .eq('id', callRowId)
+        .eq('recording_status', 'starting')
+    }
+  })
 }
 
 async function startRecordingForCall(
