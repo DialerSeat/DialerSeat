@@ -142,6 +142,17 @@ export async function POST(req: Request) {
       if (fresh.length === 0) return 0
       fresh.forEach(id => alreadyHungUp.add(id))
 
+      // Stamped first, as /api/calls/hangup does, so a leg this sweep ends is
+      // never filed as the agent's line failing. The ids are a mix of lead and
+      // agent legs, so both columns are matched.
+      const endedAt = new Date().toISOString()
+      await Promise.all([
+        supabase.from('calls').update({ ended_by_agent_at: endedAt })
+          .in('call_control_id', fresh).is('ended_by_agent_at', null),
+        supabase.from('calls').update({ ended_by_agent_at: endedAt })
+          .in('agent_call_control_id', fresh).is('ended_by_agent_at', null),
+      ])
+
       const CONCURRENCY = 5
       for (let i = 0; i < fresh.length; i += CONCURRENCY) {
         await Promise.all(fresh.slice(i, i + CONCURRENCY).map(async (id) => {

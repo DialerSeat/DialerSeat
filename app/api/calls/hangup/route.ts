@@ -65,6 +65,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
     }
 
+    // ── THE AGENT ENDED THIS, SO IT DID NOT FAIL ──────────────────────────
+    // Stamped before anything is hung up, on the row the hangup webhook reads,
+    // so the webhook cannot mistake a skip or stop during ringing for the
+    // agent's browser dropping its leg (AGENT_LEG_FAILED). 48 of 85 such
+    // "failures" on 15-18 Sept were exactly this, each recorded as a lead that
+    // never rang after ringing ~12 s. Awaited for the same reason: an event
+    // logged after the response would lose that race.
+    await supabase
+      .from('calls')
+      .update({ ended_by_agent_at: new Date().toISOString() })
+      .eq('id', callRow.id)
+      .is('ended_by_agent_at', null)
+
     // ── THE COMPLIANCE HOLD, SKIP PATH ────────────────────────────────────
     // The agent has already advanced — the browser tore down its own audio and
     // moved to the next lead before this request was even sent. This holds a

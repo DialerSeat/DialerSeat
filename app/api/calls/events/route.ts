@@ -1773,7 +1773,7 @@ async function handleHangup(
   try {
     const { data: callRow } = await supabaseAdmin
       .from('calls')
-      .select('id, created_at, duration, disposition, answered_at, talk_seconds, lead_id, dial_group_id, dial_source, call_control_id, agent_call_control_id, pool_number_id, amd_result, was_abandoned')
+      .select('id, created_at, duration, disposition, answered_at, talk_seconds, lead_id, dial_group_id, dial_source, call_control_id, agent_call_control_id, pool_number_id, amd_result, was_abandoned, ended_by_agent_at')
       .eq('call_control_id', callControlId)
       .maybeSingle()
 
@@ -1934,10 +1934,16 @@ async function handleHangup(
       // Detected on the LEAD leg only, and only when it was never answered.
       // The agent leg's own hangup arrives first (consistently ~0.4s earlier),
       // so by the time this runs the evidence is already on file.
+      // ...unless the agent ended it. A skip, stop or abort while the lead is
+      // ringing ends the agent's leg from the browser side too, which is the
+      // same shape, but the lead's phone rang and it was a real attempt.
+      // /api/calls/hangup and /api/dialer/abort stamp ended_by_agent_at before
+      // hanging up, so it is on this row by the time this webhook arrives.
       if (
         callControlId === callRow.call_control_id &&
         !callRow.answered_at &&
-        callRow.agent_call_control_id
+        callRow.agent_call_control_id &&
+        !callRow.ended_by_agent_at
       ) {
         const { data: agentEnd } = await supabaseAdmin
           .from('call_events')
