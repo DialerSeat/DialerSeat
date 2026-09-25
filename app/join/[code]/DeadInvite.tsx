@@ -56,7 +56,7 @@ export default function DeadInvite({ code }: { code: string }) {
               marginBottom: 30,
             }}
           >
-            {t("code:")}{" "}{code}
+            {t("code: {code}", { code })}
           </div>
         ) : null}
 

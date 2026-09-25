@@ -647,7 +647,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
 
             {filtered.length === 0 && (
               <p className="hub-empty">
-                {t("Nothing here matches “")}{query.trim()}&rdquo;.{' '}
+                {t("Nothing here matches “{query}”.", { query: query.trim() })}{' '}
                 <button type="button" className="hub-ask" onClick={() => setAskOpen(true)}>
                   {t(props.requestLabel)}
                 </button>{' '}

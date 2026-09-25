@@ -68,7 +68,7 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
 
         <GutsSection icon="price" title={t("What each one costs and what you get")}>
           <p>
-            {t("Both columns are stated the way each vendor states them. Where")}{" "}{c.name} {t("prices by quote, that is said rather than guessed at.")}</p>
+            {t("Both columns are stated the way each vendor states them. Where {name} prices by quote, that is said rather than guessed at.", { name: c.name })}</p>
           <div className="guts-grid-2">
             <div className="guts-panel">
               <h3>DialerSeat</h3>
@@ -121,28 +121,28 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
             engine or an AI crawler reads. The content is unchanged: it was
             always the competitor's genuine strengths and where buyers get
             caught out. See lib/vsSeo for the structured-data half. */}
-        <GutsSection icon="scale" title={`Pros and cons of ${c.name}`}>
+        <GutsSection icon="scale" title={t("Pros and cons of {name}", { name: c.name })}>
           <p>
             {t("A comparison where the competitor loses at everything is marketing, and it reads like marketing. These are real advantages, and real drawbacks.")}</p>
           <div className="guts-grid-2">
             <div className="guts-panel">
-              <h3>{t("Pros of")}{" "}{c.name}</h3>
+              <h3>{t("Pros of {name}", { name: c.name })}</h3>
               <ul className="guts-list good">
                 {c.wins.map((w) => <li key={w}>{w}</li>)}
               </ul>
             </div>
             <div className="guts-panel">
-              <h3>{t("Cons of")}{" "}{c.name}</h3>
+              <h3>{t("Cons of {name}", { name: c.name })}</h3>
               <ul className="guts-list warn">
                 {c.friction.map((f) => <li key={f}>{f}</li>)}
               </ul>
             </div>
           </div>
           <div className="guts-callout">
-            <h3>{t("Who should pick")}{" "}{c.name}</h3>
+            <h3>{t("Who should pick {name}", { name: c.name })}</h3>
             <p>{c.bestFor}</p>
             <p>
-              {t("If that describes you, take")}{" "}{c.name}{t(". It is a real product with real strengths and no comparison page should talk you out of the right tool.")}</p>
+              {t("If that describes you, take {name}. It is a real product with real strengths and no comparison page should talk you out of the right tool.", { name: c.name })}</p>
           </div>
         </GutsSection>
 
@@ -180,7 +180,7 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
       <SuggestionModal
         open={askOpen}
         onClose={() => setAskOpen(false)}
-        title={`Something wrong on the ${c.name} page?`}
+        title={t("Something wrong on the {name} page?", { name: c.name })}
         intro="Tell us what is out of date or incorrect and we will check it against the vendor's own material."
         defaultKind="other"
       />

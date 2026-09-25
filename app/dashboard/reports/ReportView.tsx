@@ -274,7 +274,7 @@ export default function ReportView({ period }: { period: string }) {
             <div style={{ fontSize: 19, fontWeight: 700 }}>{tr("Billing Statement")}</div>
             <div style={{ fontSize: 13, color: SOFT, marginTop: 3 }}>{tr(data.periodLabel)}</div>
             <div style={{ fontSize: 11, color: SOFT, marginTop: 8 }}>
-              {tr("Issued")}{" "}{shortDate(data.generatedAt)}
+              {tr("Issued {shortDate}", { shortDate: shortDate(data.generatedAt) })}
             </div>
             {data.documentRef && (
               <div style={{ fontSize: 10.5, color: SOFT, marginTop: 6, fontWeight: 600 }}>
@@ -424,7 +424,7 @@ export default function ReportView({ period }: { period: string }) {
 
         <H>{tr("Account structure")}</H>
         <div style={{ fontSize: 11.5, color: SOFT, marginBottom: 8, lineHeight: 1.6 }}>
-          {tr("A snapshot as at")}{" "}{shortDate(data.generatedAt)}{tr(", not a reconstruction of how the account was configured during the period.")}</div>
+          {tr("A snapshot as at {shortDate}, not a reconstruction of how the account was configured during the period.", { shortDate: shortDate(data.generatedAt) })}</div>
         {data.structure.teams.length === 0 ? (
           <div style={{ fontSize: 13, color: SOFT }}>{tr("No teams on this account.")}</div>
         ) : (
@@ -506,7 +506,7 @@ export default function ReportView({ period }: { period: string }) {
           justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
         }}>
           <span>{tr("DialerSeat ·")}{" "}{data.supplier.site}</span>
-          <span>{tr(data.periodLabel)} {tr("· issued")}{" "}{shortDate(data.generatedAt)}</span>
+          <span>{tr(data.periodLabel)} {tr("· issued {shortDate}", { shortDate: shortDate(data.generatedAt) })}</span>
         </div>
       </div>
     </div>

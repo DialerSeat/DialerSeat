@@ -375,7 +375,7 @@ export default function TeamDetail({
                         : 'Team code: joins the team only, until you add them to a campaign · '}
                       {c.payer === 'agent' ? t("agent pays their seat") : t("you pay the seat")}
                       {' · '}
-                      {c.max_uses ? `${uses}/${c.max_uses} used` : `${uses} used`}
+                      {c.max_uses ? t("{uses}/{max_uses} used", { uses, max_uses: c.max_uses }) : `${uses} used`}
                       {c.is_active === false ? ' · inactive' : ''}
                     </div>
                   </div>
@@ -432,7 +432,7 @@ export default function TeamDetail({
                   </div>
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
                     {c.agentCount} {c.agentCount === 1 ? t("agent") : t("agents")}
-                    {c.totalLeads ? ` · ${c.totalLeads.toLocaleString()} leads` : ''}
+                    {c.totalLeads ? t(" · {totalLeads} leads", { totalLeads: c.totalLeads.toLocaleString() }) : ''}
                   </div>
                 </div>
                 <div style={{
@@ -520,7 +520,7 @@ export default function TeamDetail({
                 track 18, and seeing it track 6 later reads as a billing bug.
                 Naming the funded count up front is cheaper than that email. */}
             <strong style={{ color: TEXT }}>
-              {seatTier.totalSeats} {t("active")}{" "}{seatTier.totalSeats === 1 ? t("seat") : t("seats")}
+              {t("{totalSeats} active {value}", { totalSeats: seatTier.totalSeats, value: seatTier.totalSeats === 1 ? t("seat") : t("seats") })}
             </strong>
             {' across your teams'}
             {seatTier.ownerPaidSeats !== seatTier.totalSeats && (
@@ -528,7 +528,7 @@ export default function TeamDetail({
             )}
             {seatTier.percentOff > 0 && (
               <> · <span style={{ color: '#32ff7e' }}>
-                {seatTier.percentOff}{t("% off your weekly seat cost")}</span></>
+                {t("{percentOff}% off your weekly seat cost", { percentOff: seatTier.percentOff })}</span></>
             )}
 
             {seatTier.salesHandoff ? (
@@ -539,11 +539,10 @@ export default function TeamDetail({
                 {/* Deliberately says "seats you pay for". The rung only moves on
                     funded seats, so counting self-funded ones toward it would be
                     the panel promising a discount billing will not apply. */}
-                {seatTier.next.seatsAway} {t("more")}{' '}
-                {seatTier.next.seatsAway === 1 ? t("seat") : t("seats")} {t("you pay for reaches")}{' '}
+                {t("{seatsAway} more {value} you pay for reaches", { seatsAway: seatTier.next.seatsAway, value: seatTier.next.seatsAway === 1 ? t("seat") : t("seats") })}{' '}
                 <strong style={{ color: TEXT }}>{t(seatTier.next.tier.label)}</strong>
                 {typeof seatTier.next.tier.percentOff === 'number'
-                  ? `, ${seatTier.next.tier.percentOff}% off weekly.`
+                  ? t(", {percentOff}% off weekly.", { percentOff: seatTier.next.tier.percentOff })
                   : t(", a rate we set with you directly. Email sales@dialerseat.com.")}
               </div>
             ) : null}
@@ -579,7 +578,7 @@ export default function TeamDetail({
                   <div style={{ fontSize: 14, fontWeight: 500 }}>{m.name}</div>
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
                     {m.campaignCount} {m.campaignCount === 1 ? t("campaign") : t("campaigns")}
-                    {m.seatPaidBy ? ` · seat paid by ${m.seatPaidBy}` : ''}
+                    {m.seatPaidBy ? t(" · seat paid by {seatPaidBy}", { seatPaidBy: m.seatPaidBy }) : ''}
                   </div>
                 </div>
                 {team.isOwner && (

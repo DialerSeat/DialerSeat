@@ -204,8 +204,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
             <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: C.primary, marginBottom: 8 }}>
               {t("YOU'VE BEEN INVITED")}</div>
             <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>
-              {t("Join")}{" "}{preview.team?.name}?
-            </div>
+              {t("Join {name}?", { name: preview.team?.name })}</div>
 
             <div style={{
               background: C.inset,
@@ -224,7 +223,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
                 {preview.requiresPayment ? (
                   <span>
-                    <strong>{t("Cost:")}</strong> ${((preview.seatCents ?? 3500) / 100).toFixed(2)}{t("/week, billed to you you'll set up billing after joining.")}</span>
+                    <strong>{t("Cost:")}</strong>{" "}{t("${seatCents}/week, billed to you you'll set up billing after joining.", { seatCents: ((preview.seatCents ?? 3500) / 100).toFixed(2) })}</span>
                 ) : (
                   <span><strong>{t("Cost to you:")}</strong> {t("$0, the team owner covers this seat.")}</span>
                 )}
@@ -243,7 +242,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
                 border: 'none', borderRadius: 4, fontSize: 12, letterSpacing: 2, fontWeight: 'bold',
                 cursor: 'pointer', fontFamily: FUTURA, marginBottom: 10,
               }}
-            >{t("JOIN")}{" "}{preview.team?.name?.toUpperCase()}</button>
+            >{t("JOIN {name}", { name: preview.team?.name?.toUpperCase() })}</button>
             <button
               onClick={() => router.push('/dashboard')}
               style={{
@@ -259,7 +258,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
             <div style={{ fontSize: 11, letterSpacing: 4, fontWeight: 'bold', color: C.primary, marginBottom: 14 }}>
               {t("THIS IS YOUR OWN INVITE")}</div>
             <div style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, marginBottom: 20 }}>
-              {t("This invite link is for")}{" "}{preview?.team?.name}{t(", a team you own. Share it with the agent you want to add instead.")}</div>
+              {t("This invite link is for {name}, a team you own. Share it with the agent you want to add instead.", { name: preview?.team?.name })}</div>
             <button onClick={() => router.push('/dashboard/teams')} style={goToTeamsBtn(C)}>{t("GO TO TEAMS")}</button>
           </>
         )}
@@ -271,8 +270,8 @@ export default function JoinRedeemClient({ code }: { code: string }) {
             </div>
             <div style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, marginBottom: 20 }}>
               {preview?.memberStatus === 'active'
-                ? `You're already an active member of ${preview?.team?.name}.`
-                : `You've already requested to join ${preview?.team?.name}, waiting on the owner's approval.`}
+                ? t("You're already an active member of {name}.", { name: preview?.team?.name })
+                : t("You've already requested to join {name}, waiting on the owner's approval.", { name: preview?.team?.name })}
             </div>
             <button
               onClick={() => router.push(preview?.memberStatus === 'active' ? '/dashboard/dialer' : '/dashboard/teams')}

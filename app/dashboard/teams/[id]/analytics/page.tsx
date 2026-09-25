@@ -685,8 +685,8 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                              tabIndex={0}
                              aria-pressed={memberFilter === m.userId}
                              title={memberFilter === m.userId
-                               ? `Showing only ${m.name}. Click to show everyone.`
-                               : `Show only ${m.name}`}
+                               ? t("Showing only {name}. Click to show everyone.", { name: m.name })
+                               : t("Show only {name}", { name: m.name })}
                              onClick={() => setMemberFilter(
                                memberFilter === m.userId ? 'all' : m.userId)}
                              onKeyDown={e => {
@@ -892,7 +892,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
             {isOwner && (
               <div className="ta-section">
                 <div className="ta-section-head">
-                  {t("▸ RECENT CALLS")}{data.recentCalls.length > 0 && ` (LAST ${data.recentCalls.length})`}
+                  {t("▸ RECENT CALLS{length}", { length: data.recentCalls.length > 0 && ` (LAST ${data.recentCalls.length})` })}
                 </div>
                 <div className="ta-list">
                   {data.recentCalls.length > 0 ? (
@@ -943,9 +943,9 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
             {isOwner && (
               <div className="ta-section">
                 <div className="ta-section-head">
-                  {t("▸ RECORDINGS")}{data.recordings.length > 0 && ` (${data.recordings.length}${
+                  {t("▸ RECORDINGS{length}", { length: data.recordings.length > 0 && ` (${data.recordings.length}${
                     (data.recordingsTotal ?? 0) > data.recordings.length
-                      ? ` OF ${data.recordingsTotal}` : ''})`}
+                      ? ` OF ${data.recordingsTotal}` : ''})` })}
                   {memberFilter !== 'all' && <span style={{ color: T.amber }}>{t("· MEMBER FILTERED")}</span>}
                   {campaignFilter !== 'all' && <span style={{ color: T.amber }}>{t("· CAMPAIGN FILTERED")}</span>}
                 </div>
@@ -1004,7 +1004,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                   )}
                   {(data.recordingsTotal ?? 0) > data.recordings.length && (
                     <div className="ta-empty" style={{ color: T.amber }}>
-                      {t("NEWEST")}{" "}{data.recordings.length} {t("SHOWN OF")}{" "}{data.recordingsTotal}{t(". NARROW BY AGENT, CAMPAIGN OR DATE TO SEE OLDER ONES.")}</div>
+                      {t("NEWEST {length} SHOWN OF {recordingsTotal}. NARROW BY AGENT, CAMPAIGN OR DATE TO SEE OLDER ONES.", { length: data.recordings.length, recordingsTotal: data.recordingsTotal })}</div>
                   )}
                 </div>
               </div>

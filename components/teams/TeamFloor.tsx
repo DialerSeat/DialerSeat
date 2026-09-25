@@ -182,7 +182,7 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
 
           <span style={{ fontSize: 11, color: 'var(--brand-muted-text)', flexShrink: 0 }}>
             <strong style={{ color: 'var(--brand-on-page-bg)', fontSize: 14 }}>{online.length}</strong>
-            {' '}{tr("online ·")}{" "}{onCall} {tr("on call")}</span>
+            {' '}{tr("online · {onCall} on call", { onCall })}</span>
         </div>
 
         <div className="tf-floor">

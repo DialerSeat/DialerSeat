@@ -166,7 +166,7 @@ export default async function PrivacyPolicyPage() {
         <div className="privacy-root">
           <div className="privacy-hero">
             <h1>{t("Privacy Policy")}</h1>
-            <p>{t("LAST UPDATED ·")}{" "}{LAST_UPDATED.toUpperCase()}</p>
+            <p>{t("LAST UPDATED · {lAST_UPDATED}", { lAST_UPDATED: LAST_UPDATED.toUpperCase() })}</p>
           </div>
 
           <div className="privacy-body">

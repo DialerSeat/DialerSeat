@@ -326,7 +326,7 @@ function RecordingsFeed({ recordings, total, agents }: {
                 borderRadius: 4, color: MUTED, fontSize: 12,
                 padding: '9px 12px', cursor: 'pointer', textAlign: 'center',
               }}
-            >{tr("Show")}{" "}{hidden} {tr("more")}</button>
+            >{tr("Show {hidden} more", { hidden })}</button>
           )}
         </div>
       )}
@@ -1207,7 +1207,7 @@ export default function TeamsPage() {
       setAssignResult(
         failures.length === 0
           ? `${done} ${done === 1 ? 'seat' : 'seats'} ${verb}.`
-          : `${done} ${verb}, ${failures.length} did not: ${failures[0]}`
+          : tr("{done} {verb}, {length} did not: {failures}", { done, verb, length: failures.length, failures: failures[0] })
       )
       await loadRoster()
       void refresh()
@@ -1674,7 +1674,7 @@ export default function TeamsPage() {
                   borderRadius: 4, padding: '10px 12px', marginBottom: 12,
                 }}>
                   <span style={{ fontSize: 12, color: TEXT }}>
-                    {selectedMembers.size} {tr("selected")}</span>
+                    {tr("{size} selected", { size: selectedMembers.size })}</span>
                   <select
                     value={assignTo}
                     onChange={e => setAssignTo(e.target.value)}
@@ -1904,7 +1904,7 @@ export default function TeamsPage() {
                                 rather than silently summed — it is money. */}
                             {billable.length > 1 && (
                               <span style={{ display: 'block', color: '#fbbf24' }}>
-                                {tr("billed")}{" "}{billable.length}{tr("×, duplicate seats")}</span>
+                                {tr("billed {length}×, duplicate seats", { length: billable.length })}</span>
                             )}
                           </span>
                         )
@@ -2123,7 +2123,7 @@ export default function TeamsPage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 500 }}>{r.name}</div>
                         <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
-                          {tr("wants to join")}{" "}{r.team}
+                          {tr("wants to join {team}", { team: r.team })}
                         </div>
                       </div>
                       {/* Decline first, Approve last and emphasised. Approve is

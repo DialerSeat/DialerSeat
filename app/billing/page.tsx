@@ -595,8 +595,7 @@ export default function BillingPage() {
             <BrandMark />
             <div style={{ ...statusTitleStyle, color: '#32ff7e' }}>{t("Subscription active")}</div>
             <div style={mutedTextStyle}>
-              {t("Promo code applied. Redirecting")}{plan === 'wl' ? ' to white-label setup' : ' to your dashboard'}...
-            </div>
+              {t("Promo code applied. Redirecting{value}...", { value: plan === 'wl' ? ' to white-label setup' : ' to your dashboard' })}</div>
           </div>
         </div>
       </main>
@@ -611,10 +610,9 @@ export default function BillingPage() {
             <BrandMark />
             <div style={{ ...statusTitleStyle, color: '#32ff7e' }}>{t("$0.00 owed")}</div>
             <div style={mutedTextStyle}>
-              {t("Your seat on")}{" "}<strong style={{ color: '#e0e2ea' }}>{seatCovered.teamName}</strong> {t("is covered by the team owner, there's nothing to pay here.")}{' '}
-              {seatCovered.pending
+              {t("Your seat on")}{" "}<strong style={{ color: '#e0e2ea' }}>{seatCovered.teamName}</strong> {t("is covered by the team owner, there's nothing to pay here. {value}", { value: seatCovered.pending
                 ? t("Taking you in now. The owner still needs to approve you before their campaigns open up.")
-                : t("Taking you in now.")}
+                : t("Taking you in now.") })}
             </div>
           </div>
         </div>
@@ -692,7 +690,7 @@ export default function BillingPage() {
             </div>
             {billing.hasDiscount ? (
               <div style={priceCaptionStyle} className="billing-price-caption">
-                <span style={{ color: '#32ff7e' }}>{promoApplied?.toUpperCase()}</span> {t("applied, then")}{" "}{t(billing.recurringLabel)}
+                <span style={{ color: '#32ff7e' }}>{promoApplied?.toUpperCase()}</span> {t("applied, then {recurringLabel}", { recurringLabel: t(billing.recurringLabel) })}
               </div>
             ) : (
               <div style={priceCaptionStyle} className="billing-price-caption">
@@ -732,7 +730,7 @@ export default function BillingPage() {
                 <span style={termBulletStyle} />
                 <span>
                   <strong style={{ color: '#4a9eff' }}>{t(billing.todayLabel)}</strong> {t("charged today to start your subscription")}{billing.hasDiscount && (
-                    <span style={{ color: '#32ff7e' }}> ({promoApplied?.toUpperCase()} {t("applied)")}</span>
+                    <span style={{ color: '#32ff7e' }}>{" "}{t("({promoApplied} applied)", { promoApplied: promoApplied?.toUpperCase() })}</span>
                   )}
                 </span>
               </li>
@@ -771,8 +769,7 @@ export default function BillingPage() {
               {teamCodes.map(c => (
                 <div key={c.code} style={{ ...promoAppliedStyle, marginBottom: 6 }}>
                   <span>
-                    ✓ <strong style={{ color: '#32ff7e' }}>{c.code}</strong>{t(", joined")}{' '}
-                    {c.teamName.toUpperCase()}
+                    ✓ <strong style={{ color: '#32ff7e' }}>{c.code}</strong>{t(", joined {teamName}", { teamName: c.teamName.toUpperCase() })}
                   </span>
                   <span style={{ fontSize: 10, letterSpacing: '0.08em', color: c.payer === 'owner' ? '#32ff7e' : '#8a8f9e' }}>
                     {c.payer === 'owner' ? t("SEAT COVERED") : t("YOU PAY THIS SEAT")}
@@ -1089,7 +1086,7 @@ function CheckoutForm({
             to survive that without ever implying the recurring charge is
             free too. */}
         <span>
-          {t("I agree my card will be charged")}{" "}<strong style={{ color: '#e0e2ea' }}>{t(billing.todayLabel)} {t("today")}</strong> {t("and")}{' '}
+          {t("I agree my card will be charged")}{" "}<strong style={{ color: '#e0e2ea' }}>{t("{todayLabel} today", { todayLabel: t(billing.todayLabel) })}</strong> {t("and")}{' '}
           <strong style={{ color: '#e0e2ea' }}>{t(billing.recurringLabel)}</strong> {t("thereafter unless I cancel.")}</span>
       </label>
 

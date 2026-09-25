@@ -266,7 +266,7 @@ const ModeRow = ({ mode, slug, modeColor, how, speed, abandons, bestFor }: {
           borderBottom: `1px dotted ${modeColor}`,
           paddingBottom: 1,
         }}
-        title={`Read the full ${mode.toLowerCase()} deep dive`}
+        title={t("Read the full {mode} deep dive", { mode: mode.toLowerCase() })}
       >
         {mode}
       </Link>
@@ -320,7 +320,7 @@ const ModeCard = ({ label, slug, color, body, bestFor }: {
         textDecoration: 'none',
       }}
     >
-      {t("READ THE FULL")}{" "}{t(label)} {t("DEEP DIVE →")}</Link>
+      {t("READ THE FULL {label} DEEP DIVE →", { label: t(label) })}</Link>
   </div>
 )
 

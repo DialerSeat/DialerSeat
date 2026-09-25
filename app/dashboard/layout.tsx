@@ -696,10 +696,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             borderBottom: '1px solid #1e3a5f', color: '#7cc0ff',
             fontSize: 13, lineHeight: 1.5,
           }}>
-            {seatsTakenOver.length === 1
+            {tr("{value} They keep dialing until you say otherwise.", { value: seatsTakenOver.length === 1
               ? `${seatsTakenOver[0].agentName} stopped paying for their own seat on ${seatsTakenOver[0].teamName}, so you are covering it now.`
-              : `${seatsTakenOver.length} agents stopped paying for their own seats, so you are covering them now.`}
-            {' '}{tr("They keep dialing until you say otherwise.")}<span style={{ display: 'block', marginTop: 4, color: '#4a86c4', fontSize: 12 }}>
+              : `${seatsTakenOver.length} agents stopped paying for their own seats, so you are covering them now.` })}<span style={{ display: 'block', marginTop: 4, color: '#4a86c4', fontSize: 12 }}>
               {tr("To stop paying for a seat, pause or remove that member in")}{' '}
               <Link href="/dashboard/teams" style={{ color: '#7cc0ff', textDecoration: 'underline' }}>
                 {tr("Teams")}</Link>.

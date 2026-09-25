@@ -114,8 +114,7 @@ export default function RosterPanel({
       {pendingMembers.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: T.amber, marginBottom: 10 }}>
-            {t("▸ PENDING REQUESTS (")}{pendingMembers.length})
-          </div>
+            {t("▸ PENDING REQUESTS ({length})", { length: pendingMembers.length })}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {pendingMembers.map(m => {
               const code = codes.find(c => c.code === m.joined_via_code)
@@ -129,10 +128,10 @@ export default function RosterPanel({
                   <div style={{ flex: '1 1 200px', minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 'bold' }}>{name}</div>
                     <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>
-                      {t("via")}{" "}{m.joined_via_code || t("unknown")} · {fmtDate(m.created_at)}
+                      {t("via {joined_via_code} · {date}", { joined_via_code: m.joined_via_code || t("unknown"), date: fmtDate(m.created_at) })}
                       {isOwnerPays && (
                         <span style={{ color: T.amber, fontWeight: 'bold' }}>
-                          {' · '}{t("accepting charges you")}{" "}{fmtMoney(seatCents)}{t("/wk")}</span>
+                          {" "}{t("· accepting charges you {money}/wk", { money: fmtMoney(seatCents) })}</span>
                       )}
                     </div>
                   </div>
@@ -150,8 +149,7 @@ export default function RosterPanel({
       )}
 
       <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: T.muted, marginBottom: 10 }}>
-        {t("▸ ROSTER (")}{activeMembers.length})
-      </div>
+        {t("▸ ROSTER ({length})", { length: activeMembers.length })}</div>
       {activeMembers.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '32px 16px', color: T.muted, fontSize: 13, border: `1px dashed ${T.border}`, borderRadius: 6 }}>
           {t("No active members yet. Share a seat link to get someone dialing.")}</div>
@@ -173,8 +171,7 @@ export default function RosterPanel({
                       {!hasAccess && <Badge color={T.amber}>{t("NO ACCESS")}</Badge>}
                     </div>
                     <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>
-                      {t("joined")}{" "}{fmtDate(m.accepted_at || m.created_at)}
-                      {m.joined_via_code && ` · via ${m.joined_via_code}`}
+                      {t("joined {date}{joined_via_code}", { date: fmtDate(m.accepted_at || m.created_at), joined_via_code: m.joined_via_code && ` · via ${m.joined_via_code}` })}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

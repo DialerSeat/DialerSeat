@@ -87,7 +87,7 @@ export async function generateMetadata(
     `you actually get, the pros and cons of each, and which buyer each suits.`
 
   return {
-    title: `${title} | DialerSeat`,
+    title: t("{title} | DialerSeat", { title }),
     description,
     // Both names, in the forms people search a two-way decision. See lib/vsSeo
     // for why the headings and structured data matter more than this tag.
@@ -161,7 +161,7 @@ function Column({ c }: { c: Competitor }) {
           text to a crawler; an h3 is a signal. Same visual as before. */}
       <div style={{ marginTop: 20 }}>
         <h3 style={{ margin: 0, fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#16a34a', textTransform: 'uppercase' }}>
-          {t("Pros of")}{" "}{c.name}
+          {t("Pros of {name}", { name: c.name })}
         </h3>
         <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 14, lineHeight: 1.8, color: INK }}>
           {c.wins.map(w => <li key={w}>{w}</li>)}
@@ -170,7 +170,7 @@ function Column({ c }: { c: Competitor }) {
 
       <div style={{ marginTop: 18 }}>
         <h3 style={{ margin: 0, fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a', textTransform: 'uppercase' }}>
-          {t("Cons of")}{" "}{c.name}
+          {t("Cons of {name}", { name: c.name })}
         </h3>
         <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 14, lineHeight: 1.8, color: INK }}>
           {c.friction.map(f => <li key={f}>{f}</li>)}
@@ -236,7 +236,7 @@ export default async function MatchupPage(
           <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: ACCENT, marginBottom: 14 }}>
             {t("▸ Head to head")}</div>
           <h1 style={{ fontSize: 44, fontWeight: 'bold', letterSpacing: -1, lineHeight: 1.12, margin: 0 }}>
-            {a.name} {t("vs")}{" "}{b.name}
+            {t("{name} vs {name2}", { name: a.name, name2: b.name })}
           </h1>
           <p style={{ fontSize: 16, lineHeight: 1.8, color: MUTED, maxWidth: 760, marginTop: 18 }}>
             {t("Both are real options and each is the right answer for someone. Below is what each one costs, which dialing modes you actually get for that money, and the buyer each genuinely suits: followed by a note on where our own product fits, clearly marked as ours.")}</p>
@@ -256,10 +256,10 @@ export default async function MatchupPage(
           }}>
             <h2 style={{ fontSize: 20, fontWeight: 'bold', margin: 0 }}>{t("Which one to pick")}</h2>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: INK, marginTop: 12 }}>
-              <strong>{t("Choose")}{" "}{a.name}</strong> {t("if you are")}{" "}{a.bestFor.charAt(0).toLowerCase()}{a.bestFor.slice(1)}
+              <strong>{t("Choose {name}", { name: a.name })}</strong> {t("if you are {charAt}{slice}", { charAt: a.bestFor.charAt(0).toLowerCase(), slice: a.bestFor.slice(1) })}
             </p>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: INK, marginTop: 8 }}>
-              <strong>{t("Choose")}{" "}{b.name}</strong> {t("if you are")}{" "}{b.bestFor.charAt(0).toLowerCase()}{b.bestFor.slice(1)}
+              <strong>{t("Choose {name}", { name: b.name })}</strong> {t("if you are {charAt}{slice}", { charAt: b.bestFor.charAt(0).toLowerCase(), slice: b.bestFor.slice(1) })}
             </p>
             <p style={{ fontSize: 14, lineHeight: 1.8, color: MUTED, marginTop: 14 }}>
               {t("The most common mistake in this comparison is reading the advertised rate as the bill. Add the seat minimum, the tier the dialer actually lives on, per-number charges, and any setup fee before deciding which is cheaper.")}</p>
@@ -275,24 +275,22 @@ export default async function MatchupPage(
             <h2 style={{ fontSize: 20, fontWeight: 'bold', margin: '10px 0 0' }}>
               {t("Where DialerSeat fits")}</h2>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: INK, marginTop: 12 }}>
-              {t("We publish this page, so weigh it accordingly.")}{" "}{DIALERSEAT.pricing} {DIALERSEAT.contract}{' '}
-              {DIALERSEAT.dialing}
+              {t("We publish this page, so weigh it accordingly. {pricing} {contract} {dialing}", { pricing: DIALERSEAT.pricing, contract: DIALERSEAT.contract, dialing: DIALERSEAT.dialing })}
             </p>
             <p style={{ fontSize: 14, lineHeight: 1.8, color: MUTED, marginTop: 12 }}>
-              {t("Where we are")}{" "}<em>{t("not")}</em> {t("the right answer:")}{" "}{DIALERSEAT.friction.join('; ')}.
-            </p>
+              {t("Where we are")}{" "}<em>{t("not")}</em> {t("the right answer: {friction}.", { friction: DIALERSEAT.friction.join('; ') })}</p>
             <div style={{ marginTop: 18, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <Link href={`/vs/${a.slug}`} style={{
                 fontSize: 11, letterSpacing: 1.5, fontWeight: 'bold', color: ACCENT,
                 border: `1px solid ${ACCENT}`, borderRadius: 4, padding: '10px 16px', textDecoration: 'none',
               }}>
-                {t("DIALERSEAT VS")}{" "}{a.name.toUpperCase()}
+                {t("DIALERSEAT VS {name}", { name: a.name.toUpperCase() })}
               </Link>
               <Link href={`/vs/${b.slug}`} style={{
                 fontSize: 11, letterSpacing: 1.5, fontWeight: 'bold', color: ACCENT,
                 border: `1px solid ${ACCENT}`, borderRadius: 4, padding: '10px 16px', textDecoration: 'none',
               }}>
-                {t("DIALERSEAT VS")}{" "}{b.name.toUpperCase()}
+                {t("DIALERSEAT VS {name}", { name: b.name.toUpperCase() })}
               </Link>
             </div>
           </section>
@@ -317,7 +315,7 @@ export default async function MatchupPage(
                       padding: '7px 11px', textDecoration: 'none',
                     }}
                   >
-                    {x.name} {t("vs")}{" "}{y.name}
+                    {t("{name} vs {name2}", { name: x.name, name2: y.name })}
                   </Link>
                 ))}
             </div>

@@ -786,7 +786,7 @@ export default function LeadsPage() {
           <span className="leads-header-stats" style={{
             fontSize: 10, fontFamily: 'monospace', color: 'var(--brand-on-header-muted)', letterSpacing: 1,
           }}>
-            {total.toLocaleString()} {tr("TOTAL ·")}{" "}{leads.length} {tr("LOADED")}</span>
+            {tr("{total} TOTAL · {length} LOADED", { total: total.toLocaleString(), length: leads.length })}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
@@ -830,9 +830,9 @@ export default function LeadsPage() {
         <div className="leads-lapsed-banner">
           <span>
             <strong style={{ marginRight: 6 }}>{tr("▸ READ-ONLY")}</strong>
-            {tr("Export anytime. Editing disabled")}{awaitingSeat
+            {tr("Export anytime. Editing disabled{value}", { value: awaitingSeat
               ? ' until the team owner approves your seat.'
-              : hasLapsedPlan ? ' until you resubscribe.' : ' until you subscribe.'}
+              : hasLapsedPlan ? ' until you resubscribe.' : ' until you subscribe.' })}
           </span>
           <Link href="/billing" style={{
             padding: '5px 12px',
@@ -850,9 +850,9 @@ export default function LeadsPage() {
       )}
 
       <div className="leads-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>
-        <span>{filtersOpen ? tr("▲ HIDE") : tr("▼ SHOW")} {tr("FILTERS")}</span>
+        <span>{tr("{value} FILTERS", { value: filtersOpen ? tr("▲ HIDE") : tr("▼ SHOW") })}</span>
         <span style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace' }}>
-          {total.toLocaleString()} {tr("leads")}</span>
+          {tr("{total} leads", { total: total.toLocaleString() })}</span>
       </div>
 
       <div className={`leads-controls ${filtersOpen ? 'open-mobile' : 'closed-mobile'}`}>
@@ -1033,7 +1033,7 @@ export default function LeadsPage() {
                           fontSize: 11, lineHeight: 1.6, color: T.text,
                           marginBottom: 12,
                         }}>
-                          {hasLapsedPlan ? tr("Resubscribe") : tr("Subscribe")} {tr("to update dispositions and notes. Your current data is preserved exactly as it was.")}</div>
+                          {tr("{value} to update dispositions and notes. Your current data is preserved exactly as it was.", { value: hasLapsedPlan ? tr("Resubscribe") : tr("Subscribe") })}</div>
                         <Link href="/billing" style={{
                           display: 'block',
                           padding: '10px 14px',
@@ -1048,7 +1048,7 @@ export default function LeadsPage() {
                           textAlign: 'center',
                           textDecoration: 'none',
                           fontFamily: FUTURA,
-                        }}>{hasLapsedPlan ? tr("RESUBSCRIBE") : tr("SUBSCRIBE")}{tr(", $35/WEEK")}</Link>
+                        }}>{tr("{value}, $35/WEEK", { value: hasLapsedPlan ? tr("RESUBSCRIBE") : tr("SUBSCRIBE") })}</Link>
                       </div>
                     ) : (
                       <>
@@ -1195,7 +1195,7 @@ export default function LeadsPage() {
           <div style={{
             padding: 20, textAlign: 'center',
             fontSize: 10, letterSpacing: 2, color: T.muted,
-          }}>{tr("END OF LIST ·")}{" "}{leads.length} {tr("OF")}{" "}{total.toLocaleString()}</div>
+          }}>{tr("END OF LIST · {length} OF {total}", { length: leads.length, total: total.toLocaleString() })}</div>
         )}
       </div>
 

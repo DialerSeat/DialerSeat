@@ -853,7 +853,7 @@ export default function RecordingsPage() {
           <span style={{
             fontSize: 10, fontFamily: 'monospace', color: 'var(--brand-on-header-muted)', letterSpacing: 1,
           }}>
-            {total.toLocaleString()} {tr("TOTAL ·")}{" "}{recordings.length} {tr("LOADED")}</span>
+            {tr("{total} TOTAL · {length} LOADED", { total: total.toLocaleString(), length: recordings.length })}</span>
         </div>
         <button
           onClick={handleSync}
@@ -898,9 +898,9 @@ export default function RecordingsPage() {
       </div>
 
       <div className="rec-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>
-        <span>{filtersOpen ? tr("▲ HIDE") : tr("▼ SHOW")} {tr("FILTERS")}</span>
+        <span>{tr("{value} FILTERS", { value: filtersOpen ? tr("▲ HIDE") : tr("▼ SHOW") })}</span>
         <span style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace' }}>
-          {total.toLocaleString()} {tr("recordings")}</span>
+          {tr("{total} recordings", { total: total.toLocaleString() })}</span>
       </div>
 
       <div className={`rec-controls ${filtersOpen ? 'open-mobile' : 'closed-mobile'}`}>
@@ -1208,7 +1208,7 @@ export default function RecordingsPage() {
                           fontFamily: 'monospace', fontWeight: 'bold',
                           color: expDays < 7 ? T.red : T.text,
                         }}>
-                          {expDays} {tr("day")}{expDays === 1 ? '' : 's'}
+                          {tr("{expDays} day{value}", { expDays, value: expDays === 1 ? '' : 's' })}
                         </span>
                       </div>
                     )}
@@ -1316,7 +1316,7 @@ export default function RecordingsPage() {
                       color: expDays < 7 ? T.red : T.muted,
                       fontFamily: 'monospace',
                     }}>
-                      {tr("EXPIRES IN")}{" "}{expDays} {tr("DAY")}{expDays === 1 ? '' : 'S'} {tr("· DOWNLOAD TO KEEP")}</div>
+                      {tr("EXPIRES IN {expDays} DAY{value} · DOWNLOAD TO KEEP", { expDays, value: expDays === 1 ? '' : 'S' })}</div>
                   )}
                 </div>
               )}

@@ -8,7 +8,7 @@
 // as a blank or a key.
 
 export type Dictionary = Record<string, string>
-export type Vars = Record<string, string | number>
+export type Vars = Record<string, string | number | null | undefined | boolean>
 
 /** Names that are never translated, in any language, by anything. */
 export const NEVER_TRANSLATED = ['DialerSeat', 'DIALERSEAT', 'Dialerseat', 'dialerseat.com']
@@ -18,9 +18,14 @@ export function translate(dict: Dictionary | null | undefined, text: string, var
   if (vars) {
     // {name} placeholders only, and only when values are passed — an English
     // string that happens to contain braces is never touched otherwise.
-    out = out.replace(/\{(\w+)\}/g, (m, k: string) =>
-      Object.prototype.hasOwnProperty.call(vars, k) ? String(vars[k]) : m,
-    )
+    // Values render the way React renders a child: null, undefined and
+    // booleans show nothing, numbers and strings show as themselves. That is
+    // what the sentence showed before it was one translatable string.
+    out = out.replace(/\{(\w+)\}/g, (m, k: string) => {
+      if (!Object.prototype.hasOwnProperty.call(vars, k)) return m
+      const v = vars[k]
+      return v == null || typeof v === 'boolean' ? '' : String(v)
+    })
   }
   return out
 }

@@ -457,7 +457,7 @@ export default function LeadQueueShowcase() {
           {tr("● AUDIO")}</span>
         <div style={{ flex: 1 }} />
         <span style={{ fontSize: 9, letterSpacing: 1.2, color: '#8b8fa3', fontFamily: MONO, whiteSpace: 'nowrap' }}>
-          {q.dials} {tr("DIALS")}</span>
+          {tr("{dials} DIALS", { dials: q.dials })}</span>
         {/* Inert on purpose. It shows the real panel has a filter without
             inviting a click that does nothing useful on a marketing page —
             and without a visitor stopping the demo by narrowing it to one

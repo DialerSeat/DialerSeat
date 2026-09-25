@@ -65,7 +65,7 @@ function Sparkline({ points, color }: { points: number[]; color: string }) {
       preserveAspectRatio="none"
       style={{ width: '100%', height: 24, display: 'block' }}
       role="img"
-      aria-label={`Last ${points.length} calls, ${points.filter(Boolean).length} answered`}
+      aria-label={t("Last {length} calls, {length2} answered", { length: points.length, length2: points.filter(Boolean).length })}
     >
       <path d={d} fill="none" stroke={color} strokeWidth={1.5}
         vectorEffect="non-scaling-stroke" strokeLinejoin="round" />

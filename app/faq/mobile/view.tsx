@@ -72,7 +72,7 @@ function MobileCarousel() {
             key={s.src}
             className={`mob-dot ${i === idx ? 'active' : ''}`}
             onClick={() => setIdx(i)}
-            aria-label={`Go to screenshot ${i + 1}`}
+            aria-label={t("Go to screenshot {i}", { i: i + 1 })}
           />
         ))}
       </div>

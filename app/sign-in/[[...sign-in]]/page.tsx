@@ -63,7 +63,7 @@ export default function SignInPage() {
       <div style={{ marginBottom: '20px', textAlign: 'center' }}>
         <Link
           href="/"
-          aria-label={`${brandName}, return to home`}
+          aria-label={t("{brandName}, return to home", { brandName })}
           className="auth-logo-link"
           style={{
             display: 'inline-flex',

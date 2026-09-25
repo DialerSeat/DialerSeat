@@ -205,10 +205,9 @@ export default async function ConnectRatesPage() {
               <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a' }}>
                 {t("NOT ENOUGH DATA YET")}</div>
               <p style={{ fontSize: 14, lineHeight: 1.8, color: INK, margin: '8px 0 0' }}>
-                {buckets
+                {t("{value}Nothing is published below {mIN_SAMPLE} calls in a bucket, because a rate computed from a smaller sample moves several points on ordinary variance. The tables below will fill in on their own as volume accumulates: no number here is ever estimated, smoothed, or carried over from a previous period.", { value: buckets
                   ? `The platform has recorded ${buckets.total.dials.toLocaleString()} dials in the last 90 days. `
-                  : 'Platform data is not available in this environment. '}
-                {t("Nothing is published below")}{" "}{MIN_SAMPLE.toLocaleString()} {t("calls in a bucket, because a rate computed from a smaller sample moves several points on ordinary variance. The tables below will fill in on their own as volume accumulates: no number here is ever estimated, smoothed, or carried over from a previous period.")}</p>
+                  : 'Platform data is not available in this environment. ', mIN_SAMPLE: MIN_SAMPLE.toLocaleString() })}</p>
             </div>
           )}
 
@@ -277,15 +276,13 @@ export default async function ConnectRatesPage() {
             <ul style={{ fontSize: 14, lineHeight: 1.9, color: MUTED, marginTop: 10, paddingLeft: 18 }}>
               <li>{t("A \"connect\" is a call the carrier reported as answered.")}</li>
               <li>{t("Window: rolling 90 days, recomputed on each page load.")}</li>
-              <li>{t("Buckets under")}{" "}{MIN_SAMPLE.toLocaleString()} {t("calls show a dash, not a rate.")}</li>
+              <li>{t("Buckets under {mIN_SAMPLE} calls show a dash, not a rate.", { mIN_SAMPLE: MIN_SAMPLE.toLocaleString() })}</li>
               <li>{t("State is derived from the destination area code.")}</li>
               <li>{t("No lead, customer, campaign, or phone number appears on this page.")}</li>
-              <li>{t("Generated")}{" "}{generated}.</li>
+              <li>{t("Generated {generated}.", { generated })}</li>
             </ul>
             <p style={{ fontSize: 13, lineHeight: 1.8, color: MUTED, marginTop: 14 }}>
-              {t("Cite this page as: DialerSeat, \"Outbound Connect Rates by State and Hour,\"")}{' '}
-              {t("dialerseat.com/data/connect-rates, accessed")}{" "}{generated}.
-            </p>
+              {t("Cite this page as: DialerSeat, \"Outbound Connect Rates by State and Hour,\" dialerseat.com/data/connect-rates, accessed {generated}.", { generated })}</p>
           </section>
         </div>
       </main>

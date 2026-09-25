@@ -26,6 +26,15 @@ function compile(src, fileName) {
   }).outputText
 }
 
+// One printable shape for "text, value, text, …", however it was written.
+function canonicalTemplate(texts, exprs) {
+  const f = ts.factory
+  if (!exprs.length) return f.createStringLiteral(texts[0])
+  const spans = exprs.map((e, i) => f.createTemplateSpan(e,
+    i === exprs.length - 1 ? f.createTemplateTail(texts[i + 1]) : f.createTemplateMiddle(texts[i + 1])))
+  return f.createTemplateExpression(f.createTemplateHead(texts[0]), spans)
+}
+
 function normalise(js, fnNames) {
   const sf = ts.createSourceFile('x.js', js, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
   const f = ts.factory
@@ -39,18 +48,50 @@ function normalise(js, fnNames) {
         const arg = node.arguments[0]
         return ts.isStringLiteral(arg) ? f.createStringLiteral(arg.text) : arg
       }
+      // t("a {x} b", { x: e }) → `a ${e} b`  (English: the placeholders are
+      // filled in order, which is what the template or the JSX pieces did)
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
+        fnNames.has(node.expression.text) && node.arguments.length === 2 &&
+        ts.isStringLiteral(node.arguments[0]) && ts.isObjectLiteralExpression(node.arguments[1])) {
+        const vars = new Map()
+        for (const p of node.arguments[1].properties) {
+          if (ts.isPropertyAssignment(p)) vars.set(p.name.text ?? p.name.getText(), p.initializer)
+          else if (ts.isShorthandPropertyAssignment(p)) vars.set(p.name.text, f.createIdentifier(p.name.text))
+        }
+        const texts = [], exprs = []
+        let rest = node.arguments[0].text, m
+        const re = /\{(\w+)\}/
+        while ((m = re.exec(rest)) && vars.has(m[1])) {
+          texts.push(rest.slice(0, m.index)); exprs.push(vars.get(m[1])); rest = rest.slice(m.index + m[0].length)
+        }
+        texts.push(rest)
+        return canonicalTemplate(texts, exprs)
+      }
+      if (ts.isTemplateExpression(node)) {
+        return canonicalTemplate([node.head.text, ...node.templateSpans.map((s) => s.literal.text)],
+          node.templateSpans.map((s) => s.expression))
+      }
       // A backtick string with no ${} is the same string.
       if (ts.isNoSubstitutionTemplateLiteral(node)) return f.createStringLiteral(node.text)
       // Quote style is not output: print every string the same way.
       if (ts.isStringLiteral(node) && node.getSourceFile?.()) return f.createStringLiteral(node.text)
-      // React.createElement(tag, props, ...children): merge adjacent strings.
+      // React.createElement(tag, props, ...children): a template child is the
+      // same text as its pieces; merge adjacent strings; drop empty ones.
       if (ts.isCallExpression(node)) {
         const callee = node.expression
         const isCE = ts.isPropertyAccessExpression(callee) && callee.name.text === 'createElement'
         if (isCE && node.arguments.length > 2) {
           const [tag, props, ...kids] = node.arguments
-          const merged = []
+          const flat = []
           for (const k of kids) {
+            if (ts.isTemplateExpression(k)) {
+              flat.push(f.createStringLiteral(k.head.text))
+              for (const s of k.templateSpans) flat.push(s.expression, f.createStringLiteral(s.literal.text))
+            } else flat.push(k)
+          }
+          const merged = []
+          for (const k of flat) {
+            if (ts.isStringLiteral(k) && k.text === '') continue
             const prev = merged[merged.length - 1]
             if (prev && ts.isStringLiteral(prev) && ts.isStringLiteral(k)) {
               merged[merged.length - 1] = f.createStringLiteral(prev.text + k.text)
@@ -116,10 +157,10 @@ for (const file of process.argv.slice(2)) {
     console.log(`same             ${file}`)
   } else {
     failed++
-    const al = a.split('\n'), bl = b.split('\n')
     let i = 0
-    while (i < al.length && al[i] === bl[i]) i++
-    console.log(`DIFFERENT        ${file}\n   before: ${al[i]?.trim()}\n   after:  ${bl[i]?.trim()}`)
+    while (i < a.length && a[i] === b[i]) i++
+    const from = Math.max(0, i - 100)
+    console.log(`DIFFERENT        ${file}\n   before: …${a.slice(from, i + 120)}\n   after:  …${b.slice(from, i + 120)}`)
   }
 }
 process.exit(failed ? 1 : 0)

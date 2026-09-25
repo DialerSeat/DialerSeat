@@ -352,7 +352,7 @@ export default function AgentDetail({
                   {m.status === 'pending'
                     ? t("Waiting on your approval")
                     : m.suspended
-                    ? `Seat paused${m.suspendReason ? `, ${m.suspendReason}` : ''}`
+                    ? t("Seat paused{value}", { value: m.suspendReason ? `, ${m.suspendReason}` : '' })
                     // Before every other case. Somebody funding their own
                     // DialerSeat is not on a seat this owner bought at all,
                     // and calling that "Seat active" invited the reasonable

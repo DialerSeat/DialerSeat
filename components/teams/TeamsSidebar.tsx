@@ -1048,10 +1048,10 @@ export default function TeamsSidebar({
           >
             <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 600 }}>
               {leaveMode
-                ? `Leave ${selectedList.length} team${selectedList.length === 1 ? '' : 's'}?`
+                ? tr("Leave {length} team{value}?", { length: selectedList.length, value: selectedList.length === 1 ? '' : 's' })
                 : agentMode
-                ? `Remove ${selectedList.length} ${selectedList.length === 1 ? 'person' : 'people'} from ${removeMode === 'campaign' ? msg("this campaign") : msg("the team")}?`
-                : `Delete ${selectedList.length} item${selectedList.length === 1 ? '' : 's'}?`}
+                ? tr("Remove {length} {value} from {value2}?", { length: selectedList.length, value: selectedList.length === 1 ? 'person' : 'people', value2: removeMode === 'campaign' ? msg("this campaign") : msg("the team") })
+                : tr("Delete {length} item{value}?", { length: selectedList.length, value: selectedList.length === 1 ? '' : 's' })}
             </h3>
             <p style={{ margin: '0 0 12px', fontSize: 12.5, color: TEXT_DIM, lineHeight: 1.6 }}>
               {leaveMode

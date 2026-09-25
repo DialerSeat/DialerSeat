@@ -725,7 +725,7 @@ export default function SettingsPage() {
 
               <div style={rowStyle}>
                 <span style={labelStyle}>{tr("PRICE")}</span>
-                <span style={valueStyle}>${weeklyPrice.toFixed(2)} {tr("/ WEEK")}</span>
+                <span style={valueStyle}>{tr("${weeklyPrice} / WEEK", { weeklyPrice: weeklyPrice.toFixed(2) })}</span>
               </div>
             </>
           )}
@@ -802,8 +802,7 @@ export default function SettingsPage() {
         {hasAnySeats && (
           <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>
-              {tr("▸ TEAM SEATS (")}{seats!.counts.totalSeats})
-            </div>
+              {tr("▸ TEAM SEATS ({totalSeats})", { totalSeats: seats!.counts.totalSeats })}</div>
 
             {seats!.ownerPaidSeats.map(seat => (
               <div key={seat.id} style={seatRowStyle('var(--brand-primary)')}>
@@ -812,9 +811,9 @@ export default function SettingsPage() {
                   <span style={seatBadgeStyle('var(--brand-primary)')}>{tr("OWNER PAID")}</span>
                 </div>
                 <div style={seatDetailStyle}>
-                  {tr("Paid by")}{" "}<strong style={{ color: CHROME.text }}>{seat.ownerName}</strong> · ${(seat.amountCents / 100).toFixed(2)} {tr("/ WEEK")}</div>
+                  {tr("Paid by")}{" "}<strong style={{ color: CHROME.text }}>{seat.ownerName}</strong>{" "}{tr("· ${amountCents} / WEEK", { amountCents: (seat.amountCents / 100).toFixed(2) })}</div>
                 <div style={seatDetailStyle}>
-                  {tr("Period:")}{" "}{formatDate(seat.periodStart)} → {formatDate(seat.periodEnd)}
+                  {tr("Period: {date} → {date2}", { date: formatDate(seat.periodStart), date2: formatDate(seat.periodEnd) })}
                 </div>
                 <div style={{ ...seatDetailStyle, color: CHROME.muted, fontSize: 10, marginTop: 6 }}>
                   {tr("Only the team owner can cancel this seat.")}</div>
@@ -831,7 +830,7 @@ export default function SettingsPage() {
                   {tr("Campaign:")}{" "}<strong style={{ color: CHROME.text }}>{seat.campaignName || '-'}</strong>
                 </div>
                 <div style={seatDetailStyle}>
-                  {tr("Owner:")}{" "}{seat.ownerName} {tr("· $35.00 / WEEK")}</div>
+                  {tr("Owner: {ownerName} · $35.00 / WEEK", { ownerName: seat.ownerName })}</div>
                 {!pausedOnly && <button
                   onClick={() => startCancelSeat(seat)}
                   disabled={seatCancelling === seat.id}
@@ -867,7 +866,7 @@ export default function SettingsPage() {
             <div style={resubscribeTextStyle}>
               {sub?.tier === 'lapsed'
                 ? tr("Resubscribe to restore dialing, campaign creation, and lead imports. Your existing leads, recordings, and analytics are still here.")
-                : `You'll lose dialing access on ${sub?.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : msg("period end")}. Resume billing now to keep going without interruption.`
+                : tr("You'll lose dialing access on {date}. Resume billing now to keep going without interruption.", { date: sub?.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : msg("period end") })
               }
             </div>
             <button onClick={handleResubscribe} disabled={resuming} style={{ ...resubscribeButtonStyle, opacity: resuming ? 0.6 : 1, cursor: resuming ? 'not-allowed' : 'pointer' }}>

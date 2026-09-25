@@ -714,7 +714,7 @@ export function ManageMemberModal({
             borderRadius: 4, padding: '12px 14px',
           }}>
             <div style={{ fontSize: 13, color: '#fecaca', lineHeight: 1.6, marginBottom: 10 }}>
-              {tr("Remove")}{" "}<strong>{member.name}</strong> {tr("from")}{" "}{teamName}{tr("? Their call history stays; their access does not.")}</div>
+              {tr("Remove")}{" "}<strong>{member.name}</strong> {tr("from {teamName}? Their call history stays; their access does not.", { teamName })}</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button style={btn} disabled={busy} onClick={() => setConfirmRemove(false)}>
                 {tr("Cancel")}</button>

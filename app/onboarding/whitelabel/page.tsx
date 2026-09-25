@@ -338,7 +338,7 @@ export default function WhitelabelOnboardingPage() {
   }
 
   const handleDeleteTheme = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"?`)) return
+    if (!confirm(tr("Delete \"{name}\"?", { name }))) return
     setDeletingThemeId(id)
     try {
       const res = await fetch(
@@ -395,7 +395,7 @@ export default function WhitelabelOnboardingPage() {
       return
     }
     if (savedThemes.length >= MAX_SAVED_THEMES) {
-      setSaveAsNewError(`You've hit your limit of ${MAX_SAVED_THEMES} saved themes.`)
+      setSaveAsNewError(tr("You've hit your limit of {mAX_SAVED_THEMES} saved themes.", { mAX_SAVED_THEMES: MAX_SAVED_THEMES }))
       return
     }
     if (!HEX_RE.test(primary) || !HEX_RE.test(sidebar) || !HEX_RE.test(headerBg) || !HEX_RE.test(pageBg)) {
@@ -856,7 +856,7 @@ export default function WhitelabelOnboardingPage() {
               style={savedThemesToggleStyle}
             >
               <span>
-                {savedThemesOpen ? '▾' : '▸'} {savedThemes.length} {tr("SAVED")}</span>
+                {tr("{value} {length} SAVED", { value: savedThemesOpen ? '▾' : '▸', length: savedThemes.length })}</span>
               {savedThemes.length === 0 && (
                 <span style={savedThemesToggleHintStyle}>
                   {tr("none yet, save your current look below")}</span>
@@ -894,7 +894,7 @@ export default function WhitelabelOnboardingPage() {
                         handleDeleteTheme(t.id, t.name)
                       }}
                       disabled={deletingThemeId === t.id}
-                      title={`Delete "${t.name}"`}
+                      title={tr("Delete \"{name}\"", { name: t.name })}
                       style={themeDeleteButtonStyle}
                       aria-label={`Delete ${t.name}`}
                     >
@@ -906,7 +906,7 @@ export default function WhitelabelOnboardingPage() {
             )}
             {savedThemesOpen && savedThemes.length === 0 && (
               <div style={savedThemesEmptyStyle}>
-                {tr("You haven't saved any themes yet. Configure your colors and logo, then use SAVE AS NEW THEME below to create one. You can save up to")}{" "}{MAX_SAVED_THEMES} {tr("themes per account.")}</div>
+                {tr("You haven't saved any themes yet. Configure your colors and logo, then use SAVE AS NEW THEME below to create one. You can save up to {mAX_SAVED_THEMES} themes per account.", { mAX_SAVED_THEMES: MAX_SAVED_THEMES })}</div>
             )}
           </div>
 
@@ -987,7 +987,7 @@ export default function WhitelabelOnboardingPage() {
                 >
                   {overwritingTheme
                     ? tr("OVERWRITING...")
-                    : `↻ OVERWRITE "${activeSavedTheme.name}"`}
+                    : tr("↻ OVERWRITE \"{name}\"", { name: activeSavedTheme.name })}
                 </button>
               )}
 
@@ -1010,13 +1010,13 @@ export default function WhitelabelOnboardingPage() {
                 }}
                 title={
                   atSavedThemeLimit
-                    ? `You've hit your limit of ${MAX_SAVED_THEMES} saved themes. Delete one to save another.`
+                    ? tr("You've hit your limit of {mAX_SAVED_THEMES} saved themes. Delete one to save another.", { mAX_SAVED_THEMES: MAX_SAVED_THEMES })
                     : undefined
                 }
               >
                 {saveAsNewOpen
                   ? tr("× CANCEL")
-                  : `+ SAVE AS NEW THEME (${savedThemes.length}/${MAX_SAVED_THEMES})`}
+                  : tr("+ SAVE AS NEW THEME ({length}/{mAX_SAVED_THEMES})", { length: savedThemes.length, mAX_SAVED_THEMES: MAX_SAVED_THEMES })}
               </button>
 
               {saveAsNewOpen && (
@@ -1142,21 +1142,18 @@ function renderSlugStatus(
   }
   if (status.kind === 'available') {
     return (
-      <span style={{ color: 'var(--color-success)' }}>
-        ✓ {slug}{tr(".dialerseat.com")}{" "}{isUnchangedEdit ? tr("(your current subdomain)") : tr("is available")}
+      <span style={{ color: 'var(--color-success)' }}>{tr("✓ {slug}.dialerseat.com {value}", { slug, value: isUnchangedEdit ? tr("(your current subdomain)") : tr("is available") })}
       </span>
     )
   }
   if (status.kind === 'taken') {
     return (
-      <span style={{ color: 'var(--color-error)' }}>
-        ✗ {slug}{tr(".dialerseat.com is taken")}</span>
+      <span style={{ color: 'var(--color-error)' }}>{tr("✗ {slug}.dialerseat.com is taken", { slug })}</span>
     )
   }
   if (status.kind === 'reserved') {
     return (
-      <span style={{ color: 'var(--color-error)' }}>
-        ✗ {slug} {tr("is reserved by DialerSeat")}</span>
+      <span style={{ color: 'var(--color-error)' }}>{tr("✗ {slug} is reserved by DialerSeat", { slug })}</span>
     )
   }
   if (status.kind === 'invalid') {

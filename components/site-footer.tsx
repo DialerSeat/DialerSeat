@@ -136,8 +136,7 @@ export default function SiteFooter() {
           color: 'rgba(255,255,255,0.4)',
           margin: 0,
         }}
-      >
-        © {new Date().getFullYear()} {t("DIALERSEAT™ · ALL RIGHTS RESERVED")}</p>
+      >{t("© {fullYear} DIALERSEAT™ · ALL RIGHTS RESERVED", { fullYear: new Date().getFullYear() })}</p>
     </footer>
   )
 }

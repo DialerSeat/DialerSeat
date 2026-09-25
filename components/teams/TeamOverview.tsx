@@ -199,7 +199,7 @@ export default function TeamOverview({
           accent={data && data.seats.pending > 0 ? T.amber : undefined}
         />
         <Tile
-          label={`CONNECT RATE · ${data?.lookbackDays ?? 7}D`}
+          label={t("CONNECT RATE · {lookbackDays}D", { lookbackDays: data?.lookbackDays ?? 7 })}
           // A dash, not 0%. No calls means unknown, and a confident 0% would
           // read as a broken dialer rather than an idle one.
           value={data?.calls.connectRatePct !== null && data?.calls.connectRatePct !== undefined
@@ -243,7 +243,7 @@ export default function TeamOverview({
             flexBasis: '100%', marginTop: 4, fontSize: 11, color: T.green,
             wordBreak: 'break-all',
           }}>
-            {t("✓ Copied,")}{" "}{copied}
+            {t("✓ Copied, {copied}", { copied })}
           </div>
         )}
         {genError && (
@@ -261,8 +261,7 @@ export default function TeamOverview({
           border: `1px solid ${T.border}`, borderRadius: 6,
         }}>
           <div style={{ fontSize: 10, letterSpacing: 1.5, fontWeight: 'bold', color: T.muted, marginBottom: 8 }}>
-            {t("WAITING TO JOIN (")}{pending.length})
-          </div>
+            {t("WAITING TO JOIN ({length})", { length: pending.length })}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {pending.map(p => (
               <div key={p.id} style={{

@@ -114,18 +114,17 @@ export default function BillingSuccessPage() {
           {isWl ? (
             <>
               {t("Your Manager+ subscription is live.")}<br />
-              {t("You'll be charged")}{" "}<strong style={{ color: '#e0e2ea' }}>{price}{t("/week")}</strong> {t("weekly from today.")}<br /><br />
+              {t("You'll be charged")}{" "}<strong style={{ color: '#e0e2ea' }}>{t("{price}/week", { price })}</strong> {t("weekly from today.")}<br /><br />
               {t("Next: set up your tenant: subdomain, logo, and brand colors.")}</>
           ) : (
             <>
               {t("Your subscription is live.")}<br />
-              {t("You'll be charged")}{" "}<strong style={{ color: '#e0e2ea' }}>{price}{t("/week")}</strong> {t("weekly from today. Cancel anytime in Settings.")}</>
+              {t("You'll be charged")}{" "}<strong style={{ color: '#e0e2ea' }}>{t("{price}/week", { price })}</strong> {t("weekly from today. Cancel anytime in Settings.")}</>
           )}
         </div>
 
         <div style={countdownStyle}>
-          {t("Redirecting to")}{" "}{teamMemberId ? t("the dialer") : isWl ? t("tenant setup") : t("dashboard")} {t("in")}{" "}{countdown}…
-        </div>
+          {t("Redirecting to {value} in {countdown}…", { value: teamMemberId ? t("the dialer") : isWl ? t("tenant setup") : t("dashboard"), countdown })}</div>
 
         <button
           onClick={() => router.push(destination)}

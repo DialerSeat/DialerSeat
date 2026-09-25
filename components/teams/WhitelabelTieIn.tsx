@@ -63,7 +63,7 @@ export default function WhitelabelTieIn({ tenant }: { tenant: TenantInfo | null 
           target="_blank"
           rel="noreferrer"
           style={{ fontSize: 11, color: T.primary, textDecoration: 'underline' }}
-        >{tenant.slug}{t(".dialerseat.com ↗")}</a>
+        >{t("{slug}.dialerseat.com ↗", { slug: tenant.slug })}</a>
         {tenant.custom_domain && (
           <span style={{ fontSize: 10, color: T.muted }}>+ {tenant.custom_domain}</span>
         )}

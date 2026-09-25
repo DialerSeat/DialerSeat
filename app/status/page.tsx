@@ -222,7 +222,7 @@ export default async function StatusPage() {
           </div>
 
           <p style={{ fontSize: 12, color: MUTED, marginTop: 16, fontFamily: 'monospace' }}>
-            {t("CHECKED")}{" "}{checkedAt}
+            {t("CHECKED {checkedAt}", { checkedAt })}
           </p>
 
           <section style={{ marginTop: 44 }}>

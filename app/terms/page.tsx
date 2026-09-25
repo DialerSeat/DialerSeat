@@ -161,7 +161,7 @@ export default async function TermsPage() {
         <div className="tos-root">
           <div className="tos-hero">
             <h1>{t("Terms of Service")}</h1>
-            <p>{t("LAST UPDATED ·")}{" "}{LAST_UPDATED.toUpperCase()}</p>
+            <p>{t("LAST UPDATED · {lAST_UPDATED}", { lAST_UPDATED: LAST_UPDATED.toUpperCase() })}</p>
           </div>
 
           <div className="tos-body">

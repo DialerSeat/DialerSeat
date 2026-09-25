@@ -529,7 +529,7 @@ export default function CampaignDetail({
                 return myDaily.map(d => (
                   <div key={d.day} style={{ flex: 1, textAlign: 'center' }}>
                     <div
-                      title={`${d.calls} call${d.calls === 1 ? '' : 's'} on ${d.day}`}
+                      title={tr("{calls} call{value} on {day}", { calls: d.calls, value: d.calls === 1 ? '' : 's', day: d.day })}
                       style={{
                         height: `${Math.round((d.calls / peak) * 34)}px`,
                         minHeight: d.calls > 0 ? 3 : 1,
@@ -811,7 +811,7 @@ export default function CampaignDetail({
             )}
           </div>
           {team && (
-            <div style={{ fontSize: 12, color: DIM, marginTop: 2 }}>{tr("on")}{" "}{team.name}</div>
+            <div style={{ fontSize: 12, color: DIM, marginTop: 2 }}>{tr("on {name}", { name: team.name })}</div>
           )}
         </div>
         {/* ── STATE, NOT INSTRUCTION ──────────────────────────────────────
@@ -863,7 +863,7 @@ export default function CampaignDetail({
             <div style={{ width: `${pct}%`, height: '100%', background: ACCENT }} />
           </div>
           <div style={{ fontSize: 11, color: DIM, marginTop: 5 }}>
-            {pct}{tr("% dialed")}{data.remainingLeads === 0 && tr(", this list is finished. Add leads or pause it.")}
+            {tr("{pct}% dialed{remainingLeads}", { pct, remainingLeads: data.remainingLeads === 0 && tr(", this list is finished. Add leads or pause it.") })}
           </div>
         </div>
       )}
@@ -880,7 +880,7 @@ export default function CampaignDetail({
         <div style={{ color: DIM, fontSize: 12.5, lineHeight: 1.7 }}>
           {data.remainingLeads === 0 && data.totalLeads > 0
             ? tr("Every lead here has been dialed. Adding a fresh list starts the queue again without touching call history.")
-            : `${data.remainingLeads.toLocaleString()} left to dial.`}
+            : tr("{remainingLeads} left to dial.", { remainingLeads: data.remainingLeads.toLocaleString() })}
         </div>
       </Section>
 
@@ -1269,7 +1269,7 @@ export default function CampaignDetail({
               />
               <span>
                 <span style={{ display: 'block', fontSize: 13, color: TEXT }}>
-                  {tr("Anyone who joins")}{" "}{team.name} {tr("can use it")}</span>
+                  {tr("Anyone who joins {name} can use it", { name: team.name })}</span>
                 <span style={{ display: 'block', fontSize: 11.5, color: DIM, marginTop: 3, lineHeight: 1.6 }}>
                   {tr("A standing rule, not a one-off, people who join later get it automatically. Ticking every name below only covers the people who are here today.")}</span>
               </span>
@@ -1280,14 +1280,14 @@ export default function CampaignDetail({
                 {tr("This campaign is open to the whole team, so there is nobody left to add individually.")}</div>
             ) : available.length === 0 ? (
               <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.7 }}>
-                {tr("Everyone on")}{" "}{team.name} {tr("is already on this campaign.")}</div>
+                {tr("Everyone on {name} is already on this campaign.", { name: team.name })}</div>
             ) : (
               <>
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   fontSize: 11.5, color: DIM, marginBottom: 6,
                 }}>
-                  <span>{available.length} {tr("on")}{" "}{team.name}</span>
+                  <span>{tr("{length} on {name}", { length: available.length, name: team.name })}</span>
                   <button
                     onClick={() => setPicked(
                       picked.size === available.length

@@ -394,7 +394,7 @@ export default function TeamsManager() {
   const removeMember = (m: TeamMember) => {
     setConfirmState({
       title: msg("KICK MEMBER"),
-      body: `Remove ${displayName(m.user, msg("this member"))} from the team? They lose all campaign access and any owner-paid subs end at period close. Type "remove" to confirm.`,
+      body: tr("Remove {displayName} from the team? They lose all campaign access and any owner-paid subs end at period close. Type \"remove\" to confirm.", { displayName: displayName(m.user, msg("this member")) }),
       confirmWord: 'remove',
       danger: true,
       onConfirm: async () => {
@@ -506,7 +506,7 @@ export default function TeamsManager() {
   const revokeAccess = (team: OwnedTeam, member: TeamMember, access: MemberCampaignAccess, campaignName: string) => {
     setConfirmState({
       title: msg("REVOKE CAMPAIGN ACCESS"),
-      body: `Revoke ${displayName(member.user, msg("this member"))}'s access to "${campaignName}"? Their seat sub for this campaign ends at period close. They stay on the team and can be reinstated anytime. Type "remove" to confirm.`,
+      body: tr("Revoke {displayName}'s access to \"{campaignName}\"? Their seat sub for this campaign ends at period close. They stay on the team and can be reinstated anytime. Type \"remove\" to confirm.", { displayName: displayName(member.user, msg("this member")), campaignName }),
       confirmWord: 'remove',
       danger: true,
       onConfirm: async () => {
@@ -597,7 +597,7 @@ export default function TeamsManager() {
   const detachCampaign = (teamId: string, campaignId: string, campaignName: string) => {
     setConfirmState({
       title: msg("DETACH CAMPAIGN"),
-      body: `Detach "${campaignName}" from this team? Member access to this campaign will be revoked. Owner-paid seat subs tied to this campaign end at period close. Type "remove" to confirm.`,
+      body: tr("Detach \"{campaignName}\" from this team? Member access to this campaign will be revoked. Owner-paid seat subs tied to this campaign end at period close. Type \"remove\" to confirm.", { campaignName }),
       confirmWord: 'remove',
       danger: true,
       onConfirm: async () => {
@@ -723,7 +723,7 @@ export default function TeamsManager() {
           <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
             {tr("TEAMS")}</span>
           <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--brand-on-header-muted)', letterSpacing: 1 }}>
-            {ownedTeams.length} {tr("OWNED ·")}{" "}{memberTeams.length} {tr("MEMBER")}{totalPending > 0 && ` · ${totalPending} PENDING`}
+            {tr("{length} OWNED · {length2} MEMBER{totalPending}", { length: ownedTeams.length, length2: memberTeams.length, totalPending: totalPending > 0 && ` · ${totalPending} PENDING` })}
           </span>
         </div>
         <button
@@ -899,9 +899,9 @@ export default function TeamsManager() {
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>{team.name}</div>
                           <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, fontFamily: 'monospace' }}>
-                            {memberCount} {tr("MEMBER")}{memberCount === 1 ? '' : 'S'} · {codeCount} {tr("CODE")}{codeCount === 1 ? '' : 'S'} · {campaignCount} {tr("CAMPAIGN")}{campaignCount === 1 ? '' : 'S'}
+                            {tr("{memberCount} MEMBER{value} · {codeCount} CODE{value2} · {campaignCount} CAMPAIGN{value3}", { memberCount, value: memberCount === 1 ? '' : 'S', codeCount, value2: codeCount === 1 ? '' : 'S', campaignCount, value3: campaignCount === 1 ? '' : 'S' })}
                             {pendingCount > 0 && (
-                              <span style={{ color: T.amber, fontWeight: 'bold' }}> · {pendingCount} {tr("PENDING")}</span>
+                              <span style={{ color: T.amber, fontWeight: 'bold' }}>{" "}{tr("· {pendingCount} PENDING", { pendingCount })}</span>
                             )}
                           </div>
                         </div>
@@ -982,7 +982,7 @@ export default function TeamsManager() {
                             />
                           </Section>
 
-                          <Section title={`SEAT LINKS (${codeCount})`} accent={T.accent}>
+                          <Section title={tr("SEAT LINKS ({codeCount})", { codeCount })} accent={T.accent}>
                             <SeatLinksPanel
                               teamId={team.id}
                               codes={team.codes}
@@ -1230,7 +1230,7 @@ export default function TeamsManager() {
           <div onClick={e => e.stopPropagation()} style={modalShellStyle}>
             <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>{tr("+ ATTACH CAMPAIGN")}</div>
             <div style={{ fontSize: 11, color: T.muted, marginBottom: 18, letterSpacing: 1 }}>
-              {tr("to")}{" "}{attachModalTeam.name}
+              {tr("to {name}", { name: attachModalTeam.name })}
             </div>
 
             {attachCampaigns.length === 0 ? (
@@ -1309,7 +1309,7 @@ export default function TeamsManager() {
               <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>
                 {tr("+ ADD CAMPAIGN ACCESS")}</div>
               <div style={{ fontSize: 11, color: T.muted, marginBottom: 18, letterSpacing: 1 }}>
-                {tr("for")}{" "}{displayName(grantTarget.member.user, grantTarget.member.user_id.slice(0, 12))}
+                {tr("for {displayName}", { displayName: displayName(grantTarget.member.user, grantTarget.member.user_id.slice(0, 12)) })}
               </div>
 
               {remaining.length === 0 ? (
@@ -1401,7 +1401,7 @@ export default function TeamsManager() {
             <p style={{ fontSize: 13, lineHeight: 1.6, color: T.text, margin: '0 0 16px 0' }}>{tr(confirmState.body)}</p>
             <input
               type="text" value={confirmInput} onChange={e => setConfirmInput(e.target.value)}
-              placeholder={`type "${confirmState.confirmWord}"`}
+              placeholder={tr("type \"{confirmWord}\"", { confirmWord: confirmState.confirmWord })}
               autoFocus disabled={confirmSubmitting} style={modalInput}
             />
             {actionError && <ErrorInline text={actionError} />}

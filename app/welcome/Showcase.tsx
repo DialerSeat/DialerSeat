@@ -122,7 +122,7 @@ export default function ShowcaseWizard({ joinCode = null }: { joinCode?: string 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 28px' }}>
         <div style={{ display: 'flex', gap: 8, flex: 1, maxWidth: 280 }}>
           {SCENES.map((s, i) => (
-            <button key={s.key} onClick={() => setScene(i)} aria-label={`Go to step ${i + 1}`} style={{
+            <button key={s.key} onClick={() => setScene(i)} aria-label={tr("Go to step {i}", { i: i + 1 })} style={{
               flex: 1, height: 4, borderRadius: 3, cursor: 'pointer', border: 'none', padding: 0,
               background: i <= scene ? C.primary : 'rgba(255,255,255,0.16)', transition: 'background 0.25s ease',
             }} />
@@ -304,7 +304,7 @@ function DialerScene() {
                   <div>
                     <div style={{ fontSize: 19, fontWeight: 800, fontFamily: MONO, color: C.onPage, letterSpacing: 1, marginBottom: 3 }}>{tr("JOHN DOE")}</div>
                     <div style={{ fontSize: 15, fontFamily: MONO, color: ACCENT, fontWeight: 800, letterSpacing: 2 }}>+1 (713) 555-0142</div>
-                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.muted, letterSpacing: 1, marginTop: 4 }}>{tr("HOUSTON, TX ·")}{" "}{mm}:{ss}</div>
+                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.muted, letterSpacing: 1, marginTop: 4 }}>{tr("HOUSTON, TX · {mm}:{ss}", { mm, ss })}</div>
                   </div>
                   <div style={{ padding: '4px 10px', borderRadius: 2, background: '#e8f5e8', border: `1px solid ${GREEN}`, fontSize: 9, letterSpacing: 2, fontWeight: 800, color: GREEN }}>{tr("● LIVE")}</div>
                 </div>

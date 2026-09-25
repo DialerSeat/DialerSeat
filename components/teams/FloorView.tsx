@@ -168,7 +168,7 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
         {quiet.length > 0 ? (
           <>
             <strong style={{ color: AMBER }}>{quiet.length}</strong> {t("of the")}{' '}
-            {usage.length} {t("quietest")}{" "}{usage.length === 1 ? t("seat") : t("seats")} {t("made fewer than")}{" "}{QUIET_THRESHOLD} {t("calls this")}{" "}{range === 'today' ? t("day") : range}{t(". You are paying for those. Pausing a seat stops the billing and is reversible.")}{total > usage.length && (
+            {usage.length} {t("quietest {value} made fewer than {qUIET_THRESHOLD} calls this {value2}. You are paying for those. Pausing a seat stops the billing and is reversible.", { value: usage.length === 1 ? t("seat") : t("seats"), qUIET_THRESHOLD: QUIET_THRESHOLD, value2: range === 'today' ? t("day") : range })}{total > usage.length && (
               <span style={{ display: 'block', marginTop: 3 }}>
                 {t("Showing the")}{" "}{usage.length} {t("quietest of")}{" "}{total.toLocaleString()} {t("seats.")}</span>
             )}
@@ -196,14 +196,14 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
                   <div style={{ fontSize: 13.5, fontWeight: 500 }}>{u.name}</div>
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
                     {u.teamName}
-                    {u.suspended ? ' · seat paused' : ` · last call ${ago(u.lastCallAt)}`}
+                    {u.suspended ? ' · seat paused' : t(" · last call {ago}", { ago: ago(u.lastCallAt) })}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right', fontSize: 11.5, color: DIM }}>
                   <div style={{ color: isQuiet ? AMBER : TEXT, fontSize: 13 }}>
                     {u.calls.toLocaleString()} {u.calls === 1 ? t("call") : t("calls")}
                   </div>
-                  <div>{dur(u.talkSeconds)} {t("talking")}</div>
+                  <div>{t("{dur} talking", { dur: dur(u.talkSeconds) })}</div>
                 </div>
               </div>
             )

@@ -171,7 +171,7 @@ export default function CompliancePage() {
           <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
             {t("🛡 COMPLIANCE")}</span>
           <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1 }}>
-            {campaigns.length} {t("CAMPAIGN")}{campaigns.length === 1 ? '' : 'S'} {t("· 30-DAY WINDOW")}</span>
+            {t("{length} CAMPAIGN{value} · 30-DAY WINDOW", { length: campaigns.length, value: campaigns.length === 1 ? '' : 'S' })}</span>
         </div>
         <Link
           href="/dialing-modes"
@@ -409,7 +409,7 @@ function CampaignComplianceCard({
             </span>
           </div>
           <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', letterSpacing: 0.5 }}>
-            {campaign.called_leads.toLocaleString()} {t("of")}{" "}{campaign.total_leads.toLocaleString()} {t("leads called")}</div>
+            {t("{called_leads} of {total_leads} leads called", { called_leads: campaign.called_leads.toLocaleString(), total_leads: campaign.total_leads.toLocaleString() })}</div>
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -536,7 +536,7 @@ function CampaignComplianceCard({
                 fontWeight: 'bold', cursor: 'pointer',
                 fontFamily: 'Futura PT, Futura, sans-serif',
               }}
-            >{t("LAST")}{" "}{days} {t("DAYS")}</button>
+            >{t("LAST {days} DAYS", { days })}</button>
           ))}
           <button
             onClick={onCloseExport}

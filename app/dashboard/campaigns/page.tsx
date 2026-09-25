@@ -624,7 +624,7 @@ export default function CampaignsPage() {
 
   const handleFile = (file: File) => {
     if (!isAcceptedLeadsFile(file.name)) {
-      setFileTypeError(`"${file.name}" isn't a supported file type. Use CSV, TSV, TXT, or Excel (.xlsx/.xls).`)
+      setFileTypeError(tr("\"{name}\" isn't a supported file type. Use CSV, TSV, TXT, or Excel (.xlsx/.xls).", { name: file.name }))
       return
     }
     setFileTypeError('')
@@ -1095,7 +1095,7 @@ export default function CampaignsPage() {
 
   const handleUploadMore = async (campaignId: string, file: File) => {
     if (!isAcceptedLeadsFile(file.name)) {
-      setFileTypeError(`"${file.name}" isn't a supported file type. Use CSV, TSV, TXT, or Excel (.xlsx/.xls).`)
+      setFileTypeError(tr("\"{name}\" isn't a supported file type. Use CSV, TSV, TXT, or Excel (.xlsx/.xls).", { name: file.name }))
       return
     }
 
@@ -1751,7 +1751,7 @@ export default function CampaignsPage() {
 
   const deleteSelected = () => {
     if (editorSelected.size === 0) return
-    if (!confirm(`Delete ${editorSelected.size} row${editorSelected.size === 1 ? '' : 's'}? Will commit on Save.`)) return
+    if (!confirm(tr("Delete {size} row{value}? Will commit on Save.", { size: editorSelected.size, value: editorSelected.size === 1 ? '' : 's' }))) return
     const newDeletes = new Set(editorDeletes)
     const newAdds = [...editorAdds]
     editorSelected.forEach(id => {
@@ -3056,8 +3056,7 @@ export default function CampaignsPage() {
               <button className="cmp-new-btn" onClick={openCreate}>
                 {tr("+ NEW CAMPAIGN")}</button>
             ) : (
-              <Link href="/billing" className="cmp-new-btn amber">
-                ↻ {hasLapsedPlan ? tr("RESUBSCRIBE") : tr("SUBSCRIBE")}{tr(", $35/WEEK")}</Link>
+              <Link href="/billing" className="cmp-new-btn amber">{tr("↻ {value}, $35/WEEK", { value: hasLapsedPlan ? tr("RESUBSCRIBE") : tr("SUBSCRIBE") })}</Link>
             )}
           </div>
         ) : (
@@ -3104,9 +3103,9 @@ export default function CampaignsPage() {
                     <div className="cmp-card-meta">
                       <h3 className="cmp-card-name">{campaign.name}</h3>
                       <div className="cmp-card-sub">
-                        <span>{tr("MOD")}{" "}{relativeTime(lastModified)}</span>
+                        <span>{tr("MOD {relativeTime}", { relativeTime: relativeTime(lastModified) })}</span>
                         <span className="dot">·</span>
-                        <span>{tr("DIAL")}{" "}{relativeTime(lastDialed)}</span>
+                        <span>{tr("DIAL {relativeTime}", { relativeTime: relativeTime(lastDialed) })}</span>
                       </div>
                     </div>
                   </div>
@@ -3228,13 +3227,13 @@ export default function CampaignsPage() {
                   className="settings-section-title"
                   style={{ marginBottom: createSubOpen ? 10 : 0, cursor: 'pointer', userSelect: 'none' }}
                   onClick={() => setCreateSubOpen(v => !v)}
-                >{createSubOpen ? '▾' : '▸'} {tr("AUTO SUB-CAMPAIGNS")}</div>
+                >{tr("{value} AUTO SUB-CAMPAIGNS", { value: createSubOpen ? '▾' : '▸' })}</div>
 
                 {createSubOpen && (<>
                 <div className="settings-row">
                   <div className="settings-row-label">
                     {tr("CALL BACKS SUB")}<small>
-                      {tr("When ON, a virtual \"")}{campaignName.trim() || tr("Campaign")} {tr("Call Backs\" campaign appears in the dialer. It auto-shows only leads dispositioned as a call back.")}</small>
+                      {tr("When ON, a virtual \"{campaignName} Call Backs\" campaign appears in the dialer. It auto-shows only leads dispositioned as a call back.", { campaignName: campaignName.trim() || tr("Campaign") })}</small>
                   </div>
                   <div
                     className={`settings-toggle ${createApptSub ? 'on' : ''}`}
@@ -3245,7 +3244,7 @@ export default function CampaignsPage() {
                 <div className="settings-row">
                   <div className="settings-row-label">
                     {tr("NOT INTERESTED SUB")}<small>
-                      {tr("When ON, a virtual \"")}{campaignName.trim() || tr("Campaign")} {tr("Not Interested\" campaign appears, filtered to dispositioned-NOT-INTERESTED leads.")}</small>
+                      {tr("When ON, a virtual \"{campaignName} Not Interested\" campaign appears, filtered to dispositioned-NOT-INTERESTED leads.", { campaignName: campaignName.trim() || tr("Campaign") })}</small>
                   </div>
                   <div
                     className={`settings-toggle ${createNotIntSub ? 'on' : ''}`}
@@ -3267,7 +3266,7 @@ export default function CampaignsPage() {
                 <div className="settings-row">
                   <div className="settings-row-label">
                     {tr("VOICEMAIL SUB")}<small>
-                      {tr("When ON, a virtual \"")}{campaignName.trim() || tr("Campaign")} {tr("Reached Voicemail\" campaign appears, holding every lead whose last call hit an answering machine. They stay dialable in the main campaign too this is a way to work them deliberately, not a separate list.")}</small>
+                      {tr("When ON, a virtual \"{campaignName} Reached Voicemail\" campaign appears, holding every lead whose last call hit an answering machine. They stay dialable in the main campaign too this is a way to work them deliberately, not a separate list.", { campaignName: campaignName.trim() || tr("Campaign") })}</small>
                   </div>
                   <div
                     className={`settings-toggle ${createVoicemailSub ? 'on' : ''}`}
@@ -3304,7 +3303,7 @@ export default function CampaignsPage() {
                         fontSize: 12, fontWeight: 'bold', letterSpacing: 2,
                         color: T.blue, margin: '0 0 4px', fontFamily: FUTURA,
                       }}>
-                        {csvData.length.toLocaleString()} {tr("LEADS LOADED")}</p>
+                        {tr("{length} LEADS LOADED", { length: csvData.length.toLocaleString() })}</p>
                       <p style={{
                         fontSize: 10, color: T.muted, margin: 0,
                         fontFamily: 'monospace', letterSpacing: 1,
@@ -3690,13 +3689,13 @@ export default function CampaignsPage() {
                   className="settings-section-title"
                   style={{ marginBottom: settingsSubOpen ? 10 : 0, cursor: 'pointer', userSelect: 'none' }}
                   onClick={() => setSettingsSubOpen(v => !v)}
-                >{settingsSubOpen ? '▾' : '▸'} {tr("AUTO SUB-CAMPAIGNS")}</div>
+                >{tr("{value} AUTO SUB-CAMPAIGNS", { value: settingsSubOpen ? '▾' : '▸' })}</div>
 
                 {settingsSubOpen && (<>
                 <div className="settings-row">
                   <div className="settings-row-label">
                     {tr("CALL BACKS SUB")}<small>
-                      {tr("When ON, \"")}{settingsCampaign.name} {tr("Call Backs\" shows up in the dialer's campaign selector. Auto-filtered to leads dispositioned as a call back. No data duplication it's a live filtered view of this campaign.")}</small>
+                      {tr("When ON, \"{name} Call Backs\" shows up in the dialer's campaign selector. Auto-filtered to leads dispositioned as a call back. No data duplication it's a live filtered view of this campaign.", { name: settingsCampaign.name })}</small>
                   </div>
                   <div
                     className={`settings-toggle ${editDraft?.enable_appointments_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
@@ -3707,7 +3706,7 @@ export default function CampaignsPage() {
                 <div className="settings-row">
                   <div className="settings-row-label">
                     {tr("NOT INTERESTED SUB")}<small>
-                      {tr("When ON, \"")}{settingsCampaign.name} {tr("Not Interested\" appears in the dialer. Auto-filtered to disposition = NOT_INTERESTED.")}</small>
+                      {tr("When ON, \"{name} Not Interested\" appears in the dialer. Auto-filtered to disposition = NOT_INTERESTED.", { name: settingsCampaign.name })}</small>
                   </div>
                   <div
                     className={`settings-toggle ${editDraft?.enable_not_interested_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
@@ -3722,7 +3721,7 @@ export default function CampaignsPage() {
                 <div className="settings-row">
                   <div className="settings-row-label">
                     {tr("VOICEMAIL SUB")}<small>
-                      {tr("When ON, \"")}{settingsCampaign.name} {tr("Reached Voicemail\" appears in the dialer, holding every lead whose last call hit an answering machine. They stay dialable in the main campaign too, this is a way to work them deliberately.")}</small>
+                      {tr("When ON, \"{name} Reached Voicemail\" appears in the dialer, holding every lead whose last call hit an answering machine. They stay dialable in the main campaign too, this is a way to work them deliberately.", { name: settingsCampaign.name })}</small>
                   </div>
                   <div
                     className={`settings-toggle ${editDraft?.enable_voicemail_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
@@ -3736,7 +3735,7 @@ export default function CampaignsPage() {
               <div className="settings-section-card">
                 <div className="settings-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span>
-                    {tr("▸ LEADS ·")}{" "}{settingsCampaign.total_leads.toLocaleString()} {tr("TOTAL ·")}{" "}{settingsCampaign.called_leads.toLocaleString()} {tr("CALLED")}</span>
+                    {tr("▸ LEADS · {total_leads} TOTAL · {called_leads} CALLED", { total_leads: settingsCampaign.total_leads.toLocaleString(), called_leads: settingsCampaign.called_leads.toLocaleString() })}</span>
                   {/* ── THE LIST IS THEIRS, AND THEY CAN TAKE IT ────────────
                       A plain anchor, not a fetch: the route streams a page at
                       a time and sets Content-Disposition, so the browser
@@ -3946,7 +3945,7 @@ export default function CampaignsPage() {
                 }}>
                   {tr("Delete")}{" "}<strong style={{ color: T.red }}>"{c.name}"</strong>?
                   {c.total_leads >= 100 && (
-                    <> {tr("It has")}{" "}<strong>{c.total_leads.toLocaleString()} {tr("leads.")}</strong> {tr("Type")}{' '}<code style={{
+                    <> {tr("It has")}{" "}<strong>{tr("{total_leads} leads.", { total_leads: c.total_leads.toLocaleString() })}</strong> {tr("Type")}{' '}<code style={{
                       background: T.surface, padding: '2px 6px', borderRadius: 2,
                       fontFamily: 'monospace', fontSize: 11, color: T.text,
                       border: `1px solid ${T.border}`,
@@ -4033,7 +4032,7 @@ export default function CampaignsPage() {
                         fontSize: 11, fontWeight: 'bold', letterSpacing: 0.4,
                         color: T.text, fontFamily: FUTURA,
                       }}>
-                        {tr(r.label)}, {r.count.toLocaleString()} {tr("row")}{r.count === 1 ? '' : 's'}
+                        {tr("{label}, {count} row{value}", { label: tr(r.label), count: r.count.toLocaleString(), value: r.count === 1 ? '' : 's' })}
                       </div>
                       {r.examples.length > 0 && (
                         <div style={{
@@ -4071,7 +4070,7 @@ export default function CampaignsPage() {
                         fontSize: 11, fontWeight: 'bold', letterSpacing: 0.4,
                         color: T.text, fontFamily: FUTURA,
                       }}>
-                        {tr(w.label)}, {w.count.toLocaleString()} {tr("lead")}{w.count === 1 ? '' : 's'}
+                        {tr("{label}, {count} lead{value}", { label: tr(w.label), count: w.count.toLocaleString(), value: w.count === 1 ? '' : 's' })}
                       </div>
                       {w.examples.length > 0 && (
                         <div style={{
@@ -4165,8 +4164,7 @@ export default function CampaignsPage() {
               <p style={{
                 fontSize: 12, lineHeight: 1.6, color: T.text, margin: '0 0 14px',
                 letterSpacing: 0.5, fontFamily: 'monospace',
-              }}>
-                "{sheetPicker.file.name}{tr("\" has")}{" "}{sheetPicker.sheetNames.length} {tr("sheets. Pick the one with your leads.")}</p>
+              }}>{tr("\"{name}\" has {length} sheets. Pick the one with your leads.", { name: sheetPicker.file.name, length: sheetPicker.sheetNames.length })}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {sheetPicker.sheetNames.map(name => (
                   <button
@@ -4215,7 +4213,7 @@ export default function CampaignsPage() {
         <div className="editor-fullscreen">
           <div className="editor-toolbar">
             <h2 className="editor-toolbar-title">
-              {settingsCampaign.name.toUpperCase()}{tr(", LEAD EDITOR")}</h2>
+              {tr("{name}, LEAD EDITOR", { name: settingsCampaign.name.toUpperCase() })}</h2>
             {hasEditorChanges && (
               <span className="editor-tb-changes">
                 {Object.keys(editorEdits).length > 0 && `${Object.keys(editorEdits).length} EDIT${Object.keys(editorEdits).length === 1 ? '' : 'S'}`}
@@ -4233,7 +4231,7 @@ export default function CampaignsPage() {
             >{tr("▤ SCRIPTS")}{campaignScriptLinks.filter(s => s.enabled).length > 0 ? ` (${campaignScriptLinks.filter(s => s.enabled).length})` : ''}</button>
             {editorSelected.size > 0 && (
               <button className="editor-tb-btn danger" onClick={deleteSelected}>
-                {tr("DELETE")}{" "}{editorSelected.size} {tr("SELECTED")}</button>
+                {tr("DELETE {size} SELECTED", { size: editorSelected.size })}</button>
             )}
             <button
               className="editor-tb-btn primary"

@@ -614,7 +614,7 @@ export default function AnalyticsPage({
               route keeps the greeting. */}
           {displayNameOverride
             ? displayNameOverride.toUpperCase()
-            : `WELCOME BACK${fullName ? `, ${fullName}` : ''}.`}
+            : t("WELCOME BACK{value}.", { value: fullName ? `, ${fullName}` : '' })}
         </div>
       </div>
 
@@ -646,7 +646,7 @@ export default function AnalyticsPage({
             <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
               <div className="stat-label">{t("TALK TIME")}</div>
               <div className="stat-value">{formatDuration(s.totalDuration || 0)}</div>
-              <div className="stat-sub">{t("avg")}{" "}{formatDuration(s.avgCallLength || 0)}{t("/call")}</div>
+              <div className="stat-sub">{t("avg {duration}/call", { duration: formatDuration(s.avgCallLength || 0) })}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.amber }}>
               <div className="stat-label">{t("BEST CAMPAIGN")}</div>
