@@ -50,3 +50,34 @@ checks placeholders and the brand name on every merge.
 | billing / subscription | facturación / suscripción |
 | week / per week | semana / por semana (`$35/semana`) |
 | sign in / sign up | iniciar sesión / registrarse |
+
+## Portuguese (pt-BR) — Brazilian, "você"
+
+Brazilians search "discador" (2.6× more than "dialer"), so it is used everywhere.
+
+| English | Portuguese |
+|---|---|
+| dialer / auto dialer | discador / discador automático |
+| predictive / progressive / preview / power (modes) | PREDITIVO / PROGRESSIVO / PRÉVIA / POWER |
+| lead(s) | lead(s) |
+| campaign | campanha |
+| seat | licença |
+| agent | agente |
+| owner | dono |
+| team | equipe |
+| floor (dialer floor) | operação |
+| disposition | tabulação |
+| callback | retorno |
+| voicemail | caixa postal |
+| answering machine detection | detecção de caixa postal |
+| caller ID | identificador de chamadas |
+| number pool | pool de números |
+| script | roteiro |
+| recording | gravação |
+| talk time | tempo de conversa |
+| answer rate / connect rate / abandon rate | taxa de atendimento / de conexão / de abandono |
+| Do Not Call | Não Ligue |
+| white-label | white label |
+| billing / subscription | cobrança / assinatura |
+| week | semana (`$35/semana`) |
+| sign in / sign up | entrar / cadastrar-se |
