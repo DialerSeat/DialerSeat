@@ -215,7 +215,11 @@ type Target = {
 }
 type FeedRow = {
   id: string; at: string; agent: string; agentPlace: string | null
-  agentRegion: string | null; phone: string | null
+  agentRegion: string | null
+  /** The pool number the lead's handset showed. Null before pools, or on the
+   *  env-fallback caller ID, which is not recorded against the call. */
+  poolNumber: string | null
+  phone: string | null
   targetState: string | null; targetPlace: string | null
   duration: number; talkSeconds: number | null; answered: boolean
   disposition: string | null; amdResult: string | null; amdRequested: boolean
@@ -548,26 +552,16 @@ export default function OpsMap() {
   }
 
   /**
-   * Enter or leave the wallboard.
+   * Enter or leave the wallboard: live calls filling this app and nothing
+   * else.
    *
-   * Entering asks for real fullscreen as well, because a wallboard with the
-   * browser's own chrome around it is not what was asked for. Leaving does
-   * NOT exit fullscreen: someone who wants the whole screen and the map back
-   * should get exactly that, and Esc is always there for the rest.
-   *
-   * requestFullscreen must be called from the user's own gesture, which this
-   * is. A refusal is ignored — the wallboard is still worth having windowed.
+   * It used to ask the browser for real fullscreen on the way in, so opening
+   * live calls threw the whole page into fullscreen and getting back to the
+   * desktop meant pressing Esc. Two different things were on one button. The
+   * ⛶ button beside it is the one that takes the screen, and it still does;
+   * this one only swaps what this app is showing (Joshua, 25 Sept 2026).
    */
-  const toggleFocusLive = () => {
-    setFocusLive(v => {
-      const next = !v
-      const el = rootRef.current
-      if (next && el && document.fullscreenElement !== el) {
-        void el.requestFullscreen?.().catch(() => { /* denied by policy */ })
-      }
-      return next
-    })
-  }
+  const toggleFocusLive = () => setFocusLive(v => !v)
 
   // ── FIT vs FILL ───────────────────────────────────────────────────────
   // 'slice' fills a wide frame handsomely and crops badly on a tall narrow
@@ -1214,6 +1208,10 @@ export default function OpsMap() {
         <tr>
           <th>TIME</th>
           <th style={{ color: GREEN }}>AGENT</th>
+          {/* The number the lead saw, beside where it was dialed from. It is
+              what a carrier complaint or a spam flag names, and it was the
+              one part of a call the log did not show. */}
+          <th className="om-hide-sm">POOL</th>
           <th className="om-hide-sm">FROM</th>
           <th style={{ color: AMBER }}>DIALED</th>
           <th className="om-hide-sm">TO</th>
@@ -1238,6 +1236,9 @@ export default function OpsMap() {
           <tr key={f.id} data-fresh={freshIds.has(f.id) ? '1' : undefined}>
             <td style={{ color: CYAN }}>{hhmmss(f.at)}</td>
             <td style={{ color: GREEN }}>{f.agent}</td>
+            <td className="om-hide-sm" style={{ color: f.poolNumber ? INK : DIM }}>
+              {f.poolNumber ? prettyPhone(f.poolNumber) : '-'}
+            </td>
             <td className="om-hide-sm" style={{ color: MUTED }}>{f.agentPlace || '-'}</td>
             <td style={{ color: AMBER }}>{prettyPhone(f.phone)}</td>
             <td className="om-hide-sm" style={{ color: MUTED }}>{f.targetPlace || 'unknown'}</td>
@@ -1278,7 +1279,7 @@ export default function OpsMap() {
           )
         })}
         {shownFeed.length === 0 && (
-          <tr><td colSpan={11} style={{ color: DIM, padding: 10 }}>
+          <tr><td colSpan={12} style={{ color: DIM, padding: 10 }}>
             {(data?.feed ?? []).length === 0
               ? 'No calls yet.'
               : 'No calls match this filter.'}
@@ -1432,10 +1433,15 @@ export default function OpsMap() {
 
         /* The balance reads at a glance from across a room, which the other
            chips do not need to. It is the one number on this screen that stops
-           a floor when it runs out. */
-        .om-hud-money { padding:6px 12px; }
-        .om-hud-money .om-hud-k { font-size:9.5px; }
-        .om-hud-money .om-hud-v { font-size:22px; line-height:1.1; }
+           a floor when it runs out.
+
+           The wallboard's compliance ratio is sized with it, for the same
+           reason: a short-call percentage over the carrier's limit stops a
+           floor just as surely, and on a screen nobody is standing at, a
+           figure that has to be walked up to is not a warning. */
+        .om-hud-money, .om-hud-wall { padding:6px 12px; }
+        .om-hud-money .om-hud-k, .om-hud-wall .om-hud-k { font-size:9.5px; }
+        .om-hud-money .om-hud-v, .om-hud-wall .om-hud-v { font-size:22px; line-height:1.1; }
         .om-pulse-wrap { flex:0 0 auto; }
         /* The two corner boxes sit on one row above CALL VOLUME, pushed to the
            outer edges so the middle of the map stays clear. */
@@ -1499,9 +1505,33 @@ export default function OpsMap() {
               ))}
             </div>
 
+            {/* ── COMPLIANCE, LEFT OF THE BALANCE ──────────────────────────
+                The CARRIER's short-call ratio, the same figure and the same
+                fallback as the map's compliance box, so a wallboard left up
+                on a screen cannot disagree with the desktop behind it. Ours
+                (shortPct) only stands in when the ledger has nothing: it
+                counts lead legs where Telnyx counts every leg, and reading
+                one as the other is how a 4.1% badge sat under an 18.86%
+                warning letter. */}
+            {comp && compMeta && (comp.carrierShortPct ?? comp.shortPct) !== null && (
+              <div className="om-hud om-hud-wall" style={{ marginLeft: 'auto' }}
+                   title={comp.carrierShortPct != null
+                     ? `Telnyx's own short-call ratio. Their limit is ${compMeta.threshold}%.`
+                     : `Our lead-leg figure: the carrier ledger has nothing for this window. Their limit is ${compMeta.threshold}%.`}>
+                <span className="om-hud-k">SHORT</span>
+                <span className="om-hud-v" style={{
+                  color: (comp.carrierShortPct ?? comp.shortPct)! > compMeta.threshold ? RED : GREEN,
+                }}>
+                  {(comp.carrierShortPct ?? comp.shortPct)!.toFixed(1)}%
+                </span>
+              </div>
+            )}
+
             {/* Same source and the same beat as the map's own balance, so the
                 wallboard cannot disagree with the screen it came from. */}
-            <div className="om-hud om-hud-money" style={{ marginLeft: 'auto' }}
+            <div className="om-hud om-hud-money"
+                 style={comp && compMeta && (comp.carrierShortPct ?? comp.shortPct) !== null
+                   ? undefined : { marginLeft: 'auto' }}
                  title={data?.balance.authoritative
                    ? 'Spendable at Telnyx right now'
                    : (data?.balance.error || 'Carrier unreachable')}>

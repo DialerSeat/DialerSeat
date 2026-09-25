@@ -26,17 +26,22 @@ What to read when it runs (docs/PREDICTIVE.md has the full spec):
 
 ---
 
-## 1. Dialer and call logs (next)
+## 1. Dialer and call logs. DONE 25 Sept 2026.
 
-1. **Daily metrics: swap the two times.** TIME CONNECTED on the left, TIME
-   DIALED on the right.
-2. **Live calls full screen should not take the page with it.** Clicking full
-   screen on live calls currently puts the whole page into real full screen.
-   It should expand the call logs panel only, and leave the browser alone.
-3. **Call logs: show the pool number a lead was dialed from**, immediately left
-   of the state it was dialed from.
-4. **Compliance percentage on the live calls full screen**, to the left of the
-   Telnyx balance.
+All four shipped together. Nothing here is verified on a live floor yet.
+
+1. **Daily metrics: swap the two times.** DONE. TIME CONNECTED on the left,
+   TIME DIALING on the right.
+2. **Live calls full screen should not take the page with it.** DONE. Opening
+   live calls asked the browser for real fullscreen on the way in, so one
+   button did two things. It now only swaps what the app shows; the button
+   beside it still takes the screen.
+3. **Call logs: show the pool number a lead was dialed from.** DONE. A POOL
+   column left of FROM, from `calls.pool_number_id`. A dash on the ~5% of
+   calls placed through the env-fallback caller ID, which is not recorded.
+4. **Compliance percentage on the live calls full screen.** DONE. Left of the
+   Telnyx balance and sized with it. The CARRIER's short-call ratio, the same
+   figure and fallback as the map's compliance box.
 
 ## 2. Idea, not scheduled
 

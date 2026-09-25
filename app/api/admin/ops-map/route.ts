@@ -53,6 +53,8 @@ type TargetRow = {
 type FeedRowRaw = {
   call_id: string; at: string; agent: string | null
   agent_country: string | null; agent_region: string | null
+  /** The pool number this call was placed from — ops_map_feed joins it. */
+  pool_number: string | null
   phone: string | null; duration: number | null; talk_seconds: number | null
   answered: boolean; disposition: string | null
   amd_result: string | null; amd_requested: boolean
@@ -461,6 +463,7 @@ export async function GET(req: NextRequest) {
         agent: r.agent || 'unknown',
         agentPlace: placeLabel(r.agent_country, r.agent_region),
         agentRegion: r.agent_region || null,
+        poolNumber: r.pool_number || null,
         phone: r.phone || null,
         targetState,
         targetPlace: targetState ? US_STATES[targetState]?.name || targetState : null,
