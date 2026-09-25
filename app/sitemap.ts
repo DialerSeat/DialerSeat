@@ -91,6 +91,9 @@ function apexSitemap(now: Date): MetadataRoute.Sitemap {
     // If the page comes back, it comes back through COMPETITORS like every
     // other one, and the sitemap picks it up with no edit here.
     ...COMPETITORS.map(c => e(`/vs/${c.slug}`, 0.8, 'monthly')),
+    // Not a competitor, so not in the registry: its opponent is a phone and a
+    // spreadsheet. Listed by hand for that reason alone.
+    e('/vs/manual-dialing', 0.8, 'monthly'),
 
     e('/faq', 0.8, 'monthly'),
     e('/faq/why-dialerseat', 0.85, 'monthly'),

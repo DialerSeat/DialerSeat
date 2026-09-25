@@ -699,6 +699,184 @@ export const COMPETITORS: Competitor[] = [
     crossShopped: false,
     segment: 'sales_crm',
   },
+  // ── ADDED 24 SEPT, EACH FROM THE VENDOR'S OWN PRICING PAGE ─────────────
+  // Every figure below was read off the vendor's published pricing or help
+  // docs that day. Where a vendor publishes a price but NOT the detail that
+  // matters to a dialer buyer (which plan has the dialer, whether it dials
+  // one line or several), the entry says "not stated" rather than filling the
+  // gap: the absence is checkable against their page, the guess would not be.
+  //
+  // Three candidates were researched and deliberately left out, because none
+  // publishes the price of its DIALER: Vulcan7 (custom quote only), Talkdesk
+  // (dialing lives in an unpriced "Advanced Dialer"), and Nextiva (its $75
+  // Essential plan excludes dialing modes; they start on a contact-sales tier).
+  {
+    slug: 'close',
+    name: 'Close',
+    summary:
+      'A sales CRM with calling built in: power dialing on its Growth plan, predictive on Scale, and calls billed at cost on top of the seat.',
+    pricing:
+      'Per user per month: Solo $19 ($9 billed annually, one user only), Essentials $49 ($35), Growth $109 ($99), Scale $149 ($139). Calling is extra, passed through at cost: most US calls around $0.02 a minute, numbers from about $1 a month.',
+    contract:
+      'Monthly or annual, with annual cheaper. A 14-day free trial with no card, and a 30-day money-back guarantee.',
+    dialing:
+      'The power dialer starts on Growth at $109 per user per month. Predictive dialing, which dials several numbers at once, is only on Scale at $149.',
+    wins: [
+      'A full sales CRM, pipeline, email and SMS in the same product as the dialer',
+      'Calling billed at cost, around $0.02 a minute, rather than marked up',
+      'Published pricing on every plan, and a 14-day trial with no card',
+      'A 30-day money-back guarantee',
+      'Monthly billing available on every plan',
+    ],
+    friction: [
+      'Solo and Essentials have no power dialer: it starts on Growth at $109 per user per month',
+      'Predictive dialing needs the top plan, Scale, at $149 per user per month',
+      'Calling and phone numbers are billed on top of the seat price',
+      'A whole CRM to adopt, which is more product than a team that already has one needs',
+    ],
+    bestFor:
+      'Sales teams that want their CRM and their dialer to be the same product, and are comfortable paying CRM prices for it.',
+    team: {
+      minimum: 'One user',
+      addingASeat: 'Add a user at the plan price, from $109 a month on the first plan with a dialer',
+      fiveSeats: 'About $545 a month on Growth billed monthly, or $745 on Scale for predictive, plus calling usage',
+    },
+    crossShopped: false,
+    segment: 'sales_crm',
+  },
+  {
+    slug: 'gohighlevel',
+    name: 'GoHighLevel',
+    summary:
+      'An all-in-one marketing and CRM platform for agencies, with a power dialer inside its phone system and calling billed per minute on top.',
+    pricing:
+      'Starter $97 a month, Unlimited $297, Agency Pro $497. Calling runs through its LC Phone system, billed per minute from a prepaid wallet: US outbound calls about $0.018 a minute, local numbers $1.15 a month.',
+    contract: 'Month to month with no long-term contract, and a 14-day free trial.',
+    dialing:
+      'A power dialer inside the phone system that works through a call list automatically. Whether it dials more than one line at a time, and which plans include it, is not stated on its pricing page or in its own announcement of the feature.',
+    wins: [
+      'A whole marketing stack in one product: CRM, funnels, automations, email and SMS',
+      'Built for agencies, with a sub-account for each client and the option to rebill usage',
+      'Month to month with no long-term contract, and a 14-day trial',
+      'Low published per-minute calling rates',
+    ],
+    friction: [
+      'Calling is billed per minute from a prepaid wallet on top of the plan, and can be marked up when an agency rebills it',
+      'The dialer is one feature inside a very large platform rather than the product itself',
+      'Its own announcement of the power dialer does not say whether it dials more than one line',
+      'A lot of platform to adopt for a team that only needs to dial',
+    ],
+    bestFor:
+      'Agencies already running their clients on HighLevel who want basic power dialing inside the same account.',
+    team: {
+      minimum: 'Starter at $97 a month',
+      addingASeat: 'Plans are priced per month rather than per seat on its pricing page; calling is billed per minute',
+      fiveSeats: 'Not priced per seat: the plan price, plus per-minute calling usage',
+    },
+    crossShopped: false,
+    segment: 'sales_crm',
+  },
+  {
+    slug: 'hubspot',
+    name: 'HubSpot',
+    summary:
+      'A CRM with calling built in, a power dialer still in beta, and calling minutes capped by plan.',
+    pricing:
+      'Sales Hub per seat per month: Starter $20 ($7 billed annually), Professional $100 ($90 annually), Enterprise $150. Professional adds a one-time $1,500 onboarding fee and Enterprise $3,500. Free for up to two users.',
+    contract:
+      'Monthly or annual, with annual cheaper. Professional and Enterprise carry one-time onboarding fees of $1,500 and $3,500.',
+    dialing:
+      'Calling from inside the CRM, with minutes capped by plan: 500 on Starter, 3,000 on Professional, 12,000 on Enterprise. A power dialer is in beta; which plans include it is not stated.',
+    wins: [
+      'Every call logs itself to the contact, company and deal record',
+      'Part of a CRM many teams already run, so there is nothing new to adopt',
+      'Voicemail drop in one click from the power dialer',
+      'A free plan for up to two users, and published pricing on the rest',
+    ],
+    friction: [
+      'Calling minutes are capped by plan, from 500 on Starter',
+      'The power dialer is still in beta, and which plans get it is not stated',
+      'Predictive and multi-line dialing are not claimed',
+      'Professional and Enterprise add a one-time onboarding fee of $1,500 or $3,500',
+    ],
+    bestFor:
+      'Teams already living in HubSpot who make a moderate number of calls and want every one of them logged to the CRM.',
+    team: {
+      minimum: 'Free for up to two users; paid plans are per seat',
+      addingASeat: 'Add a seat at the plan price',
+      fiveSeats: 'About $500 a month on Professional billed monthly, plus the one-time $1,500 onboarding fee',
+    },
+    crossShopped: false,
+    segment: 'sales_crm',
+  },
+  {
+    slug: 'redx',
+    name: 'REDX',
+    summary:
+      'Real estate seller leads with a power dialer attached: single-line on its Connect bundle, triple-line on Pro.',
+    pricing:
+      'Lead lists are $60 a month each (expired, FSBO, FRBO, pre-foreclosure, GeoLeads) or $600 a year. Bundles: Core $199 a month, Connect $299 with a single-line power dialer, Pro $349 with a triple-line dialer. Extra users $75 a month on Core and Connect, $99 on Pro.',
+    contract:
+      'Monthly or annual; annual bundles are $1,990, $2,980 and $3,480 a year. Setup fees, contract terms and trial terms are not stated on its pricing page.',
+    dialing:
+      'A single-line power dialer on Connect at $299 a month and a triple-line dialer on Pro at $349. The dialer comes as part of a lead bundle rather than on its own.',
+    wins: [
+      'Seller leads and a dialer in one account: expired, FSBO, FRBO and pre-foreclosure',
+      'A triple-line dialer on its Pro bundle',
+      'Published pricing, monthly or annual',
+      'Built specifically for real estate agents',
+    ],
+    friction: [
+      'The dialer only comes with a lead bundle, from $299 a month for single-line',
+      'Triple-line dialing needs the $349 Pro bundle',
+      'Each extra user is $75 to $99 a month',
+      'Setup fees, contract terms and trial terms are not published',
+    ],
+    bestFor:
+      'Real estate agents who want expired and FSBO leads delivered alongside a dialer to work them, from one vendor.',
+    team: {
+      minimum: 'One user on a bundle',
+      addingASeat: 'Add a user for $75 a month on Core or Connect, $99 on Pro',
+      fiveSeats: 'About $599 a month on Connect (single-line) or $745 on Pro (triple-line), leads included',
+    },
+    crossShopped: false,
+    segment: 'real_estate',
+  },
+  // Ringover's pricing page reads back with the monthly and annual figures in
+  // an order that could not be pinned down, so both published figures are
+  // stated as the range they are rather than one being labelled wrongly. The
+  // three-user minimum and twelve-month commitment are unambiguous.
+  {
+    slug: 'ringover',
+    name: 'Ringover',
+    summary:
+      'A cloud phone system with a power dialer on its Business plan, sold with a three-user minimum and a twelve-month commitment.',
+    pricing:
+      'Talk is $15 to $24 per user per month and Business, which includes the power dialer, is $47 to $57, depending on billing. Both plans require at least three users.',
+    contract: 'A twelve-month commitment and a three-user minimum on both published plans.',
+    dialing:
+      'A power dialer on the Business plan. Whether it dials more than one line, and whether predictive dialing is offered, is not stated.',
+    wins: [
+      'A full business phone system, with unlimited national calls from the entry plan',
+      'Local numbers in the US and more than 30 other countries on Business',
+      'Published pricing',
+    ],
+    friction: [
+      'A twelve-month commitment on both published plans',
+      'A three-user minimum, so a solo agent pays for three seats',
+      'The power dialer needs the Business plan',
+      'Predictive and multi-line dialing are not claimed',
+    ],
+    bestFor:
+      'Teams of three or more who want a business phone system first, with power dialing included, and are comfortable committing for a year.',
+    team: {
+      minimum: 'Three users, twelve months',
+      addingASeat: 'Add a user at $47 to $57 a month on Business, inside the twelve-month commitment',
+      fiveSeats: 'About $235 to $285 a month on Business, committed for a year',
+    },
+    crossShopped: false,
+    segment: 'phone_system',
+  },
 ]
 
 export function competitorBySlug(slug: string): Competitor | undefined {
