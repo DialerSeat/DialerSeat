@@ -73,6 +73,13 @@ The 30-day numbers come from the `calls` table (`was_abandoned`, answered
 non-machine calls). The old guard read `pacing_metrics`, which no code has ever
 written: it held zero rows, so the advertised auto-degrade could never fire.
 
+The same `predictive_campaign_stats` count is what the agent sees: the
+terminal's 30D ABANDON (`/api/dialer/active-agents`) and the Compliance tab
+(`computeAbandonRate30d`) both read it, and show a dash, not 0.00%, before a
+campaign has anyone answered in 30 days. The heartbeat's legacy
+`should_yield` still reads `campaign_abandon_rate_30d`, a view over the empty
+`pacing_metrics`, so it never fires; the line count above is the only rule.
+
 A second line also needs the campaign's seller name and callback number,
 because without the message the safe harbor is gone entirely.
 
@@ -85,8 +92,15 @@ max, the agent's LINES setting).
    as in progressive (same detector, same tuning, from `platform_config`).
    Machine → leave, agent back on the queue, lead held to the 9-second rule,
    hung up.
-2. Seat busy → wait up to 1.8 s for the verdict, then look once more for the
-   seat. Machine → hold and hang up, silently. Otherwise → the abandon message:
+2. Seat busy → a teammate takes it, when all of these hold: the campaign is a
+   team campaign, and the teammate is on that team and that campaign, running
+   predictive themselves (armed, seat live), free (no call, on the queue
+   panel) and heartbeating. Whoever has waited longest goes first. The call is
+   stamped `calls.handled_by` with the teammate's id, which is what lets them
+   poll, hang up and disposition a call dialed on someone else's session.
+3. Nobody free → wait up to 1.8 s for the verdict, then look once more for
+   either seat. Machine → hold and hang up, silently. Otherwise → the abandon
+   message:
 
    > This is a telemarketing call from *Seller*. To be added to our
    > do-not-call list, press 9 now. To reach us, call *number*.
@@ -103,13 +117,26 @@ max, the agent's LINES setting).
   the engine for 30 s and logs `predictive_breaker`.
 - Every idle tick records why (`fanout_idle`), as before.
 
-## Not built yet, on purpose
+## State rules
 
-- **Handing a surplus answer to a free teammate.** It would cut abandonment on
-  team floors, but the teammate could not hang that call up, poll it or
-  disposition it: `/api/calls/hangup`, `/api/calls/check` and
-  `/api/leads/dispose` all require the caller to own the call or lead. The line
-  count assumes one agent, so compliance does not depend on it.
-- **State calling rules** (Florida's 8 p.m. end and three calls in 24 hours,
-  Fla. Stat. 501.616(6)). The calling window is shared by every mode and is a
-  uniform 9 a.m. to 9 p.m.; changing it is a decision for all modes at once.
+- **Florida** (Fla. Stat. 501.616(6)): the window ends at 8 p.m. lead-local
+  (`STATE_RULES.FL` in lib/timezones.ts; the uniform 9 a.m. start already sits
+  inside Florida's 8 a.m.), and no more than three calls to the same number in
+  24 hours, counted across the account and the campaign
+  (lib/placeOutboundCall.ts). Both apply in every mode.
+- A refusal is a 451 with `retryAfter`. Predictive holds the lead's claim until
+  then rather than releasing it to be claimed and refused again every round
+  (`N held until callable` in the controller's reason). The client modes
+  dispose it `TCPA_BLOCKED`, which keeps the lead's status, spends no attempt
+  and leaves its disposition and note alone.
+- Alabama and Mississippi (8 p.m.) and Louisiana (no Sundays) are not added
+  until each is checked against its statute the way Florida was.
+
+## Not built yet
+
+- **Holding a skipped ringing call to 15 seconds in the client modes.** 47 CFR
+  64.1200(a)(6) forbids disconnecting an unanswered call before 15 seconds or
+  four rings. Predictive never cuts a ringing line, but in preview, power and
+  progressive a skip while the lead is ringing hangs it up at once. Holding it
+  would make a late pickup an abandoned call with nobody on it, so it needs
+  the abandon message there too: a decision, not a patch.

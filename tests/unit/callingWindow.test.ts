@@ -314,3 +314,28 @@ describe('a lead whose state column fights its area code', () => {
     }
   })
 })
+
+describe('isCallableNow: Florida ends at 8pm (Fla. Stat. 501.616(6)(a))', () => {
+  // Florida's peninsula is Eastern: 23:30 UTC = 19:30 EDT, 00:30 UTC = 20:30 EDT.
+  it('allows a Florida lead before 8pm local', () => {
+    at('2026-08-05T23:30:00Z')
+    const r = isCallableNow({ phone: '+13055550142', state: 'FL' })
+    expect(r.allowed).toBe(true)
+  })
+
+  it('blocks a Florida lead from 8pm local, an hour before the uniform window closes', () => {
+    at('2026-08-06T00:30:00Z')
+    const fl = isCallableNow({ phone: '+13055550142', state: 'FL' })
+    expect(fl.allowed).toBe(false)
+    expect(fl.code).toBe('too_late')
+    // The same instant is still inside the window for a neighbouring state.
+    const ga = isCallableNow({ phone: '+14045550142', state: 'GA' })
+    expect(ga.allowed).toBe(true)
+  })
+
+  it('reopens Florida at 9am the next morning, local', () => {
+    at('2026-08-06T00:30:00Z')
+    const r = isCallableNow({ phone: '+13055550142', state: 'FL' })
+    expect(r.retryAfter?.toISOString()).toBe('2026-08-06T13:00:00.000Z')
+  })
+})

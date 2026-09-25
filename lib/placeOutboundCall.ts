@@ -393,6 +393,49 @@ export async function placeOutboundCall(
         httpStatus: 451,
       }
     }
+
+    // ── FLORIDA: THREE CALLS A DAY TO THE SAME PERSON ─────────────────────
+    // Fla. Stat. 501.616(6)(b): no "more than three commercial telephone
+    // solicitation phone calls from any number to a person over a 24-hour
+    // period on the same subject matter or issue". Counted by number over the
+    // last 24 hours, across this account and this campaign (a team's agents
+    // share one campaign, and "from any number" means the pool does not reset
+    // it). A dial the agent's own browser never answered rang nobody and does
+    // not count.
+    //
+    // Refused through the same 451 as the calling window, so every mode
+    // already knows what to do with it: the lead waits, it is not retired.
+    if (tcpaCheck.leadState === 'FL' && !overrideWindow) {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      let recentQuery = supabase
+        .from('calls')
+        .select('created_at')
+        .eq('phone_number', toFormatted)
+        .gte('created_at', since)
+        .or('disposition.is.null,disposition.neq.AGENT_LEG_FAILED')
+        .order('created_at', { ascending: true })
+        .limit(3)
+      recentQuery = campaignId
+        ? recentQuery.or(`user_id.eq.${userId},campaign_id.eq.${campaignId}`)
+        : recentQuery.eq('user_id', userId)
+      const { data: recentToNumber } = await recentQuery
+      if ((recentToNumber?.length ?? 0) >= 3) {
+        const retryAfter = new Date(new Date(recentToNumber![0].created_at).getTime() + 24 * 60 * 60 * 1000)
+        const when = retryAfter.toLocaleString('en-US', {
+          timeZone: tcpaCheck.leadTimezone || 'America/New_York',
+          weekday: 'short', hour: 'numeric', minute: '2-digit',
+        })
+        return {
+          success: false,
+          error: 'Florida daily call limit reached',
+          detail: `Florida allows three calls a day to the same person (Fla. Stat. 501.616(6)(b)). Callable again ${when} their time.`,
+          leadState: 'FL',
+          leadLocalTime: tcpaCheck.leadLocalTime,
+          retryAfter: retryAfter.toISOString(),
+          httpStatus: 451,
+        }
+      }
+    }
   }
 
   // ── AMD TOGGLE — reads the campaign's actual setting ─────────────────────

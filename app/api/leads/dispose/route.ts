@@ -26,16 +26,32 @@ export async function POST(req: Request) {
     const { data: lead, error: leadErr } = await supabaseAdmin
       .from('leads')
       // phone is selected for the DO NOT CALL suppression write below.
-      .select('id, user_id, dial_attempts, campaign_id, phone')
+      .select('id, user_id, dial_attempts, campaign_id, phone, status')
       .eq('id', lead_id)
       .single()
 
     if (leadErr || !lead) {
       return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 })
     }
+    // ── OR THE AGENT WHOSE SEAT TOOK THE CALL ─────────────────────────────
+    // On a team campaign every lead belongs to the owner, so a teammate who
+    // was on the call (predictive joined it to their seat and recorded that
+    // in calls.handled_by, server-side) must be able to disposition it. Three
+    // hours covers the longest call plus the wrap-up; it is not a standing
+    // grant over the lead.
     if (lead.user_id !== user_id) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+      const { count: handled } = await supabaseAdmin
+        .from('calls')
+        .select('id', { count: 'exact', head: true })
+        .eq('lead_id', lead_id)
+        .eq('handled_by', user_id)
+        .gte('created_at', new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString())
+      if (!handled) {
+        return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+      }
     }
+    // The calls this agent placed, or took on their seat.
+    const mineOrHandled = `user_id.eq.${user_id},handled_by.eq.${user_id}`
 
     const currentAttempts = lead.dial_attempts || 0
     const newAttempts = currentAttempts + 1
@@ -109,7 +125,7 @@ export async function POST(req: Request) {
     const { count: recentCallCount } = await supabaseAdmin
       .from('calls')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', user_id)
+      .or(mineOrHandled)
       .eq('lead_id', lead_id)
       .gte('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString())
     const neverDialled = (recentCallCount ?? 0) === 0
@@ -121,8 +137,19 @@ export async function POST(req: Request) {
     // has to count dials.
     const effectiveAttempts = neverDialled ? currentAttempts : newAttempts
 
+    // ── A CALLING-WINDOW BLOCK IS THE DIALER MOVING ON, NOT A VERDICT ─────
+    // TCPA_BLOCKED fell through to 'called', which is not a dialable status,
+    // so a lead the window refused was retired for good instead of waiting
+    // for its window: five leads across three accounts, 16-21 Sept. It is the
+    // same event as a skip to the lead (nobody was rung), so it is treated as
+    // one: the status stays what it was, no attempt is spent, and no
+    // judgement recorded against the lead is overwritten. Florida's
+    // three-a-day limit refuses through the same path.
+    const isWindowBlock = disposition === 'TCPA_BLOCKED'
+
     let newStatus = 'called'
-    if (disposition === 'DO NOT CALL') newStatus = 'dnc'
+    if (isWindowBlock) newStatus = lead.status || 'uncalled'
+    else if (disposition === 'DO NOT CALL') newStatus = 'dnc'
     else if (disposition === 'CLOSED') newStatus = 'closed'
     else if (disposition === 'APPOINTMENT') newStatus = 'appointment'
     else if (disposition === 'NOT INTERESTED') newStatus = 'called'
@@ -140,7 +167,7 @@ export async function POST(req: Request) {
     // The lead's STATUS still changes — back to uncalled, or maxed once the
     // attempt cap is reached — because that is real and is what governs
     // whether it comes round again.
-    const isSkip = disposition === 'SKIPPED'
+    const isSkip = disposition === 'SKIPPED' || isWindowBlock
 
     const updates: Record<string, any> = {
       status: newStatus,
@@ -162,7 +189,10 @@ export async function POST(req: Request) {
       last_call_at: new Date().toISOString(),
     }
 
-    if (notes && String(notes).trim()) {
+    // A window block's note is the refusal text, not something anyone wrote
+    // about the lead. It goes into the notes history below, so the skip is on
+    // record, but it must not replace the note an agent left on the lead.
+    if (notes && String(notes).trim() && !isWindowBlock) {
       updates.notes = String(notes).trim()
     }
 
@@ -187,7 +217,7 @@ export async function POST(req: Request) {
       })
     }
 
-    if (campaign_id && disposition !== 'SKIPPED') {
+    if (campaign_id && !isSkip) {
       await supabaseAdmin.rpc('increment_called_leads', { campaign_id_input: campaign_id })
     }
 
@@ -197,17 +227,22 @@ export async function POST(req: Request) {
     // for this lead. If we somehow can't find one (manual dial, edge case),
     // insert a fallback row so we don't lose the disposition data.
     // ─────────────────────────────────────────────────────────────────────
-    const { data: openCall } = await supabaseAdmin
-      .from('calls')
-      // duration and created_at come back because the client's own elapsed
-      // timer is no longer trusted over them — see the guard below.
-      .select('id, duration, created_at')
-      .eq('user_id', user_id)
-      .eq('lead_id', lead_id)
-      .is('disposition', null)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    // A window block placed no call, so it must not claim one. Without this
+    // the lookup, which has no time bound, would stamp TCPA_BLOCKED onto
+    // whatever older call of this lead was left without a disposition.
+    const { data: openCall } = isWindowBlock
+      ? { data: null as { id: string; duration: number | null; created_at: string } | null }
+      : await supabaseAdmin
+          .from('calls')
+          // duration and created_at come back because the client's own elapsed
+          // timer is no longer trusted over them — see the guard below.
+          .select('id, duration, created_at')
+          .or(mineOrHandled)
+          .eq('lead_id', lead_id)
+          .is('disposition', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
 
     let resolvedCallId: string | null = null
     let clampedFrom: number | null = null

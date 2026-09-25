@@ -104,11 +104,17 @@ interface PacingInfo {
   readyAgents: number
   dialingAgents: number
   onCallAgents: number
-  abandonRate: number
+  /** Null until the campaign has an answered call in 30 days: no rate exists yet. */
+  abandonRate: number | null
   isDegraded: boolean
   isPredictiveTeam: boolean
   configuredLines: number
   effectiveLines: number
+}
+
+/** The 30-day abandon rate as the terminal prints it; a dash when none exists. */
+function formatAbandonRate(rate: number | null | undefined): string {
+  return typeof rate === 'number' ? `${(rate * 100).toFixed(2)}%` : '-'
 }
 
 interface LinesPrefInfo {
@@ -2985,8 +2991,10 @@ function DialerPageInner() {
         }
 
         const configuredLines = linesPref?.effective_lines || currentCampaign?.predictive_lines_per_agent || 3
-        const abandonRateDecimal = (cp.abandon_rate_pct ?? 0) / 100
-        const isDegraded = abandonRateDecimal >= 0.025
+        // Null stays null. With nobody answered in 30 days there is no rate,
+        // and printing 0.00% for it would state one.
+        const abandonRateDecimal = typeof cp.abandon_rate_pct === 'number' ? cp.abandon_rate_pct / 100 : null
+        const isDegraded = abandonRateDecimal !== null && abandonRateDecimal >= 0.025
 
         setPacingInfo({
           activeAgents: cp.active_agents,
@@ -6244,10 +6252,11 @@ function DialerPageInner() {
           <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>30D ABANDON</div>
           <div style={{
             fontSize: 16, fontFamily: 'monospace', fontWeight: 'bold',
-            color: pacingInfo && pacingInfo.abandonRate >= 0.025 ? terminalRed
-              : pacingInfo && pacingInfo.abandonRate >= 0.020 ? terminalAmber : terminalGreen,
+            color: pacingInfo?.abandonRate == null ? terminalMuted
+              : pacingInfo.abandonRate >= 0.025 ? terminalRed
+              : pacingInfo.abandonRate >= 0.020 ? terminalAmber : terminalGreen,
           }}>
-            {pacingInfo ? `${(pacingInfo.abandonRate * 100).toFixed(2)}%` : '-'}
+            {formatAbandonRate(pacingInfo?.abandonRate)}
           </div>
         </div>
       </div>
@@ -7156,7 +7165,7 @@ function DialerPageInner() {
           textAlign: 'center',
           fontWeight: 'bold',
         }}>
-          ⚠ AUTO-DEGRADED TO PROGRESSIVE, abandon rate {(pacingInfo.abandonRate * 100).toFixed(2)}% (legal cap 3%)
+          ⚠ AUTO-DEGRADED TO PROGRESSIVE, abandon rate {formatAbandonRate(pacingInfo.abandonRate)} (legal cap 3%)
         </div>
       )}
 
@@ -7330,9 +7339,10 @@ function DialerPageInner() {
                 <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>30D ABANDON RATE</div>
                 <div style={{
                   fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace',
-                  color: pacingInfo.abandonRate >= 0.025 ? terminalRed : pacingInfo.abandonRate >= 0.020 ? '#8a6a1a' : terminalGreen,
+                  color: pacingInfo.abandonRate == null ? terminalMuted
+                    : pacingInfo.abandonRate >= 0.025 ? terminalRed : pacingInfo.abandonRate >= 0.020 ? '#8a6a1a' : terminalGreen,
                 }}>
-                  {(pacingInfo.abandonRate * 100).toFixed(2)}%
+                  {formatAbandonRate(pacingInfo.abandonRate)}
                 </div>
               </div>
             </div>
@@ -8026,7 +8036,7 @@ function DialerPageInner() {
               isSpecificCampaign && currentCampaign && `> CAMPAIGN MODE: ${dialerMode.toUpperCase()} + AMD`,
               isAllActive && `> ALL ACTIVE · SESSION MODE: ${dialerMode.toUpperCase()}`,
               isPredictive && pacingInfo && `> AGENTS: ${pacingInfo.activeAgents} (READY:${pacingInfo.readyAgents}/DIALING:${pacingInfo.dialingAgents}/ONCALL:${pacingInfo.onCallAgents})`,
-              isPredictive && pacingInfo && `> ABANDON: ${(pacingInfo.abandonRate * 100).toFixed(2)}%`,
+              isPredictive && pacingInfo && `> ABANDON: ${formatAbandonRate(pacingInfo.abandonRate)}`,
               isPredictive && lastControllerSummary && `> CTRL: fired=${lastControllerSummary.fired} desired=${lastControllerSummary.desired} inflight=${lastControllerSummary.inFlight}`,
               isPredictive && lastControllerSummary && lastControllerSummary.reason && `> CTRL: ${lastControllerSummary.reason}`,
               isPredictive && shouldYield && `> SERVER ASKED TO YIELD: abandon rate near cap`,

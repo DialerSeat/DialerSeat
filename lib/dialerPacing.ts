@@ -18,32 +18,24 @@ const ABANDON_RATE_DEGRADE_RECOVER = 0.020  // 2.0% — stop auto-throttle
 const MAX_DIALS_PER_TICK = 10               // safety cap
 
 
+// ── ONE DEFINITION OF THE 30-DAY RATE ─────────────────────────────────────
+// This counted "answered" as any call with a duration and no machine verdict,
+// which includes calls that rang out unanswered and agent legs that failed, so
+// the Compliance tab reported a rate diluted by calls nobody picked up. It now
+// reads predictive_campaign_stats, the count the predictive engine paces on:
+// answered by a person (answered_at set, not a machine, not a failed agent
+// leg), over the same 30 days. The tab and the engine can no longer disagree.
 export async function computeAbandonRate30d(campaignId: string): Promise<{
   abandoned: number
   answered: number
   rate: number
 }> {
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-
-  
-  const { count: answered } = await supabaseAdmin
-    .from('calls')
-    .select('id', { count: 'exact', head: true })
-    .eq('campaign_id', campaignId)
-    .gte('created_at', thirtyDaysAgo)
-    .or('amd_result.eq.human,amd_result.is.null')
-    .gt('duration', 0)
-
-  
-  const { count: abandoned } = await supabaseAdmin
-    .from('calls')
-    .select('id', { count: 'exact', head: true })
-    .eq('campaign_id', campaignId)
-    .gte('created_at', thirtyDaysAgo)
-    .eq('was_abandoned', true)
-
-  const ans = answered || 0
-  const abn = abandoned || 0
+  const { data, error } = await supabaseAdmin
+    .rpc('predictive_campaign_stats', { p_campaign_ids: [campaignId] })
+  if (error) throw error
+  const row = Array.isArray(data) ? data[0] : null
+  const ans = Number(row?.answered_30d ?? 0)
+  const abn = Number(row?.abandoned_30d ?? 0)
   const rate = ans > 0 ? abn / ans : 0
 
   return { abandoned: abn, answered: ans, rate }

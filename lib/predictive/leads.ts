@@ -6,7 +6,8 @@
 // (dial_source 'controller_fanout'). Every other mode's legs never reach here.
 //
 // The rules, from docs/PREDICTIVE.md:
-//   - an answered lead joins the seat of the agent who dialed it, if free
+//   - an answered lead joins the seat of the agent who dialed it, else a free
+//     teammate's who is on predictive on the same team campaign
 //   - nobody free: wait for the detector (≤1.8 s), then a machine is ended
 //     silently and a person hears the abandon message with its press-9 opt-out
 //   - no leg we end is ended inside the 9-second rule, and no ringing leg is
@@ -28,8 +29,10 @@ import { addSuppression } from '@/lib/suppression'
 import { shouldRedial } from '@/lib/redialDecision'
 import { classifyLeg, type LegOutcome } from '@/lib/predictive/pacing'
 import { joinSeatRoom, leaveSeatRoom, gatherOptOut } from '@/lib/predictive/telnyx'
+import { isTeamSharedCampaign } from '@/lib/teamOverflow'
 import {
-  readSession, sessionHoldingCall, seatIsLive, heartbeatFresh, type PredictiveSession,
+  readSession, sessionHoldingCall, seatIsLive, heartbeatFresh, clerkIdForUser,
+  SESSION_COLUMNS, HEARTBEAT_FRESH_MS, type PredictiveSession,
 } from '@/lib/predictive/seat'
 
 const db = getServiceClient('predictive/leads')
@@ -46,6 +49,7 @@ export const SURPLUS_DECISION_MS = 1800
 export const ABANDON_SAFETY_MS = 25_000
 
 const ROBOT = new Set(['machine', 'fax_detected'])
+const NO_SESSION = '00000000-0000-0000-0000-000000000000'
 
 
 export const LEAD_COLUMNS =
@@ -157,24 +161,57 @@ async function claimAndJoin(s: PredictiveSession, leg: LeadLeg): Promise<boolean
     return false
   }
 
+  // handled_by names the agent whose seat took the call. It is what lets a
+  // teammate handed a surplus answer poll, end and disposition a call that was
+  // dialed on someone else's session (see /api/calls/check, /api/calls/hangup
+  // and /api/leads/dispose). Written only here, by the server, at the join.
+  const handledBy = await clerkIdForUser(s.user_id)
   await db
     .from('calls')
-    .update({ bridged_at: new Date().toISOString() })
+    .update({ bridged_at: new Date().toISOString(), ...(handledBy ? { handled_by: handledBy } : {}) })
     .eq('id', leg.id)
-    .is('bridged_at', null)
   return true
 }
 
-// ── ONLY THE AGENT WHO DIALED ──────────────────────────────────────────────
-// Handing a surplus answer to a free teammate would cut abandonment on team
-// floors, and it is deliberately not done yet: the teammate could not hang
-// that call up, poll it, or disposition it, because /api/calls/hangup,
-// /api/calls/check and /api/leads/dispose all require the caller to own it.
-// A surplus answer hears the abandon message instead. The legal line count
-// already assumes a single agent, so nothing about compliance depends on it.
-async function routeToAgentSeat(leg: LeadLeg): Promise<{ how: 'joined'; session: PredictiveSession } | null> {
+// ── A TEAMMATE ON THE SAME LIST TAKES THE SURPLUS ─────────────────────────
+// Only when every one of these holds, because each is a promise to the person
+// who just said hello: the campaign is shared by a team; the teammate is on
+// that same team and that same campaign; they are running predictive
+// themselves (armed, their own seat live), free (no call, on the queue
+// panel), and their browser is alive. Whoever has waited longest goes first.
+async function overflowToTeammate(leg: LeadLeg, originSessionId: string | null): Promise<PredictiveSession | null> {
+  if (!leg.team_id || !leg.campaign_id) return null
+  if (!(await isTeamSharedCampaign(leg.campaign_id))) return null
+
+  const { data } = await db
+    .from('agent_sessions')
+    .select(SESSION_COLUMNS)
+    .eq('team_id', leg.team_id)
+    .eq('campaign_id', leg.campaign_id)
+    .eq('dialer_mode', 'predictive')
+    .eq('predictive_armed', true)
+    .eq('predictive_seat_status', 'live')
+    .is('current_call_id', null)
+    .in('state', ['ready', 'dialing'])
+    .gte('last_heartbeat', new Date(Date.now() - HEARTBEAT_FRESH_MS).toISOString())
+    .neq('id', originSessionId || NO_SESSION)
+    .order('last_heartbeat', { ascending: true })
+    .limit(20)
+
+  for (const s of (data || []) as unknown as PredictiveSession[]) {
+    if (await claimAndJoin(s, leg)) return s
+  }
+  return null
+}
+
+// The agent who dialed first; a teammate on the same list second. The legal
+// line count assumes one agent, so a teammate taking a surplus answer only
+// ever lowers the abandon rate below what the count already allowed for.
+async function routeToAgentSeat(leg: LeadLeg): Promise<{ how: 'joined' | 'overflow'; session: PredictiveSession } | null> {
   const own = leg.dial_group_id ? await readSession(leg.dial_group_id) : null
   if (own && await claimAndJoin(own, leg)) return { how: 'joined', session: own }
+  const mate = await overflowToTeammate(leg, own?.id ?? null)
+  if (mate) return { how: 'overflow', session: mate }
   return null
 }
 
@@ -182,7 +219,7 @@ async function routeToAgentSeat(leg: LeadLeg): Promise<{ how: 'joined'; session:
  * A predictive lead just answered. Connect them to the agent if their seat is
  * free; if not, decide their fate once the detector has had its moment.
  */
-export async function routeAnsweredLead(leg: LeadLeg): Promise<'joined' | 'surplus'> {
+export async function routeAnsweredLead(leg: LeadLeg): Promise<'joined' | 'overflow' | 'surplus'> {
   const routed = await routeToAgentSeat(leg)
   if (routed) {
     void logCallEvent({

@@ -498,6 +498,7 @@ async function placeRound(input: RunControllerInput, snap: Snapshot): Promise<Co
   let skipped = 0
   let permanentlyFailed = 0
   let capacityBlocked = 0
+  let heldUntilCallable = 0
   const now = new Date().toISOString()
 
   for (let i = 0; i < placements.length; i++) {
@@ -542,6 +543,18 @@ async function placeRound(input: RunControllerInput, snap: Snapshot): Promise<Co
       // No number to dial from. Holding the claim lets the 30-second sweep be
       // the backoff, instead of the next tick failing on it a second later.
       capacityBlocked++
+    } else if (result.status === 'fulfilled' && result.value.httpStatus === 451 && result.value.retryAfter) {
+      // Refused by the calling window or Florida's daily limit: not callable
+      // until retryAfter. Released, it would be claimed on the very next tick
+      // and refused again, and the round would never move past it. So it is
+      // held until then: a claim stamped 30 s before that instant expires
+      // exactly at it (claims older than 30 s are free).
+      heldUntilCallable++
+      const holdFrom = new Date(Date.parse(result.value.retryAfter) - 30_000).toISOString()
+      await supabase
+        .from('leads')
+        .update({ claimed_at: holdFrom, claimed_by_session_id: sessionId })
+        .eq('id', lead.id)
     } else {
       await supabase.rpc('release_lead_claim', { p_lead_id: lead.id })
     }
@@ -580,6 +593,7 @@ async function placeRound(input: RunControllerInput, snap: Snapshot): Promise<Co
       (dropped.length ? `, ${dropped.length} held back` : '') +
       (permanentlyFailed ? `, ${permanentlyFailed} undialable` : '') +
       (capacityBlocked ? `, ${capacityBlocked} held for capacity` : '') +
+      (heldUntilCallable ? `, ${heldUntilCallable} held until callable` : '') +
       `; ${linesInfo.reason}`,
     callSids,
     skipped,

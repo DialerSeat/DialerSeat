@@ -51,11 +51,13 @@ export async function GET(req: Request) {
 
     const { data: callRow } = await supabase
       .from('calls')
-      .select('user_id, duration, amd_result, disposition, answered_at')
+      .select('user_id, handled_by, duration, amd_result, disposition, answered_at')
       .eq('call_control_id', sid)
       .maybeSingle()
 
-    if (!callRow || callRow.user_id !== userId) {
+    // The dialer's own call, or a predictive call handed to this agent's seat
+    // by a teammate's round (handled_by, set by the server at the join).
+    if (!callRow || (callRow.user_id !== userId && callRow.handled_by !== userId)) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
     }
 

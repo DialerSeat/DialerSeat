@@ -48,7 +48,7 @@ export default function Page() {
 
         <section className="exp-hero">
           <div className="exp-hero-inner">            <div className="exp-eyebrow">COMPLIANCE · HOW IT WORKS</div>
-            <span style={{ fontSize: 11, color: "#8888aa", letterSpacing: "2px", display: "block", marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
+            <span style={{ fontSize: 11, color: "#8888aa", letterSpacing: "2px", display: "block", marginBottom: 16 }}>LAST UPDATED 09/25/2026</span>
             <h1>How we keep compliance.</h1>
             <p className="exp-lead">
               The exact mechanisms DialerSeat uses to enforce TCPA and FTC
@@ -94,18 +94,26 @@ export default function Page() {
             <h3>1. Calling-time window enforcement</h3>
             <p>
               The TCPA prohibits outbound calls before 8 AM or after 9 PM
-              in the called party&apos;s local time zone. Every lead in a
-              DialerSeat campaign has a phone number; before every dial,
-              we resolve that number to its time zone (via NPA/NXX lookup)
-              and check the current local time at that lead&apos;s location.
+              in the called party&apos;s local time zone. DialerSeat dials
+              9 AM to 9 PM, an hour inside the federal start. Before every
+              dial, we resolve the lead to its time zone (from its state, or
+              its area code when the state is missing) and check the current
+              local time at that lead&apos;s location.
             </p>
             <p>
               If the lead is currently outside its calling window, the
-              dial doesn&apos;t fire. The lead gets a <code>TCPA_BLOCKED</code>
-              disposition with the timestamp, and the campaign engine
+              dial doesn&apos;t fire. The skip is logged against the lead as
+              <code>TCPA_BLOCKED</code> with the timestamp, the lead stays in
+              the queue for when its window opens, and the campaign engine
               advances to the next eligible lead automatically. The agent
               doesn&apos;t have to think about it, and there&apos;s no
               setting to disable this.
+            </p>
+            <p>
+              Florida is stricter, and we hold Florida leads to Florida law:
+              calls end at 8 PM their time, and no number gets more than
+              three calls in 24 hours (Fla. Stat. 501.616(6)). A Florida lead
+              that has had its three waits until the 24 hours are up.
             </p>
 
             <h3>2. Predictive abandon-rate monitoring</h3>
@@ -116,11 +124,12 @@ export default function Page() {
               that line and the safe harbor evaporates.
             </p>
             <p>
-              Our pacing controller computes the rolling 30-day abandon
-              rate continuously, recomputed every 5 seconds while a
-              campaign is active. The live rate is displayed on the agent
-              terminal so nobody has to log into an admin panel to see
-              where they stand.
+              Our pacing controller computes each campaign&apos;s 30-day
+              abandon rate from its own call records before every round it
+              dials, and sets the number of lines from it: as many as keep
+              the projected rate at or under 2%. The live rate is displayed
+              on the agent terminal so nobody has to log into an admin panel
+              to see where they stand.
             </p>
 
             <h3>3. Auto-degrade at 2.5%</h3>
@@ -129,9 +138,11 @@ export default function Page() {
               intervene is too late. When the rolling rate hits
               <strong> 2.5%</strong>, the controller automatically degrades
               the campaign to 1× lines per agent (effectively progressive
-              mode). It stays degraded until the rate drops back below
-              <strong> 2.0%</strong>, then resumes the configured
-              multiplier.
+              mode). One line can&apos;t abandon anyone. A line only comes
+              back when the 30-day record, plus what that line could add, is
+              projected to stay under <strong> 2.0%</strong>, and the campaign
+              climbs back toward the configured multiplier as its record
+              allows.
             </p>
             <p>
               That 0.5% buffer is deliberate. It means a sudden answer-
@@ -141,34 +152,36 @@ export default function Page() {
               even under abnormal conditions.
             </p>
 
-            <h3>4. The 8-agent multi-line gate</h3>
+            <h3>4. The multi-line gate</h3>
             <p>
-              Predictive&apos;s mathematical advantage over progressive
-              depends on having enough concurrent agents that statistical
-              smoothing dampens variance. With 2 agents on a 2× campaign,
-              you have 4 lines in flight; one unexpected pickup can spike
-              your abandon rate dramatically. With 10 agents on a 2×
-              campaign, you have 20 lines in flight; the same surprise
-              event barely moves the needle.
+              Every extra line is a chance that two people answer at once,
+              and only one of them can reach the agent. So a second line has
+              to be earned. A new campaign dials one line per agent, which
+              can&apos;t abandon anyone, and adds lines only when its own
+              30-day record can absorb a surplus answer and still be
+              projected under 2%. The more people a campaign has already
+              reached, the more lines it can carry.
             </p>
             <p>
-              DialerSeat&apos;s predictive controller currently engages
-              multi-line dialing only when 8+ concurrent agents are active
-              on the campaign. Below that threshold, the campaign runs
-              effectively as progressive even if predictive is configured.
-              We surface this in the dialer with a banner so nobody is
-              surprised.
+              A second line also needs the campaign&apos;s seller name and
+              callback number, because the recorded notice below can&apos;t
+              be played without them. Until both are set, predictive runs one
+              line. Two lines per agent is the most any campaign runs today.
+              When the dialer runs fewer lines than you asked for, it says
+              which rule is holding it, so nobody is surprised.
             </p>
 
-            <h3>5. AMD pre-screen on progressive and predictive</h3>
+            <h3>5. AMD on progressive and predictive</h3>
             <p>
               Answering Machine Detection runs on every progressive and
               predictive call by default, via Telnyx&apos;s native call
-              detection.
-              Machine-detected calls drop server-side and never reach an
-              agent, which means the abandon-rate math isn&apos;t
-              polluted by phantom &quot;answered&quot; calls that are just
-              voicemail greetings.
+              detection, with the same settings in both modes. Calls connect
+              the moment they&apos;re answered, so a real person never waits
+              in silence while a detector decides. When it hears a machine,
+              the agent is released to the next lead and the call drops
+              server-side. Machines never count as answered, which means the
+              abandon-rate math isn&apos;t polluted by phantom
+              &quot;answered&quot; calls that are just voicemail greetings.
             </p>
             <p>
               The AMD result is stored on every call record. <Link href="/faq/how-does-amd-work">
@@ -177,22 +190,31 @@ export default function Page() {
 
             <h3>6. Ring duration ≥ 15 seconds</h3>
             <p>
-              Per § 310.4(b)(4)(i) of the TSR safe harbor, an unanswered
-              call must ring for at least 15 seconds (or 4 rings) before
-              being treated as no-answer. Our outbound calls are
-              configured to honor this duration. Calls that ring through
-              are not eligible for early disconnect.
+              Per § 310.4(b)(4)(ii) of the TSR safe harbor, and the
+              FCC&apos;s rule at 47 CFR 64.1200(a)(6), an unanswered call
+              must ring for at least 15 seconds (or 4 rings) before being
+              treated as no-answer. Our outbound calls are configured to
+              honor this duration: predictive lines ring for 20 seconds,
+              progressive for 30 to 43, preview and power for up to 60. A
+              predictive line is never hung up while it rings, not even when
+              you press stop.
             </p>
 
             <h3>7. Recorded notice on abandoned calls</h3>
             <p>
-              When an abandoned call <em>does</em> occur, meaning a human
-              answered and no agent was available within 2 seconds, the
-              TSR safe harbor requires a brief recorded notice identifying
-              the seller and the call&apos;s purpose, per § 310.4(b)(4)(iii).
-              Every DialerSeat campaign has this configured by default with
-              a sensible generic notice; campaign owners can customize the
-              recording per campaign.
+              When a person answers and their agent is already on a call,
+              a teammate who is running predictive on the same team campaign
+              and is free takes them instead. When an abandoned call
+              <em>does</em> occur, meaning a human answered and no agent was
+              available within 2 seconds, the TSR safe harbor requires a
+              brief recorded notice with the seller&apos;s name and phone
+              number, per § 310.4(b)(4)(iii), and the FCC adds that it must
+              say the call is telemarketing and offer an automated opt-out.
+              Ours names your business, says it&apos;s a telemarketing call,
+              gives your callback number, and offers press 9 to be added to
+              your do-not-call list. Pressing 9 adds the number and ends the
+              call. The notice is built from the seller name and callback
+              number on the campaign, with no generic fallback.
             </p>
 
             <h3>8. STIR/SHAKEN attestation</h3>
@@ -207,13 +229,16 @@ export default function Page() {
               strongest level available, not a guarantee for every call.
             </p>
 
-            <h3>9. Records: 24 months minimum, exportable</h3>
+            <h3>9. Records: no expiry, exportable</h3>
             <p>
               Every dial attempt, AMD result, agent assignment, disposition,
-              abandon event, and calling-window skip is stored and retained
-              for at least 24 months, the TSR&apos;s record-keeping floor.
-              Records are exportable from your dashboard for compliance
-              audits, internal QA, or any other reason you need them.
+              abandon event, and calling-window skip is stored with no
+              expiry: nothing in the platform ages them out while your
+              account is open. The TSR asks sellers to keep call records for
+              five years (§ 310.5). Call records export to CSV from your
+              dashboard&apos;s Compliance tab, a year at a time, for
+              compliance audits, internal QA, or any other reason you need
+              them.
             </p>
             <p>
               <strong>Call recordings are the one exception:</strong> they&apos;re
@@ -221,8 +246,7 @@ export default function Page() {
               <Link href="/privacy#data-retention">Privacy Policy</Link>). Download
               recordings before the 30-day window closes if you need to keep them
               longer: the surrounding call record (disposition, duration, AMD
-              result, timestamps) stays in your dashboard for the full 24 months
-              regardless.
+              result, timestamps) stays in your dashboard regardless.
             </p>
           </div>
         </section>
@@ -252,7 +276,7 @@ export default function Page() {
             </div>
             <div className="exp-card">
               <h3>STATE-SPECIFIC RULES</h3>
-              <p>The 8 AM-9 PM window is federal. Several states impose stricter rules (call frequency caps, holiday restrictions, registration requirements). Those are on you.</p>
+              <p>The 8 AM-9 PM window is federal. We dial 9 AM-9 PM everywhere, and hold Florida to its 8 PM end and three calls a day. Other states&apos; stricter rules (call frequency caps, holiday restrictions, registration requirements) are on you.</p>
             </div>
           </div>
           <p style={{ marginTop: 24 }}>
@@ -272,7 +296,7 @@ export default function Page() {
             <p>
               Your list contains 5,000 leads across all four U.S. time zones.
               When dialing starts, the system filters in real-time: leads
-              currently in their local 8 AM-9 PM window are eligible, leads
+              currently in their local 9 AM-9 PM window are eligible, leads
               outside it are skipped with <code>TCPA_BLOCKED</code> and re-
               queued for when they enter their window. By 2 PM Pacific
               you&apos;ll have called a different mix than you did at 11 AM
@@ -285,21 +309,22 @@ export default function Page() {
               campaign on a Tuesday afternoon hits an unusually high
               answer rate, maybe a fresh batch of warm leads dropped in 
               and your in-flight calls outpace agents being free. The
-              30-day rolling abandon rate ticks up to 2.51%. Within 5
-              seconds, the controller cuts you back to 1.0× lines. You
+              30-day rolling abandon rate ticks up to 2.51%. Before its next
+              round, the controller cuts you back to 1.0× lines. You
               keep dialing, but as progressive, not predictive. When the
-              30-day average works its way back below 2.0%, you resume
+              30-day average works its way back down, far enough that a
+              second line is projected to keep you under 2.0%, you resume
               2.0× automatically.
             </p>
 
             <h3>Scenario C: You get an audit request</h3>
             <p>
               An attorney asks for records of every call placed to a
-              specific phone number over the last 18 months. You filter the
-              calls log to that number, see every dial timestamp, AMD
-              result, agent who took the call, disposition, recording link,
-              and any TCPA-window skips. Export the result to CSV; hand
-              it over. You did the right things, you have the proof.
+              specific phone number over the last 12 months. You export the
+              campaign&apos;s calls from the Compliance tab to CSV, filter it
+              to that number, and see every dial timestamp, AMD result, agent
+              who took the call, disposition, and whether it was abandoned.
+              Hand it over. You did the right things, you have the proof.
             </p>
           </div>
         </section>
@@ -328,7 +353,7 @@ export default function Page() {
 
         <DialingModeCTA
           headline="Compliance you don't have to babysit."
-          description="The 3% cap, the 8 AM-9 PM window, AMD, STIR/SHAKEN, 24-month records: enforced in software, not in policy docs. $35/week per seat, every mode included."
+          description="The 3% cap, the 9 AM-9 PM window, AMD, STIR/SHAKEN, records with no expiry: enforced in software, not in policy docs. $35/week per seat, every mode included."
         />
         </div>
       </GutsShell>

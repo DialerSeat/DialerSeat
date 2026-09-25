@@ -55,11 +55,13 @@ export async function POST(req: Request) {
     // Verify the caller owns this call before hanging it up.
     const { data: callRow } = await supabase
       .from('calls')
-      .select('id, user_id, answered_at, agent_call_control_id, dial_source')
+      .select('id, user_id, handled_by, answered_at, agent_call_control_id, dial_source')
       .eq('call_control_id', sid)
       .maybeSingle()
 
-    if (!callRow || callRow.user_id !== userId) {
+    // The dialer's own call, or a predictive call a teammate's round handed to
+    // this agent's seat (handled_by, written by the server at the join).
+    if (!callRow || (callRow.user_id !== userId && callRow.handled_by !== userId)) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
     }
 

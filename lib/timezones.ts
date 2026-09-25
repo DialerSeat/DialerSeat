@@ -109,16 +109,25 @@ export interface CallingRule {
 // which is the explicit intent.
 const UNIFORM_WINDOW: CallingRule = { startHour: 9, endHour: 21 }
 
-// Kept exported (other modules import it) but intentionally empty: no state
-// overrides the uniform window. Adding an entry here is all it takes to
-// reinstate a stricter state rule later.
-export const STATE_RULES: Record<string, CallingRule> = {}
+// States whose law is stricter than the uniform window. Each entry is checked
+// against the statute itself, not carried over from memory.
+//
+// FL  Fla. Stat. 501.616(6)(a): no commercial telephone solicitation "before
+//     8 a.m. or after 8 p.m. local time in the called person's time zone".
+//     The uniform 9am start already sits inside that; the end moves to 8pm.
+//     Reinstated 24 Sept 2026 at the owner's request. The same subsection's
+//     three-calls-a-day limit is enforced in lib/placeOutboundCall.
+//
+// AL, MS (8pm) and LA (no Sundays) are named above as stricter too. They are
+// not added here until each is checked against its statute the way FL was.
+export const STATE_RULES: Record<string, CallingRule> = {
+  FL: { startHour: 9, endHour: 20 },
+}
 
 export function getCallingRule(state: string): CallingRule {
-  // STATE_RULES is empty today, so every state resolves to the uniform
-  // window. Kept as a real lookup rather than a hardcoded return so
-  // reinstating a stricter state rule is a one-line data change here, with
-  // no code change in lib/callingWindow.ts.
+  // A real lookup rather than a hardcoded return, so a stricter state rule is
+  // a one-line data change in STATE_RULES with no code change in
+  // lib/callingWindow.ts. Every state without an entry gets the uniform window.
   return STATE_RULES[state] || UNIFORM_WINDOW
 }
 

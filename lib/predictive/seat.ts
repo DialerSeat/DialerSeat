@@ -369,3 +369,16 @@ export async function rotateSeatIfOld(s: PredictiveSession): Promise<boolean> {
   })
   return true
 }
+
+// Clerk id for an internal user id. A seat session carries the internal id;
+// calls carry the Clerk id. Stable for the life of an account, so cached.
+const clerkIdCache = new Map<string, string>()
+
+export async function clerkIdForUser(internalUserId: string): Promise<string | null> {
+  const hit = clerkIdCache.get(internalUserId)
+  if (hit) return hit
+  const { data } = await db.from('users').select('clerk_id').eq('id', internalUserId).maybeSingle()
+  const clerkId = (data?.clerk_id as string | undefined) ?? null
+  if (clerkId) clerkIdCache.set(internalUserId, clerkId)
+  return clerkId
+}

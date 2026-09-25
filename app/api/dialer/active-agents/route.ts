@@ -239,19 +239,23 @@ export async function GET(req: NextRequest) {
       const onCall = agents.filter(a => a.state === 'on_call').length
       const totalActive = agents.length
 
-      // Lookup current abandon rate from the rolling 30d view.
-      // Use maybeSingle so a brand-new campaign with no calls yet (no row in
-      // the view) doesn't 500 — returns null cleanly.
+      // ── THE SAME 30-DAY RATE THE ENGINE PACES ON ─────────────────────────
+      // This read campaign_abandon_rate_30d, a view over pacing_metrics, which
+      // nothing has written since the predictive rebuild (it holds no rows).
+      // The terminal therefore printed 0.00% whatever the campaign had done,
+      // while the engine counted from the calls themselves. Both now read
+      // predictive_campaign_stats, so the number an agent sees is the number
+      // that sets their lines. Null, not 0, when nobody has answered in 30
+      // days: there is no rate to show yet.
       let abandonRatePct: number | null = null
       try {
-        const { data: rateRow } = await supabase
-          .from('campaign_abandon_rate_30d')
-          .select('abandon_rate_pct')
-          .eq('campaign_id', campaignId)
-          .maybeSingle()
-
-        if (rateRow && typeof rateRow.abandon_rate_pct === 'number') {
-          abandonRatePct = rateRow.abandon_rate_pct
+        const { data: statRows } = await supabase
+          .rpc('predictive_campaign_stats', { p_campaign_ids: [campaignId] })
+        const row = Array.isArray(statRows) ? statRows[0] : null
+        const answered = Number(row?.answered_30d ?? 0)
+        const abandoned = Number(row?.abandoned_30d ?? 0)
+        if (answered > 0) {
+          abandonRatePct = Math.round((abandoned / answered) * 10000) / 100
         }
       } catch (rateErr) {
         // Non-fatal — abandonRatePct stays null
