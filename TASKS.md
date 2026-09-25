@@ -43,6 +43,27 @@ All four shipped together. Nothing here is verified on a live floor yet.
    Telnyx balance and sized with it. The CARRIER's short-call ratio, the same
    figure and fallback as the map's compliance box.
 
+## 1b. The agent's browser missing its calls. IN PROGRESS.
+
+The label said 4-7% of dials. Sorted by what actually happened on the real
+dialing days (15-18 Sept, 2,063 dials, 85 filed as AGENT_LEG_FAILED):
+
+- **48 were the agent skipping, stopping or aborting while the lead rang.**
+  DONE 25 Sept (f7af6024): `calls.ended_by_agent_at` is stamped before the
+  hangup is sent, and those calls are no longer filed as failures. They had
+  been recorded as never rung, so the attempt went uncounted, the pool number's
+  usage was refunded and Florida's three-a-day count missed them.
+- **17 (0.8%): the browser dropped a leg it had answered**, with no hangup
+  request. Our own code. The server's events cannot show which path did it:
+  timestamps drift, and the decision happened in the browser. NEXT, this
+  evening (dialer change): record every agent-leg teardown with the code path
+  that did it, then fix it on that evidence.
+- **20 (1.0%): the browser never answered** — a dead connection. After the
+  above.
+
+The real rate is 1.8%. That also changes the cost switch
+(`dial_agent_on_answer`, section 3): its blocker was this failure rate.
+
 ## 2. Idea, not scheduled
 
 - **A console log app.** Somewhere to read the console errors a user is
@@ -50,21 +71,29 @@ All four shipped together. Nothing here is verified on a live floor yet.
   request. Raised 25 Sept 2026 as an idea only — do not build it without
   asking.
 
-## 3. Last: AMD and recording cost tuning
+## 3. After 1b: AMD and recording cost tuning
 
-Both of these change the call path, so they come after predictive is proven,
-and **a backup of the working AMD configuration is taken before either starts**
-(platform_config's detector settings, in a migration that can be replayed).
+Both change the call path, so both ship outside the dialing day, and **a backup
+of the working AMD configuration is taken before either starts** (the detector
+settings in platform_config, in a migration that can be replayed, plus a git
+tag on the code).
 
-1. **Recording start tuning.** Stop paying to record what turns out not to be a
-   conversation: a recording that begins on a false flag is billed per minute
-   and stored. See docs/COST-FINDINGS.md for the per-minute rates and
-   app/api/calls/events (recording.saved) for where a machine's greeting is
-   already discarded.
-2. **AMD accuracy tuning.** Fewer wrong verdicts is what makes the recording
-   rule above safe: every machine called a human is a recording paid for, and
-   every human called a machine is a lead hung up on. Same detector settings
-   for progressive and predictive (docs/AMD.md).
+1. **AMD accuracy tuning.** Every machine called a human is a recording paid
+   for; every human called a machine is a lead hung up on. Same detector
+   settings for progressive and predictive (docs/AMD.md).
+2. **Recordings start about 10 seconds after a person picks up** (Joshua, 25
+   Sept), not at the verdict. Telnyx bills each recording a 60-second minimum,
+   rounding down to the minute after that (Telnyx support, 25 Sept), so a
+   recording that starts on a false human verdict costs a full minute.
+
+## Cost per dial: where it stands
+
+Measured from Telnyx's own call.cost records, 15-24 Sept: **$0.0093 a dial**
+(2,518 dials, $23.54). Voicemail billed a full 60 seconds is $0.0041 of it:
+machines are 76% of answers, average 11.6 s, and are billed a minute each.
+Telnyx no longer offers 6-second billing (Joshua, 25 Sept), so that part stays.
+The levers left are ours: the agent leg only on answer (after 1b), fewer wrong
+AMD verdicts, and recordings that start later.
 
 ---
 
