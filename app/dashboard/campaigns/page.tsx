@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { parseLeadsFile, inspectFile, isAcceptedLeadsFile, ACCEPTED_LEADS_ACCEPT_ATTR } from '@/lib/parseLeadsFile'
 import { overlayDismiss } from '@/lib/overlayDismiss'
 import { uploadLeadsInChunks, type UploadProgress } from '@/lib/uploadLeadsInChunks'
+import { usePredictiveGate } from '@/components/SellerIdentityDialog'
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -43,8 +44,6 @@ interface Campaign {
   amd_enabled?: boolean
   recording_enabled?: boolean
   predictive_lines_per_agent?: number
-  tsr_seller_name?: string | null
-  tsr_callback_number?: string | null
   enable_appointments_sub?: boolean
   enable_not_interested_sub?: boolean
   enable_voicemail_sub?: boolean
@@ -417,11 +416,6 @@ export default function CampaignsPage() {
     enable_appointments_sub: boolean
     enable_not_interested_sub: boolean
     enable_voicemail_sub: boolean
-    // 16 CFR 310.4(b)(4)(iii). Both required before predictive may run more
-    // than one line; lib/tsrAbandonMessage refuses to build the message
-    // without them and the controller then holds the campaign at one.
-    tsr_seller_name: string
-    tsr_callback_number: string
     enabledScriptIds: Set<string>   // which library scripts are on for this campaign
     scriptOrder: string[]           // ordered enabled script ids (drag order)
   }
@@ -1427,6 +1421,13 @@ export default function CampaignsPage() {
   })
 
   
+  // ── PREDICTIVE WAITS FOR THE TWO DETAILS ──────────────────────────────────
+  // Picking predictive checks that the account has the business name and
+  // callback number its recorded message needs (lib/sellerIdentity). Missing,
+  // and the popup asks for them: save and carry on with predictive, or go back
+  // to progressive. The server refuses predictive without them regardless.
+  const { dialog: predictiveGateDialog, requirePredictive: requirePredictiveDetails } = usePredictiveGate()
+
   const patchDraft = (patch: Partial<EditDraft>) =>
     setEditDraft(d => d ? { ...d, ...patch } : d)
 
@@ -1461,16 +1462,6 @@ export default function CampaignsPage() {
   }
 
   
-  // Mirrors lib/tsrAbandonMessage.buildTsrAbandonMessage exactly. Kept as the
-  // same three conditions in the same order so the badge cannot promise
-  // multi-line that lib/predictiveController will then refuse.
-  const tsrReady = (() => {
-    const name = (editDraft?.tsr_seller_name ?? '').trim()
-    const num = (editDraft?.tsr_callback_number ?? '').trim()
-    if (!name || !num) return false
-    return num.replace(/\D/g, '').length >= 10
-  })()
-
   const editDirty = (() => {
     if (!editDraft || !editBaseline) return false
     const a = editDraft, b = editBaseline
@@ -1488,8 +1479,6 @@ export default function CampaignsPage() {
     if (a.enable_appointments_sub !== b.enable_appointments_sub) return true
     if (a.enable_not_interested_sub !== b.enable_not_interested_sub) return true
     if (a.enable_voicemail_sub !== b.enable_voicemail_sub) return true
-    if (a.tsr_seller_name !== b.tsr_seller_name) return true
-    if (a.tsr_callback_number !== b.tsr_callback_number) return true
     if (a.enabledScriptIds.size !== b.enabledScriptIds.size) return true
     for (const id of a.enabledScriptIds) if (!b.enabledScriptIds.has(id)) return true
     if (a.scriptOrder.join(',') !== b.scriptOrder.join(',')) return true
@@ -1516,10 +1505,6 @@ export default function CampaignsPage() {
         corePatch.enable_not_interested_sub = editDraft.enable_not_interested_sub
       if (editDraft.enable_voicemail_sub !== editBaseline.enable_voicemail_sub)
         corePatch.enable_voicemail_sub = editDraft.enable_voicemail_sub
-      if (editDraft.tsr_seller_name !== editBaseline.tsr_seller_name)
-        corePatch.tsr_seller_name = editDraft.tsr_seller_name
-      if (editDraft.tsr_callback_number !== editBaseline.tsr_callback_number)
-        corePatch.tsr_callback_number = editDraft.tsr_callback_number
       if (Object.keys(corePatch).length > 0) {
         const res = await fetch('/api/campaigns/update', {
           method: 'POST',
@@ -1636,8 +1621,6 @@ export default function CampaignsPage() {
       enable_appointments_sub: !!campaign.enable_appointments_sub,
       enable_not_interested_sub: !!campaign.enable_not_interested_sub,
       enable_voicemail_sub: !!campaign.enable_voicemail_sub,
-      tsr_seller_name: campaign.tsr_seller_name || '',
-      tsr_callback_number: campaign.tsr_callback_number || '',
       enabledScriptIds: new Set<string>(),
       scriptOrder: [],
     }
@@ -1886,6 +1869,7 @@ export default function CampaignsPage() {
       fontFamily: FUTURA,
       color: T.text,
     }}>
+      {predictiveGateDialog}
       <style>{`
         .cmp-root * { box-sizing: border-box; }
 
@@ -3180,7 +3164,14 @@ export default function CampaignsPage() {
                   <select
                     className="settings-mode-select"
                     value={createMode}
-                    onChange={e => setCreateMode(e.target.value as DialerMode)}
+                    onChange={e => {
+                      const m = e.target.value as DialerMode
+                      if (m !== 'predictive') { setCreateMode(m); return }
+                      void requirePredictiveDetails(
+                        () => setCreateMode('predictive'),
+                        () => setCreateMode('progressive'),
+                      )
+                    }}
                   >
                     {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
                       <option key={m} value={m}>{MODE_LABELS[m]}</option>
@@ -3671,7 +3662,14 @@ export default function CampaignsPage() {
                       value={editDraft?.dialer_mode || 'progressive'}
                       onChange={e => {
                         const m = e.target.value as DialerMode
-                        patchDraft({ dialer_mode: m, amd_enabled: AMD_DEFAULT_BY_MODE[m] })
+                        if (m !== 'predictive') {
+                          patchDraft({ dialer_mode: m, amd_enabled: AMD_DEFAULT_BY_MODE[m] })
+                          return
+                        }
+                        void requirePredictiveDetails(
+                          () => patchDraft({ dialer_mode: 'predictive', amd_enabled: AMD_DEFAULT_BY_MODE.predictive }),
+                          () => patchDraft({ dialer_mode: 'progressive', amd_enabled: AMD_DEFAULT_BY_MODE.progressive }),
+                        )
                       }}
                       disabled={isLapsed}
                     >
@@ -3680,79 +3678,6 @@ export default function CampaignsPage() {
                       ))}
                     </select>
                   </div>
-                )}
-
-                {/* ── THE TWO FIELDS THAT UNLOCK MULTI-LINE PREDICTIVE ────────
-                    16 CFR 310.4(b)(4)(iii): when no rep is free within two
-                    seconds of the greeting, a recorded message must state the
-                    NAME and TELEPHONE NUMBER of the seller. Satisfy it and a
-                    surplus line that answers is compliant; miss it and the
-                    same call is an abandoned call against the 3% ceiling.
-
-                    Shown only for predictive because it is the only mode that
-                    can produce a surplus line. Every campaign on this account
-                    had both fields NULL, which is why predictive was pinned
-                    to one line no matter what was configured. */}
-                {!campaignTeamId && editDraft?.dialer_mode === 'predictive' && (
-                  <>
-                    <div className="settings-row">
-                      <div className="settings-row-label">
-                        SELLER NAME
-                        <small>
-                          Spoken aloud if a lead answers and no agent is free. Required by law
-                          before predictive can run more than one line.
-                        </small>
-                      </div>
-                      <input
-                        id="tsr-seller-name"
-                        className="settings-name-input"
-                        type="text"
-                        value={editDraft?.tsr_seller_name ?? ''}
-                        placeholder="Acme Insurance"
-                        maxLength={80}
-                        disabled={isLapsed}
-                        onChange={e => patchDraft({ tsr_seller_name: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="settings-row">
-                      <div className="settings-row-label">
-                        SELLER CALLBACK NUMBER
-                        <small>A number the lead can reach you on. Read back digit by digit.</small>
-                      </div>
-                      <input
-                        id="tsr-callback-number"
-                        className="settings-name-input"
-                        type="tel"
-                        value={editDraft?.tsr_callback_number ?? ''}
-                        placeholder="(800) 555-1234"
-                        maxLength={24}
-                        disabled={isLapsed}
-                        onChange={e => patchDraft({ tsr_callback_number: e.target.value })}
-                      />
-                    </div>
-
-                    {/* States the CONSEQUENCE, not a warning. A campaign missing
-                        either field runs at one line -- it does not run
-                        multi-line with a caution. */}
-                    <div className="settings-row">
-                      <div className="settings-row-label" style={{ width: '100%' }}>
-                        <small style={{
-                          display: 'block',
-                          padding: '8px 10px',
-                          borderRadius: 6,
-                          lineHeight: 1.5,
-                          background: tsrReady ? 'rgba(34,197,94,0.10)' : 'rgba(234,179,8,0.10)',
-                          border: `1px solid ${tsrReady ? 'rgba(34,197,94,0.35)' : 'rgba(234,179,8,0.35)'}`,
-                        }}>
-                          {tsrReady
-                            ? 'Multi-line predictive is unlocked for this campaign.'
-                            : 'Predictive will run at ONE line until both fields are filled in. '
-                              + 'A callback number needs all ten digits.'}
-                        </small>
-                      </div>
-                    </div>
-                  </>
                 )}
 
                 <div className="settings-row">

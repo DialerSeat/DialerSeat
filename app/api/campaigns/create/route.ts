@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
+import { sellerIdentityForUser, SELLER_INFO_REQUIRED } from '@/lib/sellerIdentity'
+import { PREDICTIVE_MIN_LINES, PREDICTIVE_MAX_LINES } from '@/lib/predictive/pacing'
 
 const VALID_MODES = ['preview', 'power', 'progressive', 'predictive'] as const
 type DialerMode = typeof VALID_MODES[number]
@@ -101,9 +103,23 @@ export async function POST(req: Request) {
       ? dialer_mode
       : 'progressive'
 
-    // Was `progressive || predictive`. Predictive can no longer reach here,
-    // so the second test is dead — restore it with the mode.
-    const amdDefault = mode === 'progressive'
+    // ── PREDICTIVE WAITS FOR THE TWO DETAILS ──────────────────────────────
+    // Same gate as /api/campaigns/update: its recorded message needs the
+    // account's business name and callback number (lib/sellerIdentity).
+    if (mode === 'predictive' && !(await sellerIdentityForUser(userId)).ready) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: SELLER_INFO_REQUIRED,
+          error: 'Add your business name and callback number to use predictive.',
+        },
+        { status: 428 }
+      )
+    }
+
+    // Restored with the mode, as this note asked: predictive detects machines
+    // exactly as progressive does (docs/PREDICTIVE.md), so it defaults on too.
+    const amdDefault = mode === 'progressive' || mode === 'predictive'
     const amdEnabled = typeof amd_enabled === 'boolean' ? amd_enabled : amdDefault
     // ── RECORDING DEFAULTS ON ─────────────────────────────────────────────
     // It was opt-in, and in practice that meant off: 17 of 21 campaigns on the
@@ -132,9 +148,9 @@ export async function POST(req: Request) {
     // gets floored downstream, so 1.5 was silently one line and predictive
     // dialed at progressive's rate. 3 is the default an agent would expect
     // from a mode whose entire purpose is dialing more than one at a time.
-    let lines = 3
+    let lines = PREDICTIVE_MAX_LINES
     if (typeof predictive_lines_per_agent === 'number') {
-      lines = Math.max(1, Math.min(5, Math.round(predictive_lines_per_agent)))
+      lines = Math.max(PREDICTIVE_MIN_LINES, Math.min(PREDICTIVE_MAX_LINES, Math.round(predictive_lines_per_agent)))
     }
 
     // How many times a lead should be dialed in a row before being set

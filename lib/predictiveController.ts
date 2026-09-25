@@ -3,11 +3,12 @@ import { placeOutboundCall } from '@/lib/placeOutboundCall'
 import { logCallEvent } from '@/lib/callEvents'
 import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
 import { getPlatformConfig } from '@/lib/platformConfig'
-import { canRunMultiLine } from '@/lib/tsrAbandonMessage'
+import { sellerIdentityForCampaigns } from '@/lib/sellerIdentity'
 import { backToBackAttempts } from '@/lib/dialerConstants'
 import {
   legalLineCount, estimateHumanRate, planRound, breakerTripped,
-  BREAKER_PAUSE_MS, HARD_LINE_CAP, type LegalLinesResult,
+  BREAKER_PAUSE_MS, HARD_LINE_CAP, PREDICTIVE_MIN_LINES, PREDICTIVE_MAX_LINES,
+  type LegalLinesResult,
 } from '@/lib/predictive/pacing'
 import { ensureSeat, readSession, rotateSeatIfOld, linesInFlight } from '@/lib/predictive/seat'
 
@@ -253,12 +254,22 @@ async function placeRound(input: RunControllerInput, snap: Snapshot): Promise<Co
 
   const { data: campaignRows } = await supabase
     .from('campaigns')
-    .select('id, predictive_lines_per_agent, predictive_lines_max, tsr_seller_name, tsr_callback_number, dial_repeat_count')
+    .select('id, predictive_lines_per_agent, predictive_lines_max, dial_repeat_count')
     .in('id', campaignIds)
   const campaignsById = new Map((campaignRows || []).map(c => [c.id as string, c]))
   campaignIds = campaignIds.filter(id => campaignsById.has(id))
   if (campaignIds.length === 0) {
     return idle('none of the selected campaigns could be loaded', snap, { seat: 'live' })
+  }
+
+  // ── NO LINES WITHOUT THE TWO DETAILS ────────────────────────────────────
+  // The recorded message names each campaign owner's business and a callback
+  // number (lib/sellerIdentity). One campaign in the round without them stops
+  // the whole round: a surplus answer on it would have nothing lawful to hear.
+  // The dialer asks for them before START; this is the backstop.
+  const sellers = await sellerIdentityForCampaigns(campaignIds)
+  if (campaignIds.some(id => !sellers.get(id)?.ready)) {
+    return idle("predictive needs the campaign owner's business name and callback number, set in Settings", snap, { seat: 'live' })
   }
   const primary = campaignsById.get(campaignIds[0])!
 
@@ -295,7 +306,12 @@ async function placeRound(input: RunControllerInput, snap: Snapshot): Promise<Co
   const rawDefault = Number(primary.predictive_lines_per_agent)
   const campaignDefault = Number.isFinite(rawDefault) && rawDefault > 0 ? Math.round(rawDefault) : 3
   const campaignMax = Math.min(Number(primary.predictive_lines_max) || HARD_LINE_CAP, HARD_LINE_CAP)
-  const cap = Math.max(1, Math.min(agentPref ?? campaignDefault, campaignMax, platformCeiling))
+  // 2 or 3, as chosen (lib/predictive/pacing). A leftover LINES 1, or a
+  // campaign max below 2 from before that rule, is read as 2. The platform
+  // ceiling is an operator's switch and can still lower it; the law decides
+  // below how much of it is usable.
+  const chosen = Math.max(PREDICTIVE_MIN_LINES, Math.min(agentPref ?? campaignDefault, PREDICTIVE_MAX_LINES))
+  const cap = Math.max(1, Math.min(chosen, Math.max(PREDICTIVE_MIN_LINES, campaignMax), platformCeiling))
 
   // ── THE LAW: WHAT EACH CAMPAIGN'S OWN 30 DAYS ALLOW ─────────────────────
   // A round rings together, so it runs at the count the strictest campaign in
@@ -316,7 +332,6 @@ async function placeRound(input: RunControllerInput, snap: Snapshot): Promise<Co
   } else {
     const stats = new Map(((statRows || []) as Array<Record<string, unknown>>).map(r => [r.campaign_id as string, r]))
     const perCampaign = campaignIds.map(id => {
-      const c = campaignsById.get(id)!
       const st = stats.get(id)
       return {
         id,
@@ -325,10 +340,7 @@ async function placeRound(input: RunControllerInput, snap: Snapshot): Promise<Co
           humanRate: estimateHumanRate(Number(st?.humans_14d ?? 0), Number(st?.dials_14d ?? 0)),
           answered30d: Number(st?.answered_30d ?? 0),
           abandoned30d: Number(st?.abandoned_30d ?? 0),
-          sellerMessageReady: canRunMultiLine({
-            name: c.tsr_seller_name as string | null,
-            callbackNumber: c.tsr_callback_number as string | null,
-          }),
+          sellerMessageReady: sellers.get(id)?.ready === true,
         }),
       }
     })

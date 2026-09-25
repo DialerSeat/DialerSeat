@@ -13,6 +13,8 @@ import { rotationKey, sinkDialedLeads, recordDial, pinToTop, type DialLog } from
 import { nextDialDelayMs } from '@/lib/complianceHold'
 import { recordAgentLegOutcome, needsReregister, type AgentLegHistory } from '@/lib/agentLegHealth'
 import { reachedAHuman as didReachAHuman, shouldRedial, shouldResetAttemptCount, agentLegFailed } from '@/lib/redialDecision'
+import { PREDICTIVE_MIN_LINES, PREDICTIVE_MAX_LINES } from '@/lib/predictive/pacing'
+import SellerIdentityDialog from '@/components/SellerIdentityDialog'
 
 /**
  * Whole seconds since a start timestamp, 0 when never started.
@@ -84,6 +86,17 @@ interface Campaign {
   recording_enabled?: boolean
   predictive_lines_per_agent?: number
   dial_repeat_count?: number
+  // Both come back from /api/campaigns/list (it selects *) and were read
+  // through `as any` at three call sites. Typed here instead: the mode menu
+  // and the predictive popup both branch on them, and a cast is not the place
+  // to record what a field means.
+  //
+  // agent_picks_mode: the owner lets agents choose their own mode, so a change
+  // is session-local rather than an edit to the campaign.
+  agent_picks_mode?: boolean
+  // teamName: present only on a campaign reached through a team, which is the
+  // marker for "not mine to change".
+  teamName?: string
 }
 
 interface TeamScopeCampaign {
@@ -338,7 +351,12 @@ const PREDICTIVE_HEARTBEAT_INTERVAL_MS = 1_500
 const PACING_POLL_INTERVAL_MS = 10_000
 const INCOMING_POLL_INTERVAL_MS = 2_000
 
-const LINES_OPTIONS = [1, 2, 3, 4, 5]
+// 2 or 3 (lib/predictive/pacing). The law can still run fewer, and the feed
+// says when it does.
+const LINES_OPTIONS = Array.from(
+  { length: PREDICTIVE_MAX_LINES - PREDICTIVE_MIN_LINES + 1 },
+  (_, i) => PREDICTIVE_MIN_LINES + i,
+)
 
 // ── HOW MUCH OF THE PANEL'S ORDER THE SERVER ACTUALLY NEEDS ─────────────────
 // The dial path is told the queue panel's displayed order so it dials top-down
@@ -939,6 +957,15 @@ function DialerPageInner() {
   const isQueueFiltered = !!(queueSearch.trim() || queueStateFilter.trim())
 
   const [linesPref, setLinesPref] = useState<LinesPrefInfo | null>(null)
+  // ── PREDICTIVE WAITS FOR THE TWO DETAILS (components/SellerIdentityDialog) ──
+  // Open while the campaign owner's business name and callback number are
+  // missing. onReady continues whatever picked predictive; onProgressive is
+  // absent when this viewer is not allowed to change the mode.
+  const [predictiveGate, setPredictiveGate] = useState<{
+    ownerIsYou: boolean
+    onReady?: () => void
+    onProgressive?: () => void
+  } | null>(null)
   const [linesPrefSaving, setLinesPrefSaving] = useState(false)
 
   const [lastControllerSummary, setLastControllerSummary] =
@@ -1179,7 +1206,9 @@ function DialerPageInner() {
       const res = await fetch('/api/dialer/arm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ armed }),
+        // The campaign lets the server check its owner's predictive details
+        // before arming (lib/sellerIdentity). Ignored when disarming.
+        body: JSON.stringify({ armed, campaign_id: armed ? (selectedCampaign || null) : null }),
       })
       const data = await res.json().catch(() => null)
       return data?.ok === true
@@ -1243,7 +1272,7 @@ function DialerPageInner() {
   // already does under All Active. Nothing is written to the campaign either
   // way: an agent's workflow preference is not a change to somebody else's
   // campaign settings.
-  const agentMayPickMode = !!(currentCampaign as any)?.agent_picks_mode
+  const agentMayPickMode = !!currentCampaign?.agent_picks_mode
 
   const dialerMode: DialerMode =
     isSpecificCampaign
@@ -2765,7 +2794,7 @@ function DialerPageInner() {
             // leave them wondering why LINES 3 dials one.
             const held = summary.lines && summary.lines.limitedBy !== 'cap'
               ? summary.lines.limitedBy === 'no_seller_message'
-                ? `HELD TO 1 LINE: ADD THE SELLER NAME AND CALLBACK NUMBER TO THIS CAMPAIGN FOR MORE`
+                ? `HELD TO 1 LINE: ADD YOUR BUSINESS NAME AND CALLBACK NUMBER IN SETTINGS`
                 : summary.lines.limitedBy === 'degraded'
                   ? `HELD TO 1 LINE: 30-DAY ABANDON RATE ${summary.lines.measuredPct}%`
                   : `HELD TO ${summary.lines.count} LINE${summary.lines.count === 1 ? '' : 'S'} BY THE 3% ABANDON RULE`
@@ -5075,6 +5104,15 @@ function DialerPageInner() {
     // has already left. Getting this wrong sends a predictive campaign down the
     // single-line path and starts an auto-chain that nothing stops.
     if (dialerModeRef.current === 'predictive') {
+      // ── NOT WITHOUT THE TWO DETAILS ─────────────────────────────────────
+      // The mode switch already asks; this catches a campaign that was on
+      // predictive before the rule, or details cleared since. /api/dialer/arm
+      // refuses as well, so this is the courtesy, not the lock.
+      const allowed = await checkPredictiveAllowed(selectedCampaign)
+      if (!allowed.ready) {
+        openPredictiveGate(selectedCampaign, allowed.ownerIsYou)
+        return
+      }
       // ── ARM THE REF, NOT JUST THE STATE ─────────────────────────────────
       // predictive_armed is what the server gates fan-out on, and it was read
       // from React state through the heartbeat's interval closure. That state
@@ -5558,6 +5596,72 @@ function DialerPageInner() {
     return true
   }
 
+  /**
+   * May this campaign run predictive? It may once its OWNER has given the
+   * business name and callback number (lib/sellerIdentity). An unreadable
+   * answer counts as no: the popup then costs one click, where a wrong yes
+   * starts an engine the server will refuse.
+   */
+  const checkPredictiveAllowed = async (campaignId: string): Promise<{ ready: boolean; ownerIsYou: boolean }> => {
+    try {
+      const d = await fetch(`/api/account/seller-identity?campaignId=${encodeURIComponent(campaignId)}`)
+        .then(r => r.json())
+      if (d?.success && d.campaign) return { ready: !!d.campaign.ready, ownerIsYou: !!d.campaign.ownerIsYou }
+    } catch {
+      // falls through to "not ready"
+    }
+    return { ready: false, ownerIsYou: true }
+  }
+
+  /**
+   * The popup, with "use progressive" wired to what THIS viewer may do: pick
+   * it for their own session where the owner lets agents choose, or change
+   * their own campaign. An agent on a campaign fixed to predictive by someone
+   * else gets no switch, only the explanation.
+   */
+  const openPredictiveGate = (
+    campaignId: string,
+    ownerIsYou: boolean,
+    onReady?: () => void,
+    opts?: { keepOpenOne?: boolean },
+  ) => {
+    const camp = campaigns.find(c => c.id === campaignId)
+    const viewerOwns = !!camp && !camp.teamName
+    const agentPicks = !!camp?.agent_picks_mode
+    let onProgressive: (() => void) | undefined
+    if (agentPicks || isAllActive) {
+      onProgressive = () => {
+        setAllActiveOverrideMode('progressive')
+        setAmdActivity(prev => ['MODE SET TO PROGRESSIVE (THIS SESSION)', ...prev].slice(0, 5))
+      }
+    } else if (viewerOwns) {
+      onProgressive = () => {
+        void persistModeToCampaign(campaignId, 'progressive').then(ok => {
+          if (ok) setAmdActivity(prev => ['MODE SET TO PROGRESSIVE', ...prev].slice(0, 5))
+        })
+      }
+    }
+    // keepOpenOne: a popup already showing belongs to whatever opened it,
+    // with its own continuation, and is not replaced by the arrival check.
+    setPredictiveGate(prev => (opts?.keepOpenOne && prev) ? prev : { ownerIsYou, onReady, onProgressive })
+  }
+
+  // ── ARRIVING ON PREDICTIVE WITHOUT THEM ────────────────────────────────
+  // A campaign already set to predictive, or one an owner switched elsewhere,
+  // asks the moment the dialer lands on it rather than at START. Once the
+  // details exist this finds them and says nothing, so it asks only until
+  // they are given.
+  useEffect(() => {
+    if (!isPredictive || !isSpecificCampaign || !selectedCampaign) return
+    let cancelled = false
+    void checkPredictiveAllowed(selectedCampaign).then(allowed => {
+      if (cancelled || allowed.ready) return
+      openPredictiveGate(selectedCampaign, allowed.ownerIsYou, undefined, { keepOpenOne: true })
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPredictive, isSpecificCampaign, selectedCampaign])
+
   const handleModeChange = async (newMode: DialerMode) => {
     if (newMode === dialerMode) {
       setModeDropdownOpen(false)
@@ -5585,6 +5689,12 @@ function DialerPageInner() {
 
         if (activeCampaigns.length === 1) {
           const only = activeCampaigns[0]
+          const allowed = await checkPredictiveAllowed(only.id)
+          if (!allowed.ready) {
+            setModeDropdownOpen(false)
+            openPredictiveGate(only.id, allowed.ownerIsYou, () => { void handleModeChange('predictive') })
+            return
+          }
           setModeSaving(true)
           try {
             const ok = await persistModeToCampaign(only.id, 'predictive')
@@ -5652,7 +5762,7 @@ function DialerPageInner() {
     // whether the click registered.
     // A team campaign carries the team it came from; a personal one does not.
     // That is the marker for "is this mine to change".
-    const viewerOwnsCampaign = !(currentCampaign as any).teamName
+    const viewerOwnsCampaign = !currentCampaign.teamName
     if (agentMayPickMode || (!viewerOwnsCampaign && !agentMayPickMode)) {
       if (!agentMayPickMode) {
         setModeDropdownOpen(false)
@@ -5662,6 +5772,17 @@ function DialerPageInner() {
         ].slice(0, 5))
         return
       }
+      if (newMode === 'predictive') {
+        const allowed = await checkPredictiveAllowed(currentCampaign.id)
+        if (!allowed.ready) {
+          setModeDropdownOpen(false)
+          openPredictiveGate(currentCampaign.id, allowed.ownerIsYou, () => {
+            setAllActiveOverrideMode('predictive')
+            setAmdActivity(prev => ['MODE SET TO PREDICTIVE (THIS SESSION)', ...prev].slice(0, 5))
+          })
+          return
+        }
+      }
       setAllActiveOverrideMode(newMode)
       setModeDropdownOpen(false)
       setAmdActivity(prev => [
@@ -5669,6 +5790,20 @@ function DialerPageInner() {
         ...prev,
       ].slice(0, 5))
       return
+    }
+
+    if (newMode === 'predictive') {
+      const allowed = await checkPredictiveAllowed(currentCampaign.id)
+      if (!allowed.ready) {
+        setModeDropdownOpen(false)
+        const id = currentCampaign.id
+        openPredictiveGate(id, allowed.ownerIsYou, () => {
+          void persistModeToCampaign(id, 'predictive').then(ok => {
+            if (ok) setAmdActivity(prev => ['MODE SET TO PREDICTIVE', ...prev].slice(0, 5))
+          })
+        })
+        return
+      }
     }
 
     setModeSaving(true)
@@ -6879,6 +7014,20 @@ function DialerPageInner() {
       overflow: 'hidden', minHeight: 0, position: 'relative',
       fontFamily: FUTURA, color: terminalText,
     }}>
+      <SellerIdentityDialog
+        open={!!predictiveGate}
+        ownerIsYou={predictiveGate?.ownerIsYou ?? true}
+        onSaved={() => {
+          const g = predictiveGate
+          setPredictiveGate(null)
+          setAmdActivity(prev => ['PREDICTIVE UNLOCKED', ...prev].slice(0, 5))
+          g?.onReady?.()
+        }}
+        onUseProgressive={predictiveGate?.onProgressive
+          ? () => { const g = predictiveGate; setPredictiveGate(null); g?.onProgressive?.() }
+          : undefined}
+        onClose={() => setPredictiveGate(null)}
+      />
       <style>{`
         .dialer-root { height: 100vh; height: 100dvh; }
         .dialer-status-bar { display: flex; align-items: center; justify-content: space-between; }
@@ -7311,7 +7460,7 @@ function DialerPageInner() {
                 {linesPref ? (
                   <div className="lines-selector" style={{ padding: '2px 8px', opacity: linesPrefSaving ? 0.5 : 1 }}>
                     <select
-                      value={linesPref.preferred_lines ?? linesPref.campaign_default}
+                      value={linesPref.effective_lines}
                       disabled={linesPrefSaving}
                       onChange={e => handleLinesChange(parseInt(e.target.value))}
                     >

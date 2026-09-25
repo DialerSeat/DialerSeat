@@ -163,12 +163,13 @@ export default function Page() {
               reached, the more lines it can carry.
             </p>
             <p>
-              A second line also needs the campaign&apos;s seller name and
-              callback number, because the recorded notice below can&apos;t
-              be played without them. Until both are set, predictive runs one
-              line. Two lines per agent is the most any campaign runs today.
-              When the dialer runs fewer lines than you asked for, it says
-              which rule is holding it, so nobody is surprised.
+              Predictive also needs your business name and callback number,
+              entered once in Settings (the dialer asks the first time you
+              pick predictive), because the recorded notice below can&apos;t
+              be played without them. Until both are set, predictive
+              doesn&apos;t run. Agents pick 2 or 3 lines. When the dialer runs
+              fewer lines than you asked for, it says which rule is holding
+              it, so nobody is surprised.
             </p>
 
             <h3>5. AMD on progressive and predictive</h3>
@@ -213,8 +214,9 @@ export default function Page() {
               Ours names your business, says it&apos;s a telemarketing call,
               gives your callback number, and offers press 9 to be added to
               your do-not-call list. Pressing 9 adds the number and ends the
-              call. The notice is built from the seller name and callback
-              number on the campaign, with no generic fallback.
+              call. The notice is built from the business name and callback
+              number in your Settings (the team owner&apos;s, on a team
+              campaign), with no generic fallback.
             </p>
 
             <h3>8. STIR/SHAKEN attestation</h3>

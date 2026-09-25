@@ -4,6 +4,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
 import { ensureSeat, releaseSeatIfIdle } from '@/lib/predictive/seat'
+import { sellerIdentityForCampaigns, SELLER_INFO_REQUIRED } from '@/lib/sellerIdentity'
 
 const supabase = getServiceClient('dialer/arm')
 
@@ -66,6 +67,38 @@ export async function POST(req: Request) {
 
     if (!userRow) {
       return NextResponse.json({ ok: false, error: 'user not found' }, { status: 404 })
+    }
+
+    // ── NO START WITHOUT THE TWO DETAILS ──────────────────────────────────
+    // Predictive's recorded message names the campaign owner's business and a
+    // callback number (lib/sellerIdentity). Without them it does not start:
+    // the dialer shows the popup that asks for them, or tells an agent the
+    // owner has to add them. Stopping is never gated.
+    if (armed) {
+      let campaignId: string | null =
+        typeof body?.campaign_id === 'string' && !body.campaign_id.includes(':') ? body.campaign_id : null
+      if (!campaignId) {
+        const { data: sess } = await supabase
+          .from('agent_sessions')
+          .select('campaign_id')
+          .eq('user_id', userRow.id)
+          .maybeSingle()
+        campaignId = (sess?.campaign_id as string | null) ?? null
+      }
+      if (campaignId) {
+        const seller = (await sellerIdentityForCampaigns([campaignId])).get(campaignId)
+        if (!seller?.ready) {
+          return NextResponse.json(
+            {
+              ok: false,
+              code: SELLER_INFO_REQUIRED,
+              owner_is_you: seller ? seller.ownerClerkId === clerkId : true,
+              error: 'Predictive needs a business name and callback number first.',
+            },
+            { status: 428 }
+          )
+        }
+      }
     }
 
     // Scoped to this user's own session row. The heartbeat owns creating it, so

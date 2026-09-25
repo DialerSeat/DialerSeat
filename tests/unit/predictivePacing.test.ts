@@ -6,9 +6,13 @@ import {
   planRound,
   breakerTripped,
   classifyLeg,
+  repeatOwed,
   HUMAN_RATE_PRIOR,
   PROJECTION_HORIZON_HUMANS,
+  PREDICTIVE_MIN_LINES,
+  PREDICTIVE_MAX_LINES,
 } from '@/lib/predictive/pacing'
+import { backToBackAttempts } from '@/lib/dialerConstants'
 
 describe('surplusAbandonRatio', () => {
   it('is zero for one line, which cannot abandon anyone', () => {
@@ -153,5 +157,51 @@ describe('classifyLeg', () => {
     expect(classifyLeg({ answered_at: null, amd_result: null, hangup_cause: 'timeout' })).toBe('no_answer')
     expect(classifyLeg({ answered_at: null, amd_result: null, hangup_cause: 'user_busy' })).toBe('no_answer')
     expect(classifyLeg({ answered_at: null, amd_result: null, hangup_cause: 'not_found' })).toBe('unreachable')
+  })
+})
+
+describe('repeatOwed: 1x/2x/3x in predictive', () => {
+  // attemptsSoFar counts the dial that just ended.
+  it('1x dials each lead once, whatever happened', () => {
+    const max = backToBackAttempts(1)
+    for (const o of ['person', 'voicemail', 'no_answer', 'unreachable'] as const) {
+      expect(repeatOwed(o, 1, max)).toBe(false)
+    }
+  })
+
+  it('2x gives voicemail and no answer exactly one more dial', () => {
+    const max = backToBackAttempts(2)
+    expect(repeatOwed('no_answer', 1, max)).toBe(true)
+    expect(repeatOwed('voicemail', 1, max)).toBe(true)
+    expect(repeatOwed('no_answer', 2, max)).toBe(false)
+    expect(repeatOwed('voicemail', 2, max)).toBe(false)
+  })
+
+  it('3x gives up to two more dials', () => {
+    const max = backToBackAttempts(3)
+    expect(repeatOwed('no_answer', 1, max)).toBe(true)
+    expect(repeatOwed('no_answer', 2, max)).toBe(true)
+    expect(repeatOwed('no_answer', 3, max)).toBe(false)
+  })
+
+  it('never redials a person, even with repeats left', () => {
+    expect(repeatOwed('person', 1, backToBackAttempts(3))).toBe(false)
+  })
+
+  it('never redials a number that cannot be reached', () => {
+    expect(repeatOwed('unreachable', 1, backToBackAttempts(3))).toBe(false)
+  })
+
+  it('reads a stored count outside 1-3 as the nearest of them', () => {
+    expect(backToBackAttempts(null)).toBe(1)
+    expect(backToBackAttempts(0)).toBe(1)
+    expect(backToBackAttempts(7)).toBe(3)
+  })
+})
+
+describe('predictive line choice', () => {
+  it('is 2 or 3', () => {
+    expect(PREDICTIVE_MIN_LINES).toBe(2)
+    expect(PREDICTIVE_MAX_LINES).toBe(3)
   })
 })

@@ -13,7 +13,8 @@
 //   - no leg we end is ended inside the 9-second rule, and no ringing leg is
 //     ever cut: ringing legs end on their own timeout
 //   - 1x/2x/3x: a lead nobody reached is owed another dial until its repeats
-//     are spent (the same shouldRedial progressive uses)
+//     are spent (repeatOwed in lib/predictive/pacing, which is the same
+//     shouldRedial progressive uses)
 // =============================================================================
 
 import { after } from 'next/server'
@@ -26,10 +27,10 @@ import {
   buildTsrAbandonMessage, ABANDON_OPT_OUT_DIGIT, ABANDON_OPT_OUT_WAIT_MS,
 } from '@/lib/tsrAbandonMessage'
 import { addSuppression } from '@/lib/suppression'
-import { shouldRedial } from '@/lib/redialDecision'
-import { classifyLeg, type LegOutcome } from '@/lib/predictive/pacing'
+import { classifyLeg, repeatOwed, type LegOutcome } from '@/lib/predictive/pacing'
 import { joinSeatRoom, leaveSeatRoom, gatherOptOut } from '@/lib/predictive/telnyx'
 import { isTeamSharedCampaign } from '@/lib/teamOverflow'
+import { sellerIdentityForCampaigns } from '@/lib/sellerIdentity'
 import {
   readSession, sessionHoldingCall, seatIsLive, heartbeatFresh, clerkIdForUser,
   SESSION_COLUMNS, HEARTBEAT_FRESH_MS, type PredictiveSession,
@@ -300,12 +301,14 @@ async function playAbandonMessage(leg: LeadLeg, why: string): Promise<void> {
     .maybeSingle()
   if (!latched) return
 
-  const { data: camp } = leg.campaign_id
-    ? await db.from('campaigns').select('tsr_seller_name, tsr_callback_number').eq('id', leg.campaign_id).maybeSingle()
-    : { data: null }
+  // The campaign OWNER's details, set once in Settings (lib/sellerIdentity):
+  // on a team campaign that is the team owner, whoever dialed.
+  const seller = leg.campaign_id
+    ? (await sellerIdentityForCampaigns([leg.campaign_id])).get(leg.campaign_id)
+    : undefined
   const msg = buildTsrAbandonMessage({
-    name: camp?.tsr_seller_name,
-    callbackNumber: camp?.tsr_callback_number,
+    name: seller?.name,
+    callbackNumber: seller?.callbackNumber,
   })
 
   if (!msg.ok || !msg.text) {
@@ -502,16 +505,9 @@ export async function onPredictiveLegEnded(leg: {
     .maybeSingle()
   if (!batch) return { outcome, repeatOwed: false }
 
-  const repeatOwed =
-    outcome !== 'unreachable' &&
-    shouldRedial({
-      reachedAHuman: outcome === 'person',
-      alreadyQueued: false,
-      attemptsSoFar: batch.attempts,
-      maxAttempts: batch.max_attempts,
-    })
+  const owed = repeatOwed(outcome, batch.attempts, batch.max_attempts)
 
-  if (repeatOwed) {
+  if (owed) {
     await db
       .from('predictive_batch')
       .update({ state: 'waiting', last_outcome: outcome, updated_at: new Date().toISOString() })
@@ -524,5 +520,5 @@ export async function onPredictiveLegEnded(leg: {
       .eq('session_id', leg.dial_group_id)
       .eq('lead_id', leg.lead_id)
   }
-  return { outcome, repeatOwed }
+  return { outcome, repeatOwed: owed }
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { usePredictiveGate } from '@/components/SellerIdentityDialog'
 
 // =============================================================================
 // CREATE TEAM / CREATE CAMPAIGN
@@ -276,6 +277,8 @@ export function CreateCampaignModal({
   const [existingId, setExistingId] = useState('')
   const [name, setName] = useState('')
   const [dialerMode, setDialerMode] = useState('agent_choice')
+  // Predictive waits for the owner's business name and callback number.
+  const { dialog: predictiveGateDialog, requirePredictive } = usePredictiveGate()
   const [accessMode, setAccessMode] = useState('owner_pays')
 
   // No teams, no campaign. Saying so plainly beats a disabled form that gives
@@ -419,7 +422,16 @@ export function CreateCampaignModal({
           compliance posture depends on the mode. */}
       <div style={{ marginBottom: 16 }}>
         <label style={label}>Dialer Mode</label>
-        <select style={field} value={dialerMode} onChange={e => setDialerMode(e.target.value)}>
+        {predictiveGateDialog}
+        <select
+          style={field}
+          value={dialerMode}
+          onChange={e => {
+            const m = e.target.value
+            if (m !== 'predictive') { setDialerMode(m); return }
+            void requirePredictive(() => setDialerMode('predictive'), () => setDialerMode('progressive'))
+          }}
+        >
           <option value="agent_choice">Agent chooses their own mode</option>
           <option value="preview">Force Preview: see the lead, then dial</option>
           <option value="progressive">Force Progressive: one at a time, automatic</option>

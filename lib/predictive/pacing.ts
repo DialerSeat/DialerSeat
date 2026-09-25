@@ -10,6 +10,8 @@
 // 30 days. See docs/PREDICTIVE.md for the derivation.
 // =============================================================================
 
+import { shouldRedial } from '@/lib/redialDecision'
+
 /** Where the projection is held. The law says 3%; the margin is deliberate. */
 export const PREDICTIVE_TARGET_ABANDON_PCT = 2.0
 
@@ -35,6 +37,15 @@ export const HUMAN_RATE_PRIOR_WEIGHT = 50
 
 /** Nothing ever dials more than this many lines for one agent. */
 export const HARD_LINE_CAP = 5
+
+/**
+ * What an agent can choose: 2 or 3 lines (Joshua, 25 Sept 2026: "either 2
+ * lines or 3 lines. not 1"). A choice, not a guarantee: legalLineCount below
+ * still runs fewer when the campaign's own 30 days would otherwise break the
+ * 3% limit, and says so in the dialer.
+ */
+export const PREDICTIVE_MIN_LINES = 2
+export const PREDICTIVE_MAX_LINES = 3
 
 /**
  * Expected abandoned calls per call answered by a person, for ONE agent
@@ -130,7 +141,7 @@ export function legalLineCount(input: LegalLinesInput): LegalLinesResult {
   if (cap > 1 && !input.sellerMessageReady) {
     return {
       lines: 1, projectedPct: project(1), measuredPct, limitedBy: 'no_seller_message',
-      reason: 'no seller name or callback number on this campaign, so a second line would have no abandon message',
+      reason: 'no business name or callback number in Settings, so a second line would have no abandon message',
     }
   }
 
@@ -195,6 +206,26 @@ const ROBOT_RESULTS = new Set(['machine', 'fax_detected'])
 const UNREACHABLE_CAUSES = new Set(['not_found', 'invalid_number_format', 'unallocated_number'])
 
 export type LegOutcome = 'person' | 'voicemail' | 'no_answer' | 'unreachable'
+
+/**
+ * 1x/2x/3x for predictive: is this lead dialed again in the next round?
+ *
+ * The same rule every other mode applies (lib/redialDecision.shouldRedial): a
+ * person ends the sequence, and anything else earns another dial until the
+ * campaign's count is spent. Predictive adds one case the others never meet:
+ * a number that cannot be reached is not redialed at all.
+ *
+ * attemptsSoFar counts the dial that just ended; maxAttempts is the campaign's
+ * 1, 2 or 3 (lib/dialerConstants.backToBackAttempts).
+ */
+export function repeatOwed(outcome: LegOutcome, attemptsSoFar: number, maxAttempts: number): boolean {
+  return outcome !== 'unreachable' && shouldRedial({
+    reachedAHuman: outcome === 'person',
+    alreadyQueued: false,
+    attemptsSoFar,
+    maxAttempts,
+  })
+}
 
 /**
  * The outcome the 1x/2x/3x decision reads. A person ends the sequence;

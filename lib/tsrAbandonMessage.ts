@@ -32,17 +32,18 @@
 // it, they are protected only while the 3% still holds. That is why the line
 // ceiling and the abandon throttle exist ALONGSIDE this, not instead of it.
 //
-// ── WHY IT IS PER CAMPAIGN AND NOT PER PLATFORM ─────────────────────────────
+// ── WHY IT IS PER ACCOUNT AND NOT PER PLATFORM ──────────────────────────────
 // The rule names "the seller on whose behalf the call was placed". DialerSeat
-// is not the seller; its customers are, and a campaign is the thing that
-// belongs to one of them. A platform-wide message would announce the wrong
-// company and satisfy nothing.
+// is not the seller; its customers are. The two details are set once per
+// account in Settings and a campaign uses its OWNER's (lib/sellerIdentity), so
+// a team campaign names the team owner's business, never the agent's. A
+// platform-wide message would announce the wrong company and satisfy nothing.
 //
-// ── WHY A MISSING MESSAGE MUST BLOCK MULTI-LINE, NOT DEGRADE IT ─────────────
-// A campaign with no configured seller name and callback number cannot run
-// above one line. Not "runs with a warning" — one line, where there is no
-// surplus and therefore no abandoned call to excuse. Compliance that depends on
-// somebody noticing a warning is not compliance.
+// ── WHY A MISSING MESSAGE BLOCKS PREDICTIVE, NOT DEGRADES IT ────────────────
+// Without both details predictive does not run at all: the campaign cannot be
+// switched to it, START is refused and the controller will not dial, and the
+// dialer asks for them in a popup (Joshua, 25 Sept 2026). Compliance that
+// depends on somebody noticing a warning is not compliance.
 
 export interface TsrSeller {
   /** The seller's name, spoken aloud. Required by 310.4(b)(4)(iii). */

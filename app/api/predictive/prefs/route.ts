@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { getPlatformConfig } from '@/lib/platformConfig'
+import { PREDICTIVE_MIN_LINES, PREDICTIVE_MAX_LINES } from '@/lib/predictive/pacing'
 
 const supabase = getServiceClient('predictive/prefs')
 
@@ -14,7 +15,7 @@ const supabase = getServiceClient('predictive/prefs')
 //   and the default so the UI can show a properly bounded picker.
 //
 // POST /api/predictive/prefs
-//   Body: { campaign_id: uuid, preferred_lines: 1-5, target_user_id?: uuid }
+//   Body: { campaign_id: uuid, preferred_lines: 2-3, target_user_id?: uuid }
 //   Sets the agent's preference. If target_user_id is provided, the caller
 //   must be the campaign owner (team-manager-on-behalf-of-agent write).
 //
@@ -47,6 +48,20 @@ interface CampaignConfig {
   predictive_lines_per_agent: number
   predictive_lines_min: number
   predictive_lines_max: number
+}
+
+/**
+ * The LINES an agent may pick: 2 or 3 (lib/predictive/pacing). A campaign max
+ * or min left over from before that rule cannot take it below 2; the platform
+ * ceiling, an operator's switch, still can.
+ */
+function lineChoiceBounds(campaign: CampaignConfig, ceiling: number): { min: number; max: number } {
+  const max = Math.min(
+    PREDICTIVE_MAX_LINES,
+    Math.max(PREDICTIVE_MIN_LINES, campaign.predictive_lines_max || PREDICTIVE_MAX_LINES),
+    ceiling,
+  )
+  return { min: Math.min(PREDICTIVE_MIN_LINES, max), max }
 }
 
 async function getCampaignConfig(campaignId: string): Promise<CampaignConfig | null> {
@@ -107,12 +122,8 @@ export async function GET(req: NextRequest) {
     // the absolute bound because the DB CHECK constraint enforces [1, 5] and
     // a value above it would be rejected at write time anyway.
     const ceiling = await effectiveLineCeiling()
-    const campaignMax = Math.min(campaign.predictive_lines_max || 5, ceiling)
-    // Clamped against campaignMax, not just 1: a campaign whose min is 3 under
-    // a ceiling of 2 would otherwise get pushed back up to 3 by the Math.max
-    // below, quietly defeating the ceiling.
-    const campaignMin = Math.min(Math.max(campaign.predictive_lines_min || 1, 1), campaignMax)
-    const campaignDefault = campaign.predictive_lines_per_agent || 3
+    const { min: campaignMin, max: campaignMax } = lineChoiceBounds(campaign, ceiling)
+    const campaignDefault = campaign.predictive_lines_per_agent || PREDICTIVE_MAX_LINES
 
     // Effective lines = pref if set, else campaign default. Always clamped.
     let effective = pref?.preferred_lines ?? campaignDefault
@@ -175,11 +186,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Clamp the requested value ──────────────────────────────────────
-    // Same ceiling logic as the GET — see the note there on why the min is
-    // clamped against the max rather than just against 1.
+    // Same bounds as the GET: 2 or 3, see lineChoiceBounds.
     const ceiling = await effectiveLineCeiling()
-    const campaignMax = Math.min(campaign.predictive_lines_max || 5, ceiling)
-    const campaignMin = Math.min(Math.max(campaign.predictive_lines_min || 1, 1), campaignMax)
+    const { min: campaignMin, max: campaignMax } = lineChoiceBounds(campaign, ceiling)
     const clamped = Math.max(campaignMin, Math.min(requestedLines, campaignMax))
 
     // ── Resolve target user ────────────────────────────────────────────
@@ -234,7 +243,7 @@ export async function POST(req: NextRequest) {
       updated_at: written.updated_at,
       requested_lines: requestedLines,
       clamped: clamped !== requestedLines,
-      campaign_default: campaign.predictive_lines_per_agent || 3,
+      campaign_default: campaign.predictive_lines_per_agent || PREDICTIVE_MAX_LINES,
       campaign_min: campaignMin,
       campaign_max: campaignMax,
       hard_cap: HARD_LINE_CAP,

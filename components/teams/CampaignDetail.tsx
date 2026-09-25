@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { usePredictiveGate } from '@/components/SellerIdentityDialog'
 
 const PANEL = 'var(--teams-panel, #232428)'
 const HAIRLINE = 'var(--teams-border, #1a1b1e)'
@@ -193,6 +194,8 @@ export default function CampaignDetail({
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  // Predictive waits for the owner's business name and callback number.
+  const { dialog: predictiveGateDialog, requirePredictive } = usePredictiveGate()
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -930,6 +933,7 @@ export default function CampaignDetail({
       )}
 
       {isCampaignOwner && (<>
+      {predictiveGateDialog}
       <Section title="How It Dials">
         <div style={{ display: 'grid', gap: 8 }}>
           <div style={{
@@ -940,7 +944,14 @@ export default function CampaignDetail({
             <select
               value={data.dialerMode}
               disabled={busy}
-              onChange={e => patch({ dialer_mode: e.target.value })}
+              onChange={e => {
+                const m = e.target.value
+                if (m !== 'predictive') { void patch({ dialer_mode: m }); return }
+                void requirePredictive(
+                  () => void patch({ dialer_mode: 'predictive' }),
+                  () => void patch({ dialer_mode: 'progressive' }),
+                )
+              }}
               style={{
                 background: 'var(--teams-field, #0d0f13)', color: TEXT, fontSize: 12,
                 border: `1px solid ${HAIRLINE}`, borderRadius: 3,

@@ -35,9 +35,13 @@ every line of the current one has ended and the agent is back on the queue.
 
 A round is filled with leads **still owed a repeat** first (the campaign's
 1x/2x/3x, `backToBackAttempts`), then fresh leads from the top of the queue.
-The redial rule is progressive's own (`lib/redialDecision`): only no-answer and
-voicemail earn a redial; a person picking up ends the sequence. Lifetime
-attempts (nine) still apply through the same `bumpLeadAttemptAndRelease`.
+The redial rule is progressive's own (`lib/redialDecision`), named for
+predictive as `repeatOwed` in lib/predictive/pacing and tested at 1x, 2x and
+3x: only no-answer and voicemail earn a redial; a person picking up ends the
+sequence; a number that cannot be reached is never redialed. The REDIAL
+control in the dialer writes the campaign's count, which is what the engine
+reads for every lead of that campaign. Lifetime attempts (nine) still apply
+through the same `bumpLeadAttemptAndRelease`.
 
 State lives in `predictive_batch` (one row per lead in play for a session).
 
@@ -80,11 +84,35 @@ campaign has anyone answered in 30 days. The heartbeat's legacy
 `should_yield` still reads `campaign_abandon_rate_30d`, a view over the empty
 `pacing_metrics`, so it never fires; the line count above is the only rule.
 
-A second line also needs the campaign's seller name and callback number,
-because without the message the safe harbor is gone entirely.
+The cap is the agent's LINES choice, **2 or 3** (`PREDICTIVE_MIN_LINES` /
+`PREDICTIVE_MAX_LINES`; Joshua, 25 Sept 2026: "either 2 lines or 3 lines. not
+1"), lowered only by `platform_config.predictive_line_ceiling` (3), an
+operator's switch. A leftover LINES 1 or campaign max below 2 reads as 2. The
+law above can still run fewer than the choice, and the dialer says which rule
+is holding it.
 
-The cap is min(5, `platform_config.predictive_line_ceiling`, the campaign's
-max, the agent's LINES setting).
+## The two details: predictive is gated on them
+
+The recorded message names the seller and a callback number. They are set
+once per account (`users.tsr_seller_name`, `users.tsr_callback_number`, in
+Settings) and a campaign uses its **owner's** (lib/sellerIdentity), so a team
+campaign names the team owner. `campaigns.tsr_*` are no longer read.
+
+Without both, predictive does not run at all:
+
+- `/api/campaigns/update` and `/create` refuse `dialer_mode: 'predictive'`
+  with 428 `SELLER_INFO_REQUIRED`;
+- `/api/dialer/arm` refuses START for that campaign;
+- the controller idles with the reason, even for a campaign already on
+  predictive.
+
+Where predictive is picked (the dialer's mode menu, the campaign editor and
+create form, the team campaign page and create dialog) the popup
+(components/SellerIdentityDialog) asks for them first: save and continue with
+predictive, or use progressive instead. The dialer also asks on arriving at a
+campaign already on predictive, and at START. An agent on someone else's
+campaign is told the owner has to add them, and offered progressive only where
+the owner lets agents pick their mode.
 
 ## When a lead answers
 

@@ -154,6 +154,13 @@ export default function SettingsPage() {
   const [brandOptions, setBrandOptions] = useState<BrandOptions | null>(null)
   const [switchingBrand, setSwitchingBrand] = useState(false)
 
+  // ── predictive's two details (lib/sellerIdentity) ──
+  const [sellerName, setSellerName] = useState('')
+  const [sellerNumber, setSellerNumber] = useState('')
+  const [sellerReady, setSellerReady] = useState<boolean | null>(null)
+  const [sellerSaving, setSellerSaving] = useState(false)
+  const [sellerNote, setSellerNote] = useState<{ ok: boolean; text: string } | null>(null)
+
   // ── delete account (feedback first, then confirm) ──
   const [showDelete, setShowDelete] = useState(false)
   const [deleteStep, setDeleteStep] = useState<'feedback' | 'confirm' | 'done'>('feedback')
@@ -163,6 +170,46 @@ export default function SettingsPage() {
   const [deleteTypedConfirm, setDeleteTypedConfirm] = useState('')
   const [deleteAccError, setDeleteAccError] = useState<string | null>(null)
   const [deleteAccSubmitting, setDeleteAccSubmitting] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/account/seller-identity')
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled || !d?.success) return
+        setSellerName(d.name || '')
+        setSellerNumber(d.callbackNumber || '')
+        setSellerReady(!!d.ready)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  const saveSellerIdentity = async () => {
+    if (sellerSaving) return
+    setSellerSaving(true)
+    setSellerNote(null)
+    try {
+      const res = await fetch('/api/account/seller-identity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: sellerName, callbackNumber: sellerNumber }),
+      })
+      const d = await res.json().catch(() => null)
+      if (!res.ok || !d?.success) {
+        setSellerNote({ ok: false, text: d?.error || 'Could not save. Try again.' })
+        return
+      }
+      setSellerName(d.name || '')
+      setSellerNumber(d.callbackNumber || '')
+      setSellerReady(!!d.ready)
+      setSellerNote({ ok: true, text: d.ready ? 'Saved.' : 'Cleared.' })
+    } catch {
+      setSellerNote({ ok: false, text: 'Could not save. Check your connection and try again.' })
+    } finally {
+      setSellerSaving(false)
+    }
+  }
 
   const loadStatus = async () => {
     try {
@@ -689,6 +736,69 @@ export default function SettingsPage() {
             </>
           )}
         </div>
+
+        {/* PREDICTIVE DIALING — the two details its recorded message needs */}
+        {!pausedOnly && (
+          <div style={sectionStyle}>
+            <div style={sectionHeaderStyle}>▸ PREDICTIVE DIALING</div>
+            <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
+              When two people answer at once and no agent is free, predictive plays a
+              short recorded message with your business name and a number they can call
+              back, as the law requires. Predictive stays locked until both are filled
+              in. Team campaigns use the team owner&apos;s.
+            </div>
+
+            <label htmlFor="settings-seller-name" style={{ ...labelStyle, display: 'block', marginBottom: 6 }}>
+              BUSINESS NAME
+            </label>
+            <input
+              id="settings-seller-name"
+              type="text"
+              value={sellerName}
+              maxLength={80}
+              placeholder="Acme Insurance"
+              autoComplete="organization"
+              onChange={e => { setSellerName(e.target.value); setSellerNote(null) }}
+              style={{ ...brandSelectStyle(false), cursor: 'text', marginBottom: 12, boxSizing: 'border-box' }}
+            />
+
+            <label htmlFor="settings-seller-number" style={{ ...labelStyle, display: 'block', marginBottom: 6 }}>
+              CALLBACK NUMBER
+            </label>
+            <input
+              id="settings-seller-number"
+              type="tel"
+              value={sellerNumber}
+              maxLength={24}
+              placeholder="(800) 555-1234"
+              autoComplete="tel"
+              onChange={e => { setSellerNumber(e.target.value); setSellerNote(null) }}
+              style={{ ...brandSelectStyle(false), cursor: 'text', marginBottom: 12, boxSizing: 'border-box' }}
+            />
+
+            <div style={{ ...rowStyle, borderBottom: 'none', paddingTop: 0 }}>
+              <span style={{ ...labelStyle }}>PREDICTIVE</span>
+              <span style={{ ...valueStyle, color: sellerReady ? '#32ff7e' : '#ffaa3e' }}>
+                {sellerReady === null ? '-' : sellerReady ? 'UNLOCKED' : 'LOCKED'}
+              </span>
+            </div>
+
+            {sellerNote && (
+              <div style={{ fontSize: 11, letterSpacing: 1, marginBottom: 8, color: sellerNote.ok ? '#32ff7e' : '#ff8888' }}>
+                {sellerNote.text}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => void saveSellerIdentity()}
+              disabled={sellerSaving}
+              style={{ ...editorButtonStyle, cursor: sellerSaving ? 'wait' : 'pointer', opacity: sellerSaving ? 0.7 : 1 }}
+            >
+              {sellerSaving ? 'SAVING…' : 'SAVE'}
+            </button>
+          </div>
+        )}
 
         {/* SUPPORT */}
         <div style={sectionStyle}>
