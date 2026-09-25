@@ -6,24 +6,26 @@ import {
   markTelnyxEventProcessed,
   markTelnyxEventFailed,
 } from '@/lib/telnyxIdempotency'
-import { recordAmdResult, markCallAbandoned } from '@/lib/dialerPacing'
+import { recordAmdResult } from '@/lib/dialerPacing'
 import { logCallEvent } from '@/lib/callEvents'
 import { checkDailySpend } from '@/lib/dailySpendAlarm'
-import { buildTsrAbandonMessage } from '@/lib/tsrAbandonMessage'
 import { sampleBalanceAfterCall } from '@/lib/telnyxBalance'
 import {
   hangupCallControlId, bridgeCallControlIds, buildClientState, parseClientState,
 } from '@/lib/placeOutboundCall'
-import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
-import { abortSiblingFanoutLines } from '@/lib/predictiveController'
+// Predictive (v2). Every predictive lead leg and the agent's seat are handled
+// in lib/predictive; see docs/PREDICTIVE.md.
+import { SEAT_SOURCE } from '@/lib/predictive/telnyx'
+import { onSeatAnswered, onSeatHangup, releaseSeatIfIdle } from '@/lib/predictive/seat'
+import {
+  readLeadLeg, routeAnsweredLead, releaseMachineFromSeat, onPersonVerdict,
+  onPredictiveLegEnded, onGatherEnded, releaseStrandedLead,
+} from '@/lib/predictive/leads'
 import { startTelnyxRecording } from '@/lib/telnyxRecording'
 import { remainingHoldMs, HOLD_SPREAD_SECONDS, AGENT_LEG_MIN_SECONDS, billingElapsedMs } from '@/lib/complianceHold'
 import { lifetimeAttemptCap } from '@/lib/dialerConstants'
 import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
-import {
-  agentSipUriForUserId, agentSipUriForClerkId, resolveCredentialConnectionId,
-} from '@/lib/agentSipCredentials'
-import { ensureSipUriCallingEnabled, isSipUriRejection } from '@/lib/telnyxSipUriCalling'
+import { agentSipUriForClerkId } from '@/lib/agentSipCredentials'
 import { getPlatformConfig } from '@/lib/platformConfig'
 import { recordDestinationRate } from '@/lib/destinationRates'
 import { refundUsage } from '@/lib/numberPool'
@@ -101,6 +103,8 @@ interface TelnyxWebhookPayload {
       to?: string
       direction?: string        // 'incoming' | 'outgoing'
       result?: string          // call.machine.detection.ended
+      digits?: string          // call.gather.ended
+      status?: string          // call.gather.ended: valid | invalid | call_hangup | cancelled | cancelled_amd
       hangup_cause?: string    // call.hangup
       hangup_source?: string   // call.hangup
       recording_urls?: { mp3?: string; wav?: string } // call.recording.saved
@@ -168,7 +172,7 @@ export async function POST(req: Request) {
         if (payload.direction === 'incoming') {
           await handleInboundCallAnswered(callControlId)
         } else {
-          await handleCallAnswered(callControlId)
+          await handleCallAnswered(callControlId, payload.client_state)
         }
         break
 
@@ -197,7 +201,21 @@ export async function POST(req: Request) {
         break
 
       case 'call.hangup':
-        await handleHangup(callControlId, payload.hangup_cause, payload.hangup_source)
+        await handleHangup(callControlId, payload.hangup_cause, payload.hangup_source, payload.client_state)
+        break
+
+      // ── PREDICTIVE: THE ABANDON MESSAGE FINISHED ──────────────────────────
+      // The only gather this platform issues. Ends the leg (press 9 puts the
+      // number on the do-not-call list first), which is why the message is
+      // never cut off by a hangup sent alongside it. See lib/predictive/leads.
+      case 'call.gather.ended':
+        await onGatherEnded(callControlId, payload.digits, payload.status)
+        break
+
+      // The gather's own chatter. Its outcome arrives in call.gather.ended.
+      case 'call.dtmf.received':
+      case 'call.speak.started':
+      case 'call.speak.ended':
         break
 
       case 'call.cost':
@@ -565,12 +583,22 @@ async function placeAgentLegForAnsweredLead(
   }
 }
 
-async function handleCallAnswered(callControlId: string): Promise<void> {
+async function handleCallAnswered(callControlId: string, clientState?: string): Promise<void> {
   void logCallEvent({
     event_type: 'answered',
     call_control_id: callControlId,
     source: 'webhook',
   })
+
+  // ── PREDICTIVE: THE AGENT'S SEAT ANSWERED ─────────────────────────────
+  // The one leg this platform places to a browser that is not attached to a
+  // lead. Recognised by the tag it was placed with, before anything below can
+  // mistake it for a lead leg. Opens the seat's room (lib/predictive/seat).
+  const owner = parseClientState(clientState)
+  if (owner?.s === SEAT_SOURCE) {
+    await onSeatAnswered(callControlId, owner.u)
+    return
+  }
 
   // ── RECORD THE ACTUAL ANSWER ─────────────────────────────────────────────
   // This is the ONLY moment we learn a human picked up the phone, and until
@@ -696,44 +724,6 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
       .eq('call_control_id', callControlId)
       .maybeSingle()
 
-    // ── A PREDICTIVE SURPLUS LINE ANSWERED WITH NOBODY BEHIND IT ──────────
-    // THE case 16 CFR 310.4(b)(4)(iii) exists for, and the one that gates
-    // multi-line predictive.
-    //
-    // Fan-out places one agent leg PER LINE, all INVITEing the same browser.
-    // The browser can answer exactly one. When two lines answer, the second
-    // line's agent leg is never picked up — Telnyx still bridges it via
-    // link_to, so the prospect is joined to a leg that is merely ringing. That
-    // is silence, and an abandoned call.
-    //
-    // Detected by asking whether the agent leg has an `answered` event of its
-    // own. It is not a timer: if the browser had taken the leg, the event
-    // exists by the time the LEAD's answer webhook is being processed, because
-    // the agent leg has been ringing since before the lead's phone did.
-    //
-    // Measured today at a ceiling of one line this never fires — 137 of 137
-    // answered fan-out legs had their agent leg answered. It exists so the
-    // ceiling CAN be raised.
-    if (row && row.dial_source === 'controller_fanout' && row.agent_call_control_id) {
-      const { data: agentAnswered } = await supabaseAdmin
-        .from('call_events')
-        .select('id')
-        .eq('call_control_id', row.agent_call_control_id)
-        .eq('event_type', 'answered')
-        .limit(1)
-
-      if (!agentAnswered || agentAnswered.length === 0) {
-        console.warn(
-          `[calls/events] fan-out line ${callControlId} answered but its agent leg ` +
-          `${row.agent_call_control_id} was never picked up — playing the TSR ` +
-          `no-agent message rather than bridging into a ringing leg`
-        )
-        await speakTsrAbandonMessage(callControlId, row.campaign_id)
-        await hangupCallControlId(callControlId).catch(() => {})
-        return
-      }
-    }
-
     // ── THE LEAD JUST ANSWERED AND HAS NO AGENT LEG YET ────────────────────
     // Only possible with dial_agent_on_answer on, because every other path
     // dials both legs together. This is the moment the agent is summoned —
@@ -803,106 +793,20 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
       }
     }
 
-    if (row?.dial_source === 'controller_fanout' && row.dial_group_id && !row.agent_call_control_id) {
-      const { data: session } = await supabaseAdmin
-        .from('agent_sessions')
-        .select('id, user_id, state, current_call_id, last_heartbeat')
-        .eq('id', row.dial_group_id)
-        .maybeSingle()
-
-      const beatFresh = session
-        ? Date.now() - new Date(session.last_heartbeat).getTime() <= 15_000
-        : false
-
-      // ── EVERY WAY THIS CAN DECLINE, ON THE RECORD ─────────────────────────
-      // This path had five guards and every one of them exited silently. A
-      // prospect answered, no agent was ever attached, and nothing anywhere
-      // said which condition refused — the calls row showed agent_leg false
-      // and that was the entire story available.
-      //
-      // One row per fan-out answer. That is a handful an hour, and it is the
-      // difference between knowing and guessing.
-      await logCallEvent({
-        event_type: 'fanout_placement_failed',
-        call_control_id: callControlId,
-        source: 'webhook',
-        status: session && beatFresh ? 'pickup_bridge_attempt' : 'pickup_bridge_declined',
-        detail: {
-          reason: !session
-            ? 'no agent_sessions row for this dial_group_id'
-            : !beatFresh
-              ? 'agent heartbeat older than 15s'
-              : 'proceeding to claim',
-          session_found: !!session,
-          beat_fresh: beatFresh,
-          session_state: session?.state ?? null,
-          session_current_call: session?.current_call_id ?? null,
-          this_call_row: row.id,
-        },
-      })
-
-      // ── NOBODY IS COMING: SAY WHO CALLED ────────────────────────────
-      // No agent session, or a heartbeat older than 15s, means this answered
-      // line has no representative and will not get one. Until now it heard
-      // silence and died, which is an abandoned call under 310.4(b)(1)(iv).
-      //
-      // 310.4(b)(4)(iii) turns that same call into a compliant one, and it is
-      // the clause that lets predictive run above a single line at all.
-      if (!session || !beatFresh) {
-        await speakTsrAbandonMessage(callControlId, row.campaign_id)
-        await hangupCallControlId(callControlId).catch(() => {})
-      }
-
-      if (session && beatFresh) {
-        // Same atomic claim the verdict path uses: only one answered line can
-        // take a given agent, so a second simultaneous pickup loses the race
-        // and falls through to overflow routing on its own verdict.
-        const claim = await supabaseAdmin
-          .from('agent_sessions')
-          .update({ current_call_id: row.id, state: 'on_call', updated_at: new Date().toISOString() })
-          .eq('id', session.id)
-          .or(`current_call_id.is.null,current_call_id.eq.${row.id}`)
-          .select('id')
-          .maybeSingle()
-
-        if (!claim.data) {
-          // Lost the claim — another answered line already took this agent, or
-          // the session was pinned to a call that never cleared. Silent until
-          // now, and indistinguishable from the bridge simply not running.
-          await logCallEvent({
-            event_type: 'fanout_placement_failed',
-            call_control_id: callControlId,
-            source: 'webhook',
-            status: 'pickup_claim_lost',
-            detail: {
-              reason: 'agent already pinned to another call',
-              session_current_call: session.current_call_id,
-              this_call_row: row.id,
-            },
-          })
-
-          // The classic predictive over-dial: two lines answered, one agent.
-          // THIS is the call 310.4(b)(4)(iii) exists for — the person said
-          // hello and there is genuinely nobody to hand them to.
-          await speakTsrAbandonMessage(callControlId, row.campaign_id)
-          await hangupCallControlId(callControlId).catch(() => {})
-        }
-
-        if (claim.data) {
-          const dialed = await dialAndBridgeAgentForFanout(callControlId, session.user_id)
-          if (!dialed) {
-            // Could not reach the agent — give the session back rather than
-            // pinning it to a call nobody is on.
-            await supabaseAdmin
-              .from('agent_sessions')
-              .update({ current_call_id: null, state: 'ready' })
-              .eq('id', session.id)
-
-            // And the prospect is still on the line with nobody coming.
-            await speakTsrAbandonMessage(callControlId, row.campaign_id)
-            await hangupCallControlId(callControlId).catch(() => {})
-          }
-        }
+    // ── PREDICTIVE: CONNECT THE PERSON TO WHOEVER IS FREE ─────────────────
+    // A predictive line is placed with nobody on it. The agent is already on
+    // the line, in their seat's room, so connecting is a join rather than a
+    // dial: the agent's own seat, else a teammate's, else nobody, in which
+    // case the detector gets its moment and then the person hears the abandon
+    // message. Detection carries on exactly as in progressive. See
+    // lib/predictive/leads.routeAnsweredLead.
+    if (row?.dial_source === 'controller_fanout') {
+      const leg = await readLeadLeg({ callControlId })
+      if (leg) {
+        const how = await routeAnsweredLead(leg)
+        // Campaigns with detection off record from the connection, as every
+        // agent-attended call does; the rest wait for a person verdict.
+        if (how !== 'surplus') await startRecordingIfOwedAtBridge(callControlId, leg.id)
       }
     }
   } catch (err) {
@@ -994,78 +898,6 @@ async function callControlAction(
 const INBOUND_MESSAGE =
   'Thank you for calling. This number does not accept incoming calls. ' +
   'Please call back the number that contacted you, or visit dialerseat dot com for support. Goodbye.'
-
-/**
- * No agent could be attached to an answered predictive line. Say who called.
- *
- * 16 CFR 310.4(b)(4)(iii): whenever a representative is not available within
- * two seconds of the person's completed greeting, "promptly play a recorded
- * message that states the name and telephone number of the seller on whose
- * behalf the call was placed."
- *
- * THIS IS WHAT LETS PREDICTIVE RUN ABOVE ONE LINE. Without it every surplus
- * line that answers into silence is an ABANDONED call against the 3% ceiling,
- * which is why the line ceiling was 1 — and one line is progressive with extra
- * steps. With it, the call is compliant and is not counted.
- *
- * Returns true only if the message was actually queued. A campaign with no
- * seller name or callback number gets NOTHING spoken and is logged loudly:
- * lib/predictiveController.ts refuses to give such a campaign a second line in
- * the first place, so reaching here with an unbuildable message means the
- * config was cleared mid-run.
- */
-async function speakTsrAbandonMessage(
-  callControlId: string,
-  campaignId: string | null | undefined
-): Promise<boolean> {
-  try {
-    if (!campaignId) return false
-    const { data: camp } = await supabaseAdmin
-      .from('campaigns')
-      .select('tsr_seller_name, tsr_callback_number')
-      .eq('id', campaignId)
-      .maybeSingle()
-
-    const msg = buildTsrAbandonMessage({
-      name: camp?.tsr_seller_name,
-      callbackNumber: camp?.tsr_callback_number,
-    })
-
-    if (!msg.ok || !msg.text) {
-      console.error(
-        `[calls/events] TSR ABANDON MESSAGE NOT PLAYED for ${callControlId}: ${msg.reason}. ` +
-        `This call is an abandoned call under 310.4(b)(1)(iv).`
-      )
-      void logCallEvent({
-        event_type: 'tsr_abandon_message',
-        call_control_id: callControlId,
-        source: 'webhook',
-        status: 'not_configured',
-        detail: { campaign_id: campaignId ?? null, reason: msg.reason ?? null },
-      })
-      return false
-    }
-
-    // Queued first so it begins while anything else is still in flight. Telnyx
-    // runs commands on a call in order, so the hangup below waits for speak.
-    const spoke = await callControlAction(callControlId, 'speak', {
-      payload: msg.text,
-      voice: 'female',
-    })
-
-    void logCallEvent({
-      event_type: 'tsr_abandon_message',
-      call_control_id: callControlId,
-      source: 'webhook',
-      status: spoke ? 'played' : 'speak_failed',
-      detail: { campaign_id: campaignId ?? null },
-    })
-    return spoke
-  } catch (err) {
-    console.error('[calls/events] TSR abandon message threw', callControlId, err)
-    return false
-  }
-}
 
 async function handleInboundCallInitiated(callControlId: string): Promise<void> {
   await callControlAction(callControlId, 'answer')
@@ -1254,6 +1086,15 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
         `is already bridged in, NOT hanging up. Leaving the call to the human.`
       )
       return
+    }
+
+    // ── PREDICTIVE: FREE WHOEVER THE MACHINE REACHED ──────────────────────
+    // A predictive lead joins an agent's seat at pickup. Leaving the room
+    // frees the agent now and parks the leg (Telnyx: "moves it back to parked
+    // state"), so the hold below runs with nobody listening, exactly as the
+    // agent-attended hold does.
+    if (callRow?.dial_source === 'controller_fanout' && callRow.id) {
+      await releaseMachineFromSeat({ id: callRow.id, call_control_id: callControlId })
     }
 
     // ── SILENT INSTANT SKIP ────────────────────────────────────────────
@@ -1590,149 +1431,13 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     return
   }
 
-  // ── FAN-OUT: THIS IS WHERE THE AGENT ACTUALLY GETS CONNECTED ───────────
-  // This block was headed "ALREADY CONNECTED AT PICKUP" and said the agent is
-  // bridged when the prospect answers. That is true of an agent-attended dial,
-  // which carries bridge_on_answer. It was never true here. A fan-out line is
-  // placed with nobody attached — the comment on bridgeAgentOntoLead says so
-  // in as many words — so on this path nothing had connected anybody, and
-  // nothing below did either.
-  //
-  // What that cost: 14 Sept, 138 fan-out calls, 35 answered, 7 of them human,
-  // ZERO bridged, by our bridged_at and by Telnyx's call.bridged webhook
-  // alike, against 80 of 80 for agent-attended dials. Each of those people
-  // answered their phone and heard silence for about nineteen seconds. An
-  // operator reported it independently as "goes silent on pickup". It is also
-  // why the agent legs leaked: the only teardown was gated on a bridge that
-  // never happened.
-  //
-  // THE BRIDGE COMES BEFORE THE SIBLINGS DIE. Killing the other ringing lines
-  // first and then failing to connect this one would throw away every chance
-  // the session had. If the bridge fails, this lead is hung up rather than
-  // left on an open line with nobody on it — the same thing the agent-attended
-  // path does — and the siblings are left alone to keep trying.
-  //
-  // UNVERIFIED IN PRODUCTION. Predictive is withdrawn (see the heartbeat), so
-  // no fan-out call can reach this code today. It must not be re-enabled until
-  // a fan-out call has actually been observed reaching call.bridged.
-  if (callRow.agent_call_control_id) {
-    const outcome = await bridgeAgentOntoLead(callControlId, `fan-out AMD '${result}'`)
-    if (outcome === 'failed' || outcome === 'no-agent') {
-      console.error(
-        `[calls/events] fan-out human on ${callControlId} could not be bridged ` +
-        `(${outcome}), hanging up rather than leaving the lead on a dead line.`
-      )
-      await hangupCallControlId(callControlId)
-      await recordingStart
-      return
-    }
-
-    // A human is confirmed and connected, so every other line this session has
-    // ringing ends here. Deliberately fired from the verdict rather than the
-    // pickup, so a machine never kills the other lines on a false alarm.
-    await abortSiblingFanoutLines({
-      sessionId: callRow.dial_group_id,
-      keepCallControlId: callControlId,
-    })
-    await recordingStart
-    return
-  }
-
-  // ── CONTROLLER FANOUT — claim the originating agent, or overflow ──────
-  const sessionId = callRow.dial_group_id
-  const { data: session } = await supabaseAdmin
-    .from('agent_sessions')
-    // user_id is needed to resolve THIS agent's own SIP credential — the
-    // whole point of claiming a specific session is to ring that specific
-    // person, which requires addressing their own SIP endpoint rather than
-    // a shared one that rings everybody.
-    .select('id, user_id, state, current_call_id, last_heartbeat')
-    .eq('id', sessionId)
-    .maybeSingle()
-
-  const heartbeatFresh = session
-    ? Date.now() - new Date(session.last_heartbeat).getTime() <= 15_000
-    : false
-
-  const originatingAgentStillReady =
-    !!session &&
-    heartbeatFresh &&
-    (session.state === 'ready' || session.current_call_id === callRow.id)
-
-  if (originatingAgentStillReady) {
-    // Claim it for the originating agent — same atomic guard pattern as
-    // the overflow claim, just against a specific known session.
-    const claim = await supabaseAdmin
-      .from('agent_sessions')
-      .update({ current_call_id: callRow.id, state: 'on_call', updated_at: new Date().toISOString() })
-      .eq('id', sessionId)
-      .or(`current_call_id.is.null,current_call_id.eq.${callRow.id}`)
-      .select('id')
-      .maybeSingle()
-
-    if (claim.data) {
-      const dialed = await dialAndBridgeAgentForFanout(callControlId, session!.user_id)
-      if (dialed) {
-        // ── THE PICKUP THAT ENDS THE OTHER LINES ──────────────────────────
-        // This agent now has a human. Every other line this session still has
-        // RINGING is hung up here — see abortSiblingFanoutLines for why an
-        // already-answered sibling is deliberately left to route itself.
-        //
-        // Awaited rather than fired and forgotten. The agent is already
-        // bridged and talking, so nothing they can feel is waiting on it, and
-        // on a serverless runtime un-awaited work can be torn down with the
-        // response — which would leave the prospects' phones ringing for a
-        // call that no longer exists.
-        await abortSiblingFanoutLines({ sessionId, keepCallControlId: callControlId })
-        await recordingStart
-        return
-      }
-      // Failed to actually connect the agent leg — release the claim and
-      // fall through to overflow handling below.
-      await supabaseAdmin
-        .from('agent_sessions')
-        .update({ current_call_id: null, state: 'ready' })
-        .eq('id', sessionId)
-    }
-  }
-
-  // Originating agent isn't available (busy, stale heartbeat, or lost the
-  // claim race) — this is excess overdial. Route via team overflow logic,
-  // which drops the call for solo campaigns or bridges to the next ready
-  // team agent for team-shared campaigns.
-  const outcome = await handleOverflowAnsweredCall({
-    leadCallControlId: callControlId,
-    callRowId: callRow.id,
-    campaignId: callRow.campaign_id,
-    teamId: callRow.team_id,
-    excludeSessionId: sessionId,
-  })
-
-  if (outcome === 'bridged') {
-    // A second human answered and a DIFFERENT agent on the team took them —
-    // "if two are picked up the next available user gets the pickup". That is
-    // still a pickup, so the lines that are merely ringing end here too.
-    await abortSiblingFanoutLines({ sessionId, keepCallControlId: callControlId })
-    await recordingStart
-    // Covers the AMD-off campaigns, whose recordings no longer start at dial
-    // and have nothing else to trigger them. A no-op when the AMD path above
-    // already claimed the row.
-    await startRecordingIfOwedAtBridge(callControlId, callRow.id)
-    return
-  }
-
-  if (outcome === 'dropped') {
-    // Nobody took this call, so there is nothing worth recording. The command
-    // may already be in flight; settle it and stop the recording rather than
-    // leave a few seconds of an abandoned call on disk.
-    await recordingStart
-    await markCallAbandoned(callControlId)
-    await supabaseAdmin
-      .from('calls')
-      .update({ disposition: 'ABANDONED' })
-      .eq('call_control_id', callControlId)
-    await bumpLeadAttemptAndRelease(callRow.id)
-  }
+  // ── PREDICTIVE: A PERSON ON THE LINE ───────────────────────────────────
+  // Connected at pickup if a seat was free (lib/predictive/leads). If nobody
+  // has them yet, this settles it now: one more look for a free seat, then the
+  // abandon message. The recording owed on a person starts above, in every
+  // mode alike.
+  await onPersonVerdict(callRow.id)
+  await recordingStart
 }
 
 /**
@@ -2004,7 +1709,8 @@ async function handleCallCost(
 async function handleHangup(
   callControlId: string,
   hangupCause?: string,
-  hangupSource?: string
+  hangupSource?: string,
+  clientState?: string
 ): Promise<void> {
   // ── SAMPLE THE BALANCE WHILE MONEY IS MOVING ──────────────────────────
   // Telnyx hides transaction detail until the following month, so until then
@@ -2027,6 +1733,16 @@ async function handleHangup(
     source: 'webhook',
     detail: { hangup_cause: hangupCause, hangup_source: hangupSource },
   })
+
+  // ── PREDICTIVE: THE AGENT'S SEAT ENDED ────────────────────────────────
+  // Clear it, and if a lead was in its room, end that lead properly (held to
+  // the 9-second rule) rather than leave them in an empty room. The next
+  // heartbeat places a fresh seat if the engine is still armed.
+  if (parseClientState(clientState)?.s === SEAT_SOURCE) {
+    const { strandedCallId } = await onSeatHangup(callControlId, hangupCause)
+    if (strandedCallId) await releaseStrandedLead(strandedCallId)
+    return
+  }
 
   // ── THE SAME FACT, WHERE IT CAN BE QUERIED ────────────────────────────
   // call_events.detail keeps the full payload and always has. Reading it
@@ -2057,7 +1773,7 @@ async function handleHangup(
   try {
     const { data: callRow } = await supabaseAdmin
       .from('calls')
-      .select('id, created_at, duration, disposition, answered_at, talk_seconds, lead_id, dial_group_id, dial_source, call_control_id, agent_call_control_id, pool_number_id')
+      .select('id, created_at, duration, disposition, answered_at, talk_seconds, lead_id, dial_group_id, dial_source, call_control_id, agent_call_control_id, pool_number_id, amd_result, was_abandoned')
       .eq('call_control_id', callControlId)
       .maybeSingle()
 
@@ -2332,29 +2048,42 @@ async function handleHangup(
         }
       }
 
-      // ── A FINISHED FAN-OUT LINE MUST GIVE ITS LEAD BACK ──────────────────
-      // This is why predictive dialed once and then sat at "2/2 lines" forever.
+      // ── PREDICTIVE: THE LEG IS OVER ───────────────────────────────────────
+      // Decides whether its lead is owed another dial (1x/2x/3x, the same
+      // shouldRedial progressive uses) and does the lead's own bookkeeping.
+      // Predictive legs only: every other mode keeps its claim while the agent
+      // is still looking at the lead.
       //
-      // The controller paces off live CLAIMS as well as call rows, precisely so
-      // that a dial which reaches the carrier without writing a row still counts
-      // against the line limit. But nothing released a claim when the call
-      // ENDED, and the heartbeat re-stamps claimed_at on every lead this session
-      // holds every five seconds — so the 30-second stale sweep could never
-      // reach them either. Two calls' worth of claims were therefore renewed
-      // indefinitely, inFlight stayed pinned at the line count, shouldDial
-      // stayed 0, and the engine reported itself permanently at target.
-      //
-      // Deliberately scoped to fan-out calls only. In preview/power/progressive
-      // the agent is still looking at that lead to disposition it, and dropping
-      // the claim out from under them would let a teammate dial someone they are
-      // mid-wrap-up on. Those modes are tuned; this touches none of them.
+      //   no answer / unreachable   an attempt spent: counted here, and the
+      //                             lead released until its next turn
+      //   voicemail                 counted already, at the machine verdict
+      //   person, abandoned         counted here: no agent will disposition it
+      //   person, with an agent     the disposition counts it; the claim is
+      //                             released so the round can move on
       if (callRow.dial_source === 'controller_fanout' && callRow.lead_id) {
-        const { error: relErr } = await supabaseAdmin
-          .from('leads')
-          .update({ claimed_at: null, claimed_by_session_id: null })
-          .eq('id', callRow.lead_id)
-        if (relErr) {
-          console.error('[calls/events] fan-out claim release failed', relErr)
+        const { outcome } = await onPredictiveLegEnded({
+          dial_group_id: callRow.dial_group_id,
+          lead_id: callRow.lead_id,
+          answered_at: callRow.answered_at,
+          amd_result: callRow.amd_result,
+          hangup_cause: hangupCause ?? null,
+        })
+        if (
+          outcome === 'no_answer' ||
+          outcome === 'unreachable' ||
+          (outcome === 'person' && callRow.was_abandoned)
+        ) {
+          await bumpLeadAttemptAndRelease(callRow.id)
+        } else {
+          const { error: relErr } = await supabaseAdmin
+            .from('leads')
+            .update({ claimed_at: null, claimed_by_session_id: null })
+            .eq('id', callRow.lead_id)
+          if (relErr) console.error('[calls/events] predictive claim release failed', relErr)
+        }
+        // After STOP, the seat stays up until the last line has ended.
+        if (callRow.dial_group_id) {
+          await releaseSeatIfIdle(callRow.dial_group_id, 'last line ended after STOP')
         }
       }
     }
@@ -2657,150 +2386,4 @@ async function bumpLeadAttemptAndRelease(callId: string): Promise<void> {
       })
       .eq('id', callRow.lead_id)
   }
-}
-
-async function dialAndBridgeAgentForFanout(
-  leadCallControlId: string,
-  agentUserId: string
-): Promise<boolean> {
-  // Same resolved+normalized config lib/placeOutboundCall.ts uses for the
-  // user_dial agent leg. This path used to build its own
-  // `sip:${user}@${domain}` from raw env, which meant a bad
-  // TELNYX_SIP_DOMAIN broke predictive/fanout dialing in a second, separate
-  // place that had to be found and fixed independently.
-  const env = resolveTelnyxConfigOrLog('calls/events:fanout')
-  if (!env) return false
-
-  // CALLER ID FOR THE AGENT LEG: TELNYX_PHONE_NUMBER.
-  //
-  // There used to be a calls-table lookup here that selected phone_number
-  // and then explicitly discarded it (`void callRow`) — the column holds
-  // the LEAD's number, not the pool number we dialed FROM, and the
-  // no-conference design doesn't record the from-number per call anywhere.
-  // So the query could never inform this decision; it was a round trip on
-  // every fanout bridge that always fell through to the same fallback.
-  // Removed. If per-call from-number consistency is wanted later, it needs
-  // a real column (calls.from_number) to read, not this one.
-  const fromNumber = process.env.TELNYX_PHONE_NUMBER
-  if (!fromNumber) {
-    console.error('[calls/events] TELNYX_PHONE_NUMBER not set, no caller id for fanout agent leg')
-    return false
-  }
-
-  // Ring the SPECIFIC agent whose session was just claimed above, not a
-  // shared endpoint. Without this the atomic claim is decorative: it picks
-  // one agent, then dials a URI that rings every registered browser.
-  const agentSipUri = await agentSipUriForUserId(agentUserId, env)
-
-  const dialAgentLeg = () =>
-    fetch('https://api.telnyx.com/v2/calls', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      // NOTE — DIFFERS FROM PROGRESSIVE, AND THAT DIFFERENCE IS UNVERIFIED.
-      // placeOutboundCall dials its agent leg PLAIN (connection_id,
-      // client_state, to, from, webhook_url, timeout_secs) and puts link_to +
-      // bridge_on_answer on the LEAD leg, which is dialled second. Here both
-      // are on the AGENT leg, pointing at a lead call that has already
-      // answered — a different operation, and a candidate for why no agent leg
-      // is ever attached on fan-out while progressive works.
-      //
-      // Also missing client_state, which stamps a leg with its owning agent
-      // and is how /api/dialer/abort finds legs to hang up. A fan-out agent leg
-      // is currently invisible to the kill switch.
-      //
-      // Left as-is deliberately: changing it also changes WHEN the bridge
-      // happens (Telnyx bridging on answer, versus an explicit
-      // bridgeCallControlIds once the agent's device picks up), and that needs
-      // checking against Telnyx's docs before it goes near live audio.
-      body: JSON.stringify({
-        connection_id: env.connectionId,
-        to: agentSipUri,
-        from: fromNumber,
-        webhook_url: env.webhookUrl,
-        timeout_secs: 30,
-        link_to: leadCallControlId,
-        bridge_on_answer: true,
-      }),
-    })
-
-  let res = await dialAgentLeg()
-
-  // ── SIP URI CALLING DISABLED — THE DEAD-AIR BUG ────────────────────────────
-  // Telnyx rejects a call to a SIP URI when "Receive SIP URI calls" is off on
-  // the credential connection. placeOutboundCall has detected and repaired this
-  // for the user_dial agent leg since it was written; this path never did.
-  //
-  // The consequence is the worst outcome the dialer can produce. A prospect
-  // answers, this bridge fails, and they sit listening to silence — and because
-  // abortSiblingFanoutLines only runs after a SUCCESSFUL bridge, the other
-  // lines keep ringing other people while nobody is connected to anyone. That
-  // is exactly what a live test produced: answered, dead air, dialing never
-  // stopped.
-  //
-  // Same repair the user_dial path performs: flip the setting on the connection
-  // that actually rejected, then retry once. If the retry still fails, the
-  // caller hangs up the lead rather than leaving them on a dead line.
-  if (!res.ok) {
-    const firstBody = await res.clone().json().catch(() => null)
-    if (firstBody && isSipUriRejection(firstBody.errors)) {
-      const targetConnection =
-        (await resolveCredentialConnectionId(env).catch(() => null)) ||
-        env.connectionId
-      console.warn(
-        `[calls/events] fanout agent leg rejected, SIP URI calling appears disabled on ` +
-        `connection ${targetConnection}. Enabling and retrying once.`
-      )
-      const outcome = await ensureSipUriCallingEnabled(targetConnection, env.apiKey)
-      if (outcome !== 'failed') {
-        res = await dialAgentLeg()
-      }
-    }
-  }
-
-  if (!res.ok) {
-    const text = await res.text()
-    console.error(
-      `[calls/events] fanout agent dial failed (${res.status}): ${text}`,
-      { agentSipUri, agentUserId, configWarnings: env.warnings }
-    )
-    void logCallEvent({
-      event_type: 'fanout_placement_failed',
-      call_control_id: leadCallControlId,
-      source: 'webhook',
-      status: 'agent_bridge_failed',
-      detail: {
-        reason: text.slice(0, 400),
-        http_status: res.status,
-        agent_user_id: agentUserId,
-        note: 'prospect answered and could not be connected to an agent',
-      },
-    })
-    return false
-  }
-
-  // ── RECORD THE AGENT LEG SO ABORT CAN REACH IT ──────────────────────────
-  // Predictive places NO agent leg at dial time — placeOutboundCall only does
-  // that for user_dial. The agent's leg is born HERE, in a webhook, the moment
-  // a lead answers. Until now its call_control_id was never written anywhere,
-  // so STOP DIAL SEQUENCE had no way to find it: the sweep reads `calls`, and
-  // this leg has no row of its own and wasn't referenced from the lead's.
-  // That is why the agent's phone kept ringing after abort in predictive.
-  try {
-    const agentLegId = (await res.json())?.data?.call_control_id
-    if (agentLegId) {
-      await supabaseAdmin
-        .from('calls')
-        .update({ agent_call_control_id: agentLegId })
-        .eq('call_control_id', leadCallControlId)
-    }
-  } catch (err) {
-    // Non-fatal: the bridge itself already succeeded. Worst case abort can't
-    // reach this one leg, which is the behaviour that existed before.
-    console.error('[calls/events] could not record fanout agent leg id:', err)
-  }
-
-  return true
 }

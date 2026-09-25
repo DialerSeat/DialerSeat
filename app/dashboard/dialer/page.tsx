@@ -137,6 +137,10 @@ interface HeartbeatControllerSummary {
    *  inFlightLeadIds, which is cumulative and would re-stamp a lead on every
    *  beat it stayed up. */
   dialedLeadIds?: string[]
+  /** The agent's predictive line (docs/PREDICTIVE.md). */
+  seat?: 'live' | 'placing' | 'failed'
+  /** How many lines the campaign's own 30-day record allows, and why. */
+  lines?: { count: number; limitedBy: string; reason: string; projectedPct: number; measuredPct: number }
   skipped?: number
   released?: number
   dedupedPhones?: number
@@ -986,6 +990,27 @@ function DialerPageInner() {
   const activePollRef = useRef<NodeJS.Timeout | null>(null)
   const swClientRef = useRef<any>(null)
   const swCallRef = useRef<any>(null)
+  // ── PREDICTIVE: THE SEAT ──────────────────────────────────────────────
+  // The one agent leg a predictive session keeps for its whole run
+  // (docs/PREDICTIVE.md). Held apart from swCallRef on purpose: every
+  // per-call teardown path in this file ends swCallRef, and none of them may
+  // end the seat. It is released when the agent goes offline or leaves the
+  // page, or by the server once STOP has let the last line finish.
+  const predictiveSeatRef = useRef<{ bye?: () => unknown; hangup?: () => unknown } | null>(null)
+
+  // ── PREDICTIVE: GIVE THE SEAT BACK ────────────────────────────────────
+  // Only when the agent leaves: offline, or the page going away. STOP does not
+  // call this; the server releases the seat once the last line has ended, so a
+  // person who answers a line already ringing still reaches the agent.
+  const releasePredictiveSeat = () => {
+    const seat = predictiveSeatRef.current
+    predictiveSeatRef.current = null
+    if (!seat) return
+    try {
+      if (seat.bye) seat.bye()
+      else if (seat.hangup) seat.hangup()
+    } catch { /* already gone */ }
+  }
   // ── GHOST-DIALING LOCKDOWN ────────────────────────────────────────────────
   // The browser is a SIP endpoint. To guarantee it can NEVER be bridged to a
   // call the user didn't initiate, we keep two things:
@@ -1946,9 +1971,18 @@ function DialerPageInner() {
               console.log('[agent-leg] INVITE arrived, streak cleared')
               agentLegFailStreakRef.current = 0
             }
+            // Predictive no longer places an agent leg per line: while the
+            // engine runs, the only INVITE this browser receives is its seat.
+            const isSeat =
+              dialerModeRef.current === 'predictive' && predictiveEngineStartedRef.current
             try {
               invitation.stateChange.addListener((state: any) => {
                 if (state === SessionState.Established) {
+                  if (isSeat) {
+                    predictiveSeatRef.current = invitation
+                    attachSIPAudio(invitation)
+                    return
+                  }
                   // Billing on this leg starts HERE, not at the INVITE. The
                   // short-duration floor is measured from this instant.
                   agentLegAnsweredAtRef.current = Date.now()
@@ -1956,6 +1990,7 @@ function DialerPageInner() {
                   attachSIPAudio(invitation)
                 } else if (state === SessionState.Terminated) {
                   if (swCallRef.current === invitation) swCallRef.current = null
+                  if (predictiveSeatRef.current === invitation) predictiveSeatRef.current = null
                 }
               })
               await invitation.accept({
@@ -1964,7 +1999,11 @@ function DialerPageInner() {
               // Attach immediately as well — don't wait only on the Established
               // event. The SDH/peer connection exists right after accept(), so
               // wiring audio now shaves the gap to first sound.
-              swCallRef.current = invitation
+              if (isSeat) {
+                predictiveSeatRef.current = invitation
+              } else {
+                swCallRef.current = invitation
+              }
               attachSIPAudio(invitation)
             } catch (err) {
               // sip.js calls getUserMedia while building the answer, so a
@@ -2151,8 +2190,14 @@ function DialerPageInner() {
   // race the attach and silence the call that is just beginning. getAudioEl
   // clears the mute when a new track attaches, which is what makes this safe
   // to apply repeatedly.
+  //
+  // PREDICTIVE'S SEAT IS THE EXCEPTION. It is one line for the whole run and
+  // there is no new INVITE per call to re-attach its audio, so silencing it
+  // here would make the next lead's "hello?" inaudible. It cannot bleed: a lead
+  // is only in the seat's room while the agent is on them, so between calls
+  // the room carries nothing.
   useEffect(() => {
-    if (status === 'idle' || status === 'ended') silenceSIPAudio()
+    if ((status === 'idle' || status === 'ended') && !predictiveSeatRef.current) silenceSIPAudio()
   }, [status])
 
   // ── MEASURE WHAT THE CALL SOUNDED LIKE ────────────────────────────
@@ -2618,6 +2663,22 @@ function DialerPageInner() {
             setSeconds(0)
           }
         }
+        // ── PREDICTIVE: SAY WHEN THE AGENT'S LINE IS NOT READY ────────────
+        // Nothing dials until the seat is live, so a seat that is still
+        // connecting, or failed, is the one reason worth putting in front of
+        // the agent. The controller's own word wins over the session row: it
+        // may have placed the seat on this very beat.
+        if (isPredictive && predictiveEngineStartedRef.current) {
+          const summary = (data.controller ?? null) as HeartbeatControllerSummary | null
+          const seatState = summary?.seat ?? data.predictive_seat ?? null
+          if (seatState && seatState !== 'live') {
+            const line = seatState === 'placing'
+              ? 'CONNECTING YOUR LINE'
+              : `YOUR LINE DID NOT CONNECT${summary?.reason ? `, ${String(summary.reason).toUpperCase()}` : ''}`
+            setAmdActivity(prev => (prev[0] === line ? prev : [line, ...prev].slice(0, 5)))
+          }
+        }
+
         // The engine is armed but the server declined to fan out. Say so.
         // This was silent, and silence is why predictive could sit "started"
         // indefinitely without placing a call. Deduped against the last line
@@ -2691,12 +2752,28 @@ function DialerPageInner() {
             const numbers = summary.dialedPhones && summary.dialedPhones.length > 0
               ? summary.dialedPhones
               : []
-            setAmdActivity(prev => [
-              numbers.length > 0
-                ? `DIALING ${numbers.length} LINE${numbers.length === 1 ? '' : 'S'}, ${numbers.join(', ')}`
-                : `CONTROLLER FIRED ${summary.fired} LINE${summary.fired === 1 ? '' : 'S'} (${summary.effectiveLines}x target)`,
-              ...prev,
-            ].slice(0, 5))
+            // ── WHY FEWER LINES THAN THE LINES SETTING ─────────────────────
+            // The engine runs as many lines as the campaign's own 30-day record
+            // lawfully allows (docs/PREDICTIVE.md). When that is fewer than the
+            // agent asked for, say which rule is holding it, once, rather than
+            // leave them wondering why LINES 3 dials one.
+            const held = summary.lines && summary.lines.limitedBy !== 'cap'
+              ? summary.lines.limitedBy === 'no_seller_message'
+                ? `HELD TO 1 LINE: ADD THE SELLER NAME AND CALLBACK NUMBER TO THIS CAMPAIGN FOR MORE`
+                : summary.lines.limitedBy === 'degraded'
+                  ? `HELD TO 1 LINE: 30-DAY ABANDON RATE ${summary.lines.measuredPct}%`
+                  : `HELD TO ${summary.lines.count} LINE${summary.lines.count === 1 ? '' : 'S'} BY THE 3% ABANDON RULE`
+              : null
+            setAmdActivity(prev => {
+              const next = [
+                numbers.length > 0
+                  ? `DIALING ${numbers.length} LINE${numbers.length === 1 ? '' : 'S'}, ${numbers.join(', ')}`
+                  : `CONTROLLER FIRED ${summary.fired} LINE${summary.fired === 1 ? '' : 'S'} (${summary.effectiveLines}x target)`,
+                ...prev,
+              ]
+              if (held && !prev.includes(held)) next.splice(1, 0, held)
+              return next.slice(0, 5)
+            })
           } else if (summary.degraded) {
             setAmdActivity(prev => [
               `⚠ AUTO-DEGRADED: abandon rate trigger`,
@@ -2841,6 +2918,7 @@ function DialerPageInner() {
       // Disarm immediately and tear down SIP so a refresh/close can't leave a
       // registered endpoint that auto-answers a ghost call after reload.
       disarmDialing({ force: true })
+      releasePredictiveSeat()
       try { registererRef.current?.unregister?.() } catch {}
       try { swClientRef.current?.stop?.() } catch {}
       // /api/dialer/session-end was removed along with the session writes
@@ -2981,6 +3059,10 @@ function DialerPageInner() {
       // INVITE can ever connect, cancel every pending auto-chain dial, and hang
       // up any call currently attached. This is what makes "unavailable" mean it.
       disarmDialing({ force: true })
+      // Predictive's seat too. Lines still ringing are not cut (the server
+      // never sweeps them); a person answering one now hears the abandon
+      // message rather than an agent who has left.
+      releasePredictiveSeat()
       cancelAllPendingDials()
       // Local hangup covers the one call this client holds an id for. The
       // server sweep covers the rest — predictive places lines server-side
@@ -4323,7 +4405,12 @@ function DialerPageInner() {
           const repeatCap = isPreview ? 1 : Math.min(dialRepeatCount, 3)
           const attemptsSoFar = leadAttemptCountRef.current
 
-          if (endingLead && nobodyReached && shouldRedial({
+          // Predictive's 1x/2x/3x runs on the server, in the next round
+          // (docs/PREDICTIVE.md). A redial from here would be a single-line
+          // call placed outside the engine, on top of the one it schedules.
+          const serverRedials = dialerModeRef.current === 'predictive'
+
+          if (!serverRedials && endingLead && nobodyReached && shouldRedial({
             // A machine, however cleanly the media connected.
             reachedAHuman: false,
             alreadyQueued: redialQueuedRef.current,

@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import { apiError } from '@/lib/apiError'
 import { hangupCallControlId, listActiveCallControlIdsForUser } from '@/lib/placeOutboundCall'
+import { SEAT_SOURCE } from '@/lib/predictive/telnyx'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -159,8 +160,15 @@ export async function POST(req: Request) {
     // Authoritative, and — the part that matters here — SMALL. It returns the
     // handful of legs actually up right now, scoped to this agent by the
     // client_state stamped at dial time.
+    // ── PREDICTIVE LEGS ARE NEVER SWEPT ─────────────────────────────────
+    // A predictive line rings out on its own timeout and an answered one is
+    // held to the 9-second rule; nothing cuts either (docs/PREDICTIVE.md). The
+    // agent's seat is released by the engine once nothing is left, not here.
+    // Stopping predictive disarms it, which is all STOP means there.
+    const PREDICTIVE_SOURCES = ['controller_fanout', SEAT_SOURCE]
+
     const fromTelnyx = async () => {
-      const ids = await listActiveCallControlIdsForUser(userId)
+      const ids = await listActiveCallControlIdsForUser(userId, undefined, undefined, PREDICTIVE_SOURCES)
       if (ids.length > 0) {
         const n = await hangUpAll(ids)
         if (n > 0) console.warn(`[abort] Telnyx active-call sweep hung up ${n} leg(s)`)
@@ -189,6 +197,7 @@ export async function POST(req: Request) {
         .eq('user_id', userId)
         .gte('created_at', new Date(Date.now() - RECENT_MS).toISOString())
         .or('duration.eq.0,duration.is.null')
+        .or('dial_source.is.null,dial_source.neq.controller_fanout')
         .limit(40)
       if (callsErr) {
         console.error('[abort] calls lookup failed:', callsErr)

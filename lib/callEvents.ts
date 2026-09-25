@@ -83,6 +83,17 @@ export type CallEventType =
   // A predictive tick that fired no calls, with the controller's own reason.
   // Excludes the "at target" steady state — see runPredictiveController.
   | 'fanout_idle'
+  // Predictive v2 (docs/PREDICTIVE.md). The agent's seat line through its
+  // life: `status` is placing, live, ended, failed or rotated.
+  | 'predictive_seat'
+  // Where an answered predictive lead went: `status` is joined (the agent's
+  // own seat), overflow (a teammate's), or surplus (nobody free).
+  | 'predictive_route'
+  // The runaway breaker paused the engine. See lib/predictive/pacing.
+  | 'predictive_breaker'
+  // Somebody pressed the opt-out key during the abandon message and was put
+  // on the do-not-call list (47 CFR 64.1200(a)(7)(i)(B)).
+  | 'predictive_opt_out'
 
 interface CallEventInput {
   event_type: CallEventType

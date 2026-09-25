@@ -94,15 +94,38 @@ export function buildTsrAbandonMessage(seller: TsrSeller): TsrMessageResult {
 
   // Short on purpose. The rule requires it "promptly", and a long preamble
   // before the name defeats the point for somebody about to hang up.
+  // ── TWO RULES, ONE MESSAGE ──────────────────────────────────────────────
+  // The FTC's 310.4(b)(4)(iii) asks for the seller's name and telephone
+  // number. The FCC's 64.1200(a)(7)(i) asks for more, and limits it to that:
+  //
+  //   (A) "a prerecorded identification and opt-out message that is limited
+  //       to disclosing that the call was for 'telemarketing purposes' and
+  //       states the name of the business ... and a telephone number"
+  //   (B) "an automated, interactive voice- and/or key press-activated
+  //       opt-out mechanism ... including brief explanatory instructions"
+  //
+  // The key press itself is collected by the caller of this function (a
+  // gather on the leg, see ABANDON_OPT_OUT_DIGIT). This text is its
+  // instruction. Nothing else is said: no apology, no pitch, no "thank you",
+  // because (A) says limited to.
   return {
     ok: true,
     text:
-      `Hello. This is a call from ${name}. ` +
-      `We are sorry to have missed you. ` +
-      `You can reach us at ${speakableNumber(number)}. ` +
-      `Thank you.`,
+      `This is a telemarketing call from ${name}. ` +
+      `To be added to our do-not-call list, press ${ABANDON_OPT_OUT_DIGIT} now. ` +
+      `To reach us, call ${speakableNumber(number)}.`,
   }
 }
+
+/** The key that puts the caller on the do-not-call list. */
+export const ABANDON_OPT_OUT_DIGIT = '9'
+
+/**
+ * How long, after the message finishes, the leg waits for the key before it
+ * is hung up. Long enough to find a keypad; the message plus this keeps every
+ * abandoned leg well past the 9-second short-call floor.
+ */
+export const ABANDON_OPT_OUT_WAIT_MS = 4000
 
 /**
  * Can this campaign lawfully run more than one predictive line?

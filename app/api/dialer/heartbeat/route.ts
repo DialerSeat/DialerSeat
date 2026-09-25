@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { runPredictiveController } from '@/lib/predictiveController'
+import { releaseSeatIfIdle } from '@/lib/predictive/seat'
 import { STALE_HEARTBEAT_SECONDS, ABANDON_YIELD_PCT } from '@/lib/dialerConstants'
 import { sendAdminPush } from '@/lib/pushNotify'
 import { deviceFrom } from '@/lib/device'
@@ -174,32 +175,17 @@ export async function POST(req: NextRequest) {
 
     const state: string = body.state || 'paused'
     const rawCampaignId: string | null = body.campaign_id ?? null
-    // ── PREDICTIVE IS WITHDRAWN UNTIL IT BRIDGES ─────────────────────────
-    // This value arrives from the BROWSER and is written straight onto the
-    // session, and it is the session's mode — not the campaign's — that gates
-    // fan-out further down. So blocking predictive on the campaign routes
-    // alone does nothing: a client that keeps sending dialer_mode:'predictive'
-    // keeps fanning out no matter what the campaign says.
+    // ── PREDICTIVE IS PREDICTIVE ──────────────────────────────────────────
+    // From 14 to 24 Sept this coerced 'predictive' to 'progressive' on the
+    // strength of a measurement that said fan-out never bridged. The next day
+    // that measurement was shown to be a query reading the wrong column (136
+    // of 137 answered fan-out calls had bridged, COST-FINDINGS §1ae), and the
+    // mode was restored everywhere except here. So for ten days every agent
+    // who pressed START on predictive got an engine that never dialed.
     //
-    // Predictive does not connect anybody. The only code that would bridge an
-    // agent onto a fan-out line sits inside `if (!callRow.dial_group_id)` in
-    // app/api/calls/events, and a fan-out call is DEFINED by having a
-    // dial_group_id. Measured 14 Sept: 138 fan-out calls, 35 answered, 7 of
-    // them human, ZERO bridged — by our bridged_at and by Telnyx's
-    // call.bridged webhook alike, against 80 of 80 for agent-attended dials.
-    // Every one of those humans heard silence for about nineteen seconds. An
-    // operator reported it independently as "goes silent on pickup".
-    //
-    // Coerced rather than rejected, deliberately. The failure mode of this
-    // line is that somebody who asked for predictive gets progressive, which
-    // is the mode that works; rejecting the heartbeat would put an agent
-    // offline mid-shift over a config disagreement.
-    //
-    // DELETE THIS once the bridge is fixed and a fan-out call has been seen
-    // reaching call.bridged.
-    const requestedMode: string | null = body.dialer_mode ?? null
-    const dialerMode: string | null =
-      requestedMode === 'predictive' ? 'progressive' : requestedMode
+    // Predictive now runs on its own seat (docs/PREDICTIVE.md), and the mode
+    // the browser asks for is the mode it gets.
+    const dialerMode: string | null = body.dialer_mode ?? null
     const rawCallId: string | null = body.current_call_id ?? null
     // GHOST-DIALING SERVER GUARD: the predictive controller (which fans out lead
     // calls) must only run when the client has EXPLICITLY armed the engine via
@@ -408,7 +394,7 @@ export async function POST(req: NextRequest) {
       // payload would let every heartbeat overwrite the agent's own decision
       // with whatever the browser last computed, which is the whole class of
       // bug this replaces.
-      .select('id, state, campaign_id, dialer_mode, predictive_armed, current_call_id')
+      .select('id, state, campaign_id, dialer_mode, predictive_armed, current_call_id, predictive_seat_status')
       .single()
 
     // ── RENEW THIS AGENT'S LEAD CLAIMS ────────────────────────────────────
@@ -497,6 +483,15 @@ export async function POST(req: NextRequest) {
     // effect, no interval closure. See app/api/dialer/arm/route.ts for the
     // three separate ways the browser-computed version managed to be wrong.
     const predictiveArmed: boolean = upserted.predictive_armed === true
+
+    // ── PREDICTIVE: AN AGENT WHO WENT OFFLINE GIVES THEIR LINE BACK ───────
+    // Offline disarms (above). The seat is then released once nothing is left
+    // with it: no call, and no line of theirs still ringing. Lines already
+    // ringing are never cut; a person who answers one after this reaches the
+    // abandon message rather than silence.
+    if (state === 'paused' && upserted.predictive_seat_status) {
+      await releaseSeatIfIdle(sessionId, 'agent went offline')
+    }
 
     // ── Compute should_yield (FTC throttle) ────────────────────────────────
     let shouldYield = false
@@ -677,54 +672,16 @@ export async function POST(req: NextRequest) {
     // Read from the SESSION ROW, not the client's value. For predictive the
     // client has no call id — the assignment only exists server-side, which is
     // the whole reason this field had to be added.
-    let assignedCallId = upserted.current_call_id ?? effectiveCallId
+    const assignedCallId = upserted.current_call_id ?? effectiveCallId
 
-    // ── THE SCREEN OPENS BECAUSE SOMEBODY ANSWERED ─────────────────────────
-    // Progressive shows the lead profile the instant the LEAD answers —
-    // /api/calls/check reports in-progress as soon as answered_at is set, and
-    // AMD decides afterwards whether the call survives. The bridge is a
-    // separate concern entirely.
-    //
-    // Predictive's view was gated on current_call_id, which is only written
-    // once a fan-out line has claimed the agent AND the agent leg has been
-    // dialed. Five guards sit in front of that, any of which leaves the agent
-    // staring at the queue panel through a live answered call. That is the
-    // wrong dependency: answering is what opens the screen.
-    //
-    // So if this session has a live answered fan-out line and nothing else is
-    // assigned, that is the call — same trigger progressive uses, same
-    // ordering, and AMD still decides what happens next.
-    if (!assignedCallId && dialerMode === 'predictive') {
-      // ── A MACHINE VERDICT ENDS THE CALL *FOR THE AGENT* ──────────────────
-      // The lead's leg deliberately outlives the agent on a machine: it is
-      // held to clear the carrier's short-duration threshold, which is the
-      // whole point of the compliance hold. But the agent was released the
-      // moment the verdict landed and must go straight back to the queue
-      // panel — leaving them on the lead profile for the whole hold is
-      // exactly the "stuck watching a voicemail" this is meant to avoid.
-      //
-      // Same rule /api/calls/check already applies for every other mode:
-      // machine or fax means over, regardless of what duration says. The hold
-      // continues in the background either way; it is billing housekeeping and
-      // no longer the agent's business.
-      const { data: answeredLine } = await supabase
-        .from('calls')
-        .select('id')
-        .eq('dial_group_id', sessionId)
-        .not('answered_at', 'is', null)
-        .eq('duration', 0)
-        .is('disposition', null)
-        // NULL-safe on purpose. `not.in` would drop rows where amd_result is
-        // still NULL — which is every call in the first few seconds after
-        // pickup, the exact window this has to fire in. A verdict that has not
-        // arrived yet is not a machine.
-        .or('amd_result.is.null,and(amd_result.neq.machine,amd_result.neq.fax_detected)')
-        .order('answered_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      if (answeredLine) assignedCallId = answeredLine.id
-    }
-
+    // ── PREDICTIVE: THE CALL IS WHAT JOINED THE SEAT ─────────────────────
+    // This used to fall back to any answered fan-out line with no machine
+    // verdict, because assigning the agent took a separate agent-leg dial that
+    // could fail. With the seat (docs/PREDICTIVE.md) the assignment is made at
+    // the join itself, in the same instant the person hears the agent, so
+    // current_call_id is the whole truth. The fallback would now be wrong: a
+    // line answered with nobody free is hearing the abandon message, and is
+    // not this agent's call.
     if (assignedCallId) {
       const { data: liveCall } = await supabase
         .from('calls')
@@ -807,6 +764,9 @@ export async function POST(req: NextRequest) {
       // but it is returned unconditionally because it describes the session,
       // not the mode.
       active_call: activeCall,
+      // The agent's predictive line: 'placing' while it connects, 'live' once
+      // leads can reach them, null when there is none.
+      predictive_seat: upserted.predictive_seat_status ?? null,
     })
   } catch (err: unknown) {
     console.error('[heartbeat] unhandled', err)

@@ -6,6 +6,7 @@ import { logCallEvent } from '@/lib/callEvents'
 import { hangupCallControlId } from '@/lib/placeOutboundCall'
 import { remainingHoldMs } from '@/lib/complianceHold'
 import { getPlatformConfig } from '@/lib/platformConfig'
+import { releaseLeadFromAgent } from '@/lib/predictive/leads'
 
 const supabase = getServiceClient('calls/hangup')
 
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
     // Verify the caller owns this call before hanging it up.
     const { data: callRow } = await supabase
       .from('calls')
-      .select('user_id, answered_at, agent_call_control_id')
+      .select('id, user_id, answered_at, agent_call_control_id, dial_source')
       .eq('call_control_id', sid)
       .maybeSingle()
 
@@ -74,7 +75,17 @@ export async function POST(req: Request) {
     //
     // Only extends calls that would otherwise be short. Skip after the
     // threshold and this does nothing — the call was never a problem.
-    if (isSkip && callRow.answered_at) {
+    // ── PREDICTIVE: LEAVE THE ROOM, THEN HOLD, WHATEVER THE REASON ────────
+    // A predictive lead is in the agent's seat room (docs/PREDICTIVE.md), so
+    // freeing the agent is a leave, not an agent-leg hangup: the seat stays up
+    // for the next round. And a predictive leg is never ended inside the
+    // 9-second rule, so it is held on every exit, not only a skip.
+    const isPredictive = callRow.dial_source === 'controller_fanout'
+    if (isPredictive && callRow.answered_at) {
+      await releaseLeadFromAgent({ id: callRow.id, call_control_id: sid })
+    }
+
+    if ((isSkip || isPredictive) && callRow.answered_at) {
       // ── FREE THE AGENT FIRST, THEN HOLD THE LEAD ─────────────────────────
       // The browser no longer sends its own BYE on a skip, because doing so
       // collapsed the bridge and took the lead's leg down with it — leaving

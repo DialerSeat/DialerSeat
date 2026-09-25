@@ -433,6 +433,10 @@ export async function placeOutboundCall(
       recordingEnabled = campaign.recording_enabled === true
     }
   }
+  // A predictive line is predictive whatever mode the campaign was saved in:
+  // the agent chooses the mode in the dialer, and the campaign column is only
+  // its default. This decides the ring window (20 s, see below).
+  if (source === 'controller_fanout') dialerMode = 'predictive'
 
   // ── THE MANUAL DIALER'S OWN RECORD SWITCH ────────────────────────────────
   // A manual dial has no campaign, so it had no recording setting to read and
@@ -746,8 +750,14 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   const deferAgentLeg =
     dialCfg.dial_agent_on_answer === true && p.source === 'user_dial'
 
+  // ── PREDICTIVE PLACES NO AGENT LEG ─────────────────────────────────────
+  // Since 24 Sept (docs/PREDICTIVE.md) the agent sits on ONE seat leg for the
+  // whole predictive session and every answered line joins it. A leg per line
+  // was 82% of predictive's carrier spend and rang one browser several times
+  // at once. So controller_fanout legs go out with no link_to, and
+  // lib/predictive/leads connects them at pickup.
   let agentCallControlId: string | undefined
-  if (!deferAgentLeg && (p.source === 'user_dial' || p.source === 'controller_fanout')) {
+  if (!deferAgentLeg && p.source === 'user_dial') {
     // THIS agent's own SIP endpoint — not a shared one. p.userId is the
     // Clerk id of the person who clicked dial, and agentSipUriForClerkId
     // resolves it to the credential their browser registered with, so the
@@ -1666,7 +1676,9 @@ export function parseClientState(raw?: string | null): { u: string; s: string } 
 export async function listActiveCallControlIdsForUser(
   userId: string,
   apiKey = process.env.TELNYX_API_KEY,
-  connectionId = process.env.TELNYX_CONNECTION_ID
+  connectionId = process.env.TELNYX_CONNECTION_ID,
+  /** client_state sources to leave out, e.g. predictive legs, which are never cut. */
+  excludeSources: string[] = []
 ): Promise<string[]> {
   if (!apiKey || !connectionId) return []
 
@@ -1683,7 +1695,7 @@ export async function listActiveCallControlIdsForUser(
     const json = await res.json().catch(() => null)
     for (const call of json?.data || []) {
       const owner = parseClientState(call?.client_state)
-      if (owner?.u === userId && call?.call_control_id) {
+      if (owner?.u === userId && call?.call_control_id && !excludeSources.includes(owner.s)) {
         ids.push(call.call_control_id)
       }
     }

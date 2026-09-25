@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildTsrAbandonMessage, canRunMultiLine } from '@/lib/tsrAbandonMessage'
+import { buildTsrAbandonMessage, canRunMultiLine, ABANDON_OPT_OUT_DIGIT } from '@/lib/tsrAbandonMessage'
 
 // =============================================================================
 // THIS IS A COMPLIANCE MECHANISM, NOT A NICETY
@@ -93,5 +93,23 @@ describe('canRunMultiLine gates the feature, it does not warn about it', () => {
     expect(canRunMultiLine({ name: null, callbackNumber: '+18005551234' })).toBe(false)
     expect(canRunMultiLine({ name: null, callbackNumber: null })).toBe(false)
     expect(canRunMultiLine({ name: 'Acme', callbackNumber: '123' })).toBe(false)
+  })
+})
+
+describe('it also meets the FCC rule, which asks for more than the FTC', () => {
+  it('says the call is for telemarketing, as 64.1200(a)(7)(i)(A) requires', () => {
+    const r = buildTsrAbandonMessage(seller)
+    expect(r.text).toMatch(/telemarketing call from Acme Insurance/)
+  })
+
+  it('tells the person which key opts them out, as (B) requires', () => {
+    const r = buildTsrAbandonMessage(seller)
+    expect(r.text).toContain(`press ${ABANDON_OPT_OUT_DIGIT}`)
+    expect(r.text).toMatch(/do-not-call list/)
+  })
+
+  it('says nothing beyond what the rule allows', () => {
+    const r = buildTsrAbandonMessage(seller)
+    expect(r.text).not.toMatch(/sorry|thank you|offer|special/i)
   })
 })

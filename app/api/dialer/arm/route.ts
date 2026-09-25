@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
+import { ensureSeat, releaseSeatIfIdle } from '@/lib/predictive/seat'
 
 const supabase = getServiceClient('dialer/arm')
 
@@ -73,13 +74,34 @@ export async function POST(req: Request) {
     // seconds. The client re-sends arm on its first beat after starting.
     const { data: updated, error } = await supabase
       .from('agent_sessions')
-      .update({ predictive_armed: armed, updated_at: new Date().toISOString() })
+      .update({
+        predictive_armed: armed,
+        updated_at: new Date().toISOString(),
+        // A fresh START is a fresh chance: earlier seat failures and a
+        // breaker pause belong to the run that was stopped.
+        ...(armed ? { predictive_seat_failures: 0, predictive_paused_until: null } : {}),
+      })
       .eq('user_id', userRow.id)
       .select('id, predictive_armed')
       .maybeSingle()
 
     if (error) {
       return apiError(error, { route: 'dialer/arm' })
+    }
+
+    // ── THE AGENT'S LINE (docs/PREDICTIVE.md) ─────────────────────────────
+    // START places the seat now, so it is connected by the first tick rather
+    // than the one after. STOP drops the repeats still owed and releases the
+    // seat once nothing is left: lines already ringing ring out, and a person
+    // who answers one still reaches the agent while the seat is up.
+    let seat: string | null = null
+    if (updated?.id) {
+      if (armed) {
+        seat = (await ensureSeat(updated.id, clerkId)).state
+      } else {
+        await supabase.from('predictive_batch').delete().eq('session_id', updated.id)
+        await releaseSeatIfIdle(updated.id, 'engine stopped')
+      }
     }
 
     // Recorded because "when did this engine actually arm" is the first
@@ -102,6 +124,7 @@ export async function POST(req: Request) {
       // False when no session row existed yet. The client uses this to know it
       // should re-arm once its first heartbeat has created one.
       session_found: !!updated,
+      seat,
     })
   } catch (error: any) {
     return apiError(error, { route: 'dialer/arm' })

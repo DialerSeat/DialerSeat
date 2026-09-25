@@ -1,47 +1,52 @@
 import { createClient } from '@supabase/supabase-js'
-import { placeOutboundCall, hangupCallControlId } from '@/lib/placeOutboundCall'
+import { placeOutboundCall } from '@/lib/placeOutboundCall'
 import { logCallEvent } from '@/lib/callEvents'
 import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
 import { getPlatformConfig } from '@/lib/platformConfig'
 import { canRunMultiLine } from '@/lib/tsrAbandonMessage'
+import { backToBackAttempts } from '@/lib/dialerConstants'
+import {
+  legalLineCount, estimateHumanRate, planRound, breakerTripped,
+  BREAKER_PAUSE_MS, HARD_LINE_CAP, type LegalLinesResult,
+} from '@/lib/predictive/pacing'
+import { ensureSeat, readSession, rotateSeatIfOld, linesInFlight } from '@/lib/predictive/seat'
+
+// =============================================================================
+// THE PREDICTIVE ENGINE — one tick (v2, docs/PREDICTIVE.md)
+// =============================================================================
+// Driven by the agent's heartbeat while predictive is armed. A tick either
+// places ONE round of lines or says, on the record, why it did not.
+//
+// The order of the checks is the design:
+//
+//   1. the agent's seat must be live       nobody is dialed without a line
+//                                           ready to take them
+//   2. the agent must be free              nothing rings for someone talking
+//   3. the previous round must be over     rounds do not overlap, and no
+//                                           ringing line is ever cut to make
+//                                           room for the next
+//   4. one tick at a time                  a lease on the session row
+//   5. the line count the law allows       from the campaign's own 30 days
+//   6. the runaway breaker                 six rounds a minute is a loop
+//   7. repeats owed first, then fresh      1x/2x/3x per lead, then the queue
+//
+// Every early return carries a reason, and runPredictiveController records
+// the ones that fire nothing (fanout_idle), as before.
+// =============================================================================
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Last time each session's tick decision was recorded. Per-warm-instance; the
-// worst case after a cold start is a few extra rows, which is the right way
-// round for something whose whole job is to not be silent.
+// Last time each session's idle tick was recorded. Per warm instance.
 const tickLogCache = new Map<string, number>()
 
-const HARD_LINE_CAP = 5
-const ABANDON_AUTO_DEGRADE_PCT = 2.5
+/** A tick that dies mid-round frees its lock after this long. */
+const TICK_LOCK_MS = 15_000
+
+/** Nobody new is rung on a number this engine rang in the last minute. */
+const RECENTLY_DIALED_MS = 60_000
 
 export interface ControllerResult {
   fired: number
@@ -53,47 +58,50 @@ export interface ControllerResult {
   callSids: string[]
   skipped: number
   released: number
-  dedupedPhones: number      // NEW — how many leads in the batch were dupes
-  dialedPhones: string[]     // NEW — actual numbers placed THIS TICK ONLY, for live-activity log entries
-  inFlightPhones: string[]   // real, live numbers currently in flight (any tick, refreshed every heartbeat)
-  /** Lead ids currently in flight. THIS is what row highlighting must use —
-   *  phone numbers are not unique per lead. Refreshed every heartbeat. */
+  dedupedPhones: number
+  /** Numbers placed on THIS tick only, for the live activity feed. */
+  dialedPhones: string[]
+  /** Numbers genuinely up right now, refreshed every tick. */
+  inFlightPhones: string[]
+  /** Lead ids up right now. Row highlighting keys off these, not numbers. */
   inFlightLeadIds: string[]
-  /**
-   * Lead ids placed on THIS tick only.
-   *
-   * Distinct from inFlightLeadIds, which is a cumulative snapshot. The client
-   * rotates these to the bottom of the queue panel the moment they are fired,
-   * so a 3-line tick takes the top three, drops them to the end, and the next
-   * tick starts from the new top three. Without it the dialed rows stay at the
-   * top, the panel never appears to advance, and once the 30-second claim
-   * lapses the same three are simply re-dialed.
-   */
+  /** Lead ids placed on THIS tick only. Drives queue rotation. */
   dialedLeadIds: string[]
+  /** The agent's line. */
+  seat?: 'live' | 'placing' | 'failed'
+  /** Why the line count is what it is. */
+  lines?: {
+    count: number
+    limitedBy: LegalLinesResult['limitedBy']
+    reason: string
+    projectedPct: number
+    measuredPct: number
+  }
 }
 
 interface RunControllerInput {
   sessionId: string
-  /** null means All Active — the campaign set is derived from the queue
-   *  panel's own lead ids. See campaignIds resolution in the body. */
+  /** null means All Active: the campaigns come from the queue panel's leads. */
   campaignId: string | null
   clerkId: string
   internalUserId: string
   teamId: string | null
-  // Ordered lead ids from the dialer's queue panel FILTER/shuffle, or null
-  // if no filter/shuffle is active. When present, predictive claims leads
-  // as usual (the atomic claim_next_leads_for_campaign RPC is untouched —
-  // this doesn't introduce any race condition into claiming itself), then
-  // releases any claimed lead that isn't in this list before dialing, so
-  // predictive's background engine actually respects "the only numbers
-  // dialed are the ones from the filter results" instead of pulling from
-  // the full active pool regardless of what's filtered/shuffled on screen.
-  // When more filtered candidates exist than lines available this tick,
-  // the ones earlier in this list's order are preferred.
+  /** The queue panel's displayed order. Dialing follows it top down. */
   leadIdAllowlist?: string[] | null
 }
 
+interface ClaimedLead {
+  id: string
+  phone: string
+  campaign_id: string
+}
 
+interface Snapshot {
+  released: number
+  inFlight: number
+  inFlightPhones: string[]
+  inFlightLeadIds: string[]
+}
 
 function normalizePhone(raw: string): string {
   const digits = (raw || '').replace(/\D/g, '')
@@ -102,177 +110,35 @@ function normalizePhone(raw: string): string {
   return digits
 }
 
-// =============================================================================
-// PICKUP ABORTS THE REST
-// =============================================================================
-// The defining behaviour of this dialer's predictive mode, and the reason it
-// carries far less abandonment risk than a textbook one.
-//
-// A textbook predictive dialer does the opposite of this: surplus answered
-// calls are routed to whoever is free, and when nobody is free the prospect is
-// abandoned — dead air, then a drop. That is the behaviour the FTC's 3% rule
-// exists to bound, and every vendor in this category lives inside it.
-//
-// Here, the moment a human is committed to the agent, every OTHER line this
-// session still has ringing is hung up. A line that never got answered cannot
-// be abandoned, so for a solo agent the surplus simply stops existing.
-//
-// WHAT THIS DELIBERATELY DOES NOT TOUCH — and it is the whole of the team
-// behaviour in one clause: only lines with answered_at IS NULL are aborted. A
-// sibling that has ALREADY been answered is left completely alone to finish its
-// own AMD verdict and route itself — to the originating agent if somehow free,
-// otherwise through handleOverflowAnsweredCall, which hands it to the next
-// available agent on a team campaign and drops it on a solo one. "A pickup
-// aborts all active dials, and if two are picked up the next available user
-// gets the pickup" is exactly that distinction: kill what is still ringing,
-// never take a call away from someone who already said hello.
-//
-// WHY THE CLAIM RELEASE IS NOT OPTIONAL. handleHangup writes duration and
-// clears the session pin, but it does not release the lead's claim — nothing
-// does, short of the 30-second stale sweep. The controller paces off live
-// claims (see inFlight below), so without this the aborted lines would keep
-// counting as in flight for a further 30 seconds and the engine would sit at
-// target, refusing to refill, immediately after the one moment it most needs
-// to. The abort would visibly stall the dialer it was meant to sharpen.
-//
-// dial_attempts is deliberately NOT incremented. These leads were hung up by
-// us, typically inside a second or two of ringing, because somebody else
-// answered — that is our decision, not their non-answer. Counting it would let
-// a lead exhaust its retry cap and be set aside as 'maxed' without ever having
-// been genuinely dialed, quietly eating the customer's list. They go back to
-// the pool untouched; the panel's own rotation is what stops them being the
-// very next thing dialed.
-const ABORT_LOOKBACK_MS = 90_000
-
-export async function abortSiblingFanoutLines(params: {
-  sessionId: string
-  keepCallControlId: string
-}): Promise<number> {
-  const { sessionId, keepCallControlId } = params
-
-  // ── THE FIFTEEN-SECOND FLOOR IS A REGULATION, NOT A PREFERENCE ────────
-  // FTC Telemarketing Sales Rule § 310.4(b)(4)(ii) requires a telemarketer to
-  // "allow the telephone to ring for at least fifteen (15) seconds or four (4)
-  // rings before disconnecting an unanswered call."
-  //
-  // This function hung up every still-ringing sibling the instant another line
-  // was picked up, with no floor at all. Measured across the four days
-  // predictive has ever run: 160 legs rang and were cancelled UNDER fifteen
-  // seconds, averaging 4.7s, shortest 1s, hangup cause `normal_clearing` —
-  // which is us. 222 others ran the full 20s and were fine.
-  //
-  // Breaking any ONE of the four safe-harbor conditions in § 310.4(b)(4)
-  // forfeits the whole safe harbor, which is what caps exposure at 3%
-  // abandonment. So this is not a rounding detail: at $500-$1,500 per
-  // violating call it is the most expensive line in the controller.
-  //
-  // A leg that has not yet rung 15 seconds is LEFT TO RING OUT rather than
-  // cancelled. It costs nothing at the carrier — an unanswered lead leg bills
-  // $0 (docs/CARRIER-ENGINEERING §6) — so the only price is that it may answer
-  // with nobody there, which is exactly why predictive_line_ceiling is 1 until
-  // a TSR-compliant no-agent message exists. See docs/COST-FINDINGS.md §1y.
-  const TSR_MIN_RING_SECONDS = 15
-  const cancellableBefore = new Date(Date.now() - TSR_MIN_RING_SECONDS * 1000).toISOString()
-
-  const { data: siblings, error } = await supabase
-    .from('calls')
-    .select('call_control_id, lead_id')
-    .eq('dial_group_id', sessionId)
-    .eq('dial_source', 'controller_fanout')
-    .eq('duration', 0)
-    .is('answered_at', null)
-    .is('disposition', null)
-    .gte('created_at', new Date(Date.now() - ABORT_LOOKBACK_MS).toISOString())
-    // Only legs that have ALREADY rung the statutory minimum.
-    .lte('created_at', cancellableBefore)
-    .neq('call_control_id', keepCallControlId)
-
-  if (error) {
-    console.error('[controller] sibling lookup failed', error)
-    return 0
+function idle(reason: string, snap: Snapshot, extra: Partial<ControllerResult> = {}): ControllerResult {
+  return {
+    fired: 0, desired: 0, inFlight: snap.inFlight, effectiveLines: 0, degraded: false, reason,
+    callSids: [], skipped: 0, released: snap.released, dedupedPhones: 0,
+    dialedPhones: [], dialedLeadIds: [],
+    inFlightPhones: snap.inFlightPhones, inFlightLeadIds: snap.inFlightLeadIds,
+    ...extra,
   }
-  if (!siblings || siblings.length === 0) return 0
-
-  // Bounded, for the same reason /api/dialer/abort is bounded: an unbounded
-  // burst of Call Control requests gets rate-limited by Telnyx, and the
-  // request that actually matters — the bridge putting the agent on the live
-  // call — ends up queued behind it. Five at a time covers the hard line cap
-  // in a single pass anyway.
-  let aborted = 0
-  const CONCURRENCY = 5
-  for (let i = 0; i < siblings.length; i += CONCURRENCY) {
-    await Promise.all(
-      siblings.slice(i, i + CONCURRENCY).map(async (s) => {
-        if (!s.call_control_id) return
-        try {
-          await hangupCallControlId(s.call_control_id)
-          aborted++
-        } catch (e) {
-          console.error('[controller] sibling abort hangup failed', s.call_control_id, e)
-        }
-      })
-    )
-  }
-
-  // One statement rather than a release_lead_claim RPC per lead — this runs
-  // while a human is waiting on the other line, so it stays off the critical
-  // path in both latency and round trips.
-  const leadIds = siblings.map(s => s.lead_id).filter((id): id is string => !!id)
-  if (leadIds.length > 0) {
-    const { error: relErr } = await supabase
-      .from('leads')
-      .update({ claimed_at: null, claimed_by_session_id: null })
-      .in('id', leadIds)
-    if (relErr) console.error('[controller] sibling claim release failed', relErr)
-  }
-
-  console.log(
-    `[controller] pickup on ${keepCallControlId} aborted ${aborted} still-ringing ` +
-    `line(s) past the ${TSR_MIN_RING_SECONDS}s TSR floor and released ` +
-    `${leadIds.length} claim(s). Younger siblings were left to ring out.`
-  )
-  return aborted
 }
 
-// ── WHY A TICK DIALED NOTHING ───────────────────────────────────────────────
-// Every early return in the controller carries a human-readable `reason`, and
-// every one of them was returned to the client and then dropped. So a tick that
-// claimed two leads and dialed none looked, from every table in the database,
-// exactly like a tick that was never asked to dial — the same ambiguity that
-// hid "predictive has never placed a call" for the product's whole lifetime,
-// one layer further in.
-//
-// This wraps the controller and records the reason whenever a tick fires
-// nothing. "At target" is excluded: that is the correct steady state while
-// lines are busy and would otherwise write an event every five seconds for
-// every dialing agent.
-export async function runPredictiveController(
-  input: RunControllerInput
-): Promise<ControllerResult> {
+async function snapshot(sessionId: string, released: number): Promise<Snapshot> {
+  const live = await linesInFlight(sessionId)
+  return {
+    released,
+    inFlight: live.length,
+    inFlightPhones: live.map(c => c.phone_number).filter((p): p is string => !!p),
+    inFlightLeadIds: live.map(c => c.lead_id).filter((id): id is string => !!id),
+  }
+}
+
+export async function runPredictiveController(input: RunControllerInput): Promise<ControllerResult> {
   const result = await runPredictiveControllerInner(input)
 
-  // ── EVERY TICK REPORTS, INCLUDING THE BORING ONE ────────────────────────
-  // This used to exclude "at target", on the grounds that it is the correct
-  // steady state while lines are busy. That reasoning put the single most
-  // likely silent failure — a controller that believes it is at target because
-  // stale claims inflate inFlight — into the one bucket nothing recorded.
-  //
-  // Rate-limited per session instead of filtered by reason, so a busy engine
-  // does not write twelve rows a minute while a stuck one still shows up.
+  // Rate-limited per session rather than filtered by reason, so a stuck engine
+  // shows up without a busy one writing twelve rows a minute.
   const lastLogged = tickLogCache.get(input.sessionId) ?? 0
-  const dueForLog = Date.now() - lastLogged > 20_000
-
-  if (result.fired === 0 && dueForLog) {
+  if (result.fired === 0 && Date.now() - lastLogged > 20_000) {
     tickLogCache.set(input.sessionId, Date.now())
-    // AWAITED, not fire-and-forget. The heartbeat returns its response
-    // immediately after this resolves, and on a serverless runtime a promise
-    // still pending at that moment is frozen with the invocation — so a `void`
-    // here produces an insert that never lands. That is not a theoretical
-    // risk: it is why the first round of this instrumentation recorded nothing
-    // at all while the controller was demonstrably running and claiming leads
-    // every five seconds.
-    //
-    // One insert, and nothing the agent can feel is waiting on it.
+    // Awaited: a pending insert is frozen with the invocation on serverless.
     await logCallEvent({
       event_type: 'fanout_idle',
       user_id: input.clerkId,
@@ -281,135 +147,125 @@ export async function runPredictiveController(
       status: String(result.desired),
       detail: {
         reason: result.reason,
-        desired: result.desired,
+        seat: result.seat ?? null,
+        lines: result.lines ?? null,
         in_flight: result.inFlight,
-        effective_lines: result.effectiveLines,
-        deduped: result.dedupedPhones,
-        skipped: result.skipped,
         released: result.released,
         allowlist_size: input.leadIdAllowlist?.length ?? null,
-        in_flight_lead_ids: result.inFlightLeadIds.length,
       },
     })
   }
-
   return result
 }
 
-async function runPredictiveControllerInner(
-  input: RunControllerInput
-): Promise<ControllerResult> {
-  const { sessionId, campaignId, clerkId, internalUserId, teamId, leadIdAllowlist } = input
+async function runPredictiveControllerInner(input: RunControllerInput): Promise<ControllerResult> {
+  const { sessionId, clerkId } = input
 
-  
   let released = 0
   try {
     const { data } = await supabase.rpc('release_stale_lead_claims')
     if (typeof data === 'number') released = data
-  } catch (sweepErr) {
-    console.error('[controller] stale claim sweep failed', sweepErr)
+  } catch (err) {
+    console.error('[controller] stale claim sweep failed', err)
   }
 
-  // ── WHICH CAMPAIGNS THIS TICK MAY DIAL ──────────────────────────────────
-  // Two changes here, and between them they are why predictive had never
-  // placed a single call in this product's lifetime.
-  //
-  // 1. THE MODE BELONGS TO THE AGENT, NOT THE CAMPAIGN. This used to refuse
-  //    outright unless campaigns.dialer_mode was itself 'predictive'. But the
-  //    agent picks their mode in the dialer, on whatever list they are working;
-  //    the column is the campaign's DEFAULT, not a permission. An agent who
-  //    selected predictive on a campaign saved as progressive got a controller
-  //    that returned zero on every heartbeat while the UI happily said the
-  //    engine was running — and the dialer fell back to placing one user_dial
-  //    at a time, which looks exactly like a working dialer that is simply slow.
-  //
-  // 2. ALL ACTIVE IS A REAL CASE. Predictive fans out across lines, and nothing
-  //    about a line requires every lead on it to belong to one campaign. When
-  //    no single campaign is selected the queue panel's own order — already
-  //    sent on every heartbeat as leadIdAllowlist — defines both the leads AND
-  //    the campaigns, so predictive dials the list exactly as displayed,
-  //    spanning campaigns, the same way every other mode already does.
-  let campaignIds: string[] = []
+  // Taken first so the queue panel's highlighting is true on every tick,
+  // including the ones that dial nothing.
+  const snap = await snapshot(sessionId, released)
 
+  const session = await readSession(sessionId)
+  if (!session) return idle('no dialer session yet', snap)
+
+  // 1. The agent's line.
+  const seat = await ensureSeat(sessionId, clerkId)
+  if (seat.state !== 'live') return idle(seat.reason, snap, { seat: seat.state })
+
+  // 2. Nobody rings for an agent who is talking.
+  if (session.current_call_id) return idle('agent is on a call', snap, { seat: 'live' })
+
+  const pausedUntil = session.predictive_paused_until ? Date.parse(session.predictive_paused_until) : NaN
+  if (Number.isFinite(pausedUntil) && pausedUntil > Date.now()) {
+    const secs = Math.ceil((pausedUntil - Date.now()) / 1000)
+    return idle(`paused by the runaway breaker for ${secs}s more`, snap, { seat: 'live' })
+  }
+
+  // 3. The previous round is over only when every one of its legs has ended.
+  if (snap.inFlight > 0) {
+    return idle(
+      `round in progress, ${snap.inFlight} line${snap.inFlight === 1 ? '' : 's'} still up`,
+      snap,
+      { seat: 'live' }
+    )
+  }
+
+  // Between rounds and idle is the only safe moment to replace an old seat.
+  if (await rotateSeatIfOld(session)) {
+    return idle('refreshing your line before its four-hour limit', snap, { seat: 'placing' })
+  }
+
+  // 4. One tick at a time.
+  const lockBefore = new Date(Date.now() - TICK_LOCK_MS).toISOString()
+  const { data: locked } = await supabase
+    .from('agent_sessions')
+    .update({ predictive_tick_lock: new Date().toISOString() })
+    .eq('id', sessionId)
+    .or(`predictive_tick_lock.is.null,predictive_tick_lock.lt.${lockBefore}`)
+    .select('id')
+    .maybeSingle()
+  if (!locked) return idle('another tick is placing this round', snap, { seat: 'live' })
+
+  try {
+    // Re-read under the lock: a tick that passed the barrier at the same moment
+    // as this one may have placed its round since.
+    const fresh = await snapshot(sessionId, released)
+    if (fresh.inFlight > 0) {
+      return idle(`round in progress, ${fresh.inFlight} line(s) still up`, fresh, { seat: 'live' })
+    }
+    return await placeRound(input, fresh)
+  } finally {
+    await supabase.from('agent_sessions').update({ predictive_tick_lock: null }).eq('id', sessionId)
+  }
+}
+
+async function placeRound(input: RunControllerInput, snap: Snapshot): Promise<ControllerResult> {
+  const { sessionId, campaignId, clerkId, internalUserId, teamId, leadIdAllowlist } = input
+  const panelOrder = leadIdAllowlist && leadIdAllowlist.length > 0 ? leadIdAllowlist : null
+  const panelPosition = new Map((panelOrder || []).map((id, i) => [id, i]))
+
+  // ── WHICH CAMPAIGNS ────────────────────────────────────────────────────
+  // A selected campaign, or on All Active the campaigns of the leads the queue
+  // panel is showing, in the order they first appear there.
+  let campaignIds: string[] = []
   if (campaignId) {
     campaignIds = [campaignId]
-  } else if (leadIdAllowlist && leadIdAllowlist.length > 0) {
-    // Derive the campaign set from the panel itself, preserving the order the
-    // rows are displayed in so the top of the list is dialed first.
-    const { data: allowRows } = await supabase
-      .from('leads')
-      .select('id, campaign_id')
-      .in('id', leadIdAllowlist)
-    const byId = new Map((allowRows || []).map(r => [r.id, r.campaign_id]))
+  } else if (panelOrder) {
+    const { data: rows } = await supabase.from('leads').select('id, campaign_id').in('id', panelOrder)
+    const byLead = new Map((rows || []).map(r => [r.id, r.campaign_id as string]))
     const seen = new Set<string>()
-    for (const id of leadIdAllowlist) {
-      const cid = byId.get(id)
-      if (cid && !seen.has(cid)) {
-        seen.add(cid)
-        campaignIds.push(cid)
-      }
+    for (const id of panelOrder) {
+      const cid = byLead.get(id)
+      if (cid && !seen.has(cid)) { seen.add(cid); campaignIds.push(cid) }
     }
   }
-
   if (campaignIds.length === 0) {
-    return zeroResult(
-      'no campaign selected and the queue panel sent no leads: nothing to dial',
-      released
-    )
+    return idle('no campaign selected and the queue panel sent no leads', snap, { seat: 'live' })
   }
 
   const { data: campaignRows } = await supabase
     .from('campaigns')
-    // tsr_* carry the seller identity 310.4(b)(4)(iii) requires before this
-    // campaign may be given a second line. See the clamp below.
-    .select('id, dialer_mode, predictive_lines_per_agent, predictive_lines_max, tsr_seller_name, tsr_callback_number')
+    .select('id, predictive_lines_per_agent, predictive_lines_max, tsr_seller_name, tsr_callback_number, dial_repeat_count')
     .in('id', campaignIds)
-
-  const campaignsById = new Map((campaignRows || []).map(c => [c.id, c]))
-  // Drop any id that didn't resolve, keeping panel order.
+  const campaignsById = new Map((campaignRows || []).map(c => [c.id as string, c]))
   campaignIds = campaignIds.filter(id => campaignsById.has(id))
   if (campaignIds.length === 0) {
-    return zeroResult('none of the selected campaigns could be loaded', released)
+    return idle('none of the selected campaigns could be loaded', snap, { seat: 'live' })
   }
+  const primary = campaignsById.get(campaignIds[0])!
 
-  // Line settings come from the FIRST campaign in panel order — the one the
-  // agent is effectively working. Lines are an agent-level idea ("how many at
-  // once am I comfortable with"), not a property of whichever list a given row
-  // happens to belong to, so mixing per-campaign values across one All Active
-  // run would make the pace depend on scroll position.
-  const campaign = campaignsById.get(campaignIds[0])!
-
-  
-  // ── A LINE IS A WHOLE THING ─────────────────────────────────────────────
-  // predictive_lines_per_agent is a numeric column whose DEFAULT IS 1.5, and
-  // the create/update routes clamped it to a fractional [1.0, 3.0]. Nothing in
-  // the product ever asked for one and a half telephone calls — the agent picks
-  // a number of lines and watches that many rows light up.
-  //
-  // What the fraction actually did: shouldDial floors, so 1.5 lines became one
-  // line and predictive placed exactly as many calls as progressive. Combined
-  // with the controller never having been reached at all (see the heartbeat's
-  // skip conditions), predictive has never in this product's lifetime dialed
-  // more than one line at a time.
-  //
-  // Rounded rather than floored so the stored 1.5 becomes 2 rather than
-  // silently staying at progressive parity, and the value is a real integer
-  // from here down — claim_next_leads_for_campaign's p_count is an integer
-  // parameter and PostgREST will not coerce a decimal into it.
-  const rawDefault = Number(campaign.predictive_lines_per_agent)
-  const campaignDefault = Number.isFinite(rawDefault) && rawDefault > 0
-    ? Math.round(rawDefault)
-    : 3
-  const campaignMax = Math.min(campaign.predictive_lines_max || 5, HARD_LINE_CAP)
-
-  // ── THE LINE COUNT IS THE AGENT'S, WHICHEVER LIST THEY SET IT ON ────────
-  // agent_predictive_prefs is keyed per campaign, which is fine for a single
-  // selected campaign and ambiguous across an All Active run. Rather than have
-  // the client and the controller each independently nominate a "primary"
-  // campaign to key on — two lists that must agree, and eventually won't — this
-  // reads the agent's preference across every involved campaign and takes the
-  // most recently set one. Wherever the agent moved the LINES selector, that is
-  // the number this dials, and no ordering assumption has to hold.
+  // ── THE CAP: WHAT SETTINGS ALLOW ────────────────────────────────────────
+  // The agent's LINES choice (most recently set across these campaigns), else
+  // the campaign default, bounded by the campaign's max, the platform ceiling
+  // and five. The law then decides how much of the cap is usable.
   let agentPref: number | null = null
   try {
     const { data: prefs } = await supabase
@@ -419,456 +275,172 @@ async function runPredictiveControllerInner(
       .in('campaign_id', campaignIds)
       .order('updated_at', { ascending: false })
       .limit(1)
-    const pref = prefs?.[0]
-    if (pref && typeof pref.preferred_lines === 'number') {
-      agentPref = pref.preferred_lines
-    }
-  } catch (prefErr) {
-    console.error('[controller] pref lookup failed', prefErr)
+    if (prefs?.[0] && typeof prefs[0].preferred_lines === 'number') agentPref = prefs[0].preferred_lines
+  } catch (err) {
+    console.error('[controller] line preference lookup failed', err)
   }
 
-  // ── THE PLATFORM CEILING, WHICH USED NOT TO REACH HERE ────────────────
-  // platform_config.predictive_line_ceiling was only ever applied by
-  // /api/predictive/prefs — it limited what the selector could SAVE, and
-  // nothing re-checked it here. Rows saved before the ceiling changed sailed
-  // straight past it: agent_predictive_prefs currently holds preferred_lines
-  // of 3 and 5 against a ceiling of 2.
-  //
-  // It matters because every surplus line is a CANCELLED call, and a call
-  // cancelled before answer is an abandoned call in Telnyx's definition —
-  // $0.005 on every abandoned call once the account is over 20%, applied
-  // retroactively for the whole month. Measured against 14 September's
-  // progressive traffic:
-  //
-  //     lines   total abandoned rate
-  //       1              0.8%
-  //       2             17.5%   <- the most that fits under the limit
-  //       3             29.4%   OVER
-  //       5             45.1%   OVER
-  //
-  // So the ceiling is not a preference, it is a compliance bound, and it has
-  // to be enforced where the dialing decision is actually made.
   let platformCeiling = HARD_LINE_CAP
   try {
     const { predictive_line_ceiling } = await getPlatformConfig()
     if (Number.isFinite(predictive_line_ceiling) && predictive_line_ceiling > 0) {
       platformCeiling = Math.min(HARD_LINE_CAP, predictive_line_ceiling)
     }
-  } catch (cfgErr) {
-    // Fail toward the SAFE end. An unreadable config must not hand out five
-    // lines; one line is progressive parity, which is never a compliance
-    // problem and never a silent one either — it is logged below.
-    console.error('[controller] line-ceiling lookup failed, holding at 1', cfgErr)
+  } catch (err) {
+    // Fail toward the safe end: one line cannot abandon anyone.
+    console.error('[controller] line ceiling unreadable, holding at 1', err)
     platformCeiling = 1
   }
 
-  // ── A SECOND LINE REQUIRES A SELLER TO ANNOUNCE ─────────────────────
-  // A surplus line that answers with no agent behind it is an ABANDONED call
-  // under 16 CFR 310.4(b)(1)(iv), and it counts toward the 3% ceiling whether
-  // or not the seller message plays. The message does not excuse the call and
-  // does not decrement the count — an earlier version of this comment said it
-  // did, which is wrong.
-  //
-  // What the message does is keep the 310.4(b)(4) SAFE HARBOR available. That
-  // harbor needs all four of: under 3% abandonment per campaign over 30 days,
-  // a 15-second or four-ring minimum, this message, and records proving it.
-  // Without the message the harbor is forfeit entirely, so every abandoned
-  // call is a bare violation instead of a protected one.
-  //
-  // Necessary, not sufficient. The ceiling and the abandon throttle below are
-  // what hold the 3%; this is what holds the harbor around it.
-  //
-  // So the check is structural, not advisory: a campaign that cannot announce
-  // its seller gets ONE line, where there is no surplus and therefore no
-  // abandoned call to excuse. Compliance that depends on somebody reading a
-  // warning is not compliance.
-  const tsrOk = canRunMultiLine({
-    name: campaign.tsr_seller_name,
-    callbackNumber: campaign.tsr_callback_number,
+  const rawDefault = Number(primary.predictive_lines_per_agent)
+  const campaignDefault = Number.isFinite(rawDefault) && rawDefault > 0 ? Math.round(rawDefault) : 3
+  const campaignMax = Math.min(Number(primary.predictive_lines_max) || HARD_LINE_CAP, HARD_LINE_CAP)
+  const cap = Math.max(1, Math.min(agentPref ?? campaignDefault, campaignMax, platformCeiling))
+
+  // ── THE LAW: WHAT EACH CAMPAIGN'S OWN 30 DAYS ALLOW ─────────────────────
+  // A round rings together, so it runs at the count the strictest campaign in
+  // it allows. An unreadable record fails to one line.
+  let binding: { id: string; result: LegalLinesResult }
+  const { data: statRows, error: statErr } = await supabase.rpc('predictive_campaign_stats', {
+    p_campaign_ids: campaignIds,
   })
-
-  let effectiveLines = agentPref ?? campaignDefault
-  effectiveLines = Math.max(1, Math.min(effectiveLines, campaignMax, platformCeiling))
-
-  if (!tsrOk && effectiveLines > 1) {
-    console.log(
-      `[controller] campaign ${campaign.id} clamped ${effectiveLines} → 1 line: no ` +
-      `tsr_seller_name / tsr_callback_number, so a surplus line answering with no ` +
-      `agent would be an abandoned call under 16 CFR 310.4(b)(1)(iv)`
-    )
-    effectiveLines = 1
-  }
-
-  if ((agentPref ?? campaignDefault) > platformCeiling) {
-    console.log(
-      `[controller] lines clamped ${agentPref ?? campaignDefault} → ${effectiveLines} ` +
-      `by platform_config.predictive_line_ceiling (${platformCeiling})`
-    )
-  }
-
-  
-  // ── THE ABANDON THROTTLE IS PER CAMPAIGN, BECAUSE THE RULE IS ───────────
-  // The FTC's 3% ceiling is measured per campaign over a rolling 30 days, so
-  // one unhealthy list must not throttle a healthy one, and a healthy one must
-  // not launder an unhealthy one. Across an All Active run:
-  //
-  //   - campaigns at or over the trigger are simply not claimed from this tick;
-  //     the healthy ones absorb the lines instead
-  //   - if EVERY involved campaign is degraded there is nothing healthy left to
-  //     shift to, so the whole tick drops to a single line — progressive parity,
-  //     which cannot abandon anyone
-  let degraded = false
-  let dialableCampaignIds = campaignIds
-  try {
-    const { data: rateRows } = await supabase
-      .from('campaign_abandon_rate_30d')
-      .select('campaign_id, abandon_rate_pct')
-      .in('campaign_id', campaignIds)
-
-    const degradedIds = new Set(
-      (rateRows || [])
-        .filter(r => typeof r.abandon_rate_pct === 'number' && r.abandon_rate_pct >= ABANDON_AUTO_DEGRADE_PCT)
-        .map(r => r.campaign_id)
-    )
-
-    if (degradedIds.size > 0) {
-      degraded = true
-      const healthy = campaignIds.filter(id => !degradedIds.has(id))
-      if (healthy.length > 0) {
-        dialableCampaignIds = healthy
-      } else {
-        effectiveLines = 1
-      }
+  if (statErr) {
+    console.error('[controller] abandonment record unreadable, one line', statErr)
+    binding = {
+      id: campaignIds[0],
+      result: {
+        lines: 1, projectedPct: 0, measuredPct: 0, limitedBy: 'law',
+        reason: 'the 30-day abandonment record could not be read, so one line',
+      },
     }
-  } catch (rateErr) {
-    console.error('[controller] abandon rate lookup failed', rateErr)
-  }
-
-  
-  
-  
-  
-  
-  
-  
-  const ninetySecondsAgo = new Date(Date.now() - 90_000).toISOString()
-  // ── LIVE CALLS ONLY ──────────────────────────────────────────────────
-  // duration = 0 is this codebase's "still in flight" sentinel: the row is
-  // inserted with 0 and app/api/calls/events/route.ts writes a real duration
-  // the moment call.hangup fires (never 0 — it floors at 1 precisely so this
-  // distinction holds).
-  //
-  // Without it this query counted every call from the last 90 seconds that
-  // had no disposition yet — which includes calls that ALREADY ENDED. An AMD
-  // machine-skip writes no disposition at all by design, so each one stayed
-  // in this set for a full 90 seconds after hanging up. Two consequences,
-  // one cosmetic and one not:
-  //
-  //   - inFlightPhones ballooned, so the queue panel highlighted dozens of
-  //     rows as "dialing" when only a few lines were live. On 4 lines it
-  //     eventually lit up the whole list.
-  //   - inFlight feeds the pacing decision (shouldDial = desired - inFlight),
-  //     so predictive believed it was already at target and STOPPED FIRING
-  //     new lines while actually idle. The dialer quietly ran far below the
-  //     configured line count.
-  //
-  // The 90-second window still bounds this in case a hangup webhook is
-  // missed and duration never gets written.
-  const { data: inFlightCallsRaw } = await supabase
-    .from('calls')
-    .select('id, phone_number, lead_id')
-    .in('campaign_id', campaignIds)
-    .eq('dial_group_id', sessionId)
-    .gte('created_at', ninetySecondsAgo)
-    .is('disposition', null)
-    .eq('duration', 0)
-
-  const inFlightCalls = (inFlightCallsRaw || []) as Array<{
-    id: string
-    phone_number: string | null
-    lead_id: string | null
-  }>
-
-  // ── PACE OFF CLAIMS, NOT CALL ROWS ──────────────────────────────────────
-  // This paced entirely off rows in `calls`, and a real dial runaway proved
-  // why that is not safe: calls reached the carrier and rang a phone, no row
-  // appeared, so inFlight stayed 0 and shouldDial stayed at full on every
-  // heartbeat. The controller fired again, and again, for as long as the
-  // engine was armed — the only thing that stopped it was pressing abort.
-  //
-  // The problem is not that the insert failed; it is that pacing depended on
-  // the insert succeeding. A safety limit must not be downstream of the thing
-  // it limits.
-  //
-  // leads.claimed_at is written by claim_next_leads_for_campaign itself, in the
-  // same atomic statement that hands the lead over, and it is proven working.
-  // A lead claimed by this session and not yet released IS a line in flight,
-  // whether or not anything else about that call got recorded.
-  //
-  // The higher of the two is used, so a genuinely missing claim cannot make the
-  // controller more aggressive than the call-row count already allowed.
-  const { count: claimedInFlight } = await supabase
-    .from('leads')
-    .select('id', { count: 'exact', head: true })
-    .in('campaign_id', campaignIds)
-    .eq('claimed_by_session_id', sessionId)
-    .gte('claimed_at', ninetySecondsAgo)
-
-  // ── AN ORPHANED CLAIM IS NOT A LINE ─────────────────────────────────────
-  // Pacing counts live claims as well as call rows, deliberately: a dial that
-  // reaches the carrier without writing a row must still count against the
-  // limit, or the engine runs away. But that makes a claim with NO call behind
-  // it indistinguishable from a real line — and those claims cannot expire,
-  // because the heartbeat re-stamps claimed_at every five seconds for every
-  // lead this session holds.
-  //
-  // The first tick this controller ever ran said "at target: 3/3 in flight"
-  // with zero fan-out calls in existence. Three claims left behind by earlier
-  // progressive dialing pinned the engine at its own line limit permanently:
-  // shouldDial 3 - 3 = 0, forever, on an idle dialer.
-  //
-  // So claims older than the grace period with no live call row behind them are
-  // released here rather than counted. The grace period matters — a claim taken
-  // moments ago is legitimately waiting for its call row to be written, and
-  // releasing that would reintroduce the runaway this counting exists to stop.
-  const ORPHAN_CLAIM_GRACE_MS = 25_000
-  const liveCallLeadIds = new Set(
-    inFlightCalls.map(c => c.lead_id).filter((id): id is string => !!id)
-  )
-
-  const { data: heldLeads } = await supabase
-    .from('leads')
-    .select('id, claimed_at')
-    .in('campaign_id', campaignIds)
-    .eq('claimed_by_session_id', sessionId)
-    .not('claimed_at', 'is', null)
-
-  const orphanIds = (heldLeads || [])
-    .filter(l => !liveCallLeadIds.has(l.id))
-    .filter(l => {
-      const age = Date.now() - new Date(l.claimed_at as string).getTime()
-      return Number.isFinite(age) && age > ORPHAN_CLAIM_GRACE_MS
+  } else {
+    const stats = new Map(((statRows || []) as Array<Record<string, unknown>>).map(r => [r.campaign_id as string, r]))
+    const perCampaign = campaignIds.map(id => {
+      const c = campaignsById.get(id)!
+      const st = stats.get(id)
+      return {
+        id,
+        result: legalLineCount({
+          cap,
+          humanRate: estimateHumanRate(Number(st?.humans_14d ?? 0), Number(st?.dials_14d ?? 0)),
+          answered30d: Number(st?.answered_30d ?? 0),
+          abandoned30d: Number(st?.abandoned_30d ?? 0),
+          sellerMessageReady: canRunMultiLine({
+            name: c.tsr_seller_name as string | null,
+            callbackNumber: c.tsr_callback_number as string | null,
+          }),
+        }),
+      }
     })
-    .map(l => l.id)
+    binding = perCampaign.reduce((a, b) => (b.result.lines < a.result.lines ? b : a))
+  }
+  const lines = binding.result.lines
+  const degraded = binding.result.limitedBy === 'degraded'
+  const linesInfo: ControllerResult['lines'] = {
+    count: lines,
+    limitedBy: binding.result.limitedBy,
+    reason: binding.result.reason,
+    projectedPct: Number(binding.result.projectedPct.toFixed(2)),
+    measuredPct: Number(binding.result.measuredPct.toFixed(2)),
+  }
+  const base = { seat: 'live' as const, desired: lines, effectiveLines: lines, degraded, lines: linesInfo }
 
-  if (orphanIds.length > 0) {
-    const { error: orphanErr } = await supabase
-      .from('leads')
-      .update({ claimed_at: null, claimed_by_session_id: null })
-      .in('id', orphanIds)
-    if (orphanErr) {
-      console.error('[controller] orphan claim release failed', orphanErr)
-    } else {
-      console.warn(
-        `[controller] released ${orphanIds.length} orphaned claim(s), held by this ` +
-        `session with no live call behind them`
-      )
-      released += orphanIds.length
+  // ── THE RUNAWAY BREAKER ─────────────────────────────────────────────────
+  const { count: dialsLastMinute } = await supabase
+    .from('calls')
+    .select('id', { count: 'exact', head: true })
+    .eq('dial_group_id', sessionId)
+    .gte('created_at', new Date(Date.now() - 60_000).toISOString())
+  if (breakerTripped(dialsLastMinute ?? 0, lines)) {
+    await supabase
+      .from('agent_sessions')
+      .update({ predictive_paused_until: new Date(Date.now() + BREAKER_PAUSE_MS).toISOString() })
+      .eq('id', sessionId)
+    await logCallEvent({
+      event_type: 'predictive_breaker',
+      user_id: clerkId,
+      campaign_id: campaignIds[0],
+      source: 'system',
+      status: String(dialsLastMinute),
+      detail: { session_id: sessionId, lines },
+    })
+    return idle(`runaway breaker: ${dialsLastMinute} dials in the last minute, pausing 30s`, snap, base)
+  }
+
+  // ── REPEATS OWED FIRST ──────────────────────────────────────────────────
+  const dialable = new Set(campaignIds)
+  const { data: owedRows } = await supabase
+    .from('predictive_batch')
+    .select('lead_id, campaign_id, attempts, max_attempts, position')
+    .eq('session_id', sessionId)
+    .eq('state', 'waiting')
+  const owed = ((owedRows || []) as Array<{ lead_id: string; campaign_id: string; attempts: number; max_attempts: number; position: number }>)
+    .filter(r => dialable.has(r.campaign_id))
+  const attemptsSoFar = new Map(owed.map(r => [r.lead_id, r.attempts]))
+  const plan = planRound(lines, owed.map(r => ({
+    leadId: r.lead_id,
+    position: panelPosition.get(r.lead_id) ?? r.position,
+  })))
+
+  const repeats: ClaimedLead[] = []
+  if (plan.repeatIds.length > 0) {
+    const { data, error } = await supabase.rpc('claim_predictive_repeats', {
+      p_session_id: sessionId,
+      p_lead_ids: plan.repeatIds,
+    })
+    if (error) console.error('[controller] repeat claim failed', error)
+    repeats.push(...((data || []) as ClaimedLead[]))
+    const got = new Set(repeats.map(l => l.id))
+    const lost = plan.repeatIds.filter(id => !got.has(id))
+    if (lost.length > 0) {
+      // Taken by a teammate, dispositioned, or no longer dialable. Done with.
+      await supabase.from('predictive_batch').delete().eq('session_id', sessionId).in('lead_id', lost)
     }
   }
 
-  // ── ONLY THIS ENGINE'S OWN LINES COUNT AS LINES ─────────────────────────
-  // Claims were counted as in-flight to stop a dial runaway: a call that
-  // reaches the carrier without writing a row must still hold its line. That
-  // is right, but the session's claims are not all this engine's.
-  // /api/leads/next-batch claims leads for the QUEUE PANEL under the same
-  // session id, and those were being counted as live predictive lines.
-  //
-  // The effect was total: three panel claims filled a three-line budget, the
-  // controller reported "at target: 3/3 in flight" forever, and predictive
-  // could never dial a single call while the UI cheerfully listed three
-  // numbers it was supposedly dialing.
-  //
-  // A claim only stands in for a line during the brief window between claiming
-  // a lead and its call row appearing — a second or two. After that the call
-  // row itself does the counting, and any claim still outstanding belongs to
-  // something else. Bounding the substitution to that window keeps the runaway
-  // guard intact and stops it swallowing the line budget.
-  const CLAIM_COUNTS_AS_LINE_MS = 20_000
-  const claimWindowStart = Date.now() - CLAIM_COUNTS_AS_LINE_MS
-  const recentUnbackedClaims = (heldLeads || []).filter(l => {
-    if (liveCallLeadIds.has(l.id)) return false      // the call row counts it
-    if (orphanIds.includes(l.id)) return false       // just released
-    const claimedMs = new Date(l.claimed_at as string).getTime()
-    return Number.isFinite(claimedMs) && claimedMs >= claimWindowStart
-  }).length
-
-  const inFlight = inFlightCalls.length + recentUnbackedClaims
-  // Real, live phone numbers currently in flight — genuinely still ringing
-  // or connected right now, not just "were dialed on the last tick that
-  // fired." Previously the frontend only learned about dialed numbers on
-  // the specific tick they were fired, with nothing refreshing or clearing
-  // that list on every subsequent tick (predictive doesn't fire new calls
-  // most ticks — it only fires when capacity opens up) — so the queue
-  // panel's highlighted rows could sit stale for an entire call's duration,
-  // or worse, keep showing numbers from a call that already ended. This is
-  // returned unconditionally below (not just when shouldDial/fired > 0) so
-  // the frontend always has a true current snapshot every single heartbeat.
-  const inFlightPhones = inFlightCalls
-    .map(c => c.phone_number)
-    .filter((p): p is string => !!p)
-
-  // ── THE IDS, NOT JUST THE NUMBERS ──────────────────────────────────────
-  // Row highlighting used to match queue rows against inFlightPhones by
-  // comparing the last 10 digits. That is only correct while every lead has a
-  // distinct number: the moment a list contains the same number on several
-  // leads — a test list, or a real one with a shared household or business
-  // line — dialing ONE of them lights up EVERY row sharing that number. On a
-  // list where all the numbers are the same, the whole panel highlights.
-  //
-  // A lead id identifies the row being dialed. A phone number identifies a
-  // telephone, which is not the same thing and never was.
-  const inFlightLeadIds = inFlightCalls
-    .map(c => c.lead_id)
-    .filter((id): id is string => !!id)
-  const desired = effectiveLines
-
-  // ── WHOLE LINES ONLY ────────────────────────────────────────────────────
-  // predictive_lines_per_agent is numeric and defaults to 1.5, so this came out
-  // fractional and was passed to claim_next_leads_for_campaign, whose p_count is
-  // an integer. PostgREST will not coerce a decimal into it, the claim failed on
-  // every tick, and predictive placed nothing at all.
-  //
-  // Floored, not rounded: 1.5 becomes 1, which is progressive-equivalent and
-  // cannot abandon a call. Rounding up to 2 would add abandon-rate exposure off
-  // a default nobody chose.
-  const shouldDial = Math.max(0, Math.floor(desired - inFlight))
-
-  // ── THE PACE, IN PLAIN ARITHMETIC ───────────────────────────────────────
-  // inFlight above now counts live CLAIMS as well as call rows, and that is
-  // what bounds this. A claim lives 30 seconds (release_stale_lead_claims) and
-  // a predictive line rings for at most 20 (ringTimeoutSecs under the TSR), so
-  // for an unanswered call — the majority — the claim outlives the call and the
-  // line is counted for its whole life.
-  //
-  // That caps the pace at `desired` lines per 30 seconds. At 3 lines: 6 dials a
-  // minute, 360 an hour. A progressive agent does roughly 120 an hour, and three
-  // lines should be about three times that, so 360 is the correct number rather
-  // than a compromise.
-  //
-  // What it replaces: pacing that read ONLY the calls table. Calls reached the
-  // carrier and rang a phone with no row written, so inFlight stayed 0,
-  // shouldDial stayed at full, and the controller fired a fresh batch on every
-  // 5-second heartbeat until someone pressed abort. A limit must never sit
-  // downstream of the thing it is limiting.
-
-  if (shouldDial === 0) {
-    return {
-      fired: 0, desired, inFlight, effectiveLines, degraded,
-      reason: `at target: ${inFlight}/${desired} in flight`,
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], dialedLeadIds: [], inFlightPhones, inFlightLeadIds,
-    }
-  }
-
-  
-  // ── DIAL THE PANEL'S ORDER, TOP DOWN ────────────────────────────────────
-  // leadIdAllowlist is the queue panel's displayed order, sent on every
-  // heartbeat. It arrived here and was then dropped on the floor: the RPC had
-  // no parameter for it, so predictive claimed by the database's own priority
-  // (dial_attempts ASC, created_at ASC) while every other mode dialed the list
-  // as shown.
-  //
-  // That is the same "bouncing around" the queue panel showed elsewhere, in
-  // the one mode where it is hardest to notice — nobody watches an individual
-  // predictive call, so the order was wrong invisibly.
-  //
-  // The RPC now takes p_lead_ids and uses array_position as its sort key, so
-  // the top row is claimed first. Passing null keeps the old behaviour for any
-  // caller without a panel order.
-  //
-  // ACROSS CAMPAIGNS, IN PANEL ORDER. The RPC claims within one campaign, which
-  // is correct — the atomic FOR UPDATE SKIP LOCKED claim is what makes
-  // concurrent agents safe, and that is worth keeping exactly as it is. So for
-  // an All Active run this walks the campaigns in the order they first appear
-  // in the panel, taking as many lines as each can still fill, and stops as
-  // soon as the tick is full. A three-line tick whose top rows are all one
-  // campaign therefore makes one RPC call, same as before; it only reaches for
-  // a second campaign when the first cannot fill the tick.
-  const leads: Array<{ id: string; phone: string; campaign_id: string }> = []
+  // ── THEN FRESH LEADS FROM THE TOP OF THE QUEUE ─────────────────────────
+  const owedIds = new Set((owedRows || []).map(r => r.lead_id as string))
+  const fresh: ClaimedLead[] = []
+  let freshNeeded = lines - repeats.length
   let claimFailure: string | null = null
-
-  for (const cid of dialableCampaignIds) {
-    const remaining = shouldDial - leads.length
-    if (remaining <= 0) break
-
-    // The whole panel order is passed, not a per-campaign slice. The RPC
-    // already intersects it with `campaign_id = p_campaign_id`, so ids
-    // belonging to other campaigns simply don't match — and passing the full
-    // list keeps array_position ranking rows by their true position in the
-    // panel rather than their position within one campaign's subset.
-    const panelOrder = leadIdAllowlist && leadIdAllowlist.length > 0
-      ? leadIdAllowlist
-      : null
-
-    const { data: claimedLeads, error: claimErr } = await supabase.rpc(
-      'claim_next_leads_for_campaign',
-      {
-        p_campaign_id: cid,
-        p_session_id: sessionId,
-        p_count: remaining,
-        p_lead_ids: panelOrder,
-      }
-    )
-
-    if (claimErr) {
-      // One campaign failing must not abort the tick — the others can still
-      // fill it. Remember the first error for the reason string.
-      console.error(`[controller] claim failed for campaign ${cid}`, claimErr)
-      if (!claimFailure) claimFailure = claimErr.message
+  for (const cid of campaignIds) {
+    if (freshNeeded <= 0) break
+    const { data, error } = await supabase.rpc('claim_next_leads_for_campaign', {
+      p_campaign_id: cid,
+      p_session_id: sessionId,
+      p_count: Math.min(freshNeeded, HARD_LINE_CAP),
+      p_lead_ids: panelOrder,
+    })
+    if (error) {
+      console.error(`[controller] claim failed for campaign ${cid}`, error)
+      claimFailure = claimFailure ?? error.message
       continue
     }
-
-    leads.push(...((claimedLeads || []) as Array<{
-      id: string
-      phone: string
-      campaign_id: string
-    }>))
-  }
-
-  if (leads.length === 0) {
-    return {
-      fired: 0, desired, inFlight, effectiveLines, degraded,
-      reason: claimFailure
-        ? `claim failed: ${claimFailure}`
-        : `no claimable leads across ${dialableCampaignIds.length} campaign(s)`,
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], dialedLeadIds: [], inFlightPhones, inFlightLeadIds,
+    for (const lead of (data || []) as ClaimedLead[]) {
+      if (owedIds.has(lead.id)) {
+        // Owed a repeat but not in this round: it waits its turn.
+        await supabase.rpc('release_lead_claim', { p_lead_id: lead.id })
+        continue
+      }
+      fresh.push(lead)
+      freshNeeded--
     }
   }
 
-  
-  
-  
-  
-  
-  // ── NEVER RING THE SAME PHONE TWICE AT ONCE ─────────────────────────────
-  // Seeded with the numbers already in flight, not just emptied per tick.
-  //
-  // Deduping only within a single batch stopped one tick dialing a number
-  // twice, and did nothing about the NEXT tick dialing the number the previous
-  // one is still ringing. On a list with a repeated number — a test list, or a
-  // real one with a shared household or business line — that is the common
-  // case, not the edge case: the same handset gets called again while the first
-  // call is still up.
-  // ── AND NOT ONE WE JUST RANG ────────────────────────────────────────────
-  // Seeding from in-flight calls alone only stops dialing a number that is
-  // still up. The moment a short call ends — a ring-out, a two-second reject —
-  // that number is eligible again, and with a five-second heartbeat it gets
-  // redialed almost immediately. Live traffic showed +1657... dialed twice
-  // within four seconds, and the same pair of leads fired on consecutive
-  // ticks, which is also what turned the dial blip into a beep every second.
-  //
-  // Nobody should be rung twice inside a minute by the same engine. The window
-  // is deliberately longer than a ring timeout so a number that just rang out
-  // cannot come straight back round.
-  //
-  // TESTERS ARE EXEMPT. A test campaign is usually a handful of numbers, often
-  // the tester's own, and a 60-second cooldown makes it impossible to exercise
-  // the engine at all — the pool empties after one pass and the controller
-  // sits idle. The same email allowlist that already grants the calling-window
-  // override grants this, so there is one list of testers rather than two.
-  const isTester = await hasCallingWindowOverride(clerkId)
+  const claimed = [...repeats, ...fresh]
+  if (claimed.length === 0) {
+    return idle(
+      claimFailure ? `claim failed: ${claimFailure}` : `no dialable leads across ${campaignIds.length} campaign(s)`,
+      snap,
+      base
+    )
+  }
 
-  const RECENTLY_DIALED_MS = 60_000
+  // ── NEVER THE SAME PHONE TWICE AT ONCE, AND NO NEW LEAD ON A NUMBER JUST RUNG
+  // Repeats are exempt from the one-minute rule on purpose: calling the same
+  // person back straight away is exactly what 1x/2x/3x asks for. Testers are
+  // exempt entirely (their lists are a handful of their own numbers).
+  const isTester = await hasCallingWindowOverride(clerkId)
   const { data: recentCalls } = isTester
     ? { data: [] as Array<{ phone_number: string | null }> }
     : await supabase
@@ -876,110 +448,36 @@ async function runPredictiveControllerInner(
         .select('phone_number')
         .eq('dial_group_id', sessionId)
         .gte('created_at', new Date(Date.now() - RECENTLY_DIALED_MS).toISOString())
-
-  const phoneSeen = new Set<string>(
-    [
-      ...inFlightPhones,
-      ...(recentCalls || []).map(c => c.phone_number).filter((p): p is string => !!p),
-    ]
-      .map(normalizePhone)
-      .filter(Boolean)
+  const recentPhones = new Set(
+    (recentCalls || []).map(c => c.phone_number).filter((p): p is string => !!p).map(normalizePhone)
   )
-  const leadsToCall: typeof leads = []
-  const dupeLeadIds: string[] = []
-
-  for (const lead of leads) {
+  const repeatIds = new Set(repeats.map(l => l.id))
+  const roundPhones = new Set<string>()
+  const toDial: ClaimedLead[] = []
+  const dropped: string[] = []
+  for (const lead of claimed) {
     const phone = normalizePhone(lead.phone)
-    if (!phone) {
-      
-      dupeLeadIds.push(lead.id)
-      continue
-    }
-    if (phoneSeen.has(phone)) {
-      
-      dupeLeadIds.push(lead.id)
-      continue
-    }
-    phoneSeen.add(phone)
-    leadsToCall.push(lead)
+    const blockedAsRecent = !repeatIds.has(lead.id) && recentPhones.has(phone)
+    if (!phone || roundPhones.has(phone) || blockedAsRecent) { dropped.push(lead.id); continue }
+    if (panelOrder && !panelPosition.has(lead.id)) { dropped.push(lead.id); continue }
+    roundPhones.add(phone)
+    toDial.push(lead)
+  }
+  if (dropped.length > 0) {
+    await Promise.allSettled(dropped.map(id => supabase.rpc('release_lead_claim', { p_lead_id: id })))
+    await supabase.from('predictive_batch').delete().eq('session_id', sessionId).in('lead_id', dropped)
+  }
+  if (toDial.length === 0) {
+    return idle(`claimed ${claimed.length} lead(s) but none could be dialed this round`, snap, {
+      ...base, dedupedPhones: dropped.length,
+    })
   }
 
-  
-  if (dupeLeadIds.length > 0) {
-    await Promise.allSettled(
-      dupeLeadIds.map(leadId =>
-        supabase.rpc('release_lead_claim', { p_lead_id: leadId })
-      )
-    )
-    console.log(`[controller] released ${dupeLeadIds.length} dupes/invalid from batch`)
-  }
-
-  // ── FILTER/SHUFFLE ENFORCEMENT ──────────────────────────────────────────
-  // If the queue panel has an active filter or shuffle, leadIdAllowlist
-  // carries the exact ordered set of leads that are actually allowed to be
-  // dialed right now. claim_next_leads_for_campaign has no knowledge of
-  // this (it's a database function, selecting purely by its own
-  // dial_attempts/created_at priority) — so any claimed lead NOT in this
-  // list gets released back to the pool immediately, unfired, exactly like
-  // the dupe-release above. When there are more allowed candidates than
-  // lines available this tick, the ones earlier in the allowlist's order
-  // (i.e. earlier in shuffle order, when shuffled) are kept preferentially.
-  let filteredOutCount = 0
-  if (leadIdAllowlist !== null && leadIdAllowlist !== undefined) {
-    const allowedSet = new Set(leadIdAllowlist)
-    const positionById = new Map(leadIdAllowlist.map((id, idx) => [id, idx]))
-    const allowed: typeof leadsToCall = []
-    const disallowedIds: string[] = []
-
-    for (const lead of leadsToCall) {
-      if (allowedSet.has(lead.id)) {
-        allowed.push(lead)
-      } else {
-        disallowedIds.push(lead.id)
-      }
-    }
-
-    if (disallowedIds.length > 0) {
-      await Promise.allSettled(
-        disallowedIds.map(leadId =>
-          supabase.rpc('release_lead_claim', { p_lead_id: leadId })
-        )
-      )
-      console.log(`[controller] released ${disallowedIds.length} leads outside the active filter/shuffle`)
-    }
-
-    // Sort the surviving allowed leads by their position in the allowlist
-    // (shuffle order), so if there are more allowed leads than lines this
-    // tick, the ones earlier in shuffle order are the ones actually dialed.
-    allowed.sort((a, b) => (positionById.get(a.id) ?? 0) - (positionById.get(b.id) ?? 0))
-
-    filteredOutCount = disallowedIds.length
-    leadsToCall.length = 0
-    leadsToCall.push(...allowed)
-  }
-
-  if (leadsToCall.length === 0) {
-    return {
-      fired: 0, desired, inFlight, effectiveLines, degraded,
-      reason: filteredOutCount > 0
-        ? `claimed ${leads.length} leads but none matched the active filter/shuffle`
-        : `claimed ${leads.length} leads but all were dupes/invalid`,
-      callSids: [], skipped: 0, released, dedupedPhones: dupeLeadIds.length, dialedPhones: [], dialedLeadIds: [], inFlightPhones, inFlightLeadIds,
-    }
-  }
-
-  
-  const callSids: string[] = []
-  const dialedPhones: string[] = []
-  const dialedLeadIds: string[] = []
-  let skipped = 0
-  /** Leads taken out of rotation this tick because dialing them cannot work. */
-  let permanentlyFailed = 0
-  /** Failures caused by having no number to dial from, not by the lead. */
-  let capacityBlocked = 0
-
+  // ── PLACE THE ROUND ─────────────────────────────────────────────────────
+  // Same placement as every mode: calling window, suppression, number pool,
+  // the same AMD settings as progressive. No agent leg per line: the seat is it.
   const placements = await Promise.allSettled(
-    leadsToCall.map(lead =>
+    toDial.map(lead =>
       placeOutboundCall({
         to: lead.phone,
         userId: clerkId,
@@ -992,143 +490,106 @@ async function runPredictiveControllerInner(
     )
   )
 
+  const callSids: string[] = []
+  const dialedPhones: string[] = []
+  const dialedLeadIds: string[] = []
+  const batchRows: Array<Record<string, unknown>> = []
+  const failedLeadIds: string[] = []
+  let skipped = 0
+  let permanentlyFailed = 0
+  let capacityBlocked = 0
+  const now = new Date().toISOString()
+
   for (let i = 0; i < placements.length; i++) {
     const result = placements[i]
-    const lead = leadsToCall[i]
+    const lead = toDial[i]
 
     if (result.status === 'fulfilled' && result.value.success && result.value.callControlId) {
       callSids.push(result.value.callControlId)
       dialedPhones.push(lead.phone)
       dialedLeadIds.push(lead.id)
-    } else {
-      skipped++
-
-      // ── NOT EVERY FAILURE DESERVES ANOTHER GO ──────────────────────────
-      // This released the claim unconditionally, which put the lead straight
-      // back in the pool for the next tick to claim and fail on again. Over
-      // three days that produced 727 fan-out failures from 22 leads: one lead
-      // attempted 86 times, five leads 66 times each inside 97 seconds. The
-      // loop had no way to end, because nothing here asked whether the failure
-      // was the kind retrying could fix. See FailureKind in placeOutboundCall.
-      const kind = result.status === 'fulfilled'
-        ? (result.value.failureKind ?? 'transient')
-        : 'transient'
-
-      if (kind === 'permanent') {
-        // Out of rotation. claim_next_leads_for_campaign only takes leads with
-        // status 'uncalled' or 'no_answer', so any other value stops it being
-        // claimed, and the partial index behind that claim excludes it too.
-        // dial_attempts is deliberately NOT bumped: this lead was never
-        // dialed, and spending an attempt would retire it for the wrong reason
-        // if somebody fixes the account setting and puts it back.
-        permanentlyFailed++
-        try {
-          await supabase
-            .from('leads')
-            .update({
-              status: 'undialable',
-              last_call_disposition: 'UNDIALABLE',
-              claimed_at: null,
-              claimed_by_session_id: null,
-            })
-            .eq('id', lead.id)
-        } catch (parkErr) {
-          console.error('[controller] parking undialable lead failed', parkErr)
-        }
-      } else if (kind === 'capacity') {
-        // Left CLAIMED on purpose, which is the whole fix for this case. The
-        // account has no number to dial FROM, so freeing the lead now just
-        // hands it to the next tick a second later. Holding the claim lets
-        // release_stale_lead_claims free it after 30 seconds, and that sweep
-        // runs at the top of every tick, so the backoff already exists and
-        // costs nothing to use. 66 attempts in 97 seconds becomes about 3.
-        capacityBlocked++
-      } else {
-        try {
-          await supabase.rpc('release_lead_claim', { p_lead_id: lead.id })
-        } catch (relErr) {
-          console.error('[controller] release_lead_claim failed', relErr)
-        }
-      }
-
-      // ── A FAILED FAN-OUT MUST LEAVE A TRACE ─────────────────────────────
-      // These failures were console-only, which makes them invisible: a
-      // predictive tick that claims leads and then places nothing looks
-      // identical, from every table in the database, to a tick that was never
-      // asked to dial. That ambiguity is exactly what made "predictive has
-      // never placed a call" take this long to pin down — there was no row
-      // anywhere that said WHY.
-      //
-      // Written to call_events with no call_control_id (there is no call — that
-      // is the point), so the reason is queryable next to every other event.
-      const reason = result.status === 'fulfilled'
-        ? `${result.value.error}${result.value.detail ? `, ${result.value.detail}` : ''}`
-        : `threw: ${String(result.reason)}`
-
-      if (result.status === 'fulfilled') {
-        console.warn(
-          `[controller] placement failed for lead ${lead.id}:`,
-          result.value.error, result.value.detail
-        )
-      } else {
-        console.error(`[controller] placement threw for lead ${lead.id}:`, result.reason)
-      }
-
-      // Awaited for the same reason as the idle event above — a `void` here
-      // is an insert the serverless runtime is free to discard.
-      await logCallEvent({
-        event_type: 'fanout_placement_failed',
-        user_id: clerkId,
-        campaign_id: lead.campaign_id,
+      const campaign = campaignsById.get(lead.campaign_id)
+      batchRows.push({
+        session_id: sessionId,
         lead_id: lead.id,
-        source: 'system',
-        status: result.status === 'fulfilled' ? String(result.value.httpStatus ?? '') : 'threw',
-        // failureKind recorded so the branch taken here is queryable, rather
-        // than having to be inferred from the error text again later.
-        detail: { phone: lead.phone, reason, failureKind: kind },
+        campaign_id: lead.campaign_id,
+        attempts: (attemptsSoFar.get(lead.id) ?? 0) + 1,
+        max_attempts: backToBackAttempts(campaign?.dial_repeat_count as number | null | undefined),
+        state: 'ringing',
+        position: panelPosition.get(lead.id) ?? i,
+        updated_at: now,
       })
+      continue
     }
+
+    skipped++
+    failedLeadIds.push(lead.id)
+    const kind = result.status === 'fulfilled' ? (result.value.failureKind ?? 'transient') : 'transient'
+
+    if (kind === 'permanent') {
+      // Out of rotation without spending an attempt: it was never dialed.
+      permanentlyFailed++
+      await supabase
+        .from('leads')
+        .update({
+          status: 'undialable',
+          last_call_disposition: 'UNDIALABLE',
+          claimed_at: null,
+          claimed_by_session_id: null,
+        })
+        .eq('id', lead.id)
+    } else if (kind === 'capacity') {
+      // No number to dial from. Holding the claim lets the 30-second sweep be
+      // the backoff, instead of the next tick failing on it a second later.
+      capacityBlocked++
+    } else {
+      await supabase.rpc('release_lead_claim', { p_lead_id: lead.id })
+    }
+
+    const reason = result.status === 'fulfilled'
+      ? `${result.value.error}${result.value.detail ? `, ${result.value.detail}` : ''}`
+      : `threw: ${String(result.reason)}`
+    await logCallEvent({
+      event_type: 'fanout_placement_failed',
+      user_id: clerkId,
+      campaign_id: lead.campaign_id,
+      lead_id: lead.id,
+      source: 'system',
+      status: result.status === 'fulfilled' ? String(result.value.httpStatus ?? '') : 'threw',
+      detail: { phone: lead.phone, reason, failureKind: kind },
+    })
+  }
+
+  if (batchRows.length > 0) {
+    const { error } = await supabase.from('predictive_batch').upsert(batchRows, { onConflict: 'session_id,lead_id' })
+    if (error) console.error('[controller] batch write failed', error)
+  }
+  if (failedLeadIds.length > 0) {
+    await supabase.from('predictive_batch').delete().eq('session_id', sessionId).in('lead_id', failedLeadIds)
   }
 
   return {
     fired: callSids.length,
-    desired,
-    inFlight,
-    effectiveLines,
+    desired: lines,
+    inFlight: snap.inFlight + callSids.length,
+    effectiveLines: lines,
     degraded,
-    reason: degraded
-      ? `auto-degraded to 1x (abandon rate >= ${ABANDON_AUTO_DEGRADE_PCT}%)`
-      : `dialed ${callSids.length}/${leadsToCall.length} unique`
-        + (dupeLeadIds.length ? `, deduped ${dupeLeadIds.length}` : '')
-        // Named separately from `skipped` because they mean different things to
-        // whoever is reading a tick that dialed nothing. One is leads retired,
-        // the other is the account having no number to dial from, and only the
-        // second one is fixed by buying numbers.
-        + (permanentlyFailed ? `, ${permanentlyFailed} undialable` : '')
-        + (capacityBlocked ? `, ${capacityBlocked} held for capacity` : ''),
+    reason:
+      `dialed ${callSids.length}/${toDial.length}` +
+      (repeats.length ? `, ${repeats.filter(l => dialedLeadIds.includes(l.id)).length} repeat` : '') +
+      (dropped.length ? `, ${dropped.length} held back` : '') +
+      (permanentlyFailed ? `, ${permanentlyFailed} undialable` : '') +
+      (capacityBlocked ? `, ${capacityBlocked} held for capacity` : '') +
+      `; ${linesInfo.reason}`,
     callSids,
     skipped,
-    released,
-    dedupedPhones: dupeLeadIds.length,
+    released: snap.released,
+    dedupedPhones: dropped.length,
     dialedPhones,
     dialedLeadIds,
-    // inFlightPhones was snapshotted BEFORE this tick's calls were placed —
-    // the numbers just dialed this tick are also genuinely in flight now,
-    // so combine both rather than report only the pre-dial snapshot (which
-    // would miss exactly the calls this tick just started) or only the
-    // newly-dialed ones (which would miss calls still ringing from a prior
-    // tick).
-    inFlightPhones: Array.from(new Set([...inFlightPhones, ...dialedPhones])),
-    // Same reasoning as inFlightPhones above: the snapshot predates this
-    // tick's dials, so union it with the leads just placed.
-    inFlightLeadIds: Array.from(new Set([...inFlightLeadIds, ...dialedLeadIds])),
-  }
-}
-
-function zeroResult(reason: string, released: number): ControllerResult {
-  return {
-    fired: 0, desired: 0, inFlight: 0, effectiveLines: 0,
-    degraded: false, reason,
-    callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], dialedLeadIds: [], inFlightPhones: [], inFlightLeadIds: [],
+    inFlightPhones: Array.from(new Set([...snap.inFlightPhones, ...dialedPhones])),
+    inFlightLeadIds: Array.from(new Set([...snap.inFlightLeadIds, ...dialedLeadIds])),
+    seat: 'live',
+    lines: linesInfo,
   }
 }
