@@ -8,6 +8,7 @@ import { COMPETITORS, DIALERSEAT } from '@/lib/competitors'
 import { FACTS } from '@/lib/canonicalFacts'
 import { primeLocale, t as tr } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /vs/teams — what a five-agent floor actually costs, across every tool
@@ -28,7 +29,7 @@ export const runtime = 'nodejs'
 
 const SITE = 'https://dialerseat.com'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   // No single competitor here, so the phrases are the team buyer's: the
   // cross-tool pricing question this page answers. Each named tool carries
   // its own pros-and-cons keywords on its /vs page (lib/vsSeo).
@@ -59,6 +60,10 @@ export const metadata: Metadata = {
     title: 'What a 5-Agent Dialer Floor Actually Costs',
     description: 'Seat minimums, contracts, and the real cost of adding one more agent, across every major dialer.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const INK = '#1a1c24'

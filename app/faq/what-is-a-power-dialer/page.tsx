@@ -10,11 +10,12 @@ import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Power Dialer: History, Mechanics, and the Click-to-Dial Era | DialerSeat',
   description:
     'The power dialer: one line per agent, auto-advance, and the workhorse of inside sales since the mid-1990s. How it works, where it came from, when to use it.',
@@ -31,6 +32,10 @@ export const metadata: Metadata = {
     title: 'The Power Dialer: Origins and Mechanics',
     description: 'One line per agent, queue-driven, auto-advancing. The mode that defined inside sales from 1995 onward. Mojo, PhoneBurner, Aspect, they all started here.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const MODE_COLOR = '${SITE.deep}'

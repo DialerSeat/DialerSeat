@@ -8,6 +8,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/send-leads-from-your-crm — lead drip
@@ -42,7 +43,7 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/faq/send-leads-from-your-crm'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Send Leads Into DialerSeat From GoHighLevel, HubSpot or Any Form | DialerSeat',
   description:
     'Lead drip gives a campaign its own webhook URL. Point GoHighLevel, HubSpot, Zapier, a Google Sheet or your own form at it and new leads land in the running dial queue, whatever your CRM calls its fields.',
@@ -67,6 +68,10 @@ export const metadata: Metadata = {
     title: 'Send Leads Into DialerSeat From Your CRM',
     description: 'One webhook URL per campaign. Any CRM, any form, whatever it calls its fields.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

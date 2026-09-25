@@ -8,6 +8,7 @@ import { vsRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /vs/manual-dialing — "is a dialer even worth it?"
@@ -30,7 +31,7 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/vs/manual-dialing'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: [
     'power dialer vs manual dialing',
     'is a dialer worth it',
@@ -56,6 +57,10 @@ export const metadata: Metadata = {
     description:
       'What a dialer actually removes from your day, and when dialing by hand is genuinely fine.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

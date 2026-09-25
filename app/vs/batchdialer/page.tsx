@@ -11,10 +11,11 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 const SLUG = 'batchdialer'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'DialerSeat vs BatchDialer: Their Annual Rate Without the Annual Contract',
   description:
@@ -34,6 +35,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs BatchDialer',
     description: 'Automatic number replacement on every plan, not gated behind Pro. No per-number fees. No annual prepay to reach the real price. $35/week per seat.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 // Answers are written to be defensible against BatchDialer's own published

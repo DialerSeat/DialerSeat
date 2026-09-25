@@ -11,10 +11,11 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 const SLUG = 'convoso'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'DialerSeat vs Convoso: Same Dialer Modes, No Seat Minimum',
   description:
@@ -34,6 +35,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs Convoso',
     description: 'The same four dialer modes at a published $35/week per seat: no 20-seat minimum, no custom quote, no carrier fees billed separately.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

@@ -10,11 +10,12 @@ import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Progressive Dialer: The Middle Ground Between Power and Predictive | DialerSeat',
   description:
     'The progressive dialer: one line per agent with pre-screen voicemail detection. How it works, where it came from, and why it became the favorite of compliance-sensitive industries.',
@@ -31,6 +32,10 @@ export const metadata: Metadata = {
     title: 'The Progressive Dialer: Origins and Mechanics',
     description: 'One line per agent, AMD pre-screens, agent only hears humans. The mode that emerged in the early 2000s as the safe middle ground between power and predictive.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const MODE_COLOR = '#1a6a1a'

@@ -8,6 +8,7 @@ import {
 } from '@/lib/schema'
 import VsEveryoneView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // The five tools this page's tables name, in the forms people search. Each
 // one also has its own /vs page carrying the full pros-and-cons treatment
@@ -15,7 +16,7 @@ import { msg } from '@/lib/i18n/msg'
 // category-level phrases as well.
 const COMPARED = ['ReadyMode', 'Mojo Dialer', 'PhoneBurner', 'Five9', 'Convoso']
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: [
     'dialer pros and cons',
     'predictive dialer pros and cons',
@@ -41,6 +42,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs Every Legacy Dialer',
     description: 'Side-by-side feature matrix vs ReadyMode, Mojo, PhoneBurner, and Five9, plus a look at Convoso and the wider industry. $35/week per seat, cancel anytime. No annual contract. Modern UI. Every device.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

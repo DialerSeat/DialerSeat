@@ -11,12 +11,13 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // Figures from Ringover's own published pricing, read 24 Sept 2026. See the
 // entry in lib/competitors for what was and was not stated by the vendor.
 const SLUG = 'ringover'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: "DialerSeat vs Ringover: Pros, Cons and the 12-Month Commitment",
   description:
@@ -35,6 +36,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs Ringover',
     description: "A phone system with a year-long commitment, against a dialer billed a week at a time.",
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

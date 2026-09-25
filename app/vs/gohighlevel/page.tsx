@@ -11,12 +11,13 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // Figures from GoHighLevel's own published pricing, read 24 Sept 2026. See the
 // entry in lib/competitors for what was and was not stated by the vendor.
 const SLUG = 'gohighlevel'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: "DialerSeat vs GoHighLevel Dialer: Pros, Cons and Pricing",
   description:
@@ -35,6 +36,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs GoHighLevel',
     description: "A power dialer inside an agency platform, against a dialer that is the whole product.",
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

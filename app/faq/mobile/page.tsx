@@ -3,11 +3,12 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import MobileFaqView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'DialerSeat on Mobile: Install the PWA | DialerSeat',
   description:
     'DialerSeat runs as a full Progressive Web App on your phone: the same terminal, analytics, and teams tools as desktop, installed to your home screen in under a minute. Step-by-step install instructions for iPhone and Android, and why it\u2019s worth doing before you dial.',
@@ -36,6 +37,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat on Mobile: Install the PWA',
     description: 'The full dialer terminal and analytics dashboard, installed to your home screen. No App Store, no separate app to keep updated.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function MobileFaqPage() {

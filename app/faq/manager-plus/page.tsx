@@ -3,11 +3,12 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import ManagerPlusFaqView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Manager+: DialerSeat\u2019s Team & White-Label Tier | DialerSeat',
   description:
     'What Manager+ actually is: $75/week, replaces Pro, unlocks team ownership and full white-labeling. How seats stack, owner-pays vs. agent-pays, real examples for lead vendors and agency owners, advanced analytics, and priority support, with real product screenshots.',
@@ -36,6 +37,10 @@ export const metadata: Metadata = {
     title: 'Manager+: The Tier Above Pro',
     description: '$75/week. Team ownership, full white-labeling, advanced analytics, and priority support. See it running on desktop and as a mobile PWA.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function ManagerPlusFaqPage() {

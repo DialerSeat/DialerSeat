@@ -11,10 +11,11 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 const SLUG = 'phoneburner'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'DialerSeat vs PhoneBurner: Multi-Line Without the Tier Upgrades',
   description:
@@ -34,6 +35,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs PhoneBurner',
     description: 'Multi-line predictive (PhoneBurner is single-line only). Everything in one tier. Weekly billing, no annual contract. $35/week per seat.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

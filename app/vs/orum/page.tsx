@@ -11,10 +11,11 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 const SLUG = 'orum'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'DialerSeat vs Orum: $35/week vs $250+/month, Annual Contract',
   description:
@@ -34,6 +35,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs Orum',
     description: 'No demo required, no annual contract, no 3-seat minimum. $35/week per seat vs Orum\'s widely-reported $250+/user/month starting price.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

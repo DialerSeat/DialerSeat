@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ENTITLED_STATUSES } from '@/lib/entitlement'
 import {
-  LOCALE_COOKIE, LOCALE_HEADER, LOCALE_PATH_HEADER, PROMPT_COOKIE, splitLocalePrefix,
+  LOCALE_COOKIE, LOCALE_HEADER, LOCALE_PATH_HEADER, PROMPT_COOKIE, isLocalizablePath, splitLocalePrefix,
 } from '@/lib/i18n/locales'
 
 const isPublicRoute = createRouteMatcher([
@@ -367,7 +367,7 @@ export default clerkMiddleware(async (auth, request) => {
   if (
     localized &&
     !tenantSlug &&
-    (localized.rest === '/' || isMarketingOnlyPath(localized.rest))
+    isLocalizablePath(localized.rest)
   ) {
     const target = url.clone()
     target.pathname = localized.rest

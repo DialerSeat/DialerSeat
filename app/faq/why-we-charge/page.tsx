@@ -11,11 +11,12 @@ import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Why We Charge What We Charge | DialerSeat',
   description:
     '$35 per week per seat, all-in. Unlimited dial-out numbers, multiple inbound numbers, every dialer mode, no per-minute charges. Manager+ at $75/week adds full white-label. Here\'s the math vs competitors.',
@@ -32,6 +33,10 @@ export const metadata: Metadata = {
     title: 'Why we charge what we charge.',
     description: 'The breakdown on $35/week per seat: what\'s included, what competitors charge extra for, and why we can keep it flat.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default async function Page() {

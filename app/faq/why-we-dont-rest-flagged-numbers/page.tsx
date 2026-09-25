@@ -8,6 +8,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/why-we-dont-rest-flagged-numbers — the finding, on its own page
@@ -37,7 +38,7 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/faq/why-we-dont-rest-flagged-numbers'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Why We Don’t Rest a Flagged Number (We Slow It Down) | DialerSeat',
   description:
     'The standard advice is to pull a flagged caller ID and let it cool off. We did, and our rested numbers came back answering worse than brand-new ones. Cutting volume instead let the same number recover within days. Here is the data and why it works.',
@@ -55,6 +56,10 @@ export const metadata: Metadata = {
     description:
       'Rested numbers came back worse than new ones. Slowing them down let them recover in days.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

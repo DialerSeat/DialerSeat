@@ -11,10 +11,11 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 const SLUG = 'aircall'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'DialerSeat vs Aircall: The Power Dialer Isn\u2019t on the Basic Plan',
   description:
@@ -34,6 +35,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs Aircall',
     description: 'The power dialer, included at $35/week per seat, not a $50/month Professional-tier unlock with a 3-license minimum.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

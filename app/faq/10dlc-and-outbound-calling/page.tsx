@@ -11,8 +11,9 @@ import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Do I Need 10DLC Registration to Make Outbound Calls? | DialerSeat',
   description:
     '10DLC is an SMS framework. It does not apply to voice calls. The voice equivalents are STIR/SHAKEN attestation and CNAM registration, and DialerSeat handles both. What each one actually does.',
@@ -29,6 +30,10 @@ export const metadata: Metadata = {
     title: 'Do I Need 10DLC to Make Outbound Calls?',
     description: '10DLC is an SMS framework. For voice, what matters is STIR/SHAKEN attestation and CNAM.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

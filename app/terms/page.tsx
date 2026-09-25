@@ -8,6 +8,7 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 
 
@@ -15,7 +16,7 @@ import { msg } from '@/lib/i18n/msg'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Terms of Service: DialerSeat',
   description: 'The agreement between DialerSeat and users. Covers acceptable use, subscription terms, refunds, TCPA compliance, and liability.',
   alternates: {
@@ -38,6 +39,10 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const LAST_UPDATED = 'July 17, 2026'

@@ -11,8 +11,9 @@ import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'How Many Phone Numbers Does an Outbound Dialer Need? | DialerSeat',
   description:
     'A caller ID has a daily volume ceiling before answer rates fall. Why one number never works, how rotation and headroom protect an answer rate, and how to think about pool size without guessing.',
@@ -29,6 +30,10 @@ export const metadata: Metadata = {
     title: 'How Many Phone Numbers Does a Dialer Need?',
     description: 'Why one number never works, and how rotation protects your answer rate.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

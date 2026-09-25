@@ -11,11 +11,12 @@ import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'How Does AMD Work? Answering Machine Detection Explained | DialerSeat',
   description:
     'AMD listens to the pickup of an outbound call and decides whether it\'s a human or a voicemail greeting. Done right, it can double your talk time per hour. Here\'s how DialerSeat\'s AMD works.',
@@ -32,6 +33,10 @@ export const metadata: Metadata = {
     title: 'How Does AMD Work?',
     description: 'Answering Machine Detection: what it is, how accurate it is, and how DialerSeat handles it.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default async function Page() {

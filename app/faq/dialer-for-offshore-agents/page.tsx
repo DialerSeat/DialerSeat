@@ -7,6 +7,7 @@ import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schem
 import { FACTS } from '@/lib/canonicalFacts'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/dialer-for-offshore-agents — the wedge nobody is priced for
@@ -29,7 +30,7 @@ export const runtime = 'nodejs'
 
 const SITE = 'https://dialerseat.com'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Dialer for Offshore & Remote Agents: VAs, Philippines Teams | DialerSeat',
   description:
     'Running an outbound dialer with agents overseas: what it costs per seat, how calling windows follow the lead rather than the agent, what to test before you hire, and where the real constraints are.',
@@ -50,6 +51,10 @@ export const metadata: Metadata = {
     description: 'Same $35/week seat wherever the agent sits. Calling windows follow the lead, not the agent.',
   },
   robots: { index: true, follow: true },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const INK = '#1a1c24'

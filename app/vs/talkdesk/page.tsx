@@ -11,6 +11,7 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // Seat prices from Talkdesk's own pricing page, read 25 Sept 2026. The dialer
 // sits in the Proactive Outbound Engagement add-on, which Talkdesk names on its
@@ -19,7 +20,7 @@ import { msg } from '@/lib/i18n/msg'
 // published, which is the finding rather than a gap.
 const SLUG = 'talkdesk'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'DialerSeat vs Talkdesk: Pros, Cons and the Unpriced Dialer Add-On',
   description:
@@ -38,6 +39,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs Talkdesk',
     description: 'An enterprise contact center that prices the seat but not the dialer, against a dialer billed a week at a time.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

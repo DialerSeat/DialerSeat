@@ -8,6 +8,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t as tr } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/dialer-glossary
@@ -39,7 +40,7 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/faq/dialer-glossary'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Dialer Glossary: Every Auto Dialer Term, Defined | DialerSeat',
   description:
     'Plain definitions of the terms outbound calling runs on: abandoned call, abandon rate, AMD, answer rate, connect rate, contact rate, local presence, STIR/SHAKEN, DNC, disposition, pacing and the rest.',
@@ -64,6 +65,10 @@ export const metadata: Metadata = {
     title: 'Dialer Glossary',
     description: 'Plain definitions of the terms outbound calling runs on.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

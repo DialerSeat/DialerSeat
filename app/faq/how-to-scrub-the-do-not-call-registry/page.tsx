@@ -8,6 +8,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/how-to-scrub-the-do-not-call-registry
@@ -40,7 +41,7 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/faq/how-to-scrub-the-do-not-call-registry'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'How to Scrub Your List Against the Do Not Call Registry | DialerSeat',
   description:
     'Calling numbers on the National Do Not Call Registry is illegal without consent or an existing relationship. How to access the registry, what it costs from October 2026, how often you must re-scrub, and the exceptions.',
@@ -65,6 +66,10 @@ export const metadata: Metadata = {
     title: 'How to Scrub Against the Do Not Call Registry',
     description: 'Access, cost, the 31-day rule and the exceptions.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

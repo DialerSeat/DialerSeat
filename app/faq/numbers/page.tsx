@@ -3,11 +3,12 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import NumbersFaqView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Phone Numbers & Caller ID: Avoiding Spam Likely | DialerSeat',
   description:
     'How DialerSeat handles outbound numbers: STIR/SHAKEN A-attestation, CNAM and Free Caller Registry registration, local presence dialing, and pool rotation, the real mechanics behind not getting flagged Spam Likely or Scam Likely.',
@@ -36,6 +37,10 @@ export const metadata: Metadata = {
     title: 'Phone Numbers & Caller ID: DialerSeat',
     description: 'STIR/SHAKEN A-attestation, CNAM registration, local presence, and pool rotation, how DialerSeat keeps your outbound numbers from getting flagged.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function NumbersFaqPage() {

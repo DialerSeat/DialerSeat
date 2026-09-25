@@ -8,6 +8,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/how-we-keep-numbers-clean — the number-health system, end to end
@@ -38,7 +39,7 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/faq/how-we-keep-numbers-clean'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'How DialerSeat Keeps Its Numbers From Getting Flagged | DialerSeat',
   description:
     'A hard cap of 60 calls per number per day, load spread before any number runs hot, every number checked daily against its peers, and a struggling number slowed down rather than pulled. The whole system, with the numbers.',
@@ -56,6 +57,10 @@ export const metadata: Metadata = {
     description:
       'Daily caps, load spreading, peer-relative health checks, and throttling instead of resting.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

@@ -30,7 +30,7 @@ const add = (text, file) => {
 for (const file of files) {
   const src = fs.readFileSync(file, 'utf8')
   const isApi = file.startsWith('app/api/')
-  if (!isApi && !/@\/lib\/i18n\/(client|server|msg)/.test(src) && file !== 'lib/gutsRail.ts') continue
+  if (!isApi && !/@\/lib\/i18n\/(client|server|msg|metadata)/.test(src) && file !== 'lib/gutsRail.ts') continue
   const names = new Set()
   for (const m of src.matchAll(/import \{([^}]*)\} from ['"]@\/lib\/i18n\/(?:client|server|msg)['"]/g)) {
     for (const part of m[1].split(',')) {
@@ -40,6 +40,20 @@ for (const file of files) {
   }
   const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true, file.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
   const visit = (n) => {
+    // Page metadata that localizeMetadata() translates: title, description,
+    // and the Open Graph / Twitter copies of them.
+    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.name.text === 'baseMetadata' && n.initializer) {
+      const walk = (o) => {
+        if (!ts.isObjectLiteralExpression(o)) return
+        for (const p of o.properties) {
+          if (!ts.isPropertyAssignment(p) || !ts.isIdentifier(p.name)) continue
+          const k = p.name.text, v = p.initializer
+          if (/^(title|description|default|absolute)$/.test(k) && (ts.isStringLiteral(v) || ts.isNoSubstitutionTemplateLiteral(v))) add(v.text, file)
+          else if (/^(title|openGraph|twitter)$/.test(k)) walk(v)
+        }
+      }
+      walk(n.initializer)
+    }
     if (ts.isCallExpression(n) && ts.isIdentifier(n.expression) && names.has(n.expression.text) && n.arguments[0]) {
       const a = n.arguments[0]
       if (ts.isStringLiteral(a) || ts.isNoSubstitutionTemplateLiteral(a)) add(a.text, file)

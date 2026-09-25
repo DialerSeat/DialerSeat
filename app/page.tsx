@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 /**
  * One cell of the comparison table.
@@ -61,8 +62,12 @@ interface PageProps {
 // ever shared is another one. Without a canonical those are all separately
 // crawlable copies of the most important page on the domain, splitting its
 // ranking signals across variants that should be consolidating into one.
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   alternates: { canonical: 'https://dialerseat.com' },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export const dynamic = 'force-dynamic'

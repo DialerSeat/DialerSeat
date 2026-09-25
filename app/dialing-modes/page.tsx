@@ -9,8 +9,9 @@ import {
 } from '@/lib/schema'
 import DialingModesView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Dialing Modes: Preview, Power, Progressive, Predictive | DialerSeat',
   description:
     'How DialerSeat dials, and how we stay compliant doing it. Plain-English explanation of preview, power, progressive, and predictive dialing modes, the TCPA and FTC TSR safe harbor, and what our software enforces in code.',
@@ -29,6 +30,10 @@ export const metadata: Metadata = {
     title: 'Dialing Modes: Preview, Power, Progressive, Predictive',
     description: 'Four dialing modes explained, with the TCPA and FTC TSR rules each one operates under. What DialerSeat enforces in software vs. what falls on the campaign owner.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function DialingModesPage() {

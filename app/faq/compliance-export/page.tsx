@@ -3,11 +3,12 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import ComplianceExportFaqView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Compliance Export: Proving It, Not Just Claiming It | DialerSeat',
   description:
     'How to pull a per-campaign compliance record from DialerSeat: AMD results, abandon flags, dispositions, and call duration by date range, with phone-number redaction on by default, the actual export tool behind the compliance claims.',
@@ -36,6 +37,10 @@ export const metadata: Metadata = {
     title: 'Compliance Export: DialerSeat',
     description: 'Per-campaign, per-date-range export of AMD results, abandon flags, and dispositions, redacted by default. The receipts behind the compliance claims.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function ComplianceExportFaqPage() {

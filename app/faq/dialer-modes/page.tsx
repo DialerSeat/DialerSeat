@@ -10,11 +10,12 @@ import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Dialer Modes (TL;DR): Preview, Power, Progressive, Predictive | DialerSeat',
   description:
     'The four DialerSeat dialing modes in plain English. Preview, power, progressive, and predictive: what each one does and when to use it, summarized simply.',
@@ -31,6 +32,10 @@ export const metadata: Metadata = {
     title: 'Dialer Modes: The Simple Version',
     description: 'Preview, power, progressive, predictive, all four dialing modes summarized in plain terms.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const MODES = [

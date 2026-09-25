@@ -15,6 +15,7 @@ import {
 } from '@/lib/competitors'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // HEAD-TO-HEAD COMPARISONS — "<A> vs <B>", where neither one is us
@@ -75,6 +76,12 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata(
+  props: { params: Promise<{ matchup: string }> }
+): Promise<Metadata> {
+  return localizeMetadata(await matchupMetadata(props))
+}
+
+async function matchupMetadata(
   { params }: { params: Promise<{ matchup: string }> }
 ): Promise<Metadata> {
   const { matchup } = await params

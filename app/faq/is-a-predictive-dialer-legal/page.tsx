@@ -8,6 +8,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/is-a-predictive-dialer-legal
@@ -52,7 +53,7 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/faq/is-a-predictive-dialer-legal'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Is a Predictive Dialer Legal? The 3% Rule and What It Requires | DialerSeat',
   description:
     'Yes, predictive dialers are legal in the US under conditions set by the FTC and FCC: a 3% abandon limit per campaign, a 15-second minimum ring, a recorded message and an opt-out. What each rule says, and what DialerSeat enforces for you.',
@@ -77,6 +78,10 @@ export const metadata: Metadata = {
     title: 'Is a Predictive Dialer Legal?',
     description: 'The 3% abandon rule, the 15-second ring, the recorded message, and what DialerSeat enforces.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

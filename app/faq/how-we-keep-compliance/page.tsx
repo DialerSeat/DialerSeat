@@ -11,11 +11,12 @@ import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'How We Keep Compliance | DialerSeat',
   description:
     'The exact mechanisms DialerSeat uses to enforce TCPA and FTC TSR rules in software: calling-time windows, abandon-rate monitoring, auto-degrade, AMD, STIR/SHAKEN, and record retention.',
@@ -32,6 +33,10 @@ export const metadata: Metadata = {
     title: 'How We Keep Compliance',
     description: 'The compliance enforcement layer of DialerSeat, explained without marketing fluff. What runs in software, what falls on the seller, and how the auto-degrade controller actually works.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default async function Page() {

@@ -6,6 +6,7 @@ import { organizationSchema, breadcrumbSchema } from '@/lib/schema'
 import { phoneToState } from '@/lib/areaCode'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /data/connect-rates — the only thing here no competitor can republish
@@ -29,7 +30,7 @@ import { msg } from '@/lib/i18n/msg'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Outbound Connect Rates by State and Hour: Live Platform Data | DialerSeat',
   description:
     'Real connect-rate data measured on the DialerSeat platform: which hours and which states actually answer. Computed from anonymized call records, updated continuously, with sample sizes shown.',
@@ -49,6 +50,10 @@ export const metadata: Metadata = {
     title: 'Outbound Connect Rates by State and Hour',
     description: 'Real platform data on when and where outbound calls actually get answered. Sample sizes shown; nothing published below the reporting threshold.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 /**

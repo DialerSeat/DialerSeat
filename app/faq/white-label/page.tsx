@@ -3,8 +3,9 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import View from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'White-Label Your Dialer: Your Brand, Your Domain | DialerSeat',
   description:
     'Run DialerSeat as your own product. Your logo, your colors, your custom domain. Your agents never see DialerSeat. $75/week, all-inclusive.',
@@ -21,6 +22,10 @@ export const metadata: Metadata = {
     title: 'White-Label DialerSeat',
     description: 'Your brand. Your domain. Your dialer. $75/week, no setup fees, no contracts.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function Page() {

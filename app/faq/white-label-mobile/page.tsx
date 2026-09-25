@@ -3,11 +3,12 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import WhiteLabelMobileFaqView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'White-Label on Mobile: How the PWA Works | DialerSeat',
   description:
     'How DialerSeat\u2019s white-label branding carries onto mobile through a Progressive Web App (PWA): your logo, your colors, your theme, installed to the home screen with no App Store approval needed. Real side-by-side screenshots of two different white-label themes on the same codebase.',
@@ -36,6 +37,10 @@ export const metadata: Metadata = {
     title: 'White-Label on Mobile: DialerSeat',
     description: 'Your branded dialer, installed to the home screen like a native app: no App Store review, no native app store fees, no separate codebase to maintain.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function WhiteLabelMobileFaqPage() {

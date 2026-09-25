@@ -11,6 +11,7 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // Figures from Nextiva's own pricing page, read 25 Sept 2026: Core $23/$15,
 // Engage $50/$25, Scale $75 annual, contact center Essential from $75 an agent,
@@ -19,7 +20,7 @@ import { msg } from '@/lib/i18n/msg'
 // unknown; the answer is that the published prices are not dialing prices.
 const SLUG = 'nextiva'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'DialerSeat vs Nextiva: Pros, Cons and Where the Dialer Actually Lives',
   description:
@@ -38,6 +39,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs Nextiva',
     description: 'A phone system whose published plans do not dial, against a dialer billed a week at a time.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

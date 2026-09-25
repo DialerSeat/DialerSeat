@@ -12,6 +12,7 @@ import { getDictionary, getLocale, getUrlLocale } from '@/lib/i18n/server';
 import { LOCALE_COOKIE, PROMPT_COOKIE, localeDir, suggestLocale } from '@/lib/i18n/locales';
 import LanguagePrompt from '@/components/LanguagePrompt';
 import LocaleAccountSync from '@/components/LocaleAccountSync';
+import { clerkLocalization } from '@/lib/i18n/clerk';
 import { msg } from '@/lib/i18n/msg'
 
 export const metadata: Metadata = {
@@ -121,18 +122,18 @@ export const viewport: Viewport = {
 
 const dialerseatLocalization = {
 
-  formFieldInputPlaceholder__confirmDeletionUserAccount: 'delete account',
+  formFieldInputPlaceholder__confirmDeletionUserAccount: msg('delete account'),
   userProfile: {
     start: {
       dangerSection: {
-        deleteAccountButton: 'delete account',
-        deleteAccountTitle: 'delete account',
+        deleteAccountButton: msg('delete account'),
+        deleteAccountTitle: msg('delete account'),
       },
     },
     deletePage: {
       title: msg("delete account"),
-      actionDescription: "Type 'delete account' below to continue.",
-      confirm: 'delete account',
+      actionDescription: msg("Type 'delete account' below to continue."),
+      confirm: msg('delete account'),
     },
   },
 } as const;
@@ -212,7 +213,7 @@ export default async function RootLayout({
       : null;
 
   return (
-    <ClerkProvider localization={dialerseatLocalization} afterSignOutUrl="/">
+    <ClerkProvider localization={clerkLocalization(locale, dict, dialerseatLocalization)} afterSignOutUrl="/">
       <html lang={locale} dir={localeDir(locale) === 'rtl' ? 'rtl' : undefined}>
         <head>
           {IOS_SPLASH_SCREENS.map(({ w, h, orient }) => {

@@ -12,8 +12,9 @@ import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { STATE_TIMEZONES } from '@/lib/timezones'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Telemarketing Calling Hours by State: What DialerSeat Enforces | DialerSeat',
   description:
     'The federal TCPA window is 8am-9pm in the lead’s local time, not yours. DialerSeat enforces 9am-9pm per lead, server-side, using the timezone of the number being called. Which states are stricter, and what that means for your list.',
@@ -31,6 +32,10 @@ export const metadata: Metadata = {
     description:
       'The federal window is 8am-9pm in the LEAD’s local time. DialerSeat enforces 9am-9pm per lead, server-side.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

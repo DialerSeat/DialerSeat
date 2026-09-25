@@ -3,11 +3,12 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import CampaignsFaqView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Setting Up a Campaign: Mode, AMD, and Predictive Pacing | DialerSeat',
   description:
     'What a DialerSeat campaign actually is: dialer mode selection, AMD toggle and defaults, the predictive lines-per-agent setting, and how leads and scripts attach to it.',
@@ -36,6 +37,10 @@ export const metadata: Metadata = {
     title: 'Setting Up a Campaign: DialerSeat',
     description: 'Mode, AMD, predictive pacing: the settings a campaign actually has, and what each one does.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function CampaignsFaqPage() {

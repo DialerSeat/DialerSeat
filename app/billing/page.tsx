@@ -9,7 +9,8 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js'
-import { t } from '@/lib/i18n/client'
+import { t, useLocale } from '@/lib/i18n/client'
+import { stripeLocale } from '@/lib/i18n/locales'
 import { msg } from '@/lib/i18n/msg'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
@@ -123,6 +124,7 @@ function LoadingCard({ text }: { text: string }) {
 
 export default function BillingPage() {
   const { user, isLoaded } = useUser()
+  const paymentLocale = stripeLocale(useLocale().locale)
   const { signOut } = useClerk()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -835,6 +837,7 @@ export default function BillingPage() {
               stripe={stripePromise}
               options={{
                 clientSecret,
+                ...(paymentLocale ? { locale: paymentLocale } : {}),
                 appearance: {
                   theme: 'night',
                   variables: {

@@ -11,11 +11,12 @@ import { faqRail } from '@/lib/gutsRail'
 import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Why Is Compliance Important? (And Why Legacy Dialers Don\'t Care) | DialerSeat',
   description:
     'Telemarketing compliance isn\'t a nice-to-have. The FTC can write checks north of $53,000 per violation. Here\'s why it matters, and why most dialers treat it as someone else\'s problem.',
@@ -32,6 +33,10 @@ export const metadata: Metadata = {
     title: 'Why Is Compliance Important?',
     description: 'A light-hearted look at why telemarketing compliance matters, and why so many dialers can\'t be bothered.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default async function Page() {

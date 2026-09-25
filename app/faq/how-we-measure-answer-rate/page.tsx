@@ -8,6 +8,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/how-we-measure-answer-rate
@@ -32,7 +33,7 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/faq/how-we-measure-answer-rate'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'How DialerSeat Measures Answer Rate and Connect Rate | DialerSeat',
   description:
     'An answer rate is only as honest as its denominator. DialerSeat counts every dial you paid for, but calculates answer and connect rates only over dials that actually rang, so a technical failure is never blamed on your list.',
@@ -57,6 +58,10 @@ export const metadata: Metadata = {
     title: 'How DialerSeat Measures Answer Rate',
     description: 'Every dial you paid for is counted. Only dials that rang are in the rate.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

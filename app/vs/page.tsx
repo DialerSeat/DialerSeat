@@ -7,6 +7,7 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 
 
@@ -19,7 +20,7 @@ import { msg } from '@/lib/i18n/msg'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'DialerSeat Comparisons: vs ReadyMode, Mojo, PhoneBurner, Five9, WAVV, 3CX, and More',
   description:
     'Honest side-by-side comparisons of DialerSeat against every major outbound dialer and business phone system. Pricing, features, what each tool wins at, who should switch.',
@@ -38,6 +39,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat Comparisons: Pick Your Competitor',
     description: 'Side-by-side breakdowns vs ReadyMode, Mojo Dialer, PhoneBurner, Five9, WAVV, 3CX, and the wider industry. $35/week, weekly billing, modern UI.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function Page() {

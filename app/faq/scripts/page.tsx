@@ -3,11 +3,12 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import ScriptsFaqView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Call Scripts: Write, Attach, Reorder | DialerSeat',
   description:
     'How call scripts work in DialerSeat: personal and team-shared scripts, attaching multiple scripts to one campaign, reordering which one shows first, and what agents actually see mid-call.',
@@ -36,6 +37,10 @@ export const metadata: Metadata = {
     title: 'Call Scripts: DialerSeat',
     description: 'Write once, attach to any campaign, reorder any time. The script an agent sees mid-call, without leaving the dialer.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function ScriptsFaqPage() {

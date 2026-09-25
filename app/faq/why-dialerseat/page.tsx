@@ -3,11 +3,12 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import WhyDialerSeatView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Why DialerSeat? The Thesis, The Team, The Comparison | DialerSeat',
   description:
     'Why we built DialerSeat, who builds it, how we ship, and why we don\'t really see other dialers as competition. Plus the honest takedowns of ReadyMode, Mojo, and PhoneBurner.',
@@ -36,6 +37,10 @@ export const metadata: Metadata = {
     title: 'Why DialerSeat? The Thesis',
     description: 'Why we built it, who builds it, how we work, what makes us different from the entrenched names, and where we\'re going next.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function WhyDialerSeatPage() {

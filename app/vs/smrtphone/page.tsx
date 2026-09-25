@@ -11,10 +11,11 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 const SLUG = 'smrtphone'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: "DialerSeat vs smrtPhone, Flat Weekly, Not Subscription Plus Credits",
   description: "smrtPhone stacks three charges: a $62-$104/month subscription, a $42-$75/seat/month dialer add-on, then per-minute credits. DialerSeat is $35 per seat per week with call time included.",
@@ -32,6 +33,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs smrtPhone',
     description: "Subscription, plus dialer seat, plus per-minute credits. Versus one weekly number.",
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

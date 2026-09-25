@@ -11,10 +11,11 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 const SLUG = 'calltools'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: "DialerSeat vs CallTools: No Setup Fee, No Sales Call",
   description: "CallTools runs about $119.99 per user per month with setup fees commonly $500-$1,500 and integration quoted separately. DialerSeat is $35 per seat per week, self-serve, every dialer mode included.",
@@ -32,6 +33,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs CallTools',
     description: "Published price, no setup fee, and no sales conversation required to start dialing.",
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

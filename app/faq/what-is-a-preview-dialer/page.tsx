@@ -10,11 +10,12 @@ import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Preview Dialer: How It Works, Where It Came From, When To Use It | DialerSeat',
   description:
     'A deep look at the preview dialer: the original semi-automated outbound mode, dating back to 1970s telemarketing. Mechanism, history, use cases, and how it works on DialerSeat.',
@@ -31,6 +32,10 @@ export const metadata: Metadata = {
     title: 'The Preview Dialer: Origins and Mechanics',
     description: 'The original semi-automated outbound mode. One lead at a time, agent reviews first, agent clicks dial. Used since the 1970s in B2B, debt collection, and insurance.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const MODE_COLOR = '#5a5e6a'

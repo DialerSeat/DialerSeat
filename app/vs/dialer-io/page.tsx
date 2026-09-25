@@ -11,6 +11,7 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // The slug drops the dot. A literal /vs/dialer.io puts what looks like a file
 // extension at the end of a route segment, which is the one shape static
@@ -19,7 +20,7 @@ import { msg } from '@/lib/i18n/msg'
 // loses it only in the URL.
 const SLUG = 'dialer-io'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'DialerSeat vs Dialer.io: Published Pricing, No Three-Month Commitment',
   description:
@@ -40,6 +41,10 @@ export const metadata: Metadata = {
     description:
       'A quoted three-month commitment against a published weekly price, and four dialer modes against three.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 // ── ANSWERED FROM DIALER.IO'S OWN FAQ ────────────────────────────────────

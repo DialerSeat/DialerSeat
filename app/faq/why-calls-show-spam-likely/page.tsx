@@ -8,6 +8,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/why-calls-show-spam-likely — the outside view
@@ -32,7 +33,7 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/faq/why-calls-show-spam-likely'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Why Do My Calls Show “Spam Likely”? How Call Labels Work | DialerSeat',
   description:
     'Spam Likely is a score on your number, not a verdict on you. How carriers and call-protection apps decide, what STIR/SHAKEN does and does not prove, why CNAM rarely shows on mobiles, and what you can actually control.',
@@ -50,6 +51,10 @@ export const metadata: Metadata = {
     description:
       'How call labels actually get decided, what STIR/SHAKEN proves, and what you can control.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

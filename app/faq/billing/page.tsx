@@ -3,11 +3,12 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import BillingFaqView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Billing & Cancellation: How Weekly Billing Actually Works | DialerSeat',
   description:
     'What actually happens when you cancel, when a payment fails, when you add or remove a seat mid-week, and how weekly billing through Stripe works in practice, not just the marketing line.',
@@ -37,6 +38,10 @@ export const metadata: Metadata = {
     description:
       'The most you can be out is one week, $35. What cancel actually does, what a failed card does, and how refunds work.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function BillingFaqPage() {

@@ -10,11 +10,12 @@ import DialingModeCTA from '@/components/DialingModeCTA'
 import { SITE } from '@/lib/siteTheme'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Predictive Dialer: The 1980s Algorithm That Built Modern Call Centers | DialerSeat',
   description:
     'The predictive dialer: an algorithm that pre-dials multiple lines per agent and routes humans in real time. From its 1980s origin through the FTC TSR era to today.',
@@ -31,6 +32,10 @@ export const metadata: Metadata = {
     title: 'The Predictive Dialer: A Brief History',
     description: 'Invented in the early 1980s, regulated in 2003, still the highest-throughput outbound mode in existence. Mechanism, history, math, and how DialerSeat implements it.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const MODE_COLOR = '#8a1a1a'

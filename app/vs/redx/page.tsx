@@ -11,12 +11,13 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // Figures from REDX's own published pricing, read 24 Sept 2026. See the
 // entry in lib/competitors for what was and was not stated by the vendor.
 const SLUG = 'redx'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: "DialerSeat vs REDX: Pros, Cons and What the Dialer Costs",
   description:
@@ -35,6 +36,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs REDX',
     description: "Leads with a dialer attached, against a dialer you bring your own leads to.",
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

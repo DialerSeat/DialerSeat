@@ -8,6 +8,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/local-presence-dialing
@@ -42,7 +43,7 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/faq/local-presence-dialing'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Local Presence Dialing: How DialerSeat Picks Your Caller ID | DialerSeat',
   description:
     'Local presence dialing shows each prospect a caller ID from their own area. How DialerSeat picks a number for every call: area code, then state, then region, spread across the pool so no number gets burned, on every plan and every dialing mode.',
@@ -67,6 +68,10 @@ export const metadata: Metadata = {
     title: 'Local Presence Dialing on DialerSeat',
     description: 'Area code, then state, then region, spread across the pool so no single number burns out.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

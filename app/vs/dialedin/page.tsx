@@ -11,10 +11,11 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 const SLUG = 'dialedin'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: "DialerSeat vs DialedIn (ChaseData): Every Mode at One Price",
   description: "DialedIn, formerly ChaseData, starts around $89 per user per month with outbound features arriving further up the tiers. DialerSeat includes predictive, power, progressive and preview at $35 per seat per week.",
@@ -32,6 +33,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs DialedIn',
     description: "A published starting price is a good start. What matters is which tier the dialing actually lives in.",
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

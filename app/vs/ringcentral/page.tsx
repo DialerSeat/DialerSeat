@@ -11,10 +11,11 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 const SLUG = 'ringcentral'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: "DialerSeat vs RingCentral: A Dialer, Not a Phone System",
   description: "RingCentral is an excellent business phone system, but outbound dialing lives in RingCX, its contact-centre product, from around $65 per user per month. DialerSeat is a dialer at $35 per seat per week.",
@@ -32,6 +33,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs RingCentral',
     description: "RingCentral plans start at $20. The dialer is not in them, it is in a different product line.",
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

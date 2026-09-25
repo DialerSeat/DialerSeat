@@ -8,6 +8,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/dialer-for-insurance-agents
@@ -42,7 +43,7 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/faq/dialer-for-insurance-agents'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Dialer for Insurance Agents: Medicare, Final Expense, P&C | DialerSeat',
   description:
     'What an insurance agent needs from a dialer: calling windows enforced per lead state, local caller ID, recordings you can download, four dialing modes, and $35 per seat per week with no contract.',
@@ -67,6 +68,10 @@ export const metadata: Metadata = {
     title: 'Dialer for Insurance Agents',
     description: 'Calling windows per lead state, local caller ID, recordings you can download. $35 per seat per week.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

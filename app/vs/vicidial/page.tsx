@@ -11,10 +11,11 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 const SLUG = 'vicidial'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: "DialerSeat vs VICIdial, Free Software Is Not a Free Dialer",
   description: "VICIdial is free and open source, and published total cost of ownership still lands at $130-$400+ per agent per month once servers, SIP trunking and an administrator are counted. DialerSeat is $35 per seat per week with nothing to run.",
@@ -32,6 +33,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat vs VICIdial',
     description: "The software is free. The server, the trunking and the administrator are not. A costed comparison.",
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [

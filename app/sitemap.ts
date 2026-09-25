@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { headers } from 'next/headers'
 import { COMPETITORS, crossShoppedPairs, matchupSlug } from '@/lib/competitors'
+import { ENABLED_LOCALES, isLocalizablePath, localizedPath } from '@/lib/i18n/locales'
 
 
 
@@ -181,5 +182,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const slug = extractTenantSlug(host)
 
   
-  return slug ? subdomainSitemap(slug, now) : apexSitemap(now)
+  return slug ? subdomainSitemap(slug, now) : withLanguages(apexSitemap(now))
+}
+
+// ── LANGUAGE VERSIONS ────────────────────────────────────────────────
+// Once a second language is live, every public page is listed with its
+// hreflang alternates, and each language address is listed as a page of its
+// own, so crawlers find /es/faq as readily as /faq. With English alone this
+// returns the list unchanged.
+function withLanguages(entries: MetadataRoute.Sitemap): MetadataRoute.Sitemap {
+  if (ENABLED_LOCALES.length < 2) return entries
+  const out: MetadataRoute.Sitemap = []
+  for (const entry of entries) {
+    const path = entry.url.startsWith(APEX) ? entry.url.slice(APEX.length) || '/' : null
+    if (!path) { out.push(entry); continue }
+    if (!isLocalizablePath(path)) { out.push(entry); continue }
+    const languages: Record<string, string> = {}
+    for (const l of ENABLED_LOCALES) languages[l] = `${APEX}${localizedPath(l, path)}`
+    out.push({ ...entry, alternates: { languages } })
+    for (const l of ENABLED_LOCALES) {
+      if (l === 'en') continue
+      out.push({ ...entry, url: `${APEX}${localizedPath(l, path)}`, alternates: { languages } })
+    }
+  }
+  return out
 }

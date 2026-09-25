@@ -4,6 +4,7 @@ import JsonLd from '@/components/json-ld'
 import { organizationSchema, breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /status — a real, public health page
@@ -21,7 +22,7 @@ import { msg } from '@/lib/i18n/msg'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'System Status: DialerSeat',
   description:
     'Live status of the DialerSeat platform: application, database, and carrier connectivity. Every indicator is checked at page load, not published from a static file.',
@@ -43,6 +44,10 @@ export const metadata: Metadata = {
       'Live status of the DialerSeat platform. Every indicator is checked at page load rather than published from a static file.',
   },
   robots: { index: true, follow: true },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 type State = 'operational' | 'degraded' | 'down' | 'unknown'

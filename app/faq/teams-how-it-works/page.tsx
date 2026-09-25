@@ -7,6 +7,7 @@ import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schem
 import { FACTS } from '@/lib/canonicalFacts'
 import { primeLocale, t as tr } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/teams-how-it-works — the canonical Teams page
@@ -28,7 +29,7 @@ export const runtime = 'nodejs'
 
 const SITE = 'https://dialerseat.com'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'How DialerSeat Teams Work: Seats, Lead Distribution, Billing | DialerSeat',
   description:
     'The mechanics of running a dialer floor: how leads are distributed so two agents never call the same person, how seats and billing work, who pays, what the owner can see, and what is deliberately not built.',
@@ -49,6 +50,10 @@ export const metadata: Metadata = {
     description: 'Lead distribution, seats, billing, and manager visibility: the mechanics of running a floor, stated plainly.',
   },
   robots: { index: true, follow: true },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 const INK = '#1a1c24'

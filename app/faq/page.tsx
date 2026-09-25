@@ -3,11 +3,12 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import FaqView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Frequently Asked Questions | DialerSeat',
   description:
     'Answers to the questions buyers actually ask about DialerSeat: pricing, contracts, dialing modes, TCPA compliance, team setup, white-label, data hosting, and more.',
@@ -36,6 +37,10 @@ export const metadata: Metadata = {
     title: 'Frequently Asked Questions: DialerSeat',
     description: 'Pricing, contracts, compliance, team setup, and the bigger question of why we built DialerSeat in the first place.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function FaqPage() {

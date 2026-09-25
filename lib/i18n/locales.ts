@@ -162,3 +162,21 @@ export function splitLocalePrefix(pathname: string): { locale: Locale; rest: str
   }
   return null
 }
+
+// Stripe Elements' own locale codes (docs.stripe.com/js/appendix/supported_locales).
+// Spanish is es-419, Latin American. English returns undefined so the
+// payment form keeps the options it has always had.
+const STRIPE_LOCALE: Record<Exclude<Locale, 'en'>, 'es-419' | 'pt-BR' | 'fr' | 'ar' | 'it' | 'de'> = {
+  es: 'es-419', 'pt-BR': 'pt-BR', fr: 'fr', ar: 'ar', it: 'it', de: 'de',
+}
+export function stripeLocale(locale: Locale) {
+  return locale === 'en' ? undefined : STRIPE_LOCALE[locale]
+}
+
+// The public pages that have language addresses. Mirrors MARKETING_ONLY_PATHS
+// in proxy.ts, which is what actually serves /es/… — keep the two in step.
+export function isLocalizablePath(path: string): boolean {
+  return path === '/' ||
+    /^\/(faq|vs|dialing-modes|data|tools|managers|white-label)(\/|$)/.test(path) ||
+    /^\/(pricing|resources|terms|privacy)$/.test(path)
+}

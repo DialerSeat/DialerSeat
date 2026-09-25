@@ -3,11 +3,12 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import DataRecordingsFaqView from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Recordings & Your Data: Export, Delete, Retention | DialerSeat',
   description:
     'How call recordings work day to day, plus the full-account JSON export and permanent account deletion tools: what\u2019s actually included in each, and how account deletion is protected against accidental use.',
@@ -36,6 +37,10 @@ export const metadata: Metadata = {
     title: 'Recordings & Your Data: DialerSeat',
     description: 'Play, download, and delete recordings on your own schedule. Export everything in your account as JSON. Delete your account for real, with a dry run first.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function DataRecordingsFaqPage() {

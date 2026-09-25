@@ -3,8 +3,9 @@ import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import View from './view'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'For Managers: Agency Owners & Lead Vendors | DialerSeat',
   description:
     'Run a sales floor or sell leads? DialerSeat is built for you. Create teams on Manager+ ($75/week), upload your leads, set your own prices for agents. $35/week per agent seat. No contracts.',
@@ -21,6 +22,10 @@ export const metadata: Metadata = {
     title: 'For Managers: DialerSeat',
     description: 'For agency owners and lead vendors. Resell seats at your price. Keep your margins. One view across every agent.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
 }
 
 export default function Page() {
