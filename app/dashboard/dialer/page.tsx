@@ -1023,6 +1023,9 @@ function DialerPageInner() {
   const activePollRef = useRef<NodeJS.Timeout | null>(null)
   const swClientRef = useRef<any>(null)
   const swCallRef = useRef<any>(null)
+  // Sessions this page ended through releaseAgentLeg, so a Terminated state
+  // can tell our own ending from the far end's (see onInvite).
+  const agentLegsEndedByUsRef = useRef<WeakSet<object>>(new WeakSet())
   // ── PREDICTIVE: THE SEAT ──────────────────────────────────────────────
   // The one agent leg a predictive session keeps for its whole run
   // (docs/PREDICTIVE.md). Held apart from swCallRef on purpose: every
@@ -2026,6 +2029,19 @@ function DialerPageInner() {
                 } else if (state === SessionState.Terminated) {
                   if (swCallRef.current === invitation) swCallRef.current = null
                   if (predictiveSeatRef.current === invitation) predictiveSeatRef.current = null
+                  // Not ended by releaseAgentLeg, so the far end (Telnyx, the
+                  // bridge, the transport) ended it. Recorded so a dropped leg
+                  // can be told apart from one this page dropped.
+                  if (!isSeat && !agentLegsEndedByUsRef.current.has(invitation)) {
+                    reportAgentLegEnded({
+                      why: 'ended by the far end',
+                      leadSid: activeCallSidRef.current,
+                      byUs: false,
+                      immediate: false,
+                      heldMs: 0,
+                      sipCallId: invitation?.request?.callId ?? null,
+                    })
+                  }
                 }
               })
               await invitation.accept({
@@ -2683,10 +2699,10 @@ function DialerPageInner() {
             //
             // Same call progressive makes, at the same point in the flow.
             if (swCallRef.current) {
-              releaseAgentLeg(swCallRef.current)
+              releaseAgentLeg(swCallRef.current, { why: 'server shows no active call' })
               swCallRef.current = null
             }
-            disarmDialing()
+            disarmDialing('server shows no active call')
 
             // Released — machine verdict, or the call ended. Back to the queue
             // exactly as it was.
@@ -2952,7 +2968,7 @@ function DialerPageInner() {
     const handleUnload = () => {
       // Disarm immediately and tear down SIP so a refresh/close can't leave a
       // registered endpoint that auto-answers a ghost call after reload.
-      disarmDialing({ force: true })
+      disarmDialing('page closed', { force: true })
       releasePredictiveSeat()
       try { registererRef.current?.unregister?.() } catch {}
       try { swClientRef.current?.stop?.() } catch {}
@@ -3095,7 +3111,7 @@ function DialerPageInner() {
       // Going offline must stop everything immediately: disarm dialing so no
       // INVITE can ever connect, cancel every pending auto-chain dial, and hang
       // up any call currently attached. This is what makes "unavailable" mean it.
-      disarmDialing({ force: true })
+      disarmDialing('went offline', { force: true })
       // Predictive's seat too. Lines still ringing are not cut (the server
       // never sweeps them); a person answering one now hears the abandon
       // message rather than an agent who has left.
@@ -3341,16 +3357,36 @@ function DialerPageInner() {
   // stopped -- terminate, offline, unload -- and somebody expecting silence
   // getting eight more seconds of a live leg is worse than a short call.
   const AGENT_LEG_FLOOR_MS = 7200
-  const releaseAgentLeg = (session: any, opts?: { immediate?: boolean }) => {
+  // ── EVERY ENDING SAYS WHO ENDED IT ────────────────────────────────────
+  // 0.8% of dials on 15-18 Sept ended with this browser dropping a leg it had
+  // answered, and nobody had asked it to. The server's events cannot say which
+  // path did it: their timestamps drift, and the decision was made here. So
+  // `why` is required, every call site names itself, and the moment a leg is
+  // actually ended one small record goes to /api/calls/agent-leg-ended against
+  // the lead's call. A leg the far end ends is recorded as that (see onInvite).
+  const releaseAgentLeg = (session: any, opts: { why: string; immediate?: boolean }) => {
     if (!session) return
+    // Read now: by the time a deferred end runs, the dialer may be on the next
+    // call, and the record belongs to this one.
+    const leadSid = activeCallSidRef.current
+    const releasedAt = Date.now()
     const end = () => {
+      agentLegsEndedByUsRef.current.add(session)
       try {
         if (session.bye) session.bye()
         else if (session.reject) session.reject()
         else if (session.hangup) session.hangup()
       } catch { /* already gone */ }
+      reportAgentLegEnded({
+        why: opts.why,
+        leadSid,
+        byUs: true,
+        immediate: !!opts.immediate,
+        heldMs: Date.now() - releasedAt,
+        sipCallId: session?.request?.callId ?? null,
+      })
     }
-    if (opts?.immediate) { end(); return }
+    if (opts.immediate) { end(); return }
     const answeredAt = agentLegAnsweredAtRef.current
     // No answer timestamp means the leg was never established, so there is
     // nothing billable to protect -- end it now.
@@ -3376,14 +3412,16 @@ function DialerPageInner() {
     setTimeout(end, wait)
   }
 
-  const disarmDialing = (opts?: { force?: boolean }) => {
+  // `why` is required for the reason releaseAgentLeg's is: it is how an ended
+  // agent leg is traced back to the code path that ended it.
+  const disarmDialing = (why: string, opts?: { force?: boolean }) => {
     const keepForPredictive =
       !opts?.force && isPredictive && predictiveEngineStartedRef.current
     if (keepForPredictive) {
       // Engine still running — tear down the just-ended leg but stay armed so
       // the next routed human can connect.
       if (swCallRef.current) {
-        releaseAgentLeg(swCallRef.current)
+        releaseAgentLeg(swCallRef.current, { why })
         swCallRef.current = null
       }
       return
@@ -3399,7 +3437,7 @@ function DialerPageInner() {
     // leg can't keep audio flowing after the user expects silence.
     if (swCallRef.current) {
       // force = the person stopped; end it now and accept the short call.
-      releaseAgentLeg(swCallRef.current, { immediate: !!opts?.force })
+      releaseAgentLeg(swCallRef.current, { why, immediate: !!opts?.force })
       swCallRef.current = null
     }
   }
@@ -3429,7 +3467,7 @@ function DialerPageInner() {
   const hangupCall = async (sid: string | null, reason: 'skip' | 'immediate') => {
     // Any hangup means the user is no longer on a call they initiated — disarm
     // so a follow-on INVITE can't reconnect audio behind their back.
-    disarmDialing()
+    disarmDialing(`hang up (${reason})`)
     if (!sid) return
     if (activePollRef.current) clearInterval(activePollRef.current)
     activePollRef.current = null
@@ -3451,7 +3489,7 @@ function DialerPageInner() {
     // waiting on the lead's leg and the fastest teardown is the right one.
     if (swCallRef.current) {
       if (reason === 'immediate') {
-        releaseAgentLeg(swCallRef.current, { immediate: true })
+        releaseAgentLeg(swCallRef.current, { why: 'hang up (immediate)', immediate: true })
         swCallRef.current = null
       } else {
         // ── FREE THE AGENT WITHOUT LOSING THE HANDLE ────────────────────
@@ -3474,7 +3512,7 @@ function DialerPageInner() {
         // leg first in the ordinary case, and swCallRef can be cleared —
         // which is the only thing the dialer reads to decide whether the
         // agent is busy.
-        releaseAgentLeg(swCallRef.current)
+        releaseAgentLeg(swCallRef.current, { why: `hang up (${reason})` })
         swCallRef.current = null
       }
     }
@@ -4256,7 +4294,7 @@ function DialerPageInner() {
               body: JSON.stringify({ sid: data.callSid }),
             })
           } catch {}
-          disarmDialing({ force: true })
+          disarmDialing('dial returned after stop', { force: true })
           setStatus('idle')
           return
         }
@@ -4398,12 +4436,12 @@ function DialerPageInner() {
           activePollRef.current = null
           setActiveCallSid(null)
           if (swCallRef.current) {
-            releaseAgentLeg(swCallRef.current)
+            releaseAgentLeg(swCallRef.current, { why: 'call over (hangup poll)' })
             swCallRef.current = null
           }
           // Call is over. Disarm so nothing can bridge audio to us during wrap-up
           // / the disposition sheet. An auto-chained next dial re-arms itself.
-          disarmDialing()
+          disarmDialing('call over (hangup poll)')
 
           // ── NOW IT HAS BEEN TRIED ──────────────────────────────────────
           // This is the one place every ending converges: rang out, skipped,
@@ -4587,7 +4625,7 @@ function DialerPageInner() {
             })) {
               leadAttemptCountRef.current = attemptsSoFar + 1
               setActiveCallSid(null)
-              disarmDialing()
+              disarmDialing('voicemail, redialing')
               setStatus('idle')
               // Same lead, same position. No rotation until attempts are gone.
               redialQueuedRef.current = true
@@ -4612,7 +4650,7 @@ function DialerPageInner() {
             // get the same lead back. Rotate it explicitly.
             markLeadDialedLocally(ld?.id)
             setActiveCallSid(null)
-            disarmDialing() // machine — drop the browser leg; next dial re-arms
+            disarmDialing('voicemail, next lead') // machine — drop the browser leg; next dial re-arms
             setStatus('idle')
             setCurrentLead(null)
             leadAttemptCountRef.current = 1; redialQueuedRef.current = false // next lead starts its own count
@@ -4710,7 +4748,7 @@ function DialerPageInner() {
               // directly instead of dispositioning + fetching a new one.
               leadAttemptCountRef.current = attemptsSoFar + 1
               setActiveCallSid(null)
-              disarmDialing()
+              disarmDialing('no answer, redialing')
               setStatus('idle')
               // Same lead object, same id — currentLead/currentLeadRef
               // stay pointed at it, no fetchNextLead involved.
@@ -4763,7 +4801,7 @@ function DialerPageInner() {
           markLeadDialedLocally(ld?.id)
           setStatus('idle')
           setCurrentLead(null)
-          disarmDialing() // call ended without a human; next dial re-arms
+          disarmDialing('no answer or busy, next lead') // call ended without a human; next dial re-arms
           leadAttemptCountRef.current = 1; redialQueuedRef.current = false // moving to a new lead next — reset for it
 
           // 800ms here was buying time for the rotation above to settle into
@@ -4798,7 +4836,7 @@ function DialerPageInner() {
         const attemptsSoFar = leadAttemptCountRef.current
 
         setActiveCallSid(null)
-        disarmDialing()
+        disarmDialing('call status unavailable')
         setStatus('idle')
 
         // ── UNKNOWN OUTCOME, SO DO NOT GAMBLE ON A PERSON ────────────────
@@ -5269,7 +5307,7 @@ function DialerPageInner() {
     void setServerArmed(false)
     lastIncomingCallSidRef.current = null
 
-    disarmDialing({ force: true })
+    disarmDialing('abort', { force: true })
     setStatus('idle')
     setCurrentLead(null)
     setPreviewLead(null)
@@ -8245,6 +8283,37 @@ const navLinkStyle: React.CSSProperties = {
  * Safari still only exposes webkitAudioContext. One typed lookup, so the
  * fallback isn't spelled out (and cast away) at every call site.
  */
+/**
+ * One record per agent leg this browser ends, or sees ended: which code path
+ * did it, against the lead's call. sendBeacon so it survives the page closing,
+ * which is one of the paths being traced. Never throws: a record must not be
+ * the reason a call misbehaves.
+ */
+function reportAgentLegEnded(r: {
+  why: string
+  leadSid: string | null
+  byUs: boolean
+  immediate: boolean
+  heldMs: number
+  sipCallId: string | null
+}): void {
+  try {
+    const body = JSON.stringify(r)
+    const sent = typeof navigator !== 'undefined'
+      && typeof navigator.sendBeacon === 'function'
+      && navigator.sendBeacon('/api/calls/agent-leg-ended', new Blob([body], { type: 'application/json' }))
+    if (sent) return
+    void fetch('/api/calls/agent-leg-ended', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: true,
+    }).catch(() => {})
+  } catch {
+    // swallowed on purpose, see above
+  }
+}
+
 function resolveAudioContextCtor(): typeof AudioContext | undefined {
   if (typeof window === 'undefined') return undefined
   return (

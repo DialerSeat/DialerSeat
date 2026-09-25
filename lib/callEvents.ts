@@ -28,6 +28,9 @@ export type CallEventType =
   | 'cost'
   | 'disposition_set'
   | 'hangup_requested'
+  // The agent's browser ended its leg, or saw it ended, and says which code
+  // path did it (why) against the lead's call. /api/calls/agent-leg-ended.
+  | 'agent_leg_released'
   // A hangup we issued did NOT take, after retries. Recorded because this
   // failure was invisible for its whole existence: 18 of 128 machine
   // detections kept running — 17.8s average, once 122s — and the only trace
