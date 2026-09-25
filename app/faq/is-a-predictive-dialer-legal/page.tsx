@@ -33,9 +33,19 @@ import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 //   20-second ring             lib/placeOutboundCall ringTimeoutSecs, predictive
 //   message + press 9          lib/predictive/leads; press 9 suppresses the
 //                                number account-wide ('user' scope)
-//   no message if not set up   same file: no seller name or callback number
-//                                means it holds the line and hangs up rather
-//                                than play an unlawful message
+//   predictive is GATED on it  lib/sellerIdentity. The seller name and callback
+//                                number live on the ACCOUNT (users.tsr_*), set
+//                                once in Settings, and a campaign uses its
+//                                OWNER's. Without them predictive does not
+//                                start at all: /api/campaigns/create and
+//                                /update refuse the mode with 428,
+//                                /api/dialer/arm refuses START, and the
+//                                controller idles. This replaced the old
+//                                per-campaign fields, which no campaign had
+//                                ever been given, and it replaced the earlier
+//                                behaviour this page described: holding the
+//                                line and hanging up, which was itself an
+//                                abandoned call.
 // =============================================================================
 
 const ROUTE = '/faq/is-a-predictive-dialer-legal'
@@ -91,7 +101,7 @@ const FAQS = [
   {
     question: 'Does DialerSeat play the required recorded message?',
     answer:
-      'Yes, once you set your business name and callback number on the campaign. The dialer then plays a message naming your business and number when no agent is free, and offers the person the option to press 9 to stop future calls, which blocks that number across your whole account. If those two fields are not set, the dialer does not play a message it cannot lawfully play: it holds the line briefly and hangs up. Set them before running predictive.',
+      'Yes. You set your business name and a callback number once, in Settings, and the dialer plays a message naming them when no agent is free, offering the person the option to press 9 to stop future calls, which blocks that number across your whole account. Until both are set, DialerSeat will not run predictive at all: the mode cannot be saved on a campaign and the dialer refuses to start. Predictive without that message is not lawful, so the dialer declines to place the calls rather than place them wrongly.',
   },
 ]
 
@@ -190,9 +200,11 @@ export default function Page() {
               the dialer gives up, above the 15-second minimum.
             </li>
             <li>
-              <strong>The message and opt-out.</strong> With your business name and callback number
-              set on the campaign, the dialer plays the message and offers “press 9” to stop future
-              calls. Pressing 9 blocks that number across your whole account.
+              <strong>The message and opt-out.</strong> Set your business name and a callback number
+              once in Settings, and the dialer plays the message when no agent is free, offering
+              “press 9” to stop future calls. Pressing 9 blocks that number across your whole
+              account. On a team campaign the message names the team owner’s business, because that
+              is the seller the call is placed for.
             </li>
             <li>
               <strong>Calling hours.</strong> Calls are only placed inside the permitted window for
@@ -205,10 +217,11 @@ export default function Page() {
           </ul>
           <div className="guts-callout">
             <p>
-              <strong>Set your business name and callback number first.</strong> If they are
-              missing, the dialer won’t play a message it can’t lawfully play. It holds the line
-              briefly and hangs up instead, and under the rule that is still an abandoned call. Both
-              fields are in your campaign settings.
+              <strong>Predictive is locked until those two details exist.</strong> Without a business
+              name and a callback number there is no lawful message to play, so DialerSeat does not
+              let predictive run at all: the mode can’t be saved on a campaign, and the dialer
+              refuses to start. Settings shows it as LOCKED or UNLOCKED. It is one field each, set
+              once for the account, and every campaign you own uses them.
             </p>
           </div>
         </GutsSection>
