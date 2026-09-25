@@ -81,3 +81,36 @@ export async function localizeMetadata(meta: Metadata): Promise<Metadata> {
   }
   return out
 }
+
+/**
+ * The root layout's defaults: the description and the Open Graph / Twitter
+ * card every page inherits unless it sets its own. There is no canonical here,
+ * so no language addresses; this only translates the words, and sets the Open
+ * Graph locale, so a shared Spanish page does not preview in English.
+ */
+export async function localizeSiteMetadata(meta: Metadata): Promise<Metadata> {
+  if (ENABLED_LOCALES.length < 2) return meta
+  const locale = await getLocale()
+  if (locale === 'en') return meta
+  const dict = await getDictionary()
+  return {
+    ...meta,
+    title: tr(meta.title, dict) as Metadata['title'],
+    ...(meta.description ? { description: translate(dict, meta.description) } : {}),
+    ...(meta.openGraph ? {
+      openGraph: {
+        ...meta.openGraph,
+        ...(meta.openGraph.title ? { title: tr(meta.openGraph.title, dict) as string } : {}),
+        ...(meta.openGraph.description ? { description: translate(dict, meta.openGraph.description) } : {}),
+        locale: OG_LOCALE[locale],
+      },
+    } : {}),
+    ...(meta.twitter ? {
+      twitter: {
+        ...meta.twitter,
+        ...(meta.twitter.title ? { title: tr(meta.twitter.title, dict) as string } : {}),
+        ...(meta.twitter.description ? { description: translate(dict, meta.twitter.description) } : {}),
+      },
+    } : {}),
+  }
+}

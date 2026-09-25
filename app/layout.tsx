@@ -14,8 +14,11 @@ import LanguagePrompt from '@/components/LanguagePrompt';
 import LocaleAccountSync from '@/components/LocaleAccountSync';
 import { clerkLocalization } from '@/lib/i18n/clerk';
 import { msg } from '@/lib/i18n/msg'
+import { localizeSiteMetadata } from '@/lib/i18n/metadata'
 
-export const metadata: Metadata = {
+// Named baseMetadata so the catalog extractor collects its text; served
+// through generateMetadata so a Spanish visitor gets it in Spanish.
+const baseMetadata: Metadata = {
   metadataBase: new URL('https://dialerseat.com'),
   title: "DialerSeat, Dial Smarter. Close Faster.",
   description:
@@ -106,6 +109,10 @@ export const metadata: Metadata = {
     'format-detection': 'telephone=no',
   },
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeSiteMetadata(baseMetadata)
+}
 
 export const viewport: Viewport = {
   themeColor: [

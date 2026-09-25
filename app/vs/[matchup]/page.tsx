@@ -78,6 +78,7 @@ export function generateStaticParams() {
 export async function generateMetadata(
   props: { params: Promise<{ matchup: string }> }
 ): Promise<Metadata> {
+  await primeLocale()
   return localizeMetadata(await matchupMetadata(props))
 }
 
@@ -88,10 +89,8 @@ async function matchupMetadata(
   const m = resolveMatchup(matchup)
   if (!m) return {}
 
-  const title = `${m.a.name} vs ${m.b.name}: Pricing, Dialing Modes, and Who Each One Suits`
-  const description =
-    `An honest side-by-side of ${m.a.name} and ${m.b.name}: what each costs, which dialing modes ` +
-    `you actually get, the pros and cons of each, and which buyer each suits.`
+  const title = t("{a} vs {b}: Pricing, Dialing Modes, and Who Each One Suits", { a: m.a.name, b: m.b.name })
+  const description = t("An honest side-by-side of {a} and {b}: what each costs, which dialing modes you actually get, the pros and cons of each, and which buyer each suits.", { a: m.a.name, b: m.b.name })
 
   return {
     title: t("{title} | DialerSeat", { title }),

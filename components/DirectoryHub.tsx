@@ -160,15 +160,19 @@ function Chevron({ className }: { className?: string }) {
  * The swash is an SVG path rather than text-decoration because a straight 1px
  * rule under an 800-weight headline reads as a link, not as emphasis.
  */
-function Underlined({ text, word }: { text: string; word?: string }) {
-  if (!word) return <>{t(text)}</>
+function Underlined({ text: english, word: englishWord }: { text: string; word?: string }) {
+  // Translate the whole line first, then find the translated word inside it:
+  // splitting the English around the word left the rest of the line English.
+  const text = t(english)
+  const word = englishWord ? t(englishWord) : undefined
+  if (!word) return <>{text}</>
   const at = text.indexOf(word)
-  if (at === -1) return <>{t(text)}</>
+  if (at === -1) return <>{text}</>
   return (
     <>
       {text.slice(0, at)}
       <span className="hub-swash">
-        {t(word)}
+        {word}
         <svg viewBox="0 0 120 14" preserveAspectRatio="none" aria-hidden="true">
           <path d="M3,9.6 C22,4.2 44,11.4 63,6.6 C82,1.9 100,9.1 117,4.4" />
         </svg>
