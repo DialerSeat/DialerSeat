@@ -2,6 +2,9 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ENTITLED_STATUSES } from '@/lib/entitlement'
+import {
+  LOCALE_COOKIE, LOCALE_HEADER, LOCALE_PATH_HEADER, PROMPT_COOKIE, splitLocalePrefix,
+} from '@/lib/i18n/locales'
 
 const isPublicRoute = createRouteMatcher([
   '/',
@@ -351,6 +354,37 @@ export default clerkMiddleware(async (auth, request) => {
 
   const withTenantHeader = (res: NextResponse): NextResponse => {
     if (tenantSlug) res.headers.set('x-tenant-slug', tenantSlug)
+    return res
+  }
+
+  // ── LANGUAGE ADDRESSES ──────────────────────────────────────────────
+  // /es/faq is /faq rendered in Spanish, served at its own URL so a search in
+  // Spanish can find and index it. It is a rewrite, not a redirect: the address
+  // bar and the indexed URL stay /es/faq. Only public marketing pages have
+  // language addresses, only on the main domain, and only for languages that
+  // are live; anything else falls through and 404s as an unknown path would.
+  const localized = splitLocalePrefix(url.pathname)
+  if (
+    localized &&
+    !tenantSlug &&
+    (localized.rest === '/' || isMarketingOnlyPath(localized.rest))
+  ) {
+    const target = url.clone()
+    target.pathname = localized.rest
+    // The homepage sends signed-in visitors to their dashboard; a language
+    // address of it is a page to read, so it always shows the landing page.
+    if (localized.rest === '/') target.searchParams.set('view', 'landing')
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set(LOCALE_HEADER, localized.locale)
+    requestHeaders.set(LOCALE_PATH_HEADER, localized.rest)
+    const res = NextResponse.rewrite(target, { request: { headers: requestHeaders } })
+    // Arriving from a search in their language is an answer to the question
+    // the prompt would have asked, so the rest of the site follows — unless
+    // they have already chosen, in which case their choice stands.
+    if (!request.cookies.get(LOCALE_COOKIE)) {
+      res.cookies.set(LOCALE_COOKIE, localized.locale, { path: '/', maxAge: 31536000, sameSite: 'lax' })
+      res.cookies.set(PROMPT_COOKIE, '1', { path: '/', maxAge: 31536000, sameSite: 'lax' })
+    }
     return res
   }
 

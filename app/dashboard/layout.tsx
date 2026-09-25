@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
 import DashboardBanners from '@/components/DashboardBanners'
+import LanguageDropdown from '@/components/LanguageDropdown'
 
 const userNavItems = [
   { label: 'ANALYTICS', href: '/dashboard/analytics' },
@@ -569,6 +570,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }}>{secondaryText}</div>
           )}
         </div>
+        <LanguageDropdown opens="up" tone="sidebar" />
       </div>
     </>
   )

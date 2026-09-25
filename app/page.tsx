@@ -10,6 +10,7 @@ import DialerShowcase from '@/components/DialerShowcase'
 import JsonLd from '@/components/json-ld'
 import { organizationSchema, softwareApplicationSchema } from '@/lib/schema'
 import LeadQueueShowcase from '@/components/LeadQueueShowcase'
+import LanguageDropdown from '@/components/LanguageDropdown'
 import {
   PhoneOutgoing, Voicemail, ClipboardList, BookmarkCheck, MousePointerClick,
   Users, Globe, Plug, Lock, UserPlus, Upload, PhoneCall, ChartColumn,
@@ -334,6 +335,13 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-nav-wordmark { font-size: 12px !important; letter-spacing: 2px !important; }
           .ds-nav-link.ds-show-mobile,
           .ds-nav-link.ds-mobile-only { padding: 7px 10px !important; letter-spacing: 1.5px !important; }
+          /* And room for the language globe, once there is a language to pick.
+             :has() keeps the English-only nav exactly as it was. */
+          .ds-nav:has(.ds-lang-btn) { padding-left: 14px; padding-right: 14px; }
+          .ds-nav:has(.ds-lang-btn) .ds-nav-links { gap: 6px; }
+          .ds-nav:has(.ds-lang-btn) .ds-nav-link.ds-show-mobile,
+          .ds-nav:has(.ds-lang-btn) .ds-nav-link.ds-mobile-only { padding: 7px 8px !important; letter-spacing: 1px !important; }
+          .ds-nav .ds-lang-btn { padding: 6px 2px !important; border: none !important; }
 
           .ds-announce-banner {
             padding: 8px 14px !important;
@@ -453,6 +461,7 @@ export default async function Home({ searchParams }: PageProps) {
                   account they did not have yet. Same styling as GET STARTED. */}
               <Link href="/sign-up" className="ds-nav-link ds-mobile-only" style={{ fontSize: '11px', letterSpacing: '2px', color: '#4a9eff', textDecoration: 'none', padding: '8px 12px', borderRadius: '6px', background: 'transparent', border: '1px solid #4a9eff', borderTop: '3px solid #4a9eff', whiteSpace: 'nowrap' }}>START NOW</Link>
               <Link href="/sign-up" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: '#4a9eff', textDecoration: 'none', padding: '10px 20px', borderRadius: '6px', background: 'transparent', border: '1px solid #4a9eff', borderTop: '3px solid #4a9eff', whiteSpace: 'nowrap' }}>GET STARTED</Link>
+              <LanguageDropdown />
             </div>
           </nav>
           <div className="ds-announce-banner" style={{

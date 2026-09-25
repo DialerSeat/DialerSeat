@@ -1,12 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import "./globals.css";
 import StructuredData from './components/StructuredData';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { getTenantBranding, getActiveTenantForUser } from '@/lib/tenant';
 import PageViewTracker from '@/components/PageViewTracker'
+import { LocaleProvider } from '@/lib/i18n/client';
+import { getDictionary, getLocale, getUrlLocale } from '@/lib/i18n/server';
+import { LOCALE_COOKIE, PROMPT_COOKIE, localeDir, suggestLocale } from '@/lib/i18n/locales';
+import LanguagePrompt from '@/components/LanguagePrompt';
+import LocaleAccountSync from '@/components/LocaleAccountSync';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://dialerseat.com'),
@@ -191,9 +196,23 @@ export default async function RootLayout({
     }
   }
 
+  // Interface language. English unless this visitor chose otherwise, or came
+  // in through a language address like /es/faq.
+  const locale = await getLocale();
+  const dict = await getDictionary();
+  // Offer a language once, only to someone who has never chosen or been
+  // asked. suggestLocale only ever returns an enabled, non-English language.
+  const cookieStore = await cookies();
+  const suggestedLocale =
+    !(await getUrlLocale()) &&
+    !cookieStore.get(LOCALE_COOKIE) &&
+    !cookieStore.get(PROMPT_COOKIE)
+      ? suggestLocale(h.get('x-vercel-ip-country'), h.get('accept-language'))
+      : null;
+
   return (
     <ClerkProvider localization={dialerseatLocalization} afterSignOutUrl="/">
-      <html lang="en">
+      <html lang={locale} dir={localeDir(locale) === 'rtl' ? 'rtl' : undefined}>
         <head>
           {IOS_SPLASH_SCREENS.map(({ w, h, orient }) => {
             const media =
@@ -218,9 +237,13 @@ export default async function RootLayout({
         <body>
           {!branding && <StructuredData />}
 
-          <ThemeProvider initialBranding={branding}>
-            {children}
-          </ThemeProvider>
+          <LocaleProvider initialLocale={locale} initialDict={dict}>
+            <ThemeProvider initialBranding={branding}>
+              {children}
+            </ThemeProvider>
+            <LocaleAccountSync />
+            <LanguagePrompt suggested={suggestedLocale} />
+          </LocaleProvider>
           {/* Sitewide, mounted once. Renders nothing — it exists to record that
               a page was looked at, on marketing pages and inside the dashboard
               alike, without each new route having to remember to opt in. */}
