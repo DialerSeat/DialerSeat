@@ -195,7 +195,7 @@ export default function SuggestionModal({
         }
         .sg-input:focus, .sg-textarea:focus { border-color: #2a6eff; background: ${SITE.surface}; }
         .sg-textarea { min-height: 132px; resize: vertical; line-height: 1.6; }
-        .sg-count { margin-top: 6px; font-size: 12px; color: ${SITE.muted}; text-align: right; }
+        .sg-count { margin-top: 6px; font-size: 12px; color: ${SITE.muted}; text-align: end; }
         .sg-hint { margin-top: 6px; font-size: 12.5px; color: ${SITE.muted}; }
         .sg-error {
           margin-top: 14px; padding: 11px 14px;

@@ -686,7 +686,7 @@ export function ManageMemberModal({
 
       <div style={{ display: 'grid', gap: 8 }}>
         <button
-          style={{ ...btn, textAlign: 'left', opacity: busy ? 0.5 : 1 }}
+          style={{ ...btn, textAlign: 'start', opacity: busy ? 0.5 : 1 }}
           disabled={busy}
           onClick={() => onSeatAction(member.memberId, suspended ? 'resume' : 'pause')}
         >
@@ -700,7 +700,7 @@ export function ManageMemberModal({
 
         {!confirmRemove ? (
           <button
-            style={{ ...btn, textAlign: 'left', borderColor: '#7f1d1d', opacity: busy ? 0.5 : 1 }}
+            style={{ ...btn, textAlign: 'start', borderColor: '#7f1d1d', opacity: busy ? 0.5 : 1 }}
             disabled={busy}
             onClick={() => setConfirmRemove(true)}
           >

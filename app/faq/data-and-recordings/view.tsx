@@ -29,7 +29,7 @@ export default function DataRecordingsFaqView() {
 
           .drc-warn {
             margin: 28px 0; padding: 24px 26px; background: ${SITE.surface};
-            border: 1px solid ${SITE.border}; border-left: 3px solid ${SITE.red};
+            border: 1px solid ${SITE.border}; border-inline-start: 3px solid ${SITE.red};
             border-radius: 6px;
           }
           .drc-warn-title {

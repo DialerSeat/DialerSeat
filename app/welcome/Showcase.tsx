@@ -203,8 +203,8 @@ export default function ShowcaseWizard({ joinCode = null }: { joinCode?: string 
             max-width: 760px !important;
             transform: scale(0.44);
             transform-origin: top center;
-            margin-left: calc((100vw - 760px) / 2) !important;
-            margin-right: calc((100vw - 760px) / 2) !important;
+            margin-inline-start: calc((100vw - 760px) / 2) !important;
+            margin-inline-end: calc((100vw - 760px) / 2) !important;
             margin-bottom: -210px !important;
           }
         }
@@ -220,7 +220,7 @@ function MacFrame({ title, titleColor, bg, children }: { title: string; titleCol
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f57' }} />
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#febc2e' }} />
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#28c840' }} />
-        <span style={{ marginLeft: 10, fontSize: 10, letterSpacing: 2, color: titleColor, fontWeight: 700 }}>{tr(title)}</span>
+        <span style={{ marginInlineStart: 10, fontSize: 10, letterSpacing: 2, color: titleColor, fontWeight: 700 }}>{tr(title)}</span>
       </div>
       <div>{children}</div>
     </div>
@@ -292,7 +292,7 @@ function DialerScene() {
   return (
     <MacFrame title={tr("DIALER")} titleColor="#5a8a5a" bg={C.sidebar}>
       <div className="sw-dialer-row" style={{ display: 'flex', minHeight: 300 }}>
-        <div className="sw-dialer-call" style={{ flex: 1, padding: 14, borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column' }}>
+        <div className="sw-dialer-call" style={{ flex: 1, padding: 14, borderInlineEnd: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, background: C.page, border: `1px solid ${C.cardBorder}`, borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '7px 12px', background: C.sidebar, borderBottom: `1px solid ${C.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>{tr("LEAD PROFILE")}</span>
@@ -310,7 +310,7 @@ function DialerScene() {
                 </div>
               </div>
 
-              <div style={{ flex: 1, marginTop: 10, background: C.page, border: `1px solid ${C.cardBorder}`, borderLeft: `3px solid ${ACCENT}`, borderRadius: 3, display: 'flex', flexDirection: 'column', minHeight: 96, overflow: 'hidden' }}>
+              <div style={{ flex: 1, marginTop: 10, background: C.page, border: `1px solid ${C.cardBorder}`, borderInlineStart: `3px solid ${ACCENT}`, borderRadius: 3, display: 'flex', flexDirection: 'column', minHeight: 96, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '6px 8px 0', borderBottom: `1px solid ${C.cardBorder}`, flexWrap: 'wrap' }}>
                   {SCRIPTS.map((sc, i) => (
                     <button key={sc.key} onClick={() => setScriptIdx(i)} style={{
@@ -341,7 +341,7 @@ function DialerScene() {
                 <div key={label} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '6px 11px', background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.08)', borderLeft: `3px solid ${color}`, borderRadius: 3,
+                  border: '1px solid rgba(255,255,255,0.08)', borderInlineStart: `3px solid ${color}`, borderRadius: 3,
                 }}>
                   <span style={{ fontSize: 8, letterSpacing: 1.5, color: 'rgba(255,255,255,0.5)' }}>{tr(label)}</span>
                   <span style={{ fontSize: 15, fontWeight: 700, fontFamily: MONO, color: cl ? GREEN_BRIGHT : color === C.primary ? '#7ab8ff' : 'rgba(255,255,255,0.85)' }}>{value}</span>
@@ -455,7 +455,7 @@ function AnalyticsScene() {
                   <div key={seg.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ width: 8, height: 8, borderRadius: 2, background: seg.color }} />
                     <span style={{ fontSize: 9, color: C.onPage, fontWeight: 600 }}>{tr(seg.label)}</span>
-                    <span style={{ fontSize: 9, color: C.muted, fontFamily: MONO, marginLeft: 'auto' }}>{seg.val}%</span>
+                    <span style={{ fontSize: 9, color: C.muted, fontFamily: MONO, marginInlineStart: 'auto' }}>{seg.val}%</span>
                   </div>
                 ))}
               </div>

@@ -382,7 +382,7 @@ export default function LeadQueueShowcase() {
              headline; at 9px vertical padding it ran past the fold. */
           padding: 3px 12px;
           border: 1px solid ${D.border};
-          border-left: 3px solid transparent;
+          border-inline-start: 3px solid transparent;
           border-radius: 4px;
           background: ${D.row};
           font-size: 11px;
@@ -390,7 +390,7 @@ export default function LeadQueueShowcase() {
         }
         .lq-row.is-active {
           border-color: ${D.accent};
-          border-left-color: ${D.accent};
+          border-inline-start-color: ${D.accent};
           animation: lq-pulse 1.6s ease-in-out infinite;
         }
         .lq-row.is-done { opacity: .55; }
@@ -472,7 +472,7 @@ export default function LeadQueueShowcase() {
           style={{
             fontSize: 8.5, fontWeight: 700, letterSpacing: 1.2,
             color: '#8b8fa3', border: '1px solid #33364a', borderRadius: 3,
-            padding: '2px 6px', whiteSpace: 'nowrap', marginLeft: 8,
+            padding: '2px 6px', whiteSpace: 'nowrap', marginInlineStart: 8,
           }}
         >
           {tr("▾ FILTER")}</span>
@@ -485,7 +485,7 @@ export default function LeadQueueShowcase() {
           style={{
             fontSize: 9, fontWeight: 700, letterSpacing: 1.2, color: D.accent,
             animation: 'lq-blink 1.4s ease-in-out infinite',
-            whiteSpace: 'nowrap', marginLeft: 4,
+            whiteSpace: 'nowrap', marginInlineStart: 4,
           }}
         >
           {tr("● DIALING 1 LINE")}</span>

@@ -225,7 +225,7 @@ input[type='button'] {
 
         .ds-sidebar {
           width: 260px; height: 100vh; position: sticky; top: 0;
-          background: var(--brand-sidebar-bg); border-right: 1px solid var(--brand-sidebar-active-bg);
+          background: var(--brand-sidebar-bg); border-inline-end: 1px solid var(--brand-sidebar-active-bg);
           display: flex; flex-direction: column; padding: 20px 0;
           flex-shrink: 0; overflow: hidden;
         }
@@ -239,14 +239,14 @@ input[type='button'] {
             align-items: center; justify-content: space-between;
             padding-top: max(12px, env(safe-area-inset-top, 12px));
             padding-bottom: 12px;
-            padding-left: max(16px, env(safe-area-inset-left, 16px));
-            padding-right: max(16px, env(safe-area-inset-right, 16px));
+            padding-inline-start: max(16px, env(safe-area-inset-left, 16px));
+            padding-inline-end: max(16px, env(safe-area-inset-right, 16px));
             background: var(--brand-header-bg); border-bottom: 1px solid var(--brand-sidebar-active-bg);
           }
           .ds-sidebar {
             display: flex; position: fixed; top: 0; left: 0; bottom: 0;
             width: 280px; max-width: 85vw;
-            background: var(--brand-sidebar-bg); border-right: 1px solid var(--brand-sidebar-active-bg);
+            background: var(--brand-sidebar-bg); border-inline-end: 1px solid var(--brand-sidebar-active-bg);
             flex-direction: column;
             padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 16px));
             padding-bottom: 0;
@@ -286,4 +286,29 @@ input[type='button'] {
 @media (min-width: 769px) {
   .ds-mobile-overlay,
   .ds-mobile-topbar { display: none !important; }
+}
+
+/* ── Right-to-left (Arabic) ───────────────────────────────────────────────
+   Spacing, borders and alignment are written as logical properties, so they
+   mirror by themselves under <html dir="rtl">. Two things do not:
+   - letter-spacing pulls Arabic letters apart and breaks the joins between
+     them, so it is switched off. The tracked capitals it exists for have no
+     Arabic equivalent.
+   - arrow icons point along the reading direction, so they are mirrored.
+   Nothing here applies to a left-to-right page. */
+html[dir="rtl"] body,
+html[dir="rtl"] body * {
+  letter-spacing: 0 !important;
+}
+html[dir="rtl"] .lucide-arrow-right,
+html[dir="rtl"] .lucide-arrow-left,
+html[dir="rtl"] .lucide-chevron-right,
+html[dir="rtl"] .lucide-chevron-left {
+  transform: scaleX(-1);
+}
+/* Phone numbers and other digit strings read left to right in Arabic too. */
+html[dir="rtl"] input[type="tel"],
+html[dir="rtl"] input[type="email"],
+html[dir="rtl"] input[type="url"] {
+  direction: ltr;
 }

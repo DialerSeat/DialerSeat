@@ -311,11 +311,11 @@ export default function AdminNumbersPage() {
           background: ${T.bg};
           border: 1px solid ${T.border};
           border-radius: 4px;
-          border-left: 3px solid ${T.blue};
+          border-inline-start: 3px solid ${T.blue};
         }
-        .pool-card.status-active { border-left-color: ${T.green}; }
-        .pool-card.status-resting { border-left-color: ${T.amber}; }
-        .pool-card.status-flagged { border-left-color: ${T.red}; }
+        .pool-card.status-active { border-inline-start-color: ${T.green}; }
+        .pool-card.status-resting { border-inline-start-color: ${T.amber}; }
+        .pool-card.status-flagged { border-inline-start-color: ${T.red}; }
         .pool-meter-bg {
           height: 6px;
           background: ${T.border};

@@ -158,7 +158,7 @@ export function WhitelabelLivePreview({
               style={{
                 padding: '8px 14px',
                 background: item.active ? sidebarActiveBg : 'transparent',
-                borderLeft: item.active
+                borderInlineStart: item.active
                   ? `2px solid ${primary}`
                   : '2px solid transparent',
                 color: item.active ? onSidebar : sidebarTextMuted,

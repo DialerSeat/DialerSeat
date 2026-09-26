@@ -342,7 +342,7 @@ function SegmentedTwo({ value, onChange, options }: {
           onClick={() => onChange(opt.value)}
           style={{
             flex: 1, padding: '10px 12px', borderRadius: 4, fontFamily: FUTURA, fontSize: 12,
-            cursor: 'pointer', textAlign: 'left',
+            cursor: 'pointer', textAlign: 'start',
             background: value === opt.value ? T.primary : T.bg,
             color: value === opt.value ? 'white' : T.text,
             border: `1px solid ${value === opt.value ? T.primary : T.border}`,

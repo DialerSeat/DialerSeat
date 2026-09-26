@@ -635,13 +635,13 @@ export default function SettingsPage() {
         <div style={subtitleStyle}>
           {user?.primaryEmailAddress?.emailAddress}
           {isAdmin && (
-            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>{tr("· ADMIN")}</span>
+            <span style={{ marginInlineStart: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>{tr("· ADMIN")}</span>
           )}
           {!isAdmin && planLabel && (
-            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>· {tr(planLabel)}</span>
+            <span style={{ marginInlineStart: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>· {tr(planLabel)}</span>
           )}
           {!isAdmin && sub?.tier === 'lapsed' && !wlActive && (
-            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#ffaa3e', fontWeight: 'bold' }}>{tr("· UNSUBSCRIBED")}</span>
+            <span style={{ marginInlineStart: 8, fontSize: 9, letterSpacing: 3, color: '#ffaa3e', fontWeight: 'bold' }}>{tr("· UNSUBSCRIBED")}</span>
           )}
         </div>
 
@@ -914,7 +914,7 @@ export default function SettingsPage() {
             {pauseError && (
               <div style={{
                 marginBottom: 12, padding: '8px 10px', borderRadius: 3,
-                background: 'rgba(138, 26, 26, 0.18)', borderLeft: '3px solid #8a1a1a',
+                background: 'rgba(138, 26, 26, 0.18)', borderInlineStart: '3px solid #8a1a1a',
                 color: '#ff8888', fontSize: 12, lineHeight: 1.5,
               }}>
                 {tr(pauseError)}
@@ -955,7 +955,7 @@ export default function SettingsPage() {
             {portalError && (
               <div style={{
                 marginBottom: 12, padding: '8px 10px', borderRadius: 3,
-                background: 'rgba(138, 26, 26, 0.18)', borderLeft: '3px solid #8a1a1a',
+                background: 'rgba(138, 26, 26, 0.18)', borderInlineStart: '3px solid #8a1a1a',
                 color: '#ff8888', fontSize: 12, lineHeight: 1.5,
               }}>
                 {tr(portalError)}
@@ -1031,7 +1031,7 @@ export default function SettingsPage() {
         )}
 
         {/* DELETE ACCOUNT — separate from subscription cancellation; wipes app data + Clerk identity */}
-        <div style={{ ...sectionStyle, borderLeft: '3px solid #8a1a1a', marginTop: 24 }}>
+        <div style={{ ...sectionStyle, borderInlineStart: '3px solid #8a1a1a', marginTop: 24 }}>
           <div style={{ ...sectionHeaderStyle, color: '#e0a0a0' }}>{tr("▸ DELETE ACCOUNT")}</div>
           <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
             {tr("Permanently deletes your DialerSeat account, leads, campaigns, calls, and sign-in. This cannot be undone.")}</div>
@@ -1403,7 +1403,7 @@ const secondaryButtonStyle: React.CSSProperties = {
 const confirmBoxStyle: React.CSSProperties = {
   background: 'rgba(138, 26, 26, 0.18)',
   border: '1px solid #8a1a1a',
-  borderLeft: '3px solid #8a1a1a',
+  borderInlineStart: '3px solid #8a1a1a',
   borderRadius: 4, padding: 16, marginTop: 8,
 }
 
@@ -1433,7 +1433,7 @@ const confirmButtonsStyle: React.CSSProperties = { display: 'flex', gap: 8 }
 const successStyle: React.CSSProperties = {
   background: 'rgba(26, 106, 26, 0.18)',
   border: '1px solid #1a6a1a',
-  borderLeft: '3px solid #1a6a1a',
+  borderInlineStart: '3px solid #1a6a1a',
   color: '#32ff7e',
   padding: 12, borderRadius: 3, fontSize: 11, letterSpacing: 1, marginBottom: 16,
 }
@@ -1441,7 +1441,7 @@ const successStyle: React.CSSProperties = {
 const errorStyle: React.CSSProperties = {
   background: 'rgba(138, 26, 26, 0.18)',
   border: '1px solid #8a1a1a',
-  borderLeft: '3px solid #8a1a1a',
+  borderInlineStart: '3px solid #8a1a1a',
   color: '#ff8888',
   padding: 12, borderRadius: 3, fontSize: 11, letterSpacing: 1, marginBottom: 16,
 }
@@ -1449,7 +1449,7 @@ const errorStyle: React.CSSProperties = {
 const warnStyle: React.CSSProperties = {
   background: 'rgba(138, 106, 26, 0.18)',
   border: '1px solid #8a6a1a',
-  borderLeft: '3px solid #8a6a1a',
+  borderInlineStart: '3px solid #8a6a1a',
   color: '#ffaa3e',
   padding: 12, borderRadius: 3, fontSize: 11, letterSpacing: 1, marginTop: 16,
 }
@@ -1457,7 +1457,7 @@ const warnStyle: React.CSSProperties = {
 const adminNoticeStyle: React.CSSProperties = {
   background: 'var(--brand-primary-soft)',
   border: '1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent)',
-  borderLeft: '3px solid var(--brand-primary)',
+  borderInlineStart: '3px solid var(--brand-primary)',
   color: 'var(--brand-primary)',
   padding: 12, borderRadius: 3, fontSize: 10, letterSpacing: 3, fontWeight: 700, marginTop: 16,
 }
@@ -1465,7 +1465,7 @@ const adminNoticeStyle: React.CSSProperties = {
 const resubscribeBoxStyle: React.CSSProperties = {
   background: 'rgba(138, 106, 26, 0.18)',
   border: '1px solid #8a6a1a',
-  borderLeft: '3px solid #8a6a1a',
+  borderInlineStart: '3px solid #8a6a1a',
   borderRadius: 3, padding: 16, marginBottom: 16,
 }
 
@@ -1493,7 +1493,7 @@ function seatRowStyle(borderColor: string): React.CSSProperties {
   return {
     background: CHROME.surface,
     border: `1px solid ${borderColor}`,
-    borderLeft: `3px solid ${borderColor}`, borderRadius: 3,
+    borderInlineStart: `3px solid ${borderColor}`, borderRadius: 3,
     padding: 14, marginBottom: 10,
   }
 }

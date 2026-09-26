@@ -50,7 +50,7 @@ function ExternalLinkIcon({ color }: { color: string }) {
     <svg
       width="13" height="13" viewBox="0 0 24 24" fill="none"
       stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-      aria-hidden="true" style={{ flexShrink: 0, marginLeft: 6, transform: 'translateY(0.5px)' }}
+      aria-hidden="true" style={{ flexShrink: 0, marginInlineStart: 6, transform: 'translateY(0.5px)' }}
     >
       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
       <polyline points="15 3 21 3 21 9" />
@@ -121,12 +121,12 @@ export default function LoginLinkSection({
           border: 'none',
           cursor: 'pointer',
           fontFamily: FUTURA,
-          textAlign: 'left',
+          textAlign: 'start',
         }}
       >
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.5, color: 'var(--text-primary)', textTransform: 'uppercase' }}>
-            {t("▸ Login page link")}<span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, letterSpacing: 1, color: 'var(--text-muted)' }}>
+            {t("▸ Login page link")}<span style={{ marginInlineStart: 8, fontSize: 10, fontWeight: 600, letterSpacing: 1, color: 'var(--text-muted)' }}>
               {t("OPTIONAL")}</span>
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, letterSpacing: 0.3 }}>
@@ -265,7 +265,7 @@ export default function LoginLinkSection({
                 <div style={{
                   width: '100%', height: 34, borderRadius: 4,
                   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)',
-                  display: 'flex', alignItems: 'center', paddingLeft: 10,
+                  display: 'flex', alignItems: 'center', paddingInlineStart: 10,
                 }}>
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{t("Email address")}</span>
                 </div>

@@ -358,7 +358,7 @@ export default function TeamsSidebar({
           display: flex; align-items: center; gap: 6px;
           width: 100%; border: 0; background: transparent;
           color: ${TEXT_MUTED};
-          text-align: left; cursor: pointer;
+          text-align: start; cursor: pointer;
           padding: 6px 10px; border-radius: 4px;
           font-size: 14px; line-height: 1.3;
           position: relative;
@@ -375,9 +375,9 @@ export default function TeamsSidebar({
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         .ts-team-row { font-size: 15px; font-weight: 600; color: ${TEXT}; }
-        .ts-campaign-row { font-size: 14px; font-weight: 500; padding-left: 22px; }
-        .ts-agent-row { font-size: 13.5px; padding-left: 44px; color: ${TEXT_DIM}; }
-        .ts-roster-row { font-size: 13.5px; padding-left: 12px; color: ${TEXT_DIM}; }
+        .ts-campaign-row { font-size: 14px; font-weight: 500; padding-inline-start: 22px; }
+        .ts-agent-row { font-size: 13.5px; padding-inline-start: 44px; color: ${TEXT_DIM}; }
+        .ts-roster-row { font-size: 13.5px; padding-inline-start: 12px; color: ${TEXT_DIM}; }
         .ts-roster-row:hover { color: ${TEXT}; }
         /* Quiet enough to be a label rather than another row you can click. */
         .ts-section-label {
@@ -409,7 +409,7 @@ export default function TeamsSidebar({
         .ts-menu-item {
           display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
           width: 100%; border: 0; background: transparent; cursor: pointer;
-          padding: 8px 10px; border-radius: 4px; text-align: left;
+          padding: 8px 10px; border-radius: 4px; text-align: start;
           color: ${TEXT}; font-size: 13.5px; font-family: inherit; font-weight: 500;
           transition: background 0.1s ease;
         }
@@ -448,11 +448,11 @@ export default function TeamsSidebar({
         .ts-row-wrap .ts-row:focus { background: transparent; }
         .ts-row:focus { outline: none; }
         .ts-row:focus-visible { outline: 1px solid ${TEXT_DIM}; outline-offset: -2px; }
-        .ts-indent-1 { padding-left: 16px; }
-        .ts-indent-2 { padding-left: 38px; }
+        .ts-indent-1 { padding-inline-start: 16px; }
+        .ts-indent-2 { padding-inline-start: 38px; }
         /* Levels below the team no longer need their own text indent, the
            wrapper supplies it, or the two would compound. */
-        .ts-campaign-row, .ts-agent-row { padding-left: 4px; }
+        .ts-campaign-row, .ts-agent-row { padding-inline-start: 4px; }
 
         .ts-caret-btn {
           display: grid; place-items: center;
@@ -1128,7 +1128,7 @@ export default function TeamsSidebar({
             className="ts-foot-btn"
             onClick={() => onScopeChange({ kind: 'requests' })}
           >
-            <span style={{ flex: 1, textAlign: 'left' }}>{tr("Requests")}</span>
+            <span style={{ flex: 1, textAlign: 'start' }}>{tr("Requests")}</span>
             {/* Corner badge, because pending work is an interruption — it
                 should read as something stuck to the button rather than a
                 field within it. Caps at 99+; past that the exact figure stops
@@ -1144,7 +1144,7 @@ export default function TeamsSidebar({
             className="ts-foot-btn"
             onClick={() => onScopeChange({ kind: 'all' })}
           >
-            <span style={{ flex: 1, textAlign: 'left' }}>{tr("All Users")}</span>
+            <span style={{ flex: 1, textAlign: 'start' }}>{tr("All Users")}</span>
             {/* Inline count, not a badge: this is a fact about the roster, not
                 a task. Blank at zero — "0" is the same information as no
                 number, spent on more ink. */}

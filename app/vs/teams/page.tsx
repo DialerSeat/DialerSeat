@@ -107,7 +107,7 @@ const FAQS = [
 function Th({ children, w }: { children: React.ReactNode; w?: string }) {
   return (
     <th style={{
-      textAlign: 'left', fontSize: 9.5, letterSpacing: 1.8, color: ACCENT,
+      textAlign: 'start', fontSize: 9.5, letterSpacing: 1.8, color: ACCENT,
       borderBottom: `2px solid ${ACCENT}`, padding: '10px 12px', fontWeight: 'bold',
       width: w, verticalAlign: 'bottom',
     }}>{children}</th>
@@ -212,7 +212,7 @@ export default async function TeamsComparisonPage() {
                   <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: ACCENT }}>
                     {title as string}
                   </div>
-                  <ul style={{ margin: '12px 0 0', paddingLeft: 17, fontSize: 13.5, lineHeight: 1.75 }}>
+                  <ul style={{ margin: '12px 0 0', paddingInlineStart: 17, fontSize: 13.5, lineHeight: 1.75 }}>
                     {(items as readonly string[]).map(t => <li key={t} style={{ marginBottom: 8 }}>{tr(t)}</li>)}
                   </ul>
                 </div>
@@ -223,13 +223,13 @@ export default async function TeamsComparisonPage() {
           {/* ── LIMITS, STATED ────────────────────────────────────────────── */}
           <section style={{
             marginTop: 28, background: '#fff', border: `1px solid ${BORDER}`,
-            borderLeft: `4px solid #8a6a1a`, borderRadius: 8, padding: 26,
+            borderInlineStart: `4px solid #8a6a1a`, borderRadius: 8, padding: 26,
           }}>
             <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a' }}>
               {tr("WHAT DIALERSEAT DOES NOT DO FOR TEAMS")}</div>
             <p style={{ fontSize: 14, lineHeight: 1.75, color: MUTED, marginTop: 10 }}>
               {tr("If any of these is a requirement, one of the enterprise platforms above is the better buy and we would rather you found that out here than after paying us.")}</p>
-            <ul style={{ margin: '10px 0 0', paddingLeft: 17, fontSize: 14, lineHeight: 1.8 }}>
+            <ul style={{ margin: '10px 0 0', paddingInlineStart: 17, fontSize: 14, lineHeight: 1.8 }}>
               {FACTS.teams.notYet.map(l => <li key={l} style={{ marginBottom: 5 }}>{tr(l)}</li>)}
             </ul>
           </section>
@@ -240,7 +240,7 @@ export default async function TeamsComparisonPage() {
               {tr("Remote and offshore agents")}</h2>
             <p style={{ fontSize: 15, lineHeight: 1.8, color: MUTED, marginTop: 12, maxWidth: 780 }}>
               {tr("At $95-$250 per seat per month, an offshore floor costs more in software than in wages, which is why most teams never build one. At $35 per week the arithmetic changes.")}</p>
-            <ul style={{ margin: '16px 0 0', paddingLeft: 17, fontSize: 14.5, lineHeight: 1.85, maxWidth: 800 }}>
+            <ul style={{ margin: '16px 0 0', paddingInlineStart: 17, fontSize: 14.5, lineHeight: 1.85, maxWidth: 800 }}>
               {FACTS.teams.offshore.map(l => <li key={l} style={{ marginBottom: 7 }}>{tr(l)}</li>)}
             </ul>
             <p style={{ fontSize: 14, lineHeight: 1.8, color: MUTED, marginTop: 16, maxWidth: 800 }}>

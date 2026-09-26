@@ -129,7 +129,7 @@ function MacFrame({
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f57' }} />
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#febc2e' }} />
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#28c840' }} />
-        <span style={{ marginLeft: 10, fontSize: 10, letterSpacing: 2, color: titleColor, fontWeight: 700 }}>
+        <span style={{ marginInlineStart: 10, fontSize: 10, letterSpacing: 2, color: titleColor, fontWeight: 700 }}>
           {tr(title)}
         </span>
       </div>
@@ -159,7 +159,7 @@ export default function DialerShowcase() {
   return (
     <MacFrame title={tr("DIALER")} titleColor="#5a8a5a" bg={C.sidebar}>
       <div className="ds-showcase-row" style={{ display: 'flex', minHeight: 220 }}>
-        <div className="ds-showcase-call" style={{ flex: 1, padding: 8, borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <div className="ds-showcase-call" style={{ flex: 1, padding: 8, borderInlineEnd: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <div style={{ flex: 1, background: C.page, border: `1px solid ${C.cardBorder}`, borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '4px 12px', background: C.sidebar, borderBottom: `1px solid ${C.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>{tr("LEAD PROFILE")}</span>
@@ -177,7 +177,7 @@ export default function DialerShowcase() {
                 </div>
               </div>
 
-              <div style={{ flex: 1, marginTop: 4, background: C.page, border: `1px solid ${C.cardBorder}`, borderLeft: `3px solid ${ACCENT}`, borderRadius: 3, display: 'flex', flexDirection: 'column', minHeight: 64, overflow: 'hidden' }}>
+              <div style={{ flex: 1, marginTop: 4, background: C.page, border: `1px solid ${C.cardBorder}`, borderInlineStart: `3px solid ${ACCENT}`, borderRadius: 3, display: 'flex', flexDirection: 'column', minHeight: 64, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '3px 6px 0', borderBottom: `1px solid ${C.cardBorder}`, flexWrap: 'wrap' }}>
                   {SCRIPTS.map((sc, i) => (
                     <button
@@ -228,7 +228,7 @@ export default function DialerShowcase() {
                     padding: '5px 9px',
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.08)',
-                    borderLeft: `3px solid ${color}`,
+                    borderInlineStart: `3px solid ${color}`,
                     borderRadius: 3,
                   }}
                 >

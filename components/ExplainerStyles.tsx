@@ -70,7 +70,7 @@ export default function ExplainerStyles({ accent, accentBg }: Props) {
       }
       .exp-pullquote {
         margin: 24px 0; padding: 20px 24px; background: ${SITE.surface};
-        border-left: 3px solid ${accent}; border-radius: 4px;
+        border-inline-start: 3px solid ${accent}; border-radius: 4px;
         font-size: 15px; line-height: 1.7; color: ${SITE.muted};
       }
       .exp-cards {
@@ -79,7 +79,7 @@ export default function ExplainerStyles({ accent, accentBg }: Props) {
       }
       .exp-card {
         padding: 20px 22px; background: ${SITE.surface};
-        border: 1px solid ${SITE.border}; border-left: 3px solid ${accent};
+        border: 1px solid ${SITE.border}; border-inline-start: 3px solid ${accent};
         border-radius: 4px;
       }
       .exp-card h3 {
@@ -90,7 +90,7 @@ export default function ExplainerStyles({ accent, accentBg }: Props) {
       .exp-deepdive {
         display: flex; align-items: center; justify-content: space-between;
         gap: 24px; padding: 24px 28px; background: ${SITE.surface};
-        border: 1px solid ${SITE.border}; border-left: 3px solid ${accent};
+        border: 1px solid ${SITE.border}; border-inline-start: 3px solid ${accent};
         border-radius: 4px;
       }
       .exp-deepdive h3 {
@@ -187,12 +187,12 @@ export default function ExplainerStyles({ accent, accentBg }: Props) {
          centered; the paragraphs inside it do not, because centered body text
          past about three lines makes the eye hunt for each line start instead
          of returning to a fixed left edge. See components/GutsShell. */
-      .exp-section p { margin-left: auto; margin-right: auto; max-width: 660px; text-align: left; }
+      .exp-section p { margin-inline-start: auto; margin-inline-end: auto; max-width: 660px; text-align: start; }
       .exp-hero .exp-lead, .exp-hero p { text-align: center; }
       .exp-section a { color: ${ROYAL}; font-weight: 600; }
       /* Scanned rather than read: back to left inside the centered section. */
       .exp-cards, .exp-card, .exp-qa, .exp-deepdive, .exp-pullquote,
-      .exp-section ul, .exp-section ol, .exp-section table { text-align: left; }
+      .exp-section ul, .exp-section ol, .exp-section table { text-align: start; }
 
       @media (max-width: 700px) {
         .exp-hero { padding: 34px 22px 30px; }

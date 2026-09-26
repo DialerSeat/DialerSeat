@@ -133,7 +133,7 @@ export default function DialingModesView() {
             fontSize: 11,
             letterSpacing: 1,
             color: T.muted,
-            textAlign: 'right',
+            textAlign: 'end',
           }}>
             {t("Click any mode for the full deep dive →")}</div>
         </section>
@@ -284,7 +284,7 @@ const ModeCard = ({ label, slug, color, body, bestFor }: {
   <div style={{
     background: T.surface,
     border: `1px solid ${T.border}`,
-    borderLeft: `3px solid ${color}`,
+    borderInlineStart: `3px solid ${color}`,
     borderRadius: 8,
     padding: '20px 24px',
     marginBottom: 16,
@@ -327,7 +327,7 @@ const ModeCard = ({ label, slug, color, body, bestFor }: {
 const cardStyle = (edge: string): React.CSSProperties => ({
   background: T.surface,
   border: `1px solid ${T.border}`,
-  borderLeft: `3px solid ${edge}`,
+  borderInlineStart: `3px solid ${edge}`,
   borderRadius: 6,
   padding: '20px 24px',
   marginBottom: 16,
@@ -396,7 +396,7 @@ const ul: React.CSSProperties = {
   fontSize: 14,
   lineHeight: 1.7,
   color: T.text,
-  paddingLeft: 20,
+  paddingInlineStart: 20,
   margin: 0,
 }
 
@@ -406,7 +406,7 @@ const li: React.CSSProperties = {
 
 const th: React.CSSProperties = {
   padding: '12px 14px',
-  textAlign: 'left',
+  textAlign: 'start',
   fontSize: 9,
   letterSpacing: 3,
   color: '#8888aa',

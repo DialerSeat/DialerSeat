@@ -295,17 +295,17 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           font-size: 10px; font-weight: bold; letter-spacing: 2.5px;
           padding: 9px 14px;
           border-radius: 6px;
-          margin-right: 16px;
+          margin-inline-end: 16px;
         }
         .hub-pick {
           padding: 4px 18px;
           font-size: 14.5px; font-weight: 600;
           color: var(--hub-royal);
           text-decoration: none;
-          border-right: 1px solid var(--hub-line);
+          border-inline-end: 1px solid var(--hub-line);
           white-space: nowrap;
         }
-        .hub-pick:last-child { border-right: none; }
+        .hub-pick:last-child { border-inline-end: none; }
         .hub-pick:hover { color: ${SITE.deep}; text-decoration: underline; text-underline-offset: 3px; }
 
         /* ── SEARCH ROW ───────────────────────────────────────────────── */
@@ -400,7 +400,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           color: ${SITE.text};
         }
         .hub-card-count {
-          margin-left: auto;
+          margin-inline-start: auto;
           font-size: 11px; font-weight: bold; letter-spacing: 1.5px;
           color: ${SITE.muted};
           background: ${SITE.bg};
@@ -475,7 +475,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           background: none;
           border: none;
           border-bottom: 1px solid var(--hub-line);
-          text-align: left;
+          text-align: start;
           cursor: default;
           pointer-events: none;
         }
@@ -506,10 +506,10 @@ export default function DirectoryHub(props: DirectoryHubProps) {
              bar folds past two lines, so narrower screens get chips instead.
              Full width keeps the mockup's divided list. */
           .hub-picks { padding: 12px; gap: 8px; }
-          .hub-picks-label { margin-right: 2px; }
+          .hub-picks-label { margin-inline-end: 2px; }
           .hub-pick {
             padding: 8px 12px;
-            border-right: none;
+            border-inline-end: none;
             border: 1px solid #dde6fb;
             border-radius: 6px;
             background: #f5f8ff;
@@ -535,7 +535,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
           .hub-nav-toggle { cursor: pointer; pointer-events: auto; }
           .hub-nav-caret {
             display: block;
-            margin-left: auto;
+            margin-inline-start: auto;
             font-size: 14px;
             color: var(--hub-royal);
             transition: transform 0.16s ease;

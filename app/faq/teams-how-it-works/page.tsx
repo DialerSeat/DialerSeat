@@ -111,7 +111,7 @@ function Section({ title, lead, items }: { title: string; lead: string; items: r
     <section style={{ marginTop: 46 }}>
       <h2 style={{ fontSize: 25, fontWeight: 'bold', letterSpacing: -0.4, margin: 0 }}>{tr(title)}</h2>
       <p style={{ fontSize: 15, lineHeight: 1.8, color: MUTED, marginTop: 10, maxWidth: 780 }}>{tr(lead)}</p>
-      <ul style={{ margin: '16px 0 0', paddingLeft: 18, fontSize: 14.5, lineHeight: 1.85, maxWidth: 830 }}>
+      <ul style={{ margin: '16px 0 0', paddingInlineStart: 18, fontSize: 14.5, lineHeight: 1.85, maxWidth: 830 }}>
         {items.map(t => <li key={t} style={{ marginBottom: 8 }}>{tr(t)}</li>)}
       </ul>
     </section>
@@ -170,7 +170,7 @@ export default async function TeamsHowItWorksPage() {
 
           <section style={{
             marginTop: 46, background: '#fff', border: `1px solid ${BORDER}`,
-            borderLeft: '4px solid #8a6a1a', borderRadius: 8, padding: 26,
+            borderInlineStart: '4px solid #8a6a1a', borderRadius: 8, padding: 26,
           }}>
             <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a' }}>
               {tr("WHAT WE HAVE NOT BUILT")}</div>
@@ -178,7 +178,7 @@ export default async function TeamsHowItWorksPage() {
               {tr("Named here rather than discovered after you pay. If one of these is a requirement, an enterprise contact-centre platform is genuinely the better buy, see the")}{' '}
               <Link href="/vs/five9" style={{ color: ACCENT }}>{tr("Five9")}</Link> {tr("and")}{' '}
               <Link href="/vs/convoso" style={{ color: ACCENT }}>{tr("Convoso")}</Link> {tr("comparisons.")}</p>
-            <ul style={{ margin: '12px 0 0', paddingLeft: 18, fontSize: 14.5, lineHeight: 1.85 }}>
+            <ul style={{ margin: '12px 0 0', paddingInlineStart: 18, fontSize: 14.5, lineHeight: 1.85 }}>
               {FACTS.teams.notYet.map(l => <li key={l} style={{ marginBottom: 6 }}>{tr(l)}</li>)}
             </ul>
           </section>

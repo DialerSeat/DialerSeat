@@ -210,7 +210,7 @@ export default async function StatusPage() {
                   <div style={{ fontSize: 15, fontWeight: 'bold' }}>{c.name}</div>
                   <div style={{ fontSize: 13, color: MUTED, marginTop: 3 }}>{t(c.detail)}</div>
                 </div>
-                <div style={{ fontSize: 12, color: MUTED, fontFamily: 'monospace', minWidth: 64, textAlign: 'right' }}>
+                <div style={{ fontSize: 12, color: MUTED, fontFamily: 'monospace', minWidth: 64, textAlign: 'end' }}>
                   {/* A dash, never a plausible-looking number. */}
                   {c.ms === null ? '-' : `${c.ms} ms`}
                 </div>

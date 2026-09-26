@@ -131,7 +131,7 @@ export default function VsHookedCrmView() {
             border-radius: 12px;
             padding: 32px;
             margin-bottom: 48px;
-            border-left: 4px solid ${T.blue};
+            border-inline-start: 4px solid ${T.blue};
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
           }
           .verdict-title { font-size: 14px; font-weight: bold; letter-spacing: 3px; color: ${T.blue}; margin-bottom: 12px; }
@@ -143,9 +143,9 @@ export default function VsHookedCrmView() {
           .price-card.winner .price-card-label { color: ${T.blue}; }
           .price-card-name { font-size: 24px; font-weight: 800; color: ${T.text}; margin-bottom: 16px; }
           .price-card-big { font-size: 44px; font-weight: 800; letter-spacing: -1px; color: ${T.text}; line-height: 1; }
-          .price-card-suffix { font-size: 14px; color: ${T.muted}; margin-left: 4px; letter-spacing: 1px; }
+          .price-card-suffix { font-size: 14px; color: ${T.muted}; margin-inline-start: 4px; letter-spacing: 1px; }
           .price-card-monthly { margin-top: 8px; font-size: 13px; color: ${T.muted}; letter-spacing: 0.5px; }
-          .price-card-list { margin-top: 20px; padding-top: 20px; border-top: 1px solid ${T.border}; list-style: none; padding-left: 0; }
+          .price-card-list { margin-top: 20px; padding-top: 20px; border-top: 1px solid ${T.border}; list-style: none; padding-inline-start: 0; }
           .price-card-list li {
             padding: 6px 0;
             font-size: 13px;
@@ -174,7 +174,7 @@ export default function VsHookedCrmView() {
             color: white;
             font-size: 11px;
             letter-spacing: 2px;
-            text-align: left;
+            text-align: start;
             font-weight: bold;
           }
           .feature-table th:nth-child(2), .feature-table th:nth-child(3) { text-align: center; width: 18%; }
@@ -191,7 +191,7 @@ export default function VsHookedCrmView() {
             background: ${T.surface};
             border: 1px solid ${T.border};
             border-radius: 12px;
-            border-left: 4px solid ${T.green};
+            border-inline-start: 4px solid ${T.green};
           }
           .win-card-title { font-size: 17px; font-weight: 800; color: ${T.text}; margin-bottom: 10px; }
           .win-card-body { font-size: 14px; line-height: 1.65; color: ${T.muted}; margin: 0; }
@@ -211,7 +211,7 @@ export default function VsHookedCrmView() {
             background: ${T.surface} !important;
             border: 1px solid ${T.border} !important;
             border-radius: 4px !important;
-            border-left: none !important;
+            border-inline-start: none !important;
             border-top: 3px solid ${T.blue} !important;
             box-shadow: none !important;
           }
@@ -226,7 +226,7 @@ export default function VsHookedCrmView() {
           .price-card-list li.bad { color: ${T.muted} !important; }
           .feature-table { background: ${T.surface} !important; border-color: ${T.border} !important; border-radius: 4px !important; }
           .feature-table tr:nth-child(even) td { background: rgba(255,255,255,0.02) !important; }
-          .win-card { background: ${T.surface} !important; border: 1px solid ${T.border} !important; border-radius: 4px !important; border-left: 3px solid ${T.green} !important; }
+          .win-card { background: ${T.surface} !important; border: 1px solid ${T.border} !important; border-radius: 4px !important; border-inline-start: 3px solid ${T.green} !important; }
           .win-card-title { color: ${T.text} !important; }
           .win-card-body { color: ${T.muted} !important; }
           .check { color: ${T.green} !important; }

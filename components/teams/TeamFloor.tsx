@@ -108,7 +108,7 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
         .tf-inspector {
           grid-area: inspector;
           width: 420px;
-          border-left: 1px solid var(--brand-card-border);
+          border-inline-start: 1px solid var(--brand-card-border);
           background: var(--brand-card-surface);
           overflow-y: auto;
           padding: 18px;
@@ -149,7 +149,7 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
           .tf-inspector {
             position: fixed; left: 0; right: 0; bottom: 0; top: auto;
             width: auto; max-height: 70vh; z-index: 40;
-            border-left: none; border-top: 1px solid var(--brand-card-border);
+            border-inline-start: none; border-top: 1px solid var(--brand-card-border);
             border-radius: 14px 14px 0 0;
           }
           .tf-roster { display: none; }
@@ -334,7 +334,7 @@ function Row({ k, v }: { k: string; v: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
       <dt style={{ color: 'var(--brand-muted-text)' }}>{k}</dt>
-      <dd style={{ margin: 0, fontWeight: 500, textAlign: 'right' }}>{v}</dd>
+      <dd style={{ margin: 0, fontWeight: 500, textAlign: 'end' }}>{v}</dd>
     </div>
   )
 }

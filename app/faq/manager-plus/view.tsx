@@ -116,14 +116,14 @@ export default function ManagerPlusFaqView() {
           .mp-tier-price { font-size: 30px; font-weight: 800; margin-bottom: 4px; }
           .mp-tier-price span { font-size: 14px; font-weight: 600; color: ${SITE.muted}; }
           .mp-tier-sub { font-size: 13px; color: ${SITE.muted}; margin-bottom: 16px; }
-          .mp-tier-card ul { margin: 0; padding-left: 18px; }
+          .mp-tier-card ul { margin: 0; padding-inline-start: 18px; }
           .mp-tier-card li { font-size: 14px; line-height: 1.6; margin-bottom: 6px; }
 
           /* MATH BLOCK */
           .mp-math {
             margin: 28px 0; padding: 24px 28px;
             background: ${SITE.surface}; border: 1px solid ${SITE.border};
-            border-left: 3px solid ${SITE.green}; border-radius: 6px;
+            border-inline-start: 3px solid ${SITE.green}; border-radius: 6px;
           }
           .mp-math-title {
             font-size: 11px; letter-spacing: 3px; color: ${SITE.green};

@@ -137,7 +137,7 @@ export default async function OffshoreAgentsPage() {
           <section style={{ marginTop: 46 }}>
             <h2 style={{ fontSize: 25, fontWeight: 'bold', letterSpacing: -0.4, margin: 0 }}>
               {t("What carries over the border")}</h2>
-            <ul style={{ margin: '16px 0 0', paddingLeft: 18, fontSize: 14.5, lineHeight: 1.85, maxWidth: 820 }}>
+            <ul style={{ margin: '16px 0 0', paddingInlineStart: 18, fontSize: 14.5, lineHeight: 1.85, maxWidth: 820 }}>
               {FACTS.teams.offshore.map(l => <li key={l} style={{ marginBottom: 8 }}>{t(l)}</li>)}
             </ul>
           </section>
@@ -153,7 +153,7 @@ export default async function OffshoreAgentsPage() {
 
           <section style={{
             marginTop: 40, background: '#fff', border: `1px solid ${BORDER}`,
-            borderLeft: '4px solid #8a6a1a', borderRadius: 8, padding: 26,
+            borderInlineStart: '4px solid #8a6a1a', borderRadius: 8, padding: 26,
           }}>
             <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a' }}>
               {t("COMPLIANCE DOES NOT MOVE OFFSHORE WITH THE AGENT")}</div>

@@ -322,7 +322,7 @@ function Tile({
       }}>
         {value}
         {suffix ? (
-          <span style={{ fontSize: 11, fontWeight: 'normal', color: T.muted, marginLeft: 5 }}>
+          <span style={{ fontSize: 11, fontWeight: 'normal', color: T.muted, marginInlineStart: 5 }}>
             {suffix}
           </span>
         ) : null}

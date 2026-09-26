@@ -244,7 +244,7 @@ function RecordingsFeed({ recordings, total, agents }: {
             {!expanded && hidden > 0 && ` · showing ${shown.length}`}
           </span>
         </button>
-        <label style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <label style={{ marginInlineStart: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 11, color: MUTED }}>{tr("Agent")}</span>
           <select
             value={who}
@@ -1546,7 +1546,7 @@ export default function TeamsPage() {
             width: 22px; height: 64px;
             border-radius: 8px 0 0 8px;
             border: 1px solid var(--brand-sidebar-active-bg, #35373c);
-            border-right: none;
+            border-inline-end: none;
             background: var(--brand-header-bg, #111214);
             color: var(--brand-primary, #4a9eff);
             align-items: center; justify-content: center;
@@ -1559,7 +1559,7 @@ export default function TeamsPage() {
 
           /* The panel keeps the full width, the drawer floats over it rather
              than squeezing it, so nothing reflows when it opens. */
-          .ts-main { padding-right: 0 !important; }
+          .ts-main { padding-inline-end: 0 !important; }
         }
       `}</style>
 
@@ -1600,7 +1600,7 @@ export default function TeamsPage() {
           }}>
             <span style={{
               fontSize: 12, letterSpacing: 2, textTransform: 'uppercase',
-              color: '#93c5fd', fontWeight: 600, marginRight: 8,
+              color: '#93c5fd', fontWeight: 600, marginInlineEnd: 8,
             }}>{tr("Teams Overview")}</span>
             {RANGES.map(r => (
               <button
@@ -2080,7 +2080,7 @@ export default function TeamsPage() {
                       <div key={p.id} style={{
                         display: 'flex', alignItems: 'center', gap: 12,
                         background: PANEL, border: `1px solid ${HAIRLINE}`,
-                        borderLeft: '3px solid #b45309',
+                        borderInlineStart: '3px solid #b45309',
                         borderRadius: 4, padding: '12px 14px',
                       }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -2206,7 +2206,7 @@ export default function TeamsPage() {
                             style={{
                               display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
                               gap: 2, width: '100%', border: 0, cursor: 'pointer',
-                              padding: '8px 10px', borderRadius: 4, textAlign: 'left',
+                              padding: '8px 10px', borderRadius: 4, textAlign: 'start',
                               background: metric === mv.key ? '#2563eb' : 'transparent',
                               color: TEXT, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 500,
                             }}
@@ -2230,7 +2230,7 @@ export default function TeamsPage() {
                     why a discount is counted the way it is. An owner should be
                     able to look them up without asking, rather than learning
                     each one from a bill or a locked-out agent. */}
-                <div style={{ marginLeft: 'auto', position: 'relative' }}>
+                <div style={{ marginInlineStart: 'auto', position: 'relative' }}>
                   <button
                     onClick={() => setHelpOpen(true)}
                     aria-label={tr("Things you should know")}

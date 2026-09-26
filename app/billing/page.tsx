@@ -895,9 +895,9 @@ export default function BillingPage() {
                notched devices the safe-area inset takes over and adds
                whatever the device actually needs on top of it. */
             padding-top: calc(5px + env(safe-area-inset-top, 0px)) !important;
-            padding-right: 14px !important;
+            padding-inline-end: 14px !important;
             padding-bottom: 20px !important;
-            padding-left: 14px !important;
+            padding-inline-start: 14px !important;
           }
           .billing-col {
             padding: 20px !important;
@@ -1082,7 +1082,7 @@ function CheckoutForm({
           type="checkbox"
           checked={agreed}
           onChange={(e) => setAgreed(e.target.checked)}
-          style={{ marginRight: 10, marginTop: 2, accentColor: '#4a9eff', flexShrink: 0 }}
+          style={{ marginInlineEnd: 10, marginTop: 2, accentColor: '#4a9eff', flexShrink: 0 }}
         />
         {/* The consent states the real numbers from the real invoice. A
             promo code can still make today's figure $0, and the sentence has
@@ -1302,7 +1302,7 @@ const switchLinkStyle: React.CSSProperties = {
   padding: 0,
   marginBottom: 24,
   fontFamily: FUTURA,
-  textAlign: 'left',
+  textAlign: 'start',
   textDecoration: 'underline',
   textUnderlineOffset: 3,
 }
@@ -1364,7 +1364,7 @@ const promoBoxStyle: React.CSSProperties = {
 
 const promoToggleStyle: React.CSSProperties = {
   width: '100%',
-  textAlign: 'left',
+  textAlign: 'start',
   padding: '11px 14px',
   background: 'transparent',
   border: '1px dashed #3a3c48',

@@ -712,7 +712,7 @@ export default function LeadsPage() {
           padding: 8px 12px;
           background: #f8e8e8;
           border: 1px solid ${T.red};
-          border-left: 3px solid ${T.red};
+          border-inline-start: 3px solid ${T.red};
           border-radius: 3px;
           font-size: 11px;
           color: ${T.red};
@@ -760,8 +760,8 @@ export default function LeadsPage() {
           .lead-cell-state, .lead-cell-campaign, .lead-cell-called {
             display: none;
           }
-          .lead-cell-attempts { grid-area: attempts; text-align: right; }
-          .lead-cell-disp { grid-area: disp; text-align: right; }
+          .lead-cell-attempts { grid-area: attempts; text-align: end; }
+          .lead-cell-disp { grid-area: disp; text-align: end; }
           .lead-meta-mobile {
             grid-area: meta;
             display: flex;
@@ -829,7 +829,7 @@ export default function LeadsPage() {
       {isLapsed && (
         <div className="leads-lapsed-banner">
           <span>
-            <strong style={{ marginRight: 6 }}>{tr("▸ READ-ONLY")}</strong>
+            <strong style={{ marginInlineEnd: 6 }}>{tr("▸ READ-ONLY")}</strong>
             {tr("Export anytime. Editing disabled{value}", { value: awaitingSeat
               ? ' until the team owner approves your seat.'
               : hasLapsedPlan ? ' until you resubscribe.' : ' until you subscribe.' })}
@@ -1022,7 +1022,7 @@ export default function LeadsPage() {
                         padding: 14,
                         background: 'rgba(255,170,62,0.06)',
                         border: '1px solid #8a6a1a',
-                        borderLeft: '3px solid #ffaa3e',
+                        borderInlineStart: '3px solid #ffaa3e',
                         borderRadius: 3,
                       }}>
                         <div style={{

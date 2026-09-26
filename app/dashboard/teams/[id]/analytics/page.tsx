@@ -482,7 +482,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
         .ta-rec-lead { font-size: 13px; font-weight: 700; color: ${T.text};
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .ta-rec-meta { font-size: 10px; letter-spacing: 1px; color: ${T.muted}; margin-top: 2px; }
-        .ta-rec-right { margin-left: auto; text-align: right; flex-shrink: 0; }
+        .ta-rec-right { margin-inline-start: auto; text-align: end; flex-shrink: 0; }
         .ta-rec-play {
           background: none; border: 1px solid ${T.border}; border-radius: 3px;
           color: ${T.text}; font-size: 10px; letter-spacing: 1px; font-weight: 700;
@@ -491,8 +491,8 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
         .ta-rec-play:hover { border-color: ${T.blue}; color: ${T.blue}; }
         .ta-rec-audio { width: 100%; margin-top: 8px; }
 
-        .ta-lb-metrics { display: flex; gap: 20px; margin-left: auto; flex-wrap: wrap; }
-        .ta-lb-metric { text-align: right; min-width: 56px; }
+        .ta-lb-metrics { display: flex; gap: 20px; margin-inline-start: auto; flex-wrap: wrap; }
+        .ta-lb-metric { text-align: end; min-width: 56px; }
         .ta-lb-metric-val { font-size: 14px; font-weight: 800; font-family: monospace; color: ${T.text}; }
         .ta-lb-metric-key { font-size: 8.5px; letter-spacing: 1.2px; color: ${T.muted}; font-weight: 700; margin-top: 1px; }
 
@@ -512,7 +512,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
           display: inline-block; padding: 3px 9px; border-radius: 20px;
           font-size: 9px; letter-spacing: 1px; font-weight: 800; font-family: ${FUTURA};
         }
-        .ta-call-right { text-align: right; flex-shrink: 0; }
+        .ta-call-right { text-align: end; flex-shrink: 0; }
         .ta-call-time { font-size: 10px; color: ${T.muted}; }
         .ta-call-dur { font-size: 12px; font-weight: 700; font-family: monospace; color: ${T.text}; margin-top: 3px; }
 
@@ -520,7 +520,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
           .ta-kpi-grid { grid-template-columns: repeat(2, 1fr); }
         }
         @media (max-width: 720px) {
-          .ta-header, .ta-toolbar, .ta-body { padding-left: 16px; padding-right: 16px; }
+          .ta-header, .ta-toolbar, .ta-body { padding-inline-start: 16px; padding-inline-end: 16px; }
           .ta-filter-field select { min-width: 130px; }
           .ta-lb-metrics { gap: 12px; }
           .ta-personal-grid { grid-template-columns: repeat(2, 1fr); }
@@ -529,9 +529,9 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
           .ta-kpi-grid { grid-template-columns: 1fr 1fr; }
           .ta-kpi-value { font-size: 20px; }
           .ta-row { flex-wrap: wrap; }
-          .ta-lb-metrics { width: 100%; margin-left: 50px; justify-content: flex-start; gap: 16px; }
+          .ta-lb-metrics { width: 100%; margin-inline-start: 50px; justify-content: flex-start; gap: 16px; }
           .ta-call-row { flex-wrap: wrap; }
-          .ta-call-right { margin-left: auto; }
+          .ta-call-right { margin-inline-start: auto; }
         }
       `}</style>
 
@@ -696,7 +696,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                                }
                              }}
                              style={memberFilter === m.userId
-                               ? { borderLeft: `3px solid ${T.blue}` }
+                               ? { borderInlineStart: `3px solid ${T.blue}` }
                                : undefined}>
                           <span style={{
                             width: 22, textAlign: 'center', fontSize: 12, fontWeight: 800,
@@ -800,7 +800,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                     </div>
                   </div>
                   {viewerConnectPct !== null && (
-                    <div style={{ paddingRight: 22, flexShrink: 0 }}>
+                    <div style={{ paddingInlineEnd: 22, flexShrink: 0 }}>
                       <Ring pct={viewerConnectPct} size={64} stroke={6} color={T.blue} />
                     </div>
                   )}

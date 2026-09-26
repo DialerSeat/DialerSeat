@@ -86,7 +86,7 @@ export default function DialerSeatTeamsFaqView() {
             margin: 26px 0;
             padding: 22px 26px;
             background: ${SITE.bg};
-            border-left: 3px solid ${SITE.deep};
+            border-inline-start: 3px solid ${SITE.deep};
             border-radius: 4px;
             font-size: 16px;
             line-height: 1.7;
@@ -99,7 +99,7 @@ export default function DialerSeatTeamsFaqView() {
             padding: 24px 26px;
             background: ${SITE.bg};
             border: 1px solid ${SITE.border};
-            border-left: 3px solid ${SITE.amber};
+            border-inline-start: 3px solid ${SITE.amber};
             border-radius: 6px;
           }
           .tfaq-aged-callout .label {
@@ -163,10 +163,10 @@ export default function DialerSeatTeamsFaqView() {
             padding: 22px 24px;
             background: ${SITE.surface};
             border: 1px solid ${SITE.border};
-            border-left: 3px solid ${SITE.deep};
+            border-inline-start: 3px solid ${SITE.deep};
             border-radius: 8px;
           }
-          .tfaq-mode-card.free { border-left-color: ${SITE.green}; }
+          .tfaq-mode-card.free { border-inline-start-color: ${SITE.green}; }
           .tfaq-mode-card h3 {
             font-size: 13px;
             font-weight: 700;
@@ -252,13 +252,13 @@ export default function DialerSeatTeamsFaqView() {
           .tfaq-step-body { padding: 20px 24px; }
           .tfaq-step-body ol {
             margin: 0;
-            padding-left: 22px;
+            padding-inline-start: 22px;
             counter-reset: tfaq-step;
             list-style: none;
           }
           .tfaq-step-body li {
             position: relative;
-            padding-left: 6px;
+            padding-inline-start: 6px;
             margin-bottom: 12px;
             font-size: 14px;
             line-height: 1.6;
@@ -443,7 +443,7 @@ export default function DialerSeatTeamsFaqView() {
             <h3>{t("FOUR PRICING MODELS")}</h3>
             <p>
               {t("The four billing modes (covered in detail below) map naturally to the seat structure. Pick whichever matches how you want to charge:")}</p>
-            <ol style={{ paddingLeft: 22, marginTop: 14 }}>
+            <ol style={{ paddingInlineStart: 22, marginTop: 14 }}>
               <li style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.65 }}>
                 <strong>{t("Per-seat-per-week markup.")}</strong> {t("You eat the $35 seat cost and charge buyers a flat weekly markup. Clean recurring revenue per active dialing buyer.")}</li>
               <li style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.65 }}>

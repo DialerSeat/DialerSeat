@@ -219,7 +219,7 @@ export function BarList({ points, total, colorByIndex = false }: {
               <span style={{ color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {tr(p.label)}
               </span>
-              <span style={{ color: DIM, flexShrink: 0, marginLeft: 10 }}>
+              <span style={{ color: DIM, flexShrink: 0, marginInlineStart: 10 }}>
                 {p.value.toLocaleString()}{sum > 0 && ` · ${pct}%`}
               </span>
             </div>

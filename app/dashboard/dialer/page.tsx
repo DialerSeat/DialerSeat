@@ -6312,7 +6312,7 @@ function DialerPageInner() {
               background: 'transparent', border: 'none', cursor: 'pointer',
               color: terminalMuted, fontFamily: FUTURA,
               fontSize: inOverlay ? '11px' : '9px',
-              letterSpacing: '2px', fontWeight: 'bold', textAlign: 'left',
+              letterSpacing: '2px', fontWeight: 'bold', textAlign: 'start',
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: '1 1 auto' }}>
@@ -6325,7 +6325,7 @@ function DialerPageInner() {
             {!manualSettingsOpen && (
               <span style={{
                 fontSize: inOverlay ? '9px' : '7.5px', letterSpacing: '1px',
-                whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 'auto',
+                whiteSpace: 'nowrap', flexShrink: 0, marginInlineStart: 'auto',
               }}>
                 <span style={{ color: manualAmd ? '#4a9eff' : terminalMuted }}>
                   {tr("DETECTION {value}", { value: manualAmd ? tr("ON") : tr("OFF") })}
@@ -6362,7 +6362,7 @@ function DialerPageInner() {
               color: manualAmd ? '#4a9eff' : terminalMuted,
               fontFamily: FUTURA,
               fontSize: inOverlay ? '11px' : '9px',
-              letterSpacing: '2px', fontWeight: 'bold', textAlign: 'left',
+              letterSpacing: '2px', fontWeight: 'bold', textAlign: 'start',
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: '1 1 auto' }}>
@@ -6403,7 +6403,7 @@ function DialerPageInner() {
               color: manualRecord ? '#f87171' : terminalMuted,
               fontFamily: FUTURA,
               fontSize: inOverlay ? '11px' : '9px',
-              letterSpacing: '2px', fontWeight: 'bold', textAlign: 'left',
+              letterSpacing: '2px', fontWeight: 'bold', textAlign: 'start',
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: '1 1 auto' }}>
@@ -6470,19 +6470,19 @@ function DialerPageInner() {
     const linesTarget = linesPref?.effective_lines || pacingInfo?.configuredLines || 3
     return (
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', padding: '0 14px 10px' }}>
-        <div style={{ textAlign: 'left' }}>
+        <div style={{ textAlign: 'start' }}>
           <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>{tr("LINES IN FLIGHT")}</div>
           <div style={{ fontSize: 16, fontFamily: 'monospace', fontWeight: 'bold', color: terminalText }}>
             {linesActive} / {linesTarget}
           </div>
         </div>
-        <div style={{ textAlign: 'left' }}>
+        <div style={{ textAlign: 'start' }}>
           <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>{tr("CONNECTED TODAY")}</div>
           <div style={{ fontSize: 16, fontFamily: 'monospace', fontWeight: 'bold', color: terminalAccent }}>
             {sessionStats.connected}
           </div>
         </div>
-        <div style={{ textAlign: 'left' }}>
+        <div style={{ textAlign: 'start' }}>
           <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>{tr("30D ABANDON")}</div>
           <div style={{
             fontSize: 16, fontFamily: 'monospace', fontWeight: 'bold',
@@ -6984,7 +6984,7 @@ function DialerPageInner() {
                       padding: '10px 12px',
                       background: isRowActive ? 'rgba(42, 74, 138, 0.10)' : (dispInfo?.tint || terminalBg),
                       border: `1px solid ${isRowActive ? terminalAccent : terminalBorder}`,
-                      borderLeft: `3px solid ${isRowActive ? terminalAccent : 'transparent'}`,
+                      borderInlineStart: `3px solid ${isRowActive ? terminalAccent : 'transparent'}`,
                       borderRadius: 4,
                     }}
                   >
@@ -7121,7 +7121,7 @@ function DialerPageInner() {
         .dialer-status-bar-right { display: flex; align-items: center; gap: 18px; }
         .dialer-stat-grid { grid-template-columns: repeat(4, 1fr) !important; }
         .dialer-right-sidebar {
-          width: 280px; border-left: 1px solid ${terminalBorder};
+          width: 280px; border-inline-start: 1px solid ${terminalBorder};
           display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
         }
         .dialer-right-toggle { display: none; }
@@ -7276,7 +7276,7 @@ function DialerPageInner() {
             position: fixed; right: 0; top: 0; bottom: 0; z-index: 60;
             width: 280px; max-width: 85vw;
             transform: translateX(100%); transition: transform 0.25s ease;
-            background: ${terminalBg}; border-left: 1px solid ${terminalBorder};
+            background: ${terminalBg}; border-inline-start: 1px solid ${terminalBorder};
           }
           .dialer-right-sidebar.open { transform: translateX(0); }
 
@@ -7301,7 +7301,7 @@ function DialerPageInner() {
             border-radius: 8px 0 0 8px;
             background: ${terminalDark};
             border: 1px solid var(--brand-sidebar-active-bg);
-            border-right: none;
+            border-inline-end: none;
             color: var(--brand-primary);
             align-items: center;
             justify-content: center;
@@ -7422,7 +7422,7 @@ function DialerPageInner() {
             <div style={{
               padding: '10px 12px', marginBottom: 8, flexShrink: 0,
               background: 'rgba(220, 38, 38, 0.12)',
-              border: '1px solid #dc2626', borderLeft: '4px solid #dc2626',
+              border: '1px solid #dc2626', borderInlineStart: '4px solid #dc2626',
               borderRadius: 4, color: '#f87171',
               fontFamily: FUTURA, fontSize: 10, letterSpacing: 1.5,
               fontWeight: 'bold', lineHeight: 1.6,
@@ -7513,7 +7513,7 @@ function DialerPageInner() {
                       }} />
                       {tr(opt.label)}
                       {opt.value === dialerMode && (
-                        <span style={{ marginLeft: 'auto', color: 'var(--brand-primary)' }}>✓</span>
+                        <span style={{ marginInlineStart: 'auto', color: 'var(--brand-primary)' }}>✓</span>
                       )}
                     </div>
                   ))}
@@ -7525,7 +7525,7 @@ function DialerPageInner() {
           {isPredictive && pacingInfo && (
             <div style={{
               padding: '10px 14px', background: terminalSurface,
-              border: `1px solid ${terminalBorder}`, borderLeft: `3px solid ${pacingInfo.isDegraded ? terminalRed : terminalAccent}`,
+              border: `1px solid ${terminalBorder}`, borderInlineStart: `3px solid ${pacingInfo.isDegraded ? terminalRed : terminalAccent}`,
               borderRadius: '4px', flexShrink: 0,
               display: 'grid', gridTemplateColumns: msgText("repeat(4, 1fr)"), gap: 10,
             }}>
@@ -7533,7 +7533,7 @@ function DialerPageInner() {
                 <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>{tr("ACTIVE AGENTS")}</div>
                 <div style={{ fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace', color: terminalText }}>
                   {pacingInfo.activeAgents}{pacingInfo.isPredictiveTeam && (
-                    <span style={{ fontSize: 9, color: terminalGreen, marginLeft: 6, letterSpacing: 1 }}>{tr("TEAM")}</span>
+                    <span style={{ fontSize: 9, color: terminalGreen, marginInlineStart: 6, letterSpacing: 1 }}>{tr("TEAM")}</span>
                   )}
                 </div>
               </div>
@@ -7613,7 +7613,7 @@ function DialerPageInner() {
                 marginTop: 6, padding: '6px 10px',
                 background: '#fdf4e8',
                 border: `1px solid ${terminalAmber}`,
-                borderLeft: `3px solid ${terminalAmber}`,
+                borderInlineStart: `3px solid ${terminalAmber}`,
                 borderRadius: 4,
                 fontSize: 11, color: terminalAmber, letterSpacing: 0.5, fontWeight: 'bold',
               }}>
@@ -7855,7 +7855,7 @@ function DialerPageInner() {
                       <div className="dialer-script-box" style={{
                         flex: 1, margin: '0 12px 12px',
                         background: terminalBg, border: `1px solid ${terminalBorder}`,
-                        borderLeft: `3px solid ${terminalAccent}`, borderRadius: '3px',
+                        borderInlineStart: `3px solid ${terminalAccent}`, borderRadius: '3px',
                         display: 'flex', flexDirection: 'column', minHeight: 80, overflow: 'hidden',
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '6px 8px 0', borderBottom: `1px solid ${terminalBorder}`, flexWrap: 'wrap', flexShrink: 0 }}>
@@ -7938,7 +7938,7 @@ function DialerPageInner() {
                 <div style={{
                   marginBottom: 10, padding: '6px 10px',
                   background: 'rgba(42,74,138,0.08)',
-                  borderLeft: `3px solid ${terminalAccent}`,
+                  borderInlineStart: `3px solid ${terminalAccent}`,
                   fontSize: 10, color: terminalAccent, letterSpacing: 0.5,
                 }}>
                   {tr("ⓘ System is still dialing in background. Next human routes automatically.")}</div>
@@ -8184,7 +8184,7 @@ function DialerPageInner() {
                 gap: 6, minWidth: 0,
                 padding: '5px 8px', background: terminalSurface,
                 border: `1px solid ${terminalBorder}`, borderRadius: '3px',
-                borderLeft: `3px solid ${stat.color}`,
+                borderInlineStart: `3px solid ${stat.color}`,
               }}>
                 <span className="dialer-metric-label" style={{
                   fontSize: '8px', letterSpacing: '1px', color: terminalMuted,
@@ -8204,7 +8204,7 @@ function DialerPageInner() {
               gap: 6, minWidth: 0,
               padding: '5px 8px', background: terminalSurface,
               border: `1px solid ${terminalBorder}`, borderRadius: '3px',
-              borderLeft: `3px solid ${terminalAccent}`,
+              borderInlineStart: `3px solid ${terminalAccent}`,
             }}>
               <span className="dialer-metric-label" style={{
                 fontSize: '8px', letterSpacing: '1px', color: terminalMuted,
@@ -8235,7 +8235,7 @@ function DialerPageInner() {
                 gap: 1, minWidth: 0,
                 padding: '4px 8px', background: terminalSurface,
                 border: `1px solid ${terminalBorder}`, borderRadius: '3px',
-                borderLeft: `3px solid ${stat.color}`,
+                borderInlineStart: `3px solid ${stat.color}`,
               }}>
                 <span className="dialer-metric-label" style={{
                   fontSize: '8px', letterSpacing: '1px', color: terminalMuted, lineHeight: 1.1,

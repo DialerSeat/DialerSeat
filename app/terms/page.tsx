@@ -83,8 +83,8 @@ export default async function TermsPage() {
             margin: 0 auto;
             padding: 60px 32px 80px;
             background: white;
-            border-left: 1px solid #c4c8d0;
-            border-right: 1px solid #c4c8d0;
+            border-inline-start: 1px solid #c4c8d0;
+            border-inline-end: 1px solid #c4c8d0;
           }
           .tos-body h2 {
             font-size: 22px;
@@ -109,14 +109,14 @@ export default async function TermsPage() {
           }
           .tos-body ul {
             margin: 0 0 16px 0;
-            padding-left: 24px;
+            padding-inline-start: 24px;
           }
           .tos-body li { margin-bottom: 8px; }
           .tos-body strong { font-weight: 800; color: #1a1c24; }
           .tos-body a { color: #2a4a8a; text-decoration: underline; }
           .tos-body .meta-row {
             background: #f0f1f4;
-            border-left: 3px solid #2a4a8a;
+            border-inline-start: 3px solid #2a4a8a;
             padding: 14px 18px;
             margin: 16px 0 24px 0;
             border-radius: 4px;
@@ -126,7 +126,7 @@ export default async function TermsPage() {
           .tos-body .meta-row strong { color: #1a1c24; }
           .tos-body .warning-row {
             background: #fdf4e8;
-            border-left: 3px solid #8a6a1a;
+            border-inline-start: 3px solid #8a6a1a;
             padding: 14px 18px;
             margin: 16px 0 24px 0;
             border-radius: 4px;
@@ -143,7 +143,7 @@ export default async function TermsPage() {
           .tos-body .toc h3 { margin-top: 0; }
           .tos-body .toc ol {
             margin: 0;
-            padding-left: 20px;
+            padding-inline-start: 20px;
             font-size: 14px;
             line-height: 1.9;
           }

@@ -172,7 +172,7 @@ function Column({ c }: { c: Competitor }) {
         <h3 style={{ margin: 0, fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#16a34a', textTransform: 'uppercase' }}>
           {t("Pros of {name}", { name: c.name })}
         </h3>
-        <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 14, lineHeight: 1.8, color: INK }}>
+        <ul style={{ margin: '8px 0 0', paddingInlineStart: 18, fontSize: 14, lineHeight: 1.8, color: INK }}>
           {c.wins.map(w => <li key={w}>{t(w)}</li>)}
         </ul>
       </div>
@@ -181,7 +181,7 @@ function Column({ c }: { c: Competitor }) {
         <h3 style={{ margin: 0, fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: '#8a6a1a', textTransform: 'uppercase' }}>
           {t("Cons of {name}", { name: c.name })}
         </h3>
-        <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 14, lineHeight: 1.8, color: INK }}>
+        <ul style={{ margin: '8px 0 0', paddingInlineStart: 18, fontSize: 14, lineHeight: 1.8, color: INK }}>
           {c.friction.map(f => <li key={f}>{t(f)}</li>)}
         </ul>
       </div>
@@ -277,7 +277,7 @@ export default async function MatchupPage(
           {/* ── Disclosed self-mention. Last, and labelled. ───────────────── */}
           <section style={{
             marginTop: 20, background: SURFACE, border: `1px solid ${ACCENT}`,
-            borderLeft: `4px solid ${ACCENT}`, borderRadius: 8, padding: 28,
+            borderInlineStart: `4px solid ${ACCENT}`, borderRadius: 8, padding: 28,
           }}>
             <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: ACCENT }}>
               {t("DISCLOSURE, THIS IS OUR PRODUCT")}</div>

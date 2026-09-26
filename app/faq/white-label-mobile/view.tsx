@@ -205,11 +205,11 @@ export default function WhiteLabelMobileFaqView() {
           }
           .wlm-vs-cell.label {
             font-weight: 700; color: ${SITE.text}; background: ${SITE.surface};
-            border-right: 1px solid ${SITE.border}; font-size: 13px;
+            border-inline-end: 1px solid ${SITE.border}; font-size: 13px;
           }
           .wlm-vs-row.head .wlm-vs-cell {
             color: white; font-size: 11px; letter-spacing: 2px; font-weight: bold;
-            border-right: 1px solid rgba(255,255,255,0.1);
+            border-inline-end: 1px solid rgba(255,255,255,0.1);
           }
           .wlm-vs-cell.us { color: ${SITE.green}; font-weight: 600; }
           .wlm-vs-cell.them { color: ${SITE.red}; }@media (max-width: 768px) {

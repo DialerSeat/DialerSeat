@@ -835,7 +835,7 @@ export default function RecordingsPage() {
            independent of how wide its neighbours happen to be.
            Mobile keeps it in normal flow, where the header wraps and an
            absolutely positioned element would overlap the row above it. */
-        .rec-vm-btn { margin-left: auto; margin-right: auto; }
+        .rec-vm-btn { margin-inline-start: auto; margin-inline-end: auto; }
         @media (min-width: 769px) {
           .rec-vm-btn {
             position: absolute;

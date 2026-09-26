@@ -163,7 +163,7 @@ export default async function ProgressiveDialerPage() {
             padding: 18px 20px;
             background: ${MODE_BG};
             border: 1px solid #c8e4c8;
-            border-left: 3px solid ${MODE_COLOR};
+            border-inline-start: 3px solid ${MODE_COLOR};
             border-radius: 6px;
           }
           .dm-shines-card h4 {
@@ -183,7 +183,7 @@ export default async function ProgressiveDialerPage() {
             margin: 24px 0;
             padding: 20px 24px;
             background: ${MODE_BG};
-            border-left: 3px solid ${MODE_COLOR};
+            border-inline-start: 3px solid ${MODE_COLOR};
             border-radius: 4px;
             font-size: 15px;
             line-height: 1.7;
@@ -308,7 +308,7 @@ export default async function ProgressiveDialerPage() {
             .dm-hero h1 { font-size: 36px; }
             .dm-lead { font-size: 15px; }
             .dm-section, .dm-section.alt > .inner, .dm-on-ds > .inner,
-            .dm-other > .inner { padding-left: 20px; padding-right: 20px; }
+            .dm-other > .inner { padding-inline-start: 20px; padding-inline-end: 20px; }
             .dm-section { padding-top: 48px; padding-bottom: 48px; }
             .dm-section h2 { font-size: 26px; }
             .dm-shines-grid { grid-template-columns: 1fr; }
@@ -338,7 +338,7 @@ export default async function ProgressiveDialerPage() {
             letter-spacing: -1.4px; line-height: 1.08;
           }
           .dm-lead {
-            max-width: 660px; margin-left: auto; margin-right: auto;
+            max-width: 660px; margin-inline-start: auto; margin-inline-end: auto;
             font-size: 15.5px; line-height: 1.75;
           }
           .dm-eyebrow { letter-spacing: 3px; font-size: 10px; }
@@ -359,9 +359,9 @@ export default async function ProgressiveDialerPage() {
              three lines makes the eye hunt for each line start. These pages have
              the longest paragraphs on the site. See components/GutsShell. */
           .dm-section > p, .dm-section .inner > p {
-            max-width: 660px; margin-left: auto; margin-right: auto;
+            max-width: 660px; margin-inline-start: auto; margin-inline-end: auto;
           }
-          .dm-section p { text-align: left; }
+          .dm-section p { text-align: start; }
           .dm-hero .dm-lead { text-align: center; }
           .dm-section a { color: #2a6eff; font-weight: 600; }
 
@@ -371,7 +371,7 @@ export default async function ProgressiveDialerPage() {
           .dm-shines-grid, .dm-shines-card,
           .dm-other-grid, .dm-other-card,
           .dm-grid, .dm-card, .dm-note, .dm-best {
-            text-align: left;
+            text-align: start;
           }
 
           .dm-cta {

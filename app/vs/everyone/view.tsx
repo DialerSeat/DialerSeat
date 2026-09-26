@@ -365,7 +365,7 @@ export default function VsEveryoneView() {
           .vse-tiles {
             display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px; max-width: 620px; margin: 22px auto 0;
-            text-align: left;
+            text-align: start;
           }
           .vse-tile {
             border: 1px solid ${T.border}; border-radius: 10px;
@@ -380,7 +380,7 @@ export default function VsEveryoneView() {
           .vse-tile.ours .vse-tile-sub { color: rgba(255,255,255,0.6); }
 
           /* ── FAILURES ─────────────────────────────────────────────── */
-          .vse-failures { display: grid; gap: 12px; margin-top: 24px; text-align: left; }
+          .vse-failures { display: grid; gap: 12px; margin-top: 24px; text-align: start; }
           .vse-failure {
             display: flex; gap: 16px;
             background: ${T.bg};
@@ -401,7 +401,7 @@ export default function VsEveryoneView() {
             border: 1px solid ${T.border};
             border-radius: 10px;
             overflow-x: auto;
-            text-align: left;
+            text-align: start;
           }
           .vse-tablewrap table { width: 100%; border-collapse: collapse; min-width: 880px; }
           .vse-tablewrap th {
@@ -412,7 +412,7 @@ export default function VsEveryoneView() {
             font-size: 10px; letter-spacing: 2px; font-weight: bold;
             white-space: nowrap;
           }
-          .vse-tablewrap th:first-child { text-align: left; }
+          .vse-tablewrap th:first-child { text-align: start; }
           .vse-tablewrap th.ds-head { color: ${T.blue}; }
           .vse-tablewrap td {
             padding: 12px 16px;
@@ -422,7 +422,7 @@ export default function VsEveryoneView() {
           }
           .vse-tablewrap tr:last-child td { border-bottom: none; }
           .vse-tablewrap td:first-child {
-            text-align: left; font-weight: 600; color: ${T.text};
+            text-align: start; font-weight: 600; color: ${T.text};
             width: 230px; font-size: 13px;
           }
           .vse-tablewrap tr:nth-child(even) td { background: rgba(226,228,234,0.34); }
@@ -431,7 +431,7 @@ export default function VsEveryoneView() {
           /* ── SWITCHING ────────────────────────────────────────────── */
           .vse-switch {
             display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px; margin-top: 24px; text-align: left;
+            gap: 10px; margin-top: 24px; text-align: start;
           }
           .vse-switch a {
             background: ${T.bg}; border: 1px solid ${T.border};

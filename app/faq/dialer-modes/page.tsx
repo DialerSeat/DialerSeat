@@ -237,7 +237,7 @@ export default async function DialerModesTldrPage() {
             letter-spacing: -1.4px; line-height: 1.08;
           }
           .dmt-lead {
-            max-width: 660px; margin-left: auto; margin-right: auto;
+            max-width: 660px; margin-inline-start: auto; margin-inline-end: auto;
             font-size: 15.5px; line-height: 1.75;
           }
           .dmt-eyebrow { letter-spacing: 3px; font-size: 10px; }
@@ -258,9 +258,9 @@ export default async function DialerModesTldrPage() {
              three lines makes the eye hunt for each line start. These pages have
              the longest paragraphs on the site. See components/GutsShell. */
           .dmt-section > p, .dmt-section .inner > p {
-            max-width: 660px; margin-left: auto; margin-right: auto;
+            max-width: 660px; margin-inline-start: auto; margin-inline-end: auto;
           }
-          .dmt-section p { text-align: left; }
+          .dmt-section p { text-align: start; }
           .dmt-hero .dmt-lead { text-align: center; }
           .dmt-section a { color: #2a6eff; font-weight: 600; }
 
@@ -270,7 +270,7 @@ export default async function DialerModesTldrPage() {
           .dmt-shines-grid, .dmt-shines-card,
           .dmt-other-grid, .dmt-other-card,
           .dmt-grid, .dmt-card, .dmt-note, .dmt-best {
-            text-align: left;
+            text-align: start;
           }
 
           .dmt-cta {

@@ -162,7 +162,7 @@ export default async function PowerDialerPage() {
             padding: 18px 20px;
             background: ${MODE_BG};
             border: 1px solid #d4dceb;
-            border-left: 3px solid ${MODE_COLOR};
+            border-inline-start: 3px solid ${MODE_COLOR};
             border-radius: 6px;
           }
           .dm-shines-card h4 {
@@ -182,7 +182,7 @@ export default async function PowerDialerPage() {
             margin: 24px 0;
             padding: 20px 24px;
             background: ${MODE_BG};
-            border-left: 3px solid ${MODE_COLOR};
+            border-inline-start: 3px solid ${MODE_COLOR};
             border-radius: 4px;
             font-size: 15px;
             line-height: 1.7;
@@ -307,7 +307,7 @@ export default async function PowerDialerPage() {
             .dm-hero h1 { font-size: 36px; }
             .dm-lead { font-size: 15px; }
             .dm-section, .dm-section.alt > .inner, .dm-on-ds > .inner,
-            .dm-other > .inner { padding-left: 20px; padding-right: 20px; }
+            .dm-other > .inner { padding-inline-start: 20px; padding-inline-end: 20px; }
             .dm-section { padding-top: 48px; padding-bottom: 48px; }
             .dm-section h2 { font-size: 26px; }
             .dm-shines-grid { grid-template-columns: 1fr; }
@@ -334,7 +334,7 @@ export default async function PowerDialerPage() {
           .dm-hero-inner { max-width: none; }
           .dm-hero h1 { font-size: 42px; font-weight: 800; letter-spacing: -1.4px; line-height: 1.08; }
           .dm-hero .dm-lead { text-align: center; }
-          .dm-lead { max-width: 660px; margin-left: auto; margin-right: auto; font-size: 15.5px; line-height: 1.75; }
+          .dm-lead { max-width: 660px; margin-inline-start: auto; margin-inline-end: auto; font-size: 15.5px; line-height: 1.75; }
           .dm-eyebrow { letter-spacing: 3px; font-size: 10px; }
 
           .dm-section {
@@ -345,15 +345,15 @@ export default async function PowerDialerPage() {
           }
           .dm-section:last-of-type { border-bottom: none; }
           .dm-section h2 { font-size: 27px; font-weight: 800; letter-spacing: -0.6px; line-height: 1.2; }
-          .dm-section > p, .dm-section .inner > p { max-width: 660px; margin-left: auto; margin-right: auto; }
-          .dm-section p { text-align: left; }
+          .dm-section > p, .dm-section .inner > p { max-width: 660px; margin-inline-start: auto; margin-inline-end: auto; }
+          .dm-section p { text-align: start; }
           .dm-section a { color: #2a6eff; font-weight: 600; }
 
           /* Scanned, not read. */
           .dm-section ul, .dm-section ol, .dm-section table,
           .dm-bullets, .dm-steps, .dm-pullquote,
           .dm-shines-grid, .dm-shines-card,
-          .dm-other-grid, .dm-other-card { text-align: left; }
+          .dm-other-grid, .dm-other-card { text-align: start; }
 
           .dm-cta { margin: 0; padding: 44px 48px; border-top: 1px solid #e2e4ea; border-radius: 0; }
 

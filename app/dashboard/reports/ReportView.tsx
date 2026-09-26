@@ -61,7 +61,7 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
       fontSize: 13,
     }}>
       <span style={{ color: SOFT }}>{tr(label)}</span>
-      <span style={{ color: INK, fontWeight: strong ? 700 : 500, textAlign: 'right' }}>{value}</span>
+      <span style={{ color: INK, fontWeight: strong ? 700 : 500, textAlign: 'end' }}>{value}</span>
     </div>
   )
 }
@@ -160,9 +160,9 @@ export default function ReportView({ period }: { period: string }) {
           h2 { break-after: avoid; page-break-after: avoid; }
         }
         @page { margin: 16mm; }
-        .rt th { text-align: left; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: ${SOFT}; font-weight: 700; padding: 6px 8px; border-bottom: 1.5px solid ${RULE}; }
+        .rt th { text-align: start; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: ${SOFT}; font-weight: 700; padding: 6px 8px; border-bottom: 1.5px solid ${RULE}; }
         .rt td { font-size: 12px; padding: 7px 8px; border-bottom: 1px solid ${RULE}; color: ${INK}; }
-        .rt td.num, .rt th.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .rt td.num, .rt th.num { text-align: end; font-variant-numeric: tabular-nums; }
         .idf { font-size: 13px; padding: 8px 10px; border: 1px solid ${RULE}; border-radius: 4px; width: 100%; font-family: inherit; color: ${INK}; }
         .idf:focus { outline: none; border-color: ${BRAND}; }
 
@@ -179,9 +179,9 @@ export default function ReportView({ period }: { period: string }) {
           .rt { min-width: 560px; }
           .rt-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
           .hdr { flex-direction: column; align-items: flex-start !important; }
-          .hdr-right { text-align: left !important; }
+          .hdr-right { text-align: start !important; }
           .row-pair { flex-direction: column; gap: 2px !important; }
-          .row-pair span:last-child { text-align: left !important; }
+          .row-pair span:last-child { text-align: start !important; }
         }
       `}</style>
 
@@ -270,7 +270,7 @@ export default function ReportView({ period }: { period: string }) {
               {data.supplier.site} · {data.supplier.contact}
             </div>
           </div>
-          <div className="hdr-right" style={{ textAlign: 'right' }}>
+          <div className="hdr-right" style={{ textAlign: 'end' }}>
             <div style={{ fontSize: 19, fontWeight: 700 }}>{tr("Billing Statement")}</div>
             <div style={{ fontSize: 13, color: SOFT, marginTop: 3 }}>{tr(data.periodLabel)}</div>
             <div style={{ fontSize: 11, color: SOFT, marginTop: 8 }}>
@@ -388,7 +388,7 @@ export default function ReportView({ period }: { period: string }) {
                     </td>
                     <td className="num">
                       {li.discountCents > 0 && (
-                        <span style={{ color: SOFT, textDecoration: 'line-through', marginRight: 6 }}>
+                        <span style={{ color: SOFT, textDecoration: 'line-through', marginInlineEnd: 6 }}>
                           {money(li.listCents)}
                         </span>
                       )}

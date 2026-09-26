@@ -90,8 +90,8 @@ export default async function PrivacyPolicyPage() {
             margin: 0 auto;
             padding: 60px 32px 80px;
             background: white;
-            border-left: 1px solid #c4c8d0;
-            border-right: 1px solid #c4c8d0;
+            border-inline-start: 1px solid #c4c8d0;
+            border-inline-end: 1px solid #c4c8d0;
           }
           .privacy-body h2 {
             font-size: 22px;
@@ -116,7 +116,7 @@ export default async function PrivacyPolicyPage() {
           }
           .privacy-body ul {
             margin: 0 0 16px 0;
-            padding-left: 24px;
+            padding-inline-start: 24px;
           }
           .privacy-body li { margin-bottom: 8px; }
           .privacy-body strong { font-weight: 800; color: #1a1c24; }
@@ -131,7 +131,7 @@ export default async function PrivacyPolicyPage() {
           }
           .privacy-body .meta-row {
             background: #f0f1f4;
-            border-left: 3px solid #2a4a8a;
+            border-inline-start: 3px solid #2a4a8a;
             padding: 14px 18px;
             margin: 16px 0 24px 0;
             border-radius: 4px;
@@ -148,7 +148,7 @@ export default async function PrivacyPolicyPage() {
           .privacy-body .toc h3 { margin-top: 0; }
           .privacy-body .toc ol {
             margin: 0;
-            padding-left: 20px;
+            padding-inline-start: 20px;
             font-size: 14px;
             line-height: 1.9;
           }

@@ -110,7 +110,7 @@ export default function FaqTheme() {
       .faq-section p {
         font-size: ${SITE_TYPE.body}; line-height: 1.75; color: ${T.muted}; margin: 0 0 18px 0;
       }
-      .faq-section ul, .faq-section ol { padding-left: 22px; margin: 0 0 20px 0; }
+      .faq-section ul, .faq-section ol { padding-inline-start: 22px; margin: 0 0 20px 0; }
       .faq-section li {
         font-size: 16px; line-height: 1.7; color: ${T.muted}; margin-bottom: 10px;
       }
@@ -180,14 +180,14 @@ export default function FaqTheme() {
          only that and nothing else. */
       .faq-callout {
         background: ${T.surface}; border: 1px solid ${T.borderSoft};
-        border-left: 3px solid ${T.blue}; border-radius: 6px;
+        border-inline-start: 3px solid ${T.blue}; border-radius: 6px;
         padding: 20px 24px; margin: 0 0 26px 0;
         font-size: 15.5px; line-height: 1.7; color: ${T.muted};
       }
       .faq-callout strong { color: ${T.text}; }
-      .faq-callout.warn { border-left-color: ${T.amber}; }
-      .faq-callout.good { border-left-color: ${T.green}; }
-      .faq-callout.bad  { border-left-color: ${T.red}; }
+      .faq-callout.warn { border-inline-start-color: ${T.amber}; }
+      .faq-callout.good { border-inline-start-color: ${T.green}; }
+      .faq-callout.bad  { border-inline-start-color: ${T.red}; }
 
       /* ── TABLE ──────────────────────────────────────────────────────
          Same treatment as .feature-table on /vs, so the two page types do
@@ -199,7 +199,7 @@ export default function FaqTheme() {
       }
       .faq-table th {
         padding: 15px 18px; background: ${T.ink}; color: ${T.inkText};
-        font-size: 11px; letter-spacing: 2px; text-align: left; font-weight: bold;
+        font-size: 11px; letter-spacing: 2px; text-align: start; font-weight: bold;
       }
       .faq-table td {
         padding: 14px 18px; border-top: 1px solid ${T.borderSoft};
@@ -231,10 +231,10 @@ export default function FaqTheme() {
       .faq-flow { counter-reset: faqstep; margin: 0 0 26px 0; }
       .faq-flow-step {
         counter-increment: faqstep; position: relative;
-        padding: 0 0 24px 48px; border-left: 1px solid ${T.border};
-        margin-left: 15px;
+        padding: 0 0 24px 48px; border-inline-start: 1px solid ${T.border};
+        margin-inline-start: 15px;
       }
-      .faq-flow-step:last-child { border-left-color: transparent; padding-bottom: 0; }
+      .faq-flow-step:last-child { border-inline-start-color: transparent; padding-bottom: 0; }
       .faq-flow-step::before {
         content: counter(faqstep);
         position: absolute; left: -15px; top: -2px;
@@ -415,11 +415,11 @@ export default function FaqTheme() {
       .faq-section .faq-callout, .faq-section .faq-flow,
       .faq-section .faq-fieldtable,
       .faq-root > .faq-related, .faq-root > .faq-cta {
-        text-align: left;
+        text-align: start;
       }
       .faq-section ul, .faq-section ol {
         max-width: 660px;
-        margin-left: auto; margin-right: auto;
+        margin-inline-start: auto; margin-inline-end: auto;
       }
 
       /* The closing CTA and related-links blocks are sections in their own

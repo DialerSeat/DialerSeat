@@ -86,7 +86,7 @@ export default function WhyDialerSeatView() {
             margin: 28px 0;
             padding: 22px 26px;
             background: ${SITE.bg};
-            border-left: 3px solid ${SITE.deep};
+            border-inline-start: 3px solid ${SITE.deep};
             border-radius: 4px;
             font-size: 16px;
             line-height: 1.7;
@@ -104,7 +104,7 @@ export default function WhyDialerSeatView() {
             padding: 22px 24px;
             background: ${SITE.surface};
             border: 1px solid ${SITE.border};
-            border-left: 3px solid ${SITE.deep};
+            border-inline-start: 3px solid ${SITE.deep};
             border-radius: 8px;
           }
           .why-card h3 {
@@ -203,7 +203,7 @@ export default function WhyDialerSeatView() {
             padding: 16px 18px;
             background: ${SITE.surface};
             border: 1px solid ${SITE.border};
-            border-left: 3px solid ${SITE.green};
+            border-inline-start: 3px solid ${SITE.green};
             border-radius: 8px;
           }
           .why-promise-item .check {

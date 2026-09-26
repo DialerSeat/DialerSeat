@@ -198,7 +198,7 @@ export default function CompliancePage() {
         <div style={{
           background: T.surface,
           border: `1px solid ${T.border}`,
-          borderLeft: `3px solid ${T.accent}`,
+          borderInlineStart: `3px solid ${T.accent}`,
           borderRadius: 4,
           padding: '14px 18px',
           marginBottom: 16,
@@ -370,7 +370,7 @@ function CampaignComplianceCard({
     <div style={{
       background: T.surface,
       border: `1px solid ${T.border}`,
-      borderLeft: `3px solid ${statusColor}`,
+      borderInlineStart: `3px solid ${statusColor}`,
       borderRadius: 4,
       overflow: 'hidden',
     }}>
@@ -546,7 +546,7 @@ function CampaignComplianceCard({
               color: T.muted, fontSize: 10, letterSpacing: 1.5,
               cursor: 'pointer',
               fontFamily: 'Futura PT, Futura, sans-serif',
-              marginLeft: 'auto',
+              marginInlineStart: 'auto',
             }}
           >{t("CANCEL")}</button>
         </div>

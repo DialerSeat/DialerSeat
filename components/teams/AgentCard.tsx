@@ -118,7 +118,7 @@ export default function AgentCard({
         className="agent-card"
         onClick={onSelect}
         style={{
-          textAlign: 'left',
+          textAlign: 'start',
           background: 'var(--brand-card-surface)',
           border: `1px solid ${selected ? color : 'var(--brand-card-border)'}`,
           boxShadow: selected ? `inset 0 0 0 1px ${color}` : 'none',

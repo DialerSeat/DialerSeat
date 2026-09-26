@@ -377,7 +377,7 @@ export default function FaqView() {
             color: ${SITE.text};
           }
           .faqx-ask {
-            margin-left: auto;
+            margin-inline-start: auto;
             font-size: 13px; color: ${SITE.muted};
           }
           .faqx-ask a { color: #2a6eff; font-weight: 600; text-decoration: none; }
@@ -471,7 +471,7 @@ export default function FaqView() {
           @media (max-width: 760px) {
             .faqx-band { padding: 0 20px 64px; }
             .faqx-head { flex-wrap: wrap; }
-            .faqx-ask { margin-left: 0; flex-basis: 100%; }
+            .faqx-ask { margin-inline-start: 0; flex-basis: 100%; }
             .faqx-card summary { font-size: 14.5px; padding: 15px 18px; }
             .faqx-answer { padding: 0 18px 18px; }
             .faqx-cta { padding: 40px 22px; }

@@ -199,7 +199,7 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
                     {u.suspended ? ' · seat paused' : t(" · last call {ago}", { ago: ago(u.lastCallAt) })}
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', fontSize: 11.5, color: DIM }}>
+                <div style={{ textAlign: 'end', fontSize: 11.5, color: DIM }}>
                   <div style={{ color: isQuiet ? AMBER : TEXT, fontSize: 13 }}>
                     {u.calls.toLocaleString()} {u.calls === 1 ? t("call") : t("calls")}
                   </div>

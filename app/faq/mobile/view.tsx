@@ -92,7 +92,7 @@ export default function MobileFaqView() {
 /* STRONG RECOMMENDATION CALLOUT */
           .mob-recommend {
             margin: 28px 0; padding: 26px 28px; background: ${SITE.ink};
-            border-radius: 8px; border-left: 4px solid #4a9eff;
+            border-radius: 8px; border-inline-start: 4px solid #4a9eff;
           }
           .mob-recommend-eyebrow {
             font-size: 10px; letter-spacing: 3px; color: #7ab8ff;
@@ -157,7 +157,7 @@ export default function MobileFaqView() {
           .mob-install-platform.ios .icon { background: #1a1a2e; }
           .mob-install-platform.android .icon { background: #1a6a1a; }
           .mob-install-platform span.name { font-size: 15px; font-weight: 700; }
-          .mob-install-card ol { margin: 0; padding-left: 20px; }
+          .mob-install-card ol { margin: 0; padding-inline-start: 20px; }
           .mob-install-card li {
             font-size: 14.5px; line-height: 1.65; margin-bottom: 10px; color: ${SITE.text};
           }

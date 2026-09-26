@@ -243,7 +243,7 @@ export default function TeamDetail({
                       <div style={{ fontSize: 14, fontWeight: 500, color: paused ? DIM : TEXT }}>
                         {c.name}
                         {paused && (
-                          <span style={{ color: '#fbbf24', fontSize: 11, marginLeft: 8 }}>{t("paused")}</span>
+                          <span style={{ color: '#fbbf24', fontSize: 11, marginInlineStart: 8 }}>{t("paused")}</span>
                         )}
                       </div>
                       <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
@@ -427,7 +427,7 @@ export default function TeamDetail({
                   }}>
                     {c.name}
                     {c.status === 'inactive' && (
-                      <span style={{ color: '#fbbf24', fontSize: 11, marginLeft: 8 }}>{t("paused")}</span>
+                      <span style={{ color: '#fbbf24', fontSize: 11, marginInlineStart: 8 }}>{t("paused")}</span>
                     )}
                   </div>
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
@@ -437,7 +437,7 @@ export default function TeamDetail({
                 </div>
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-                  marginLeft: 'auto',
+                  marginInlineStart: 'auto',
                 }}>
                 {c.openToTeam && (
                   <span style={{
@@ -506,7 +506,7 @@ export default function TeamDetail({
             fontSize: 11.5, color: DIM, lineHeight: 1.7,
           }}>
             {seatTier.badges.length > 0 && (
-              <span style={{ display: 'inline-flex', gap: 6, marginRight: 8, verticalAlign: 'middle' }}>
+              <span style={{ display: 'inline-flex', gap: 6, marginInlineEnd: 8, verticalAlign: 'middle' }}>
                 {seatTier.badges.map(b => (
                   <span key={b} style={{
                     fontSize: 9, letterSpacing: 1, fontWeight: 700, color: ACCENT,

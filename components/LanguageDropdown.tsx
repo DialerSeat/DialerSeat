@@ -96,7 +96,7 @@ export default function LanguageDropdown({
         position: 'relative', flexShrink: 0,
         // In the sidebar, sit hard against the rail's right edge rather than
         // inside the profile row's 24px padding.
-        ...(onSidebar ? { marginRight: '-14px' } : {}),
+        ...(onSidebar ? { marginInlineEnd: '-14px' } : {}),
       }}
       // The sidebar row opens the Clerk menu on click; this must not.
       onClick={(e) => e.stopPropagation()}

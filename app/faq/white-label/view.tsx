@@ -60,11 +60,11 @@ export default function View() {
           }
           .wl-price-amount .wl-price-unit {
             font-size: 14px; color: ${SITE.muted}; font-weight: 500;
-            letter-spacing: 1px; margin-left: 4px;
+            letter-spacing: 1px; margin-inline-start: 4px;
           }
           .wl-price-strike {
             font-size: 14px; color: ${SITE.muted};
-            text-decoration: line-through; margin-left: 12px;
+            text-decoration: line-through; margin-inline-start: 12px;
           }
           .wl-price-text {
             flex: 1; min-width: 240px;
@@ -85,15 +85,15 @@ export default function View() {
             border: 1px solid ${SITE.border};
             border-radius: 6px;
           }
-          .wl-included-col.yes { border-left: 3px solid ${SITE.green}; }
-          .wl-included-col.no  { border-left: 3px solid ${SITE.amber}; }
+          .wl-included-col.yes { border-inline-start: 3px solid ${SITE.green}; }
+          .wl-included-col.no  { border-inline-start: 3px solid ${SITE.amber}; }
           .wl-included-col h4 {
             font-size: 11px; letter-spacing: 3px; font-weight: bold;
             margin: 0 0 12px 0;
           }
           .wl-included-col.yes h4 { color: ${SITE.green}; }
           .wl-included-col.no h4  { color: ${SITE.amber}; }
-          .wl-included-col ul { margin: 0; padding-left: 18px; }
+          .wl-included-col ul { margin: 0; padding-inline-start: 18px; }
           .wl-included-col li {
             font-size: 14px; line-height: 1.65; margin-bottom: 6px;
             color: ${SITE.text};
@@ -103,7 +103,7 @@ export default function View() {
             margin: 28px 0; padding: 24px 28px;
             background: ${SITE.surface};
             border: 1px solid ${SITE.border};
-            border-left: 3px solid ${SITE.green};
+            border-inline-start: 3px solid ${SITE.green};
             border-radius: 6px;
           }
           .wl-math-title {

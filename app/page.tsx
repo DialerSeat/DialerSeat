@@ -125,8 +125,8 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-nav {
           padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 12px));
           padding-bottom: 20px;
-          padding-left: 60px;
-          padding-right: 60px;
+          padding-inline-start: 60px;
+          padding-inline-end: 60px;
         }
         .ds-nav-links { display: flex; align-items: center; gap: 40px; }
         .ds-nav-link { display: inline-block; }
@@ -139,14 +139,14 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-hero-logged-out {
           padding-top: max(140px, calc(env(safe-area-inset-top, 0px) + 120px));
           padding-bottom: 56px;
-          padding-left: 40px;
-          padding-right: 40px;
+          padding-inline-start: 40px;
+          padding-inline-end: 40px;
         }
         .ds-hero-logged-in {
           padding-top: 40px;
           padding-bottom: 56px;
-          padding-left: 40px;
-          padding-right: 40px;
+          padding-inline-start: 40px;
+          padding-inline-end: 40px;
         }
 
         .ds-hero-grid {
@@ -186,7 +186,7 @@ export default async function Home({ searchParams }: PageProps) {
         }
         .ds-volume-demo { order: 2; }
         .ds-volume-copy { order: 1; }
-        .ds-volume-demo { max-width: 640px; margin: 0 auto; width: 100%; text-align: left; }
+        .ds-volume-demo { max-width: 640px; margin: 0 auto; width: 100%; text-align: start; }
         /* Near full-bleed. The mockup runs the panel to ~80px from the left
            edge and the headline to ~80px from the right; a 1200px (or even
            1720px) centred container can't reach either. */
@@ -204,7 +204,7 @@ export default async function Home({ searchParams }: PageProps) {
            grows and a fixed inset does not. 1720px is far above any ordinary
            window, so at every normal width this behaves exactly as if it were
            max-width: none. */
-        .ds-volume-section { max-width: 1720px; margin-left: auto; margin-right: auto; }
+        .ds-volume-section { max-width: 1720px; margin-inline-start: auto; margin-inline-end: auto; }
 
         /* ── WHY 1240px AND NOT 1000px ───────────────────────────────────────
            The two-column layout below has fixed costs that do not shrink:
@@ -247,7 +247,7 @@ export default async function Home({ searchParams }: PageProps) {
                the bottom of the section. The drift is handled by the
                max-width on .ds-volume-section instead, which only engages far
                wider than any normal window. */
-            padding-left: 192px; padding-right: 80px; padding-top: 24px;
+            padding-inline-start: 192px; padding-inline-end: 80px; padding-top: 24px;
             /* Tight to the feature cards. The demo and its caption are this
                section's payoff; 90px of trough under them made the cards read
                as an unrelated block rather than the continuation they are. */
@@ -265,7 +265,7 @@ export default async function Home({ searchParams }: PageProps) {
                headline back so the PANEL moves a long way and the TEXT barely
                moves, which is the difference between the two mockups. */
             gap: 64px;
-            text-align: left;
+            text-align: start;
             /* Top-aligned, not centred. In the mockup the eyebrow sits a fixed
                distance below the panel's top edge rather than floating at its
                vertical middle, centring made the text drift down as the panel
@@ -292,7 +292,7 @@ export default async function Home({ searchParams }: PageProps) {
            links are the navigation and a tablet is not a phone. Above 1200px
            nothing changes. */
         @media (min-width: 769px) and (max-width: 1199px) {
-          .ds-nav { padding-left: 28px; padding-right: 28px; }
+          .ds-nav { padding-inline-start: 28px; padding-inline-end: 28px; }
           .ds-nav-links { gap: 22px; }
         }
 
@@ -331,8 +331,8 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-nav {
             padding-top: max(14px, calc(env(safe-area-inset-top, 0px) + 8px));
             padding-bottom: 14px;
-            padding-left: 20px;
-            padding-right: 20px;
+            padding-inline-start: 20px;
+            padding-inline-end: 20px;
           }
           .ds-nav-links { gap: 8px; }
           .ds-nav-link { display: none; }
@@ -345,7 +345,7 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-nav-link.ds-mobile-only { padding: 7px 10px !important; letter-spacing: 1.5px !important; }
           /* And room for the language globe, once there is a language to pick.
              :has() keeps the English-only nav exactly as it was. */
-          .ds-nav:has(.ds-lang-btn) { padding-left: 14px; padding-right: 14px; }
+          .ds-nav:has(.ds-lang-btn) { padding-inline-start: 14px; padding-inline-end: 14px; }
           .ds-nav:has(.ds-lang-btn) .ds-nav-links { gap: 6px; }
           .ds-nav:has(.ds-lang-btn) .ds-nav-link.ds-show-mobile,
           .ds-nav:has(.ds-lang-btn) .ds-nav-link.ds-mobile-only { padding: 7px 8px !important; letter-spacing: 1px !important; }
@@ -362,14 +362,14 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-hero-logged-out {
             padding-top: max(122px, calc(env(safe-area-inset-top, 0px) + 105px));
             padding-bottom: 60px;
-            padding-left: 20px;
-            padding-right: 20px;
+            padding-inline-start: 20px;
+            padding-inline-end: 20px;
           }
           .ds-hero-logged-in {
             padding-top: 24px;
             padding-bottom: 60px;
-            padding-left: 20px;
-            padding-right: 20px;
+            padding-inline-start: 20px;
+            padding-inline-end: 20px;
           }
 
           .ds-hero-grid {
@@ -487,7 +487,7 @@ export default async function Home({ searchParams }: PageProps) {
 
       <section className={isLoggedIn ? 'ds-hero-logged-in' : 'ds-hero-logged-out'}>
         <div className="ds-hero-grid">
-          <div className="ds-hero-copy-top" style={{ textAlign: 'left' }}>
+          <div className="ds-hero-copy-top" style={{ textAlign: 'start' }}>
             <div style={{
               fontSize: '11px',
               letterSpacing: '3px',
@@ -552,7 +552,7 @@ export default async function Home({ searchParams }: PageProps) {
             </div>
           </div>
 
-          <div className="ds-hero-copy-paragraph" style={{ textAlign: 'left' }}>
+          <div className="ds-hero-copy-paragraph" style={{ textAlign: 'start' }}>
             <p className="ds-hero-p" style={{
               fontSize: '17px',
               lineHeight: '1.7',
@@ -563,7 +563,7 @@ export default async function Home({ searchParams }: PageProps) {
               {t("The professional outbound dialer built for")}{" "}<u>{t("ANYONE")}</u> {t("who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting, for a fraction of what everyone else charges.")}</p>
           </div>
 
-          <div className="ds-hero-copy-buttons" style={{ textAlign: 'left' }}>
+          <div className="ds-hero-copy-buttons" style={{ textAlign: 'start' }}>
             <div className="ds-cta-buttons" style={{
               display: 'flex',
               alignItems: 'center',
@@ -941,7 +941,7 @@ export default async function Home({ searchParams }: PageProps) {
             }}>
               {t("FIRST CHARGE TODAY · CANCEL ANYTIME")}</div>
 
-            <div style={{ marginBottom: '40px', textAlign: 'left', flex: 1 }}>
+            <div style={{ marginBottom: '40px', textAlign: 'start', flex: 1 }}>
               {[
                 msg("Predictive dialing engine"),
                 msg("Voicemail detection"),
@@ -1038,7 +1038,7 @@ export default async function Home({ searchParams }: PageProps) {
             }}>
               {t("CUSTOMIZE YOUR WHITELABEL DIALER")}</div>
 
-            <div style={{ marginBottom: '40px', textAlign: 'left', flex: 1 }}>
+            <div style={{ marginBottom: '40px', textAlign: 'start', flex: 1 }}>
               {[
                 msg("Everything in Pro, plus:"),
                 msg("Your own subdomain (you.dialerseat.com)"),

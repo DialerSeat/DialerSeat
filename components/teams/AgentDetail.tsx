@@ -395,12 +395,12 @@ export default function AgentDetail({
                   <div style={{ fontSize: 13.5, color: c.status === 'inactive' ? DIM : TEXT }}>
                     {c.name}
                     {c.status === 'inactive' && (
-                      <span style={{ color: AMBER, fontSize: 11, marginLeft: 8 }}>{t("paused")}</span>
+                      <span style={{ color: AMBER, fontSize: 11, marginInlineStart: 8 }}>{t("paused")}</span>
                     )}
                   </div>
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>{c.teamName}</div>
                 </div>
-                <div style={{ textAlign: 'right', fontSize: 11.5, color: DIM }}>
+                <div style={{ textAlign: 'end', fontSize: 11.5, color: DIM }}>
                   <div style={{ color: TEXT, fontSize: 13 }}>
                     {c.calls ? c.calls.toLocaleString() : '-'}
                   </div>

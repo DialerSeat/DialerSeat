@@ -209,7 +209,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
             <div style={{
               background: C.inset,
               border: `1px solid ${C.border}`,
-              borderRadius: 6, padding: 16, textAlign: 'left', marginBottom: 20,
+              borderRadius: 6, padding: 16, textAlign: 'start', marginBottom: 20,
               fontSize: 13, lineHeight: 1.7,
             }}>
               {preview.codeType === 'recruit' ? (

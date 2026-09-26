@@ -46,7 +46,7 @@ export default function View() {
             margin: 28px 0; padding: 24px 28px;
             background: ${SITE.surface};
             border: 1px solid ${SITE.border};
-            border-left: 3px solid ${SITE.green};
+            border-inline-start: 3px solid ${SITE.green};
             border-radius: 6px;
           }
           .mgr-math-title {

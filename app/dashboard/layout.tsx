@@ -713,7 +713,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   } catch {}
                 }}
                 style={{
-                  marginLeft: 10, background: 'transparent', border: '1px solid #1e3a5f',
+                  marginInlineStart: 10, background: 'transparent', border: '1px solid #1e3a5f',
                   color: '#7cc0ff', borderRadius: 4, padding: '2px 10px',
                   fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
                 }}
@@ -757,7 +757,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
             <Link
               href="/billing"
-              style={{ color: '#ffd96a', marginLeft: 8, textDecoration: 'underline' }}
+              style={{ color: '#ffd96a', marginInlineStart: 8, textDecoration: 'underline' }}
             >
               {tr("Subscribe")}</Link>
           </div>

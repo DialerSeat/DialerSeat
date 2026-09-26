@@ -817,14 +817,14 @@ export default function TeamsManager() {
           <div style={{ marginBottom: 24 }}>
             <div style={{
               fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold',
-              marginBottom: 10, paddingLeft: 4,
+              marginBottom: 10, paddingInlineStart: 4,
             }}>{tr("▸ TEAMS YOU'VE JOINED")}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {memberTeams.map(team => (
                 <Link key={team.id} href={`/dashboard/teams/${team.id}/analytics`} style={{ textDecoration: 'none' }}>
                   <div style={{
                     background: T.surface, border: `1px solid ${T.border}`,
-                    borderLeft: `3px solid ${T.accent}`, borderRadius: 3,
+                    borderInlineStart: `3px solid ${T.accent}`, borderRadius: 3,
                     padding: '14px 16px', display: 'flex', alignItems: 'center',
                     justifyContent: 'space-between', gap: 12, cursor: 'pointer',
                   }}>
@@ -858,7 +858,7 @@ export default function TeamsManager() {
           <div style={{ marginBottom: 24 }}>
             <div style={{
               fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold',
-              marginBottom: 10, paddingLeft: 4,
+              marginBottom: 10, paddingInlineStart: 4,
             }}>{tr("▸ TEAMS YOU OWN")}</div>
 
             {loading ? (
@@ -876,7 +876,7 @@ export default function TeamsManager() {
                   return (
                     <div key={team.id} style={{
                       background: T.surface, border: `1px solid ${T.border}`,
-                      borderLeft: `3px solid ${T.blue}`, borderRadius: 3, overflow: 'hidden',
+                      borderInlineStart: `3px solid ${T.blue}`, borderRadius: 3, overflow: 'hidden',
                     }}>
                       <div
                         onClick={() => toggleExpanded(team.id)}
@@ -1026,7 +1026,7 @@ export default function TeamsManager() {
         {/* ── ▸ WHAT IS A DIALERSEAT TEAM? — header row with FAQ link top-right ── */}
         <div style={{
           background: T.surface, border: `1px solid ${T.border}`,
-          borderLeft: `3px solid ${T.blue}`, borderRadius: 4,
+          borderInlineStart: `3px solid ${T.blue}`, borderRadius: 4,
           padding: '28px 32px', marginBottom: 16,
         }}>
           <div style={{
@@ -1459,7 +1459,7 @@ function SegmentedTwo({ left, right, value, onChange }: {
         const selected = value === opt.value
         return (
           <button key={opt.value} onClick={() => onChange(opt.value)} style={{
-            flex: 1, padding: '10px 12px', textAlign: 'left',
+            flex: 1, padding: '10px 12px', textAlign: 'start',
             background: selected
               ? 'color-mix(in srgb, var(--brand-card-surface) 85%, var(--brand-on-page-bg) 15%)'
               : 'var(--brand-card-surface)',

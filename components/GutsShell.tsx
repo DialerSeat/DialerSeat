@@ -238,7 +238,7 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
           max-width: 660px;
           font-size: 15.5px; line-height: 1.75;
           color: ${T.muted};
-          text-align: left;
+          text-align: start;
         }
         .guts-sec p:last-child { margin-bottom: 0; }
         /* The hero is the page's opening statement and runs two or three
@@ -253,8 +253,8 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
            the markers end up hanging in space and the eye loses the left edge
            it tracks back to. Lists and tables keep the section's column and
            get their alignment back. */
-        .guts-sec ul, .guts-sec ol { text-align: left; max-width: 660px; margin-left: auto; margin-right: auto; }
-        .guts-sec table { text-align: left; }
+        .guts-sec ul, .guts-sec ol { text-align: start; max-width: 660px; margin-inline-start: auto; margin-inline-end: auto; }
+        .guts-sec table { text-align: start; }
 
         .guts-eyebrow {
           font-size: 10px; font-weight: bold; letter-spacing: 3px;
@@ -298,8 +298,8 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
         }
 
         /* ── CARD GRID ────────────────────────────────────────────────── */
-        .guts-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 24px; text-align: left; }
-        .guts-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 24px; text-align: left; }
+        .guts-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 24px; text-align: start; }
+        .guts-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 24px; text-align: start; }
         .guts-panel {
           background: ${T.bg};
           border: 1px solid ${T.border};
@@ -315,10 +315,10 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
         a.guts-panel:hover { border-color: ${T.royal}; transform: translateY(-2px); }
 
         /* ── LISTS ────────────────────────────────────────────────────── */
-        .guts-list { list-style: none; margin: 0; padding: 0; text-align: left; }
+        .guts-list { list-style: none; margin: 0; padding: 0; text-align: start; }
         .guts-list li {
           position: relative;
-          padding-left: 22px;
+          padding-inline-start: 22px;
           margin-bottom: 9px;
           font-size: 13.5px; line-height: 1.6; color: ${T.muted};
         }
@@ -336,7 +336,7 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
           border: 1px solid ${T.border};
           border-radius: 10px;
           overflow-x: auto;
-          text-align: left;
+          text-align: start;
         }
         .guts-tablewrap table { width: 100%; border-collapse: collapse; }
         .guts-tablewrap th {
@@ -347,7 +347,7 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
           font-size: 10px; letter-spacing: 2px; font-weight: bold;
           white-space: nowrap;
         }
-        .guts-tablewrap th:first-child { text-align: left; }
+        .guts-tablewrap th:first-child { text-align: start; }
         .guts-tablewrap th.ds-head { color: ${T.blue}; }
         .guts-tablewrap td {
           padding: 12px 16px;
@@ -358,7 +358,7 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
         }
         .guts-tablewrap tr:last-child td { border-bottom: none; }
         .guts-tablewrap td:first-child {
-          text-align: left; font-weight: 600; color: ${T.text};
+          text-align: start; font-weight: 600; color: ${T.text};
           font-size: 13px;
         }
         .guts-tablewrap tr:nth-child(even) td { background: rgba(226,228,234,0.34); }
@@ -374,14 +374,14 @@ export default function GutsShell({ rail, activeHref, children }: GutsShellProps
           border: 1px solid rgba(42,110,255,0.22);
           border-radius: 10px;
           padding: 22px 24px;
-          text-align: left;
+          text-align: start;
         }
         .guts-callout p { margin: 0 0 10px; max-width: none; font-size: 14.5px; }
         .guts-callout p:last-child { margin-bottom: 0; }
         .guts-note {
           margin-top: 24px;
           font-size: 12.5px; line-height: 1.7; color: ${T.muted};
-          text-align: left;
+          text-align: start;
           padding-top: 18px;
           border-top: 1px solid ${T.surface2};
         }

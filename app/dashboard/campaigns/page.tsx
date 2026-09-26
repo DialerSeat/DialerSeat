@@ -261,20 +261,20 @@ function LeadPreviewThumb({
 
 const thStyle: React.CSSProperties = {
   padding: '4px 6px',
-  textAlign: 'left',
+  textAlign: 'start',
   fontSize: 8,
   fontWeight: 'bold',
   color: T.muted,
   letterSpacing: 1.5,
   textTransform: 'uppercase',
-  borderRight: `1px solid ${T.border}`,
+  borderInlineEnd: `1px solid ${T.border}`,
   fontFamily: FUTURA,
 }
 
 const tdStyle: React.CSSProperties = {
   padding: '3px 6px',
   fontSize: 10,
-  borderRight: `1px solid ${T.bg}`,
+  borderInlineEnd: `1px solid ${T.bg}`,
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -2279,7 +2279,7 @@ export default function CampaignsPage() {
           cursor: grabbing;
         }
         .script-tab.drag-over {
-          border-left: 3px solid ${T.blue};
+          border-inline-start: 3px solid ${T.blue};
           background: var(--brand-primary-soft);
           color: ${T.blue};
         }
@@ -2404,7 +2404,7 @@ export default function CampaignsPage() {
           gap: 4px;
           max-height: 420px;
           overflow-y: auto;
-          padding-right: 2px;
+          padding-inline-end: 2px;
         }
         .lib-rail-item {
           -webkit-user-select: none;
@@ -2742,7 +2742,7 @@ export default function CampaignsPage() {
           position: sticky;
           top: 0;
           z-index: 2;
-          text-align: left;
+          text-align: start;
           font-family: ${FUTURA};
         }
         .editor-grid th.row-header, .editor-grid td.row-header {
@@ -2827,7 +2827,7 @@ export default function CampaignsPage() {
           margin-bottom: 22px;
           background: rgba(255,170,62,0.08);
           border: 1px solid rgba(138,106,26,0.5);
-          border-left: 3px solid #ffaa3e;
+          border-inline-start: 3px solid #ffaa3e;
           border-radius: 4px;
           font-size: 11px;
           letter-spacing: 1px;
@@ -3500,7 +3500,7 @@ export default function CampaignsPage() {
                                 className="ds-btn primary"
                                 onClick={saveLibScript}
                                 disabled={libSaving || !libDirty}
-                                style={{ marginLeft: 'auto' }}
+                                style={{ marginInlineStart: 'auto' }}
                               >{libSaving ? tr("SAVING…") : libDirty ? tr("SAVE SCRIPT") : tr("SAVED")}</button>
                             )}
                           </div>
@@ -4190,7 +4190,7 @@ export default function CampaignsPage() {
                     }}
                   >
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                    <span style={{ color: T.muted, flexShrink: 0, marginLeft: 10 }}>›</span>
+                    <span style={{ color: T.muted, flexShrink: 0, marginInlineStart: 10 }}>›</span>
                   </button>
                 ))}
               </div>
@@ -4246,7 +4246,7 @@ export default function CampaignsPage() {
               <div className="editor-scripts-head">
                 <span className="editor-scripts-title">{tr("CAMPAIGN SCRIPTS")}</span>
                 <span className="editor-scripts-hint">{tr("Toggle on/off · drag enabled scripts to set dialer tab order")}</span>
-                <button className="script-manage-link" onClick={() => openScriptsManagerFromCampaign()} style={{ marginLeft: 'auto' }}>
+                <button className="script-manage-link" onClick={() => openScriptsManagerFromCampaign()} style={{ marginInlineStart: 'auto' }}>
                   {tr("MANAGE LIBRARY ↗")}</button>
               </div>
               {linksLoading ? (

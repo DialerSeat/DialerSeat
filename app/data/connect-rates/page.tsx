@@ -157,12 +157,12 @@ function Row({ label, b }: { label: string; b: Bucket }) {
       <td style={{ padding: '9px 12px', borderTop: `1px solid ${BORDER}`, fontWeight: 'bold' }}>{t(label)}</td>
       <td style={{
         padding: '9px 12px', borderTop: `1px solid ${BORDER}`,
-        textAlign: 'right', fontFamily: 'monospace',
+        textAlign: 'end', fontFamily: 'monospace',
       }}>
         {b.dials.toLocaleString()}
       </td>
       <td style={{
-        padding: '9px 12px', borderTop: `1px solid ${BORDER}`, textAlign: 'right',
+        padding: '9px 12px', borderTop: `1px solid ${BORDER}`, textAlign: 'end',
         fontFamily: 'monospace', color: r === null ? MUTED : INK,
       }}>
         {r === null ? '-' : `${r.toFixed(1)}%`}
@@ -222,10 +222,10 @@ export default async function ConnectRatesPage() {
                 <h2 style={{ fontSize: 22, fontWeight: 'bold', margin: 0 }}>{t("Overall")}</h2>
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12, background: '#fff' }}>
                   <thead>
-                    <tr style={{ fontSize: 10, letterSpacing: 2, color: MUTED, textAlign: 'left' }}>
+                    <tr style={{ fontSize: 10, letterSpacing: 2, color: MUTED, textAlign: 'start' }}>
                       <th style={{ padding: '9px 12px' }}>{t("PERIOD")}</th>
-                      <th style={{ padding: '9px 12px', textAlign: 'right' }}>{t("DIALS")}</th>
-                      <th style={{ padding: '9px 12px', textAlign: 'right' }}>{t("CONNECT RATE")}</th>
+                      <th style={{ padding: '9px 12px', textAlign: 'end' }}>{t("DIALS")}</th>
+                      <th style={{ padding: '9px 12px', textAlign: 'end' }}>{t("CONNECT RATE")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -241,10 +241,10 @@ export default async function ConnectRatesPage() {
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12, background: '#fff', minWidth: 420 }}>
                     <thead>
-                      <tr style={{ fontSize: 10, letterSpacing: 2, color: MUTED, textAlign: 'left' }}>
+                      <tr style={{ fontSize: 10, letterSpacing: 2, color: MUTED, textAlign: 'start' }}>
                         <th style={{ padding: '9px 12px' }}>{t("HOUR")}</th>
-                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>{t("DIALS")}</th>
-                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>{t("CONNECT RATE")}</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'end' }}>{t("DIALS")}</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'end' }}>{t("CONNECT RATE")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -261,10 +261,10 @@ export default async function ConnectRatesPage() {
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12, background: '#fff', minWidth: 420 }}>
                     <thead>
-                      <tr style={{ fontSize: 10, letterSpacing: 2, color: MUTED, textAlign: 'left' }}>
+                      <tr style={{ fontSize: 10, letterSpacing: 2, color: MUTED, textAlign: 'start' }}>
                         <th style={{ padding: '9px 12px' }}>{t("STATE")}</th>
-                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>{t("DIALS")}</th>
-                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>{t("CONNECT RATE")}</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'end' }}>{t("DIALS")}</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'end' }}>{t("CONNECT RATE")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -278,7 +278,7 @@ export default async function ConnectRatesPage() {
 
           <section style={{ marginTop: 44, borderTop: `1px solid ${BORDER}`, paddingTop: 24 }}>
             <h2 style={{ fontSize: 16, fontWeight: 'bold', margin: 0 }}>{t("Method")}</h2>
-            <ul style={{ fontSize: 14, lineHeight: 1.9, color: MUTED, marginTop: 10, paddingLeft: 18 }}>
+            <ul style={{ fontSize: 14, lineHeight: 1.9, color: MUTED, marginTop: 10, paddingInlineStart: 18 }}>
               <li>{t("A \"connect\" is a call the carrier reported as answered.")}</li>
               <li>{t("Window: rolling 90 days, recomputed on each page load.")}</li>
               <li>{t("Buckets under {mIN_SAMPLE} calls show a dash, not a rate.", { mIN_SAMPLE: MIN_SAMPLE.toLocaleString() })}</li>

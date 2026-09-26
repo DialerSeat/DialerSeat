@@ -465,7 +465,7 @@ export default function CampaignDetail({
             <div style={{ fontSize: 22, fontWeight: 600, color: TEXT }}>
               {data.name}
               {paused && (
-                <span style={{ color: '#fbbf24', fontSize: 12, marginLeft: 10 }}>{tr("paused")}</span>
+                <span style={{ color: '#fbbf24', fontSize: 12, marginInlineStart: 10 }}>{tr("paused")}</span>
               )}
             </div>
             <div style={{ fontSize: 12, color: DIM, marginTop: 2 }}>
@@ -489,7 +489,7 @@ export default function CampaignDetail({
         {!canDial && (
           <div style={{
             background: PANEL, border: `1px solid ${HAIRLINE}`,
-            borderLeft: '3px solid #fbbf24',
+            borderInlineStart: '3px solid #fbbf24',
             borderRadius: 4, padding: '12px 14px', marginBottom: 20,
             fontSize: 12.5, color: DIM, lineHeight: 1.7,
           }}>
@@ -561,7 +561,7 @@ export default function CampaignDetail({
                   <button
                     onClick={() => setOpenScript(openScript === sc.id ? null : sc.id)}
                     style={{
-                      width: '100%', textAlign: 'left', background: 'transparent',
+                      width: '100%', textAlign: 'start', background: 'transparent',
                       border: 0, color: TEXT, fontSize: 13.5, padding: '12px 14px',
                       cursor: 'pointer', fontFamily: 'inherit',
                     }}
@@ -685,7 +685,7 @@ export default function CampaignDetail({
                 <button style={btn} onClick={() => setEditingScript(null)}>{tr("Cancel")}</button>
                 {editingScript.id && (
                   <button
-                    style={{ ...btn, marginLeft: 'auto', borderColor: '#7f1d1d', color: '#ff6464' }}
+                    style={{ ...btn, marginInlineStart: 'auto', borderColor: '#7f1d1d', color: '#ff6464' }}
                     disabled={scriptBusy}
                     onClick={async () => {
                       const id = editingScript.id!
@@ -714,7 +714,7 @@ export default function CampaignDetail({
                     <button
                       onClick={() => setOpenScript(openScript === sc.id ? null : sc.id)}
                       style={{
-                        flex: 1, textAlign: 'left', background: 'transparent',
+                        flex: 1, textAlign: 'start', background: 'transparent',
                         border: 0, color: TEXT, fontSize: 13.5, padding: '12px 14px',
                         cursor: 'pointer', fontFamily: 'inherit',
                       }}
@@ -807,7 +807,7 @@ export default function CampaignDetail({
           <div style={{ fontSize: 22, fontWeight: 600, color: TEXT }}>
             {data.name}
             {paused && (
-              <span style={{ color: '#fbbf24', fontSize: 12, marginLeft: 10 }}>{tr("paused")}</span>
+              <span style={{ color: '#fbbf24', fontSize: 12, marginInlineStart: 10 }}>{tr("paused")}</span>
             )}
           </div>
           {team && (
@@ -1179,7 +1179,7 @@ export default function CampaignDetail({
                         background: 'transparent', border: 'none', padding: 0,
                         fontSize: 14, fontWeight: 500, color: TEXT,
                         fontFamily: 'inherit', cursor: 'pointer',
-                        textAlign: 'left', textDecoration: 'underline',
+                        textAlign: 'start', textDecoration: 'underline',
                         textDecorationColor: HAIRLINE, textUnderlineOffset: 3,
                         maxWidth: '100%', overflow: 'hidden',
                         textOverflow: 'ellipsis', whiteSpace: 'nowrap',

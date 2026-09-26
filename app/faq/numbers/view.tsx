@@ -22,7 +22,7 @@ export default function NumbersFaqView() {
 /* WHY IT HAPPENS CALLOUT (problem framing) */
           .num-problem {
             margin: 28px 0; padding: 26px 28px; background: ${SITE.surface};
-            border: 1px solid ${SITE.border}; border-left: 3px solid ${SITE.red};
+            border: 1px solid ${SITE.border}; border-inline-start: 3px solid ${SITE.red};
             border-radius: 6px;
           }
           .num-problem-title {
@@ -50,7 +50,7 @@ export default function NumbersFaqView() {
           .num-math {
             margin: 28px 0; padding: 24px 28px;
             background: ${SITE.surface}; border: 1px solid ${SITE.border};
-            border-left: 3px solid ${SITE.green}; border-radius: 6px;
+            border-inline-start: 3px solid ${SITE.green}; border-radius: 6px;
           }
           .num-math-title {
             font-size: 11px; letter-spacing: 3px; color: ${SITE.green};
@@ -72,11 +72,11 @@ export default function NumbersFaqView() {
           .num-vs-cell { padding: 14px 18px; font-size: 14px; line-height: 1.6; }
           .num-vs-cell.label {
             font-weight: 700; color: ${SITE.text}; background: ${SITE.surface};
-            border-right: 1px solid ${SITE.border}; font-size: 13px;
+            border-inline-end: 1px solid ${SITE.border}; font-size: 13px;
           }
           .num-vs-row.head .num-vs-cell {
             color: white; font-size: 11px; letter-spacing: 2px; font-weight: bold;
-            border-right: 1px solid rgba(255,255,255,0.1);
+            border-inline-end: 1px solid rgba(255,255,255,0.1);
           }
           .num-vs-cell.us { color: ${SITE.green}; font-weight: 600; }
           .num-vs-cell.them { color: ${SITE.red}; }@media (max-width: 768px) {

@@ -236,7 +236,7 @@ function Badge({ children, color }: { children: React.ReactNode; color: string }
 
 function rowStyle(accent: string): React.CSSProperties {
   return {
-    background: T.bg, border: `1px solid ${T.border}`, borderLeft: `3px solid ${accent}`,
+    background: T.bg, border: `1px solid ${T.border}`, borderInlineStart: `3px solid ${accent}`,
     borderRadius: 3, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
   }
 }

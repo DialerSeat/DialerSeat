@@ -61,7 +61,7 @@ function Ticker({ text, bg, color }: { text: string; bg: string; color: string }
             style={{
               display: 'inline-block',
               whiteSpace: 'nowrap',
-              paddingRight: 72,
+              paddingInlineEnd: 72,
               fontSize: 13.5,
               fontWeight: 600,
               letterSpacing: 0.2,

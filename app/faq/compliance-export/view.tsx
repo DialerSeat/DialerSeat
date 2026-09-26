@@ -27,7 +27,7 @@ export default function ComplianceExportFaqView() {
           .cex-csv-title { font-size: 10px; letter-spacing: 2px; color: #ffcf7a; font-weight: bold; margin-bottom: 12px; }
           .cex-csv table { border-collapse: collapse; width: 100%; min-width: 640px; }
           .cex-csv th {
-            text-align: left; font-size: 10.5px; letter-spacing: 0.5px; color: #8a8ea8;
+            text-align: start; font-size: 10.5px; letter-spacing: 0.5px; color: #8a8ea8;
             font-weight: 700; padding: 6px 12px 6px 0; border-bottom: 1px solid #2a2c48;
             font-family: monospace;
           }
