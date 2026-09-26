@@ -1100,6 +1100,10 @@ function DialerPageInner() {
   // streak   = consecutive dials whose INVITE never came.
   const agentLegPendingRef = useRef<boolean>(false)
   const agentLegFailStreakRef = useRef<number>(0)
+  // True while the "CALLS ARE NOT REACHING YOUR HEADSET" pause is on screen,
+  // so the next agent leg that does arrive can take it down. Nothing else
+  // cleared it when the line had never actually dropped.
+  const headsetPauseShownRef = useRef<boolean>(false)
   const expectAgentLegTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // How long after initiating a dial an agent-leg INVITE is still expected.
   // Comfortably longer than the agent leg's own 30s Telnyx ring timeout, so a
@@ -1116,6 +1120,13 @@ function DialerPageInner() {
    * eleven seconds and two leads, against thirty-nine.
    */
   const AGENT_LEG_FAIL_LIMIT = 2
+  // How soon a paused chain looks at the line again.
+  const LINE_RECHECK_MS = 3_000
+  // A dial refused because the last call is still closing: retried on the
+  // same lead, quickly at first (a voicemail's hold is about ten seconds),
+  // then every five seconds until it clears or the agent stops.
+  const REFUSED_RETRY_MS = 2_500
+  const REFUSED_RETRY_SLOW_MS = 5_000
   // ── AND THE RATE, NOT ONLY THE STREAK ──────────────────────────────────
   // The streak above is cleared by every INVITE that does arrive, so it only
   // ever catches a registration that has died outright. One agent ran 47
@@ -2010,6 +2021,10 @@ function DialerPageInner() {
             if (agentLegFailStreakRef.current > 0) {
               console.log('[agent-leg] INVITE arrived, streak cleared')
               agentLegFailStreakRef.current = 0
+            }
+            if (headsetPauseShownRef.current) {
+              headsetPauseShownRef.current = false
+              setAgentLegError(null)
             }
             // Predictive no longer places an agent leg per line: while the
             // engine runs, the only INVITE this browser receives is its seat.
@@ -4183,7 +4198,7 @@ function DialerPageInner() {
     fetchPreviewLead()
   }
 
-  const dialLeadCall = async (lead: Lead) => {
+  const dialLeadCall = async (lead: Lead, refusedRetries = 0) => {
     // ── ONE LIVE CALL, WHATEVER PATH GOT HERE ──────────────────────────────
     // runDial has this guard; the redial paths call straight into here and
     // skipped it, which is how concurrent chains each placed their own call.
@@ -4303,6 +4318,34 @@ function DialerPageInner() {
         setActiveCallSid(data.callSid)
         startCallPolling(data.callSid)
       } else {
+        // ── A REFUSED DIAL OWES NO HEADSET CALL ──────────────────────────
+        // openAgentLegWindow ran before the request, expecting this dial's
+        // agent leg. A refusal means the server placed nothing, so none is
+        // coming, and leaving the window pending made the NEXT dial count it
+        // as a call that never reached the headset. Three refusals in a row
+        // (leads outside their calling hours, or the one-call guard) read as
+        // a broken line, "DIALING PAUSED, RECONNECTING YOUR LINE", and the
+        // chain stopped until STOP and START. Found 25 Sept, at a convention.
+        agentLegPendingRef.current = false
+        closeAgentLegWindow()
+        if (res.status === 409) {
+          // ── "ALREADY ON A CALL" IS ABOUT THE LAST CALL, NOT THIS LEAD ──
+          // The server still sees the previous call open. It closes by itself
+          // within seconds, or the leg watchdog closes it, so wait and dial
+          // this same lead again. Skipping it burned a lead per refusal.
+          setAmdActivity(prev => [msgText("WAITING FOR THE LAST CALL TO CLOSE"), ...prev].slice(0, 5))
+          // Counted as a call when it started; nothing was dialed.
+          setSessionStats(s => ({ ...s, calls: Math.max(0, s.calls - 1) }))
+          setStatus('idle')
+          const id = setTimeout(() => {
+            dialChainTimeoutsRef.current.delete(id)
+            if (abortDialingRef.current || !availableRef.current) return
+            if (dialerModeRef.current === 'predictive') return
+            void dialLeadCall(lead, refusedRetries + 1)
+          }, refusedRetries < 4 ? REFUSED_RETRY_MS : REFUSED_RETRY_SLOW_MS)
+          dialChainTimeoutsRef.current.add(id)
+          return
+        }
         if (res.status === 403) {
           setTier('lapsed')
           return
@@ -5045,6 +5088,10 @@ function DialerPageInner() {
         tr("NOT CONNECTED TO THE CALL SERVER, reconnecting. No leads will be dialled until this clears.")
       )
       setAmdActivity(prev => [msgText("⚠ DIAL BLOCKED: phone line not connected"), ...prev].slice(0, 5))
+      // The banner says dialing resumes when this clears, and nothing ever
+      // resumed it: the chain simply ended here. Look again shortly; this
+      // same check runs first, so no lead is spent while the line is down.
+      if (autoChainOnFailure) scheduleDial(LINE_RECHECK_MS)
       return
     }
 
@@ -5072,6 +5119,7 @@ function DialerPageInner() {
       )
       setAmdActivity(prev =>
         [msgText("⚠ DIALING PAUSED, RECONNECTING YOUR LINE"), ...prev].slice(0, 5))
+      headsetPauseShownRef.current = true
       agentLegPendingRef.current = false
       agentLegFailStreakRef.current = 0
       // Cleared too, or the same window would trip the rate again on the very
@@ -5084,6 +5132,13 @@ function DialerPageInner() {
         } catch (err) {
           console.error('[agent-leg] forced re-register failed:', err)
         }
+        // ── AND THEN CARRY ON ──────────────────────────────────────────
+        // "Paused until it clears" never ended: a line that was already
+        // registered does not change state, so no listener fired and the
+        // agent sat on this banner until STOP and START. The next dial checks
+        // reachability first, so carrying on cannot spend a lead on a line
+        // that is still down.
+        if (autoChainOnFailure) scheduleDial(LINE_RECHECK_MS)
       })()
       return
     }
@@ -5548,6 +5603,10 @@ function DialerPageInner() {
         setActiveCallSid(data.callSid)
         startCallPolling(data.callSid)
       } else {
+        // Refused: nothing was placed, so no agent leg is coming. See the
+        // queue dial path for how a pending window left here stalled dialing.
+        agentLegPendingRef.current = false
+        closeAgentLegWindow()
         if (res.status === 403) {
           setTier('lapsed')
           return
