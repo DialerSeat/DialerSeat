@@ -11,6 +11,10 @@ import TeamOverview from '@/components/teams/TeamOverview'
 import { t as tr } from '@/lib/i18n/client'
 import { msg } from '@/lib/i18n/msg'
 
+// Confirm boxes show the word in the reader's language, so accept that or the English.
+const typedWord = (typed: string, word: string) =>
+  [word, tr(word)].some(w => typed.trim().toLowerCase() === w.toLowerCase())
+
 
 
 
@@ -615,7 +619,7 @@ export default function TeamsManager() {
 
   const submitConfirm = async () => {
     if (!confirmState) return
-    if (confirmInput.trim().toLowerCase() !== confirmState.confirmWord.toLowerCase()) return
+    if (!typedWord(confirmInput, confirmState.confirmWord)) return
     setConfirmSubmitting(true)
     setActionError(null)
     try {
@@ -672,7 +676,7 @@ export default function TeamsManager() {
 
   const submitDeleteTeam = async () => {
     if (!deleteTeamStage) return
-    if (deleteTypedConfirm.trim().toLowerCase() !== 'delete') return
+    if (!typedWord(deleteTypedConfirm, 'delete')) return
     setDeleteSubmitting(true)
     setActionError(null)
     try {
@@ -1213,8 +1217,8 @@ export default function TeamsManager() {
                     {tr("CANCEL")}</button>
                   <button
                     onClick={submitDeleteTeam}
-                    disabled={deleteSubmitting || deleteTypedConfirm.trim().toLowerCase() !== 'delete'}
-                    style={modalConfirmBtn(deleteSubmitting || deleteTypedConfirm.trim().toLowerCase() !== 'delete', T.red)}
+                    disabled={deleteSubmitting || !typedWord(deleteTypedConfirm, 'delete')}
+                    style={modalConfirmBtn(deleteSubmitting || !typedWord(deleteTypedConfirm, 'delete'), T.red)}
                   >{deleteSubmitting ? '...' : tr("▶ DELETE FOREVER")}</button>
                 </div>
               </>
@@ -1410,9 +1414,9 @@ export default function TeamsManager() {
                 {tr("CANCEL")}</button>
               <button
                 onClick={submitConfirm}
-                disabled={confirmSubmitting || confirmInput.trim().toLowerCase() !== confirmState.confirmWord.toLowerCase()}
+                disabled={confirmSubmitting || !typedWord(confirmInput, confirmState.confirmWord)}
                 style={modalConfirmBtn(
-                  confirmSubmitting || confirmInput.trim().toLowerCase() !== confirmState.confirmWord.toLowerCase(),
+                  confirmSubmitting || !typedWord(confirmInput, confirmState.confirmWord),
                   confirmState.danger ? T.red : T.blue
                 )}
               >{confirmSubmitting ? '...' : tr("▶ CONFIRM")}</button>

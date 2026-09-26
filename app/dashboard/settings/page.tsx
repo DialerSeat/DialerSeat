@@ -255,7 +255,8 @@ export default function SettingsPage() {
       .catch(() => setIsAdmin(false))
   }, [])
 
-  const confirmReady = typedConfirm.toLowerCase().trim() === 'cancel'
+  // The prompt shows the word in the reader's language, so accept that or the English.
+  const confirmReady = ['cancel', tr('cancel')].some(w => typedConfirm.toLowerCase().trim() === w.toLowerCase())
 
   // ── PAUSE / RESUME ──────────────────────────────────────────────────────
   // The gentler alternative to cancelling, and the point of it is that coming

@@ -256,6 +256,8 @@ export default function TeamsSidebar({
   const [removeMode, setRemoveMode] = useState<'campaign' | 'team'>('team')
 
   const confirmWord = leaveMode ? msg("LEAVE") : agentMode ? msg("REMOVE") : 'DELETE'
+  // The label shows the word in the reader's language, so accept that or the English.
+  const confirmOk = [confirmWord, tr(confirmWord)].some(w => confirmText.trim().toUpperCase() === w.toUpperCase())
 
   // The one ticked thing that can be renamed, or null. Requires exactly one
   // selection, a renameable kind, and ownership — the same three conditions
@@ -1096,8 +1098,8 @@ export default function TeamsSidebar({
               >{tr("Cancel")}</button>
               <button
                 className="ts-mini-btn is-danger"
-                disabled={confirmText !== confirmWord || deleting}
-                style={{ opacity: confirmText !== confirmWord || deleting ? 0.45 : 1 }}
+                disabled={!confirmOk || deleting}
+                style={{ opacity: !confirmOk || deleting ? 0.45 : 1 }}
                 onClick={async () => {
                   setDeleting(true)
                   try {
