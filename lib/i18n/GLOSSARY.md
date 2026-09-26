@@ -81,3 +81,35 @@ Brazilians search "discador" (2.6× more than "dialer"), so it is used everywher
 | billing / subscription | cobrança / assinatura |
 | week | semana (`$35/semana`) |
 | sign in / sign up | entrar / cadastrar-se |
+
+## French (fr) — neutral international French, "vous"
+
+Written for call-centre agents in Morocco, Tunisia, Senegal, Côte d'Ivoire and
+France, so no France-only idioms. "vous" throughout, as in business software.
+
+| English | French |
+|---|---|
+| dialer / auto dialer | numéroteur / numéroteur automatique |
+| predictive / progressive / preview / power (modes) | PRÉDICTIF / PROGRESSIF / APERÇU / POWER |
+| lead(s) | lead(s) |
+| campaign | campagne |
+| seat | licence |
+| agent | agent |
+| owner | propriétaire |
+| team | équipe |
+| floor (dialer floor) | plateau |
+| disposition | qualification |
+| callback | rappel |
+| voicemail | messagerie vocale |
+| answering machine detection | détection de répondeur |
+| caller ID | numéro affiché |
+| number pool | pool de numéros |
+| script | script |
+| recording | enregistrement |
+| talk time | temps de conversation |
+| answer rate / connect rate / abandon rate | taux de réponse / de connexion / d'abandon |
+| Do Not Call | Ne pas appeler |
+| white-label | marque blanche |
+| billing / subscription | facturation / abonnement |
+| week | semaine (`35 $/semaine` is wrong: keep `$35/semaine`) |
+| sign in / sign up | se connecter / s'inscrire |
