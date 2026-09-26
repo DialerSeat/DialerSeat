@@ -47,6 +47,107 @@ Never "come dial Britain with us" until there are British numbers in the pool.
 
 ---
 
+## The argument, once the pool is global
+
+**Not shipped. Nothing below may appear on the site until it is.** Written down
+now because it decides which /vs pages are worth building, and because it is a
+different argument from the US one.
+
+### The shape of the change
+
+The product does not change. Same four dialing modes, same seat, same price.
+What changes is the pool: numbers activate for the countries a campaign's leads
+are actually in, and the lead sheet is read for numbers that are not American.
+**Every account gets every country.** No regional edition, no international tier,
+no add-on.
+
+### The claim nobody else on this list can make
+
+**One seat price, every country, all four modes.** Everyone else treats crossing
+a border as a place to price:
+
+| Vendor | What international costs |
+|---|---|
+| Ringover | Local numbers in 30+ countries, but only on the Business plan |
+| CloudCall | "Unlimited" is UK and Ireland only, premium prefixes excluded |
+| Voiso | Local caller IDs are in the $52 Pro tier |
+| Bitrix24 | Numbers priced **$4–11/month depending on country** |
+| Genesys | Seat price, then telco usage billed on top |
+| Amazon Connect | $0.045/min + $0.005/communication + telephony, per destination |
+| Twilio Flex | Every model is seat-or-hour **plus** usage |
+| Talkdesk | $225 Industry Clouds, dialer still unpriced |
+
+### The centrepiece: per-seat wins hardest where per-minute hurts most
+
+This inverts our one real weakness. Domestically a per-minute vendor beats us for
+a light dialer — Dialfire is $0.0115 a minute with no seat fee. But that is a
+**US** rate. The expensive part of global calling is mobile termination outside
+North America, and every per-minute vendor passes it straight to the customer.
+
+A flat weekly seat does not move when the destination does.
+
+| | US-only dialing | International dialing |
+|---|---|---|
+| Per-minute vendors | Genuinely competitive | Cost climbs with every destination |
+| Tiered vendors | Comparable | A higher tier just to dial abroad |
+| **DialerSeat** | Mid-pack on price | **The price does not change at all** |
+
+Carrier cost stays ours to manage on the back end. The customer's number is
+fixed. The more international the operation, the better we look — and that is
+precisely the segment we have nothing to sell today.
+
+### The three that come with it
+
+- **One campaign, mixed countries, no setup.** The lead sheet is the interface:
+  a number's country picks the pool number and the legal window. Enterprise
+  platforms treat adding a country as a project.
+- **Predictive everywhere, not as an upgrade.** Voiso gates it behind Pro,
+  Squaretalk behind its predictive plan, Nextiva behind a quoted contact-center
+  tier, Talkdesk behind an unpriced add-on. Zoho has no predictive at $74.
+- **The smallest purchase in the category stays smallest.** $35 for one seat for
+  one week, against $1,080 committed at Squaretalk, $1,692–2,052 at Ringover,
+  A$5,004 per seat over ipSCAPE's 36-month term.
+
+### Be honest about where it does not hold
+
+- **Light dialing.** Dialfire is cheaper for a few hours a week and we should say
+  so rather than be caught at it.
+- **Domestic work in low-cost currencies.** Runo is ₹599 a month. We will not win
+  Indian domestic telecalling on price; the pitch there is Indian agents on US
+  leads.
+- **Omnichannel and workforce management.** Genesys, Talkdesk and NICE do things
+  we do not.
+- **A company phone system.** Nextiva, RingCentral and CloudCall win that.
+
+### What stands between here and there
+
+Two of these are pool and account work, not product:
+
+1. **Number provisioning is a paperwork queue, not a switch.** Telnyx holds
+   carrier licences in 30+ countries and sells numbers in 130+, but many
+   countries require the end user's name, address and a valid ID before a number
+   activates, and some want proof of local presence such as a utility bill.
+   Verification takes working days. "Every country" means every country we have
+   cleared.
+2. **Telnyx destination whitelisting**, on the Outbound Voice Profile. The dial
+   path already detects that rejection and names the fix.
+
+One is a genuine software change, and it is small:
+
+3. **The UK abandon clock.** Ofcom measures 3% per campaign per **24 hours**;
+   our engine measures 3% per campaign over **30 days**. A 30-day average of 2%
+   can hide a single day at 8% — legal in the US, a breach in Britain. A second
+   window on the same counter, not a rewrite. Until it exists, no UK page may say
+   compliance is enforced for a UK campaign.
+
+And one is a decision rather than a build: **access to every country is not
+permission in every country.** Germany requires documented prior consent for B2C
+marketing calls whatever the hour. The consistent position is the one we already
+take on DNC scrubbing — give the access, enforce the hours we know, say plainly
+whose duty the rest is.
+
+---
+
 ## Ranked shortlist: build these first
 
 | # | Vendor | Country | Why | Price |
