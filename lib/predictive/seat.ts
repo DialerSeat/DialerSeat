@@ -140,6 +140,31 @@ async function recordFailure(s: PredictiveSession, clerkId: string, reason: stri
 }
 
 /**
+ * The number the seat is placed from. The seat rings the agent's own browser,
+ * never a phone, so this is only what their screen shows: any active pool
+ * number will do, exactly as every other agent leg dials from the lead's pool
+ * number.
+ *
+ * It used to be TELNYX_PHONE_NUMBER alone. That variable is not set in
+ * production, so every START failed with "the carrier is not configured" and
+ * predictive never placed a single seat (found 25 Sept). The variable still
+ * wins where it is set.
+ */
+async function seatCallerId(): Promise<string | null> {
+  const fromEnv = process.env.TELNYX_PHONE_NUMBER?.trim()
+  if (fromEnv) return fromEnv
+  const { data, error } = await db
+    .from('phone_numbers')
+    .select('phone_number')
+    .eq('status', 'active')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  if (error) console.error('[predictive/seat] pool read for the seat caller ID failed', error)
+  return data?.phone_number ?? null
+}
+
+/**
  * Make sure this session has a seat, placing one if it has none. Idempotent:
  * safe to call on every heartbeat.
  */
@@ -185,8 +210,9 @@ export async function ensureSeat(sessionId: string, clerkId: string): Promise<En
   }
 
   const env = resolveTelnyxConfigOrLog('predictive/seat')
-  const from = process.env.TELNYX_PHONE_NUMBER
-  if (!env || !from) return recordFailure(s, clerkId, 'the carrier is not configured')
+  if (!env) return recordFailure(s, clerkId, 'the carrier is not configured')
+  const from = await seatCallerId()
+  if (!from) return recordFailure(s, clerkId, 'the number pool has no active number to call from')
 
   const to = await agentSipUriForClerkId(clerkId, env)
   const place = () => dialSeat({

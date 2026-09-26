@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { stillOnTheCall } from '@/lib/openCallGuard'
 import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 import { shouldMaskCampaign } from '@/lib/leadMasking'
@@ -120,9 +121,9 @@ export async function POST(req: Request) {
       // leg-watchdog owns that, and unlike this request it holds an
       // authoritative list of what Telnyx actually has up.
       const staleBefore = new Date(Date.now() - CONCURRENT_CALL_GRACE_MS).toISOString()
-      const { count: liveCount } = await supabaseAdmin
+      const { data: openRows } = await supabaseAdmin
         .from('calls')
-        .select('id', { count: 'exact', head: true })
+        .select('amd_result, ended_by_agent_at, was_abandoned')
         .eq('user_id', userId)
         .is('hangup_cause', null)
         .or('duration.is.null,duration.eq.0')
@@ -130,6 +131,10 @@ export async function POST(req: Request) {
         // Bounded, so a permanently stuck row cannot deny an agent their next
         // dial for the rest of the day. Past this the watchdog owns it.
         .gt('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+        .limit(20)
+      // Age alone still let the tail of a voicemail through: see
+      // lib/openCallGuard for what counts, and the 25 Sept loop it ends.
+      const liveCount = (openRows || []).filter(stillOnTheCall).length
 
       if ((liveCount ?? 0) > 0) {
         console.warn(
