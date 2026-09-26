@@ -157,3 +157,40 @@ use English dialers, so each is given in Arabic with no English beside it.
 | sign in / sign up | تسجيل الدخول / إنشاء حساب |
 | calling window / calling hours | ساعات الاتصال المسموح بها |
 | compliance | الامتثال |
+
+## Italian (it) — standard Italian, "tu"
+
+Written for call-centre operators in Italy and in the Italian-language
+outsourcing centres of Albania and Romania. "tu" throughout, as in most modern
+Italian software, and kept consistent. Italian call centres already say
+"dialer", "lead" and "script", so those stay. Keep `$35` as written:
+`$35/settimana`, never `35 $`.
+
+| English | Italian |
+|---|---|
+| dialer / auto dialer | dialer / dialer automatico |
+| predictive / progressive / preview / power (modes) | PREDITTIVO / PROGRESSIVO / ANTEPRIMA / POWER |
+| lead(s) | lead |
+| campaign | campagna |
+| seat | postazione |
+| agent | operatore |
+| owner | titolare |
+| team | team |
+| floor (dialer floor) | sala |
+| disposition | esito |
+| callback | richiamata |
+| voicemail | segreteria |
+| answering machine detection | rilevamento segreteria |
+| caller ID | numero chiamante |
+| number pool | pool di numeri |
+| script | script |
+| recording | registrazione |
+| talk time | tempo di conversazione |
+| answer rate / connect rate / abandon rate | tasso di risposta / di connessione / di abbandono |
+| Do Not Call | Non chiamare |
+| white-label | white label |
+| billing / subscription | fatturazione / abbonamento |
+| week | settimana (`$35/settimana`) |
+| sign in / sign up | accedi / registrati |
+| calling window / calling hours | fascia oraria consentita |
+| compliance | conformità |
