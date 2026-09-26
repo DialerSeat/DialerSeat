@@ -229,33 +229,33 @@ function MacFrame({ title, titleColor, bg, children }: { title: string; titleCol
 
 
 const SCRIPTS: { key: string; label: string; text: string }[] = [
-  { key: 'life', label: msg("Life"), text: `"Hi (client), this is (agent) reaching
+  { key: 'life', label: msg("Life"), text: msg(`"Hi (client), this is (agent) reaching
 out about the life coverage you
 looked into.
 
 It only takes a minute, I can show
 you what you'd actually qualify for,
-no medical exam needed…"` },
-  { key: 'health', label: msg("Health"), text: `"Hi (client), this is (agent), you
+no medical exam needed…"`) },
+  { key: 'health', label: msg("Health"), text: msg(`"Hi (client), this is (agent), you
 requested help finding a health plan,
 is now a good time?
 
 Perfect. Let's see if we can get you
 better coverage for less than you're
-paying today…"` },
-  { key: 'realestate', label: msg("Real Estate"), text: `"Hi (client), this is (agent), I saw
+paying today…"`) },
+  { key: 'realestate', label: msg("Real Estate"), text: msg(`"Hi (client), this is (agent), I saw
 you were curious what your home
 might be worth.
 
 I can get you a real number today,
 and if you ever decide to sell, walk
-you through what's next…"` },
-  { key: 'solar', label: msg("Solar"), text: `"Hi (client), this is (agent), did I
+you through what's next…"`) },
+  { key: 'solar', label: msg("Solar"), text: msg(`"Hi (client), this is (agent), did I
 catch you at an okay time?
 
 Great. You asked about cutting your
 power bill with solar, so I wanted to
-get you a quick free estimate…"` },
+get you a quick free estimate…"`) },
 ]
 
 function DialerScene() {
@@ -319,7 +319,7 @@ function DialerScene() {
                       color: i === scriptIdx ? '#fff' : C.muted,
                       fontFamily: FUTURA, fontSize: 9, letterSpacing: 1, fontWeight: 800,
                       transition: 'all 0.15s ease',
-                    }}>{sc.label.toUpperCase()}</button>
+                    }}>{tr(sc.label).toUpperCase()}</button>
                   ))}
                 </div>
                 <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column' }}>

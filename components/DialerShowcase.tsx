@@ -41,45 +41,45 @@ const SCRIPTS: { key: string; label: string; text: string }[] = [
   {
     key: 'life',
     label: msg("Life"),
-    text: `"Hi (client), this is (agent) reaching
+    text: msg(`"Hi (client), this is (agent) reaching
 out about the life coverage you
 looked into.
 
 It only takes a minute, I can show
 you what you'd actually qualify for,
-no medical exam needed…"`,
+no medical exam needed…"`),
   },
   {
     key: 'health',
     label: msg("Health"),
-    text: `"Hi (client), this is (agent), you
+    text: msg(`"Hi (client), this is (agent), you
 requested help finding a health plan,
 is now a good time?
 
 Perfect. Let's see if we can get you
 better coverage for less than you're
-paying today…"`,
+paying today…"`),
   },
   {
     key: 'realestate',
     label: msg("Real Estate"),
-    text: `"Hi (client), this is (agent), I saw
+    text: msg(`"Hi (client), this is (agent), I saw
 you were curious what your home
 might be worth.
 
 I can get you a real number today,
 and if you ever decide to sell, walk
-you through what's next…"`,
+you through what's next…"`),
   },
   {
     key: 'solar',
     label: msg("Solar"),
-    text: `"Hi (client), this is (agent), did I
+    text: msg(`"Hi (client), this is (agent), did I
 catch you at an okay time?
 
 Great. You asked about cutting your
 power bill with solar, so I wanted to
-get you a quick free estimate…"`,
+get you a quick free estimate…"`),
   },
 ]
 
@@ -197,7 +197,7 @@ export default function DialerShowcase() {
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      {sc.label.toUpperCase()}
+                      {tr(sc.label).toUpperCase()}
                     </button>
                   ))}
                 </div>

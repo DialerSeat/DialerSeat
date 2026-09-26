@@ -406,6 +406,22 @@
   "app/dialing-modes/power/page.tsx",
   "app/faq/what-is-a-power-dialer/page.tsx"
  ],
+ "\"Hi (client), this is (agent) reaching\nout about the life coverage you\nlooked into.\n\nIt only takes a minute, I can show\nyou what you'd actually qualify for,\nno medical exam needed…\"": [
+  "app/welcome/Showcase.tsx",
+  "components/DialerShowcase.tsx"
+ ],
+ "\"Hi (client), this is (agent), did I\ncatch you at an okay time?\n\nGreat. You asked about cutting your\npower bill with solar, so I wanted to\nget you a quick free estimate…\"": [
+  "app/welcome/Showcase.tsx",
+  "components/DialerShowcase.tsx"
+ ],
+ "\"Hi (client), this is (agent), I saw\nyou were curious what your home\nmight be worth.\n\nI can get you a real number today,\nand if you ever decide to sell, walk\nyou through what's next…\"": [
+  "app/welcome/Showcase.tsx",
+  "components/DialerShowcase.tsx"
+ ],
+ "\"Hi (client), this is (agent), you\nrequested help finding a health plan,\nis now a good time?\n\nPerfect. Let's see if we can get you\nbetter coverage for less than you're\npaying today…\"": [
+  "app/welcome/Showcase.tsx",
+  "components/DialerShowcase.tsx"
+ ],
  "\"Hi (client), this is (your name), I saw you were curious what your home might be worth.": [
   "app/faq/scripts/view.tsx"
  ],
@@ -19409,6 +19425,9 @@
   "app/vs/manual-dialing/page.tsx"
  ],
  "Waiting for activity…": [
+  "app/dashboard/dialer/page.tsx"
+ ],
+ "WAITING FOR THE LAST CALL TO CLOSE": [
   "app/dashboard/dialer/page.tsx"
  ],
  "Waiting on": [

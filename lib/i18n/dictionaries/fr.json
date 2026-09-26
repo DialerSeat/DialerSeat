@@ -130,7 +130,7 @@
   "\"But what about [other dialer]?\"": "\"Et [autre numéroteur], alors ?\"",
   "“Cancel anytime” is a real button, not a phone call.": "“Résiliable à tout moment”, c'est un vrai bouton, pas un appel téléphonique.",
   "\"click-to-dial\"": "\"click-to-dial\"",
-  "\"Hi (client), this is (your name), I saw you were curious what your home might be worth.": "\"Hi (client), this is (your name), I saw you were curious what your home might be worth.",
+  "\"Hi (client), this is (your name), I saw you were curious what your home might be worth.": "\"Bonjour (client), ici (votre nom), j'ai vu que vous vouliez savoir combien vaut votre maison.",
   "“I generate leads. I want to sell dialer access to them instead of selling raw CSVs.”": "“Je génère des leads. Je veux vendre un accès au numéroteur plutôt que des CSV bruts.”",
   "“I run a sales floor. I want my own branded dialer, not a tool with someone else's name on it.”": "“Je dirige un plateau de vente. Je veux mon propre numéroteur à ma marque, pas un outil portant le nom de quelqu'un d'autre.”",
   "“Install app”": "“Installer l'application”",
@@ -3074,7 +3074,7 @@
   "human": "humain",
   "I agree my card will be charged": "J'accepte que ma carte soit débitée",
   "I am licensed in several states. Does the dialer handle calling hours?": "Je suis agréé dans plusieurs États. Le numéroteur gère-t-il les heures d'appel ?",
-  "I can get you a real number today, and if you ever decide to sell, walk...\"": "I can get you a real number today, and if you ever decide to sell, walk...\"",
+  "I can get you a real number today, and if you ever decide to sell, walk...\"": "Je peux vous donner un vrai chiffre aujourd'hui, et si un jour vous vendez, vous expliquer...\"",
   "ⓘ HEADS UP": "ⓘ ATTENTION",
   "ⓘ System is still dialing in background. Next human routes automatically.": "ⓘ Le système continue d'appeler en arrière-plan. La prochaine personne vous est transférée automatiquement.",
   "icon in the bottom toolbar (the square with an arrow pointing up).": "dans la barre d'outils du bas (le carré avec une flèche vers le haut).",
@@ -6856,5 +6856,10 @@
   "why": "pourquoi",
   "Yes. DialerSeat integrates with the same FSBO, expired, and skip-tracing data providers Mojo resells, via our public API. You keep your preferred data source without paying Mojo a markup.": "Oui. DialerSeat s'intègre aux mêmes fournisseurs de données FSBO, mandats expirés et skip tracing que Mojo revend, via notre API publique. Vous gardez votre source de données préférée sans payer de marge à Mojo.",
   "Yes. DialerSeat is designed for solo agents through 500+ seat operations. Same product, same $35/week per seat. Per-campaign dialer mode (Preview, Power, Progressive, Predictive), multiple scripts per campaign with live mid-call switching, calendar-aligned analytics, and lapsed-user data preservation. Public API and webhooks integrate with any CRM.": "Oui. DialerSeat est conçu pour les agents seuls jusqu'aux structures de 500+ licences. Le même produit, les mêmes $35/semaine par licence. Mode de numérotation par campagne (aperçu, power, progressif, prédictif), plusieurs scripts par campagne avec changement en direct en cours d'appel, statistiques alignées sur le calendrier, et conservation des données des utilisateurs dont l'abonnement a expiré. L'API publique et les webhooks s'intègrent à n'importe quel CRM.",
-  "Your Company LLC": "Votre Entreprise LLC"
+  "Your Company LLC": "Votre Entreprise LLC",
+  "\"Hi (client), this is (agent) reaching\nout about the life coverage you\nlooked into.\n\nIt only takes a minute, I can show\nyou what you'd actually qualify for,\nno medical exam needed…\"": "\"Bonjour (client), ici (agent), je vous\nappelle au sujet de l'assurance vie\nque vous avez consultée.\n\nÇa ne prend qu'une minute : je vous\nmontre à quoi vous avez droit,\nsans examen médical…\"",
+  "\"Hi (client), this is (agent), did I\ncatch you at an okay time?\n\nGreat. You asked about cutting your\npower bill with solar, so I wanted to\nget you a quick free estimate…\"": "\"Bonjour (client), ici (agent), je\ntombe à un bon moment ?\n\nParfait. Vous vouliez réduire votre\nfacture d'électricité avec le solaire,\nje voulais vous faire un devis gratuit…\"",
+  "\"Hi (client), this is (agent), I saw\nyou were curious what your home\nmight be worth.\n\nI can get you a real number today,\nand if you ever decide to sell, walk\nyou through what's next…\"": "\"Bonjour (client), ici (agent), j'ai\nvu que vous vouliez savoir combien\nvaut votre maison.\n\nJe peux vous donner un vrai chiffre\naujourd'hui, et si un jour vous vendez,\nvous expliquer la suite…\"",
+  "\"Hi (client), this is (agent), you\nrequested help finding a health plan,\nis now a good time?\n\nPerfect. Let's see if we can get you\nbetter coverage for less than you're\npaying today…\"": "\"Bonjour (client), ici (agent), vous\navez demandé de l'aide pour trouver\nune mutuelle, c'est le bon moment ?\n\nParfait. Voyons si on peut vous\ntrouver mieux, pour moins que ce\nque vous payez aujourd'hui…\"",
+  "WAITING FOR THE LAST CALL TO CLOSE": "EN ATTENTE DE LA FIN DU DERNIER APPEL"
 }

@@ -6302,8 +6302,12 @@ function DialerPageInner() {
             onClick={() => setManualSettingsOpen(o => !o)}
             aria-expanded={manualSettingsOpen}
             style={{
+              // Wraps rather than overflowing: in Spanish, Portuguese or French
+              // the title and the ON/OFF summary are each about twice their
+              // English width, and on one line they ran out of the panel.
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              gap: 8, width: '100%', boxSizing: 'border-box',
+              flexWrap: 'wrap', columnGap: 8, rowGap: 4,
+              width: '100%', boxSizing: 'border-box',
               padding: inOverlay ? '12px 14px' : '8px 10px',
               background: 'transparent', border: 'none', cursor: 'pointer',
               color: terminalMuted, fontFamily: FUTURA,
@@ -6311,7 +6315,7 @@ function DialerPageInner() {
               letterSpacing: '2px', fontWeight: 'bold', textAlign: 'left',
             }}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: '1 1 auto' }}>
               <span aria-hidden="true" style={{
                 display: 'inline-block', flexShrink: 0,
                 transform: manualSettingsOpen ? 'rotate(90deg)' : 'none',
@@ -6321,7 +6325,7 @@ function DialerPageInner() {
             {!manualSettingsOpen && (
               <span style={{
                 fontSize: inOverlay ? '9px' : '7.5px', letterSpacing: '1px',
-                whiteSpace: 'nowrap', flexShrink: 0,
+                whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 'auto',
               }}>
                 <span style={{ color: manualAmd ? '#4a9eff' : terminalMuted }}>
                   {tr("DETECTION {value}", { value: manualAmd ? tr("ON") : tr("OFF") })}
@@ -6358,10 +6362,10 @@ function DialerPageInner() {
               color: manualAmd ? '#4a9eff' : terminalMuted,
               fontFamily: FUTURA,
               fontSize: inOverlay ? '11px' : '9px',
-              letterSpacing: '2px', fontWeight: 'bold',
+              letterSpacing: '2px', fontWeight: 'bold', textAlign: 'left',
             }}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: '1 1 auto' }}>
               <span
                 aria-hidden="true"
                 style={{
@@ -6374,7 +6378,7 @@ function DialerPageInner() {
               {tr("MACHINE DETECTION")}</span>
             <span style={{
               fontSize: inOverlay ? '10px' : '8px', letterSpacing: '1.5px',
-              padding: '2px 7px', borderRadius: 2,
+              padding: '2px 7px', borderRadius: 2, flexShrink: 0, whiteSpace: 'nowrap',
               background: manualAmd ? '#4a9eff' : 'transparent',
               border: `1px solid ${manualAmd ? '#4a9eff' : terminalBorder}`,
               color: manualAmd ? '#fff' : terminalMuted,
@@ -6399,10 +6403,10 @@ function DialerPageInner() {
               color: manualRecord ? '#f87171' : terminalMuted,
               fontFamily: FUTURA,
               fontSize: inOverlay ? '11px' : '9px',
-              letterSpacing: '2px', fontWeight: 'bold',
+              letterSpacing: '2px', fontWeight: 'bold', textAlign: 'left',
             }}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: '1 1 auto' }}>
               {/* The dot is the whole point of it being visual: a solid red
                   circle reads as "armed" across the room, and a hollow one
                   reads as off without having to parse the word beside it. */}
@@ -6418,7 +6422,7 @@ function DialerPageInner() {
               {tr("RECORD CALL")}</span>
             <span style={{
               fontSize: inOverlay ? '10px' : '8px', letterSpacing: '1.5px',
-              padding: '2px 7px', borderRadius: 2,
+              padding: '2px 7px', borderRadius: 2, flexShrink: 0, whiteSpace: 'nowrap',
               background: manualRecord ? '#dc2626' : 'transparent',
               border: `1px solid ${manualRecord ? '#dc2626' : terminalBorder}`,
               color: manualRecord ? '#fff' : terminalMuted,
