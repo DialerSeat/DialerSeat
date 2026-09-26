@@ -163,6 +163,198 @@ whose duty the rest is.
 
 ---
 
+## Where outbound dialing actually happens
+
+Researched 26 Sept 2026. Telnyx facts and the named regulations are ✅ sourced
+this week. The industry descriptions are trade knowledge, not sourced, and are
+marked 🟡 — good enough to rank markets, not good enough to publish.
+
+### Two different markets, and confusing them wastes a year
+
+Every country below is one or both of:
+
+- **A number market** — people there dial their own countrymen. Needs local
+  numbers, local law, local presence.
+- **An agent market** — floors there dial somebody else's countrymen, nearly
+  always Americans or the British. Needs seats and a browser. **Nothing else.**
+
+The Philippines has one of the largest dialing industries on earth and almost no
+domestic telemarketing worth selling into. It is an agent market, and we can
+serve it today, at $35 a week, with no globalization at all. India is both, and
+the two halves have opposite answers. Getting this backwards means buying numbers
+for a country whose value to us was its people.
+
+### What Telnyx actually offers ✅
+
+- **Termination: "Telnyx offers termination in every country."** Their words, in
+  the help centre. Outbound calling is not the constraint anywhere.
+- **Numbers: 108 countries** in the help-centre coverage list; the marketing
+  pages claim 140+ and **131 countries with inbound voice**. Carrier licences
+  held directly in **30+**.
+- **Documentation gates activation.** Name, address and a valid ID for the end
+  user; some countries additionally want proof of local presence such as a
+  utility bill. **Ten days to supply it or the number is removed**, and
+  verification takes working days.
+- **India carries a 12-month minimum commitment** on any India number.
+- **Their fraud controls are our controls too**: whitelist destinations by
+  country or region, cap the maximum destination rate, cap daily spend. Telnyx
+  itself blocks revenue-share and toll-pumping prefixes.
+
+### Tier 1 — number markets worth opening, in order
+
+| Country | Why | Telnyx numbers | Rules |
+|---|---|---|---|
+| **United Kingdom, Ireland** | Mature outbound culture, English, our own agents can serve it 🟡 | ✅ | Ofcom: 3% abandoned per campaign per **24 hours** — the one real code change |
+| **Australia, New Zealand** | Real outbound industry, English 🟡 | ✅ | ACMA standard, **already implemented** |
+| **Canada** | Adjacent market, shared time zones, NANP 🟡 | ✅ | CRTC: 5% per calendar month, 9:00–21:30 weekdays |
+| **Spain, Italy, Portugal** | Large domestic telemarketing, Italy heavily regulated 🟡 | ✅ | National regimes; Italy's registry is strict |
+| **Brazil** | One of the biggest domestic telemarketing markets anywhere 🟡 | ✅ | Não Me Perturbe extended to **all** operators from November; the mandatory **0303 telemarketing prefix was abolished in August** because consumers auto-rejected it, in favour of call authentication ✅ |
+| **Mexico, Colombia, Chile, Peru, Argentina** | Domestic dialing plus the nearshore floors 🟡 | ✅ | Per-country registries |
+| **France** | Real market, hardest hours in the world | ✅ | **Mon–Fri 10–13 and 14–20 only, no weekends**, already implemented |
+| **Poland, Romania, Turkey, Greece** | Domestic dialing and outsourcing hubs 🟡 | ✅ | Varies |
+| **South Africa** | Domestic plus UK-facing floors 🟡 | ✅ | POPIA |
+| **Japan, South Korea, Taiwan** | See below — real markets, hard rules | ✅ | See below |
+| **Indonesia, Vietnam, Thailand, Malaysia** | Growing domestic telemarketing 🟡 | ✅ mostly | Not researched |
+
+### Tier 2 — agent markets, where the seat sells and numbers do not
+
+These need no globalization at all. We can sell here **today**, and
+[/faq/dialer-for-offshore-agents] is the page that does it.
+
+**Philippines** (the largest), **India**, **Pakistan**, **Bangladesh**, **Sri
+Lanka**, **Nepal** · **Mexico**, **Colombia**, **Guatemala**, **El Salvador**,
+**Honduras**, **Nicaragua**, **Costa Rica**, **Dominican Republic**, **Jamaica**
+· **South Africa**, **Kenya**, **Egypt**, **Morocco**, **Tunisia**, **Ghana** ·
+**Poland**, **Romania**, **Bulgaria**, **Serbia**, **North Macedonia**,
+**Albania**, **Ukraine**, **Georgia** 🟡
+
+Morocco and Tunisia dial France; South Africa dials Britain; Albania and North
+Macedonia dial Italy; the rest overwhelmingly dial the United States.
+
+### Where the agents are — the market that needs no globalization
+
+We sell seats, and a seat is a browser. This list is not about dialers at all:
+it is where the **people** are. Every country here can be sold to today, at $35
+a week, with the product exactly as it stands.
+
+| Country | Workforce | Serves | Language |
+|---|---|---|---|
+| **Philippines** | **~1.9M IT-BPM workers**, of which **1.68M in contact centres**, per IBPAP and CCAP, heading for ~1.73M in 2026 ✅ industry-reported | US, AU, UK | English |
+| **India** | The other giant. Domestic telecalling plus US/UK voice 🟡 | US, UK | English, Hindi |
+| **Colombia** | **600,000+ BPO workers** per the Colombian BPO association ✅ industry-reported. The leading nearshore destination for bilingual voice | US (EN + ES) | Spanish, English |
+| **Mexico** | **100,000+ call-centre agents** nearshore ✅ industry-reported; the closest large pool to the US | US, LatAm | Spanish, English |
+| **Argentina, Brazil, Chile, Peru** | Large placements share — one report puts Argentina at 21% and Brazil at 14% of LatAm placements ✅ | US, LatAm | Spanish, Portuguese |
+| **Guatemala, El Salvador, Honduras, Nicaragua, Costa Rica, Dominican Republic, Jamaica** | The rest of nearshore 🟡 | US | English, Spanish |
+| **Pakistan, Bangladesh, Sri Lanka, Nepal** | Cheapest English-capable voice labour anywhere 🟡 | US, UK | English |
+| **South Africa, Kenya, Ghana, Nigeria** | South Africa is the established UK-facing pool 🟡 | UK, US | English |
+| **Egypt, Morocco, Tunisia** | The francophone pools 🟡 | France, Gulf | French, Arabic, English |
+| **Poland, Romania, Bulgaria, Serbia, North Macedonia, Albania, Ukraine, Georgia** | European multilingual outsourcing 🟡 | DACH, Italy, Nordics, UK | German, Italian, Polish, Russian |
+| **Malaysia, Vietnam, Indonesia** | Growing, mostly APAC-facing 🟡 | APAC | English, local |
+
+### The economics, and a claim of ours that needs correcting
+
+Nearshore Latin American voice is reported at **$12–18 per agent hour fully
+loaded** ✅. A $35 weekly seat across a 40-hour week is **$0.88 an agent hour** —
+about 5% of the labour cost. Nobody in that market is deciding on the software
+price; they are deciding on whether the software loses them the client.
+
+Further offshore the ratio inverts, and that is where price decides. A Philippine
+agent earns roughly **₱18,000–28,000 a month** ✅ — call it $300–500 🟡 at
+current rates. A $250-a-month enterprise seat is then **half to four-fifths of
+what the person earns**, which is why those floors run VICIdial on a VPS instead.
+
+> **Flag.** /faq/dialer-for-offshore-agents and /faq/teams-how-it-works both say
+> that at $95–$250 a seat a month "an offshore floor costs more in software than
+> in wages". Against Philippine wages that is an overstatement — it is a large
+> fraction, not more. It is true in Pakistan or Bangladesh. Worth narrowing the
+> sentence to the countries where it holds, or softening it to "a serious
+> fraction of the wage", because it is the one number on those pages a BPO owner
+> can check in their head.
+
+### Who actually buys
+
+Three different buyers, and only two of them are ours:
+
+- **The BPO buys its own stack.** Small and mid-size agencies, 2–50 seats.
+  **This is our buyer**: they staff up for a campaign, they cannot sign a
+  36-month contract against a 90-day client contract, and weekly billing is
+  built for exactly that shape.
+- **The US client mandates the stack** and often pays for it. Then the sale is
+  to the American company, and the offshore floor is just where the seats get
+  used. Also ours, through the existing US pages.
+- **The enterprise BPO with 5,000 seats** runs Genesys or Avaya under a master
+  agreement. Not ours, and never will be.
+
+### The four markets with rules that change the product
+
+**India** — the largest dialing culture on earth, and the one place our core
+feature cannot work. Telnyx states that calls terminating to India **bearing a
+CLI from India, or no CLI at all, are rejected by local operators**; they
+recommend an international caller ID different from the destination country ✅.
+Local presence is the thing we are best at, and in India it is prohibited by the
+receiving carriers. Add the 12-month number commitment and the TRAI/DLT
+registration regime, and India is an **agent market only**. That is not a
+disappointment: its agent market is enormous.
+
+**United Arab Emirates** — a serious dialing culture, mostly real estate 🟡, and
+the rules are now specific ✅: prior TDRA approval to telemarket at all, calls
+only from **numbers registered under the company's own commercial licence**,
+9:00–18:00 only, a national Do Not Contact Register, records of every call, and
+fines reported up to roughly $41,000. Telemarketing from personal numbers has
+been illegal since August 2024. **A shared pool is structurally illegal there** —
+the number must belong to the calling company. Closed to us unless we sell
+dedicated, customer-owned numbers.
+
+**South Korea** — a large outbound industry, insurance and telco especially 🟡,
+under an opt-in regime for mobile since 2005 ✅. Telemarketers must disclose
+**how and where they obtained the number**, financial-product calls must be
+recorded and retained, and PIPA reaches foreign businesses targeting Korean
+consumers. Buildable, but "where did you get my number" has to be answerable per
+lead — which our consent fields already carry.
+
+**Japan** — under the Act on Specified Commercial Transactions, the caller must
+state, **before soliciting**, the seller's name, the solicitor's name, the
+product, and that the purpose of the call is solicitation; re-soliciting anyone
+who has declined is prohibited; eight-day cooling off ✅. That is a scripted
+opening enforced by law, which is a script feature, not a dialer feature.
+
+**China** — treat as closed. Foreign-operated outbound telemarketing and VoIP
+termination are heavily restricted, and nothing here was verified. Do not put it
+on a list of supported countries on the strength of a coverage map.
+
+### The underground ones
+
+They exist, they are large, and the answer is no — for a reason that is
+architectural rather than moral posturing.
+
+Known concentrations 🟡: **Jamaica** (lottery scams aimed at American seniors),
+**India** (tech-support scams, Kolkata and Noida), **Myanmar, Cambodia and Laos**
+(trafficking-run scam compounds), **Albania and Kosovo** (Italian-language),
+**Nigeria and Ghana**. Every one of these also contains legitimate BPO work,
+which is the whole difficulty.
+
+Why we cannot take the revenue:
+
+- **Our pool is shared.** One fraud operation dialing from it burns the answer
+  rate and the reputation of every number every other customer dials from. We
+  sell against shared pools on /faq/numbers precisely because of this. It is the
+  single fastest way to destroy the product.
+- **Telnyx polices it and our account is the business.** They block revenue-share
+  and toll-pumping prefixes, and a fraud incident risks the account the entire
+  platform runs on.
+- **STIR/SHAKEN attestation is an identity claim we make.** Attesting for a
+  fraud operation is our signature on their call.
+
+**Screen operations, not nationalities.** A country blacklist would cut Manila
+and Bogotá, which are our best legitimate markets, while missing a Florida boiler
+room entirely. The controls that actually work are signup friction, a real
+business identity before predictive is unlocked — which the seller-name gate
+already is — and watching the numbers: a floor with a collapsing answer rate
+across every number it touches is either incompetent or lying about what it
+dials.
+
+---
+
 ## Canada
 
 **Nobody is going to out-compete us here on software, because the market runs on
