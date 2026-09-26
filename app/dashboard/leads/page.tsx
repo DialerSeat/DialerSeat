@@ -930,7 +930,7 @@ export default function LeadsPage() {
                   </div>
                 </div>
                 <div className="lead-cell lead-cell-phone">
-                  <div className="lead-phone">{lead.phone}</div>
+                  <div className="lead-phone"><bdi dir="ltr">{lead.phone}</bdi></div>
                 </div>
                 <div className="lead-cell lead-cell-state" style={{
                   fontSize: 11, color: T.muted, fontFamily: 'monospace',
@@ -1367,7 +1367,7 @@ export default function LeadsPage() {
               }}>
                 {tr("Permanently delete")}{" "}<strong style={{ fontFamily: 'monospace' }}>
                   {tr(deleteConfirmLead.first_name)} {tr(deleteConfirmLead.last_name)}
-                </strong> ({deleteConfirmLead.phone})?
+                </strong> (<bdi dir="ltr">{deleteConfirmLead.phone}</bdi>)?
               </div>
               <div style={{
                 fontSize: 11, color: T.muted, lineHeight: 1.6, marginTop: 4,

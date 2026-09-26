@@ -525,7 +525,7 @@ export default function LeadQueueShowcase() {
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
-                {r.phone}
+                <bdi dir="ltr">{r.phone}</bdi>
               </span>
               <span className="lq-state" style={{ color: D.muted, fontSize: 10 }}>{r.state}</span>
               {/* No Nx column. It existed to show a lead's attempt count

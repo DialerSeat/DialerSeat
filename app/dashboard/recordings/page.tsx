@@ -1046,7 +1046,7 @@ export default function RecordingsPage() {
                   <div className="rec-name">{leadName}</div>
                 </div>
 
-                <div className="rec-phone">{phone}</div>
+                <div className="rec-phone"><bdi dir="ltr">{phone}</bdi></div>
 
                 <div className="rec-datetime">
                   <div className="date">{date}</div>
@@ -1127,7 +1127,7 @@ export default function RecordingsPage() {
                     }}>{tr("NO DISP")}</span>
                   )}
                 </div>
-                <div className="col-phone rec-phone">{phone}</div>
+                <div className="col-phone rec-phone"><bdi dir="ltr">{phone}</bdi></div>
                 <div className="col-meta">
                   <span>{date} · {time}</span>
                   <span>{dur}</span>

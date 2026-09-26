@@ -6999,7 +6999,7 @@ function DialerPageInner() {
                         {(lead.first_name || lead.last_name) ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim() : '-'}
                       </span>
                       <span className="dq-cell-phone" style={{ gridArea: 'phone', color: terminalAccent, fontWeight: 'bold', fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>
-                        {lead.phone}
+                        <bdi dir="ltr">{lead.phone}</bdi>
                       </span>
                       <span className="dq-cell-state" style={{ gridArea: 'state', color: terminalMuted, fontSize: 12 }}>
                         {lead.state || '-'}
@@ -7809,7 +7809,7 @@ function DialerPageInner() {
                               {tr(displayLead.first_name)} {tr(displayLead.last_name)}
                             </div>
                             <div style={{ fontSize: '15px', fontFamily: 'monospace', color: terminalAccent, fontWeight: 'bold', letterSpacing: '2px' }}>
-                              {displayLead.phone}
+                              <bdi dir="ltr">{displayLead.phone}</bdi>
                             </div>
                             {/* Location · live timer, matches /welcome page 1 layout */}
                             <div style={{ fontSize: '10px', fontFamily: 'monospace', color: terminalMuted, letterSpacing: '1px', marginTop: '4px' }}>

@@ -303,7 +303,7 @@ function DialerScene() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                   <div>
                     <div style={{ fontSize: 19, fontWeight: 800, fontFamily: MONO, color: C.onPage, letterSpacing: 1, marginBottom: 3 }}>{tr("JOHN DOE")}</div>
-                    <div style={{ fontSize: 15, fontFamily: MONO, color: ACCENT, fontWeight: 800, letterSpacing: 2 }}>+1 (713) 555-0142</div>
+                    <div style={{ fontSize: 15, fontFamily: MONO, color: ACCENT, fontWeight: 800, letterSpacing: 2 }}><bdi dir="ltr">+1 (713) 555-0142</bdi></div>
                     <div style={{ fontSize: 10, fontFamily: MONO, color: C.muted, letterSpacing: 1, marginTop: 4 }}>{tr("HOUSTON, TX · {mm}:{ss}", { mm, ss })}</div>
                   </div>
                   <div style={{ padding: '4px 10px', borderRadius: 2, background: '#e8f5e8', border: `1px solid ${GREEN}`, fontSize: 9, letterSpacing: 2, fontWeight: 800, color: GREEN }}>{tr("● LIVE")}</div>

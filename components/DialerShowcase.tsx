@@ -170,7 +170,7 @@ export default function DialerShowcase() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                   <div>
                     <div style={{ fontSize: 17, fontWeight: 800, fontFamily: MONO, color: C.onPage, letterSpacing: 1, marginBottom: 2 }}>{tr("JOHN DOE")}</div>
-                    <div style={{ fontSize: 14, fontFamily: MONO, color: ACCENT, fontWeight: 800, letterSpacing: 2 }}>+1 (713) 555-0142</div>
+                    <div style={{ fontSize: 14, fontFamily: MONO, color: ACCENT, fontWeight: 800, letterSpacing: 2 }}><bdi dir="ltr">+1 (713) 555-0142</bdi></div>
                     <div style={{ fontSize: 9, fontFamily: MONO, color: C.muted, letterSpacing: 1, marginTop: 3 }}>{tr("HOUSTON, TX · {mm}:{ss}", { mm, ss })}</div>
                   </div>
                   <div style={{ padding: '4px 10px', borderRadius: 2, background: '#e8f5e8', border: `1px solid ${GREEN}`, fontSize: 9, letterSpacing: 2, fontWeight: 800, color: GREEN }}>{tr("● LIVE")}</div>

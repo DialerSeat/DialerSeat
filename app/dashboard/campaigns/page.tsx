@@ -222,7 +222,7 @@ function LeadPreviewThumb({
               <td style={tdStyle}>
                 {tr(lead.first_name)} {tr(lead.last_name)}
               </td>
-              <td style={tdStyle}>{lead.phone}</td>
+              <td style={tdStyle}><bdi dir="ltr">{lead.phone}</bdi></td>
               <td style={tdStyle}>{lead.state || ''}</td>
               {extraKey && (
                 <td style={tdStyle}>

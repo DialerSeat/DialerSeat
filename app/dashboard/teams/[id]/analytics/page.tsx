@@ -902,7 +902,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                         <div className="ta-call-main">
                           <div className="ta-call-lead">
                             {c.leadName}
-                            {c.phone && <span style={{ color: T.muted, fontWeight: 400 }}> · {c.phone}</span>}
+                            {c.phone && <span style={{ color: T.muted, fontWeight: 400 }}> · <bdi dir="ltr">{c.phone}</bdi></span>}
                           </div>
                           <div className="ta-call-meta">{c.memberName}</div>
                         </div>
@@ -958,7 +958,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                           <div className="ta-rec-lead">
                             {r.leadName || r.phone || t("Unknown lead")}
                             {r.leadName && r.phone && (
-                              <span style={{ color: T.muted, fontWeight: 400 }}> · {r.phone}</span>
+                              <span style={{ color: T.muted, fontWeight: 400 }}> · <bdi dir="ltr">{r.phone}</bdi></span>
                             )}
                           </div>
                           <div className="ta-rec-meta">

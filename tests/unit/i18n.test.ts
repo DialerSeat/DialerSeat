@@ -51,15 +51,19 @@ describe('dictionaries', () => {
   const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'))
 
   it('never translate the DialerSeat name', () => {
+    // Collected and asserted once: an expect per string made this the slowest
+    // test in the suite once several full dictionaries existed.
+    const bad: string[] = []
     for (const f of files) {
       const dict = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) as Record<string, string>
       for (const [en, tr] of Object.entries(dict)) {
         for (const name of NEVER_TRANSLATED) {
           const count = (s: string) => s.split(name).length - 1
-          expect(count(tr), `${f}: "${en}" must keep "${name}"`).toBe(count(en))
+          if (count(tr) !== count(en)) bad.push(`${f}: "${en}" must keep "${name}"`)
         }
       }
     }
+    expect(bad).toEqual([])
   })
 
   it('keep every {placeholder}', () => {
@@ -67,6 +71,7 @@ describe('dictionaries', () => {
     // English plural ending. Arabic and other languages do not pluralise by suffix,
     // so a translation may leave that one out. Every other placeholder must stay,
     // and a translation may never invent one.
+    const bad: string[] = []
     for (const f of files) {
       const dict = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) as Record<string, string>
       for (const [en, tr] of Object.entries(dict)) {
@@ -74,9 +79,10 @@ describe('dictionaries', () => {
         const suffix = new Set([...en.matchAll(/[A-Za-z](\{\w+\})/g)].map((m) => m[1]))
         const need = [...all(en)].filter((v) => !suffix.has(v)).sort().join(',')
         const got = [...all(tr)].filter((v) => !suffix.has(v)).sort().join(',')
-        expect(got, `${f}: "${en}"`).toBe(need)
-        for (const v of all(tr)) expect(all(en).has(v), `${f}: invented ${v} in "${en}"`).toBe(true)
+        if (got !== need) bad.push(`${f}: "${en}" has ${got || 'none'}, needs ${need || 'none'}`)
+        for (const v of all(tr)) if (!all(en).has(v)) bad.push(`${f}: invented ${v} in "${en}"`)
       }
     }
+    expect(bad).toEqual([])
   })
 })
