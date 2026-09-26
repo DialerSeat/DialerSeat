@@ -322,10 +322,17 @@ opening enforced by law, which is a script feature, not a dialer feature.
 termination are heavily restricted, and nothing here was verified. Do not put it
 on a list of supported countries on the strength of a coverage map.
 
-### The underground ones
+### The ones to screen out
 
-They exist, they are large, and the answer is no — for a reason that is
-architectural rather than moral posturing.
+Not a market list — a screening list. Joshua, 26 Sept 2026: "no fraud, no dirty
+money, only legit business people." This section exists so we can recognise the
+handful of operations that would have to be turned away, in markets we otherwise
+very much want.
+
+Keep the proportions straight: the Philippines alone has **1.68M people in
+legitimate contact-centre work**. The fraud concentrations are a rounding error
+next to that, and the reason to know where they are is to avoid mistaking one for
+the other when a signup comes in.
 
 Known concentrations 🟡: **Jamaica** (lottery scams aimed at American seniors),
 **India** (tech-support scams, Kolkata and Noida), **Myanmar, Cambodia and Laos**
