@@ -63,11 +63,19 @@ describe('dictionaries', () => {
   })
 
   it('keep every {placeholder}', () => {
+    // A placeholder glued to a word (lead{value}, where value is '' or 's') is an
+    // English plural ending. Arabic and other languages do not pluralise by suffix,
+    // so a translation may leave that one out. Every other placeholder must stay,
+    // and a translation may never invent one.
     for (const f of files) {
       const dict = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) as Record<string, string>
       for (const [en, tr] of Object.entries(dict)) {
-        const vars = (s: string) => (s.match(/\{\w+\}/g) ?? []).sort().join(',')
-        expect(vars(tr), `${f}: "${en}"`).toBe(vars(en))
+        const all = (s: string) => new Set(s.match(/\{\w+\}/g) ?? [])
+        const suffix = new Set([...en.matchAll(/[A-Za-z](\{\w+\})/g)].map((m) => m[1]))
+        const need = [...all(en)].filter((v) => !suffix.has(v)).sort().join(',')
+        const got = [...all(tr)].filter((v) => !suffix.has(v)).sort().join(',')
+        expect(got, `${f}: "${en}"`).toBe(need)
+        for (const v of all(tr)) expect(all(en).has(v), `${f}: invented ${v} in "${en}"`).toBe(true)
       }
     }
   })

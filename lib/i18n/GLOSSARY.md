@@ -113,3 +113,47 @@ France, so no France-only idioms. "vous" throughout, as in business software.
 | billing / subscription | facturation / abonnement |
 | week | semaine (`35 $/semaine` is wrong: keep `$35/semaine`) |
 | sign in / sign up | se connecter / s'inscrire |
+
+## Arabic (ar) — Modern Standard Arabic, right to left
+
+Written for call-centre agents in Egypt, Jordan, Morocco and the Gulf, so
+Modern Standard Arabic (فصحى مبسطة), not a dialect. Address the reader in the singular
+("أنت" forms), as most Arabic software does, and keep it consistent. Western digits (0-9),
+never Eastern Arabic numerals, because prices, phone numbers and US times must
+match what the agent sees in the dialer. Keep `$35` as written; prices stay in
+dollars.
+
+Direction: arrows that point along the reading direction flip, so `→` in the
+English becomes `←` and `▸` becomes `◂`. Keep brand and product names in Latin
+script: DialerSeat, Manager+, Pro, Telnyx, Stripe, HubSpot, TCPA, FTC, DNC, AMD,
+STIR/SHAKEN, CNAM, CSV, API. Mode names stay recognisable to agents who already
+use English dialers, so each is given in Arabic with no English beside it.
+
+| English | Arabic |
+|---|---|
+| dialer / auto dialer | برنامج الاتصال / الاتصال الآلي |
+| predictive / progressive / preview / power (modes) | تنبؤي / تدريجي / معاينة / متواصل |
+| lead(s) | عميل محتمل / عملاء محتملون |
+| campaign | حملة |
+| seat | مقعد |
+| agent | وكيل |
+| owner | المالك |
+| team | فريق |
+| floor (dialer floor) | صالة الاتصال |
+| disposition | نتيجة المكالمة |
+| callback | معاودة الاتصال |
+| voicemail | البريد الصوتي |
+| answering machine detection | كشف الرد الآلي |
+| caller ID | رقم المتصل |
+| number pool | مجموعة الأرقام |
+| script | نص المكالمة |
+| recording | تسجيل |
+| talk time | مدة التحدث |
+| answer rate / connect rate / abandon rate | معدل الرد / معدل الاتصال / معدل التخلي |
+| Do Not Call | عدم الاتصال |
+| white-label | علامة بيضاء |
+| billing / subscription | الفوترة / الاشتراك |
+| week | أسبوع (`$35/أسبوع`) |
+| sign in / sign up | تسجيل الدخول / إنشاء حساب |
+| calling window / calling hours | ساعات الاتصال المسموح بها |
+| compliance | الامتثال |

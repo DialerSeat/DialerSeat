@@ -53,14 +53,17 @@ if (cmd === 'status') {
 } else if (cmd === 'apply') {
   const batch = JSON.parse(fs.readFileSync(pendingPath, 'utf8'))
   const tr = JSON.parse(fs.readFileSync(arg, 'utf8'))
-  const vars = (s) => (s.match(/\{\w+\}/g) ?? []).sort().join(',')
+  // Placeholders glued to a word (lead{value}) are English plural endings; a
+  // language that does not pluralise by suffix may drop them. See i18n.test.ts.
+  const suffix = (en) => new Set([...en.matchAll(/[A-Za-z](\{\w+\})/g)].map((m) => m[1]))
+  const vars = (s, en = s) => [...new Set(s.match(/\{\w+\}/g) ?? [])].filter((v) => !suffix(en).has(v)).sort().join(',')
   const count = (s, n) => s.split(n).length - 1
   const problems = []
   let merged = 0
   batch.forEach((en, i) => {
     const t = tr[String(i)]
     if (typeof t !== 'string' || !t.trim()) { problems.push(`${i}: missing`); return }
-    if (vars(t) !== vars(en)) { problems.push(`${i}: placeholders ${vars(en)} → ${vars(t)}  ${JSON.stringify(en).slice(0, 60)}`); return }
+    if (vars(t, en) !== vars(en) || (t.match(/\{\w+\}/g) ?? []).some((v) => !en.includes(v))) { problems.push(`${i}: placeholders ${vars(en)} → ${vars(t)}  ${JSON.stringify(en).slice(0, 60)}`); return }
     for (const n of NEVER) if (count(t, n) !== count(en, n)) { problems.push(`${i}: brand "${n}"  ${JSON.stringify(en).slice(0, 60)}`); return }
     if (en.length >= 25) {
       const r = t.length / en.length
