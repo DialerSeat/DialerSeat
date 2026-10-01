@@ -9,7 +9,7 @@ import { getTenantBranding, getActiveTenantForUser } from '@/lib/tenant';
 import PageViewTracker from '@/components/PageViewTracker'
 import { LocaleProvider } from '@/lib/i18n/client';
 import { getClientDictionary, getDictionary, getLocale, getUrlLocale } from '@/lib/i18n/server';
-import { LOCALE_COOKIE, PROMPT_COOKIE, localeDir, suggestLocale } from '@/lib/i18n/locales';
+import { LOCALE_COOKIE, PROMPT_COOKIE, suggestLocale } from '@/lib/i18n/locales';
 import LanguagePrompt from '@/components/LanguagePrompt';
 import LocaleAccountSync from '@/components/LocaleAccountSync';
 import { clerkLocalization } from '@/lib/i18n/clerk';
@@ -222,7 +222,7 @@ export default async function RootLayout({
 
   return (
     <ClerkProvider localization={clerkLocalization(locale, dict, dialerseatLocalization)} afterSignOutUrl="/">
-      <html lang={locale} dir={localeDir(locale) === 'rtl' ? 'rtl' : undefined}>
+      <html lang={locale}>
         <head>
           {IOS_SPLASH_SCREENS.map(({ w, h, orient }) => {
             const media =

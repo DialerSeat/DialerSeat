@@ -17,7 +17,7 @@
 import * as React from 'react'
 import { createContext, use, useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  DEFAULT_LOCALE, LOCALE_COOKIE, PROMPT_COOKIE, isEnabledLocale, localeDir, type Locale,
+  DEFAULT_LOCALE, LOCALE_COOKIE, PROMPT_COOKIE, isEnabledLocale, type Locale,
 } from './locales'
 import { translate, type Dictionary, type Vars } from './translate'
 import { loadDictionary } from './dictionaries'
@@ -80,13 +80,10 @@ function writeCookie(name: string, value: string) {
   } catch {}
 }
 
-// English pages keep exactly the <html lang="en"> they always had: no dir
-// attribute is added unless the language actually reads right to left.
+// The page layout never mirrors, Arabic included: only the text runs right to
+// left, which globals.css handles per paragraph. So no dir attribute is set.
 function applyDocumentLanguage(locale: Locale) {
-  const el = document.documentElement
-  el.lang = locale
-  if (localeDir(locale) === 'rtl') el.dir = 'rtl'
-  else el.removeAttribute('dir')
+  document.documentElement.lang = locale
 }
 
 // Account persistence is registered by LocaleAccountSync, which lives inside

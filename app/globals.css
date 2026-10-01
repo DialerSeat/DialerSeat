@@ -288,27 +288,18 @@ input[type='button'] {
   .ds-mobile-topbar { display: none !important; }
 }
 
-/* ── Right-to-left (Arabic) ───────────────────────────────────────────────
-   Spacing, borders and alignment are written as logical properties, so they
-   mirror by themselves under <html dir="rtl">. Two things do not:
+/* ── Arabic ───────────────────────────────────────────────────────────────
+   The layout stays exactly as it is in English: nav, sidebar, columns and
+   icons never mirror. Only the text itself runs right to left.
+   - unicode-bidi: plaintext gives every paragraph the direction of its own
+     first letter, so an Arabic sentence reads right to left while a phone
+     number, price or the DialerSeat name in it stays left to right.
    - letter-spacing pulls Arabic letters apart and breaks the joins between
      them, so it is switched off. The tracked capitals it exists for have no
      Arabic equivalent.
-   - arrow icons point along the reading direction, so they are mirrored.
-   Nothing here applies to a left-to-right page. */
-html[dir="rtl"] body,
-html[dir="rtl"] body * {
+   Nothing here applies to any other language. */
+html[lang="ar"] body,
+html[lang="ar"] body * {
   letter-spacing: 0 !important;
-}
-html[dir="rtl"] .lucide-arrow-right,
-html[dir="rtl"] .lucide-arrow-left,
-html[dir="rtl"] .lucide-chevron-right,
-html[dir="rtl"] .lucide-chevron-left {
-  transform: scaleX(-1);
-}
-/* Phone numbers and other digit strings read left to right in Arabic too. */
-html[dir="rtl"] input[type="tel"],
-html[dir="rtl"] input[type="email"],
-html[dir="rtl"] input[type="url"] {
-  direction: ltr;
+  unicode-bidi: plaintext;
 }

@@ -143,11 +143,8 @@ export default function LanguageDropdown({
             // Right edges aligned, so it opens inward from the landing nav's
             // right edge. In the sidebar the button sits at the rail's right
             // edge, so the same alignment keeps the menu over the rail. Never
-            // closer than 16px to the left of the screen. Right-to-left pages
-            // mirror the nav, so there the left edges line up instead.
-            ...(document.documentElement.dir === 'rtl'
-              ? { left: Math.max(16, anchor.left) }
-              : { right: Math.max(16, window.innerWidth - anchor.right) }),
+            // closer than 16px to the left of the screen.
+            right: Math.max(16, window.innerWidth - anchor.right),
             minWidth: '190px',
             maxWidth: 'calc(100vw - 32px)',
             background: 'var(--surface, #ffffff)',
