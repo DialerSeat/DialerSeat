@@ -22,7 +22,7 @@ const SLUG = 'talkdesk'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs Talkdesk: Pros, Cons and the Unpriced Dialer Add-On',
+  title: 'Talkdesk Alternative: Dialer Pricing, Pros & Cons | DialerSeat',
   description:
     'The pros and cons of Talkdesk against DialerSeat. Talkdesk publishes seats at $85 to $225 a user a month, but the outbound dialer is an add-on it does not price. DialerSeat is $35 a week per seat with every dialing mode included.',
   alternates: {

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { neverRang } from '@/lib/dialOutcome'
 import Link from 'next/link'
 import JsonLd from '@/components/json-ld'
+import CiteThis from '@/components/CiteThis'
 import { organizationSchema, breadcrumbSchema } from '@/lib/schema'
 import { phoneToState } from '@/lib/areaCode'
 import { primeLocale, t } from '@/lib/i18n/server'
@@ -288,6 +289,7 @@ export default async function ConnectRatesPage() {
             </ul>
             <p style={{ fontSize: 13, lineHeight: 1.8, color: MUTED, marginTop: 14 }}>
               {t("Cite this page as: DialerSeat, \"Outbound Connect Rates by State and Hour,\" dialerseat.com/data/connect-rates, accessed {generated}.", { generated })}</p>
+            <CiteThis title="Outbound connect rates by state and hour" path="/data/connect-rates" />
           </section>
         </div>
       </main>

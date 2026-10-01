@@ -1,4 +1,4 @@
-
+import { organizationSchema, softwareApplicationSchema } from '@/lib/schema'
 
 type TenantBranding = {
   brand_name?: string | null
@@ -8,6 +8,13 @@ type TenantBranding = {
 } | null | undefined
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'dialerseat.com'
+
+/** A standalone schema object minus its @context, for use as an @graph node. */
+function withoutContext<T extends Record<string, unknown>>(o: T): Omit<T, '@context'> {
+  const node: Record<string, unknown> = { ...o }
+  delete node['@context']
+  return node as Omit<T, '@context'>
+}
 
 function tenantBaseUrl(b: NonNullable<TenantBranding>): string | null {
   if (b.custom_domain) return `https://${b.custom_domain}`
@@ -92,101 +99,15 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
   
   const graph = [
     
-    {
-      '@type': 'Organization',
-      '@id': `${BASE}/#organization`,
-      name: 'DialerSeat',
-      
-      
-      
-      
-      alternateName: 'DialerSeat',
-      url: BASE,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${BASE}/icons/android-chrome-512x512.png`,
-        width: 512,
-        height: 512,
-      },
-      description:
-        'Professional outbound dialer SaaS for solo agents up through larger teams. $35/week per seat. No contracts. Cancel anytime.',
-      foundingDate: '2025',
-      sameAs: [
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-      ],
-    },
-
-    
-    
-    
-    {
-      '@type': 'SoftwareApplication',
-      '@id': `${BASE}/#software`,
-      name: 'DialerSeat',
-      applicationCategory: 'BusinessApplication',
-      applicationSubCategory: 'OutboundDialer',
-      operatingSystem: 'Web, iOS, Android',
-      url: BASE,
-      description:
-        'Browser-based outbound dialer with predictive, progressive, power, and preview modes; automatic voicemail detection; inbound call reception; unlimited numbers; team workflow; TCPA compliance. Built for solo agents up through larger teams.',
-      // Third copy of the same offer. Three files describing one price is
-      // three chances to disagree — worth consolidating.
-      offers: [
-        {
-          '@type': 'Offer',
-          price: '35.00',
-          priceCurrency: 'USD',
-          priceSpecification: {
-            '@type': 'UnitPriceSpecification',
-            price: '35.00',
-            priceCurrency: 'USD',
-            unitText: 'per seat per week',
-            billingDuration: 'P7D',
-          },
-          availability: 'https://schema.org/InStock',
-          url: `${BASE}/sign-up`,
-        },
-      ],
-      featureList: [
-        'Predictive dialing',
-        'Progressive dialing',
-        'Power dialing',
-        'Preview dialing',
-        'Automatic voicemail detection',
-        'Inbound call reception',
-        'Unlimited phone numbers',
-        'Unlimited campaigns',
-        'Unlimited lead uploads',
-        'Multi-script support',
-        'Team workflow with per-seat billing',
-        'TCPA calling-window enforcement',
-        'State-specific compliance rules',
-        'FCC abandon-rate enforcement',
-        'Call recording',
-        'Deep analytics and reporting',
-        'Mobile and desktop support',
-        'Global dialing',
-        'No contracts',
-        'Cancel anytime',
-      ],
-      publisher: {
-        '@id': `${BASE}/#organization`,
-      },
-      
-      
-      
-    },
+    // ── ONE DESCRIPTION OF THE COMPANY AND THE PRODUCT ───────────────────
+    // These two nodes used to be written out here by hand, and the same two
+    // @ids were emitted again by lib/schema.ts on every /vs and /faq page, with
+    // different descriptions, different sameAs lists and P7D against P1W. Two
+    // nodes sharing an @id are merged by a parser, so a crawler was being handed
+    // one entity with two conflicting accounts of itself. Both now come from
+    // lib/schema.ts, so there is one account to merge.
+    withoutContext(organizationSchema()),
+    withoutContext(softwareApplicationSchema()),
 
     
     

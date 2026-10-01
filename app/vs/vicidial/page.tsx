@@ -17,7 +17,7 @@ const SLUG = 'vicidial'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: "DialerSeat vs VICIdial, Free Software Is Not a Free Dialer",
+  title: 'VICIdial Alternative: Hosted Predictive Dialer, No Server | DialerSeat',
   description: "VICIdial is free and open source, and published total cost of ownership still lands at $130-$400+ per agent per month once servers, SIP trunking and an administrator are counted. DialerSeat is $35 per seat per week with nothing to run.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/vicidial',

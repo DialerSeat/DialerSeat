@@ -17,7 +17,7 @@ const SLUG = 'convoso'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs Convoso: Same Dialer Modes, No Seat Minimum',
+  title: 'Convoso Alternative: Same Dialer Modes, No Seat Minimum | DialerSeat',
   description:
     'Convoso is a strong predictive dialer built for 20+ seat operations with custom, usage-billed quotes. DialerSeat matches predictive, power, progressive, and preview dialing at $35/seat/week, billed weekly, no seat minimum, no demo required.',
   alternates: {

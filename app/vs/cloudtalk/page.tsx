@@ -17,7 +17,7 @@ const SLUG = 'cloudtalk'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs CloudTalk: The Dialer Isn\u2019t a Paid Add-On',
+  title: 'CloudTalk Alternative: Dialer Pricing Without the Add-Ons | DialerSeat',
   description:
     'CloudTalk\u2019s $19/seat headline doesn\u2019t include a dialer: Power Dialer is +$15/seat/month, Parallel Dialer is +$39/seat/month. DialerSeat includes every dialer mode at $35/seat/week, billed weekly, no add-on required.',
   alternates: {

@@ -13,6 +13,15 @@ export function organizationSchema() {
     description:
       'The modern dialer for sales teams and solo agents. Multi-line predictive dialing with per-campaign mode configuration, multiple scripts per campaign, server-side TCPA enforcement, and carrier-level STIR/SHAKEN A-attestation where supported. A flat $35/week per seat, no annual contracts.',
     foundingDate: '2025',
+    // The subjects the site publishes on. Part of the same entity signal as
+    // sameAs below: it tells a knowledge graph what this organization is an
+    // authority about, which is the basis for being named when those topics
+    // come up.
+    knowsAbout: [
+      'Auto dialer', 'Predictive dialer', 'Power dialer', 'Outbound calling',
+      'Telemarketing compliance', 'TCPA', 'Do Not Call registry', 'Call abandonment rate',
+      'Local presence dialing', 'Answering machine detection', 'Call center software',
+    ],
     // sameAs is how a search engine stops treating dialerseat.com as a website
     // and starts treating DialerSeat as an ENTITY — one thing with profiles in
     // several places rather than several unconnected mentions. It is the input
@@ -43,7 +52,7 @@ export function softwareApplicationSchema() {
     '@id': `${SITE_URL}/#software`,
     name: 'DialerSeat',
     description:
-      'Multi-line predictive dialer for sales teams and solo agents. Per-campaign dialer mode, multiple scripts with live mid-call switching, server-side TCPA compliance, carrier-level STIR/SHAKEN A-attestation where supported, and a public API that works with any CRM. Works on phone, tablet, and desktop. $35/week per seat with no annual contract.',
+      'Multi-line predictive dialer for sales teams and solo agents. Per-campaign dialer mode, multiple scripts with live mid-call switching, server-side TCPA compliance, carrier-level STIR/SHAKEN A-attestation where supported, and an inbound lead webhook per campaign that takes leads from any CRM, Zapier or Make. Works on phone, tablet, and desktop. $35/week per seat with no annual contract.',
     applicationCategory: 'BusinessApplication',
     applicationSubCategory: 'Sales Dialer',
     operatingSystem: 'Web (works on iOS, Android, macOS, Windows via browser or installable PWA)',
@@ -76,7 +85,9 @@ export function softwareApplicationSchema() {
       'Per-campaign dialer mode configuration',
       'AMD voicemail detection drops in 1.8 seconds',
       'Multiple scripts per campaign with live mid-call switching',
-      'Public API and webhooks (works with any CRM)',
+      // Was "Public API and webhooks". There are no customer API keys; what
+      // exists is lead drip, one inbound webhook per campaign. See 3ce19770.
+      'Inbound lead webhook per campaign (any CRM, Zapier, Make)',
       'Inbound team numbers',
       'TCPA windows enforced server-side per lead state',
       'STIR/SHAKEN A-attestation',

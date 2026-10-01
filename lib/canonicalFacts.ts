@@ -143,4 +143,7 @@ export const MIRRORED_PAGES = [
   { path: '/faq/dialer-for-offshore-agents', title: 'Offshore & Remote Agents' },
   { path: '/status', title: 'System Status' },
   { path: '/data/connect-rates', title: 'Connect Rate Data' },
+  { path: '/pricing', title: 'Pricing: One Week Costs $35, Not a Month' },
+  { path: '/data/dialer-pricing', title: 'Dialer Pricing Index' },
+  { path: '/data/calling-rules-by-country', title: 'Outbound Calling Rules by Country' },
 ] as const

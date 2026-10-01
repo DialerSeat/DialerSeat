@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const baseMetadata: Metadata = {
-  title: 'Progressive Dialer: The Middle Ground Between Power and Predictive | DialerSeat',
+  title: 'Progressive Dialer: How It Works vs Power and Predictive | DialerSeat',
   description:
     'The progressive dialer: one line per agent with pre-screen voicemail detection. How it works, where it came from, and why it became the favorite of compliance-sensitive industries.',
   alternates: { canonical: 'https://dialerseat.com/dialing-modes/progressive' },

@@ -1,6 +1,9 @@
 import type { MetadataRoute } from 'next'
 import { headers } from 'next/headers'
 import { COMPETITORS, crossShoppedPairs, matchupSlug } from '@/lib/competitors'
+import { pageDate } from '@/lib/pageDates'
+import { VERTICALS } from '@/lib/verticals'
+import { COUNTRY_RULES } from '@/lib/countryRules'
 import { ENABLED_LOCALES, isLocalizablePath, localizedPath } from '@/lib/i18n/locales'
 
 
@@ -52,15 +55,30 @@ function extractTenantSlug(host: string): string | null {
 }
 
 
-function apexSitemap(now: Date): MetadataRoute.Sitemap {
+function apexSitemap(): MetadataRoute.Sitemap {
+  // ── lastModified IS THE DAY THE PAGE CHANGED, NOT THE DAY OF THE REQUEST ──
+  // It was `now` for every URL, so all of them claimed to change on every
+  // fetch, and Google ignores lastmod on a site where it is not accurate.
+  // lib/pageDates.ts holds the real dates, read from git by
+  // scripts/gen-page-dates.mjs.
   const e = (
     path: string,
     priority: number,
     changeFrequency: 'weekly' | 'monthly' | 'yearly',
-  ) => ({ url: `${APEX}${path}`, lastModified: now, changeFrequency, priority })
+  ) => ({ url: `${APEX}${path}`, lastModified: pageDate(path), changeFrequency, priority })
 
   return [
     e('/', 1.0, 'weekly'),
+    e('/pricing', 0.95, 'monthly'),
+
+    // Data, tools and the hub that lists them: the pages built to be cited.
+    e('/resources', 0.85, 'monthly'),
+    e('/data/dialer-pricing', 0.9, 'monthly'),
+    e('/data/calling-rules-by-country', 0.9, 'monthly'),
+    ...COUNTRY_RULES.map(c => e(`/data/calling-rules-by-country/${c.code.toLowerCase()}`, 0.75, 'monthly')),
+    e('/about', 0.6, 'monthly'),
+    e('/tools/dialer-cost-calculator', 0.85, 'monthly'),
+    e('/tools/abandon-rate-calculator', 0.8, 'monthly'),
     
     e('/dialing-modes', 0.9, 'monthly'),
     e('/dialing-modes/preview', 0.8, 'monthly'),
@@ -99,10 +117,10 @@ function apexSitemap(now: Date): MetadataRoute.Sitemap {
     e('/faq', 0.8, 'monthly'),
     e('/faq/why-dialerseat', 0.85, 'monthly'),
     e('/faq/dialer-modes', 0.75, 'monthly'),
-    e('/faq/what-is-a-preview-dialer', 0.7, 'monthly'),
-    e('/faq/what-is-a-power-dialer', 0.7, 'monthly'),
-    e('/faq/what-is-a-progressive-dialer', 0.7, 'monthly'),
-    e('/faq/what-is-a-predictive-dialer', 0.7, 'monthly'),
+    // The four /faq/what-is-a-*-dialer pages are left out: each declares its
+    // /dialing-modes twin as canonical, and a sitemap should list only
+    // canonical URLs. They still render and still pass links.
+    e('/faq/what-is-an-auto-dialer', 0.9, 'monthly'),
     e('/faq/why-is-compliance-important', 0.8, 'monthly'),
     e('/faq/how-we-keep-compliance', 0.85, 'monthly'),
     e('/faq/how-does-amd-work', 0.7, 'monthly'),
@@ -140,6 +158,11 @@ function apexSitemap(now: Date): MetadataRoute.Sitemap {
     e('/faq/how-we-measure-answer-rate', 0.7, 'monthly'),
     e('/faq/dialer-glossary', 0.7, 'monthly'),
     e('/faq/dialer-for-insurance-agents', 0.85, 'monthly'),
+    e('/faq/dialer-for-real-estate', 0.85, 'monthly'),
+    e('/faq/dialer-for-call-centers', 0.85, 'monthly'),
+    // One page per industry, generated from lib/verticals so a new trade
+    // cannot ship unindexed.
+    ...VERTICALS.map(v => e(`/faq/dialer-for-${v.slug}`, 0.8, 'monthly')),
     e('/faq/managers', 0.7, 'monthly'),
     e('/faq/white-label', 0.7, 'monthly'),
     
@@ -182,7 +205,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const slug = extractTenantSlug(host)
 
   
-  return slug ? subdomainSitemap(slug, now) : withLanguages(apexSitemap(now))
+  return slug ? subdomainSitemap(slug, now) : withLanguages(apexSitemap())
 }
 
 // ── LANGUAGE VERSIONS ────────────────────────────────────────────────

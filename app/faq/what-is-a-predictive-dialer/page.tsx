@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const baseMetadata: Metadata = {
-  title: 'Predictive Dialer: The 1980s Algorithm That Built Modern Call Centers | DialerSeat',
+  title: 'Predictive Dialer: How It Works, the 3% Rule, and the History | DialerSeat',
   description:
     'The predictive dialer: an algorithm that pre-dials multiple lines per agent and routes humans in real time. From its 1980s origin through the FTC TSR era to today.',
   alternates: { canonical: 'https://dialerseat.com/dialing-modes/predictive' },

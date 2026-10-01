@@ -49,6 +49,18 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // ── THE CALCULATORS ARE MEANT TO BE FRAMED ────────────────────────────
+      // /embed/* exists so other sites can put a calculator on their own page,
+      // with a credit link back. SAMEORIGIN above would block every one of those
+      // frames. A CSP frame-ancestors directive supersedes X-Frame-Options in
+      // every current browser, so this opens framing for these routes only and
+      // leaves the rest of the site, the dashboard included, as it was.
+      {
+        source: '/embed/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
+        ],
+      },
     ]
   },
 

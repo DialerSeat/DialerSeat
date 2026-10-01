@@ -22,7 +22,7 @@ const SLUG = 'dialer-io'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs Dialer.io: Published Pricing, No Three-Month Commitment',
+  title: 'Dialer.io Alternative: Published Pricing, No 3-Month Commitment | DialerSeat',
   description:
     "Dialer.io quotes case by case and asks for an initial three-month commitment. DialerSeat publishes $35 per seat per week, bills weekly, and includes predictive and multi-line dialing that Dialer.io does not claim.",
   alternates: {

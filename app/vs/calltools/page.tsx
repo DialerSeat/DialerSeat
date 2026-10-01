@@ -17,7 +17,7 @@ const SLUG = 'calltools'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: "DialerSeat vs CallTools: No Setup Fee, No Sales Call",
+  title: 'CallTools Alternative: Pricing With No Setup Fee | DialerSeat',
   description: "CallTools runs about $119.99 per user per month with setup fees commonly $500-$1,500 and integration quoted separately. DialerSeat is $35 per seat per week, self-serve, every dialer mode included.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/calltools',

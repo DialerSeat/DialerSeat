@@ -17,7 +17,7 @@ const SLUG = 'five9'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs Five9: Enterprise Features Without the Enterprise Sales Cycle',
+  title: 'Five9 Alternative: Predictive Dialer Without the Enterprise Contract | DialerSeat',
   description:
     'DialerSeat is the modern alternative to Five9. Self-serve signup in minutes (not weeks of demos), public $35/week pricing (no custom quotes), no annual contract, no implementation fees. Multi-line predictive dialing with the same compliance posture.',
   alternates: {
@@ -60,7 +60,7 @@ const FAQS = [
   {
     question: msg("Can DialerSeat handle high-volume teams like Five9?"),
     answer:
-      msg("Yes. DialerSeat is designed for solo agents through 500+ seat operations. Same product, same $35/week per seat. Per-campaign dialer mode (Preview, Power, Progressive, Predictive), multiple scripts per campaign with live mid-call switching, calendar-aligned analytics, and lapsed-user data preservation. Public API and webhooks integrate with any CRM."),
+      msg("Yes. DialerSeat is designed for solo agents through 500+ seat operations. Same product, same $35/week per seat. Per-campaign dialer mode (Preview, Power, Progressive, Predictive), multiple scripts per campaign with live mid-call switching, calendar-aligned analytics, and lapsed-user data preservation. Lead drip, an inbound webhook per campaign, takes new leads from any CRM, Zapier or Make."),
   },
   {
     question: msg("What does Five9 have that DialerSeat does not?"),

@@ -17,7 +17,7 @@ const SLUG = 'wavv'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs WAVV: Every Dialer Mode, One Flat Price',
+  title: 'WAVV Alternative: Every Dialer Mode, One Flat Price | DialerSeat',
   description:
     'DialerSeat is $35 a week per seat: preview, power, and multi-line predictive dialing all included, no tier to unlock. WAVV starts at $59/month and requires its $149/month Multi Line plan for predictive dialing, plus $1/month per phone number.',
   alternates: {

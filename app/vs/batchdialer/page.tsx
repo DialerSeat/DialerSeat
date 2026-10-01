@@ -17,7 +17,7 @@ const SLUG = 'batchdialer'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs BatchDialer: Their Annual Rate Without the Annual Contract',
+  title: 'BatchDialer Alternative: Pricing Without the Annual Prepay | DialerSeat',
   description:
     "BatchDialer's advertised $95/seat is the annual prepay rate; month to month it is $119-$249. DialerSeat is $35/week billed weekly with all four dialer modes, automatic number cycling on every plan, multiple scripts per campaign, and whitelabel at $75/mo flat.",
   alternates: {

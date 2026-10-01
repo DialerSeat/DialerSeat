@@ -19,7 +19,7 @@ const SLUG = 'hubspot'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: "DialerSeat vs HubSpot Calling: Pros, Cons and Pricing",
+  title: 'HubSpot Calling Alternative: Pros, Cons & Pricing | DialerSeat',
   description:
     "The pros and cons of calling from HubSpot against a dedicated dialer. Sales Hub calling minutes are capped by plan, the power dialer is in beta, and Professional adds a $1,500 onboarding fee. DialerSeat is $35 a week with every mode included.",
   alternates: {

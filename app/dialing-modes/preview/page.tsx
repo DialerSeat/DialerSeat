@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const baseMetadata: Metadata = {
-  title: 'Preview Dialer: How It Works, Where It Came From, When To Use It | DialerSeat',
+  title: 'Preview Dialer: How It Works and When to Use It | DialerSeat',
   description:
     'A deep look at the preview dialer: the original semi-automated outbound mode, dating back to 1970s telemarketing. Mechanism, history, use cases, and how it works on DialerSeat.',
   alternates: { canonical: 'https://dialerseat.com/dialing-modes/preview' },

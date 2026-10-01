@@ -17,7 +17,7 @@ const SLUG = 'orum'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs Orum: $35/week vs $250+/month, Annual Contract',
+  title: 'Orum Alternative: $35 a Week vs $250+ a Month, Annual | DialerSeat',
   description:
     'DialerSeat is the transparent, self-serve alternative to Orum. Orum starts around $250/user/month billed annually with a 3-seat minimum and no public pricing. DialerSeat is $35 per seat per week, cancel anytime, one seat minimum, sign up in minutes.',
   alternates: {

@@ -17,7 +17,7 @@ const SLUG = 'dialedin'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: "DialerSeat vs DialedIn (ChaseData): Every Mode at One Price",
+  title: 'DialedIn (ChaseData) Alternative: Pricing, Pros & Cons | DialerSeat',
   description: "DialedIn, formerly ChaseData, starts around $89 per user per month with outbound features arriving further up the tiers. DialerSeat includes predictive, power, progressive and preview at $35 per seat per week.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/dialedin',

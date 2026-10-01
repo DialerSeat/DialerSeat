@@ -22,7 +22,7 @@ const SLUG = 'nextiva'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs Nextiva: Pros, Cons and Where the Dialer Actually Lives',
+  title: 'Nextiva Dialer Alternative: Pros, Cons & Pricing | DialerSeat',
   description:
     'The pros and cons of Nextiva against DialerSeat. Nextiva publishes $15 to $75 a user a month, but none of those plans dial; progressive and predictive sit in a contact center tier quoted by sales. DialerSeat is $35 a week with every mode included.',
   alternates: {

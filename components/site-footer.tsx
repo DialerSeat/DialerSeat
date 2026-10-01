@@ -2,6 +2,20 @@
 
 import Link from 'next/link'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
+
+/** The data pages and tools, linked from every page's footer. */
+const FOOTER_RESOURCES = [
+  { href: '/pricing', label: msg('PRICING') },
+  { href: '/data/dialer-pricing', label: msg('DIALER PRICING INDEX') },
+  { href: '/data/calling-rules-by-country', label: msg('CALLING RULES BY COUNTRY') },
+  { href: '/data/connect-rates', label: msg('CONNECT RATES') },
+  { href: '/tools/dialer-cost-calculator', label: msg('COST CALCULATOR') },
+  { href: '/tools/abandon-rate-calculator', label: msg('ABANDON RATE CALCULATOR') },
+  { href: '/faq/what-is-an-auto-dialer', label: msg('WHAT IS AN AUTO DIALER') },
+  { href: '/resources', label: msg('RESOURCES') },
+  { href: '/about', label: msg('ABOUT') },
+]
 
 
 
@@ -126,6 +140,31 @@ export default function SiteFooter() {
           }}
         >
           {t("COMPARISONS")}</Link>
+      </div>
+
+      {/* Resources row. Every page carries this footer, so these are the links
+          that tell a crawler the data pages and tools matter, and the way a
+          visitor on any page finds the things worth citing. */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 4,
+          flexWrap: 'wrap',
+          marginBottom: 16,
+          fontSize: 10,
+          letterSpacing: 2,
+        }}
+      >
+        {FOOTER_RESOURCES.map((r, i) => (
+          <span key={r.href} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            {i > 0 && <span style={{ color: 'rgba(255,255,255,0.25)' }}>·</span>}
+            <Link href={r.href} style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none', padding: '4px 8px' }}>
+              {t(r.label)}
+            </Link>
+          </span>
+        ))}
       </div>
 
       {/* Copyright row */}

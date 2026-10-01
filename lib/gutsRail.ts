@@ -25,6 +25,66 @@ const SITE_INFO: RailGroup = {
   ],
 }
 
+/**
+ * The data pages and tools, on every article.
+ *
+ * These are the pages built to be cited and linked to from other sites, and a
+ * page only collects links if people can find it. Putting them on the rail
+ * means every /vs and /faq article, over a hundred pages, links to each one,
+ * which is also what tells a crawler they matter.
+ */
+const RESOURCES: RailGroup = {
+  label: msg("RESOURCES"),
+  items: [
+    { href: '/pricing', label: msg("Pricing: a week costs a week") },
+    { href: '/data/dialer-pricing', label: msg("Dialer pricing index") },
+    { href: '/data/calling-rules-by-country', label: msg("Calling rules by country") },
+    { href: '/data/connect-rates', label: msg("Connect rates by state & hour") },
+    { href: '/tools/dialer-cost-calculator', label: msg("Dialer cost calculator") },
+    { href: '/tools/abandon-rate-calculator', label: msg("Abandon rate calculator") },
+    { href: '/resources', label: msg("All resources") },
+  ],
+}
+
+/**
+ * One page per industry, on every /faq article.
+ *
+ * The industry pages are what a buyer searching "dialer for <their trade>"
+ * lands on, and each is only as strong as the links into it.
+ */
+const INDUSTRIES: RailGroup = {
+  label: msg("BY INDUSTRY"),
+  items: [
+    { href: '/faq/dialer-for-insurance-agents', label: msg("Insurance") },
+    { href: '/faq/dialer-for-real-estate', label: msg("Real estate") },
+    { href: '/faq/dialer-for-mortgage', label: msg("Mortgage") },
+    { href: '/faq/dialer-for-solar', label: msg("Solar") },
+    { href: '/faq/dialer-for-debt-collection', label: msg("Debt collection") },
+    { href: '/faq/dialer-for-call-centers', label: msg("Call centers") },
+    { href: '/faq/dialer-for-b2b-sales', label: msg("B2B sales & SDRs") },
+    { href: '/faq/dialer-for-recruiters', label: msg("Recruiting") },
+    { href: '/faq/dialer-for-fundraising', label: msg("Fundraising") },
+    { href: '/faq/dialer-for-offshore-agents', label: msg("Offshore agents") },
+  ],
+}
+
+/** The rail for a /data, /tools or /pricing page. */
+export function resourcesRail(activePath?: string): RailGroup[] {
+  return [
+    {
+      label: msg("MAIN MENU"),
+      items: [
+        { href: '/?view=landing', label: msg("Home") },
+        { href: '/faq', label: msg("FAQ") },
+        { href: '/vs', label: msg("Comparisons") },
+      ],
+    },
+    { ...INDUSTRIES, items: INDUSTRIES.items.filter((i) => i.href !== activePath) },
+    { ...RESOURCES, items: RESOURCES.items.filter((i) => i.href !== activePath) },
+    SITE_INFO,
+  ]
+}
+
 /** The competitors worth putting one click away, most cross-shopped first. */
 const RAIL_COMPETITORS = [
   'readymode',
@@ -76,6 +136,7 @@ export function vsRail(activeSlug?: string): RailGroup[] {
         { href: '/vs', label: msg("All dialer comparisons") },
       ],
     },
+    RESOURCES,
     SITE_INFO,
   ]
 }
@@ -134,6 +195,7 @@ export function faqRail(activePath?: string): RailGroup[] {
       label: msg("OTHER FAQ PAGES"),
       items: [...others, { href: '/faq', label: msg("All questions") }],
     },
+    { ...RESOURCES, items: RESOURCES.items.filter((i) => i.href !== activePath) },
     SITE_INFO,
   ]
 }

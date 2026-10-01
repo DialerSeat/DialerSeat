@@ -19,7 +19,7 @@ const SLUG = 'close'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: "DialerSeat vs Close: Pros, Cons and What the Dialer Costs",
+  title: 'Close Dialer Alternative: Pros, Cons & What the Dialer Costs | DialerSeat',
   description:
     "The pros and cons of Close against DialerSeat. Close is a CRM with a power dialer from $109 per user and predictive on Scale at $149, with calling billed on top. DialerSeat is $35 a week with every mode and calling included.",
   alternates: {

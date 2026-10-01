@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { COMPETITORS, crossShoppedPairs, matchupSlug } from '@/lib/competitors'
+import { VERTICALS } from '@/lib/verticals'
 
 // =============================================================================
 // A PAGE NOBODY LINKS TO AND NOTHING LISTS DOES NO WORK
@@ -85,11 +86,43 @@ describe('every /vs page is discoverable', () => {
   })
 })
 
+/**
+ * The canonical URL a page declares, if it declares one. A page whose canonical
+ * is some other URL is a duplicate by its own account, and Google's guidance is
+ * to list only canonical URLs in a sitemap: the /faq/what-is-a-*-dialer pages
+ * declare their /dialing-modes twins.
+ */
+function declaredCanonical(dir: string, slug: string): string | null {
+  const src = readFileSync(join(APP, dir, slug, 'page.tsx'), 'utf8')
+  const m = src.match(/canonical:\s*['"`](https:\/\/dialerseat\.com[^'"`]*)['"`]/)
+  // A template like `https://dialerseat.com${ROUTE}` is the page's own URL.
+  if (!m || m[1].includes('${')) return null
+  return m[1]
+}
+
 describe('every /faq page is in the sitemap', () => {
   it('has no unlisted FAQ pages', () => {
-    const missing = faqRouteSlugs().filter(
-      slug => !sitemapSource.includes(`/faq/${slug}`))
+    // Industry pages are generated from VERTICALS, the same way competitor
+    // pages are generated from COMPETITORS.
+    const verticalSlugs = new Set(VERTICALS.map(v => `dialer-for-${v.slug}`))
+    const derivedFromVerticals = sitemapSource.includes('VERTICALS.map')
+
+    const missing = faqRouteSlugs().filter(slug => {
+      if (derivedFromVerticals && verticalSlugs.has(slug)) return false
+      const canonical = declaredCanonical('faq', slug)
+      if (canonical && canonical !== `https://dialerseat.com/faq/${slug}`) return false
+      return !sitemapSource.includes(`/faq/${slug}`)
+    })
     expect(missing, 'these /faq pages are not in the sitemap').toEqual([])
+  })
+
+  it('does not list a page that declares another URL as canonical', () => {
+    const listedDuplicates = faqRouteSlugs().filter(slug => {
+      const canonical = declaredCanonical('faq', slug)
+      return canonical && canonical !== `https://dialerseat.com/faq/${slug}` &&
+        sitemapSource.includes(`'/faq/${slug}'`)
+    })
+    expect(listedDuplicates, 'non-canonical pages listed in the sitemap').toEqual([])
   })
 })
 

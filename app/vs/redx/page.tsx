@@ -19,7 +19,7 @@ const SLUG = 'redx'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: "DialerSeat vs REDX: Pros, Cons and What the Dialer Costs",
+  title: 'REDX Dialer Alternative: Pros, Cons & Pricing | DialerSeat',
   description:
     "The pros and cons of REDX against DialerSeat. REDX sells real estate leads with a dialer attached: single-line on its $299 bundle, triple-line on $349. DialerSeat is $35 a week for a dialer with every mode, and you bring your own leads.",
   alternates: {

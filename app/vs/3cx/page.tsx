@@ -17,7 +17,7 @@ const SLUG = '3cx'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs 3CX: Sales Dialer vs Business Phone System',
+  title: '3CX Alternative for Outbound Dialing: Pros, Cons & Pricing | DialerSeat',
   description:
     'DialerSeat and 3CX solve different problems. 3CX is a business PBX licensed by simultaneous call capacity; DialerSeat is a purpose-built outbound sales dialer at $35/seat/week: lead lists, dispositions, AMD, and TCPA compliance included, no capacity planning required.',
   alternates: {

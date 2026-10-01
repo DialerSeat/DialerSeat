@@ -17,7 +17,7 @@ const SLUG = 'ringcentral'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: "DialerSeat vs RingCentral: A Dialer, Not a Phone System",
+  title: 'RingCentral Dialer Alternative: Pros, Cons & Pricing | DialerSeat',
   description: "RingCentral is an excellent business phone system, but outbound dialing lives in RingCX, its contact-centre product, from around $65 per user per month. DialerSeat is a dialer at $35 per seat per week.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/ringcentral',

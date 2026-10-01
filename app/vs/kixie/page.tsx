@@ -17,7 +17,7 @@ const SLUG = 'kixie'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs Kixie: Every Dialer Mode, One Price',
+  title: 'Kixie Alternative: Every Dialer Mode at One Price | DialerSeat',
   description:
     'Kixie PowerCall is well-reviewed but tiers dialing power by price, multi-line dialing runs $95+/seat/month. DialerSeat includes predictive, power, progressive, and preview dialing at $35/seat/week, billed weekly, no tier to climb.',
   alternates: {

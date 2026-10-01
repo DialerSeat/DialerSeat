@@ -17,7 +17,7 @@ const SLUG = 'aircall'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs Aircall: The Power Dialer Isn\u2019t on the Basic Plan',
+  title: 'Aircall Alternative: Power Dialer Pricing, Pros & Cons | DialerSeat',
   description:
     'Aircall\u2019s advertised $30/seat Essentials plan doesn\u2019t include the Power Dialer, Salesforce integration, or call monitoring: all three require the $50/seat Professional tier, plus a 3-license minimum. DialerSeat includes every dialer mode at $35/seat/week.',
   alternates: {

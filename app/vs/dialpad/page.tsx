@@ -17,7 +17,7 @@ const SLUG = 'dialpad'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs Dialpad: The Power Dialer Is a Separate Product',
+  title: 'Dialpad Power Dialer Alternative: Pricing, Pros & Cons | DialerSeat',
   description:
     'Dialpad Connect, the $15-$35/user/month phone system, has no power dialer at any tier: the dialer lives in a separate product, Dialpad Sell, starting around $39/user/month. DialerSeat includes every dialer mode at $35/seat/week, one product.',
   alternates: {

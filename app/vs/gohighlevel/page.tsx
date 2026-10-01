@@ -19,7 +19,7 @@ const SLUG = 'gohighlevel'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: "DialerSeat vs GoHighLevel Dialer: Pros, Cons and Pricing",
+  title: 'GoHighLevel Dialer Alternative: Pros, Cons & Pricing | DialerSeat',
   description:
     "The pros and cons of GoHighLevel’s dialer against DialerSeat. HighLevel plans run $97 to $497 a month with calling billed per minute from a wallet. DialerSeat is a dedicated dialer at $35 a week with every mode and calling included.",
   alternates: {

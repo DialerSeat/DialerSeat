@@ -17,7 +17,7 @@ const SLUG = 'readymode'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs ReadyMode: Modern Dialer Without the $2K Setup Fee',
+  title: 'ReadyMode Alternative: Pricing Without the $2K Setup Fee | DialerSeat',
   description:
     'DialerSeat is the modern alternative to ReadyMode. Multi-line predictive dialing, per-campaign mode, multiple scripts per campaign, server-side TCPA, at flat $35/week per seat. No $500-$2,000 setup fee, no annual contract, works on every device.',
   alternates: {

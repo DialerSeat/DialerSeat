@@ -17,7 +17,7 @@ const SLUG = 'aloware'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: "DialerSeat vs Aloware: Where the Dialing Actually Lives",
+  title: 'Aloware Alternative: Pricing, Pros & Cons | DialerSeat',
   description: "Aloware starts around $30 per user per month, with dialing capability tiered above it and ad-hoc charges outside the seat price. DialerSeat includes every dialer mode at $35 per seat per week.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/aloware',

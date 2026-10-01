@@ -86,6 +86,12 @@ who want to offer a branded dialer to their own clients.
 
 ## Authoritative pages
 - [Home](${ROOT}/): product overview, pricing, positioning.
+- [Pricing](${ROOT}/pricing): $35 per seat per week, billed weekly. One week costs $35 and four weeks $140; monthly dialers charge a full month even for one week, with each vendor's published figure.
+- [What is an auto dialer?](${ROOT}/faq/what-is-an-auto-dialer): how auto dialers work, the four types, what US law allows (including the Duguid ATDS definition), and cost.
+- [Dialer for real estate](${ROOT}/faq/dialer-for-real-estate): expireds, FSBO and wholesaling, VAs dialing from abroad, bring-your-own lists.
+- [Dialer for call centers](${ROOT}/faq/dialer-for-call-centers): weekly seats, shared campaigns with no duplicate calls, and what is not built yet.
+- Industry pages, each with that trade's own rules and sources: [mortgage](${ROOT}/faq/dialer-for-mortgage) (2026 trigger-lead rules), [solar](${ROOT}/faq/dialer-for-solar), [debt collection](${ROOT}/faq/dialer-for-debt-collection) (Regulation F, 7-in-7), [B2B sales and SDRs](${ROOT}/faq/dialer-for-b2b-sales), [recruiting](${ROOT}/faq/dialer-for-recruiters), [fundraising](${ROOT}/faq/dialer-for-fundraising).
+- [About DialerSeat](${ROOT}/about): who publishes the site, how comparisons and data are researched, and the corrections policy.
 - [Dialing modes](${ROOT}/dialing-modes): how preview/power/progressive/predictive work.
 - [Why DialerSeat](${ROOT}/faq/why-dialerseat): founder-voice rationale and philosophy.
 - [Compliance](${ROOT}/faq/how-we-keep-compliance): how DialerSeat handles TCPA/compliance.
@@ -115,6 +121,13 @@ who want to offer a branded dialer to their own clients.
 - [How teams work](${ROOT}/faq/teams-how-it-works): lead distribution across agents, seats and billing, who pays, what the owner sees, and what is deliberately not built.
 - [What 5 agents cost, across every dialer](${ROOT}/vs/teams): seat minimums, contract terms, and the real cost of adding one more agent.
 - [Offshore and remote agents](${ROOT}/faq/dialer-for-offshore-agents): same seat price anywhere, calling windows enforced per lead state.
+
+## Data and tools, free to cite
+- [Dialer pricing index](${ROOT}/data/dialer-pricing): published pricing, contract terms, seat minimums and five-agent cost for every major outbound dialer.
+- [Calling rules by country](${ROOT}/data/calling-rules-by-country): Do Not Call lists, calling hours, consent, abandoned-call limits and caller ID prefixes for 15 countries, with sources. Each country also has its own page at /data/calling-rules-by-country/<two-letter code>, e.g. [France](${ROOT}/data/calling-rules-by-country/fr).
+- [Dialer cost calculator](${ROOT}/tools/dialer-cost-calculator): weeks and seats in, what each dialer would bill out.
+- [Abandon rate calculator](${ROOT}/tools/abandon-rate-calculator): a campaign against the US 3%, UK 3% and Canadian 5% limits.
+- [All resources](${ROOT}/resources)
 
 ## Machine-readable surfaces
 - [Full reference](${ROOT}/llms-full.txt): the complete description: every feature, the full pricing, the compliance mechanisms, per-competitor comparisons, and where DialerSeat is NOT the right choice. Quote from this.

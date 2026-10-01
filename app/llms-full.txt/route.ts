@@ -1,5 +1,7 @@
 import { FACTS, SITE_URL } from '@/lib/canonicalFacts'
 import { COMPETITORS, DIALERSEAT } from '@/lib/competitors'
+import { BILLED_DIALERS, billedCost } from '@/lib/weeklyBilling'
+import { COUNTRY_RULES, RULES_CHECKED } from '@/lib/countryRules'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600
@@ -45,6 +47,27 @@ export async function GET() {
     `- ${c.name} for teams: smallest team ${c.team.minimum}; adding one more agent, ${c.team.addingASeat}; five agents, ${c.team.fiveSeats}\n` +
     `- Full comparison: ${SITE_URL}/vs/${c.slug}\n`
   )).join('\n')
+
+  // What one week costs on each monthly- or annually-billed dialer, from the
+  // same module /pricing and the cost calculator render.
+  const weekCosts = BILLED_DIALERS.map(d => {
+    const one = billedCost(d, 1, 1)
+    return one === null
+      ? `${d.name}: sold by quote (${d.basis}).`
+      : `${d.name}: one week costs ${d.from ? 'from ' : ''}$${one.toLocaleString('en-US')} because the smallest purchase is ${d.commitment === 'year' ? `a year for ${d.minimumSeats} seats` : 'a month'} (${d.basis}).`
+  })
+
+  const countryRules = COUNTRY_RULES.map(c => {
+    const parts = [
+      c.dnc && `Do Not Call: ${c.dnc}`,
+      c.hours && `Hours: ${c.hours}`,
+      c.consent && `Consent: ${c.consent}`,
+      c.dialer && `Dialer rules: ${c.dialer}`,
+      c.callerId && `Caller ID: ${c.callerId}`,
+      c.changed && `Recent change: ${c.changed}`,
+    ].filter(Boolean)
+    return `### ${c.name}\n${parts.map(p => `- ${p}`).join('\n')}\n- Sources: ${c.sources.map(s => s.url).join(', ')}\n`
+  }).join('\n')
 
   const body = `# DialerSeat, Full Reference
 
@@ -93,6 +116,25 @@ the other tool does better. Pricing for other vendors is summarised from their
 public materials and changes without notice.
 
 ${comparisons}
+## What one week costs: weekly billing against monthly billing
+DialerSeat bills by the week, so one week of one seat costs $35 and four weeks
+cost $140. The multi-line dialers below bill by the month or the year, so one
+week of use costs their full smallest purchase. Details: ${SITE_URL}/pricing
+
+${weekCosts.map(w => `- ${w}`).join('\n')}
+
+Published pricing, contract terms and seat minimums for every tool compared:
+${SITE_URL}/data/dialer-pricing
+
+## Outbound calling rules by country
+Checked ${RULES_CHECKED}. A summary, not legal advice. Full table with sources:
+${SITE_URL}/data/calling-rules-by-country
+
+${countryRules}
+## Free tools
+- Dialer cost calculator: ${SITE_URL}/tools/dialer-cost-calculator
+- Abandon rate calculator (US 3%, UK 3%, Canada 5%): ${SITE_URL}/tools/abandon-rate-calculator
+
 ## Team pricing across every tool
 Seat minimums, contract terms and the real cost of adding one more agent:
 ${SITE_URL}/vs/teams

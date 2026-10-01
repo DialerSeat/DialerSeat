@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const baseMetadata: Metadata = {
-  title: 'Power Dialer: History, Mechanics, and the Click-to-Dial Era | DialerSeat',
+  title: 'Power Dialer: How It Works, When to Use It, and the History | DialerSeat',
   description:
     'The power dialer: one line per agent, auto-advance, and the workhorse of inside sales since the mid-1990s. How it works, where it came from, when to use it.',
   alternates: { canonical: 'https://dialerseat.com/dialing-modes/power' },

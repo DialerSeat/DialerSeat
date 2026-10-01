@@ -17,9 +17,9 @@ const SLUG = 'mojo'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs Mojo Dialer: Triple-Line Speed for Every Industry',
+  title: 'Mojo Dialer Alternative: Pricing, Cost, Pros & Cons | DialerSeat',
   description:
-    'DialerSeat is the modern alternative to Mojo Dialer. Triple-line speed plus real multi-line predictive, multiple scripts per campaign, public API for any CRM, at flat $35/week per seat. No $10/mo Agent Access fee, no $25-$49 data add-ons, every industry welcome.',
+    'DialerSeat is the modern alternative to Mojo Dialer. Triple-line speed plus real multi-line predictive, multiple scripts per campaign, and a lead webhook for any CRM, at a flat $35/week per seat. No $10/mo Agent Access fee, no $25-$49 data add-ons, every industry welcome.',
   alternates: {
     canonical: 'https://dialerseat.com/vs/mojo',
   },
@@ -48,6 +48,11 @@ const FAQS = [
       msg("DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with everything included. Mojo Dialer advertises $139/month for Triple Line, but real customer bills land at $250-$350 once the $10/mo Agent Access fee and $25-$49 data add-ons (FSBO, Pre-Foreclosure, Neighborhood, Skip Tracer) are stacked. DialerSeat has no required access fee and no per-dataset subscriptions."),
   },
   {
+    question: msg("What does one week of Mojo Dialer cost compared to DialerSeat?"),
+    answer:
+      msg("Mojo Dialer bills by the month, so using it for one week still costs a full month: $139 for Triple Line plus the $10 Agent Access licence, before any data add-on. DialerSeat bills by the week, so one week costs $35 and four weeks cost $140, with every dialer mode included."),
+  },
+  {
     question: msg("Is DialerSeat only for real estate?"),
     answer:
       msg("No. DialerSeat is industry-agnostic from day one: insurance (life, health, IUL, veterans), real estate, financial services, B2B SaaS, fundraising, debt resolution, mortgage, solar, recruiting, and more. Mojo is built around FSBO, expired, and neighborhood data which works well for real estate but limits other industries."),
@@ -60,7 +65,7 @@ const FAQS = [
   {
     question: msg("Can I use my preferred real estate data with DialerSeat?"),
     answer:
-      msg("Yes. DialerSeat integrates with the same FSBO, expired, and skip-tracing data providers Mojo resells, via our public API. You keep your preferred data source without paying Mojo a markup."),
+      'Yes. Export the list from your FSBO, expired or skip-tracing provider as a CSV and upload it; the columns are detected automatically. If your CRM or data tool can send a webhook, lead drip on Manager+ pushes new leads straight into a running campaign. You keep your preferred data source without paying Mojo a markup.',
   },
   {
     question: msg("Does DialerSeat work on mobile?"),

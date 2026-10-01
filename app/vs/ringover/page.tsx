@@ -19,7 +19,7 @@ const SLUG = 'ringover'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: "DialerSeat vs Ringover: Pros, Cons and the 12-Month Commitment",
+  title: "Ringover Alternative: No 12-Month Commitment | DialerSeat",
   description:
     "The pros and cons of Ringover against DialerSeat. Ringover’s power dialer is on its Business plan, with a three-user minimum and a twelve-month commitment. DialerSeat is $35 a week per seat, one seat minimum, cancel any week.",
   alternates: {

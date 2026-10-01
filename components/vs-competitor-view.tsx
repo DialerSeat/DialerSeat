@@ -54,7 +54,10 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">{t("▸ COMPARISON")}</div>
+            {/* The phrase buyers search is "<tool> alternative", not "DialerSeat
+                vs <tool>". The h1 keeps the comparison; the eyebrow carries the
+                search phrase, so it is on the page and not only in the title. */}
+            <div className="guts-eyebrow">{t("▸ {name} ALTERNATIVE · PRICING, PROS & CONS", { name: c.name.toUpperCase() })}</div>
             <h1>
               DialerSeat <span className="versus">{t("vs")}</span> {c.name}
             </h1>
@@ -66,7 +69,7 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
           </div>
         </GutsSection>
 
-        <GutsSection icon="price" title={t("What each one costs and what you get")}>
+        <GutsSection icon="price" title={t("{name} pricing vs DialerSeat pricing", { name: c.name })}>
           <p>
             {t("Both columns are stated the way each vendor states them. Where {name} prices by quote, that is said rather than guessed at.", { name: c.name })}</p>
           <div className="guts-grid-2">
@@ -87,6 +90,11 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
               <FactRow label="ADDING A SEAT" value={c.team.addingASeat} />
             </div>
           </div>
+          <p className="guts-note">
+            {t("DialerSeat bills by the week, so one week of use costs $35 and four weeks cost $140. A tool billed by the month costs a full month even when you only need it for a week.")}{' '}
+            <Link href="/pricing">{t("How the billing compares")}</Link> ·{' '}
+            <Link href="/data/dialer-pricing">{t("Every dialer's published pricing")}</Link>
+          </p>
         </GutsSection>
 
         {matrix && (

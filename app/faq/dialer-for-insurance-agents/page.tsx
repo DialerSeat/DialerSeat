@@ -83,7 +83,7 @@ const FAQS = [
   {
     question: msg("How much does an insurance dialer cost?"),
     answer:
-      msg("DialerSeat is $35 per seat per week, billed weekly, with no contract, no setup fee and no seat minimum. Carrier usage is charged separately as you dial. Most dialers aimed at insurance agencies are sold per seat per month on an annual commitment, often with local presence and recording as paid add-ons."),
+      msg("DialerSeat is $35 per seat per week, billed weekly, with no contract, no setup fee and no seat minimum, and calling is included with no per-minute charge. Most dialers aimed at insurance agencies are sold per seat per month on an annual commitment, often with local presence and recording as paid add-ons."),
   },
   {
     question: msg("Can I run a predictive dialer for insurance calls legally?"),
@@ -228,7 +228,7 @@ export default async function Page() {
               <div className="role">{t("PRO")}</div>
               <h3>{t("$35 per seat, per week")}</h3>
               <p>
-                {t("All four modes, local presence, recording, compliance export. Billed weekly, no contract, no setup fee, no seat minimum. Carrier usage is charged as you dial.")}</p>
+                {t("All four modes, local presence, recording, compliance export. Billed weekly, no contract, no setup fee, no seat minimum, no per-minute charge.")}</p>
             </div>
             <div className="guts-panel">
               <div className="role">{t("MANAGER+")}</div>

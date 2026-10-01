@@ -2,6 +2,8 @@ import { FACTS, SITE_URL, MIRRORED_PAGES } from '@/lib/canonicalFacts'
 import {
   COMPETITORS, DIALERSEAT, competitorBySlug, crossShoppedPairs, matchupSlug,
 } from '@/lib/competitors'
+import { BILLED_DIALERS, DIALERSEAT_WEEKLY, billedCost } from '@/lib/weeklyBilling'
+import { COUNTRY_RULES, RULES_CHECKED } from '@/lib/countryRules'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600
@@ -265,6 +267,71 @@ function teamsPricingDoc(): string {
   )
 }
 
+// ── PRICING AND THE DATA PAGES ─────────────────────────────────────────
+// Rendered from lib/weeklyBilling, lib/competitors and lib/countryRules, the
+// same modules the HTML pages render from.
+
+function pricingDoc(): string {
+  const rows = BILLED_DIALERS.map(d => {
+    const one = billedCost(d, 1, 1)
+    const four = billedCost(d, 4, 1)
+    const fmt = (n: number | null) => (n === null ? 'quote' : `${d.from ? 'from ' : ''}$${n.toLocaleString('en-US')}`)
+    return `| ${d.name} | ${d.commitment === 'year' ? 'annually' : d.commitment === 'quote' ? 'by quote' : 'monthly'} | ${fmt(one)} | ${fmt(four)} |`
+  })
+  return (
+    `# DialerSeat pricing: one week costs $35, not a month\n\n` +
+    `${FACTS.oneLine}\n\n` +
+    `## Plans\n${FACTS.pricing.map(p => `- ${p}`).join('\n')}\n\n` +
+    `## What one week costs, dialer by dialer\n` +
+    `DialerSeat bills by the week. The multi-line dialers below bill by the month or the year, ` +
+    `so one week of use costs their full smallest purchase. One seat, before setup fees, add-ons and usage.\n\n` +
+    `| Dialer | Billed | 1 week | 4 weeks |\n|---|---|---|---|\n` +
+    `| DialerSeat | weekly | $${DIALERSEAT_WEEKLY} | $${DIALERSEAT_WEEKLY * 4} |\n` +
+    `${rows.join('\n')}\n\n` +
+    `Where each figure is published:\n${BILLED_DIALERS.map(d => `- ${d.name}: ${d.basis}`).join('\n')}\n` +
+    footer('/pricing')
+  )
+}
+
+function dialerPricingDoc(): string {
+  const cell = (s: string) => s.replace(/\|/g, '/')
+  const rows = COMPETITORS.map(c =>
+    `| [${c.name}](${SITE_URL}/vs/${c.slug}) | ${cell(c.pricing)} | ${cell(c.contract)} | ${cell(c.team.minimum)} | ${cell(c.team.fiveSeats)} |`)
+  return (
+    `# Dialer Pricing Index\n\n` +
+    `Published pricing, contract terms, smallest purchase and five-agent cost for ${COMPETITORS.length + 1} outbound dialers. ` +
+    `Quoted-only pricing is marked as quoted. Free to cite with a link to ${SITE_URL}/data/dialer-pricing\n\n` +
+    `| Dialer | Pricing | Contract | Smallest purchase | Five agents |\n|---|---|---|---|---|\n` +
+    `| DialerSeat | ${cell(DIALERSEAT.pricing)} | ${cell(DIALERSEAT.contract)} | ${cell(DIALERSEAT.team.minimum)} | ${cell(DIALERSEAT.team.fiveSeats)} |\n` +
+    `${rows.join('\n')}\n` +
+    footer('/data/dialer-pricing')
+  )
+}
+
+function callingRulesDoc(): string {
+  const sections = COUNTRY_RULES.map(c => {
+    const lines = [
+      c.dnc && `- **Do Not Call list:** ${c.dnc}`,
+      c.hours && `- **Calling hours:** ${c.hours}`,
+      c.consent && `- **Consent:** ${c.consent}`,
+      c.dialer && `- **Dialer rules:** ${c.dialer}`,
+      c.callerId && `- **Caller ID and prefixes:** ${c.callerId}`,
+      c.penalties && `- **Penalties:** ${c.penalties}`,
+      c.localNumber && `- **Getting a local number:** ${c.localNumber}`,
+      c.changed && `- **Recent change:** ${c.changed}`,
+      `- **Sources:** ${c.sources.map(s => `[${s.label}](${s.url})`).join(', ')}`,
+    ].filter(Boolean)
+    return `## ${c.name}\n${lines.join('\n')}\n`
+  })
+  return (
+    `# Outbound calling rules by country\n\n` +
+    `Do Not Call lists, calling hours, consent, abandoned-call limits and caller ID rules for ${COUNTRY_RULES.length} countries. ` +
+    `Checked ${RULES_CHECKED}. A summary, not legal advice. Free to cite with a link to ${SITE_URL}/data/calling-rules-by-country\n\n` +
+    `${sections.join('\n')}` +
+    footer('/data/calling-rules-by-country')
+  )
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ path?: string[] }> }
@@ -295,6 +362,12 @@ export async function GET(
       return md(offshoreDoc())
     case '/vs/teams':
       return md(teamsPricingDoc())
+    case '/pricing':
+      return md(pricingDoc())
+    case '/data/dialer-pricing':
+      return md(dialerPricingDoc())
+    case '/data/calling-rules-by-country':
+      return md(callingRulesDoc())
   }
 
   if (segments[0] === 'data' && segments.length === 2 && segments[1] === 'connect-rates') {

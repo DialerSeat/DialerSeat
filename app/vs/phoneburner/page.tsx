@@ -17,7 +17,7 @@ const SLUG = 'phoneburner'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'DialerSeat vs PhoneBurner: Multi-Line Without the Tier Upgrades',
+  title: 'PhoneBurner Alternative: Pricing, Pros & Cons | DialerSeat',
   description:
     'DialerSeat is the modern alternative to PhoneBurner. Multi-line predictive included (PhoneBurner is single-line only), everything in one tier (no Premium upgrades), flexible list sizes, weekly billing: flat $35/week per seat, no annual contract.',
   alternates: {
@@ -45,7 +45,7 @@ const FAQS = [
   {
     question: msg("How does DialerSeat compare to PhoneBurner on price?"),
     answer:
-      msg("DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with everything in one tier: no upgrades needed for inbound numbers, advanced reporting, or public API access. PhoneBurner advertises $140/seat/month at the Professional tier but real bills land at $200-$250 once Premium-tier features (inbound numbers, advanced reporting) and annual-contract assumptions are factored in."),
+      msg("DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with everything in one tier: no upgrades needed for inbound numbers, advanced reporting, or the lead webhook. PhoneBurner advertises $140/seat/month at the Professional tier but real bills land at $200-$250 once Premium-tier features (inbound numbers, advanced reporting) and annual-contract assumptions are factored in."),
   },
   {
     question: msg("Does PhoneBurner have multi-line dialing?"),

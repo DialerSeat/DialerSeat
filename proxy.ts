@@ -9,6 +9,36 @@ import {
 const isPublicRoute = createRouteMatcher([
   '/',
   '/sitemap.xml',
+  // ── EVERY FILE WRITTEN FOR A CRAWLER WAS BEHIND THE SIGN-IN WALL ──────
+  // The matcher below skips static files by extension, but not .txt or .xml,
+  // so robots.txt, llms.txt, llms-full.txt, sitemap-index.xml and the
+  // IndexNow key all ran through this middleware, missed this list, and hit
+  // auth.protect(). A crawler got a 404; a browser got bounced to sign-in.
+  //
+  // That made the whole machine-readable layer invisible in production: no
+  // robots.txt (so no sitemap line), no llms files, no markdown mirrors, no
+  // /data/connect-rates, no /status, and an IndexNow key Bing could never
+  // verify, so every submission was being discarded. Verified with curl on
+  // 2026-09-25: Googlebot got 404 on all of them while /vs and /faq were 200.
+  '/robots.txt',
+  '/sitemap-index.xml',
+  '/llms.txt',
+  '/llms-full.txt',
+  '/ai.txt',
+  '/security.txt',
+  '/.well-known/(.*)',
+  '/browserconfig.xml',
+  '/md(.*)',
+  '/data(.*)',
+  '/tools(.*)',
+  '/embed(.*)',
+  '/pricing',
+  '/resources',
+  '/about',
+  '/status',
+  // The IndexNow key file, served by app/[indexnowKey] at /<key>.txt. The key
+  // is an environment variable, so it is matched by shape rather than by name.
+  /^\/[A-Za-z0-9-]{8,128}\.txt$/,
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/auth/(.*)',
@@ -164,6 +194,11 @@ const MARKETING_ONLY_PATHS = [
   /^\/faq(\/.*)?$/,
   /^\/vs(\/.*)?$/,
   /^\/dialing-modes(\/.*)?$/,
+  /^\/pricing$/,
+  /^\/resources$/,
+  /^\/about$/,
+  /^\/data(\/.*)?$/,
+  /^\/tools(\/.*)?$/,
   /^\/terms$/,
   /^\/privacy$/,
   /^\/managers(\/.*)?$/,
