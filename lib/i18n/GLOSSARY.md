@@ -194,3 +194,40 @@ Italian software, and kept consistent. Italian call centres already say
 | sign in / sign up | accedi / registrati |
 | calling window / calling hours | fascia oraria consentita |
 | compliance | conformità |
+
+## German (de) — standard German, "du"
+
+Written for call-centre agents in Germany, Austria and Switzerland. "du"
+throughout, as modern German SaaS does, and kept consistent; never mix in
+"Sie". German call centres already say "Dialer", "Lead" and "Skript", so
+those stay. Keep `$35` as written: `$35/Woche`, never `35 $`. Long compounds
+are fine in sentences; in buttons and tracked capitals prefer the shorter word.
+
+| English | German |
+|---|---|
+| dialer / auto dialer | Dialer / automatischer Dialer |
+| predictive / progressive / preview / power (modes) | PREDICTIVE / PROGRESSIVE / PREVIEW / POWER (mode names stay; prose: prädiktiv, progressiv, Vorschau) |
+| lead(s) | Lead(s) |
+| campaign | Kampagne |
+| seat | Platz (Plätze) |
+| agent | Agent |
+| owner | Inhaber |
+| team | Team |
+| floor (dialer floor) | Callcenter-Team / Floor |
+| disposition | Ergebnis |
+| callback | Rückruf |
+| voicemail | Mailbox |
+| answering machine detection | Anrufbeantworter-Erkennung (AMD) |
+| caller ID | Rufnummer / Anrufer-ID |
+| number pool | Nummernpool |
+| script | Skript |
+| recording | Aufzeichnung |
+| talk time | Gesprächszeit |
+| answer rate / connect rate / abandon rate | Annahmequote / Verbindungsquote / Abbruchquote |
+| Do Not Call | Nicht anrufen |
+| white-label | White Label |
+| billing / subscription | Abrechnung / Abo |
+| week | Woche (`$35/Woche`) |
+| sign in / sign up | anmelden / registrieren |
+| calling window / calling hours | erlaubte Anrufzeiten |
+| compliance | Compliance |
