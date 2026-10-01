@@ -370,9 +370,14 @@ const dispColour = (d: string | null) => {
 const amdColour = (a: string | null) =>
   a === 'human' ? GREEN : a === 'machine' ? VIOLET : a === 'not_sure' ? AMBER : DIM
 
+// Clock time the way the floor reads it, not the way a log file writes it:
+// 9:04:12 PM, never 21:04:12. Used by every time column on this screen, so
+// the whole map changes together.
 const hhmmss = (iso: string) => {
   const d = new Date(iso)
-  return d.toLocaleTimeString('en-GB', { hour12: false })
+  return d.toLocaleTimeString('en-US', {
+    hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
+  })
 }
 
 // ── A CALL THAT HAS NOT ENDED YET ────────────────────────────────────────
@@ -403,7 +408,11 @@ const liveSeconds = (
   return Math.floor(elapsed / 1000)
 }
 
-/** A running call reads as a clock, not a count of seconds. */
+/**
+ * Every call length on this screen reads as a clock, not a count of seconds.
+ * A running call, a finished one and the talk time all use it, so "97s" is
+ * never shown where "1:37" is what somebody actually wants to know.
+ */
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 const prettyPhone = (p: string | null) => {
   if (!p) return '-'
@@ -1257,10 +1266,10 @@ export default function OpsMap() {
             }}>
               {live !== null ? mmss(live)
                 : neverPlaced ? '-'
-                : `${f.duration}s`}
+                : mmss(f.duration)}
             </td>
             <td className="om-hide-sm" style={{ color: f.talkSeconds ? INK : DIM }}>
-              {f.talkSeconds ? f.talkSeconds + 's' : '-'}
+              {f.talkSeconds ? mmss(f.talkSeconds) : '-'}
             </td>
             <td style={{
               color: live !== null ? GREEN
@@ -2179,7 +2188,7 @@ export default function OpsMap() {
                         }}>
                           {/* Talk time, not duration: on an unanswered call the
                               duration is just how long it rang. */}
-                          {c.answered ? `${c.talkSeconds}s` : 'no answer'}
+                          {c.answered ? mmss(c.talkSeconds ?? 0) : 'no answer'}
                         </span>
                         <span style={{
                           marginLeft: 'auto', color: MUTED, overflow: 'hidden',
@@ -2947,7 +2956,7 @@ function Pulse({ buckets }: { buckets: PulseBucket[] }) {
     return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`
   }).join(' ')
   const label = (iso: string) =>
-    new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+    new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
 
   return (
     <div style={{ padding: '5px 9px 6px' }}>

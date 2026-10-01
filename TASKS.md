@@ -114,3 +114,13 @@ AMD verdicts, and recordings that start later.
   power and progressive. 47 CFR 64.1200(a)(6) wants 15 seconds or four rings.
   Holding it means a late pickup becomes an abandoned call, so it needs the
   recorded message there too.
+
+---
+
+## 4. Added 1 Oct 2026, Joshua to go in depth on each
+
+- **Vercel optimization.** Not scoped yet.
+- **Supabase optimization.** Not scoped yet.
+- **Onboarding revamp.** Not scoped yet. (Separate from the whitelabel
+  onboarding restyle, which is built and waiting on his confirm.)
+- **Other items** to come from Joshua.
