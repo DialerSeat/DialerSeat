@@ -5,6 +5,7 @@ import { useUser, UserButton } from '@clerk/nextjs'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { t } from '@/lib/i18n/client'
+import LanguageDropdown from '@/components/LanguageDropdown'
 
 const T = {
   bg: '#f0f1f4',
@@ -386,6 +387,8 @@ export default function SiteHeader({ tenantSlug = null }: { tenantSlug?: string 
                 {t("SIGN UP")}</Link>
             </>
           ) : null}
+          {/* Last in the row, where the landing nav keeps it, signed in or out. */}
+          <LanguageDropdown />
         </div>
       </div>
 
