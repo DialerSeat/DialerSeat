@@ -121,6 +121,6 @@ AMD verdicts, and recordings that start later.
 
 - **Vercel optimization.** Not scoped yet.
 - **Supabase optimization.** Not scoped yet.
-- **Onboarding revamp.** Not scoped yet. (Separate from the whitelabel
-  onboarding restyle, which is built and waiting on his confirm.)
+- **Onboarding revamp.** Not scoped yet. (The billing-style whitelabel
+  onboarding restyle was demoed and dropped by Joshua on 1 Oct.)
 - **Other items** to come from Joshua.
