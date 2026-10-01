@@ -464,7 +464,7 @@ international work is on firm ground.
 | **Dialfire** | Germany, EU-hosted | Predictive | **$0.0115/min** outbound landline and mobile, **$0.0050/min** inbound, **no monthly fee, unlimited users**, no minimum | ✅ | **Build first.** Their model wins for an hour of dialing a week and loses badly for a full-time agent. That arithmetic is the page |
 | **Squaretalk** | Israel, global | Power and predictive | Core **$15**/user/mo annual (3-user minimum), Connect **$25**, predictive from **$30** | ✅ | **Build** |
 | **Voiso** | UAE / Singapore | Predictive, progressive, AMD, local caller ID | Core **$24**, Pro **$52** (predictive included). 30% off annual | ✅ | **Build** |
-| **Diabolocom** | France | Predictive | Not researched | — | Research next |
+| **Diabolocom** | France | Preview, progressive, AMD **and predictive, all in the base plan** | Voice from **$60** per named licence/mo, Omnichannel from **$99**, plus usage for minutes, transcription, storage and SMS. Named or concurrent licensing | ✅ | **Build.** A European vendor that publishes predictive in its entry plan is the sharpest EU comparison after Dialfire. Verified 1 Oct 2026 |
 | Ringover, Aircall, CloudTalk, 3CX | FR / SK / CY | — | — | — | Already published |
 
 ## Asia and India
@@ -473,26 +473,46 @@ international work is on firm ground.
 |---|---|---|---|---|
 | **Zoho Voice** | Power dialer; no predictive claim found | Contact Center **$74**/user/mo annual, **$79** monthly; a $49/mo plan bundles 10 agents for existing Zoho customers | ✅ | **Build.** A $74 seat with no predictive dialing is the angle |
 | **CallHippo** | Power and parallel dialer, AMD, local presence | Basic **$1**, Starter **$19**, Professional **$29**, Ultimate **$45** per user/mo | ✅ | **Build** |
-| **Bitrix24** | Auto dialer in the CRM | Telephony on paid plans only; numbers **$4–11**/mo across 43 countries; SIP connector **$49**/mo. Plan tiers unread | ⚠️ | Research the tiers, then build. Enormous installed base in the EU and LatAm |
+| **Bitrix24** | Auto dialer in the CRM | **Flat price per plan, not per user**: Basic **$69/mo** ($49 annual) for 5 users, Standard **$144** ($99) for **50 users**, Professional **$289** ($199) for 100, Enterprise from **$579** ($399) for 250. Telephony from Basic; numbers $4–11/mo; SIP connector $49/mo | ✅ | **Build, and read the warning below.** Verified 1 Oct 2026 |
 | **Ozonetel** | Predictive, progressive, preview | None. Third parties say ₹1,500–3,500/agent/mo | ⚠️ | No-price page or skip |
 | **Exotel / Ameyo** | Predictive | None | ❌ | Skip |
 | **Runo** | Auto dialer, telecalling CRM | **₹599**/user/mo annual | ✅ | Low priority: no US overlap, pure search volume |
 | **NeoDove** | Auto dialer | None | ❌ | Skip |
 
+> **Bitrix24 is the cheapest seat economics in this entire document, and we
+> should know it before a prospect tells us.** Standard is **$99 a month,
+> billed annually, for fifty users**. That is about **$2 per user per month**.
+> Fifty DialerSeat seats are $1,750 a week. No feature argument survives being
+> surprised by that number in a sales conversation, so the honest comparison has
+> to be made deliberately:
+>
+> - it is an **auto dialer inside a CRM**, not a predictive dialer for a floor,
+>   and nothing on their pricing page claims predictive;
+> - **telephony is separate** — numbers at $4–11 a month, minutes on top, and a
+>   $49/mo SIP connector if you bring your own carrier;
+> - there is no abandoned-call pacing, no AMD routing, no compliance export, and
+>   no local-presence pool. The things that make a dialing floor legal are the
+>   things it does not have.
+>
+> The page writes itself as "what $2 a user actually buys", and it must be
+> written fairly. Anyone choosing Bitrix24 on price and then dialing predictively
+> through it has a compliance problem, not a bargain — that is the argument, and
+> it only lands if we quote their price correctly and without sneering.
+
 ## Southeast Asia: the offshore wedge
 
 | Vendor | Dialer | Published price | Src | Verdict |
 |---|---|---|---|---|
-| **GOautodial** (Philippines) | Predictive, VICIdial lineage | GOcloud Starter **$29**/agent/mo, Premium **$34**, 3-agent minimum | ⚠️ | **Build** once confirmed on their portal. The page an offshore floor is actually searching for |
+| **GOautodial** (Philippines) | Predictive, VICIdial lineage | Their own portal announcement, effective Jan 2022: Starter **$24**/agent/mo, Premium **$29**, Unlimited **$90** plus **$75** per extra channel. Directories report $29 and $34 today | ⚠️ vendor but **four years stale** | **Build**, quoting the 2022 announcement as what they last published and saying so. Do not print a directory's current guess as their price |
 | VICIdial | — | — | — | Already published |
 
 ## Latin America
 
 | Vendor | Country | Dialer | Published price | Src | Verdict |
 |---|---|---|---|---|---|
-| **uContact** (Integra CCS) | Uruguay | Predictive | Voice **$59.99**/user/mo, Omni **$84.99**; implementation reported from $1,000 | ⚠️ | Build once the vendor confirms. The implementation fee is the story |
+| **uContact** (Integra CCS) | Uruguay | Predictive | Voice **$89.99**/user/mo, Omni **$129.99**, from net2phone's own pricing page. Directories had said $59.99 and $84.99 — **wrong by about half** | ✅ | **Build.** Corrected 1 Oct 2026 |
 | **wolkvox** | Colombia | Predictive, 10x pacing | Modular, no per-agent figure. No minimum agents | ❌ | No-price page or skip |
-| **3C Plus** | Brazil | Predictive | Has a public pricing page, unread | ⚠️ | Research next |
+| **3C Plus** | Brazil | Predictive, claims 10x pacing | The pricing URL 404s and nothing published was found | ❌ | No-price page or skip. Checked 1 Oct 2026 |
 
 ---
 
@@ -501,6 +521,16 @@ international work is on firm ground.
 - **Verify every ⚠️ against the vendor's own page.** Directories contradict each
   other — Primo Dialler has two different "published" prices in two places, which
   is how you end up retracting a page.
+
+  The verification pass on 1 Oct 2026 settled five rows and justified the rule
+  on the first one: **uContact's real published price is $89.99 and $129.99, not
+  the $59.99 and $84.99 the directories carried — wrong by about half.** A /vs
+  page built on that would have understated a competitor by fifty per cent,
+  which is the kind of error that makes every other figure on the site
+  suspect. Also settled: Diabolocom publishes predictive in a $60 entry plan,
+  Bitrix24's tiers are flat-rate rather than per user, GOautodial's own last
+  published prices are from January 2022, and 3C Plus publishes nothing.
+
 - **Say who the page is for, above the fold.** Every vendor here sells into
   countries we do not dial.
 - **Never import their compliance rules as ours.** Ofcom is 3% per campaign per
