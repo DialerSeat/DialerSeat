@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { stillOnTheCall } from '@/lib/openCallGuard'
 import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
@@ -196,6 +196,37 @@ export async function POST(req: Request) {
         dialerMode: result.dialerMode,
       },
     })
+
+    // ── A REDIAL CLOSES THE ATTEMPT BEFORE IT ──────────────────────────────
+    // On 2x and 3x the dialer sends one NO_ANSWER when the whole sequence is
+    // over, and /api/leads/dispose attaches it to the newest open call only.
+    // Every earlier attempt was left with no disposition at all: 89 of the
+    // 106 unlabelled unanswered calls in the week to 1 Oct were attempts that
+    // were redialed within three minutes. A sequence that ends on a voicemail
+    // sends no disposition, so its earlier attempts were never labelled
+    // either.
+    //
+    // This dial is the proof: the earlier attempt has ended (hangup_cause is
+    // written) and the sequence went on. So it is labelled what it was. Only
+    // attempts nobody picked up and the agent did not end themselves; never
+    // overwrites a label; runs after the response, so it costs the dial nothing.
+    if (leadId && result.callControlId) {
+      const newCall = result.callControlId
+      after(async () => {
+        const { error } = await supabaseAdmin
+        .from('calls')
+        .update({ disposition: 'NO_ANSWER' })
+        .eq('user_id', userId)
+        .eq('lead_id', leadId)
+        .neq('call_control_id', newCall)
+        .is('answered_at', null)
+        .is('disposition', null)
+        .is('ended_by_agent_at', null)
+        .not('hangup_cause', 'is', null)
+        .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+        if (error) console.error('[calls/outbound] could not label the earlier attempt', error)
+      })
+    }
 
     // NOTE: response keys (callSid, agentCallSid, roomName) are kept as-is
     // for frontend compatibility — app/dashboard/dialer/page.tsx reads
