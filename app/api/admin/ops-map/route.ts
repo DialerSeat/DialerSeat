@@ -121,8 +121,9 @@ const FEED_LIMIT_MAX = 1000
 const IN_FLIGHT_MAX_AGE_SECONDS = 600
 
 export async function GET(req: NextRequest) {
+  let adminId: string
   try {
-    await requireAdmin()
+    adminId = (await requireAdmin()).userId
   } catch (res) {
     return res as Response
   }
@@ -698,8 +699,20 @@ export async function GET(req: NextRequest) {
       answered24h: Number(live?.answered_24h ?? 0),
     }
 
+    // ── READ ON ONE DEVICE IS READ ON ALL ─────────────────────────────────
+    // The new-logs badge was measured against a timestamp in each browser's
+    // localStorage, so opening the panel on a phone left the badge up on the
+    // desktop. The watermark is on the admin's account now; every beat hands
+    // it back, and the client keeps whichever of its own and this is newer.
+    const { data: seenRow } = await supabase
+      .from('users')
+      .select('ops_logs_seen_at')
+      .eq('clerk_id', adminId)
+      .maybeSingle()
+
     return NextResponse.json({
       success: true,
+      logsSeenAt: seenRow?.ops_logs_seen_at ? new Date(seenRow.ops_logs_seen_at as string).toISOString() : null,
       notis,
       // ── OMITTED, NOT EMPTIED, ON A FAST BEAT ──────────────────────────
       // The client spreads this over what it already holds. An omitted key
@@ -764,6 +777,40 @@ export async function GET(req: NextRequest) {
       unplacedNames: unplacedNames.sort((a, b) => a.localeCompare(b)),
     })
   } catch (err) {
+    return apiError(err, { route: 'admin/ops-map' })
+  }
+}
+
+/**
+ * The notifications panel was open at `at`: everything logged before then has
+ * been seen, on every device. Only ever moves forward, and never past now, so
+ * a device with a wrong clock cannot hide logs that have not happened yet.
+ */
+export async function POST(req: NextRequest) {
+  let adminId: string
+  try {
+    adminId = (await requireAdmin()).userId
+  } catch (res) {
+    return res as Response
+  }
+  try {
+    const body = await req.json().catch(() => null) as { action?: string; at?: string } | null
+    if (body?.action !== 'logs_seen' || !body.at) {
+      return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 })
+    }
+    const at = Date.parse(body.at)
+    if (!Number.isFinite(at)) {
+      return NextResponse.json({ success: false, error: 'Bad timestamp' }, { status: 400 })
+    }
+    const seen = new Date(Math.min(at, Date.now())).toISOString()
+    const { error } = await supabase
+      .from('users')
+      .update({ ops_logs_seen_at: seen })
+      .eq('clerk_id', adminId)
+      .or(`ops_logs_seen_at.is.null,ops_logs_seen_at.lt."${seen}"`)
+    if (error) throw error
+    return NextResponse.json({ success: true, logsSeenAt: seen })
+  } catch (err: unknown) {
     return apiError(err, { route: 'admin/ops-map' })
   }
 }

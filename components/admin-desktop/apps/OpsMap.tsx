@@ -275,6 +275,8 @@ type VisitorBucket = { at: string; newVisitors: number; returning: number; views
 type IncomeBucket = { at: string; seatUsd: number; subUsd: number; events: number }
 
 type Payload = {
+  /** When this admin last had the notifications panel open, on any device. */
+  logsSeenAt?: string | null
   notis: Noti[]
   logs: Noti[]
   visitors: Visitor[]
@@ -926,8 +928,14 @@ export default function OpsMap() {
   //
   // Notification unread state is untouched and still colours the noti rows;
   // it simply no longer drives a badge.
+  // Whichever is later: this device's watermark, or the account's, which any
+  // other device may have moved on (see "read on one device" below).
+  const seenMs = Math.max(
+    logsSeenAt ? Date.parse(logsSeenAt) || 0 : 0,
+    data?.logsSeenAt ? Date.parse(data.logsSeenAt) || 0 : 0,
+  )
   const newLogs = (data?.logs ?? []).filter(
-    l => !logsSeenAt || l.at > logsSeenAt
+    l => !seenMs || Date.parse(l.at) > seenMs
   ).length
   // Still read, still used -- it decides whether opening the panel is worth a
   // round trip to mark notifications read. It just no longer draws a badge.
@@ -973,13 +981,21 @@ export default function OpsMap() {
   // panel is open and rows keep arriving. You cannot have unseen logs on a
   // list you are looking at.
   const panelWasOpenRef = useRef(false)
+  const serverSeenAtRef = useRef<string | null>(null)
+  useEffect(() => { serverSeenAtRef.current = data?.logsSeenAt ?? null }, [data?.logsSeenAt])
   useEffect(() => {
     if (notisOpen) {
       // Freeze the highlight watermark on the way IN only, so the rows the
       // badge was counting stay marked amber while they are being read rather
       // than clearing on the next five-second sync.
       if (!panelWasOpenRef.current) {
-        logsSeenBeforeOpenRef.current = logsSeenAtRef.current
+        // The later of this device's and the account's, so rows read on
+        // another device do not light up again here.
+        const local = logsSeenAtRef.current
+        const account = serverSeenAtRef.current
+        logsSeenBeforeOpenRef.current =
+          local && account ? (Date.parse(account) > Date.parse(local) ? account : local)
+            : (local ?? account)
       }
       setLogsSeenAt(new Date().toISOString())
     }
@@ -987,6 +1003,25 @@ export default function OpsMap() {
     // logsSeenAt is read through its ref precisely so it is not a dependency;
     // including it would make this effect re-trigger itself forever.
   }, [notisOpen, data?.logs])
+
+  // ── READ ON ONE DEVICE IS READ ON ALL ─────────────────────────────────
+  // The watermark above lived only in this browser, so reading the panel on
+  // the phone left the badge up on the desktop. It is kept on the account now:
+  // the panel being open sends it up (at most every ten seconds, since the
+  // effect above restamps on every sync), and every sync brings back the
+  // account's value, which the badge count uses whenever it is the newer one.
+  const lastSeenSentRef = useRef(0)
+  useEffect(() => {
+    if (!notisOpen || !logsSeenAt) return
+    if (Date.now() - lastSeenSentRef.current < 10_000) return
+    lastSeenSentRef.current = Date.now()
+    void fetch('/api/admin/ops-map', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'logs_seen', at: logsSeenAt }),
+    }).catch(() => { /* the next open sends it again */ })
+  }, [notisOpen, logsSeenAt])
+
   // BOTH interleaves by time rather than concatenating, so a payment and the
   // notification about it sit next to each other instead of in two piles.
   const notiStream = (
