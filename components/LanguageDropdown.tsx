@@ -167,7 +167,6 @@ export default function LanguageDropdown({
                 role="option"
                 aria-selected={selected}
                 lang={code}
-                dir={info.dir}
                 translate="no"
                 onClick={() => choose(code)}
                 style={{
@@ -190,7 +189,9 @@ export default function LanguageDropdown({
                   textAlign: 'start',
                 }}
               >
-                <span>{info.label}</span>
+                {/* Direction on the label only: العربية reads right to left but
+                    lines up on the left with every other language. */}
+                <span dir={info.dir}>{info.label}</span>
                 {selected && <Check size={15} color="#4a9eff" />}
               </button>
             )
