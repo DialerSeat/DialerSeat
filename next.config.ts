@@ -39,11 +39,11 @@ const nextConfig: NextConfig = {
               "connect-src 'self' https://*.clerk.accounts.dev https://api.stripe.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io wss://*.telnyx.com https://*.telnyx.com",
               "frame-src https://js.stripe.com https://challenges.cloudflare.com https://*.clerk.accounts.dev",
               "img-src 'self' data: https:",
-              // app/globals.css imports Futura PT from fonts.cdnfonts.com.
-              // style-src covers the @import'd stylesheet; font-src covers the
-              // font files it then references — without BOTH, enforcing this
-              // policy drops the site's typeface everywhere.
-              "style-src 'self' 'unsafe-inline' https://fonts.cdnfonts.com",
+              // app/globals.css declares Futura PT itself, with the font files
+              // on fonts.cdnfonts.com. No stylesheet comes from there any more,
+              // but font-src must keep it — without it, enforcing this policy
+              // drops the site's typeface everywhere.
+              "style-src 'self' 'unsafe-inline'",
               "font-src 'self' data: https://fonts.cdnfonts.com",
             ].join('; '),
           },

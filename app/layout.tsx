@@ -224,6 +224,9 @@ export default async function RootLayout({
     <ClerkProvider localization={clerkLocalization(locale, dict, dialerseatLocalization)} afterSignOutUrl="/">
       <html lang={locale}>
         <head>
+          {/* Futura PT is served from here (see globals.css); connecting
+              before the stylesheet asks for it saves a round trip. */}
+          <link rel="preconnect" href="https://fonts.cdnfonts.com" crossOrigin="anonymous" />
           {IOS_SPLASH_SCREENS.map(({ w, h, orient }) => {
             const media =
               `(device-width: ${Math.round(w / 2)}px) and ` +
