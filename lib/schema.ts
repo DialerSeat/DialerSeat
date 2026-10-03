@@ -9,7 +9,10 @@ export function organizationSchema() {
     '@id': `${SITE_URL}/#organization`,
     name: 'DialerSeat',
     url: SITE_URL,
-    logo: `${SITE_URL}/logo.png`,
+    // /logo.png never existed (404), so Google had no usable logo for the
+    // entity. Organization logos must be crawlable and at least 112x112; the
+    // 512x512 app icon is both.
+    logo: `${SITE_URL}/icons/android-chrome-512x512.png`,
     description:
       'The modern dialer for sales teams and solo agents. Multi-line predictive dialing with per-campaign mode configuration, multiple scripts per campaign, server-side TCPA enforcement, and carrier-level STIR/SHAKEN A-attestation where supported. A flat $35/week per seat, no annual contracts.',
     foundingDate: '2025',
