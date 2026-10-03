@@ -224,9 +224,12 @@ export default async function RootLayout({
     <ClerkProvider localization={clerkLocalization(locale, dict, dialerseatLocalization)} afterSignOutUrl="/">
       <html lang={locale}>
         <head>
-          {/* Futura PT is served from here (see globals.css); connecting
-              before the stylesheet asks for it saves a round trip. */}
+          {/* Futura PT is served from here (see globals.css). Book and Bold
+              are the two weights the homepage hero paints with; fetching them
+              before the stylesheet asks saves the hero's text a round trip. */}
           <link rel="preconnect" href="https://fonts.cdnfonts.com" crossOrigin="anonymous" />
+          <link rel="preload" as="font" type="font/woff" href="https://fonts.cdnfonts.com/s/72205/FuturaCyrillicBook.woff" crossOrigin="anonymous" />
+          <link rel="preload" as="font" type="font/woff" href="https://fonts.cdnfonts.com/s/72205/FuturaCyrillicBold.woff" crossOrigin="anonymous" />
           {IOS_SPLASH_SCREENS.map(({ w, h, orient }) => {
             const media =
               `(device-width: ${Math.round(w / 2)}px) and ` +

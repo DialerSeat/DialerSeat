@@ -1,17 +1,21 @@
 /* Futura PT, declared here rather than through @import of cdnfonts' stylesheet.
    The @import was a render-blocking request to a third origin, found only after
-   this file had downloaded, and its faces had no font-display, so text stayed
-   invisible until the font arrived. On a phone that made the first paragraph
-   the slowest thing on every marketing page. Same files, same weights; swap
-   paints text in the fallback at once and switches when Futura lands. The
-   layout preconnects to fonts.cdnfonts.com so the fetch starts early. */
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 300; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicLight.woff') format('woff'); }
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 400; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicBook.woff') format('woff'); }
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 450; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicMedium.woff') format('woff'); }
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 500; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicDemi.woff') format('woff'); }
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 600; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicHeavy.woff') format('woff'); }
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 700; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicBold.woff') format('woff'); }
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 800; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicExtraBold.woff') format('woff'); }
+   this file had downloaded, so the font files were requested late. Declared
+   here, and with the layout preconnecting and preloading Book and Bold, the
+   fonts start downloading while the HTML is still arriving.
+
+   font-display stays `block`, the behaviour the @import had. `swap` was tried
+   on 2026-10-03: the hero headline re-wrapped when Futura replaced the
+   fallback and pushed the dialer showcase down, a 0.12 to 0.30 layout shift on
+   the homepage, past Google's 0.1 line. Fallback-metric matching would need
+   every one of the ~70 'Futura PT' font stacks in the app to name it. */
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 300; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicLight.woff') format('woff'); }
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 400; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicBook.woff') format('woff'); }
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 450; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicMedium.woff') format('woff'); }
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 500; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicDemi.woff') format('woff'); }
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 600; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicHeavy.woff') format('woff'); }
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 700; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicBold.woff') format('woff'); }
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 800; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicExtraBold.woff') format('woff'); }
 
 @tailwind base;
 @tailwind components;
