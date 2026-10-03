@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { t } from '@/lib/i18n/client'
 
 // =============================================================================
 // CITE THIS — the attribution box on every data page and tool
@@ -35,9 +36,9 @@ function CopyField({ id, label, value }: { id: string; label: string; value: str
   return (
     <div className="cite-field">
       <div className="cite-row">
-        <label htmlFor={id}>{label}</label>
+        <label htmlFor={id}>{t(label)}</label>
         <button type="button" onClick={copy} className="cite-copy">
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? t("Copied") : t("Copy")}
         </button>
       </div>
       <textarea id={id} readOnly value={value} rows={value.length > 160 ? 4 : 2} onFocus={(e) => e.currentTarget.select()} />
@@ -87,10 +88,12 @@ export default function CiteThis({
           border: 1px solid rgba(42,110,255,0.25); background: #fff; color: #1a1c24;
         }
       `}</style>
-      <h3>{embedPath ? 'Use this tool on your site' : 'Cite this page'}</h3>
+      <h3>{embedPath ? t("Use this tool on your site") : t("Cite this page")}</h3>
+      {/* The pasted HTML stays in English: it lands on someone else's page. */}
       <p>
-        Free to quote, link and {embedPath ? 'embed' : 'reference'}. Please credit the source with a
-        link. The HTML is ready to paste.
+        {embedPath
+          ? t("Free to quote, link and embed. Please credit the source with a link. The HTML is ready to paste.")
+          : t("Free to quote, link and reference. Please credit the source with a link. The HTML is ready to paste.")}
       </p>
       <CopyField id={`cite-link-${path}`} label="LINK" value={link} />
       {embed && <CopyField id={`cite-embed-${path}`} label="EMBED" value={embed} />}

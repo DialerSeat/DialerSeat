@@ -13,7 +13,7 @@ import {
   matchupSlug,
   type Competitor,
 } from '@/lib/competitors'
-import { getT, primeLocale, t } from '@/lib/i18n/server'
+import { getLocale, getT, primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 
@@ -196,6 +196,10 @@ export default async function MatchupPage(
   { params }: { params: Promise<{ matchup: string }> }
 ) {
   await primeLocale()
+  // English runs "if you are" straight into the persona, so its first letter
+  // drops to lowercase. Other languages introduce it with a colon, and German
+  // capitalises nouns, so there the persona keeps its own first letter.
+  const lowerFirst = (await getLocale()) === 'en'
   const { matchup } = await params
   const m = resolveMatchup(matchup)
   if (!m) {
@@ -268,10 +272,10 @@ export default async function MatchupPage(
           }}>
             <h2 style={{ fontSize: 20, fontWeight: 'bold', margin: 0 }}>{t("Which one to pick")}</h2>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: INK, marginTop: 12 }}>
-              <strong>{t("Choose {name}", { name: a.name })}</strong> {t("if you are {charAt}{slice}", { charAt: t(a.bestFor).charAt(0).toLowerCase(), slice: t(a.bestFor).slice(1) })}
+              <strong>{t("Choose {name}", { name: a.name })}</strong> {t("if you are {charAt}{slice}", { charAt: lowerFirst ? t(a.bestFor).charAt(0).toLowerCase() : t(a.bestFor).charAt(0), slice: t(a.bestFor).slice(1) })}
             </p>
             <p style={{ fontSize: 15, lineHeight: 1.85, color: INK, marginTop: 8 }}>
-              <strong>{t("Choose {name}", { name: b.name })}</strong> {t("if you are {charAt}{slice}", { charAt: t(b.bestFor).charAt(0).toLowerCase(), slice: t(b.bestFor).slice(1) })}
+              <strong>{t("Choose {name}", { name: b.name })}</strong> {t("if you are {charAt}{slice}", { charAt: lowerFirst ? t(b.bestFor).charAt(0).toLowerCase() : t(b.bestFor).charAt(0), slice: t(b.bestFor).slice(1) })}
             </p>
             <p style={{ fontSize: 14, lineHeight: 1.8, color: MUTED, marginTop: 14 }}>
               {t("The most common mistake in this comparison is reading the advertised rate as the bill. Add the seat minimum, the tier the dialer actually lives on, per-number charges, and any setup fee before deciding which is cheaper.")}</p>

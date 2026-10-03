@@ -431,6 +431,24 @@ export default function SiteHeader({ tenantSlug = null }: { tenantSlug?: string 
           }
         }
 
+        /* Translated buttons run longer than English. On the narrowest phones,
+           tighten the spacing so the language menu stays on screen; English
+           keeps its spacing because it already fits. */
+        @media (max-width: 400px) {
+          html:not([lang="en"]) .site-header {
+            padding-inline-start: 16px !important;
+            padding-inline-end: 16px !important;
+          }
+          html:not([lang="en"]) .site-header-auth-link {
+            letter-spacing: 1px !important;
+            padding: 4px !important;
+          }
+          html:not([lang="en"]) .site-header-auth-btn {
+            letter-spacing: 1px !important;
+            padding: 6px 10px !important;
+          }
+        }
+
         @media (max-width: 380px) {
           .site-header-brand-text {
             font-size: 10px !important;

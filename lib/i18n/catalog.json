@@ -560,7 +560,7 @@
  "[ SET AVAILABLE TO DIAL ]": [
   "app/dashboard/dialer/page.tsx"
  ],
- "{a} vs {b}: Pricing, Dialing Modes, and Who Each One Suits": [
+ "{a} vs {b}: Pricing, Pros & Cons": [
   "app/vs/[matchup]/page.tsx"
  ],
  "{brandName}, return to home": [
@@ -2533,6 +2533,9 @@
  "A local number on every call.": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
+ "A local number, so sellers pick up": [
+  "app/faq/dialer-for-real-estate/page.tsx#prop"
+ ],
  "A login link needs both clickable text and a URL, or leave the link fields blank.": [
   "app/api/whitelabel/onboarding/route.ts"
  ],
@@ -2617,6 +2620,9 @@
  "A predictive dialer calls more numbers than there are free agents, betting that most won’t answer. Usually that bet pays off. Sometimes more people pick up than there are agents to take them, and someone answers to silence.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
+ "A predictive dialer for small call centers, lead-gen agencies and offshore floors: shared campaigns with no duplicate calls, per-lead calling windows, the 3% cap enforced, and $35 per seat per week that you add or pause any week.": [
+  "app/faq/dialer-for-call-centers/page.tsx"
+ ],
  "A predictive-dialing contact-centre platform sold through sales, with setup and integration fees on top of the seat price.": [
   "lib/competitors.ts"
  ],
@@ -2643,6 +2649,9 @@
  ],
  "A real CRM and calling workspace. An unclear dialer.": [
   "app/vs/hookedcrm/view.tsx"
+ ],
+ "A real estate dialer for agents, wholesalers and their VAs: multi-line predictive, local caller ID, calling windows per lead state, and $35 per seat per week with no contract. Bring your list from any data tool.": [
+  "app/faq/dialer-for-real-estate/page.tsx"
  ],
  "A real person reads these. Leave an email if you want an answer back.": [
   "components/SuggestionModal.tsx"
@@ -2798,8 +2807,12 @@
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
  "Abandon rate calculator": [
+  "app/resources/page.tsx",
   "app/tools/abandon-rate-calculator/page.tsx#prop",
   "lib/gutsRail.ts"
+ ],
+ "ABANDON RATE CALCULATOR": [
+  "components/site-footer.tsx"
  ],
  "Abandon Rate Calculator: The 3% Rule for Predictive Dialers | DialerSeat": [
   "app/tools/abandon-rate-calculator/page.tsx"
@@ -2825,6 +2838,9 @@
  "ABANDONS": [
   "app/dialing-modes/view.tsx"
  ],
+ "ABOUT": [
+  "components/site-footer.tsx"
+ ],
  "About $235 to $285 a month on Business, committed for a year": [
   "lib/competitors.ts"
  ],
@@ -2839,6 +2855,9 @@
  ],
  "About $599 a month on Connect (single-line) or $745 on Pro (triple-line), leads included": [
   "lib/competitors.ts"
+ ],
+ "About DialerSeat: Who We Are and How We Research | DialerSeat": [
+  "app/about/page.tsx"
  ],
  "About this page": [
   "app/data/calling-rules-by-country/page.tsx#prop"
@@ -3169,6 +3188,9 @@
  ],
  "Aged and shared leads need a local number": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
+ ],
+ "Aged leads, refis, and the 2026 trigger-lead rules": [
+  "app/faq/view.tsx"
  ],
  "AGED OR SHARED LISTS": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
@@ -3545,6 +3567,12 @@
  "An attorney asks for records of every call placed to a specific phone number over the last 12 months. You export the campaign's calls from the Compliance tab to CSV, filter it to that number, and see every dial timestamp, AMD result, agent who took the call, disposition, and whether it was abandoned. Hand it over. You did the right things, you have the proof.": [
   "app/faq/how-we-keep-compliance/page.tsx"
  ],
+ "An auto dialer is software that places outbound calls from a list automatically, so an agent is not typing numbers. When a person answers, the call is connected to the agent; voicemails and unanswered calls are handled without the agent. The four common types are preview, power, progressive and predictive dialers.": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
+ "An auto dialer places calls from a lead list automatically and connects the agent when a person answers. How auto dialers work, the four types, what the law allows, and what one costs.": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
  "An enterprise contact center platform that publishes its seat prices but sells the dialer separately, as an add-on with no published price.": [
   "lib/competitors.ts"
  ],
@@ -3832,6 +3860,9 @@
   "app/dashboard/leads/page.tsx",
   "app/dashboard/recordings/page.tsx"
  ],
+ "Appointment setting, consent, seasonal seats": [
+  "app/faq/view.tsx"
+ ],
  "APPOINTMENTS": [
   "app/welcome/Showcase.tsx"
  ],
@@ -3846,6 +3877,9 @@
  ],
  "architecture": [
   "app/faq/how-we-keep-compliance/page.tsx"
+ ],
+ "Are auto dialers illegal?": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
  "are billed. A roster this size is worth talking about directly: email": [
   "components/teams/TeamDetail.tsx"
@@ -3876,6 +3910,12 @@
  ],
  "arrive.": [
   "app/faq/send-leads-from-your-crm/page.tsx"
+ ],
+ "Article": [
+  "app/data/calling-rules-by-country/[code]/page.tsx",
+  "app/faq/what-is-an-auto-dialer/page.tsx",
+  "components/VerticalView.tsx",
+  "components/vs-competitor-view.tsx"
  ],
  "As covered on": [
   "app/faq/numbers/view.tsx"
@@ -4004,6 +4044,12 @@
  "Authentication:": [
   "app/privacy/page.tsx"
  ],
+ "Auto dialer is the umbrella term. A predictive dialer is one kind of auto dialer: it dials several lines per agent at once and uses a pacing algorithm to connect answered calls as agents come free. Power and progressive dialers dial one line at a time; preview dialers let the agent read the lead before the call starts.": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
+ "Auto dialer questions": [
+  "app/faq/what-is-an-auto-dialer/page.tsx#prop"
+ ],
  "Auto-advance after disposition (you don't click between calls).": [
   "app/dialing-modes/progressive/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
@@ -4094,6 +4140,9 @@
  "B2B COLD CALLING": [
   "app/dialing-modes/power/page.tsx",
   "app/faq/what-is-a-power-dialer/page.tsx"
+ ],
+ "B2B sales & SDRs": [
+  "lib/gutsRail.ts"
  ],
  "B2B SDR / sales-team focus": [
   "lib/competitorFeatures.ts"
@@ -4529,6 +4578,12 @@
  "By hour of day (UTC)": [
   "app/data/connect-rates/page.tsx"
  ],
+ "By industry": [
+  "app/resources/page.tsx#prop"
+ ],
+ "BY INDUSTRY": [
+  "lib/gutsRail.ts"
+ ],
  "By review data, yes, Kixie holds a strong 4.8/5 rating on G2 across 800+ reviews, and its local presence dialing and native HubSpot/Salesforce integration are genuine strengths for CRM-embedded teams. The tradeoff is pricing structure: dialing power is tiered, so the features most outbound teams actually want, multi-line dialing, AI voice detection, cost more than the advertised entry price.": [
   "app/vs/kixie/page.tsx"
  ],
@@ -4538,6 +4593,9 @@
  "By the late 2000s, progressive had become the standard mode for insurance lead-gen, mortgage refi outreach, and any B2C vertical where the cost of a TCPA complaint dwarfed the throughput gain from predictive. It's still that today, mostly. AMD has gotten dramatically better, pre-dial carrier-side detection from providers like Telnyx in the 2020s is meaningfully more accurate than the early DSP attempts, but the shape of the mode hasn't changed.": [
   "app/dialing-modes/progressive/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
+ ],
+ "Calculators": [
+  "app/resources/page.tsx#prop"
  ],
  "Calendar-aligned analytics (Sun/1st)": [
   "app/vs/everyone/view.tsx",
@@ -4572,6 +4630,9 @@
  ],
  "Call center and predictive dialers": [
   "app/data/dialer-pricing/page.tsx"
+ ],
+ "Call centers": [
+  "lib/gutsRail.ts"
  ],
  "Call connection rates, answer rates, or conversion rates will reach any specific level": [
   "app/terms/page.tsx"
@@ -4698,6 +4759,9 @@
  "CALLER ID & PREFIXES": [
   "app/data/calling-rules-by-country/page.tsx"
  ],
+ "Caller ID and prefixes": [
+  "app/data/calling-rules-by-country/[code]/page.tsx"
+ ],
  "Caller ID name: the text shown alongside a number. It comes from carrier databases rather than from the call itself, and most mobile phones do not display it at all.": [
   "app/faq/dialer-glossary/page.tsx"
  ],
@@ -4726,6 +4790,9 @@
  ],
  "Calling from inside the CRM, with minutes capped by plan: 500 on Starter, 3,000 on Professional, 12,000 on Enterprise. A power dialer is in beta; which plans include it is not stated.": [
   "lib/competitors.ts"
+ ],
+ "Calling hours": [
+  "app/data/calling-rules-by-country/[code]/page.tsx"
  ],
  "CALLING HOURS": [
   "app/data/calling-rules-by-country/page.tsx",
@@ -4774,7 +4841,14 @@
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
  "Calling rules by country": [
+  "app/resources/page.tsx",
   "lib/gutsRail.ts"
+ ],
+ "CALLING RULES BY COUNTRY": [
+  "components/site-footer.tsx"
+ ],
+ "Calling rules, one country at a time": [
+  "app/resources/page.tsx#prop"
  ],
  "Calling US leads from another country": [
   "app/data/calling-rules-by-country/page.tsx#prop"
@@ -5057,6 +5131,9 @@
  "Can I use my preferred real estate data with DialerSeat?": [
   "app/vs/mojo/page.tsx"
  ],
+ "Can I use my PropStream, BatchLeads or DealMachine lists?": [
+  "app/faq/dialer-for-real-estate/page.tsx"
+ ],
  "Can I use single-line on DialerSeat if I prefer it?": [
   "app/vs/phoneburner/page.tsx"
  ],
@@ -5066,8 +5143,14 @@
  "Can my team share campaigns?": [
   "app/faq/view.tsx"
  ],
+ "Can my virtual assistants in the Philippines use it?": [
+  "app/faq/dialer-for-real-estate/page.tsx"
+ ],
  "Can team members export the lead CSV?": [
   "app/faq/dialerseat-teams/view.tsx"
+ ],
+ "Can two agents call the same lead?": [
+  "app/faq/dialer-for-call-centers/page.tsx"
  ],
  "Can two agents on the same campaign call the same lead?": [
   "app/vs/teams/page.tsx"
@@ -5239,6 +5322,9 @@
  "Check a predictive campaign against the US 3% (FTC TSR), UK 3% (Ofcom) and Canada 5% (CRTC) abandoned-call limits. Enter answered and abandoned calls, get the rate and how many more calls you can abandon.": [
   "app/tools/abandon-rate-calculator/page.tsx"
  ],
+ "Check a predictive campaign against the US, UK and Canadian abandoned-call limits. Embeddable.": [
+  "app/resources/page.tsx"
+ ],
  "CHECKED {checkedAt}": [
   "app/status/page.tsx"
  ],
@@ -5265,6 +5351,9 @@
  ],
  "Chrome themed white-label sidebar": [
   "app/faq/white-label-mobile/view.tsx"
+ ],
+ "Cite this page": [
+  "components/CiteThis.tsx"
  ],
  "Cite this page as: DialerSeat, \"Outbound Connect Rates by State and Hour,\" dialerseat.com/data/connect-rates, accessed {generated}.": [
   "app/data/connect-rates/page.tsx"
@@ -5411,6 +5500,9 @@
  ],
  "code: {code}": [
   "app/join/[code]/DeadInvite.tsx"
+ ],
+ "Cold calling businesses after the 2024 rule change": [
+  "app/faq/view.tsx"
  ],
  "Collapse": [
   "components/teams/TeamsSidebar.tsx"
@@ -5567,6 +5659,9 @@
  "Compliance isn't a feature you should be excited about. It's the cost of being allowed to do outbound at all. The dialers that treat it like an afterthought are betting that the bill won't come: and that if it does, it'll land on you, not them.": [
   "app/faq/why-is-compliance-important/page.tsx"
  ],
+ "Compliance on a predictive floor": [
+  "app/faq/dialer-for-call-centers/page.tsx#prop"
+ ],
  "compliance page": [
   "app/faq/how-does-amd-work/page.tsx"
  ],
@@ -5639,8 +5734,14 @@
  "Connect rates": [
   "app/data/connect-rates/page.tsx"
  ],
+ "CONNECT RATES": [
+  "components/site-footer.tsx"
+ ],
  "Connect rates by state & hour": [
   "lib/gutsRail.ts"
+ ],
+ "Connect rates by state and hour": [
+  "app/resources/page.tsx"
  ],
  "connect you to the line immediately. Instead, the system holds the audio for roughly 1-2 seconds and analyzes what comes through. Humans tend to answer with a quick \"hello?\" usually under 1.5 seconds of audio, with a clear pause afterward waiting for a response.": [
   "app/faq/how-does-amd-work/page.tsx"
@@ -5681,6 +5782,9 @@
  ],
  "Cons of DialerSeat": [
   "components/vs-competitor-view.tsx"
+ ],
+ "Consent": [
+  "app/data/calling-rules-by-country/[code]/page.tsx"
  ],
  "CONSENT": [
   "app/data/calling-rules-by-country/page.tsx"
@@ -5813,11 +5917,15 @@
   "app/privacy/page.tsx"
  ],
  "Copied": [
+  "components/CiteThis.tsx",
   "components/teams/CampaignDetail.tsx",
   "components/teams/TeamDetail.tsx"
  ],
  "COPIED ✓": [
   "components/teams/SeatLinksPanel.tsx"
+ ],
+ "Copy": [
+  "components/CiteThis.tsx"
  ],
  "Copy Code": [
   "components/teams/TeamDetail.tsx"
@@ -5843,8 +5951,14 @@
  "Correction:": [
   "app/privacy/page.tsx"
  ],
+ "Corrections": [
+  "app/about/page.tsx#prop"
+ ],
  "COST": [
   "components/teams/TeamsManager.tsx"
+ ],
+ "COST CALCULATOR": [
+  "components/site-footer.tsx"
  ],
  "Cost climbs quickly off the prepay plan": [
   "lib/competitors.ts"
@@ -6012,6 +6126,9 @@
  "Couldn't load this team's numbers. Everything below still works.": [
   "components/teams/TeamOverview.tsx"
  ],
+ "Country": [
+  "app/data/calling-rules-by-country/[code]/page.tsx"
+ ],
  "Coverage, deductible, last quote, family status. Walking in cold costs you the renewal.": [
   "app/dialing-modes/preview/page.tsx",
   "app/faq/what-is-a-preview-dialer/page.tsx"
@@ -6093,6 +6210,9 @@
  "CREATE YOUR ACCOUNT": [
   "app/page.tsx",
   "app/sign-up/[[...sign-up]]/page.tsx"
+ ],
+ "Create your DialerSeat account: every dialing mode for $35 per seat per week, billed weekly. No contract, no setup fee.": [
+  "app/sign-up/layout.tsx"
  ],
  "CREATE YOUR FIRST CAMPAIGN, UPLOAD YOUR LEADS, AND START DIALING.": [
   "app/dashboard/campaigns/page.tsx"
@@ -6209,7 +6329,8 @@
   "app/billing/success/page.tsx"
  ],
  "Data": [
-  "app/data/connect-rates/page.tsx"
+  "app/data/connect-rates/page.tsx",
+  "app/resources/page.tsx#prop"
  ],
  "data controller": [
   "app/privacy/page.tsx"
@@ -6256,7 +6377,8 @@
   "components/teams/AgentDetail.tsx"
  ],
  "Debt collection": [
-  "lib/canonicalFacts.ts"
+  "lib/canonicalFacts.ts",
+  "lib/gutsRail.ts"
  ],
  "DEBT COLLECTION": [
   "app/dialing-modes/preview/page.tsx",
@@ -6500,6 +6622,7 @@
   "components/WhitelabelLivePreview.tsx"
  ],
  "Dialer cost calculator": [
+  "app/resources/page.tsx",
   "app/tools/dialer-cost-calculator/page.tsx#prop",
   "lib/gutsRail.ts"
  ],
@@ -6512,6 +6635,15 @@
  "DIALER DISCONNECTED, reconnecting. Calls cannot connect until this clears.": [
   "app/dashboard/dialer/page.tsx"
  ],
+ "Dialer for B2B sales & SDRs": [
+  "app/faq/view.tsx"
+ ],
+ "Dialer for call centers": [
+  "app/faq/view.tsx"
+ ],
+ "Dialer for debt collection": [
+  "app/faq/view.tsx"
+ ],
  "Dialer for insurance agents": [
   "app/faq/dialer-for-insurance-agents/page.tsx",
   "app/faq/view.tsx"
@@ -6522,15 +6654,34 @@
  "Dialer for Insurance Agents: Medicare, Final Expense, P&C | DialerSeat": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
  ],
+ "Dialer for mortgage loan officers": [
+  "app/faq/view.tsx"
+ ],
+ "Dialer for nonprofits & fundraising": [
+  "app/faq/view.tsx"
+ ],
  "Dialer for offshore & remote agents": [
   "app/faq/view.tsx"
  ],
  "Dialer for Offshore & Remote Agents: VAs, Philippines Teams | DialerSeat": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
+ "Dialer for real estate agents & investors": [
+  "app/faq/view.tsx"
+ ],
+ "Dialer for Real Estate Agents & Investors: Expireds, FSBO, Wholesaling | DialerSeat": [
+  "app/faq/dialer-for-real-estate/page.tsx"
+ ],
+ "Dialer for recruiters": [
+  "app/faq/view.tsx"
+ ],
+ "Dialer for solar sales": [
+  "app/faq/view.tsx"
+ ],
  "Dialer glossary": [
   "app/faq/dialer-glossary/page.tsx",
-  "app/faq/view.tsx"
+  "app/faq/view.tsx",
+  "app/resources/page.tsx"
  ],
  "Dialer Glossary": [
   "app/faq/dialer-glossary/page.tsx"
@@ -6595,16 +6746,24 @@
   "app/vs/teams/page.tsx"
  ],
  "Dialer pricing index": [
+  "app/resources/page.tsx",
   "lib/gutsRail.ts"
  ],
  "Dialer Pricing Index": [
-  "app/data/dialer-pricing/page.tsx#prop"
+  "app/data/dialer-pricing/page.tsx#prop",
+  "lib/canonicalFacts.ts"
+ ],
+ "DIALER PRICING INDEX": [
+  "components/site-footer.tsx"
  ],
  "Dialer Pricing Index, DialerSeat": [
   "app/data/dialer-pricing/page.tsx"
  ],
  "Dialer Pricing: $35 a Week per Seat, No Contract | DialerSeat": [
   "app/pricing/page.tsx"
+ ],
+ "Dialer rules": [
+  "app/data/calling-rules-by-country/[code]/page.tsx"
  ],
  "DIALER RULES": [
   "app/data/calling-rules-by-country/page.tsx"
@@ -6782,6 +6941,9 @@
  ],
  "DialerSeat is a cloud-based outbound calling platform. We provide:": [
   "app/terms/page.tsx"
+ ],
+ "DialerSeat is an outbound dialer at $35 per seat per week. How we research competitor pricing and calling rules, how we handle corrections, and where DialerSeat is not the right choice.": [
+  "app/about/page.tsx"
  ],
  "DialerSeat is operated from the United States. If you access the service from outside the US, your data will be transferred to and processed in the US. By using DialerSeat, you consent to this transfer.": [
   "app/privacy/page.tsx"
@@ -7065,6 +7227,9 @@
  "DialerSeat, and by enough that the add-on price does not change the answer. Five DialerSeat seats are $175 a week, about $758 a month, with all four dialing modes included. Five Talkdesk Voice Essentials seats are $525 a month before the dialer add-on is priced at all.": [
   "app/vs/talkdesk/page.tsx"
  ],
+ "DialerSeat, Dial Smarter. Close Faster.": [
+  "app/layout.tsx"
+ ],
  "DialerSeat, if dialing is the job. All four dialing modes, answering machine detection, local presence and the compliance tooling are in the $35 weekly seat. Nextiva is a phone system first, and reaching predictive dialing means a contact center tier and a sales conversation.": [
   "app/vs/nextiva/page.tsx"
  ],
@@ -7073,9 +7238,6 @@
  ],
  "DialerSeat: Outbound Dialer": [
   "lib/canonicalFacts.ts"
- ],
- "DialerSeat: Predictive & Auto Dialer, $35 a Week": [
-  "app/layout.tsx"
  ],
  "DialerSeat. Aloware is built around CRM workflows; DialerSeat is built around getting through a list, with predictive pacing, per-campaign modes and server-side calling-window enforcement.": [
   "app/vs/aloware/page.tsx"
@@ -7336,6 +7498,9 @@
  "Do I need MANAGER+ to create a team?": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
+ "Do I need to scrub expired and FSBO lists against the Do Not Call Registry?": [
+  "app/faq/dialer-for-real-estate/page.tsx"
+ ],
  "Do more numbers mean better answer rates?": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
@@ -7353,6 +7518,9 @@
   "app/dashboard/leads/page.tsx",
   "app/dashboard/recordings/page.tsx",
   "app/welcome/Showcase.tsx"
+ ],
+ "Do Not Call list": [
+  "app/data/calling-rules-by-country/[code]/page.tsx"
  ],
  "DO NOT CALL LIST": [
   "app/data/calling-rules-by-country/page.tsx"
@@ -7384,7 +7552,8 @@
   "components/ExplainerCrossLinks.tsx"
  ],
  "Do you need 10DLC to make outbound calls?": [
-  "app/faq/10dlc-and-outbound-calling/page.tsx"
+  "app/faq/10dlc-and-outbound-calling/page.tsx",
+  "app/resources/page.tsx"
  ],
  "Do you offer a white-label option?": [
   "app/faq/view.tsx"
@@ -7519,6 +7688,9 @@
  "Does HubSpot have a power dialer?": [
   "app/vs/hubspot/page.tsx"
  ],
+ "Does it work for offshore agents calling US leads?": [
+  "app/faq/dialer-for-call-centers/page.tsx"
+ ],
  "Does JustCall’s $29 plan include the sales dialer?": [
   "app/vs/justcall/page.tsx"
  ],
@@ -7587,6 +7759,9 @@
  ],
  "Done.": [
   "app/dashboard/teams/page.tsx"
+ ],
+ "Donor calls and which Do Not Call rules apply": [
+  "app/faq/view.tsx"
  ],
  "DOWN": [
   "app/status/page.tsx"
@@ -8169,6 +8344,9 @@
  "Expected JSON.": [
   "app/api/suggestions/route.ts"
  ],
+ "Expireds, FSBOs, wholesaling and the VAs who dial": [
+  "app/faq/view.tsx"
+ ],
  "EXPIRES": [
   "app/dashboard/recordings/page.tsx"
  ],
@@ -8469,6 +8647,9 @@
  ],
  "Find the next number and type it in": [
   "app/vs/manual-dialing/page.tsx"
+ ],
+ "Find us": [
+  "app/about/page.tsx#prop"
  ],
  "FIRST CHARGE TODAY · CANCEL ANYTIME": [
   "app/page.tsx"
@@ -8786,11 +8967,20 @@
  "FREE ON EVERY PLAN": [
   "app/faq/mobile/view.tsx"
  ],
+ "Free outbound calling resources: a pricing index of every major dialer, telemarketing rules for 15 countries, live connect-rate data, a dialer cost calculator and an abandon-rate calculator. Free to cite and embed.": [
+  "app/resources/page.tsx"
+ ],
  "Free software is not a free dialer": [
   "app/vs/view.tsx"
  ],
  "Free software is not a free system: published TCO lands at $130-$400+ per agent per month once servers, SIP trunking and administration are counted": [
   "lib/competitors.ts"
+ ],
+ "Free to quote, link and embed. Please credit the source with a link. The HTML is ready to paste.": [
+  "components/CiteThis.tsx"
+ ],
+ "Free to quote, link and reference. Please credit the source with a link. The HTML is ready to paste.": [
+  "components/CiteThis.tsx"
  ],
  "Free to the whole team, no seat charged": [
   "components/teams/TeamModals.tsx"
@@ -8937,6 +9127,9 @@
  "Funded SDR teams where a rep’s hour is worth far more than the seat.": [
   "lib/competitors.ts"
  ],
+ "Fundraising": [
+  "lib/gutsRail.ts"
+ ],
  "Gateway": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
@@ -9013,6 +9206,9 @@
  ],
  "Get your team running this week.": [
   "app/faq/dialerseat-teams/view.tsx"
+ ],
+ "Getting a local number": [
+  "app/data/calling-rules-by-country/[code]/page.tsx"
  ],
  "GETTING A LOCAL NUMBER": [
   "app/data/calling-rules-by-country/page.tsx"
@@ -9126,6 +9322,9 @@
  ],
  "Grateful for the present. Excited about the next year.": [
   "app/faq/why-dialerseat/view.tsx"
+ ],
+ "Guides": [
+  "app/resources/page.tsx#prop"
  ],
  "Half year": [
   "app/dashboard/reports/page.tsx"
@@ -9426,6 +9625,9 @@
   "app/faq/dialer-glossary/page.tsx",
   "app/faq/how-we-keep-compliance/page.tsx"
  ],
+ "How an auto dialer works": [
+  "app/faq/what-is-an-auto-dialer/page.tsx#prop"
+ ],
  "How are you able to charge so much less than the legacy dialers?": [
   "app/faq/why-we-charge/page.tsx"
  ],
@@ -9512,6 +9714,9 @@
  "How Does AMD Work? Answering Machine Detection Explained | DialerSeat": [
   "app/faq/how-does-amd-work/page.tsx"
  ],
+ "How does an auto dialer work?": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
  "How does DialerSeat calculate answer rate?": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
@@ -9581,6 +9786,9 @@
  "How does TCPA enforcement work across a team?": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
+ "How does the price compare with Mojo Dialer?": [
+  "app/faq/dialer-for-real-estate/page.tsx"
+ ],
  "How each use case actually goes.": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
@@ -9601,6 +9809,9 @@
  ],
  "how it works on mobile": [
   "app/faq/white-label/view.tsx"
+ ],
+ "How it works, the four kinds, and what the law allows": [
+  "app/faq/view.tsx"
  ],
  "How it works, where it came from, when to use it": [
   "app/faq/view.tsx"
@@ -9629,6 +9840,9 @@
  "How many numbers do you need?": [
   "components/ExplainerCrossLinks.tsx"
  ],
+ "How many phone numbers a dialer needs": [
+  "app/resources/page.tsx"
+ ],
  "How many phone numbers do I need for an outbound dialer?": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
@@ -9655,6 +9869,9 @@
  ],
  "How much does a predictive dialer cost?": [
   "app/data/dialer-pricing/page.tsx"
+ ],
+ "How much does an auto dialer cost?": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
  "How much does an insurance dialer cost?": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
@@ -9761,6 +9978,9 @@
  "How to scrub": [
   "app/faq/dialer-glossary/page.tsx"
  ],
+ "How to scrub a list against the Do Not Call Registry": [
+  "app/resources/page.tsx"
+ ],
  "How to Scrub Against the Do Not Call Registry": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
@@ -9845,6 +10065,12 @@
  ],
  "How we measure ours": [
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "How we research": [
+  "components/PageStamp.tsx"
+ ],
+ "How we research what we publish": [
+  "app/about/page.tsx#prop"
  ],
  "How we use your data": [
   "app/privacy/page.tsx"
@@ -10198,6 +10424,9 @@
  "instead of": [
   "app/faq/leads/view.tsx"
  ],
+ "Insurance": [
+  "lib/gutsRail.ts"
+ ],
  "Insurance agents": [
   "lib/canonicalFacts.ts"
  ],
@@ -10295,6 +10524,9 @@
  "IS A PREDICTIVE DIALER LEGAL?": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
+ "Is a predictive dialer legal? The 3% rule": [
+  "app/resources/page.tsx"
+ ],
  "Is a Predictive Dialer Legal? The 3% Rule and What It Requires | DialerSeat": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
@@ -10309,6 +10541,12 @@
  ],
  "Is AMD compliant with TCPA / TSR?": [
   "app/faq/how-does-amd-work/page.tsx"
+ ],
+ "Is an auto dialer legal?": [
+  "app/faq/what-is-an-auto-dialer/page.tsx#prop"
+ ],
+ "Is an auto dialer the same as a robocall?": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
  "is available": [
   "app/onboarding/whitelabel/page.tsx"
@@ -10387,6 +10625,9 @@
  ],
  "Is there a seat minimum?": [
   "app/vs/teams/page.tsx"
+ ],
+ "Is there live call monitoring?": [
+  "app/faq/dialer-for-call-centers/page.tsx"
  ],
  "Is VICIdial really free?": [
   "app/vs/vicidial/page.tsx"
@@ -11080,6 +11321,7 @@
   "app/faq/local-presence-dialing/page.tsx",
   "app/faq/numbers/view.tsx",
   "app/faq/view.tsx",
+  "app/resources/page.tsx",
   "app/vs/everyone/view.tsx"
  ],
  "LOCAL PRESENCE DIALING": [
@@ -11360,6 +11602,9 @@
  "Measured on the DialerSeat platform over the last 90 days, from anonymized call records. No lead, customer, or campaign is identifiable here. Free to cite with attribution.": [
   "app/data/connect-rates/page.tsx"
  ],
+ "Measured on the platform over the last 90 days, with sample sizes shown and nothing published below the threshold.": [
+  "app/resources/page.tsx"
+ ],
  "Median buyer saves 23% off list (Vendr data)": [
   "lib/competitorFeatures.ts"
  ],
@@ -11501,6 +11746,9 @@
  "Mojo Dialer bills by the month, so using it for one week still costs a full month: $139 for Triple Line plus the $10 Agent Access licence, before any data add-on. DialerSeat bills by the week, so one week costs $35 and four weeks cost $140, with every dialer mode included.": [
   "app/vs/mojo/page.tsx"
  ],
+ "Mojo Dialer is billed monthly: $139 for Triple Line plus a $10 Agent Access licence, before data add-ons. DialerSeat is $35 per seat per week with predictive included and no contract, so a week costs $35 and four weeks cost $140.": [
+  "app/faq/dialer-for-real-estate/page.tsx"
+ ],
  "Mojo Dialer's lower tiers exclude predictive dialing. PhoneBurner is power-dial only on most tiers. DialerSeat includes all four dialer modes (Preview, Power, Progressive, Predictive) at $35 per week, plus unlimited numbers, team workflow, and compliance enforcement bundled into the same price.": [
   "app/components/StructuredData.tsx"
  ],
@@ -11598,8 +11846,14 @@
  "More dialer for less money than the competition, enterprise-grade quality without the enterprise-level pricing.": [
   "app/welcome/Showcase.tsx"
  ],
+ "More lines when the list is cold, one line when it is warm": [
+  "app/faq/dialer-for-real-estate/page.tsx#prop"
+ ],
  "More platform than a team that just wants to dial a list needs": [
   "lib/competitors.ts"
+ ],
+ "Mortgage": [
+  "lib/gutsRail.ts"
  ],
  "MORTGAGE / REFI": [
   "app/dialing-modes/progressive/page.tsx",
@@ -12418,8 +12672,14 @@
  "No. A call is not counted either way until it has finished. Counting a call that is ringing right now as a miss would pull the rate down during every busy hour.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
+ "No. A robocall plays a recorded message. An auto dialer used for sales connects a live agent to the person who answers. The rules differ: prerecorded calls need prior consent, while live agent calls to numbers not on the Do Not Call Registry generally do not.": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
  "No. A team of two is a supported configuration. Several alternatives have minimums: Orum requires three seats, Aircall three licences, JustCall two.": [
   "app/vs/teams/page.tsx"
+ ],
+ "No. Auto dialers are legal in the US. What the law regulates is how they are used: prerecorded or artificial-voice calls need the person’s consent, predictive dialers must keep abandoned calls under 3% of answered calls per campaign per 30 days, calls must respect calling hours and the Do Not Call Registry, and caller ID must be shown. Some states add their own rules.": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
  "No. Billing starts the day you sign up. Because billing is weekly and you can cancel any week, the most a trial run can cost is one week, $35 per seat.": [
   "app/pricing/page.tsx"
@@ -12447,6 +12707,9 @@
  ],
  "No. Kixie's own content frames this as an intentional choice, Multi-line PowerDialer is positioned as an alternative that avoids the abandoned-call risk associated with predictive dialing. It's a legitimate, compliance-minded design decision, not an oversight. DialerSeat includes predictive dialing alongside power, progressive, and preview modes for teams that want it.": [
   "app/vs/kixie/page.tsx"
+ ],
+ "No. Leads are claimed in the database before they are dialed, so a shared campaign never hands the same lead to two agents. A claim is released automatically if an agent’s browser closes mid-call.": [
+  "app/faq/dialer-for-call-centers/page.tsx"
  ],
  "No. Live call monitoring, whisper, and barge are not built, and neither is call scoring or workforce management. If those are requirements, an enterprise contact-centre platform is the better buy.": [
   "app/faq/teams-how-it-works/page.tsx"
@@ -12697,6 +12960,9 @@
  "Not what you expected? Email": [
   "app/faq/billing/view.tsx"
  ],
+ "Not yet. Listen, whisper and barge are not built, and neither are call scoring or workforce management. The owner sees which agents are live, what campaign each is on, and per-agent calls, connects and dispositions for any date range.": [
+  "app/faq/dialer-for-call-centers/page.tsx"
+ ],
  "Not your agent": [
   "app/api/teams/analytics/route.ts"
  ],
@@ -12865,11 +13131,17 @@
  "Offshore & Remote Agents": [
   "lib/canonicalFacts.ts"
  ],
+ "Offshore agents": [
+  "lib/gutsRail.ts"
+ ],
  "Offshore Agents": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
  "OFFSHORE AGENTS": [
   "app/faq/teams-how-it-works/page.tsx"
+ ],
+ "Offshore floors dialing the US": [
+  "app/faq/dialer-for-call-centers/page.tsx#prop"
  ],
  "Often a separate one-time or enterprise fee on top of the base plan": [
   "app/faq/white-label-mobile/view.tsx"
@@ -13044,6 +13316,9 @@
  "One line per agent. The instant you finish a call, it dials the next lead automatically, no clicking between calls. You control the pace by toggling available / unavailable.": [
   "app/faq/dialer-modes/page.tsx"
  ],
+ "One list, the whole floor, no double calls": [
+  "app/faq/dialer-for-call-centers/page.tsx#prop"
+ ],
  "One month, because a month is the smallest unit sold. Setup fees extra.": [
   "app/vs/everyone/view.tsx"
  ],
@@ -13095,6 +13370,9 @@
  ],
  "One subscription plus one dialer seat": [
   "lib/competitors.ts"
+ ],
+ "One that fits your lists. Expireds and FSBOs are worked fast and in volume, so multi-line or predictive dialing and a local caller ID matter most. Referral and sphere calls need preview dialing and good notes. DialerSeat includes all four modes at $35 per seat per week, so you choose per campaign instead of per plan.": [
+  "app/faq/dialer-for-real-estate/page.tsx"
  ],
  "One thing worth knowing,": [
   "app/faq/billing/view.tsx",
@@ -13354,6 +13632,9 @@
  "OTHER COMPARISONS": [
   "app/vs/[matchup]/page.tsx"
  ],
+ "Other countries": [
+  "app/data/calling-rules-by-country/[code]/page.tsx#prop"
+ ],
  "Other explainers": [
   "components/ExplainerCrossLinks.tsx"
  ],
@@ -13397,8 +13678,14 @@
  "Outbound calling platform (auto dialer) for sales agents and teams": [
   "lib/canonicalFacts.ts"
  ],
+ "Outbound Calling Resources: Data, Calculators & Guides | DialerSeat": [
+  "app/resources/page.tsx"
+ ],
  "Outbound calling rules by country": [
   "app/data/calling-rules-by-country/page.tsx#prop"
+ ],
+ "Outbound Calling Rules by Country": [
+  "lib/canonicalFacts.ts"
  ],
  "Outbound calling rules by country, DialerSeat": [
   "app/data/calling-rules-by-country/page.tsx"
@@ -13409,6 +13696,9 @@
  "outbound calls than it has agents to handle.": [
   "app/dialing-modes/predictive/page.tsx",
   "app/faq/what-is-a-predictive-dialer/page.tsx"
+ ],
+ "Outbound connect rates by state and hour": [
+  "app/data/connect-rates/page.tsx#prop"
  ],
  "Outbound Connect Rates by State and Hour": [
   "app/data/connect-rates/page.tsx"
@@ -13643,6 +13933,9 @@
  ],
  "pays to unlock team creation, white-labeling, and the advanced analytics view. It doesn't change what an individual agent pays to dial, that's still $35/week per seat, whether the owner absorbs it or the agent covers their own.": [
   "app/faq/manager-plus/view.tsx"
+ ],
+ "Penalties": [
+  "app/data/calling-rules-by-country/[code]/page.tsx"
  ],
  "PENALTIES": [
   "app/data/calling-rules-by-country/page.tsx"
@@ -14155,10 +14448,6 @@
   "app/faq/what-is-a-progressive-dialer/page.tsx",
   "components/ExplainerCrossLinks.tsx"
  ],
- "Predictive & Auto Dialer: $35 a Week, No Contract | DialerSeat": [
-  "app/layout.tsx",
-  "app/page.tsx"
- ],
  "Predictive + Preview": [
   "lib/competitorFeatures.ts"
  ],
@@ -14207,6 +14496,9 @@
   "app/vs/everyone/view.tsx",
   "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
+ ],
+ "Predictive Dialer for Call Centers: Weekly Seats, No Contract | DialerSeat": [
+  "app/faq/dialer-for-call-centers/page.tsx"
  ],
  "Predictive dialer for cold outbound": [
   "lib/competitorFeatures.ts"
@@ -14439,6 +14731,9 @@
  "Preview, power, progressive and predictive all match locally.": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
+ "Preview, power, progressive and predictive dialing": [
+  "app/resources/page.tsx"
+ ],
  "Preview, power, progressive, and predictive: all four included at the base price, selectable per campaign.": [
   "lib/competitors.ts"
  ],
@@ -14489,6 +14784,7 @@
   "app/vs/[matchup]/page.tsx",
   "app/vs/hookedcrm/view.tsx",
   "components/ExplainerCrossLinks.tsx",
+  "components/site-footer.tsx",
   "components/vs-competitor-view.tsx#prop"
  ],
  "Pricing and packaging for other vendors change without notice and are summarised here from their public materials. Verify current terms with the vendor before buying. Corrections are welcome, we would rather be accurate than flattering. Competitors listed:": [
@@ -14514,6 +14810,9 @@
  ],
  "Pricing: a week costs a week": [
   "lib/gutsRail.ts"
+ ],
+ "Pricing: One Week Costs $35, Not a Month": [
+  "lib/canonicalFacts.ts"
  ],
  "Primary": [
   "app/onboarding/whitelabel/page.tsx"
@@ -14729,8 +15028,14 @@
  "Public: anyone in the team, seat still required": [
   "components/teams/TeamModals.tsx"
  ],
+ "Published by DialerSeat": [
+  "components/PageStamp.tsx"
+ ],
  "Published price, no setup fee, and no sales conversation required to start dialing.": [
   "app/vs/calltools/page.tsx"
+ ],
+ "Published prices for multi-line and predictive dialers run from about $49 to $250 per seat per month where they are published at all, usually billed monthly or annually. DialerSeat is $35 per seat per week with all four dialer modes included and no contract.": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
  "Published pricing": [
   "lib/competitors.ts"
@@ -14793,7 +15098,8 @@
   "app/data/dialer-pricing/page.tsx#prop",
   "app/faq/dialer-for-offshore-agents/page.tsx",
   "app/faq/teams-how-it-works/page.tsx",
-  "app/vs/teams/page.tsx"
+  "app/vs/teams/page.tsx",
+  "components/VerticalView.tsx#prop"
  ],
  "Questions about these Terms? Email": [
   "app/terms/page.tsx"
@@ -14900,6 +15206,9 @@
  "Real connect-rate data measured on the DialerSeat platform: which hours and which states actually answer. Computed from anonymized call records, updated continuously, with sample sizes shown.": [
   "app/data/connect-rates/page.tsx"
  ],
+ "Real estate": [
+  "lib/gutsRail.ts"
+ ],
  "Real Estate": [
   "app/welcome/Showcase.tsx",
   "components/DialerShowcase.tsx"
@@ -14915,6 +15224,9 @@
  ],
  "Real estate CRM focus": [
   "lib/competitorFeatures.ts"
+ ],
+ "Real estate dialer questions": [
+  "app/faq/dialer-for-real-estate/page.tsx#prop"
  ],
  "Real estate dialers": [
   "app/data/dialer-pricing/page.tsx"
@@ -15080,6 +15392,9 @@
  "Recruiters": [
   "lib/canonicalFacts.ts"
  ],
+ "Recruiting": [
+  "lib/gutsRail.ts"
+ ],
  "RECURRING REVENUE": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
@@ -15142,6 +15457,9 @@
  ],
  "Registry access is granted to your organization, so we cannot do it for you.": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
+ ],
+ "Regulation F, the 7-in-7 rule, calling hours": [
+  "app/faq/view.tsx"
  ],
  "REJECT": [
   "components/teams/RosterPanel.tsx"
@@ -15300,6 +15618,7 @@
   "lib/competitors.ts"
  ],
  "RESOURCES": [
+  "components/site-footer.tsx",
   "lib/gutsRail.ts"
  ],
  "Respond to lawful subpoenas, court orders, and government requests.": [
@@ -15886,6 +16205,9 @@
  "Seats bill weekly and cancel anytime. Ten seats": [
   "app/dashboard/teams/page.tsx"
  ],
+ "Seats by the week": [
+  "app/faq/dialer-for-call-centers/page.tsx#prop"
+ ],
  "Seats, lead distribution, and who gets billed": [
   "app/faq/view.tsx"
  ],
@@ -16270,6 +16592,9 @@
  "SIGN IN": [
   "app/page.tsx"
  ],
+ "Sign In to DialerSeat": [
+  "app/sign-in/layout.tsx"
+ ],
  "Sign in to your account.": [
   "app/faq/mobile/view.tsx"
  ],
@@ -16281,6 +16606,9 @@
  ],
  "Sign up for DialerSeat MANAGER+ ($75/wk).": [
   "app/faq/dialerseat-teams/view.tsx"
+ ],
+ "Sign Up for DialerSeat: $35 a Week, No Contract": [
+  "app/sign-up/layout.tsx"
  ],
  "Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime.": [
   "app/page.tsx"
@@ -16440,7 +16768,8 @@
  ],
  "Solar": [
   "app/welcome/Showcase.tsx",
-  "components/DialerShowcase.tsx"
+  "components/DialerShowcase.tsx",
+  "lib/gutsRail.ts"
  ],
  "SOLAR": [
   "app/faq/scripts/view.tsx"
@@ -16530,6 +16859,9 @@
  "SORT": [
   "app/dashboard/leads/page.tsx"
  ],
+ "Sources": [
+  "app/data/calling-rules-by-country/[code]/page.tsx#prop"
+ ],
  "Spam Likely": [
   "app/faq/dialer-glossary/page.tsx"
  ],
@@ -16559,6 +16891,9 @@
  ],
  "Spreading volume so no number runs hot": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
+ ],
+ "Staffing desks calling candidates": [
+  "app/faq/view.tsx"
  ],
  "Standard $62/month and Pro $104/month billed monthly. smrtDialer is an add-on on top: about $42/seat/month single-line or $75/seat/month multi-line. Call time is then deducted from pre-paid credits, from around $0.02/minute.": [
   "lib/competitors.ts"
@@ -17186,6 +17521,9 @@
  "Telemarketing Calling Hours by State: What DialerSeat Enforces | DialerSeat": [
   "app/faq/calling-hours/page.tsx"
  ],
+ "Telemarketing calling hours by US state": [
+  "app/resources/page.tsx"
+ ],
  "Telemarketing compliance isn't a nice-to-have. The FTC can write checks north of $53,000 per violation. Here's why it matters, and why most dialers treat it as someone else's problem.": [
   "app/faq/why-is-compliance-important/page.tsx"
  ],
@@ -17236,6 +17574,9 @@
  ],
  "Ten buyers at $100/week is $1,000/week in bundling revenue on top of whatever you already charge for the leads themselves, against a fixed $75/week Manager+ cost, margin that gets better, not worse, as you add more buyers, since the platform fee never changes.": [
   "app/faq/manager-plus/view.tsx"
+ ],
+ "Ten seats are $350 a week, plus $75 a week for the owner on Manager+, which adds team management and white-labeling. No setup fee, no contract and no seat minimum, and a seat can be paused any week without losing the agent’s data.": [
+  "app/faq/dialer-for-call-centers/page.tsx"
  ],
  "Tenant check failed": [
   "app/api/manager/analytics/route.ts",
@@ -17478,8 +17819,12 @@
  "the compliance page": [
   "app/faq/numbers/view.tsx"
  ],
+ "The compliance part, for real estate": [
+  "app/faq/dialer-for-real-estate/page.tsx#prop"
+ ],
  "The compliance part, said honestly": [
-  "app/faq/dialer-for-insurance-agents/page.tsx"
+  "app/faq/dialer-for-insurance-agents/page.tsx",
+  "components/VerticalView.tsx#prop"
  ],
  "The controller does the math. Auto-degrades before you hit the FTC cap. Live abandon-rate display in the terminal. $35/week per seat, no contract.": [
   "app/dialing-modes/predictive/page.tsx#prop",
@@ -17644,6 +17989,9 @@
  ],
  "The four DialerSeat dialing modes in plain English. Preview, power, progressive, and predictive: what each one does and when to use it, summarized simply.": [
   "app/faq/dialer-modes/page.tsx"
+ ],
+ "The four kinds of auto dialer": [
+  "app/faq/what-is-an-auto-dialer/page.tsx#prop"
  ],
  "The four modes, in plain English.": [
   "app/faq/dialer-modes/page.tsx"
@@ -18066,6 +18414,9 @@
  ],
  "the right answer: {friction}.": [
   "app/vs/[matchup]/page.tsx"
+ ],
+ "The right mode for each list": [
+  "components/VerticalView.tsx#prop"
  ],
  "The right way to evaluate a dialer's compliance posture isn't to ask whether it": [
   "app/faq/how-we-keep-compliance/page.tsx"
@@ -19065,6 +19416,9 @@
  "Update cycle": [
   "app/faq/white-label-mobile/view.tsx"
  ],
+ "Updated {date}": [
+  "components/vs-competitor-view.tsx"
+ ],
  "UPGRADE TO WHITE-LABEL →": [
   "app/faq/white-label/view.tsx"
  ],
@@ -19162,6 +19516,9 @@
  "use third-party advertising cookies. We do": [
   "app/privacy/page.tsx"
  ],
+ "Use this tool on your site": [
+  "components/CiteThis.tsx"
+ ],
  "Use your data to compete with you": [
   "app/privacy/page.tsx"
  ],
@@ -19210,6 +19567,9 @@
  ],
  "Varies by provider: often B or C-level, sometimes not disclosed at all": [
   "app/faq/numbers/view.tsx"
+ ],
+ "VAs who dial for you": [
+  "app/faq/dialer-for-real-estate/page.tsx#prop"
  ],
  "VAs, Philippines teams, and what they need": [
   "app/faq/view.tsx"
@@ -19709,6 +20069,9 @@
  "weekly from today. Cancel anytime in Settings.": [
   "app/billing/success/page.tsx"
  ],
+ "Weekly seats, shared campaigns, offshore floors": [
+  "app/faq/view.tsx"
+ ],
  "Weeks of dialing": [
   "components/tools/DialerCostCalculator.tsx"
  ],
@@ -19779,6 +20142,9 @@
  "What actually happens when you cancel, when a payment fails, when you add or remove a seat mid-week, and how weekly billing through Stripe works in practice, not just the marketing line.": [
   "app/faq/billing/page.tsx"
  ],
+ "What an auto dialer costs": [
+  "app/faq/what-is-an-auto-dialer/page.tsx#prop"
+ ],
  "What an insurance agent needs from a dialer: calling windows enforced per lead state, local caller ID, recordings you can download, four dialing modes, and $35 per seat per week with no contract.": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
  ],
@@ -19803,6 +20169,9 @@
  "What carries over the border": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
+ "What changed recently": [
+  "app/data/calling-rules-by-country/[code]/page.tsx#prop"
+ ],
  "What counts as an abandoned call?": [
   "app/tools/abandon-rate-calculator/page.tsx"
  ],
@@ -19814,6 +20183,9 @@
  ],
  "What DialerSeat enforces for you": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
+ ],
+ "What DialerSeat is": [
+  "app/about/page.tsx#prop"
  ],
  "What does “lines per agent” mean?": [
   "app/faq/dialer-glossary/page.tsx"
@@ -19829,6 +20201,9 @@
  ],
  "What does a five-person team cost on Close?": [
   "app/vs/close/page.tsx"
+ ],
+ "What does a ten-agent floor cost?": [
+  "app/faq/dialer-for-call-centers/page.tsx"
  ],
  "What does Close cost?": [
   "app/vs/close/page.tsx"
@@ -19886,6 +20261,9 @@
  ],
  "What does Ytel cost?": [
   "app/vs/ytel/page.tsx"
+ ],
+ "What each dialer bills for the weeks and agents you need, with seat minimums and annual terms applied. Embeddable.": [
+  "app/resources/page.tsx"
  ],
  "What five agents actually cost, across every tool": [
   "app/vs/view.tsx"
@@ -19964,6 +20342,17 @@
   "app/faq/dialer-glossary/page.tsx",
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
+ "WHAT IS AN AUTO DIALER": [
+  "components/site-footer.tsx"
+ ],
+ "What is an auto dialer?": [
+  "app/faq/view.tsx",
+  "app/faq/what-is-an-auto-dialer/page.tsx",
+  "app/resources/page.tsx"
+ ],
+ "What Is an Auto Dialer? How It Works, Types, and Is It Legal | DialerSeat": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
  "What is Dialer.io genuinely better at?": [
   "app/vs/dialer-io/page.tsx"
  ],
@@ -19976,6 +20365,12 @@
  ],
  "What is the best dialer for insurance agents?": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
+ ],
+ "What is the best dialer for real estate agents?": [
+  "app/faq/dialer-for-real-estate/page.tsx"
+ ],
+ "What is the difference between an auto dialer and a predictive dialer?": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
  "What is the difference between connect rate and contact rate?": [
   "app/faq/dialer-glossary/page.tsx"
@@ -20003,7 +20398,9 @@
  ],
  "What it costs": [
   "app/faq/dialer-for-insurance-agents/page.tsx",
-  "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
+  "app/faq/dialer-for-real-estate/page.tsx#prop",
+  "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx",
+  "components/VerticalView.tsx#prop"
  ],
  "WHAT IT IS": [
   "app/faq/managers/view.tsx"
@@ -20062,6 +20459,7 @@
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
  "What the owner sees": [
+  "app/faq/dialer-for-call-centers/page.tsx#prop",
   "app/faq/teams-how-it-works/page.tsx"
  ],
  "WHAT THE OWNER SEES": [
@@ -20081,6 +20479,9 @@
  ],
  "What this team works": [
   "components/teams/TeamModals.tsx"
+ ],
+ "What to look for in an auto dialer": [
+  "app/faq/what-is-an-auto-dialer/page.tsx#prop"
  ],
  "What to send": [
   "app/faq/send-leads-from-your-crm/page.tsx",
@@ -20289,6 +20690,9 @@
  ],
  "Where DialerSeat fits": [
   "app/vs/[matchup]/page.tsx"
+ ],
+ "Where DialerSeat is not the right choice": [
+  "app/about/page.tsx#prop"
  ],
  "WHERE DIALERSEAT WINS": [
   "app/vs/hookedcrm/view.tsx"
@@ -20558,7 +20962,8 @@
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
  "Why calls show “Spam Likely”": [
-  "app/faq/view.tsx"
+  "app/faq/view.tsx",
+  "app/resources/page.tsx"
  ],
  "why calls show Spam Likely": [
   "app/faq/view.tsx"
@@ -20874,6 +21279,9 @@
  "Write them, attach them, reorder them": [
   "app/faq/view.tsx"
  ],
+ "Writing about outbound calling?": [
+  "app/resources/page.tsx#prop"
+ ],
  "Written agreement.": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
@@ -20988,6 +21396,12 @@
  "Yes: write as many as you want, attach them to whichever campaigns need them, and reorder which one shows first if a campaign has several. Personal scripts are yours alone; a Manager+ team owner can also publish a script the whole team sees.": [
   "app/faq/view.tsx"
  ],
+ "Yes. Agents dial from a browser anywhere at the same seat price, and calling windows are enforced against each lead’s own state, so an agent in another time zone cannot call outside the lead’s legal hours.": [
+  "app/faq/dialer-for-call-centers/page.tsx"
+ ],
+ "Yes. Agents dial from a browser anywhere, at the same $35 per seat per week, and calling windows follow each lead’s own state, so a VA in another time zone cannot call a US seller outside legal hours.": [
+  "app/faq/dialer-for-real-estate/page.tsx"
+ ],
  "Yes. Agents need a browser and an internet connection; there is no per-country restriction and no separate international seat price. Calling windows are enforced against the lead’s state rather than the agent’s, so an agent in another timezone cannot dial outside a prospect’s legal window.": [
   "app/vs/teams/page.tsx"
  ],
@@ -21005,6 +21419,9 @@
  ],
  "Yes. Both of Ringover’s published plans carry a twelve-month commitment and a three-user minimum. DialerSeat bills weekly with no contract and a one-seat minimum.": [
   "app/vs/ringover/page.tsx"
+ ],
+ "Yes. Calling a homeowner to solicit a listing or a purchase is a marketing call, and many FSBO and expired numbers are on the National Do Not Call Registry. Scrubbing is your responsibility; DialerSeat blocks numbers on your own suppression list and anyone who opts out.": [
+  "app/faq/dialer-for-real-estate/page.tsx"
  ],
  "Yes. Calling windows are enforced server-side against each lead’s own state, not your location, so an agent in one time zone cannot dial a lead in another outside that lead’s legal hours. States with stricter rules than the federal window are enforced at the stricter rule.": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
@@ -21053,6 +21470,9 @@
  ],
  "Yes. Every DialerSeat seat includes multi-line predictive dialing, along with preview and power dialing, at the same $35/week price. WAVV requires upgrading to its top Multi Line tier to get predictive dialing across multiple lines.": [
   "app/vs/wavv/page.tsx"
+ ],
+ "Yes. Export the list as a CSV and upload it; the columns are detected automatically. If your CRM or data tool can send a webhook, lead drip on Manager+ sends new leads straight into a running campaign. DialerSeat does not sell lead data, so you keep your own source.": [
+  "app/faq/dialer-for-real-estate/page.tsx"
  ],
  "Yes. Export the list from your FSBO, expired or skip-tracing provider as a CSV and upload it; the columns are detected automatically. If your CRM or data tool can send a webhook, lead drip on Manager+ pushes new leads straight into a running campaign. You keep your preferred data source without paying Mojo a markup.": [
   "app/vs/mojo/page.tsx"
@@ -21406,6 +21826,9 @@
  "You upgrade your account to white-label in /billing. You're now at $75/week. The white-label config panel appears in your settings.": [
   "app/faq/white-label/view.tsx"
  ],
+ "You upload a list of leads. The dialer calls them in order, detects whether a person or an answering machine picked up, connects live answers to an agent, and records the outcome of each call so the lead is retried, called back or closed out. A predictive dialer calls several numbers per agent at once to cut the waiting between conversations.": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
  "You upload your logo (we'll auto-generate variants, light mode, dark mode, favicon, social-share). You pick your two colors. You set your custom domain, we generate a CNAME record you point at us, and SSL provisioning happens automatically in ~10 minutes.": [
   "app/faq/white-label/view.tsx"
  ],
@@ -21605,6 +22028,9 @@
  ],
  "Your list contains 5,000 leads across all four U.S. time zones. When dialing starts, the system filters in real-time: leads currently in their local 9 AM-9 PM window are eligible, leads outside it are skipped with": [
   "app/faq/how-we-keep-compliance/page.tsx"
+ ],
+ "Your list, from whatever tool you use": [
+  "app/faq/dialer-for-real-estate/page.tsx#prop"
  ],
  "Your login link needs both clickable text and a URL, or clear the link fields.": [
   "app/onboarding/whitelabel/page.tsx"
