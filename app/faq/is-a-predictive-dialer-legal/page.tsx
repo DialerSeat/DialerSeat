@@ -220,7 +220,7 @@ export default async function Page() {
           </p>
           <div className="guts-btns">
             <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
-            <Link href="/faq/what-is-a-predictive-dialer" className="guts-btn secondary">
+            <Link href="/dialing-modes/predictive" className="guts-btn secondary">
               {t("WHAT IS A PREDICTIVE DIALER?")}</Link>
           </div>
         </GutsSection>

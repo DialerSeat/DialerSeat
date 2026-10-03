@@ -106,22 +106,22 @@ const MODES: Term[] = [
   {
     term: 'Preview dialer',
     def: 'The agent sees the lead before the call is placed and starts it themselves. Slowest, and the right choice when each lead is worth preparing for.',
-    see: { href: '/faq/what-is-a-preview-dialer', label: msg("Preview dialing") },
+    see: { href: '/dialing-modes/preview', label: msg("Preview dialing") },
   },
   {
     term: 'Power dialer',
     def: 'Dials the next lead automatically as soon as the last call ends. One call at a time, with no pause between them.',
-    see: { href: '/faq/what-is-a-power-dialer', label: msg("Power dialing") },
+    see: { href: '/dialing-modes/power', label: msg("Power dialing") },
   },
   {
     term: 'Progressive dialer',
     def: 'Dials automatically with the agent already on the line, so there is no connect delay when somebody answers.',
-    see: { href: '/faq/what-is-a-progressive-dialer', label: msg("Progressive dialing") },
+    see: { href: '/dialing-modes/progressive', label: msg("Progressive dialing") },
   },
   {
     term: 'Predictive dialer',
     def: 'Dials several numbers at once per available agent and passes the first person who answers to an agent. The most conversations per hour, and the only mode the abandon rules apply to.',
-    see: { href: '/faq/what-is-a-predictive-dialer', label: msg("Predictive dialing") },
+    see: { href: '/dialing-modes/predictive', label: msg("Predictive dialing") },
   },
   {
     term: 'Lines per agent',

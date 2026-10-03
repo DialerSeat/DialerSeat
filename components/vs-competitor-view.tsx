@@ -9,7 +9,7 @@ import PageStamp from '@/components/PageStamp'
 import JsonLd from '@/components/json-ld'
 import { pageDate } from '@/lib/pageDates'
 import { vsRail } from '@/lib/gutsRail'
-import { DIALERSEAT, type Competitor } from '@/lib/competitors'
+import { COMPETITORS, DIALERSEAT, crossShoppedPairs, matchupSlug, type Competitor } from '@/lib/competitors'
 import { featuresFor } from '@/lib/competitorFeatures'
 import { t } from '@/lib/i18n/client'
 
@@ -54,6 +54,15 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
   // dateModified below and the sitemap's <lastmod> all read lib/pageDates.
   const route = `/vs/${c.slug}`
   const updated = pageDate(route)
+  // The search is "<tool> alternatives", plural: the searcher wants the
+  // shortlist, not one rival. The others on this tool's shortlist (same
+  // segment, the gate the head-to-head pages use) come straight from their
+  // own records, so the table makes no claim the comparison pages don't.
+  const alternatives = COMPETITORS.filter((o) => o.segment === c.segment && o.slug !== c.slug)
+  // Head-to-heads were linked only from other head-to-heads sharing a tool,
+  // which left a segment with one pair (CloudTalk vs Aircall) linked from
+  // nowhere. Each tool's own page is where its matchups belong.
+  const matchups = crossShoppedPairs().filter(([x, y]) => x.slug === c.slug || y.slug === c.slug)
 
   return (
     <>
@@ -173,6 +182,50 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
               {t("If that describes you, take {name}. It is a real product with real strengths and no comparison page should talk you out of the right tool.", { name: c.name })}</p>
           </div>
         </GutsSection>
+
+        {alternatives.length > 0 && (
+          <GutsSection icon="list" title={t("Other {name} alternatives", { name: c.name })}>
+            <p>
+              {t("The other tools buyers shortlist against {name}, with the price each vendor publishes and who each one suits.", { name: c.name })}</p>
+            <div className="guts-tablewrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t("TOOL")}</th>
+                    <th>{t("PUBLISHED PRICING")}</th>
+                    <th>{t("BEST FOR")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="ds-cell">DialerSeat</td>
+                    <td className="ds-cell" style={{ textAlign: 'start' }}>{t(DIALERSEAT.pricing)}</td>
+                    <td className="ds-cell" style={{ textAlign: 'start' }}>{t(DIALERSEAT.bestFor)}</td>
+                  </tr>
+                  {alternatives.map((o) => (
+                    <tr key={o.slug}>
+                      <td><Link href={`/vs/${o.slug}`}>{o.name}</Link></td>
+                      <td style={{ textAlign: 'start' }}>{t(o.pricing)}</td>
+                      <td style={{ textAlign: 'start' }}>{t(o.bestFor)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {matchups.length > 0 && (
+              <>
+                <h3 style={{ marginTop: 28 }}>{t("Head-to-head comparisons")}</h3>
+                <div className="guts-btns">
+                  {matchups.map(([x, y]) => (
+                    <Link key={matchupSlug(x, y)} href={`/vs/${matchupSlug(x, y)}`} className="guts-btn secondary">
+                      {t("{name} vs {name2}", { name: x.name, name2: y.name })}
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
+          </GutsSection>
+        )}
 
         <GutsSection icon="check" title={t("Who should pick DialerSeat")}>
           <p>{t(DIALERSEAT.bestFor)}</p>

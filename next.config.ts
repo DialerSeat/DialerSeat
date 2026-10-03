@@ -72,6 +72,13 @@ const nextConfig: NextConfig = {
         destination: '/.well-known/security.txt',
         permanent: true,
       },
+      // /signup was linked from two FAQ pages and 404'd. Those links now point
+      // at /sign-up; this catches the same address anywhere else it was shared.
+      {
+        source: '/signup',
+        destination: '/sign-up',
+        permanent: true,
+      },
     ]
   },
 }

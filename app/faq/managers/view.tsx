@@ -312,7 +312,7 @@ export default function View() {
               {t("$35/week per active seat. No contracts. Cancel anytime.")}<br/>
               {t("You decide what to charge your agents on top.")}</p>
             <Link
-              href={isSignedIn ? '/dashboard/teams' : '/signup'}
+              href={isSignedIn ? '/dashboard/teams' : '/sign-up'}
               className="faq-cta-btn"
             >
               {isSignedIn ? t("GO TO TEAMS →") : t("GET STARTED →")}

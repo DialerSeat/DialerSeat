@@ -154,7 +154,7 @@ export default async function Page() {
                   <p>
                     {t("AMD itself doesn't change your compliance picture. The compliance rules apply to the act of placing the call, not to whether you connect to a human or a machine afterward.")}</p>
                   <p>
-                    {t("AMD is, however, what makes")}{" "}<Link href="/faq/what-is-a-progressive-dialer">{t("progressive mode")}</Link> {t("work as a higher-throughput alternative to power, without triggering the FTC's 3% abandon cap. See the")}{" "}<Link href="/faq/why-is-compliance-important">{t("compliance page")}</Link> {t("for more.")}</p>
+                    {t("AMD is, however, what makes")}{" "}<Link href="/dialing-modes/progressive">{t("progressive mode")}</Link> {t("work as a higher-throughput alternative to power, without triggering the FTC's 3% abandon cap. See the")}{" "}<Link href="/faq/why-is-compliance-important">{t("compliance page")}</Link> {t("for more.")}</p>
                 </div>
               </details>
             </div>

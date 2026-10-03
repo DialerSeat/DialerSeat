@@ -47,7 +47,7 @@ const MODES = [
     body:
       msg("The dialer shows you each lead before anything rings. You read their info, get ready, and press dial when you want to. One call at a time, fully at your pace."),
     best: 'Best for high-value or complex calls where prep matters more than speed.',
-    href: '/faq/what-is-a-preview-dialer',
+    href: '/dialing-modes/preview',
   },
   {
     key: 'power',
@@ -57,7 +57,7 @@ const MODES = [
     body:
       msg("One line per agent. The instant you finish a call, it dials the next lead automatically, no clicking between calls. You control the pace by toggling available / unavailable."),
     best: 'Best for clean lists when you want steady, hands-free volume.',
-    href: '/faq/what-is-a-power-dialer',
+    href: '/dialing-modes/power',
   },
   {
     key: 'progressive',
@@ -67,7 +67,7 @@ const MODES = [
     body:
       'Same auto-dialing as power, except it listens to each pickup with answering-machine detection and quietly drops voicemails and dead air, only connecting you to real people.',
     best: 'Best when you want power-style volume without wasting time on machines.',
-    href: '/faq/what-is-a-progressive-dialer',
+    href: '/dialing-modes/progressive',
   },
   {
     key: 'predictive',
@@ -77,7 +77,7 @@ const MODES = [
     body:
       msg("The highest-volume mode. It dials multiple lines per agent and uses pacing math to hand you a call only when a real person answers. A built-in abandon-rate cap keeps it compliant."),
     best: 'Best for big, well-staffed campaigns focused on maximum live conversations.',
-    href: '/faq/what-is-a-predictive-dialer',
+    href: '/dialing-modes/predictive',
   },
 ]
 

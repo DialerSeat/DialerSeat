@@ -344,7 +344,7 @@ export default function View() {
               {t("$75/week, all-inclusive. No setup fees. No contracts.")}<br/>
               {t("Custom domain, logo, colors, branded emails.")}</p>
             <Link
-              href={isSignedIn ? '/billing?plan=whitelabel' : '/signup?plan=whitelabel'}
+              href={isSignedIn ? '/billing?plan=whitelabel' : '/sign-up?plan=whitelabel'}
               className="faq-cta-btn"
             >
               {isSignedIn ? t("UPGRADE TO WHITE-LABEL →") : t("GET STARTED →")}

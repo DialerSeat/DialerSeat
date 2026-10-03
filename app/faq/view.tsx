@@ -62,28 +62,28 @@ const ANSWERS: HubItem[] = [
     keywords: 'modes comparison summary',
   },
   {
-    href: '/faq/what-is-a-preview-dialer',
+    href: '/dialing-modes/preview',
     label: msg("What is a preview dialer?"),
     note: msg("How it works, where it came from, when to use it"),
     added: '2026-05-29',
     keywords: 'modes',
   },
   {
-    href: '/faq/what-is-a-power-dialer',
+    href: '/dialing-modes/power',
     label: msg("What is a power dialer?"),
     note: msg("History, mechanics, and the click-to-dial era"),
     added: '2026-05-29',
     keywords: 'modes',
   },
   {
-    href: '/faq/what-is-a-progressive-dialer',
+    href: '/dialing-modes/progressive',
     label: msg("What is a progressive dialer?"),
     note: msg("The middle ground between power and predictive"),
     added: '2026-05-29',
     keywords: 'modes',
   },
   {
-    href: '/faq/what-is-a-predictive-dialer',
+    href: '/dialing-modes/predictive',
     label: msg("What is a predictive dialer?"),
     note: 'The 1980s algorithm that built modern call centers',
     added: '2026-05-29',
@@ -366,10 +366,10 @@ const ANSWERS: HubItem[] = [
 
 /** The questions people arrive already asking. */
 const TOP_PICKS: HubItem[] = [
-  { href: '/faq/what-is-a-preview-dialer', label: msg("Preview dialer") },
-  { href: '/faq/what-is-a-power-dialer', label: msg("Power dialer") },
-  { href: '/faq/what-is-a-progressive-dialer', label: msg("Progressive dialer") },
-  { href: '/faq/what-is-a-predictive-dialer', label: msg("Predictive dialer") },
+  { href: '/dialing-modes/preview', label: msg("Preview dialer") },
+  { href: '/dialing-modes/power', label: msg("Power dialer") },
+  { href: '/dialing-modes/progressive', label: msg("Progressive dialer") },
+  { href: '/dialing-modes/predictive', label: msg("Predictive dialer") },
   { href: '/faq/how-does-amd-work', label: msg("AMD") },
   { href: '/faq/why-we-charge', label: msg("Pricing") },
   { href: '/faq/billing', label: msg("Billing") },
