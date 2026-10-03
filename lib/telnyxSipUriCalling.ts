@@ -46,7 +46,22 @@
 //     "internal" or "unrestricted", it is left exactly as it is.
 // =============================================================================
 
-const SECURITY_BASE = 'https://api.telnyx.com/security'
+// ── THE DOCUMENTED ENDPOINT, NOT THE PORTAL'S ─────────────────────────────
+// This read and wrote api.telnyx.com/security/connections/{id}, the address
+// Telnyx's help centre gives. By 26 Sept it answered 401 to our API key, and
+// because a failure is re-checked, every single dial paid a refused round
+// trip before its agent leg went out (45 dials, 45 "read failed ... HTTP
+// 401"), while the self-heal it exists for could no longer heal anything.
+// The public API carries the same field at the top level of a credential
+// connection: GET and PATCH /v2/credential_connections/{id}, values
+// disabled | unrestricted | internal (developers.telnyx.com, Credential
+// Connections). The same key already lists credential connections through
+// /v2 when it provisions agents, so this is an endpoint it is known to reach.
+const TELNYX_V2 = 'https://api.telnyx.com/v2'
+
+function connectionUrl(connectionId: string): string {
+  return `${TELNYX_V2}/credential_connections/${String(connectionId).replace(/^connection:/, '')}`
+}
 
 export type SipUriCallingPreference = 'disabled' | 'unrestricted' | 'internal'
 
@@ -61,10 +76,15 @@ export type EnsureResult =
  * in-flight remediation instead of each firing their own PUT.
  */
 const ensureCache = new Map<string, Promise<EnsureResult>>()
+/** When a check failed, so it is re-tried after a while rather than never or always. */
+const failedAt = new Map<string, number>()
+/** A failed check is remembered this long before a dial checks again. */
+export const FAILED_RECHECK_MS = 5 * 60 * 1000
 
 /** Test/ops hook — forget past results so the next call re-checks. */
 export function resetSipUriCallingCache(): void {
   ensureCache.clear()
+  failedAt.clear()
 }
 
 /**
@@ -87,7 +107,7 @@ export async function readSipUriCallingPreference(
   apiKey: string
 ): Promise<SipUriCallingPreference | null> {
   try {
-    const res = await fetch(`${SECURITY_BASE}/connections/${connectionId}`, {
+    const res = await fetch(connectionUrl(connectionId), {
       headers: { Authorization: `Bearer ${apiKey}` },
       cache: 'no-store',
     })
@@ -101,8 +121,8 @@ export async function readSipUriCallingPreference(
       data?: { sip_uri_calling_preference?: string }
       sip_uri_calling_preference?: string
     }
-    // Telnyx's non-/v2 endpoints are inconsistent about wrapping the resource
-    // in `data`, so accept either shape rather than betting on one.
+    // /v2 wraps the resource in `data`; the bare shape is still accepted, as
+    // it was for the old endpoint, rather than betting on one.
     const pref = body?.data?.sip_uri_calling_preference ?? body?.sip_uri_calling_preference
     if (pref === 'disabled' || pref === 'unrestricted' || pref === 'internal') return pref
     console.warn(
@@ -122,12 +142,9 @@ export async function setSipUriCallingPreference(
   preference: SipUriCallingPreference
 ): Promise<boolean> {
   try {
-    // NOTE THE HOST PATH: api.telnyx.com/security/... — NOT /v2 like every
-    // other Telnyx endpoint this codebase touches. That's Telnyx's layout,
-    // not a typo. Using /v2 here 404s in a way that reads as "connection not
-    // found", which is a misleading answer to a different question.
-    const res = await fetch(`${SECURITY_BASE}/connections/${connectionId}`, {
-      method: 'PUT',
+    // PATCH on the credential connection itself, as the /v2 docs give it.
+    const res = await fetch(connectionUrl(connectionId), {
+      method: 'PATCH',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
@@ -161,7 +178,12 @@ export function ensureSipUriCallingEnabled(
   apiKey: string
 ): Promise<EnsureResult> {
   const cached = ensureCache.get(connectionId)
-  if (cached) return cached
+  if (cached) {
+    const failed = failedAt.get(connectionId)
+    if (failed === undefined || Date.now() - failed < FAILED_RECHECK_MS) return cached
+    ensureCache.delete(connectionId)
+    failedAt.delete(connectionId)
+  }
 
   const attempt = (async (): Promise<EnsureResult> => {
     const current = await readSipUriCallingPreference(connectionId, apiKey)
@@ -189,14 +211,15 @@ export function ensureSipUriCallingEnabled(
 
   ensureCache.set(connectionId, attempt)
 
-  // A thrown/failed attempt must not be cached as a permanent failure in a
-  // way that hides a transient network blip forever — but it also must not
-  // retry on every dial. Dropping only the FAILED result from the cache
-  // strikes that balance: a genuine misconfiguration re-reads once per dial
-  // at worst (two cheap API calls), while the success path is memoized for
-  // the life of the process.
+  // A failed attempt must not be cached as a permanent failure, which would
+  // hide a transient network blip forever, but it also must not retry on
+  // every dial. It did retry on every dial, and that is exactly what an
+  // endpoint that started refusing our key turned into: a refused round
+  // trip in front of every agent leg (26 Sept). So a failure is kept for
+  // FAILED_RECHECK_MS, then checked again; success is kept for the life of
+  // the process.
   void attempt.then((result) => {
-    if (result === 'failed') ensureCache.delete(connectionId)
+    if (result === 'failed') failedAt.set(connectionId, Date.now())
   })
 
   return attempt

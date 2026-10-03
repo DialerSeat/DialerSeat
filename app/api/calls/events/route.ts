@@ -16,6 +16,7 @@ import {
 // Predictive (v2). Every predictive lead leg and the agent's seat are handled
 // in lib/predictive; see docs/PREDICTIVE.md.
 import { SEAT_SOURCE } from '@/lib/predictive/telnyx'
+import { isOwnAgentLegConnection } from '@/lib/agentLegConnection'
 import { onSeatAnswered, onSeatHangup, releaseSeatIfIdle } from '@/lib/predictive/seat'
 import {
   readLeadLeg, routeAnsweredLead, releaseMachineFromSeat, onPersonVerdict,
@@ -163,13 +164,16 @@ export async function POST(req: Request) {
           call_control_id: callControlId,
           source: 'webhook',
         })
-        if (payload.direction === 'incoming') {
+        // 'incoming' alone also matches the browser side of our own agent
+        // legs, on every dial (lib/agentLegConnection). Only a stranger's
+        // call gets the inbound treatment.
+        if (payload.direction === 'incoming' && !(await isOwnAgentLegConnection(payload.connection_id))) {
           await handleInboundCallInitiated(callControlId)
         }
         break
 
       case 'call.answered':
-        if (payload.direction === 'incoming') {
+        if (payload.direction === 'incoming' && !(await isOwnAgentLegConnection(payload.connection_id))) {
           await handleInboundCallAnswered(callControlId)
         } else {
           await handleCallAnswered(callControlId, payload.client_state)
