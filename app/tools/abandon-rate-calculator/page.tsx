@@ -4,6 +4,7 @@ import JsonLd from '@/components/json-ld'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
+import PageStamp from '@/components/PageStamp'
 import CiteThis from '@/components/CiteThis'
 import AbandonRateCalculator from '@/components/tools/AbandonRateCalculator'
 import { resourcesRail } from '@/lib/gutsRail'
@@ -104,7 +105,7 @@ export default function AbandonRateCalculatorPage() {
               Enter answered and abandoned calls and pick the rule you dial under. You get the rate, whether
               it is inside the limit, and how many more calls you could abandon before crossing it.
             </p>
-            <div className="guts-stamp">Updated {UPDATED}</div>
+            <PageStamp>Updated {UPDATED}</PageStamp>
           </div>
         </GutsSection>
 

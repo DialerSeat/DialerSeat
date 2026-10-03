@@ -4,6 +4,7 @@ import JsonLd from '@/components/json-ld'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
+import PageStamp from '@/components/PageStamp'
 import CiteThis from '@/components/CiteThis'
 import DialerCostCalculator from '@/components/tools/DialerCostCalculator'
 import { resourcesRail } from '@/lib/gutsRail'
@@ -103,7 +104,7 @@ export default function DialerCostCalculatorPage() {
               Set the weeks you need and the agents you have. Monthly and annual billing, seat minimums
               and the vendors’ own published prices are applied, so the number is what you would be billed.
             </p>
-            <div className="guts-stamp">Updated {UPDATED}</div>
+            <PageStamp>Updated {UPDATED}</PageStamp>
           </div>
         </GutsSection>
 

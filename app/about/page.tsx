@@ -84,12 +84,16 @@ export default function AboutPage() {
             {FACTS.audience.join(', ').toLowerCase()}. All four dialing modes, answering-machine detection
             and compliance tooling are included in one weekly seat price.
           </p>
+          <p>
+            Every comparison, data page and guide on this site is published by DialerSeat as a company and
+            checked against the method below. Pages carry the date they last changed.
+          </p>
           <ul className="guts-list good">
             {FACTS.pricing.slice(1, 5).map((p) => <li key={p}>{p}</li>)}
           </ul>
         </GutsSection>
 
-        <GutsSection icon="book" title="How we research what we publish">
+        <GutsSection icon="book" title="How we research what we publish" id="method">
           <ul className="guts-list good">
             <li>
               <strong>Competitor pricing</strong> comes from each vendor’s own published pricing. Where a vendor

@@ -4,6 +4,7 @@ import JsonLd from '@/components/json-ld'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
+import PageStamp from '@/components/PageStamp'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
@@ -98,7 +99,7 @@ export default function DialerForCallCentersPage() {
               Lead-gen agencies, BPOs and small outbound floors, on-site or offshore. Seats you add and pause
               by the week, campaigns the whole floor shares, and the compliance limits enforced on the server.
             </p>
-            <div className="guts-stamp">Updated {UPDATED}</div>
+            <PageStamp>Updated {UPDATED}</PageStamp>
           </div>
         </GutsSection>
 

@@ -5,6 +5,7 @@ import JsonLd from '@/components/json-ld'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
+import PageStamp from '@/components/PageStamp'
 import CiteThis from '@/components/CiteThis'
 import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
@@ -122,7 +123,7 @@ export default async function CountryRulesPage({ params }: { params: Promise<{ c
               What a caller has to do before dialing people in {c.name}, from each rule’s source. Anything we
               could not verify is left out rather than guessed.
             </p>
-            <div className="guts-stamp">Rules checked {RULES_CHECKED} · page updated {updated}</div>
+            <PageStamp>Rules checked {RULES_CHECKED} · page updated {updated}</PageStamp>
           </div>
         </GutsSection>
 

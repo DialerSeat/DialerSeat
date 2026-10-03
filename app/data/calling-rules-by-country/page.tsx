@@ -4,6 +4,7 @@ import JsonLd from '@/components/json-ld'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
+import PageStamp from '@/components/PageStamp'
 import CiteThis from '@/components/CiteThis'
 import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
@@ -122,7 +123,7 @@ export default function CallingRulesByCountry() {
               {COUNTRY_RULES.length} countries, each with its source. Anything we could not verify is left
               out rather than guessed.
             </p>
-            <div className="guts-stamp">Rules checked {RULES_CHECKED} · page updated {UPDATED}</div>
+            <PageStamp>Rules checked {RULES_CHECKED} · page updated {UPDATED}</PageStamp>
           </div>
         </GutsSection>
 

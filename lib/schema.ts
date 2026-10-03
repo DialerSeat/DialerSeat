@@ -27,9 +27,12 @@ export function organizationSchema() {
     // several places rather than several unconnected mentions. It is the input
     // to a knowledge panel, and to an assistant being confident enough to name
     // us rather than hedge.
-    sameAs: [
-      'https://www.linkedin.com/in/dialerseat',
-    ],
+    //
+    // Company profiles only. The site names no person, by the owner's choice,
+    // so a personal profile (linkedin.com/in/...) does not belong here. Add
+    // each company profile as it exists: LinkedIn /company/, G2, Capterra,
+    // Crunchbase, YouTube.
+    sameAs: [],
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'Customer Support',

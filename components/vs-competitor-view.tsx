@@ -5,6 +5,9 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import SuggestionModal from '@/components/SuggestionModal'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
+import PageStamp from '@/components/PageStamp'
+import JsonLd from '@/components/json-ld'
+import { pageDate } from '@/lib/pageDates'
 import { vsRail } from '@/lib/gutsRail'
 import { DIALERSEAT, type Competitor } from '@/lib/competitors'
 import { featuresFor } from '@/lib/competitorFeatures'
@@ -46,9 +49,25 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
   // about another company's product that nobody researched.
   const matrix = featuresFor(c.slug)
   const [askOpen, setAskOpen] = useState(false)
+  // The comparison pages showed no date at all, though they are the pages
+  // whose facts (another vendor's prices) go stale fastest. The visible date,
+  // dateModified below and the sitemap's <lastmod> all read lib/pageDates.
+  const route = `/vs/${c.slug}`
+  const updated = pageDate(route)
 
   return (
     <>
+      <JsonLd
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'Article',
+          headline: `DialerSeat vs ${c.name}`,
+          url: `https://dialerseat.com${route}`,
+          dateModified: updated,
+          author: { '@id': 'https://dialerseat.com/#organization' },
+          publisher: { '@id': 'https://dialerseat.com/#organization' },
+        }}
+      />
       <SiteHeader />
       <GutsShell rail={vsRail(c.slug)} activeHref={`/vs/${c.slug}`}>
 
@@ -66,6 +85,7 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
               <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
               <Link href="/vs" className="guts-btn secondary">{t("ALL COMPARISONS")}</Link>
             </div>
+            <PageStamp>{t('Updated {date}', { date: updated })}</PageStamp>
           </div>
         </GutsSection>
 

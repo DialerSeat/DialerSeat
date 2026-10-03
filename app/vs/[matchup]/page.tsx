@@ -92,7 +92,10 @@ async function matchupMetadata(
   // getT, not t: metadata runs outside the page render, where the request's
   // language has not been primed for the synchronous t().
   const tm = await getT()
-  const title = tm(msg("{a} vs {b}: Pricing, Dialing Modes, and Who Each One Suits"), { a: m.a.name, b: m.b.name })
+  // Kept near 60 characters with the suffix. The old title ran 80 to 87, and
+  // Google rewrites nearly every title past 70 (Zyppy, 80,959 titles, 2022);
+  // "pros and cons" is the modifier these pages already target in keywords.
+  const title = tm(msg("{a} vs {b}: Pricing, Pros & Cons"), { a: m.a.name, b: m.b.name })
   const description = tm(msg("An honest side-by-side of {a} and {b}: what each costs, which dialing modes you actually get, the pros and cons of each, and which buyer each suits."), { a: m.a.name, b: m.b.name })
 
   return {

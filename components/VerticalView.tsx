@@ -4,6 +4,7 @@ import JsonLd from '@/components/json-ld'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
+import PageStamp from '@/components/PageStamp'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { pageDate } from '@/lib/pageDates'
@@ -69,7 +70,7 @@ export default function VerticalView({ v }: { v: Vertical }) {
               <span className="second">{v.h1[1]}</span>
             </h1>
             <p>{v.intro}</p>
-            <div className="guts-stamp">Updated {updated}</div>
+            <PageStamp>Updated {updated}</PageStamp>
           </div>
         </GutsSection>
 

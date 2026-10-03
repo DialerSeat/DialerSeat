@@ -184,7 +184,6 @@ function apexSitemap(): MetadataRoute.Sitemap {
     e('/terms', 0.3, 'yearly'),
     e('/privacy', 0.3, 'yearly'),
     e('/sign-up', 0.5, 'yearly'),
-    e('/sign-in', 0.3, 'yearly'),
   ]
 }
 

@@ -4,6 +4,7 @@ import JsonLd from '@/components/json-ld'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
+import PageStamp from '@/components/PageStamp'
 import DialerCostCalculator from '@/components/tools/DialerCostCalculator'
 import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
@@ -132,7 +133,7 @@ export default function PricingPage() {
               <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
               <Link href="/tools/dialer-cost-calculator" className="guts-btn secondary">COST CALCULATOR</Link>
             </div>
-            <div className="guts-stamp">Updated {UPDATED}</div>
+            <PageStamp>Updated {UPDATED}</PageStamp>
           </div>
         </GutsSection>
 

@@ -4,6 +4,7 @@ import JsonLd from '@/components/json-ld'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
+import PageStamp from '@/components/PageStamp'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { pageDate } from '@/lib/pageDates'
@@ -113,7 +114,7 @@ export default function DialerForRealEstatePage() {
               Listing agents, wholesalers, investors and the VAs who dial for them. Here is what matters in a
               real estate dialer, and what DialerSeat does about each part.
             </p>
-            <div className="guts-stamp">Updated {UPDATED}</div>
+            <PageStamp>Updated {UPDATED}</PageStamp>
           </div>
         </GutsSection>
 

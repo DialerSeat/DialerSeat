@@ -4,6 +4,7 @@ import JsonLd from '@/components/json-ld'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
+import PageStamp from '@/components/PageStamp'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { pageDate } from '@/lib/pageDates'
@@ -126,7 +127,7 @@ export default function WhatIsAnAutoDialerPage() {
               answers. Voicemails, busy signals and rings that go nowhere are dealt with before you hear
               them. Here is how it works, the four kinds, and what the law expects of you.
             </p>
-            <div className="guts-stamp">Updated {UPDATED}</div>
+            <PageStamp>Updated {UPDATED}</PageStamp>
           </div>
         </GutsSection>
 
