@@ -120,113 +120,21 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
       publisher: {
         '@id': `${BASE}/#organization`,
       },
-      potentialAction: {
-        '@type': 'SearchAction',
-        target: {
-          '@type': 'EntryPoint',
-          urlTemplate: `${BASE}/?q={search_term_string}`,
-        },
-        'query-input': 'required name=search_term_string',
-      },
+      // No SearchAction: the site has no search at /?q=, and Google retired
+      // the sitelinks search box that read it on 2024-11-21. WebSite stays,
+      // because Google still reads its name for the site name above results.
     },
 
     
     
     
-    {
-      '@type': 'FAQPage',
-      '@id': `${BASE}/#faq`,
-      mainEntity: [
-        {
-          '@type': 'Question',
-          name: 'How much does DialerSeat cost?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'DialerSeat is $35 USD per seat per week, billed every 7 days. There are no contracts, no setup fees, no per-minute charges, and no annual commitments. Cancel any time.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'How does DialerSeat compare to ReadyMode?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'ReadyMode charges $199 or more per seat per month and typically requires an annual contract and onboarding. DialerSeat is $35 per week with no contract and no onboarding call. DialerSeat also works on mobile (iOS Safari and Android Chrome), includes unlimited phone numbers, deeper analytics, and simple team management at the same flat price.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'How does DialerSeat compare to Mojo Dialer and PhoneBurner?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Mojo Dialer\'s lower tiers exclude predictive dialing. PhoneBurner is power-dial only on most tiers. DialerSeat includes all four dialer modes (Preview, Power, Progressive, Predictive) at $35 per week, plus unlimited numbers, team workflow, and compliance enforcement bundled into the same price.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'What dialer modes does DialerSeat support?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'DialerSeat supports four selectable dialer modes per campaign: Preview (review lead before dialing), Power (one-click manual dial), Progressive (auto-advance one line per agent), and Predictive (multi-line simultaneous dialing with FCC abandon-rate enforcement).',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'Does DialerSeat detect voicemail automatically?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Yes. DialerSeat uses Telnyx\'s native call-detection engine to analyze call audio at pickup and classify whether a human, an uncertain result, or a machine answered. When a machine is detected, the call is hung up before the agent is connected, and the recording reference is removed from your dashboard immediately.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'Does DialerSeat support inbound calls?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Yes. Inbound calls from ad campaigns, mailers, billboards, or website CTAs route to whichever DialerSeat agent is marked live and online, through the same dialer interface used for outbound calls.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'Does DialerSeat work on mobile?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Yes. DialerSeat works in iOS Safari, Android Chrome, and every modern desktop browser. No headset software, no native app install, no PBX hardware. Just sign in and dial.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'Does DialerSeat sell customer data?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'No. DialerSeat does not sell, broker, lease, or share customer data, lead lists, or call recordings with any third party. Customer data is never used to train AI models.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'Can I cancel any time?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Yes. Cancel from Settings at any time. The subscription does not auto-renew once canceled. Service continues until the end of the paid 7-day period. Lead data, recordings, and account history are retained.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'What happens to my data if my subscription lapses?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Your account remains accessible in read-only mode. Leads, recordings, campaigns, and history are retained indefinitely. Dialing is paused until you resubscribe, at which point everything resumes immediately with no data loss.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'Does DialerSeat work for solo agents or only teams?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Both. DialerSeat is built to serve the full range from solo agents up through larger teams. The same $35/week price applies per seat, whether you\'re one person or fifty.',
-          },
-        },
-      ],
-    },
+    // ── NO SITEWIDE FAQ ──────────────────────────────────────────────────
+    // An FAQPage with eleven questions used to sit here, so every page on the
+    // site, from /pricing to a country's calling rules, claimed to carry Q&As
+    // it never showed. Google's structured-data rules require markup to match
+    // the visible page, and FAQ rich results were retired in May 2026, so it
+    // could only cost: some answers had also drifted from lib/competitors and
+    // lib/canonicalFacts. Pages that show questions carry their own FAQPage.
   ]
 
   const ld = {
