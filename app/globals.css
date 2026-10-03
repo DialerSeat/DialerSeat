@@ -4,18 +4,20 @@
    here, and with the layout preconnecting and preloading Book and Bold, the
    fonts start downloading while the HTML is still arriving.
 
-   font-display stays `block`, the behaviour the @import had. `swap` was tried
-   on 2026-10-03: the hero headline re-wrapped when Futura replaced the
-   fallback and pushed the dialer showcase down, a 0.12 to 0.30 layout shift on
-   the homepage, past Google's 0.1 line. Fallback-metric matching would need
-   every one of the ~70 'Futura PT' font stacks in the app to name it. */
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 300; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicLight.woff') format('woff'); }
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 400; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicBook.woff') format('woff'); }
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 450; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicMedium.woff') format('woff'); }
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 500; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicDemi.woff') format('woff'); }
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 600; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicHeavy.woff') format('woff'); }
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 700; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicBold.woff') format('woff'); }
-@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 800; font-display: block; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicExtraBold.woff') format('woff'); }
+   font-display: swap, so text never waits for the font. Swap alone (before
+   the preloads) let the homepage's dialer showcase paint in the fallback and
+   grow ~16px when Futura arrived: a 0.12 to 0.30 layout shift. With Book and
+   Bold preloaded they normally land before first paint, so the swap happens
+   before anything is on screen. If the homepage shift comes back, `block` is
+   the fallback: no shift, but text invisible until Futura loads (PageSpeed
+   mobile 81 with block against 96 with swap on 2026-10-03). */
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 300; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicLight.woff') format('woff'); }
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 400; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicBook.woff') format('woff'); }
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 450; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicMedium.woff') format('woff'); }
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 500; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicDemi.woff') format('woff'); }
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 600; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicHeavy.woff') format('woff'); }
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 700; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicBold.woff') format('woff'); }
+@font-face { font-family: 'Futura PT'; font-style: normal; font-weight: 800; font-display: swap; src: local('Futura PT'), url('https://fonts.cdnfonts.com/s/72205/FuturaCyrillicExtraBold.woff') format('woff'); }
 
 @tailwind base;
 @tailwind components;
