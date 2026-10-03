@@ -20,7 +20,7 @@ import { localizeSiteMetadata } from '@/lib/i18n/metadata'
 // through generateMetadata so a Spanish visitor gets it in Spanish.
 const baseMetadata: Metadata = {
   metadataBase: new URL('https://dialerseat.com'),
-  title: 'Predictive & Auto Dialer: $35 a Week, No Contract | DialerSeat',
+  title: "DialerSeat, Dial Smarter. Close Faster.",
   description:
     "The professional outbound dialer built for solo agents up through larger teams. $35/week per seat. No contracts. Cancel anytime. Four dialer modes, automatic voicemail detection, inbound reception, unlimited numbers.",
   applicationName: 'DialerSeat',
@@ -81,7 +81,7 @@ const baseMetadata: Metadata = {
     ],
   },
   openGraph: {
-    title: 'DialerSeat: Predictive & Auto Dialer, $35 a Week',
+    title: 'DialerSeat, Dial Smarter. Close Faster.',
     description:
       'Every dialer mode for $35 per seat per week. Billed weekly, so a week costs $35, not a month. No contract.',
     url: 'https://dialerseat.com',
@@ -94,7 +94,7 @@ const baseMetadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'DialerSeat: Predictive & Auto Dialer, $35 a Week',
+    title: 'DialerSeat, Dial Smarter. Close Faster.',
     description: 'Every dialer mode for $35 per seat per week. Billed weekly, so a week costs $35, not a month.',
     images: ['/icons/twitter-image.png'],
   },

@@ -63,10 +63,8 @@ interface PageProps {
 // crawlable copies of the most important page on the domain, splitting its
 // ranking signals across variants that should be consolidating into one.
 const baseMetadata: Metadata = {
-  // The title leads with the category people search ("auto dialer" is ~3,600
-  // US searches a month, "predictive dialer" ~4,400 worldwide) and the one
-  // fact that separates us: billing by the week. The slogan stays on the page.
-  title: 'Predictive & Auto Dialer: $35 a Week, No Contract | DialerSeat',
+  // The tab title comes from the root layout: "DialerSeat, Dial Smarter.
+  // Close Faster." The description is what search results show under it.
   description:
     'Predictive, power, progressive and preview dialing in one browser dialer for $35 per seat per week. Billed weekly, so a week costs $35, not a month. No contract, no setup fee.',
   alternates: { canonical: 'https://dialerseat.com' },

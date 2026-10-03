@@ -30,7 +30,7 @@ curl on 2026-09-25. They are public now.
 | `/about` | brand + trust | Who publishes, research method, corrections policy |
 
 **On-page.** Comparison titles lead with "<vendor> Alternative: Pricing, Pros &
-Cons"; the homepage title leads with "Predictive & Auto Dialer: $35 a Week";
+Cons"; the homepage tab title stays "DialerSeat, Dial Smarter. Close Faster.";
 every comparison page links to `/pricing` and the index; structured data is one
 consistent entity (duplicate Organization/SoftwareApplication nodes merged);
 `knowsAbout` added; the false "public API" claim corrected on the pages touched;
