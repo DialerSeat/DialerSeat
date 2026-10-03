@@ -11,24 +11,26 @@
 // was blocked by proxy.ts until 2026-09-25, so no submission could have
 // verified before then anyway.
 //
-//   INDEXNOW_KEY=<key> node scripts/indexnow-submit.mjs            every URL in the sitemap
-//   INDEXNOW_KEY=<key> node scripts/indexnow-submit.mjs /pricing   only the paths given
-//   INDEXNOW_KEY=<key> node scripts/indexnow-submit.mjs --since 2026-09-25
-//                                                                  URLs whose lastmod is on or after a date
+//   node scripts/indexnow-submit.mjs                    every URL in the sitemap
+//   node scripts/indexnow-submit.mjs /pricing           only the paths given
+//   node scripts/indexnow-submit.mjs --since 2026-09-25  URLs whose lastmod is on or after a date
 //
-// Run it after a deploy, against production. The key must match the one the
+// Run it after a deploy, against production. The key must match the file the
 // live site serves at https://dialerseat.com/<key>.txt, or the submission is
-// discarded.
+// discarded; the script checks that first.
 // =============================================================================
 
 const HOST = 'dialerseat.com'
 const APEX = `https://${HOST}`
-const key = process.env.INDEXNOW_KEY
-
-if (!key) {
-  console.error('INDEXNOW_KEY is not set. Use the same key as the production environment.')
-  process.exit(1)
-}
+// The key the marketing site submits with. An IndexNow key is public by
+// design: engines verify it by fetching it from the site, so it is served as
+// a static file, public/c2bb112f84ec1d07545c006b5d2d8f77.txt, and committed. The production
+// INDEXNOW_KEY (used by lib/indexnow.ts for tenant pages) is a sensitive
+// Vercel variable, which `vercel env run` passes to local commands as an empty
+// string, so a script that depended on it could never run from a laptop.
+// Setting INDEXNOW_KEY still overrides this.
+const REPO_KEY = 'c2bb112f84ec1d07545c006b5d2d8f77'
+const key = process.env.INDEXNOW_KEY || REPO_KEY
 
 const args = process.argv.slice(2)
 const sinceIdx = args.indexOf('--since')
