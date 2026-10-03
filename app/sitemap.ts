@@ -70,6 +70,7 @@ function apexSitemap(): MetadataRoute.Sitemap {
   return [
     e('/', 1.0, 'weekly'),
     e('/pricing', 0.95, 'monthly'),
+    e('/features', 0.9, 'monthly'),
 
     // Data, tools and the hub that lists them: the pages built to be cited.
     e('/resources', 0.85, 'monthly'),

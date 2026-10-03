@@ -27,7 +27,7 @@ const ROOT = process.cwd()
 const APP = join(ROOT, 'app')
 
 /** Route prefixes that are public marketing pages. Everything else is the app. */
-const PUBLIC_PREFIXES = ['/', '/faq', '/vs', '/dialing-modes', '/data', '/tools', '/pricing', '/resources', '/status', '/terms', '/privacy']
+const PUBLIC_PREFIXES = ['/', '/faq', '/vs', '/dialing-modes', '/data', '/tools', '/pricing', '/features', '/resources', '/about', '/status', '/terms', '/privacy']
 
 /** Shared sources whose edits change the rendered content of a route family. */
 const SHARED = {

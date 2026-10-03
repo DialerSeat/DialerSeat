@@ -271,6 +271,27 @@ function teamsPricingDoc(): string {
 // Rendered from lib/weeklyBilling, lib/competitors and lib/countryRules, the
 // same modules the HTML pages render from.
 
+// /features, from the same FACTS record the HTML page renders.
+function featuresDoc(): string {
+  const list = (items: readonly string[]) => items.map(i => `- ${i}`).join('\n')
+  const notBuilt = [...new Set([...FACTS.teams.notYet, ...FACTS.limits])]
+  return (
+    `# DialerSeat features\n\n` +
+    `${FACTS.oneLine}\n\n` +
+    `## Four dialing modes, chosen per campaign\n` +
+    `${FACTS.modes.map(([m, d]) => `- **${m}**: ${d}`).join('\n')}\n\n` +
+    `## What every seat includes\n${list(FACTS.features)}\n\n` +
+    `## Compliance\n${list(FACTS.compliance)}\n\n` +
+    `## Teams\n### Seats\n${list(FACTS.teams.seats)}\n\n` +
+    `### Lead distribution\n${list(FACTS.teams.distribution)}\n\n` +
+    `### Visibility\n${list(FACTS.teams.visibility)}\n\n` +
+    `### Remote and offshore agents\n${list(FACTS.teams.offshore)}\n\n` +
+    `## Not built yet, and not what DialerSeat is\n${list(notBuilt)}\n\n` +
+    `## Pricing\n${list(FACTS.pricing)}\n` +
+    footer('/features')
+  )
+}
+
 function pricingDoc(): string {
   const rows = BILLED_DIALERS.map(d => {
     const one = billedCost(d, 1, 1)
@@ -362,6 +383,8 @@ export async function GET(
       return md(offshoreDoc())
     case '/vs/teams':
       return md(teamsPricingDoc())
+    case '/features':
+      return md(featuresDoc())
     case '/pricing':
       return md(pricingDoc())
     case '/data/dialer-pricing':

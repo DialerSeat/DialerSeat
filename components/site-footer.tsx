@@ -7,6 +7,7 @@ import { msg } from '@/lib/i18n/msg'
 /** The data pages and tools, linked from every page's footer. */
 const FOOTER_RESOURCES = [
   { href: '/pricing', label: msg('PRICING') },
+  { href: '/features', label: msg('FEATURES') },
   { href: '/data/dialer-pricing', label: msg('DIALER PRICING INDEX') },
   { href: '/data/calling-rules-by-country', label: msg('CALLING RULES BY COUNTRY') },
   { href: '/data/connect-rates', label: msg('CONNECT RATES') },

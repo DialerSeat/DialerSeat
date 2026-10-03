@@ -86,6 +86,7 @@ who want to offer a branded dialer to their own clients.
 
 ## Authoritative pages
 - [Home](${ROOT}/): product overview, pricing, positioning.
+- [Features](${ROOT}/features): every capability in one seat (four dialing modes, AMD, local presence, recording, compliance enforcement, team tools) and what is not built yet.
 - [Pricing](${ROOT}/pricing): $35 per seat per week, billed weekly. One week costs $35 and four weeks $140; monthly dialers charge a full month even for one week, with each vendor's published figure.
 - [What is an auto dialer?](${ROOT}/faq/what-is-an-auto-dialer): how auto dialers work, the four types, what US law allows (including the Duguid ATDS definition), and cost.
 - [Dialer for real estate](${ROOT}/faq/dialer-for-real-estate): expireds, FSBO and wholesaling, VAs dialing from abroad, bring-your-own lists.
