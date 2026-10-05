@@ -180,6 +180,28 @@ export async function POST(req: Request) {
       })
       .eq('stripe_subscription_id', sub.stripe_subscription_id)
 
+    // ── EVERY RESUME IS RECORDED, WHATEVER HAPPENS NEXT ─────────────────
+    // Stripe is un-paused by this point, so billing has restarted whether or
+    // not the card went through or our status write landed. Both of those
+    // used to return before this ran, which is how a resume could happen
+    // with no notification and no line in the billing log. Logged first now.
+    try {
+      const { name, email } = await lookupUserIdentity(userId)
+      await sendAdminPush(
+        'sub_resumed',
+        billingFailed
+          ? `${name} resumed their subscription, but the card was declined.`
+          : `${name} resumed their subscription. Billing has restarted.`
+      )
+      await logBillingEvent({
+        event_type: 'resume', clerk_id: userId, user_name: name, user_email: email,
+        plan: planOf(sub.plan), stripe_subscription_id: sub.stripe_subscription_id,
+        detail: { source: 'customer', ...(billingFailed ? { billing_failed: true, status: resumed.status } : {}) },
+      })
+    } catch (pushErr) {
+      console.error('[stripe/pause] resume notification failed:', pushErr)
+    }
+
     if (billingFailed) {
       console.warn(`[stripe/pause] resume left subscription ${resumed.id} in status ${resumed.status}`)
       return NextResponse.json({
@@ -192,26 +214,9 @@ export async function POST(req: Request) {
     }
 
     if (error) {
-      // Billing resumed but the marker says paused: they'd be charged with no
-      // access. Log loudly — this needs a human, and re-pausing would be the
-      // wrong reflex since money is now moving again.
-      console.error('[stripe/pause] CRITICAL: resumed in Stripe but marker still set:', error.message)
-      return NextResponse.json(
-        { error: 'Billing resumed but access did not. Contact support, do not retry.' },
-        { status: 500 }
-      )
-    }
-
-    try {
-      const { name, email } = await lookupUserIdentity(userId)
-      await sendAdminPush('sub_resumed', `${name} resumed their subscription. Billing has restarted.`)
-      await logBillingEvent({
-        event_type: 'resume', clerk_id: userId, user_name: name, user_email: email,
-        plan: planOf(sub.plan), stripe_subscription_id: sub.stripe_subscription_id,
-        detail: { source: 'customer' },
-      })
-    } catch (pushErr) {
-      console.error('[stripe/pause] resume notification failed:', pushErr)
+      // The pause marker was already cleared before Stripe was touched, so
+      // this is only the status copy failing; the webhook will correct it.
+      console.error('[stripe/pause] resume status write failed:', error.message)
     }
 
     return NextResponse.json({ success: true, paused: false })
