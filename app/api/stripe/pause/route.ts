@@ -136,9 +136,28 @@ export async function POST(req: Request) {
     // Clearing pause_collection puts the subscription back on schedule. If the
     // paid period already elapsed while paused, Stripe bills on resume — which
     // is the one moment this can fail.
-    const resumed = await stripe.subscriptions.update(sub.stripe_subscription_id, {
-      pause_collection: null,
-    })
+    // ── OUR MARKER FIRST ──────────────────────────────────────────────────
+    // The webhook now re-pauses any subscription our row says is paused
+    // (lib/subscriptionControl). Clearing Stripe first would let that put
+    // the pause straight back, so the marker goes first and is restored if
+    // Stripe refuses.
+    await supabase
+      .from('subscriptions')
+      .update({ paused_at: null })
+      .eq('stripe_subscription_id', sub.stripe_subscription_id)
+
+    let resumed: Awaited<ReturnType<typeof stripe.subscriptions.update>>
+    try {
+      resumed = await stripe.subscriptions.update(sub.stripe_subscription_id, {
+        pause_collection: null,
+      })
+    } catch (err) {
+      await supabase
+        .from('subscriptions')
+        .update({ paused_at: sub.paused_at })
+        .eq('stripe_subscription_id', sub.stripe_subscription_id)
+      throw err
+    }
 
     // ── DID THE CARD ACTUALLY GO THROUGH? ─────────────────────────────────
     // Product rule: a successful resume is SILENT — they just have access

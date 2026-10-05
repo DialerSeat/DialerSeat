@@ -10,6 +10,7 @@ import { takeOverAgentPaidSeats } from '@/lib/seatTakeover'
 import { isReplacedFailedPlan, unpaidAccessEnd } from '@/lib/failedPlan'
 import { extractStripeFailureDetail, summariseStripeFailure } from '@/lib/stripeFailureDetail'
 import { logBillingEvent } from '@/lib/billingEvents'
+import { reconcilePausedSubscriptions } from '@/lib/subscriptionControl'
 import { assembleAndSaveDisputeEvidence, recordDisputeClosed } from '@/lib/disputeEvidence'
 import {
   claimStripeEvent,
@@ -159,9 +160,20 @@ export async function POST(req: Request) {
 
     switch (event.type) {
       case 'customer.subscription.created':
-      case 'customer.subscription.updated':
-        await routeSubscription(event.data.object as Stripe.Subscription, event.type, undefined, event.created)
+      case 'customer.subscription.updated': {
+        const sub = event.data.object as Stripe.Subscription
+        await routeSubscription(sub, event.type, undefined, event.created)
+        // ── PAUSED HERE MEANS PAUSED THERE ───────────────────────────────
+        // If this person paused and Stripe no longer has the pause, put it
+        // back now, before the next renewal can charge them (lib/
+        // subscriptionControl). Never throws into the webhook.
+        if (!sub.pause_collection) {
+          try { await reconcilePausedSubscriptions(sub.id) } catch (err) {
+            console.error('[stripe/webhook] pause reconcile failed', err)
+          }
+        }
         break
+      }
 
       case 'customer.subscription.deleted':
         await routeSubscriptionDeleted(event.data.object as Stripe.Subscription)
@@ -722,6 +734,7 @@ async function routeWhitelabel(
   ) {
     const { name, email } = await lookupNameAndEmail(clerkId)
     await sendAdminPush('renewal', `${name} renewed Manager+ subscription.`)
+    await flagChargeWhilePaused(subscription.id, name, invoiceAmountCents)
     // ── WHAT STRIPE CHARGED, NOT WHAT THE PLAN LISTS FOR ────────────────
     // This logged a flat 7500 on every cycle. That is the list price typed
     // into the source, not a figure anyone read off the invoice, so a $0
@@ -1082,6 +1095,7 @@ async function syncPersonalSubscription(
   ) {
     const { name, email } = await lookupNameAndEmail(clerkId)
     await sendAdminPush('renewal', `${name} renewed Pro subscription.`)
+    await flagChargeWhilePaused(subscription.id, name, invoiceAmountCents)
     // Same as the white-label renewal above: the invoice's amount, not the
     // plan's list price.
     await logBillingEvent({
@@ -1165,6 +1179,34 @@ async function lookupClerkIdByCustomer(
     .maybeSingle()
 
   return userByCustomer?.clerk_id ?? null
+}
+
+/**
+ * A renewal was paid on a subscription this person had paused. That is money
+ * taken against their wishes (Hussein, 23 and 30 Sept), so it is said out loud
+ * with the amount, and the pause is put back so it cannot happen again.
+ */
+async function flagChargeWhilePaused(
+  subscriptionId: string,
+  name: string,
+  amountCents: number | null | undefined
+): Promise<void> {
+  try {
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('paused_at')
+      .eq('stripe_subscription_id', subscriptionId)
+      .maybeSingle()
+    if (!data?.paused_at) return
+    const amount = typeof amountCents === 'number' ? ` $${(amountCents / 100).toFixed(2)}` : ''
+    await sendAdminPush(
+      'sub_paused',
+      `${name} was charged${amount} while paused. Pause re-applied in Stripe; consider a refund.`
+    )
+    await reconcilePausedSubscriptions(subscriptionId)
+  } catch (err) {
+    console.error('[stripe/webhook] paused-charge check failed', err)
+  }
 }
 
 async function upsertPersonalSubscription(

@@ -56,6 +56,10 @@
     {
       "path": "/api/cron/telnyx-compliance-sync",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/pause-reconcile",
+      "schedule": "15 * * * *"
     }
   ]
 }

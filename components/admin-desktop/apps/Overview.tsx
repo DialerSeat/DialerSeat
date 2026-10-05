@@ -39,6 +39,7 @@ interface AdminUser {
     status: string
     current_period_end: string | null
     cancel_at_period_end: boolean
+    paused_at?: string | null
     discount_coupon: string | null
     plan: 'pro' | 'wl' | null
     subscribed_since: string | null
@@ -183,6 +184,10 @@ export default function OverviewApp() {
   const [deleteInFlight, setDeleteInFlight] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleteResult, setDeleteResult] = useState<any>(null)
+  // Pause / resume / cancel / renew from here. Keyed by user so a result
+  // stays under the person it was about.
+  const [subBusy, setSubBusy] = useState<string | null>(null)
+  const [subMsg, setSubMsg] = useState<Record<string, { ok: boolean; text: string }>>({})
   const [sortMode, setSortMode] = useState<'joined_new' | 'joined_old' | 'active_first' | 'name'>('joined_new')
   const [lastSynced, setLastSynced] = useState<number>(() => Date.now())
 
@@ -302,6 +307,48 @@ export default function OverviewApp() {
       setDeleteError(err?.message || 'Network error')
     } finally {
       setDeleteInFlight(false)
+    }
+  }
+
+  // ── CHANGE SOMEBODY'S PLAN FOR THEM ─────────────────────────────────────
+  // Every result says what Stripe holds afterwards, read back, so "paused"
+  // here means Stripe confirmed it, not that we asked.
+  async function runSubAction(u: AdminUser, action: 'pause' | 'resume' | 'cancel' | 'renew') {
+    const who = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email
+    const verb = { pause: 'Pause', resume: 'Resume', cancel: 'Cancel at period end', renew: 'Renew (undo the cancel)' }[action]
+    if (!window.confirm(`${verb} the subscription for ${who}?`)) return
+    setSubBusy(u.clerk_id + ':' + action)
+    try {
+      const r = await fetch('/api/admin/users/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clerkId: u.clerk_id, action }),
+      })
+      const d = await r.json().catch(() => null)
+      const results: Array<{ ok: boolean; error?: string; stripe?: { status: string; paused: boolean; cancelAtPeriodEnd: boolean } }> =
+        d?.results || []
+      if (!results.length) {
+        setSubMsg(m => ({ ...m, [u.clerk_id]: { ok: false, text: d?.error || `Request failed (${r.status})` } }))
+        return
+      }
+      const text = results.map(x => x.ok && x.stripe
+        ? `Stripe: ${x.stripe.status.toUpperCase()}${x.stripe.paused ? ' · PAUSED' : ''}${x.stripe.cancelAtPeriodEnd ? ' · CANCELS AT PERIOD END' : ''}`
+        : `Failed: ${x.error || 'unknown error'}`).join('  |  ')
+      setSubMsg(m => ({ ...m, [u.clerk_id]: { ok: results.every(x => x.ok), text } }))
+      // Reflect it now rather than on the next ten-second sync.
+      setUsers(list => list.map(x => x.clerk_id !== u.clerk_id || !x.subscription ? x : {
+        ...x,
+        subscription: {
+          ...x.subscription,
+          paused_at: action === 'pause' ? (x.subscription.paused_at || new Date().toISOString())
+            : action === 'resume' ? null : x.subscription.paused_at,
+          cancel_at_period_end: action === 'cancel' ? true : action === 'renew' ? false : x.subscription.cancel_at_period_end,
+        },
+      }))
+    } catch (err) {
+      setSubMsg(m => ({ ...m, [u.clerk_id]: { ok: false, text: err instanceof Error ? err.message : 'Network error' } }))
+    } finally {
+      setSubBusy(null)
     }
   }
 
@@ -561,6 +608,32 @@ export default function OverviewApp() {
         .ovr-danger-btn:disabled {
           opacity: 0.4;
           cursor: not-allowed;
+        }
+        .ovr-sub-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .ovr-sub-btn {
+          padding: 7px 14px;
+          background: transparent;
+          border: 1px solid ${T.blue};
+          color: ${T.blue};
+          font-size: 10px;
+          letter-spacing: 2px;
+          font-weight: bold;
+          cursor: pointer;
+          border-radius: 3px;
+          font-family: 'Futura PT', Futura, sans-serif;
+        }
+        .ovr-sub-btn:hover:not(:disabled) {
+          background: ${T.blue};
+          color: #fff;
+        }
+        .ovr-sub-btn:disabled {
+          opacity: 0.4;
+          cursor: wait;
         }
         .ovr-modal-backdrop {
           position: fixed;
@@ -890,6 +963,7 @@ export default function OverviewApp() {
                               {' · '}
                               {u.subscription.status.toUpperCase()}
                               {u.subscription.cancel_at_period_end ? ' · CANCEL PENDING' : ''}
+                              {u.subscription.paused_at ? ' · PAUSED' : ''}
                               {u.subscription.subscribed_since && (
                                 <div style={{ color: T.muted, fontSize: 10, marginTop: 2 }}>
                                   {u.subscription.status === 'canceled' ? 'was subscribed for ' : 'subscribed for '}
@@ -917,6 +991,32 @@ export default function OverviewApp() {
                     <span className="ovr-danger-label">
                       DANGER ZONE{u.is_admin ? ' · ADMIN PROTECTED' : ''}
                     </span>
+                    <div className="ovr-sub-actions">
+                    {u.subscription && ['active', 'past_due', 'trialing', 'unpaid'].includes(u.subscription.status) && (() => {
+                      const paused = !!u.subscription.paused_at
+                      const cancelling = !!u.subscription.cancel_at_period_end
+                      const btn = (action: 'pause' | 'resume' | 'cancel' | 'renew', label: string) => (
+                        <button
+                          key={action}
+                          className="ovr-sub-btn"
+                          disabled={!!subBusy}
+                          onClick={(e) => { e.stopPropagation(); void runSubAction(u, action) }}
+                        >
+                          {subBusy === u.clerk_id + ':' + action ? '…' : label}
+                        </button>
+                      )
+                      return (
+                        <>
+                          {paused ? btn('resume', 'RESUME') : btn('pause', 'PAUSE')}
+                          {cancelling ? btn('renew', 'RENEW') : btn('cancel', 'CANCEL')}
+                        </>
+                      )
+                    })()}
+                    {subMsg[u.clerk_id] && (
+                      <span style={{ fontSize: 10, letterSpacing: 1, color: subMsg[u.clerk_id].ok ? T.green : T.red }}>
+                        {subMsg[u.clerk_id].text}
+                      </span>
+                    )}
                     <button
                       className="ovr-danger-btn"
                       disabled={u.is_admin}
@@ -929,6 +1029,7 @@ export default function OverviewApp() {
                     >
                       DELETE
                     </button>
+                    </div>
                   </div>
                 </>
               )}
