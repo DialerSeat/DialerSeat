@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { getT } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /sign-up — its own title on the main domain
@@ -23,10 +24,17 @@ export async function generateMetadata(): Promise<Metadata> {
   if (h.get('x-tenant-slug') || !APEX_HOSTS.has(host)) return {}
 
   const tm = await getT()
-  return {
-    title: tm(msg('Sign Up for DialerSeat: $35 a Week, No Contract')),
-    description: tm(msg('Create your DialerSeat account: every dialing mode for $35 per seat per week, billed weekly. No contract, no setup fee.')),
-  }
+  const title = tm(msg('Sign Up for DialerSeat: $35 a Week, No Contract'))
+  const description = tm(msg('Create your DialerSeat account: every dialing mode for $35 per seat per week, billed weekly. No contract, no setup fee.'))
+  // A sign-up link is what gets pasted into a DM, so it gets a canonical and
+  // the same titled share card as every other page.
+  return withShareImage({
+    title,
+    description,
+    alternates: { canonical: 'https://dialerseat.com/sign-up' },
+    openGraph: { title, description, url: 'https://dialerseat.com/sign-up', type: 'website' },
+    twitter: { card: 'summary_large_image', title, description },
+  })
 }
 
 export default function SignUpLayout({ children }: { children: React.ReactNode }) {

@@ -1,6 +1,7 @@
 import 'server-only'
 import type { Metadata } from 'next'
-import { ENABLED_LOCALES, localizedPath, type Locale } from './locales'
+import { ENABLED_LOCALES, isLocalizablePath, localizedPath, type Locale } from './locales'
+import { shareImageUrl } from '@/lib/shareImage'
 import { getDictionary, getLocale, getUrlLocale } from './server'
 import { translate, type Dictionary } from './translate'
 
@@ -40,10 +41,50 @@ function tr(v: unknown, dict: Dictionary | null): unknown {
   return v
 }
 
+function textOf(v: unknown): string | null {
+  if (typeof v === 'string') return v
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>
+    for (const k of ['absolute', 'default']) if (typeof o[k] === 'string') return o[k] as string
+  }
+  return null
+}
+
+/**
+ * What every page's metadata gets, in every language:
+ *
+ * - A share image carrying the page's own title (lib/shareImage). A page's
+ *   openGraph object replaces the layout's wholesale, so without this the
+ *   layout's image was lost on every page that set its own card.
+ * - og:site_name and og:locale, lost the same way.
+ * - No meta keywords. Google ignores the tag; Bing has said it reads it only
+ *   as a spam signal, and advised five to seven terms at most. Pages here
+ *   carried 16 on average and the layout 40, competitor names included.
+ */
+export function withShareImage(meta: Metadata, locale: Locale = 'en'): Metadata {
+  const out: Metadata = { ...meta }
+  delete out.keywords
+  const title = textOf(meta.openGraph?.title) ?? textOf(meta.twitter?.title) ?? textOf(meta.title)
+  const url = shareImageUrl(title, locale)
+  out.openGraph = {
+    siteName: 'DialerSeat',
+    locale: OG_LOCALE[locale],
+    ...meta.openGraph,
+    images: meta.openGraph?.images ?? [{ url, width: 1200, height: 630, alt: title ?? 'DialerSeat' }],
+  }
+  out.twitter = {
+    card: 'summary_large_image',
+    ...meta.twitter,
+    images: meta.twitter?.images ?? [url],
+  }
+  return out
+}
+
 export async function localizeMetadata(meta: Metadata): Promise<Metadata> {
-  if (ENABLED_LOCALES.length < 2) return meta
   const path = pathOf(meta.alternates?.canonical)
-  if (!path) return meta
+  // Language addresses exist only for the paths proxy.ts serves in other
+  // languages. Listing hreflang for any other page sent crawlers to 404s.
+  if (ENABLED_LOCALES.length < 2 || !path || !isLocalizablePath(path)) return withShareImage(meta, 'en')
 
   const locale = await getLocale()
   const urlLocale = await getUrlLocale()
@@ -79,7 +120,7 @@ export async function localizeMetadata(meta: Metadata): Promise<Metadata> {
       }
     }
   }
-  return out
+  return withShareImage(out, locale)
 }
 
 /**
@@ -89,12 +130,14 @@ export async function localizeMetadata(meta: Metadata): Promise<Metadata> {
  * Graph locale, so a shared Spanish page does not preview in English.
  */
 export async function localizeSiteMetadata(meta: Metadata): Promise<Metadata> {
-  if (ENABLED_LOCALES.length < 2) return meta
+  const base: Metadata = { ...meta }
+  delete base.keywords
+  if (ENABLED_LOCALES.length < 2) return base
   const locale = await getLocale()
-  if (locale === 'en') return meta
+  if (locale === 'en') return base
   const dict = await getDictionary()
   return {
-    ...meta,
+    ...base,
     title: tr(meta.title, dict) as Metadata['title'],
     ...(meta.description ? { description: translate(dict, meta.description) } : {}),
     ...(meta.openGraph ? {

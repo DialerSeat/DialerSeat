@@ -29,6 +29,12 @@ const isPublicRoute = createRouteMatcher([
   '/.well-known/(.*)',
   '/browserconfig.xml',
   '/md(.*)',
+  // Link-preview images. /og serves every page's titled card; the other two
+  // are Next's file-based images. All three hit auth.protect() and 404'd, so
+  // even the homepage's preview image was broken.
+  '/og',
+  '/opengraph-image(.*)',
+  '/twitter-image(.*)',
   '/data(.*)',
   '/tools(.*)',
   '/embed(.*)',

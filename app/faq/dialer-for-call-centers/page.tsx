@@ -9,6 +9,7 @@ import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
 import { pageDate } from '@/lib/pageDates'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/dialer-for-call-centers
@@ -27,7 +28,7 @@ import { pageDate } from '@/lib/pageDates'
 const ROUTE = '/faq/dialer-for-call-centers'
 const UPDATED = pageDate(ROUTE)
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Predictive Dialer for Call Centers: Weekly Seats, No Contract | DialerSeat',
   description:
     'A predictive dialer for small call centers, lead-gen agencies and offshore floors: shared campaigns with no duplicate calls, per-lead calling windows, the 3% cap enforced, and $35 per seat per week that you add or pause any week.',
@@ -48,6 +49,10 @@ export const metadata: Metadata = {
     title: 'Predictive dialer for call centers',
     description: 'Shared campaigns, per-lead calling windows, the 3% cap enforced. $35 per seat per week.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return withShareImage(baseMetadata)
 }
 
 const FAQS = [

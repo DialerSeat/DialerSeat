@@ -10,6 +10,7 @@ import DialerCostCalculator from '@/components/tools/DialerCostCalculator'
 import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { pageDate } from '@/lib/pageDates'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /tools/dialer-cost-calculator
@@ -25,7 +26,7 @@ import { pageDate } from '@/lib/pageDates'
 const ROUTE = '/tools/dialer-cost-calculator'
 const UPDATED = pageDate(ROUTE)
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Dialer Cost Calculator: Weekly vs Monthly Billing, Any Team Size | DialerSeat',
   description:
     'Enter how many weeks you need a dialer and how many agents. See what DialerSeat, ReadyMode, PhoneBurner, Mojo, BatchDialer, WAVV, Kixie and Orum would bill, with seat minimums and annual terms applied.',
@@ -45,6 +46,10 @@ export const metadata: Metadata = {
     title: 'Dialer cost calculator',
     description: 'What each dialer bills for the weeks and agents you actually need.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return withShareImage(baseMetadata)
 }
 
 const FAQS = [

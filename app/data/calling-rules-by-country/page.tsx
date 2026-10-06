@@ -10,6 +10,7 @@ import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { COUNTRY_RULES, RULES_CHECKED, type CountryRule } from '@/lib/countryRules'
 import { pageDate } from '@/lib/pageDates'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /data/calling-rules-by-country
@@ -28,7 +29,7 @@ import { pageDate } from '@/lib/pageDates'
 const ROUTE = '/data/calling-rules-by-country'
 const UPDATED = pageDate(ROUTE)
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Telemarketing & Cold Calling Rules by Country (2026) | DialerSeat',
   description: `Do Not Call lists, calling hours, consent rules, abandoned-call limits and caller ID prefixes for ${COUNTRY_RULES.length} countries, including the US, Canada, UK, Australia, France, Spain, Brazil and India. Sourced and dated.`,
   keywords: [
@@ -51,6 +52,10 @@ export const metadata: Metadata = {
     title: 'Outbound calling rules, country by country',
     description: `Do Not Call lists, calling hours, consent and dialer rules for ${COUNTRY_RULES.length} countries, with sources.`,
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return withShareImage(baseMetadata)
 }
 
 const FIELDS: { key: keyof CountryRule; label: string }[] = [

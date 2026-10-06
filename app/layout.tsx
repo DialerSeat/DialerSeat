@@ -24,20 +24,8 @@ const baseMetadata: Metadata = {
   description:
     "The professional outbound dialer built for solo agents up through larger teams. $35/week per seat. No contracts. Cancel anytime. Four dialer modes, automatic voicemail detection, inbound reception, unlimited numbers.",
   applicationName: 'DialerSeat',
-  keywords: [
-    'power dialer', 'predictive dialer', 'progressive dialer', 'preview dialer',
-    'outbound dialer', 'auto dialer', 'sales dialer', 'cold calling software',
-    'lead dialer', 'call center software',
-    'insurance dialer', 'real estate dialer', 'mortgage dialer',
-    'solar sales dialer', 'debt collection dialer', 'SDR dialer', 'B2B sales dialer',
-    'ReadyMode alternative', 'Mojo Dialer alternative', 'PhoneBurner alternative',
-    'Five9 alternative', 'CallTools alternative', 'Vicidial alternative',
-    'cheap predictive dialer', 'low cost dialer', 'no contract dialer',
-    'automatic voicemail detection', 'AMD dialer', 'TCPA compliant dialer',
-    'mobile dialer', 'browser dialer', 'inbound outbound dialer',
-    'team dialer', 'multi seat dialer', 'lead vendor dialer',
-    'white label dialer', 'agency dialer', 'reseller dialer',
-  ],
+  // No keywords. Google ignores the meta keywords tag, and Bing has said it
+  // reads it only as a spam signal past five to seven terms; this list was 40.
   authors: [{ name: 'DialerSeat' }],
   creator: 'DialerSeat',
   publisher: 'DialerSeat',

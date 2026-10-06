@@ -9,6 +9,7 @@ import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
 import { pageDate } from '@/lib/pageDates'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /features — every capability in one seat, and what is not built
@@ -38,7 +39,7 @@ const MODE_ROUTES: Record<string, string> = {
   Predictive: '/dialing-modes/predictive',
 }
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'DialerSeat Features: Dialing Modes, AMD, Compliance, Teams',
   description:
     'Everything a $35-a-week DialerSeat seat includes: all four dialing modes, answering-machine detection, local presence, recording, compliance enforcement and team tools. Plus what is not built yet.',
@@ -54,6 +55,10 @@ export const metadata: Metadata = {
     title: 'DialerSeat features',
     description: 'Every dialing mode, AMD, local presence, compliance and team tools in one weekly seat.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return withShareImage(baseMetadata)
 }
 
 export default function FeaturesPage() {

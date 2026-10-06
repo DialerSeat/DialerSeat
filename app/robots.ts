@@ -43,6 +43,11 @@ const AI_BOTS = [
   'OAI-SearchBot',
   
   'ClaudeBot',
+  // Anthropic split its crawling in 2025: Claude-SearchBot indexes for
+  // Claude's search, Claude-User fetches a page a user asked about. Each obeys
+  // only its own group, so each is named.
+  'Claude-SearchBot',
+  'Claude-User',
   'Claude-Web',
   'anthropic-ai',
   
@@ -91,6 +96,10 @@ const AI_BOTS = [
   // a URL to build the card shown when someone shares it. Every page now
   // carries its own Open Graph and Twitter card; these are what render them.
   // redditbot matters most of the three, given where the conversations are.
+  // Meta's preview crawler, for links shared on Instagram, Facebook,
+  // Messenger and WhatsApp. It falls under * otherwise; named so it is plain
+  // that DMs are a channel this site is built for.
+  'facebookexternalhit',
   'Twitterbot',
   'LinkedInBot',
   'redditbot',
@@ -119,13 +128,13 @@ const DISALLOW_PRIVATE = [
   
   
   
-  '/apple-icon',
-  '/apple-icon/',
-  '/icon',
-  '/icon/',
-  '/opengraph-image',
-  '/twitter-image',
   '/manifest.webmanifest',
+  // NOT disallowed: /og, /opengraph-image, /twitter-image, /icon, /apple-icon.
+  // They were, so every crawler that builds a link preview (Meta's for
+  // Instagram, Facebook and WhatsApp, Twitterbot, LinkedInBot, Slackbot...)
+  // was told it could not fetch the preview image. Meta documents that its
+  // crawler honours robots.txt, and Google requires Googlebot-Image to reach a
+  // site's icon. These are public images whose whole job is to be fetched.
 ]
 
 const RESERVED = new Set([

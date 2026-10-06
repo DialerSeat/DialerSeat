@@ -12,6 +12,7 @@ import { FACTS } from '@/lib/canonicalFacts'
 import { DIALERSEAT } from '@/lib/competitors'
 import { BILLED_DIALERS, DIALERSEAT_WEEKLY, billedCost } from '@/lib/weeklyBilling'
 import { pageDate } from '@/lib/pageDates'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /pricing
@@ -33,7 +34,7 @@ import { pageDate } from '@/lib/pageDates'
 const ROUTE = '/pricing'
 const UPDATED = pageDate(ROUTE)
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Dialer Pricing: $35 a Week per Seat, No Contract | DialerSeat',
   description:
     'DialerSeat costs $35 per seat per week with every dialer mode included. Billed weekly, so one week costs $35. A week of ReadyMode costs $199 and a week of Mojo Dialer $149, because they bill by the month.',
@@ -56,6 +57,10 @@ export const metadata: Metadata = {
     title: 'Dialer pricing: one week costs $35, not a month',
     description: 'Every dialer mode for $35 per seat per week. Monthly dialers bill a full month even for one week.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return withShareImage(baseMetadata)
 }
 
 const FAQS = [

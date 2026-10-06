@@ -10,6 +10,7 @@ import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { COMPETITORS, DIALERSEAT, type Competitor } from '@/lib/competitors'
 import { pageDate } from '@/lib/pageDates'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /data/dialer-pricing — the Dialer Pricing Index
@@ -33,7 +34,7 @@ import { pageDate } from '@/lib/pageDates'
 const ROUTE = '/data/dialer-pricing'
 const UPDATED = pageDate(ROUTE)
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: `Dialer Pricing Index: What ${COMPETITORS.length + 1} Dialers Cost | DialerSeat`,
   description: `Published pricing, contract terms and seat minimums for ${COMPETITORS.length + 1} outbound dialers, including ReadyMode, Mojo, PhoneBurner, BatchDialer, Five9, Convoso, Kixie, Orum and VICIdial. Dated and free to cite.`,
   keywords: [
@@ -55,6 +56,10 @@ export const metadata: Metadata = {
     title: 'Dialer Pricing Index',
     description: `What ${COMPETITORS.length + 1} outbound dialers charge, their contract terms and seat minimums, side by side.`,
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return withShareImage(baseMetadata)
 }
 
 const SEGMENTS: { key: Competitor['segment']; title: string; note: string }[] = [

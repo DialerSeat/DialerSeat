@@ -11,6 +11,7 @@ import { COMPETITORS } from '@/lib/competitors'
 import { COUNTRY_RULES } from '@/lib/countryRules'
 import { VERTICALS } from '@/lib/verticals'
 import { pageDate } from '@/lib/pageDates'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /resources — every citable page, in one place
@@ -25,7 +26,7 @@ import { pageDate } from '@/lib/pageDates'
 const ROUTE = '/resources'
 const UPDATED = pageDate(ROUTE)
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Outbound Calling Resources: Data, Calculators & Guides | DialerSeat',
   description:
     'Free outbound calling resources: a pricing index of every major dialer, telemarketing rules for 15 countries, live connect-rate data, a dialer cost calculator and an abandon-rate calculator. Free to cite and embed.',
@@ -41,6 +42,10 @@ export const metadata: Metadata = {
     title: 'Outbound calling resources',
     description: 'Dialer pricing index, calling rules by country, connect-rate data and free calculators.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return withShareImage(baseMetadata)
 }
 
 const DATA = [

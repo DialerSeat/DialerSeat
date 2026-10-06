@@ -8,6 +8,7 @@ import PageStamp from '@/components/PageStamp'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { pageDate } from '@/lib/pageDates'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/dialer-for-real-estate
@@ -38,7 +39,7 @@ import { pageDate } from '@/lib/pageDates'
 const ROUTE = '/faq/dialer-for-real-estate'
 const UPDATED = pageDate(ROUTE)
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Dialer for Real Estate Agents & Investors: Expireds, FSBO, Wholesaling | DialerSeat',
   description:
     'A real estate dialer for agents, wholesalers and their VAs: multi-line predictive, local caller ID, calling windows per lead state, and $35 per seat per week with no contract. Bring your list from any data tool.',
@@ -59,6 +60,10 @@ export const metadata: Metadata = {
     title: 'Dialer for real estate agents and investors',
     description: 'Multi-line predictive, local caller ID, calling windows per lead state. $35 per seat per week.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return withShareImage(baseMetadata)
 }
 
 const FAQS = [

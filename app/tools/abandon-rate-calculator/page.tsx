@@ -10,6 +10,7 @@ import AbandonRateCalculator from '@/components/tools/AbandonRateCalculator'
 import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { pageDate } from '@/lib/pageDates'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /tools/abandon-rate-calculator
@@ -26,7 +27,7 @@ import { pageDate } from '@/lib/pageDates'
 const ROUTE = '/tools/abandon-rate-calculator'
 const UPDATED = pageDate(ROUTE)
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'Abandon Rate Calculator: The 3% Rule for Predictive Dialers | DialerSeat',
   description:
     'Check a predictive campaign against the US 3% (FTC TSR), UK 3% (Ofcom) and Canada 5% (CRTC) abandoned-call limits. Enter answered and abandoned calls, get the rate and how many more calls you can abandon.',
@@ -46,6 +47,10 @@ export const metadata: Metadata = {
     title: 'Abandon rate calculator',
     description: 'Is your predictive campaign inside the US, UK or Canadian abandoned-call limit?',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return withShareImage(baseMetadata)
 }
 
 const FAQS = [

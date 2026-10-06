@@ -8,6 +8,7 @@ import PageStamp from '@/components/PageStamp'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { pageDate } from '@/lib/pageDates'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /faq/what-is-an-auto-dialer
@@ -35,7 +36,7 @@ import { pageDate } from '@/lib/pageDates'
 const ROUTE = '/faq/what-is-an-auto-dialer'
 const UPDATED = pageDate(ROUTE)
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'What Is an Auto Dialer? How It Works, Types, and Is It Legal | DialerSeat',
   description:
     'An auto dialer places calls from a lead list automatically and connects the agent when a person answers. How auto dialers work, the four types, what the law allows, and what one costs.',
@@ -55,6 +56,10 @@ export const metadata: Metadata = {
     title: 'What is an auto dialer?',
     description: 'How auto dialers work, the four types, what the law allows, and what one costs.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return withShareImage(baseMetadata)
 }
 
 const FAQS = [

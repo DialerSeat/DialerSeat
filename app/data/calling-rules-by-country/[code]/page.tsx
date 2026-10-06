@@ -11,6 +11,7 @@ import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { COUNTRY_RULES, RULES_CHECKED, type CountryRule } from '@/lib/countryRules'
 import { pageDate } from '@/lib/pageDates'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /data/calling-rules-by-country/<code> — one country's rules, on its own page
@@ -63,7 +64,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     .filter(Boolean)
     .join(', ')
   const description = `${c.name} telemarketing and cold calling rules: ${topics}, with sources.${c.changed ? ` ${c.changed}` : ''}`
-  return {
+  return withShareImage({
     title: `${c.name} Telemarketing & Cold Calling Rules (2026) | DialerSeat`,
     description: description.slice(0, 300),
     keywords: [
@@ -73,7 +74,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     alternates: { canonical: url },
     openGraph: { title: `${c.name}: telemarketing and cold calling rules`, description, url, type: 'article' },
     twitter: { card: 'summary_large_image', title: `${c.name}: telemarketing and cold calling rules`, description },
-  }
+  })
 }
 
 export default async function CountryRulesPage({ params }: { params: Promise<{ code: string }> }) {

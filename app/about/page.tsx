@@ -8,6 +8,7 @@ import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
 import { pageDate } from '@/lib/pageDates'
+import { withShareImage } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /about — who publishes all this, and how it is checked
@@ -25,7 +26,7 @@ import { pageDate } from '@/lib/pageDates'
 const ROUTE = '/about'
 const UPDATED = pageDate(ROUTE)
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: 'About DialerSeat: Who We Are and How We Research | DialerSeat',
   description:
     'DialerSeat is an outbound dialer at $35 per seat per week. How we research competitor pricing and calling rules, how we handle corrections, and where DialerSeat is not the right choice.',
@@ -41,6 +42,10 @@ export const metadata: Metadata = {
     title: 'About DialerSeat',
     description: 'Who publishes this site, how the comparisons and data are researched, and how corrections are made.',
   },
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return withShareImage(baseMetadata)
 }
 
 export default function AboutPage() {
