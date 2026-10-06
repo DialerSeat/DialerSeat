@@ -1,5 +1,5 @@
 'use client'
-import Link from 'next/link'
+import Link from '@/components/LocaleLink'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import BackToVsButton from '@/components/back-to-vs-button'

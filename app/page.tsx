@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-import Link from "next/link"
+import Link from '@/components/LocaleLink'
 import SiteFooter from '@/components/site-footer'
 import SiteHeader from '@/components/site-header'
 import LandingAuthSync from '@/components/LandingAuthSync'

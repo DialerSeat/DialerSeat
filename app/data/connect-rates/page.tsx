@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { neverRang } from '@/lib/dialOutcome'
-import Link from 'next/link'
+import Link from '@/components/LocaleLink'
 import JsonLd from '@/components/json-ld'
 import CiteThis from '@/components/CiteThis'
 import { organizationSchema, breadcrumbSchema } from '@/lib/schema'

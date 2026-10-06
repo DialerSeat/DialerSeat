@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/components/LocaleLink'
 import SeatLinksPanel from '@/components/teams/SeatLinksPanel'
 import RosterPanel from '@/components/teams/RosterPanel'
 import CampaignsAccessPanel from '@/components/teams/CampaignsAccessPanel'

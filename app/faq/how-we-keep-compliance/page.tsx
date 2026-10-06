@@ -1,7 +1,7 @@
 import { breadcrumbSchema } from '@/lib/schema'
 import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/LocaleLink'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DialingModeCTA from '@/components/DialingModeCTA'

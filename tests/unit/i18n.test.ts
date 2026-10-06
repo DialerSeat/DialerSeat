@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { NEVER_TRANSLATED, translate } from '@/lib/i18n/translate'
 import {
-  ENABLED_LOCALES, LOCALES, localeFromAcceptLanguage, localizedPath,
+  ENABLED_LOCALES, LOCALES, localeFromAcceptLanguage, localeHref, localizedPath,
 } from '@/lib/i18n/locales'
 
 describe('translate', () => {
@@ -43,6 +43,26 @@ describe('languages', () => {
     expect(localizedPath('es', '/faq/billing')).toBe('/es/faq/billing')
     expect(localizedPath('es', '/')).toBe('/es')
     expect(localizedPath('pt-BR', '/vs')).toBe('/pt-br/vs')
+  })
+
+  it("internal links stay in the page's language, only where a language version exists", () => {
+    // English pages render exactly as before.
+    expect(localeHref('/pricing', 'en')).toBe('/pricing')
+    expect(localeHref('/pricing', 'es')).toBe('/es/pricing')
+    expect(localeHref('/', 'de')).toBe('/de')
+    expect(localeHref('/pricing#faq', 'fr')).toBe('/fr/pricing#faq')
+    expect(localeHref('/vs/mojo?ref=rail', 'pt-BR')).toBe('/pt-br/vs/mojo?ref=rail')
+    expect(localeHref('/faq/dialer-for-solar', 'ar')).toBe('/ar/faq/dialer-for-solar')
+    // No language version: sign-up, the app, status, the llms files.
+    expect(localeHref('/sign-up', 'es')).toBe('/sign-up')
+    expect(localeHref('/dashboard', 'es')).toBe('/dashboard')
+    expect(localeHref('/status', 'it')).toBe('/status')
+    expect(localeHref('/llms.txt', 'it')).toBe('/llms.txt')
+    // Not a site path.
+    expect(localeHref('https://example.com/pricing', 'es')).toBe('https://example.com/pricing')
+    expect(localeHref('//cdn.example.com/x', 'es')).toBe('//cdn.example.com/x')
+    expect(localeHref('#top', 'es')).toBe('#top')
+    expect(localeHref('mailto:hello@dialerseat.com', 'es')).toBe('mailto:hello@dialerseat.com')
   })
 })
 

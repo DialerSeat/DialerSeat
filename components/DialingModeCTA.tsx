@@ -20,7 +20,7 @@
 
 
 import { useUser } from '@clerk/nextjs'
-import Link from 'next/link'
+import Link from '@/components/LocaleLink'
 import type { CSSProperties } from 'react'
 import { t } from '@/lib/i18n/client'
 

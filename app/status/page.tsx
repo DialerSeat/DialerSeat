@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/LocaleLink'
 import JsonLd from '@/components/json-ld'
 import { organizationSchema, breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'

@@ -149,6 +149,19 @@ export function localizedPath(locale: Locale, path: string): string {
 }
 
 /**
+ * An internal link as a reader of `locale` should follow it: "/pricing#faq"
+ * on a Spanish page is "/es/pricing#faq". Untouched in English, for anything
+ * that is not a site path, and for paths with no language version.
+ */
+export function localeHref(href: string, locale: Locale): string {
+  if (locale === 'en' || !href.startsWith('/') || href.startsWith('//')) return href
+  const cut = href.search(/[?#]/)
+  const path = (cut === -1 ? href : href.slice(0, cut)) || '/'
+  if (!isLocalizablePath(path)) return href
+  return localizedPath(locale, path) + (cut === -1 ? '' : href.slice(cut))
+}
+
+/**
  * Splits "/es/faq" into { locale: 'es', rest: '/faq' }. Only enabled languages
  * count: a prefix for a language that is not live yet is just a path, and
  * 404s like any other unknown one.

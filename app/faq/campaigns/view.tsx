@@ -1,5 +1,5 @@
 'use client'
-import Link from 'next/link'
+import Link from '@/components/LocaleLink'
 import { useUser } from '@clerk/nextjs'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'

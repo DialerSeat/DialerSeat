@@ -432,7 +432,9 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   if (tenantSlug) {
-    if (isMarketingOnlyPath(url.pathname)) {
+    // A language address (/es/pricing) goes to the main domain like its
+    // English twin: marketing links keep the reader's language (LocaleLink).
+    if (isMarketingOnlyPath(url.pathname) || (localized && isLocalizablePath(localized.rest))) {
       const mainUrl = new URL(url.pathname + url.search, 'https://dialerseat.com')
       return NextResponse.redirect(mainUrl, 308)
     }

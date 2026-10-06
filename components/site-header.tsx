@@ -1,5 +1,5 @@
 'use client'
-import Link from 'next/link'
+import Link from '@/components/LocaleLink'
 import Image from 'next/image'
 import { useUser, UserButton } from '@clerk/nextjs'
 import { usePathname } from 'next/navigation'

@@ -1,6 +1,6 @@
 'use client'
 import { useUser } from '@clerk/nextjs'
-import Link from 'next/link'
+import Link from '@/components/LocaleLink'
 import { useState } from 'react'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'

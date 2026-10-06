@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/LocaleLink'
 import JsonLd from '@/components/json-ld'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'

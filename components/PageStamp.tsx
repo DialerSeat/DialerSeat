@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/LocaleLink'
 import type { ReactNode } from 'react'
 import { t } from '@/lib/i18n/client'
 

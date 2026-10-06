@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/LocaleLink'
 import { useState, type ReactNode } from 'react'
 import { SITE } from '@/lib/siteTheme'
 import { inter } from '@/lib/fonts'
