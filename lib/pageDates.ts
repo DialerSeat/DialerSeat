@@ -5,10 +5,10 @@
 
 export const PAGE_DATES: Record<string, string> = {
   "/": "2026-10-03",
-  "/about": "2026-10-03",
-  "/data/calling-rules-by-country": "2026-10-03",
+  "/about": "2026-10-06",
+  "/data/calling-rules-by-country": "2026-10-06",
   "/data/connect-rates": "2026-10-01",
-  "/data/dialer-pricing": "2026-10-03",
+  "/data/dialer-pricing": "2026-10-06",
   "/dialing-modes": "2026-09-26",
   "/dialing-modes/power": "2026-10-01",
   "/dialing-modes/predictive": "2026-10-01",
@@ -21,16 +21,16 @@ export const PAGE_DATES: Record<string, string> = {
   "/faq/campaigns": "2026-09-25",
   "/faq/compliance-export": "2026-09-26",
   "/faq/data-and-recordings": "2026-09-26",
-  "/faq/dialer-for-b2b-sales": "2026-10-01",
-  "/faq/dialer-for-call-centers": "2026-10-03",
-  "/faq/dialer-for-debt-collection": "2026-10-01",
-  "/faq/dialer-for-fundraising": "2026-10-01",
+  "/faq/dialer-for-b2b-sales": "2026-10-06",
+  "/faq/dialer-for-call-centers": "2026-10-06",
+  "/faq/dialer-for-debt-collection": "2026-10-06",
+  "/faq/dialer-for-fundraising": "2026-10-06",
   "/faq/dialer-for-insurance-agents": "2026-10-01",
-  "/faq/dialer-for-mortgage": "2026-10-01",
+  "/faq/dialer-for-mortgage": "2026-10-06",
   "/faq/dialer-for-offshore-agents": "2026-09-26",
-  "/faq/dialer-for-real-estate": "2026-10-03",
-  "/faq/dialer-for-recruiters": "2026-10-01",
-  "/faq/dialer-for-solar": "2026-10-01",
+  "/faq/dialer-for-real-estate": "2026-10-06",
+  "/faq/dialer-for-recruiters": "2026-10-06",
+  "/faq/dialer-for-solar": "2026-10-06",
   "/faq/dialer-glossary": "2026-10-03",
   "/faq/dialer-modes": "2026-10-03",
   "/faq/dialerseat-teams": "2026-09-26",
@@ -54,7 +54,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/faq/what-is-a-predictive-dialer": "2026-10-01",
   "/faq/what-is-a-preview-dialer": "2026-10-01",
   "/faq/what-is-a-progressive-dialer": "2026-10-01",
-  "/faq/what-is-an-auto-dialer": "2026-10-03",
+  "/faq/what-is-an-auto-dialer": "2026-10-06",
   "/faq/white-label": "2026-10-03",
   "/faq/white-label-mobile": "2026-09-26",
   "/faq/why-calls-show-spam-likely": "2026-09-25",
@@ -62,14 +62,14 @@ export const PAGE_DATES: Record<string, string> = {
   "/faq/why-is-compliance-important": "2026-09-25",
   "/faq/why-we-charge": "2026-09-25",
   "/faq/why-we-dont-rest-flagged-numbers": "2026-09-25",
-  "/features": "2026-10-03",
-  "/pricing": "2026-10-03",
+  "/features": "2026-10-06",
+  "/pricing": "2026-10-06",
   "/privacy": "2026-09-26",
-  "/resources": "2026-10-03",
+  "/resources": "2026-10-06",
   "/status": "2026-09-26",
   "/terms": "2026-09-26",
-  "/tools/abandon-rate-calculator": "2026-10-03",
-  "/tools/dialer-cost-calculator": "2026-10-03",
+  "/tools/abandon-rate-calculator": "2026-10-06",
+  "/tools/dialer-cost-calculator": "2026-10-06",
   "/vs": "2026-10-03",
   "/vs/[matchup]": "2026-10-03",
   "/vs/3cx": "2026-10-03",
@@ -107,7 +107,7 @@ export const PAGE_DATES: Record<string, string> = {
 }
 
 /** Latest date across every page: the fallback for a route missing above. */
-export const SITE_UPDATED = '2026-10-03'
+export const SITE_UPDATED = '2026-10-06'
 
 /** The date a route last changed, as YYYY-MM-DD. */
 export function pageDate(path: string): string {

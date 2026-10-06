@@ -8,7 +8,9 @@ import PageStamp from '@/components/PageStamp'
 import { faqRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { pageDate } from '@/lib/pageDates'
-import { withShareImage } from '@/lib/i18n/metadata'
+import { localizeMetadata } from '@/lib/i18n/metadata'
+import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /faq/dialer-for-real-estate
@@ -63,46 +65,47 @@ const baseMetadata: Metadata = {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return withShareImage(baseMetadata)
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [
   {
-    question: 'What is the best dialer for real estate agents?',
+    question: msg("What is the best dialer for real estate agents?"),
     answer:
-      'One that fits your lists. Expireds and FSBOs are worked fast and in volume, so multi-line or predictive dialing and a local caller ID matter most. Referral and sphere calls need preview dialing and good notes. DialerSeat includes all four modes at $35 per seat per week, so you choose per campaign instead of per plan.',
+      msg("One that fits your lists. Expireds and FSBOs are worked fast and in volume, so multi-line or predictive dialing and a local caller ID matter most. Referral and sphere calls need preview dialing and good notes. DialerSeat includes all four modes at $35 per seat per week, so you choose per campaign instead of per plan."),
   },
   {
-    question: 'Can I use my PropStream, BatchLeads or DealMachine lists?',
+    question: msg("Can I use my PropStream, BatchLeads or DealMachine lists?"),
     answer:
       'Yes. Export the list as a CSV and upload it; the columns are detected automatically. If your CRM or data tool can send a webhook, lead drip on Manager+ sends new leads straight into a running campaign. DialerSeat does not sell lead data, so you keep your own source.',
   },
   {
-    question: 'Can my virtual assistants in the Philippines use it?',
+    question: msg("Can my virtual assistants in the Philippines use it?"),
     answer:
-      'Yes. Agents dial from a browser anywhere, at the same $35 per seat per week, and calling windows follow each lead’s own state, so a VA in another time zone cannot call a US seller outside legal hours.',
+      msg("Yes. Agents dial from a browser anywhere, at the same $35 per seat per week, and calling windows follow each lead’s own state, so a VA in another time zone cannot call a US seller outside legal hours."),
   },
   {
-    question: 'Do I need to scrub expired and FSBO lists against the Do Not Call Registry?',
+    question: msg("Do I need to scrub expired and FSBO lists against the Do Not Call Registry?"),
     answer:
       'Yes. Calling a homeowner to solicit a listing or a purchase is a marketing call, and many FSBO and expired numbers are on the National Do Not Call Registry. Scrubbing is your responsibility; DialerSeat blocks numbers on your own suppression list and anyone who opts out.',
   },
   {
-    question: 'How does the price compare with Mojo Dialer?',
+    question: msg("How does the price compare with Mojo Dialer?"),
     answer:
-      'Mojo Dialer is billed monthly: $139 for Triple Line plus a $10 Agent Access licence, before data add-ons. DialerSeat is $35 per seat per week with predictive included and no contract, so a week costs $35 and four weeks cost $140.',
+      msg("Mojo Dialer is billed monthly: $139 for Triple Line plus a $10 Agent Access licence, before data add-ons. DialerSeat is $35 per seat per week with predictive included and no contract, so a week costs $35 and four weeks cost $140."),
   },
 ]
 
-export default function DialerForRealEstatePage() {
+export default async function DialerForRealEstatePage() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'FAQ', url: '/faq' },
-          { name: 'Dialer for real estate', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("FAQ"), url: '/faq' },
+          { name: msg("Dialer for real estate"), url: ROUTE },
         ])}
       />
       <SiteHeader />
@@ -110,119 +113,100 @@ export default function DialerForRealEstatePage() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ REAL ESTATE</div>
+            <div className="guts-eyebrow">{t("▸ REAL ESTATE")}</div>
             <h1>
-              A dialer for expireds, FSBOs
-              <span className="second">and the list you bought today.</span>
+              {t("A dialer for expireds, FSBOs")}<span className="second">{t("and the list you bought today.")}</span>
             </h1>
             <p>
-              Listing agents, wholesalers, investors and the VAs who dial for them. Here is what matters in a
-              real estate dialer, and what DialerSeat does about each part.
-            </p>
-            <PageStamp>Updated {UPDATED}</PageStamp>
+              {t("Listing agents, wholesalers, investors and the VAs who dial for them. Here is what matters in a real estate dialer, and what DialerSeat does about each part.")}</p>
+            <PageStamp>{t("Updated {uPDATED}", { uPDATED: UPDATED })}</PageStamp>
           </div>
         </GutsSection>
 
-        <GutsSection icon="swap" title="More lines when the list is cold, one line when it is warm">
+        <GutsSection icon="swap" title={t("More lines when the list is cold, one line when it is warm")}>
           <div className="guts-grid-2">
             <div className="guts-panel">
-              <div className="role">EXPIREDS, FSBO, COLD LISTS</div>
-              <h3>Predictive</h3>
-              <p>Several lines at once, the first seller who answers reaches you. Real predictive, not a fixed triple line.</p>
+              <div className="role">{t("EXPIREDS, FSBO, COLD LISTS")}</div>
+              <h3>{t("Predictive")}</h3>
+              <p>{t("Several lines at once, the first seller who answers reaches you. Real predictive, not a fixed triple line.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">CIRCLE PROSPECTING</div>
-              <h3>Power or progressive</h3>
-              <p>One call at a time, dialed the moment the last one ends.</p>
+              <div className="role">{t("CIRCLE PROSPECTING")}</div>
+              <h3>{t("Power or progressive")}</h3>
+              <p>{t("One call at a time, dialed the moment the last one ends.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">SPHERE, REFERRALS, CALLBACKS</div>
-              <h3>Preview</h3>
-              <p>Read the notes first, then start the call yourself.</p>
+              <div className="role">{t("SPHERE, REFERRALS, CALLBACKS")}</div>
+              <h3>{t("Preview")}</h3>
+              <p>{t("Read the notes first, then start the call yourself.")}</p>
             </div>
             <div className="guts-panel">
-              <div className="role">NOT A TIER</div>
-              <h3>All four included</h3>
-              <p>Chosen per campaign. Nothing to upgrade to change how you dial.</p>
+              <div className="role">{t("NOT A TIER")}</div>
+              <h3>{t("All four included")}</h3>
+              <p>{t("Chosen per campaign. Nothing to upgrade to change how you dial.")}</p>
             </div>
           </div>
         </GutsSection>
 
-        <GutsSection icon="phone" title="A local number, so sellers pick up">
+        <GutsSection icon="phone" title={t("A local number, so sellers pick up")}>
           <p>
-            A homeowner who listed last month has had a dozen agents call. An out-of-state number is the
-            easiest one to ignore. Every DialerSeat call goes out from a number matched to the seller: their
-            area code first, then their state, then their region. It is on by default, with no add-on fee,
-            and calls spread across the pool so no single number gets labelled Spam Likely.
-          </p>
+            {t("A homeowner who listed last month has had a dozen agents call. An out-of-state number is the easiest one to ignore. Every DialerSeat call goes out from a number matched to the seller: their area code first, then their state, then their region. It is on by default, with no add-on fee, and calls spread across the pool so no single number gets labelled Spam Likely.")}</p>
           <div className="guts-btns">
-            <Link href="/faq/local-presence-dialing" className="guts-btn secondary">HOW THE NUMBER IS PICKED</Link>
-            <Link href="/faq/why-calls-show-spam-likely" className="guts-btn secondary">WHY CALLS GET FLAGGED</Link>
+            <Link href="/faq/local-presence-dialing" className="guts-btn secondary">{t("HOW THE NUMBER IS PICKED")}</Link>
+            <Link href="/faq/why-calls-show-spam-likely" className="guts-btn secondary">{t("WHY CALLS GET FLAGGED")}</Link>
           </div>
         </GutsSection>
 
-        <GutsSection icon="list" title="Your list, from whatever tool you use">
+        <GutsSection icon="list" title={t("Your list, from whatever tool you use")}>
           <p>
-            DialerSeat does not sell lead data, so you are not paying for a dataset you already have. Export
-            your list from PropStream, BatchLeads, DealMachine, your MLS or your CRM as a CSV and upload it;
-            the columns are detected automatically. If the tool can send a webhook, lead drip on Manager+ puts
-            new leads straight into a running campaign.
-          </p>
+            {t("DialerSeat does not sell lead data, so you are not paying for a dataset you already have. Export your list from PropStream, BatchLeads, DealMachine, your MLS or your CRM as a CSV and upload it; the columns are detected automatically. If the tool can send a webhook, lead drip on Manager+ puts new leads straight into a running campaign.")}</p>
           <div className="guts-btns">
-            <Link href="/faq/leads" className="guts-btn secondary">UPLOADING LEADS</Link>
-            <Link href="/faq/send-leads-from-your-crm" className="guts-btn secondary">LEAD DRIP</Link>
+            <Link href="/faq/leads" className="guts-btn secondary">{t("UPLOADING LEADS")}</Link>
+            <Link href="/faq/send-leads-from-your-crm" className="guts-btn secondary">{t("LEAD DRIP")}</Link>
           </div>
         </GutsSection>
 
-        <GutsSection icon="team" title="VAs who dial for you">
+        <GutsSection icon="team" title={t("VAs who dial for you")}>
           <p>
-            Many investors have callers in the Philippines or Latin America. Each gets their own seat at the
-            same $35 a week, dials from a browser, and cannot call a seller outside that seller’s legal hours,
-            because the window is enforced against the lead’s state on the server. You see who is live and
-            what each caller did.
-          </p>
+            {t("Many investors have callers in the Philippines or Latin America. Each gets their own seat at the same $35 a week, dials from a browser, and cannot call a seller outside that seller’s legal hours, because the window is enforced against the lead’s state on the server. You see who is live and what each caller did.")}</p>
           <div className="guts-btns">
-            <Link href="/faq/dialer-for-offshore-agents" className="guts-btn secondary">OFFSHORE & REMOTE AGENTS</Link>
-            <Link href="/faq/teams-how-it-works" className="guts-btn secondary">HOW TEAMS WORK</Link>
+            <Link href="/faq/dialer-for-offshore-agents" className="guts-btn secondary">{t("OFFSHORE & REMOTE AGENTS")}</Link>
+            <Link href="/faq/teams-how-it-works" className="guts-btn secondary">{t("HOW TEAMS WORK")}</Link>
           </div>
         </GutsSection>
 
-        <GutsSection icon="shield" title="The compliance part, for real estate">
+        <GutsSection icon="shield" title={t("The compliance part, for real estate")}>
           <ul className="guts-list good">
-            <li><strong>Calling windows</strong> are enforced per lead state, including the states stricter than 8 a.m. to 9 p.m.</li>
-            <li><strong>Abandoned calls</strong> are held under the federal 3% limit automatically in predictive mode.</li>
-            <li><strong>Opt-outs.</strong> Pressing 9 on the abandoned-call message blocks the number across your account, and a STOP text blocks it platform-wide.</li>
+            <li><strong>{t("Calling windows")}</strong> {t("are enforced per lead state, including the states stricter than 8 a.m. to 9 p.m.")}</li>
+            <li><strong>{t("Abandoned calls")}</strong> {t("are held under the federal 3% limit automatically in predictive mode.")}</li>
+            <li><strong>{t("Opt-outs.")}</strong> {t("Pressing 9 on the abandoned-call message blocks the number across your account, and a STOP text blocks it platform-wide.")}</li>
           </ul>
           <ul className="guts-list warn">
             <li>
-              <strong>Scrub expireds and FSBOs.</strong> Soliciting a listing is a marketing call, and many of
-              these numbers are on the National Do Not Call Registry.{' '}
-              <Link href="/faq/how-to-scrub-the-do-not-call-registry">How to scrub your list</Link>.
+              <strong>{t("Scrub expireds and FSBOs.")}</strong> {t("Soliciting a listing is a marketing call, and many of these numbers are on the National Do Not Call Registry.")}{' '}
+              <Link href="/faq/how-to-scrub-the-do-not-call-registry">{t("How to scrub your list")}</Link>.
             </li>
-            <li><strong>Consent for texts and recorded messages</strong> is yours to hold.</li>
+            <li><strong>{t("Consent for texts and recorded messages")}</strong> {t("is yours to hold.")}</li>
           </ul>
         </GutsSection>
 
-        <GutsSection icon="price" title="What it costs">
+        <GutsSection icon="price" title={t("What it costs")}>
           <p>
-            $35 per seat per week, billed weekly, with every mode, local presence and recording included. No
-            contract and no data add-ons. Mojo Dialer bills monthly, $139 for Triple Line plus a $10 Agent
-            Access licence, so a slow month still pays the full month.
-          </p>
+            {t("$35 per seat per week, billed weekly, with every mode, local presence and recording included. No contract and no data add-ons. Mojo Dialer bills monthly, $139 for Triple Line plus a $10 Agent Access licence, so a slow month still pays the full month.")}</p>
           <div className="guts-btns">
-            <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
-            <Link href="/vs/mojo" className="guts-btn secondary">VS MOJO DIALER</Link>
-            <Link href="/vs/batchdialer" className="guts-btn secondary">VS BATCHDIALER</Link>
-            <Link href="/vs/redx" className="guts-btn secondary">VS REDX</Link>
+            <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
+            <Link href="/vs/mojo" className="guts-btn secondary">{t("VS MOJO DIALER")}</Link>
+            <Link href="/vs/batchdialer" className="guts-btn secondary">{t("VS BATCHDIALER")}</Link>
+            <Link href="/vs/redx" className="guts-btn secondary">{t("VS REDX")}</Link>
           </div>
         </GutsSection>
 
-        <GutsSection icon="chat" title="Real estate dialer questions">
+        <GutsSection icon="chat" title={t("Real estate dialer questions")}>
           <div style={{ textAlign: 'start', maxWidth: 660, margin: '0 auto' }}>
             {FAQS.map((f) => (
               <div key={f.question} style={{ marginBottom: 22 }}>
-                <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>{f.question}</h3>
-                <p style={{ margin: 0 }}>{f.answer}</p>
+                <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>{t(f.question)}</h3>
+                <p style={{ margin: 0 }}>{t(f.answer)}</p>
               </div>
             ))}
           </div>

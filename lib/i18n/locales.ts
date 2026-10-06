@@ -178,5 +178,5 @@ export function stripeLocale(locale: Locale) {
 export function isLocalizablePath(path: string): boolean {
   return path === '/' ||
     /^\/(faq|vs|dialing-modes|data|tools|managers|white-label)(\/|$)/.test(path) ||
-    /^\/(pricing|resources|terms|privacy)$/.test(path)
+    /^\/(pricing|features|about|resources|terms|privacy)$/.test(path)
 }

@@ -51,8 +51,9 @@ and no longer lists the four non-canonical `/faq/what-is-a-*` URLs.
    `/data/dialer-pricing`, `/data/calling-rules-by-country`, `/faq/what-is-an-auto-dialer`,
    `/tools/dialer-cost-calculator`, `/vs/mojo`, `/vs/readymode`.
 3. **Bing Webmaster Tools**: import from Search Console, submit both sitemaps.
-4. **IndexNow**: `INDEXNOW_KEY=<prod key> node scripts/indexnow-submit.mjs`
-   (checks the key file first; then submits every sitemap URL).
+4. **IndexNow**: `node scripts/indexnow-submit.mjs` (the key file is committed
+   in `public/`, so no env variable is needed; the script checks the key file
+   first, then submits every sitemap URL).
 5. Run `/pricing`, `/data/dialer-pricing` and one `/faq/dialer-for-*` page through
    Google's Rich Results Test and validator.schema.org.
 6. Before every later commit that touches marketing pages:
@@ -68,8 +69,9 @@ independent places describe it the same way. Use `FACTS.oneLine` from
 `lib/canonicalFacts.ts` word for word as the description everywhere.
 
 Create or claim, then add each URL to `sameAs` in `lib/schema.ts`
-(`organizationSchema`). Today `sameAs` holds only
-`linkedin.com/in/dialerseat`, which is a personal-profile URL pattern.
+(`organizationSchema`). `sameAs` is empty for now: the old
+`linkedin.com/in/dialerseat` was a personal-profile URL, and the site carries
+the company name only.
 
 | Profile | Why |
 |---|---|
@@ -189,5 +191,37 @@ Referrals from `chatgpt.com`, `perplexity.ai`, `gemini.google.com` and
 - **Data licence.** The data pages say "free to cite with a link". Adding a
   formal licence (e.g. CC BY 4.0) to the Dataset schema makes Google Dataset
   Search and researchers more likely to use them.
-- **Translations.** The new pages render English under `/es/`, `/pt-BR/`,
-  `/fr/` until their strings are added to the i18n catalog.
+- **WebMCP origin trial.** The two calculators register WebMCP tools
+  (section 9), but Chrome only exposes `document.modelContext` to ordinary
+  visitors on sites with an origin-trial token. Registering is free at
+  developer.chrome.com/origintrials (WebMCP) with a Google account; the token
+  then goes in a `<meta http-equiv="origin-trial">` tag. Without it the tools
+  are dormant and cost nothing.
+- **Description and title lengths.** Measured on 2026-10-05: 95 of the 143
+  English pages in the sitemap have meta descriptions over 160 characters (the
+  longest, `/faq/white-label-mobile`, is 282), and 56 titles run past 65
+  characters, where Google starts cutting them. Descriptions are not a ranking
+  factor and Google rewrites most of them anyway, but Bing's SEO report flags
+  them and the cut-off tail never shows. Shortening them changes the English
+  text every language translates from, so it is a rewrite-and-retranslate job.
+  Titles carry more weight: change them a few at a time and watch Search
+  Console, rather than all at once.
+
+---
+
+## 9. Tags, previews, languages and AI agents (2026-10-05)
+
+What the primary sources say, and what changed on the site because of it.
+
+| Finding | Source | What changed |
+|---|---|---|
+| Shared links showed no image: `og:image` was missing or 404 on every page, and `robots.txt` blocked the image routes | Checked live with curl as `facebookexternalhit`, `Twitterbot`, `LinkedInBot` | `/og` draws a signed 1200×630 card per page title (`lib/shareImage.ts`, `app/og/route.tsx`); `withShareImage()` puts it on every page in every language; robots no longer blocks image routes; Meta's crawler named in robots |
+| Google ignores the meta keywords tag; Bing treats a long one as a spam signal | Google Search Central ("Google does not use the keywords meta tag in web ranking", 2009); Bing Webmaster guidance on keyword stuffing | Every `keywords` tag removed |
+| Google rewrites most titles that are long or padded with boilerplate, and most meta descriptions | Zyppy title-rewrite study (80,959 titles); Ahrefs: 62.78% of descriptions rewritten | Titles lead with the query and end in one `\| DialerSeat`; homepage keeps "DialerSeat, Dial Smarter. Close Faster." |
+| Ranking leans on anchors, body text and user clicks ("ABC" signals, Navboost) | US v. Google trial record: HJ Kim exhibit, Pandu Nayak testimony; the May 2024 Content Warehouse API leak | No change needed: internal links already use descriptive anchors (rails, footer, `/resources`). Clicks come from people choosing the result, which is what the titles above are for |
+| hreflang must point at pages that exist, return 200 and are self-canonical | Google Search Central, "Tell Google about localized versions of your page" | hreflang only on paths `/es/…` actually serves (`isLocalizablePath`, kept in step with `MARKETING_ONLY_PATHS` in `proxy.ts`) |
+| The language URLs in the sitemap served English | Checked live | 17 pages and their data (industry pages, 15 country pages, pricing table, calculators) translated into Spanish, Portuguese, French, Arabic, Italian and German: 7,498 strings each. Titles, descriptions, preview images, FAQ and breadcrumb structured data follow the page's language |
+| Structured data helps LLM-based search understand a page; IndexNow gets changes seen fast | Microsoft Bing (Fabrice Canel) on schema and LLMs; IndexNow docs | FAQ and breadcrumb JSON-LD translated per language; changed URLs submitted through IndexNow after each deploy |
+| Anthropic runs three crawlers with separate purposes | Anthropic crawler docs: `ClaudeBot`, `Claude-SearchBot`, `Claude-User` | All three allowed in `robots.txt` |
+| Agents in the browser can call a page's functions instead of scraping it | WebMCP, W3C Draft Community Group Report (2 Oct 2026); Chrome's WebMCP imperative API docs (`document.modelContext.registerTool`, origin trial) | `/tools/abandon-rate-calculator` registers `check_abandoned_call_rate` and `/tools/dialer-cost-calculator` registers `compare_dialer_cost` (`lib/webmcpTools.ts`), computed by the same function the page shows |
+| Assistants cite comparison and "best of" lists heavily | Ahrefs: 43.8% of ChatGPT citations go to best-of lists | Section 4's list outreach stays the top off-site task |

@@ -10,7 +10,9 @@ import AbandonRateCalculator from '@/components/tools/AbandonRateCalculator'
 import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { pageDate } from '@/lib/pageDates'
-import { withShareImage } from '@/lib/i18n/metadata'
+import { localizeMetadata } from '@/lib/i18n/metadata'
+import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /tools/abandon-rate-calculator
@@ -50,46 +52,47 @@ const baseMetadata: Metadata = {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return withShareImage(baseMetadata)
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [
   {
-    question: 'How do you calculate the abandon rate?',
+    question: msg("How do you calculate the abandon rate?"),
     answer:
-      'Divide abandoned calls by calls answered by a person, then multiply by 100. Use answered calls, not dials: dividing by dials makes the rate look lower than the regulator will measure it.',
+      msg("Divide abandoned calls by calls answered by a person, then multiply by 100. Use answered calls, not dials: dividing by dials makes the rate look lower than the regulator will measure it."),
   },
   {
-    question: 'What is the legal abandon rate for a predictive dialer?',
+    question: msg("What is the legal abandon rate for a predictive dialer?"),
     answer:
-      'In the US, no more than 3% of calls answered by a person, per campaign, over each 30-day period (FTC Telemarketing Sales Rule). In the UK, no more than 3% of live calls per campaign per 24 hours (Ofcom). In Canada, no more than 5% per calendar month (CRTC).',
+      msg("In the US, no more than 3% of calls answered by a person, per campaign, over each 30-day period (FTC Telemarketing Sales Rule). In the UK, no more than 3% of live calls per campaign per 24 hours (Ofcom). In Canada, no more than 5% per calendar month (CRTC)."),
   },
   {
-    question: 'What counts as an abandoned call?',
+    question: msg("What counts as an abandoned call?"),
     answer:
-      'In the US and Canada, a call is abandoned when a person answers and no live agent is connected within 2 seconds. In the US, every abandoned call must also play a recorded message with the seller’s name and phone number.',
+      msg("In the US and Canada, a call is abandoned when a person answers and no live agent is connected within 2 seconds. In the US, every abandoned call must also play a recorded message with the seller’s name and phone number."),
   },
 ]
 
-export default function AbandonRateCalculatorPage() {
+export default async function AbandonRateCalculatorPage() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Resources', url: '/resources' },
-          { name: 'Abandon rate calculator', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Resources"), url: '/resources' },
+          { name: msg("Abandon rate calculator"), url: ROUTE },
         ])}
       />
       <JsonLd
         data={{
           '@context': 'https://schema.org',
           '@type': 'WebApplication',
-          name: 'Abandon rate calculator',
+          name: msg("Abandon rate calculator"),
           url: `https://dialerseat.com${ROUTE}`,
           applicationCategory: 'BusinessApplication',
-          operatingSystem: 'Web',
+          operatingSystem: msg("Web"),
           isAccessibleForFree: true,
           offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
           dateModified: UPDATED,
@@ -101,16 +104,13 @@ export default function AbandonRateCalculatorPage() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ TOOL · ABANDON RATE CALCULATOR</div>
+            <div className="guts-eyebrow">{t("▸ TOOL · ABANDON RATE CALCULATOR")}</div>
             <h1>
-              Is your campaign
-              <span className="second">inside the 3% rule?</span>
+              {t("Is your campaign")}<span className="second">{t("inside the 3% rule?")}</span>
             </h1>
             <p>
-              Enter answered and abandoned calls and pick the rule you dial under. You get the rate, whether
-              it is inside the limit, and how many more calls you could abandon before crossing it.
-            </p>
-            <PageStamp>Updated {UPDATED}</PageStamp>
+              {t("Enter answered and abandoned calls and pick the rule you dial under. You get the rate, whether it is inside the limit, and how many more calls you could abandon before crossing it.")}</p>
+            <PageStamp>{t("Updated {uPDATED}", { uPDATED: UPDATED })}</PageStamp>
           </div>
         </GutsSection>
 
@@ -118,24 +118,22 @@ export default function AbandonRateCalculatorPage() {
           <AbandonRateCalculator />
         </GutsSection>
 
-        <GutsSection icon="chat" title="The rules behind it">
+        <GutsSection icon="chat" title={t("The rules behind it")}>
           <div style={{ textAlign: 'start', maxWidth: 660, margin: '0 auto' }}>
             {FAQS.map((f) => (
               <div key={f.question} style={{ marginBottom: 22 }}>
-                <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>{f.question}</h3>
-                <p style={{ margin: 0 }}>{f.answer}</p>
+                <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>{t(f.question)}</h3>
+                <p style={{ margin: 0 }}>{t(f.answer)}</p>
               </div>
             ))}
           </div>
           <p>
-            DialerSeat holds every predictive campaign under the US limit automatically and drops to one
-            line per agent before it is reached.
-          </p>
+            {t("DialerSeat holds every predictive campaign under the US limit automatically and drops to one line per agent before it is reached.")}</p>
           <div className="guts-btns">
-            <Link href="/faq/is-a-predictive-dialer-legal" className="guts-btn secondary">IS A PREDICTIVE DIALER LEGAL?</Link>
-            <Link href="/data/calling-rules-by-country" className="guts-btn secondary">RULES BY COUNTRY</Link>
+            <Link href="/faq/is-a-predictive-dialer-legal" className="guts-btn secondary">{t("IS A PREDICTIVE DIALER LEGAL?")}</Link>
+            <Link href="/data/calling-rules-by-country" className="guts-btn secondary">{t("RULES BY COUNTRY")}</Link>
           </div>
-          <CiteThis title="Abandon rate calculator" path={ROUTE} embedPath="/embed/abandon-rate-calculator" embedHeight={460} />
+          <CiteThis title={t("Abandon rate calculator")} path={ROUTE} embedPath="/embed/abandon-rate-calculator" embedHeight={460} />
         </GutsSection>
 
       </GutsShell>

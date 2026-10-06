@@ -8,6 +8,9 @@ import {
   dialerSeatCost,
   monthsToCover,
 } from '@/lib/weeklyBilling'
+import { t } from '@/lib/i18n/client'
+import { useWebMcpTool } from '@/lib/useWebMcpTool'
+import { DIALER_COST_TOOL } from '@/lib/webmcpTools'
 
 // =============================================================================
 // DIALER COST CALCULATOR — weeks of use and seats in, what each tool bills out
@@ -23,21 +26,44 @@ import {
 
 const money = (n: number) => `$${n.toLocaleString('en-US')}`
 
+// One calculation for the page and for the WebMCP tool below.
+function compare(weeks: number, seats: number) {
+  const ours = dialerSeatCost(weeks, seats)
+  const others = BILLED_DIALERS.map((d) => ({ d, cost: billedCost(d, weeks, seats) })).sort((a, b) => {
+    if (a.cost === null) return 1
+    if (b.cost === null) return -1
+    return a.cost - b.cost
+  })
+  return { ours, others }
+}
+
+const clamp = (v: unknown, max: number) => Math.min(max, Math.max(1, Math.floor(Number(v) || 1)))
+
 export default function DialerCostCalculator() {
   const [weeks, setWeeks] = useState(1)
   const [seats, setSeats] = useState(1)
 
-  const rows = useMemo(() => {
-    const ours = dialerSeatCost(weeks, seats)
-    const others = BILLED_DIALERS.map((d) => ({ d, cost: billedCost(d, weeks, seats) })).sort((a, b) => {
-      if (a.cost === null) return 1
-      if (b.cost === null) return -1
-      return a.cost - b.cost
-    })
-    return { ours, others }
-  }, [weeks, seats])
+  const rows = useMemo(() => compare(weeks, seats), [weeks, seats])
 
   const months = monthsToCover(weeks)
+
+  // An AI agent in the browser can run the same comparison (lib/useWebMcpTool).
+  useWebMcpTool({
+    ...DIALER_COST_TOOL,
+    execute: (input) => {
+      const w = clamp(input.weeks, 104), s = clamp(input.seats, 500)
+      setWeeks(w); setSeats(s)
+      const res = compare(w, s)
+      return {
+        weeks: w,
+        seats: s,
+        dialerSeat: { totalUsd: res.ours, basis: `${s} × ${w} × $${DIALERSEAT_WEEKLY} per seat per week, billed weekly, no contract, no seat minimum` },
+        monthsBilledOnAMonthlyPlan: monthsToCover(w),
+        others: res.others.map(({ d, cost }) => ({ name: d.name, totalUsd: cost, atLeast: d.from, basis: d.basis })),
+        source: 'https://dialerseat.com/tools/dialer-cost-calculator',
+      }
+    },
+  })
 
   return (
     <div className="dcc">
@@ -71,18 +97,18 @@ export default function DialerCostCalculator() {
 
       <div className="dcc-inputs">
         <div className="dcc-field">
-          <label htmlFor="dcc-weeks">WEEKS OF DIALING</label>
+          <label htmlFor="dcc-weeks">{t("WEEKS OF DIALING")}</label>
           <div className="row">
-            <input id="dcc-weeks-range" aria-label="Weeks of dialing" type="range" min={1} max={52} value={weeks}
+            <input id="dcc-weeks-range" aria-label={t("Weeks of dialing")} type="range" min={1} max={52} value={weeks}
               onChange={(e) => setWeeks(Number(e.target.value))} />
             <input id="dcc-weeks" type="number" min={1} max={104} value={weeks}
               onChange={(e) => setWeeks(Math.min(104, Math.max(1, Number(e.target.value) || 1)))} />
           </div>
         </div>
         <div className="dcc-field">
-          <label htmlFor="dcc-seats">AGENTS (SEATS)</label>
+          <label htmlFor="dcc-seats">{t("AGENTS (SEATS)")}</label>
           <div className="row">
-            <input id="dcc-seats-range" aria-label="Agents" type="range" min={1} max={50} value={seats}
+            <input id="dcc-seats-range" aria-label={t("Agents")} type="range" min={1} max={50} value={seats}
               onChange={(e) => setSeats(Number(e.target.value))} />
             <input id="dcc-seats" type="number" min={1} max={500} value={seats}
               onChange={(e) => setSeats(Math.min(500, Math.max(1, Number(e.target.value) || 1)))} />
@@ -92,7 +118,7 @@ export default function DialerCostCalculator() {
 
       <div className="dcc-ours" aria-live="polite">
         <span>
-          DialerSeat, billed weekly: {seats} seat{seats > 1 ? 's' : ''} × {weeks} week{weeks > 1 ? 's' : ''} × ${DIALERSEAT_WEEKLY}
+          {t("DialerSeat, billed weekly: {seats} seat{value} × {weeks} week{value2} × ${dIALERSEAT_WEEKLY}", { seats, value: seats > 1 ? 's' : '', weeks, value2: weeks > 1 ? 's' : '', dIALERSEAT_WEEKLY: DIALERSEAT_WEEKLY })}
         </span>
         <b>{money(rows.ours)}</b>
       </div>
@@ -100,9 +126,9 @@ export default function DialerCostCalculator() {
       <table>
         <thead>
           <tr>
-            <th scope="col">BILLED BY THE MONTH OR YEAR</th>
-            <th scope="col" style={{ textAlign: 'end' }}>COST</th>
-            <th scope="col" style={{ textAlign: 'end' }}>VS DIALERSEAT</th>
+            <th scope="col">{t("BILLED BY THE MONTH OR YEAR")}</th>
+            <th scope="col" style={{ textAlign: 'end' }}>{t("COST")}</th>
+            <th scope="col" style={{ textAlign: 'end' }}>{t("VS DIALERSEAT")}</th>
           </tr>
         </thead>
         <tbody>
@@ -110,9 +136,9 @@ export default function DialerCostCalculator() {
             <tr key={d.slug}>
               <td>
                 {d.name}
-                <small>{d.basis}</small>
+                <small>{t(d.basis)}</small>
               </td>
-              <td className="num">{cost === null ? 'Quote' : `${d.from ? 'from ' : ''}${money(cost)}`}</td>
+              <td className="num">{cost === null ? t("Quote") : d.from ? t("from {price}", { price: money(cost) }) : money(cost)}</td>
               <td className={`more${cost !== null && cost < rows.ours ? ' less' : ''}`}>
                 {cost === null ? '—' : cost > rows.ours ? `+${money(cost - rows.ours)}` : `−${money(rows.ours - cost)}`}
               </td>
@@ -122,10 +148,7 @@ export default function DialerCostCalculator() {
       </table>
 
       <p className="dcc-foot">
-        {weeks} week{weeks > 1 ? 's' : ''} on a monthly plan bills {months} month{months > 1 ? 's' : ''}; annual plans bill
-        at least 12 months; seat minimums are applied. Competitor figures are the lowest published price that includes
-        multi-line or predictive dialing, before add-ons, setup fees and usage. Figures as published September 2026.
-      </p>
+        {t("{weeks} week{value} on a monthly plan bills {months} month{value2}; annual plans bill at least 12 months; seat minimums are applied. Competitor figures are the lowest published price that includes multi-line or predictive dialing, before add-ons, setup fees and usage. Figures as published September 2026.", { weeks, value: weeks > 1 ? 's' : '', months, value2: months > 1 ? 's' : '' })}</p>
     </div>
   )
 }

@@ -10,7 +10,9 @@ import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { COMPETITORS, DIALERSEAT, type Competitor } from '@/lib/competitors'
 import { pageDate } from '@/lib/pageDates'
-import { withShareImage } from '@/lib/i18n/metadata'
+import { localizeMetadata } from '@/lib/i18n/metadata'
+import { getT, primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /data/dialer-pricing — the Dialer Pricing Index
@@ -34,9 +36,10 @@ import { withShareImage } from '@/lib/i18n/metadata'
 const ROUTE = '/data/dialer-pricing'
 const UPDATED = pageDate(ROUTE)
 
+// The title and descriptions carry a count, so they are templates that
+// localizeMetadata's exact-string lookup cannot match; generateMetadata
+// translates and fills them.
 const baseMetadata: Metadata = {
-  title: `Dialer Pricing Index: What ${COMPETITORS.length + 1} Dialers Cost | DialerSeat`,
-  description: `Published pricing, contract terms and seat minimums for ${COMPETITORS.length + 1} outbound dialers, including ReadyMode, Mojo, PhoneBurner, BatchDialer, Five9, Convoso, Kixie, Orum and VICIdial. Dated and free to cite.`,
   keywords: [
     'dialer pricing', 'dialer pricing comparison', 'readymode pricing', 'mojo dialer pricing',
     'phoneburner pricing', 'batchdialer pricing', 'five9 pricing', 'convoso pricing', 'predictive dialer cost',
@@ -47,71 +50,79 @@ const baseMetadata: Metadata = {
   },
   openGraph: {
     title: 'Dialer Pricing Index',
-    description: `What ${COMPETITORS.length + 1} outbound dialers charge, their contract terms and seat minimums, side by side.`,
     url: `https://dialerseat.com${ROUTE}`,
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Dialer Pricing Index',
-    description: `What ${COMPETITORS.length + 1} outbound dialers charge, their contract terms and seat minimums, side by side.`,
   },
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return withShareImage(baseMetadata)
+  const tm = await getT()
+  const n = COMPETITORS.length + 1
+  const social = tm(msg('What {n} outbound dialers charge, their contract terms and seat minimums, side by side.'), { n })
+  return localizeMetadata({
+    ...baseMetadata,
+    title: tm(msg('Dialer Pricing Index: What {n} Dialers Cost | DialerSeat'), { n }),
+    description: tm(msg('Published pricing, contract terms and seat minimums for {n} outbound dialers, including ReadyMode, Mojo, PhoneBurner, BatchDialer, Five9, Convoso, Kixie, Orum and VICIdial. Dated and free to cite.'), { n }),
+    openGraph: { ...baseMetadata.openGraph, description: social },
+    twitter: { ...baseMetadata.twitter, description: social },
+  })
 }
 
 const SEGMENTS: { key: Competitor['segment']; title: string; note: string }[] = [
-  { key: 'call_center', title: 'Call center and predictive dialers', note: 'Built for floors running predictive campaigns all day.' },
-  { key: 'real_estate', title: 'Real estate dialers', note: 'Built around investor and agent workflows, often with lead data.' },
-  { key: 'sales_crm', title: 'Sales and CRM dialers', note: 'Dialers inside, or attached to, a sales CRM or engagement tool.' },
-  { key: 'phone_system', title: 'Phone systems with a dialer', note: 'Business phone platforms where dialing is one feature or add-on.' },
+  { key: 'call_center', title: msg("Call center and predictive dialers"), note: msg("Built for floors running predictive campaigns all day.") },
+  { key: 'real_estate', title: msg("Real estate dialers"), note: msg("Built around investor and agent workflows, often with lead data.") },
+  { key: 'sales_crm', title: msg("Sales and CRM dialers"), note: msg("Dialers inside, or attached to, a sales CRM or engagement tool.") },
+  { key: 'phone_system', title: msg("Phone systems with a dialer"), note: msg("Business phone platforms where dialing is one feature or add-on.") },
 ]
 
 const FAQS = [
   {
-    question: 'How much does a predictive dialer cost?',
+    question: msg("How much does a predictive dialer cost?"),
     answer:
-      'Where it is priced publicly, multi-line and predictive dialing runs from about $49 to $250 per seat per month, and several vendors sell only by quote with setup fees and annual contracts. DialerSeat is $35 per seat per week, billed weekly, with predictive included.',
+      msg("Where it is priced publicly, multi-line and predictive dialing runs from about $49 to $250 per seat per month, and several vendors sell only by quote with setup fees and annual contracts. DialerSeat is $35 per seat per week, billed weekly, with predictive included."),
   },
   {
-    question: 'Which dialers bill weekly?',
+    question: msg("Which dialers bill weekly?"),
     answer:
-      'Of the dialers in this index, only DialerSeat bills weekly. None of the others sells less than a month, and several sell a year at a time.',
+      msg("Of the dialers in this index, only DialerSeat bills weekly. None of the others sells less than a month, and several sell a year at a time."),
   },
   {
-    question: 'Where do these prices come from?',
+    question: msg("Where do these prices come from?"),
     answer:
-      'Each vendor’s own published pricing where it exists, and the terms stated on each comparison page where it does not. Where a vendor sells only by quote, the index says so rather than estimating.',
+      msg("Each vendor’s own published pricing where it exists, and the terms stated on each comparison page where it does not. Where a vendor sells only by quote, the index says so rather than estimating."),
   },
 ]
 
-export default function DialerPricingIndex() {
+export default async function DialerPricingIndex() {
+  await primeLocale()
   const all = COMPETITORS.length + 1
   return (
     <>
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Resources', url: '/resources' },
-          { name: 'Dialer pricing index', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Resources"), url: '/resources' },
+          { name: msg("Dialer pricing index"), url: ROUTE },
         ])}
       />
       <JsonLd
         data={{
           '@context': 'https://schema.org',
           '@type': 'Dataset',
-          name: 'Dialer Pricing Index',
-          description: `Published pricing, contract terms, seat minimums and five-agent costs for ${all} outbound dialers.`,
+          name: msg("Dialer Pricing Index"),
+          description: t("Published pricing, contract terms, seat minimums and five-agent costs for {all} outbound dialers.", { all }),
           url: `https://dialerseat.com${ROUTE}`,
           dateModified: UPDATED,
           creator: { '@id': 'https://dialerseat.com/#organization' },
           isAccessibleForFree: true,
-          creditText: 'Dialer Pricing Index, DialerSeat',
+          creditText: msg("Dialer Pricing Index, DialerSeat"),
           keywords: ['dialer pricing', 'predictive dialer', 'auto dialer', 'call center software'],
-          variableMeasured: ['pricing', 'contract terms', 'smallest purchase', 'five-agent cost'],
+          variableMeasured: ['pricing', msg("contract terms"), msg("smallest purchase"), msg("five-agent cost")],
           distribution: {
             '@type': 'DataDownload',
             encodingFormat: 'text/markdown',
@@ -124,35 +135,24 @@ export default function DialerPricingIndex() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ DATA · DIALER PRICING INDEX</div>
+            <div className="guts-eyebrow">{t("▸ DATA · DIALER PRICING INDEX")}</div>
             <h1>
-              What {all} dialers cost,
-              <span className="second">as they publish it.</span>
+              {t("What {all} dialers cost,", { all })}<span className="second">{t("as they publish it.")}</span>
             </h1>
             <p>
-              Pricing, contract terms, the smallest purchase and what five agents cost, for every
-              outbound dialer we compare. Quoted-only pricing is marked as quoted rather than guessed.
-              Free to cite.
-            </p>
-            <PageStamp>Updated {UPDATED}</PageStamp>
+              {t("Pricing, contract terms, the smallest purchase and what five agents cost, for every outbound dialer we compare. Quoted-only pricing is marked as quoted rather than guessed. Free to cite.")}</p>
+            <PageStamp>{t("Updated {uPDATED}", { uPDATED: UPDATED })}</PageStamp>
           </div>
         </GutsSection>
 
-        <GutsSection icon="info" title="The short version">
+        <GutsSection icon="info" title={t("The short version")}>
           <ul className="guts-list good">
             <li>
-              Only one dialer here bills weekly: DialerSeat, at $35 per seat per week. None of the others
-              sells less than a month, and several sell a year at a time.
-            </li>
+              {t("Only one dialer here bills weekly: DialerSeat, at $35 per seat per week. None of the others sells less than a month, and several sell a year at a time.")}</li>
             <li>
-              Where multi-line and predictive dialing is priced publicly, it runs from about $49 per seat
-              per month (JustCall Pro, two-seat minimum) to about $250 as reported for Orum, billed annually. The
-              largest contact-center vendors sell by quote.
-            </li>
+              {t("Where multi-line and predictive dialing is priced publicly, it runs from about $49 per seat per month (JustCall Pro, two-seat minimum) to about $250 as reported for Orum, billed annually. The largest contact-center vendors sell by quote.")}</li>
             <li>
-              Phone systems where the dialer is a plan tier or an add-on (CloudTalk, Aircall, Dialpad) can
-              cost less per month. Check which tier actually includes the dialing mode you need.
-            </li>
+              {t("Phone systems where the dialer is a plan tier or an add-on (CloudTalk, Aircall, Dialpad) can cost less per month. Check which tier actually includes the dialing mode you need.")}</li>
           </ul>
         </GutsSection>
 
@@ -161,18 +161,18 @@ export default function DialerPricingIndex() {
             <table>
               <thead>
                 <tr>
-                  <th scope="col">DIALER</th>
-                  <th scope="col">PRICING</th>
-                  <th scope="col">CONTRACT</th>
-                  <th scope="col">FIVE AGENTS</th>
+                  <th scope="col">{t("DIALER")}</th>
+                  <th scope="col">{t("PRICING")}</th>
+                  <th scope="col">{t("CONTRACT")}</th>
+                  <th scope="col">{t("FIVE AGENTS")}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td>DialerSeat</td>
-                  <td className="ds-cell" style={{ textAlign: 'start' }}>{DIALERSEAT.pricing}</td>
-                  <td style={{ textAlign: 'start' }}>{DIALERSEAT.contract}</td>
-                  <td style={{ textAlign: 'start' }}>{DIALERSEAT.team.fiveSeats}</td>
+                  <td className="ds-cell" style={{ textAlign: 'start' }}>{t(DIALERSEAT.pricing)}</td>
+                  <td style={{ textAlign: 'start' }}>{t(DIALERSEAT.contract)}</td>
+                  <td style={{ textAlign: 'start' }}>{t(DIALERSEAT.team.fiveSeats)}</td>
                 </tr>
               </tbody>
             </table>
@@ -183,17 +183,17 @@ export default function DialerPricingIndex() {
           const rows = COMPETITORS.filter((c) => c.segment === s.key)
           if (rows.length === 0) return null
           return (
-            <GutsSection key={s.key} icon="table" title={s.title} id={s.key.replace('_', '-')}>
-              <p>{s.note}</p>
+            <GutsSection key={s.key} icon="table" title={t(s.title)} id={s.key.replace('_', '-')}>
+              <p>{t(s.note)}</p>
               <div className="guts-tablewrap">
                 <table>
                   <thead>
                     <tr>
-                      <th scope="col">DIALER</th>
-                      <th scope="col">PRICING</th>
-                      <th scope="col">CONTRACT</th>
-                      <th scope="col">SMALLEST PURCHASE</th>
-                      <th scope="col">FIVE AGENTS</th>
+                      <th scope="col">{t("DIALER")}</th>
+                      <th scope="col">{t("PRICING")}</th>
+                      <th scope="col">{t("CONTRACT")}</th>
+                      <th scope="col">{t("SMALLEST PURCHASE")}</th>
+                      <th scope="col">{t("FIVE AGENTS")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -202,10 +202,10 @@ export default function DialerPricingIndex() {
                         <td>
                           <Link href={`/vs/${c.slug}`}>{c.name}</Link>
                         </td>
-                        <td style={{ textAlign: 'start' }}>{c.pricing}</td>
-                        <td style={{ textAlign: 'start' }}>{c.contract}</td>
-                        <td style={{ textAlign: 'start' }}>{c.team.minimum}</td>
-                        <td style={{ textAlign: 'start' }}>{c.team.fiveSeats}</td>
+                        <td style={{ textAlign: 'start' }}>{t(c.pricing)}</td>
+                        <td style={{ textAlign: 'start' }}>{t(c.contract)}</td>
+                        <td style={{ textAlign: 'start' }}>{t(c.team.minimum)}</td>
+                        <td style={{ textAlign: 'start' }}>{t(c.team.fiveSeats)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -215,31 +215,25 @@ export default function DialerPricingIndex() {
           )
         })}
 
-        <GutsSection icon="book" title="How the index is kept">
+        <GutsSection icon="book" title={t("How the index is kept")}>
           <p>
-            Each row is the same record the matching comparison page renders from, so the index, the
-            comparison pages and the machine-readable copies always agree. Prices are the vendor’s own
-            published figures where they exist, before setup fees, add-ons and usage. Vendors that sell
-            only by quote are shown that way.
-          </p>
+            {t("Each row is the same record the matching comparison page renders from, so the index, the comparison pages and the machine-readable copies always agree. Prices are the vendor’s own published figures where they exist, before setup fees, add-ons and usage. Vendors that sell only by quote are shown that way.")}</p>
           <p>
-            Spotted a price that has changed? Email{' '}
-            <a href="mailto:support@dialerseat.com">support@dialerseat.com</a> with the vendor’s page and
-            the row is corrected and re-dated.
-          </p>
+            {t("Spotted a price that has changed? Email")}{' '}
+            <a href="mailto:support@dialerseat.com">support@dialerseat.com</a> {t("with the vendor’s page and the row is corrected and re-dated.")}</p>
           <div className="guts-btns">
-            <Link href="/pricing" className="guts-btn secondary">WHAT ONE WEEK COSTS</Link>
-            <Link href="/tools/dialer-cost-calculator" className="guts-btn secondary">COST CALCULATOR</Link>
+            <Link href="/pricing" className="guts-btn secondary">{t("WHAT ONE WEEK COSTS")}</Link>
+            <Link href="/tools/dialer-cost-calculator" className="guts-btn secondary">{t("COST CALCULATOR")}</Link>
           </div>
-          <CiteThis title="Dialer Pricing Index" path={ROUTE} />
+          <CiteThis title={t("Dialer Pricing Index")} path={ROUTE} />
         </GutsSection>
 
-        <GutsSection icon="chat" title="Questions">
+        <GutsSection icon="chat" title={t("Questions")}>
           <div style={{ textAlign: 'start', maxWidth: 660, margin: '0 auto' }}>
             {FAQS.map((f) => (
               <div key={f.question} style={{ marginBottom: 22 }}>
-                <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>{f.question}</h3>
-                <p style={{ margin: 0 }}>{f.answer}</p>
+                <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>{t(f.question)}</h3>
+                <p style={{ margin: 0 }}>{t(f.answer)}</p>
               </div>
             ))}
           </div>

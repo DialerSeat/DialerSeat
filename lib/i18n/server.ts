@@ -63,6 +63,14 @@ export async function getT(): Promise<(text: string, vars?: Vars) => string> {
 // layout does not re-render and so cannot be relied on to fill it.
 const requestLocale = cache((): { current: Locale | null } => ({ current: null }))
 
+/**
+ * The language primeLocale() stored for this request, or English. Synchronous,
+ * for helpers that build text outside JSX (structured data in lib/schema.ts).
+ */
+export function currentLocale(): Locale {
+  return requestLocale().current ?? DEFAULT_LOCALE
+}
+
 /** First line of every server page that shows text: `await primeLocale()`. */
 export async function primeLocale(): Promise<void> {
   await getLocale()

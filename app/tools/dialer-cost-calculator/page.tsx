@@ -10,7 +10,9 @@ import DialerCostCalculator from '@/components/tools/DialerCostCalculator'
 import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { pageDate } from '@/lib/pageDates'
-import { withShareImage } from '@/lib/i18n/metadata'
+import { localizeMetadata } from '@/lib/i18n/metadata'
+import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /tools/dialer-cost-calculator
@@ -49,46 +51,47 @@ const baseMetadata: Metadata = {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return withShareImage(baseMetadata)
+  return localizeMetadata(baseMetadata)
 }
 
 const FAQS = [
   {
-    question: 'How is the cost worked out?',
+    question: msg("How is the cost worked out?"),
     answer:
-      'DialerSeat is $35 per seat per week, multiplied by weeks and seats. A monthly-billed dialer is charged for every month the weeks touch, so five weeks is two months. An annually billed dialer is charged at least twelve months. Seat minimums are applied, so two agents on a three-seat minimum are billed as three.',
+      msg("DialerSeat is $35 per seat per week, multiplied by weeks and seats. A monthly-billed dialer is charged for every month the weeks touch, so five weeks is two months. An annually billed dialer is charged at least twelve months. Seat minimums are applied, so two agents on a three-seat minimum are billed as three."),
   },
   {
-    question: 'Which prices does it use?',
+    question: msg("Which prices does it use?"),
     answer:
-      'Each vendor’s lowest published price that includes multi-line or predictive dialing, before setup fees, add-ons and usage. Vendors that sell only by quote are shown as quoted.',
+      msg("Each vendor’s lowest published price that includes multi-line or predictive dialing, before setup fees, add-ons and usage. Vendors that sell only by quote are shown as quoted."),
   },
   {
-    question: 'When is a monthly dialer cheaper?',
+    question: msg("When is a monthly dialer cheaper?"),
     answer:
-      'For one seat over a full month, a dialer published at under $140 a month costs less than four weeks of DialerSeat. Weekly billing wins for short projects, seasonal hires, trial runs and floors whose headcount changes week to week.',
+      msg("For one seat over a full month, a dialer published at under $140 a month costs less than four weeks of DialerSeat. Weekly billing wins for short projects, seasonal hires, trial runs and floors whose headcount changes week to week."),
   },
 ]
 
-export default function DialerCostCalculatorPage() {
+export default async function DialerCostCalculatorPage() {
+  await primeLocale()
   return (
     <>
       <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Resources', url: '/resources' },
-          { name: 'Dialer cost calculator', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Resources"), url: '/resources' },
+          { name: msg("Dialer cost calculator"), url: ROUTE },
         ])}
       />
       <JsonLd
         data={{
           '@context': 'https://schema.org',
           '@type': 'WebApplication',
-          name: 'Dialer cost calculator',
+          name: msg("Dialer cost calculator"),
           url: `https://dialerseat.com${ROUTE}`,
           applicationCategory: 'BusinessApplication',
-          operatingSystem: 'Web',
+          operatingSystem: msg("Web"),
           isAccessibleForFree: true,
           offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
           dateModified: UPDATED,
@@ -100,16 +103,13 @@ export default function DialerCostCalculatorPage() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ TOOL · DIALER COST CALCULATOR</div>
+            <div className="guts-eyebrow">{t("▸ TOOL · DIALER COST CALCULATOR")}</div>
             <h1>
-              What will a dialer
-              <span className="second">actually cost you?</span>
+              {t("What will a dialer")}<span className="second">{t("actually cost you?")}</span>
             </h1>
             <p>
-              Set the weeks you need and the agents you have. Monthly and annual billing, seat minimums
-              and the vendors’ own published prices are applied, so the number is what you would be billed.
-            </p>
-            <PageStamp>Updated {UPDATED}</PageStamp>
+              {t("Set the weeks you need and the agents you have. Monthly and annual billing, seat minimums and the vendors’ own published prices are applied, so the number is what you would be billed.")}</p>
+            <PageStamp>{t("Updated {uPDATED}", { uPDATED: UPDATED })}</PageStamp>
           </div>
         </GutsSection>
 
@@ -117,20 +117,20 @@ export default function DialerCostCalculatorPage() {
           <DialerCostCalculator />
         </GutsSection>
 
-        <GutsSection icon="chat" title="How it works">
+        <GutsSection icon="chat" title={t("How it works")}>
           <div style={{ textAlign: 'start', maxWidth: 660, margin: '0 auto' }}>
             {FAQS.map((f) => (
               <div key={f.question} style={{ marginBottom: 22 }}>
-                <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>{f.question}</h3>
-                <p style={{ margin: 0 }}>{f.answer}</p>
+                <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>{t(f.question)}</h3>
+                <p style={{ margin: 0 }}>{t(f.answer)}</p>
               </div>
             ))}
           </div>
           <div className="guts-btns">
-            <Link href="/data/dialer-pricing" className="guts-btn secondary">EVERY DIALER’S PRICING</Link>
-            <Link href="/pricing" className="guts-btn secondary">DIALERSEAT PRICING</Link>
+            <Link href="/data/dialer-pricing" className="guts-btn secondary">{t("EVERY DIALER’S PRICING")}</Link>
+            <Link href="/pricing" className="guts-btn secondary">{t("DIALERSEAT PRICING")}</Link>
           </div>
-          <CiteThis title="Dialer cost calculator" path={ROUTE} embedPath="/embed/dialer-cost-calculator" embedHeight={760} />
+          <CiteThis title={t("Dialer cost calculator")} path={ROUTE} embedPath="/embed/dialer-cost-calculator" embedHeight={760} />
         </GutsSection>
 
       </GutsShell>

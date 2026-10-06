@@ -9,7 +9,9 @@ import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
 import { pageDate } from '@/lib/pageDates'
-import { withShareImage } from '@/lib/i18n/metadata'
+import { localizeMetadata } from '@/lib/i18n/metadata'
+import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /features — every capability in one seat, and what is not built
@@ -58,18 +60,19 @@ const baseMetadata: Metadata = {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return withShareImage(baseMetadata)
+  return localizeMetadata(baseMetadata)
 }
 
-export default function FeaturesPage() {
+export default async function FeaturesPage() {
+  await primeLocale()
   const notBuilt = [...new Set([...FACTS.teams.notYet, ...FACTS.limits])]
 
   return (
     <>
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'Features', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("Features"), url: ROUTE },
         ])}
       />
       <JsonLd
@@ -77,7 +80,7 @@ export default function FeaturesPage() {
           '@context': 'https://schema.org',
           '@type': 'WebPage',
           url: `https://dialerseat.com${ROUTE}`,
-          name: 'DialerSeat features',
+          name: msg("DialerSeat features"),
           dateModified: UPDATED,
           about: { '@id': 'https://dialerseat.com/#software' },
           publisher: { '@id': 'https://dialerseat.com/#organization' },
@@ -88,105 +91,104 @@ export default function FeaturesPage() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ FEATURES</div>
+            <div className="guts-eyebrow">{t("▸ FEATURES")}</div>
             <h1>
-              Everything in one seat,
-              <span className="second">for $35 a week.</span>
+              {t("Everything in one seat,")}<span className="second">{t("for $35 a week.")}</span>
             </h1>
-            <p>{FACTS.oneLine}</p>
+            <p>{t(FACTS.oneLine)}</p>
             <div className="guts-btns">
-              <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
-              <Link href="/pricing" className="guts-btn secondary">PRICING</Link>
+              <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
+              <Link href="/pricing" className="guts-btn secondary">{t("PRICING")}</Link>
             </div>
-            <PageStamp>Updated {UPDATED}</PageStamp>
+            <PageStamp>{t("Updated {uPDATED}", { uPDATED: UPDATED })}</PageStamp>
           </div>
         </GutsSection>
 
-        <GutsSection icon="swap" title="Four dialing modes, chosen per campaign">
-          <p>All four are included at the base price. Each campaign picks its own mode, so one list can run predictive while another runs preview.</p>
+        <GutsSection icon="swap" title={t("Four dialing modes, chosen per campaign")}>
+          <p>{t("All four are included at the base price. Each campaign picks its own mode, so one list can run predictive while another runs preview.")}</p>
           <div className="guts-grid-2">
             {FACTS.modes.map(([mode, body]) => (
               <Link key={mode} href={MODE_ROUTES[mode]} className="guts-panel">
                 <div className="role">{mode.toUpperCase()}</div>
-                <p>{body}</p>
+                <p>{t(body)}</p>
               </Link>
             ))}
           </div>
         </GutsSection>
 
-        <GutsSection icon="phone" title="What every seat includes">
+        <GutsSection icon="phone" title={t("What every seat includes")}>
           <ul className="guts-list good">
-            {FACTS.features.map((f) => <li key={f}>{f}</li>)}
+            {FACTS.features.map((f) => <li key={f}>{t(f)}</li>)}
           </ul>
           <div className="guts-btns">
-            <Link href="/faq/how-does-amd-work" className="guts-btn secondary">HOW AMD WORKS</Link>
-            <Link href="/faq/local-presence-dialing" className="guts-btn secondary">LOCAL PRESENCE</Link>
-            <Link href="/faq/numbers" className="guts-btn secondary">NUMBERS & CALLER ID</Link>
+            <Link href="/faq/how-does-amd-work" className="guts-btn secondary">{t("HOW AMD WORKS")}</Link>
+            <Link href="/faq/local-presence-dialing" className="guts-btn secondary">{t("LOCAL PRESENCE")}</Link>
+            <Link href="/faq/numbers" className="guts-btn secondary">{t("NUMBERS & CALLER ID")}</Link>
           </div>
         </GutsSection>
 
-        <GutsSection icon="shield" title="Compliance the dialer enforces, and what stays yours">
+        <GutsSection icon="shield" title={t("Compliance the dialer enforces, and what stays yours")}>
           <ul className="guts-list good">
-            {FACTS.compliance.slice(0, -1).map((c) => <li key={c}>{c}</li>)}
+            {FACTS.compliance.slice(0, -1).map((c) => <li key={c}>{t(c)}</li>)}
           </ul>
           <ul className="guts-list warn" style={{ marginTop: 18 }}>
-            <li>{FACTS.compliance[FACTS.compliance.length - 1]}</li>
+            <li>{t(FACTS.compliance[FACTS.compliance.length - 1])}</li>
           </ul>
           <div className="guts-btns">
-            <Link href="/faq/how-we-keep-compliance" className="guts-btn secondary">HOW WE KEEP COMPLIANCE</Link>
-            <Link href="/tools/abandon-rate-calculator" className="guts-btn secondary">ABANDON RATE CALCULATOR</Link>
-            <Link href="/data/calling-rules-by-country" className="guts-btn secondary">RULES BY COUNTRY</Link>
+            <Link href="/faq/how-we-keep-compliance" className="guts-btn secondary">{t("HOW WE KEEP COMPLIANCE")}</Link>
+            <Link href="/tools/abandon-rate-calculator" className="guts-btn secondary">{t("ABANDON RATE CALCULATOR")}</Link>
+            <Link href="/data/calling-rules-by-country" className="guts-btn secondary">{t("RULES BY COUNTRY")}</Link>
           </div>
         </GutsSection>
 
-        <GutsSection icon="team" title="Teams">
+        <GutsSection icon="team" title={t("Teams")}>
           <div className="guts-grid-2">
             <div className="guts-panel">
-              <div className="role">SEATS</div>
+              <div className="role">{t("SEATS")}</div>
               <ul className="guts-list good">
-                {FACTS.teams.seats.map((s) => <li key={s}>{s}</li>)}
+                {FACTS.teams.seats.map((s) => <li key={s}>{t(s)}</li>)}
               </ul>
             </div>
             <div className="guts-panel">
-              <div className="role">LEAD DISTRIBUTION</div>
+              <div className="role">{t("LEAD DISTRIBUTION")}</div>
               <ul className="guts-list good">
-                {FACTS.teams.distribution.map((s) => <li key={s}>{s}</li>)}
+                {FACTS.teams.distribution.map((s) => <li key={s}>{t(s)}</li>)}
               </ul>
             </div>
             <div className="guts-panel">
-              <div className="role">VISIBILITY</div>
+              <div className="role">{t("VISIBILITY")}</div>
               <ul className="guts-list good">
-                {FACTS.teams.visibility.map((s) => <li key={s}>{s}</li>)}
+                {FACTS.teams.visibility.map((s) => <li key={s}>{t(s)}</li>)}
               </ul>
             </div>
             <div className="guts-panel">
-              <div className="role">REMOTE AND OFFSHORE AGENTS</div>
+              <div className="role">{t("REMOTE AND OFFSHORE AGENTS")}</div>
               <ul className="guts-list good">
-                {FACTS.teams.offshore.map((s) => <li key={s}>{s}</li>)}
+                {FACTS.teams.offshore.map((s) => <li key={s}>{t(s)}</li>)}
               </ul>
             </div>
           </div>
           <div className="guts-btns">
-            <Link href="/faq/teams-how-it-works" className="guts-btn secondary">HOW TEAMS WORK</Link>
-            <Link href="/vs/teams" className="guts-btn secondary">TEAM PRICING VS OTHERS</Link>
+            <Link href="/faq/teams-how-it-works" className="guts-btn secondary">{t("HOW TEAMS WORK")}</Link>
+            <Link href="/vs/teams" className="guts-btn secondary">{t("TEAM PRICING VS OTHERS")}</Link>
           </div>
         </GutsSection>
 
-        <GutsSection icon="alert" title="Not built yet, and not what DialerSeat is">
-          <p>Stated here so nobody finds out after paying.</p>
+        <GutsSection icon="alert" title={t("Not built yet, and not what DialerSeat is")}>
+          <p>{t("Stated here so nobody finds out after paying.")}</p>
           <ul className="guts-list warn">
-            {notBuilt.map((l) => <li key={l}>{l}</li>)}
+            {notBuilt.map((l) => <li key={l}>{t(l)}</li>)}
           </ul>
         </GutsSection>
 
-        <GutsSection icon="price" title="What it costs">
+        <GutsSection icon="price" title={t("What it costs")}>
           <ul className="guts-list good">
-            {FACTS.pricing.map((p) => <li key={p}>{p}</li>)}
+            {FACTS.pricing.map((p) => <li key={p}>{t(p)}</li>)}
           </ul>
           <div className="guts-btns">
-            <Link href="/sign-up" className="guts-btn primary">GET STARTED →</Link>
-            <Link href="/pricing" className="guts-btn secondary">PRICING</Link>
-            <Link href="/vs" className="guts-btn secondary">COMPARISONS</Link>
+            <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
+            <Link href="/pricing" className="guts-btn secondary">{t("PRICING")}</Link>
+            <Link href="/vs" className="guts-btn secondary">{t("COMPARISONS")}</Link>
           </div>
         </GutsSection>
 

@@ -78,7 +78,10 @@ for (const file of files) {
 // so the text itself belongs here: prose string literals that are JSX
 // attribute values, object property values or array elements, in the public
 // pages, the components they import, and those three data files.
-const DATA_FILES = ['lib/competitors.ts', 'lib/competitorFeatures.ts', 'lib/canonicalFacts.ts']
+// lib/verticals.ts (industry pages), lib/countryRules.ts (calling rules) and
+// lib/weeklyBilling.ts (the pricing table's published-price notes) joined on
+// 2026-10-05, when their pages were wrapped for translation.
+const DATA_FILES = ['lib/competitors.ts', 'lib/competitorFeatures.ts', 'lib/canonicalFacts.ts', 'lib/verticals.ts', 'lib/countryRules.ts', 'lib/weeklyBilling.ts']
 const isPublicPage = (f) => /^app\/.*\.tsx$/.test(f) &&
   !/^app\/(dashboard|api|admin|sign-in|sign-up|onboarding|billing|welcome|join|invite|embed)\b/.test(f) &&
   !/admin-desktop|\/manager\/desktop/.test(f)

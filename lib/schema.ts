@@ -1,3 +1,6 @@
+import { currentLocale, t } from '@/lib/i18n/server'
+import { isLocalizablePath, localizedPath } from '@/lib/i18n/locales'
+
 const SITE_URL = 'https://dialerseat.com'
 
 
@@ -116,12 +119,16 @@ export function faqPageSchema(faqs: Array<{ question: string; answer: string }>)
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
+    // In the page's language. These were English on every translated page,
+    // so /es/vs/mojo showed Spanish questions and described English ones to
+    // crawlers; Google requires markup to match the visible content. t() is
+    // English when nothing primed a language (llms files, mirrors).
     mainEntity: faqs.map((faq) => ({
       '@type': 'Question',
-      name: faq.question,
+      name: t(faq.question),
       acceptedAnswer: {
         '@type': 'Answer',
-        text: faq.answer,
+        text: t(faq.answer),
       },
     })),
   }
@@ -133,12 +140,20 @@ export function breadcrumbSchema(items: Array<{ name: string; url: string }>) {
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
-    itemListElement: items.map((item, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      name: item.name,
-      item: item.url.startsWith('http') ? item.url : `${SITE_URL}${item.url}`,
-    })),
+    // Names in the page's language, and each step pointing at that language's
+    // address where one exists, so /es/faq/x lists /es/faq, not /faq.
+    itemListElement: items.map((item, i) => {
+      const locale = currentLocale()
+      const path = item.url.startsWith('http') ? null : item.url
+      const url = path === null ? item.url
+        : `${SITE_URL}${locale !== 'en' && isLocalizablePath(path) ? localizedPath(locale, path) : path}`
+      return {
+        '@type': 'ListItem',
+        position: i + 1,
+        name: t(item.name),
+        item: url,
+      }
+    }),
   }
 }
 

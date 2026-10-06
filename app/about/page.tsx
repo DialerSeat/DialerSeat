@@ -8,7 +8,9 @@ import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
 import { pageDate } from '@/lib/pageDates'
-import { withShareImage } from '@/lib/i18n/metadata'
+import { localizeMetadata } from '@/lib/i18n/metadata'
+import { primeLocale, t } from '@/lib/i18n/server'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // /about — who publishes all this, and how it is checked
@@ -45,16 +47,17 @@ const baseMetadata: Metadata = {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return withShareImage(baseMetadata)
+  return localizeMetadata(baseMetadata)
 }
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  await primeLocale()
   return (
     <>
       <JsonLd
         data={breadcrumbSchema([
-          { name: 'Home', url: '/' },
-          { name: 'About', url: ROUTE },
+          { name: msg("Home"), url: '/' },
+          { name: msg("About"), url: ROUTE },
         ])}
       />
       <JsonLd
@@ -62,7 +65,7 @@ export default function AboutPage() {
           '@context': 'https://schema.org',
           '@type': 'AboutPage',
           url: `https://dialerseat.com${ROUTE}`,
-          name: 'About DialerSeat',
+          name: msg("About DialerSeat"),
           dateModified: UPDATED,
           mainEntity: { '@id': 'https://dialerseat.com/#organization' },
           publisher: { '@id': 'https://dialerseat.com/#organization' },
@@ -73,79 +76,61 @@ export default function AboutPage() {
 
         <GutsSection>
           <div className="guts-hero">
-            <div className="guts-eyebrow">▸ ABOUT</div>
+            <div className="guts-eyebrow">{t("▸ ABOUT")}</div>
             <h1>
-              A dialer for people
-              <span className="second">who live on the phone.</span>
+              {t("A dialer for people")}<span className="second">{t("who live on the phone.")}</span>
             </h1>
-            <p>{FACTS.oneLine}</p>
-            <div className="guts-stamp">Updated {UPDATED}</div>
+            <p>{t(FACTS.oneLine)}</p>
+            <div className="guts-stamp">{t("Updated {uPDATED}", { uPDATED: UPDATED })}</div>
           </div>
         </GutsSection>
 
-        <GutsSection icon="info" title="What DialerSeat is">
+        <GutsSection icon="info" title={t("What DialerSeat is")}>
           <p>
-            An outbound calling platform, founded in 2025, for solo agents through mid-size floors:{' '}
-            {FACTS.audience.join(', ').toLowerCase()}. All four dialing modes, answering-machine detection
-            and compliance tooling are included in one weekly seat price.
-          </p>
+            {t("An outbound calling platform, founded in 2025, for solo agents through mid-size floors: {audience}. All four dialing modes, answering-machine detection and compliance tooling are included in one weekly seat price.", { audience: FACTS.audience.join(', ').toLowerCase() })}</p>
           <p>
-            Every comparison, data page and guide on this site is published by DialerSeat as a company and
-            checked against the method below. Pages carry the date they last changed.
-          </p>
+            {t("Every comparison, data page and guide on this site is published by DialerSeat as a company and checked against the method below. Pages carry the date they last changed.")}</p>
           <ul className="guts-list good">
-            {FACTS.pricing.slice(1, 5).map((p) => <li key={p}>{p}</li>)}
+            {FACTS.pricing.slice(1, 5).map((p) => <li key={p}>{t(p)}</li>)}
           </ul>
         </GutsSection>
 
-        <GutsSection icon="book" title="How we research what we publish" id="method">
+        <GutsSection icon="book" title={t("How we research what we publish")} id="method">
           <ul className="guts-list good">
             <li>
-              <strong>Competitor pricing</strong> comes from each vendor’s own published pricing. Where a vendor
-              sells only by quote, we say so and do not estimate. Every comparison page and the{' '}
-              <Link href="/data/dialer-pricing">pricing index</Link> render from one record per vendor, so the
-              site cannot state two prices for the same tool.
-            </li>
+              <strong>{t("Competitor pricing")}</strong> {t("comes from each vendor’s own published pricing. Where a vendor sells only by quote, we say so and do not estimate. Every comparison page and the")}{' '}
+              <Link href="/data/dialer-pricing">{t("pricing index")}</Link> {t("render from one record per vendor, so the site cannot state two prices for the same tool.")}</li>
             <li>
-              <strong>Comparisons concede.</strong> Each one says what the other tool does better and who it is
-              the right choice for, before making our case.
-            </li>
+              <strong>{t("Comparisons concede.")}</strong> {t("Each one says what the other tool does better and who it is the right choice for, before making our case.")}</li>
             <li>
-              <strong>Rules and laws</strong> are summarised from the regulator or statute, linked beside the
-              summary, with the date they were checked. Anything we could not verify is left out.
-            </li>
+              <strong>{t("Rules and laws")}</strong> {t("are summarised from the regulator or statute, linked beside the summary, with the date they were checked. Anything we could not verify is left out.")}</li>
             <li>
-              <strong>Platform data</strong>, like <Link href="/data/connect-rates">connect rates</Link>, is
-              computed from anonymized call records, shows its sample size, and publishes nothing below a
-              minimum sample.
-            </li>
+              <strong>{t("Platform data")}</strong>{t(", like")}{" "}<Link href="/data/connect-rates">{t("connect rates")}</Link>{t(", is computed from anonymized call records, shows its sample size, and publishes nothing below a minimum sample.")}</li>
           </ul>
         </GutsSection>
 
-        <GutsSection icon="check" title="Corrections">
+        <GutsSection icon="check" title={t("Corrections")}>
           <p>
-            If a price, a rule or a claim about another company is wrong or out of date, email{' '}
-            <a href="mailto:support@dialerseat.com">support@dialerseat.com</a> with the source. We would rather
-            fix it than benefit from it, and the page is re-dated when it changes.
-          </p>
+            {t("If a price, a rule or a claim about another company is wrong or out of date, email")}{' '}
+            <a href="mailto:support@dialerseat.com">support@dialerseat.com</a> {t("with the source. We would rather fix it than benefit from it, and the page is re-dated when it changes.")}</p>
         </GutsSection>
 
-        <GutsSection icon="alert" title="Where DialerSeat is not the right choice">
+        <GutsSection icon="alert" title={t("Where DialerSeat is not the right choice")}>
           <ul className="guts-list warn">
-            {FACTS.limits.map((l) => <li key={l}>{l}</li>)}
+            {FACTS.limits.map((l) => <li key={l}>{t(l)}</li>)}
           </ul>
         </GutsSection>
 
-        <GutsSection icon="list" title="Find us">
+        <GutsSection icon="list" title={t("Find us")}>
           <ul className="guts-list good">
-            <li>Support: <a href="mailto:support@dialerseat.com">support@dialerseat.com</a></li>
-            <li>Data and tools: <Link href="/resources">/resources</Link></li>
-            <li>For AI assistants and crawlers: <a href="/llms.txt">/llms.txt</a> and <a href="/llms-full.txt">/llms-full.txt</a></li>
-            <li>Live system status: <Link href="/status">/status</Link></li>
+            <li>{t("Support:")}{" "}<a href="mailto:support@dialerseat.com">support@dialerseat.com</a></li>
+            <li>{t("Data and tools:")}{" "}<Link href="/resources">{t("/resources")}</Link></li>
+            <li>{t("For AI assistants and crawlers:")}{" "}<a href="/llms.txt">{t("/llms.txt")}</a> {t("and")}{" "}<a href="/llms-full.txt">{t("/llms-full.txt")}</a></li>
+            <li>{t("Live system status:")}{" "}<Link href="/status">{t("/status")}</Link></li>
           </ul>
           <div className="guts-btns">
-            <Link href="/pricing" className="guts-btn primary">PRICING</Link>
-            <Link href="/faq/why-dialerseat" className="guts-btn secondary">WHY DIALERSEAT</Link>
+            <Link href="/pricing" className="guts-btn primary">{t("PRICING")}</Link>
+            <Link href="/faq/why-dialerseat" className="guts-btn secondary">{t("WHY DIALERSEAT")}</Link>
           </div>
         </GutsSection>
 

@@ -1,6 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
+import { useWebMcpTool } from '@/lib/useWebMcpTool'
+import { ABANDON_RATE_RULES, ABANDON_RATE_TOOL } from '@/lib/webmcpTools'
 
 // =============================================================================
 // ABANDON RATE CALCULATOR — is a predictive campaign inside the legal limit?
@@ -15,23 +19,51 @@ import { useState } from 'react'
 // =============================================================================
 
 const RULES = {
-  us: { label: 'United States (FTC TSR)', limit: 3, window: 'per campaign, each 30-day period', base: 'calls answered by a person' },
-  uk: { label: 'United Kingdom (Ofcom)', limit: 3, window: 'per campaign, each 24 hours', base: 'live calls' },
-  ca: { label: 'Canada (CRTC)', limit: 5, window: 'each calendar month', base: 'calls answered' },
+  us: { label: msg("United States (FTC TSR)"), limit: 3, window: msg("per campaign, each 30-day period"), base: msg("calls answered by a person") },
+  uk: { label: msg("United Kingdom (Ofcom)"), limit: 3, window: msg("per campaign, each 24 hours"), base: msg("live calls") },
+  ca: { label: msg("Canada (CRTC)"), limit: 5, window: msg("each calendar month"), base: msg("calls answered") },
 } as const
 
 type RuleKey = keyof typeof RULES
+const RULE_KEYS: readonly RuleKey[] = ABANDON_RATE_RULES
+
+// One calculation for the page and for the WebMCP tool below.
+function assess(rule: RuleKey, answered: number, abandoned: number) {
+  const r = RULES[rule]
+  const rate = answered > 0 ? (abandoned / answered) * 100 : 0
+  const allowed = Math.floor((answered * r.limit) / 100)
+  return { r, rate, allowed, headroom: allowed - abandoned, inside: rate <= r.limit }
+}
+
+const count = (v: unknown) => Math.max(0, Math.floor(Number(v) || 0))
 
 export default function AbandonRateCalculator() {
   const [rule, setRule] = useState<RuleKey>('us')
   const [answered, setAnswered] = useState(1200)
   const [abandoned, setAbandoned] = useState(30)
 
-  const r = RULES[rule]
-  const rate = answered > 0 ? (abandoned / answered) * 100 : 0
-  const allowed = Math.floor((answered * r.limit) / 100)
-  const headroom = allowed - abandoned
-  const inside = rate <= r.limit
+  const { r, rate, allowed, headroom, inside } = assess(rule, answered, abandoned)
+
+  // An AI agent in the browser can run the same check (lib/useWebMcpTool).
+  useWebMcpTool({
+    ...ABANDON_RATE_TOOL,
+    execute: (input) => {
+      const k = RULE_KEYS.includes(input.rule as RuleKey) ? (input.rule as RuleKey) : 'us'
+      const a = count(input.answered), x = count(input.abandoned)
+      setRule(k); setAnswered(a); setAbandoned(x)
+      const res = assess(k, a, x)
+      return {
+        rule: res.r.label,
+        limitPercent: res.r.limit,
+        measured: `${res.r.window}, as a share of ${res.r.base}`,
+        ratePercent: Number(res.rate.toFixed(2)),
+        mostAbandonedAllowed: res.allowed,
+        headroom: res.headroom,
+        insideLimit: res.inside,
+        source: 'https://dialerseat.com/tools/abandon-rate-calculator',
+      }
+    },
+  })
 
   return (
     <div className="arc">
@@ -56,20 +88,20 @@ export default function AbandonRateCalculator() {
 
       <div className="arc-grid">
         <div className="arc-field">
-          <label htmlFor="arc-rule">RULE</label>
+          <label htmlFor="arc-rule">{t("RULE")}</label>
           <select id="arc-rule" value={rule} onChange={(e) => setRule(e.target.value as RuleKey)}>
             {Object.entries(RULES).map(([k, v]) => (
-              <option key={k} value={k}>{v.label}</option>
+              <option key={k} value={k}>{t(v.label)}</option>
             ))}
           </select>
         </div>
         <div className="arc-field">
-          <label htmlFor="arc-answered">CALLS ANSWERED BY A PERSON</label>
+          <label htmlFor="arc-answered">{t("CALLS ANSWERED BY A PERSON")}</label>
           <input id="arc-answered" type="number" min={0} value={answered}
             onChange={(e) => setAnswered(Math.max(0, Number(e.target.value) || 0))} />
         </div>
         <div className="arc-field">
-          <label htmlFor="arc-abandoned">ABANDONED CALLS</label>
+          <label htmlFor="arc-abandoned">{t("ABANDONED CALLS")}</label>
           <input id="arc-abandoned" type="number" min={0} value={abandoned}
             onChange={(e) => setAbandoned(Math.max(0, Number(e.target.value) || 0))} />
         </div>
@@ -79,17 +111,14 @@ export default function AbandonRateCalculator() {
         <b>{rate.toFixed(2)}%</b>
         <p>
           {inside
-            ? `Inside the ${r.limit}% limit. You could abandon ${headroom} more call${headroom === 1 ? '' : 's'} before crossing it.`
-            : `Over the ${r.limit}% limit by ${Math.abs(headroom)} call${Math.abs(headroom) === 1 ? '' : 's'}. At ${answered.toLocaleString('en-US')} answered calls, ${allowed} abandoned is the most allowed.`}
-          {' '}Measured {r.window}, as a share of {r.base}.
-        </p>
+            ? t("Inside the {limit}% limit. You could abandon {headroom} more call{value} before crossing it.", { limit: r.limit, headroom, value: headroom === 1 ? '' : 's' })
+            : t("Over the {limit}% limit by {over} call{value}. At {answered} answered calls, {allowed} abandoned is the most allowed.", { limit: r.limit, over: Math.abs(headroom), value: Math.abs(headroom) === 1 ? '' : 's', answered: answered.toLocaleString('en-US'), allowed })}
+          {' '}
+          {t("Measured {window}, as a share of {base}.", { window: t(r.window), base: t(r.base) })}</p>
       </div>
 
       <p className="arc-foot">
-        A call is abandoned when a person answers and no agent is connected within 2 seconds (US and Canada). Divide by
-        answered calls, not dials: dividing by dials understates the rate. The US rule also requires a recorded message
-        with the seller’s name and number on every abandoned call, and 15 seconds of ringing before hanging up.
-      </p>
+        {t("A call is abandoned when a person answers and no agent is connected within 2 seconds (US and Canada). Divide by answered calls, not dials: dividing by dials understates the rate. The US rule also requires a recorded message with the seller’s name and number on every abandoned call, and 15 seconds of ringing before hanging up.")}</p>
     </div>
   )
 }
