@@ -35,7 +35,10 @@ describe('languages', () => {
     expect(localeFromAcceptLanguage('pt-BR,pt;q=0.9')).toBe('pt-BR')
     expect(localeFromAcceptLanguage('en-US,en;q=0.9,es;q=0.8')).toBeNull()
     expect(localeFromAcceptLanguage('')).toBeNull()
-    expect(localeFromAcceptLanguage('ja,zh;q=0.5')).toBeNull()
+    expect(localeFromAcceptLanguage('ko,th;q=0.5')).toBeNull()
+    expect(localeFromAcceptLanguage('zh-Hans-CN,zh;q=0.9')).toBe('zh-CN')
+    expect(localeFromAcceptLanguage('iw-IL')).toBe('he')
+    expect(localeFromAcceptLanguage('ja-JP')).toBe('ja')
   })
 
   it('English keeps its existing, unprefixed addresses', () => {

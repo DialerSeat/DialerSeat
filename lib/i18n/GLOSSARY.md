@@ -231,3 +231,115 @@ are fine in sentences; in buttons and tracked capitals prefer the shorter word.
 | sign in / sign up | anmelden / registrieren |
 | calling window / calling hours | erlaubte Anrufzeiten |
 | compliance | Compliance |
+
+## Chinese (zh-CN) — Mandarin, simplified characters
+
+Written for mainland China and Singapore. Neutral, plain business Chinese;
+address the reader as "你" (not "您") throughout, as Chinese SaaS does. Use
+full-width punctuation（，。：？！“”） in Chinese sentences, but keep `$35`,
+numbers, percentages and product names in half-width Latin. No space between
+Chinese characters; a space either side of a Latin word or number is optional
+and should follow what reads naturally (`DialerSeat 的`, `$35/周`). Mode names
+in tracked capitals stay English in labels, with Chinese in prose.
+
+| English | Chinese |
+|---|---|
+| dialer / auto dialer | 拨号器 / 自动拨号器 |
+| predictive / progressive / preview / power (modes) | 预测式 / 渐进式 / 预览式 / 功率式 (labels may keep PREDICTIVE etc.) |
+| lead(s) | 线索 |
+| campaign | 活动 |
+| seat | 席位 |
+| agent | 坐席 |
+| owner | 所有者 |
+| team | 团队 |
+| floor (dialer floor) | 呼叫团队 |
+| disposition | 通话结果 |
+| callback | 回拨 |
+| voicemail | 语音信箱 |
+| answering machine detection | 答录机检测 (AMD) |
+| caller ID | 来电显示号码 |
+| number pool | 号码池 |
+| script | 话术 |
+| recording | 录音 |
+| talk time | 通话时长 |
+| answer rate / connect rate / abandon rate | 接听率 / 接通率 / 放弃率 |
+| Do Not Call | 谢绝来电 (Do Not Call) |
+| white-label | 白标 |
+| billing / subscription | 账单 / 订阅 |
+| week | 周 (`$35/周`) |
+| sign in / sign up | 登录 / 注册 |
+| calling window / calling hours | 允许拨打时段 |
+| compliance | 合规 |
+
+## Hebrew (he) — modern Israeli Hebrew, right to left
+
+Same layout rules as Arabic: the page never mirrors, only the text runs right
+to left. Address the reader in the masculine-plural-neutral imperative common
+in Israeli software ("לחץ", "התחל") and keep it consistent. Israeli call
+centres say "דיילר", "ליד" and "קמפיין", so those stay as loanwords. Keep `$35`
+as written with Latin digits.
+
+| English | Hebrew |
+|---|---|
+| dialer / auto dialer | חייגן / חייגן אוטומטי |
+| predictive / progressive / preview / power (modes) | חיזוי / פרוגרסיבי / תצוגה מקדימה / פאוור |
+| lead(s) | ליד(ים) |
+| campaign | קמפיין |
+| seat | עמדה (עמדות) |
+| agent | נציג |
+| owner | בעלים |
+| team | צוות |
+| floor (dialer floor) | מוקד |
+| disposition | תוצאת שיחה |
+| callback | שיחה חוזרת |
+| voicemail | תא קולי |
+| answering machine detection | זיהוי משיבון (AMD) |
+| caller ID | מספר מזוהה |
+| number pool | מאגר מספרים |
+| script | תסריט |
+| recording | הקלטה |
+| talk time | זמן שיחה |
+| answer rate / connect rate / abandon rate | שיעור מענה / שיעור חיבור / שיעור נטישה |
+| Do Not Call | רשימת "אל תתקשר" (Do Not Call) |
+| white-label | white label |
+| billing / subscription | חיוב / מנוי |
+| week | שבוע (`$35 לשבוע`) |
+| sign in / sign up | התחברות / הרשמה |
+| calling window / calling hours | שעות חיוג מותרות |
+| compliance | ציות |
+
+## Japanese (ja) — standard Japanese, polite です/ます
+
+Polite です/ます in sentences; buttons and labels are short noun forms
+(「開始」「保存」). Full-width Japanese punctuation（、。「」）in Japanese
+sentences; `$35`, numbers and product names stay half-width. Japanese call
+centres use katakana loanwords, so those stay.
+
+| English | Japanese |
+|---|---|
+| dialer / auto dialer | ダイヤラー / オートダイヤラー |
+| predictive / progressive / preview / power (modes) | プレディクティブ / プログレッシブ / プレビュー / パワー |
+| lead(s) | リード |
+| campaign | キャンペーン |
+| seat | シート |
+| agent | エージェント |
+| owner | オーナー |
+| team | チーム |
+| floor (dialer floor) | コールセンター |
+| disposition | 通話結果 |
+| callback | コールバック |
+| voicemail | 留守番電話 |
+| answering machine detection | 留守番電話検出 (AMD) |
+| caller ID | 発信者番号 |
+| number pool | 番号プール |
+| script | トークスクリプト |
+| recording | 録音 |
+| talk time | 通話時間 |
+| answer rate / connect rate / abandon rate | 応答率 / 接続率 / 放棄率 |
+| Do Not Call | 電話勧誘拒否リスト (Do Not Call) |
+| white-label | ホワイトラベル |
+| billing / subscription | 請求 / サブスクリプション |
+| week | 週 (`$35/週`) |
+| sign in / sign up | ログイン / 登録 |
+| calling window / calling hours | 発信可能時間帯 |
+| compliance | コンプライアンス |

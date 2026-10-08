@@ -26,6 +26,9 @@ const COPY: Record<Exclude<Locale, 'en'>, { ask: string; yes: string; no: string
   ar: { ask: 'هل تريد عرض DialerSeat باللغة العربية؟', yes: 'نعم', no: 'لا، البقاء على الإنجليزية', en: 'View DialerSeat in Arabic?' },
   it: { ask: 'Vuoi vedere DialerSeat in italiano?', yes: 'Sì', no: 'No, resta in inglese', en: 'View DialerSeat in Italian?' },
   de: { ask: 'DialerSeat auf Deutsch anzeigen?', yes: 'Ja', no: 'Nein, auf Englisch bleiben', en: 'View DialerSeat in German?' },
+  'zh-CN': { ask: '以中文查看 DialerSeat？', yes: '是', no: '不用，继续使用英文', en: 'View DialerSeat in Chinese?' },
+  he: { ask: 'להציג את DialerSeat בעברית?', yes: 'כן', no: 'לא, להישאר באנגלית', en: 'View DialerSeat in Hebrew?' },
+  ja: { ask: 'DialerSeat を日本語で表示しますか？', yes: 'はい', no: 'いいえ、英語のままにする', en: 'View DialerSeat in Japanese?' },
 }
 
 function remember() {

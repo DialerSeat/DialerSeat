@@ -322,3 +322,19 @@ html[lang="ar"] body * {
   letter-spacing: 0 !important;
   unicode-bidi: plaintext;
 }
+
+/* Hebrew is handled exactly like Arabic: the layout never mirrors, each
+   paragraph takes the direction of its own first letter, and tracking is off
+   because Hebrew has no capitals for it to space. */
+html[lang="he"] body,
+html[lang="he"] body * {
+  letter-spacing: 0 !important;
+  unicode-bidi: plaintext;
+}
+
+/* Chinese and Japanese: the wide tracking on English capitals pulls
+   characters apart into separate-looking glyphs, so it is off. */
+html[lang="zh-CN"] body *,
+html[lang="ja"] body * {
+  letter-spacing: 0 !important;
+}

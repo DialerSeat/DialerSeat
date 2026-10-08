@@ -12,10 +12,13 @@ import fr from './dictionaries/fr.json'
 import ar from './dictionaries/ar.json'
 import it from './dictionaries/it.json'
 import de from './dictionaries/de.json'
+import zhCN from './dictionaries/zh-CN.json'
+import he from './dictionaries/he.json'
+import ja from './dictionaries/ja.json'
 
 // On the server every dictionary is bundled, so a lookup never waits on I/O.
 const DICTS: Record<Locale, Dictionary | null> = {
-  en: null, es, 'pt-BR': ptBR, fr, ar, it, de,
+  en: null, es, 'pt-BR': ptBR, fr, ar, it, de, 'zh-CN': zhCN, he, ja,
 }
 
 /**

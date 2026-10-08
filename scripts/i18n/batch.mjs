@@ -67,7 +67,10 @@ if (cmd === 'status') {
     for (const n of NEVER) if (count(t, n) !== count(en, n)) { problems.push(`${i}: brand "${n}"  ${JSON.stringify(en).slice(0, 60)}`); return }
     if (en.length >= 25) {
       const r = t.length / en.length
-      if (r < 0.45 || r > 2.6) { problems.push(`${i}: length ratio ${r.toFixed(2)} — misaligned?  ${JSON.stringify(en).slice(0, 50)} → ${JSON.stringify(t).slice(0, 50)}`); return }
+      // Chinese and Japanese say in one character what English spells in
+      // several, so their translations run far shorter.
+      const min = locale === 'zh-CN' || locale === 'ja' ? 0.12 : 0.45
+      if (r < min || r > 2.6) { problems.push(`${i}: length ratio ${r.toFixed(2)} — misaligned?  ${JSON.stringify(en).slice(0, 50)} → ${JSON.stringify(t).slice(0, 50)}`); return }
     }
     dict[en] = t
     merged++

@@ -5,6 +5,9 @@ import { frFR } from '@clerk/localizations/fr-FR'
 import { arSA } from '@clerk/localizations/ar-SA'
 import { itIT } from '@clerk/localizations/it-IT'
 import { deDE } from '@clerk/localizations/de-DE'
+import { zhCN } from '@clerk/localizations/zh-CN'
+import { heIL } from '@clerk/localizations/he-IL'
+import { jaJP } from '@clerk/localizations/ja-JP'
 import type { Locale } from './locales'
 import { translate, type Dictionary } from './translate'
 
@@ -16,7 +19,7 @@ import { translate, type Dictionary } from './translate'
 // Spanish is Latin American (es-MX), for the Colombian, Mexican and Dominican
 // centres this is for.
 const CLERK: Record<Exclude<Locale, 'en'>, object> = {
-  es: esMX, 'pt-BR': ptBR, fr: frFR, ar: arSA, it: itIT, de: deDE,
+  es: esMX, 'pt-BR': ptBR, fr: frFR, ar: arSA, it: itIT, de: deDE, 'zh-CN': zhCN, he: heIL, ja: jaJP,
 }
 
 type Tree = { [k: string]: string | Tree }
