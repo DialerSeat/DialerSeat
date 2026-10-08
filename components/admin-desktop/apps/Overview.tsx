@@ -46,6 +46,8 @@ interface AdminUser {
   } | null
   is_active_subscription: boolean
   has_access?: boolean
+  // Paused: counted under Inactive, labelled PAUSED.
+  paused?: boolean
 }
 
 type FilterMode = 'all' | 'active' | 'inactive'
@@ -910,7 +912,7 @@ export default function OverviewApp() {
                       the door can never disagree. */}
                   <span className={`ovr-pill-status ${(u.has_access ?? u.is_active_subscription) ? 'active' : 'inactive'}`}>
                     <span className={`ovr-status-dot ${(u.has_access ?? u.is_active_subscription) ? 'green' : 'gray'}`} />
-                    {(u.has_access ?? u.is_active_subscription) ? 'ACTIVE' : 'INACTIVE'}
+                    {(u.has_access ?? u.is_active_subscription) ? 'ACTIVE' : u.paused ? 'PAUSED' : 'INACTIVE'}
                   </span>
                   {userOnline && (
                     <span className="ovr-pill-status online">

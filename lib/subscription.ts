@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { ENTITLED_STATUSES } from '@/lib/entitlement'
+import { ENTITLED_STATUSES, pausedAccessRunning } from '@/lib/entitlement'
 import { isOwnerFunded } from '@/lib/seatFunding'
 
 const supabase = createClient(
@@ -26,7 +26,7 @@ export interface DetailedAccess {
 async function checkSelfSubActive(clerkId: string): Promise<{ active: boolean; hasHistory: boolean }> {
   const { data: subs, error } = await supabase
     .from('subscriptions')
-    .select('status, current_period_end, cancel_at_period_end')
+    .select('status, current_period_end, cancel_at_period_end, paused_at, paused_access_until')
     .eq('user_id', clerkId)
     .order('created_at', { ascending: false })
 
@@ -43,6 +43,13 @@ async function checkSelfSubActive(clerkId: string): Promise<{ active: boolean; h
   const now = Date.now()
 
   for (const sub of subs) {
+    // Before the status check, because a paused plan's status is 'active'
+    // forever. This gate is the one /api/calls/outbound asks, and it never
+    // looked at the pause, so a paused plan dialed for free indefinitely.
+    if (sub.paused_at) {
+      if (pausedAccessRunning(sub, now)) return { active: true, hasHistory: true }
+      continue
+    }
     if (ACTIVE_STATUSES.includes(sub.status)) {
       return { active: true, hasHistory: true }
     }

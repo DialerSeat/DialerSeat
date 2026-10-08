@@ -38,3 +38,25 @@ export const ENTITLED_STATUSES = ['active'] as const
 export function isEntitledStatus(status: string | null | undefined): boolean {
   return !!status && (ENTITLED_STATUSES as readonly string[]).includes(status)
 }
+
+// =============================================================================
+// A PAUSED PLAN IS NOT A FREE ONE
+// =============================================================================
+// Stripe's pause_collection leaves the subscription 'active' and keeps rolling
+// its billing period forward every week, voiding each invoice. So neither the
+// status nor current_period_end says anything about whether a paused plan is
+// paid for. Both gates read status, and one of them did not look at the pause
+// at all: Karol Amado paid to 5 Oct, paused, and dialed 491 calls on 5-8 Oct.
+//
+// The rule: a paused plan keeps the days it already paid for, then nothing
+// until it is resumed and the resume is paid. paused_access_until is the end of
+// those days, fixed at the moment of the pause (lib/subscriptionControl).
+// =============================================================================
+
+/** Does this paused plan still have paid days left? */
+export function pausedAccessRunning(
+  sub: { paused_access_until?: string | null },
+  now: number = Date.now()
+): boolean {
+  return !!sub.paused_access_until && new Date(sub.paused_access_until).getTime() > now
+}

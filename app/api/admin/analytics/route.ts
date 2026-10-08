@@ -195,7 +195,7 @@ export async function GET(req: NextRequest) {
     .select(`
       user_id, status, current_period_end, cancel_at_period_end,
       created_at, canceled_at, updated_at, discount_coupon,
-      stripe_subscription_id, stripe_price_id
+      stripe_subscription_id, stripe_price_id, paused_at
     `)
 
   const visibleSubs = (rawSubs || []).filter(s => !excluded.has(s.user_id))

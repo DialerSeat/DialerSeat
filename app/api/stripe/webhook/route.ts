@@ -734,7 +734,10 @@ async function routeWhitelabel(
   ) {
     const { name, email } = await lookupNameAndEmail(clerkId)
     await sendAdminPush('renewal', `${name} renewed Manager+ subscription.`)
-    await flagChargeWhilePaused(subscription.id, name, invoiceAmountCents)
+    await flagChargeWhilePaused(
+      subscription.id, name, invoiceAmountCents,
+      subscription.items.data[0]?.current_period_end ?? null,
+    )
     // ── WHAT STRIPE CHARGED, NOT WHAT THE PLAN LISTS FOR ────────────────
     // This logged a flat 7500 on every cycle. That is the list price typed
     // into the source, not a figure anyone read off the invoice, so a $0
@@ -1095,7 +1098,10 @@ async function syncPersonalSubscription(
   ) {
     const { name, email } = await lookupNameAndEmail(clerkId)
     await sendAdminPush('renewal', `${name} renewed Pro subscription.`)
-    await flagChargeWhilePaused(subscription.id, name, invoiceAmountCents)
+    await flagChargeWhilePaused(
+      subscription.id, name, invoiceAmountCents,
+      subscription.items.data[0]?.current_period_end ?? null,
+    )
     // Same as the white-label renewal above: the invoice's amount, not the
     // plan's list price.
     await logBillingEvent({
@@ -1189,15 +1195,30 @@ async function lookupClerkIdByCustomer(
 async function flagChargeWhilePaused(
   subscriptionId: string,
   name: string,
-  amountCents: number | null | undefined
+  amountCents: number | null | undefined,
+  paidPeriodEndSec: number | null
 ): Promise<void> {
   try {
     const { data } = await supabase
       .from('subscriptions')
-      .select('paused_at')
+      .select('paused_at, paused_access_until')
       .eq('stripe_subscription_id', subscriptionId)
       .maybeSingle()
     if (!data?.paused_at) return
+    // Money taken is a week paid for. Whatever is decided about a refund,
+    // until then that week is theirs, so the paid days run to its end.
+    if (paidPeriodEndSec) {
+      const paidThrough = new Date(paidPeriodEndSec * 1000).toISOString()
+      if (
+        !data.paused_access_until ||
+        new Date(data.paused_access_until).getTime() < paidPeriodEndSec * 1000
+      ) {
+        await supabase
+          .from('subscriptions')
+          .update({ paused_access_until: paidThrough })
+          .eq('stripe_subscription_id', subscriptionId)
+      }
+    }
     const amount = typeof amountCents === 'number' ? ` $${(amountCents / 100).toFixed(2)}` : ''
     await sendAdminPush(
       'sub_paused',

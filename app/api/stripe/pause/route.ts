@@ -6,6 +6,7 @@ import { requireNotAdmin } from '@/lib/subscription'
 import { sendAdminPush } from '@/lib/pushNotify'
 import { lookupUserIdentity } from '@/lib/userDisplayName'
 import { logBillingEvent } from '@/lib/billingEvents'
+import { paidThroughAtPause, resumePausedSubscription } from '@/lib/subscriptionControl'
 
 const supabase = getServiceClient('stripe/pause')
 
@@ -31,6 +32,11 @@ const supabase = getServiceClient('stripe/pause')
 // 'active'. Every access check in this app keys off status, so pausing
 // without the explicit subscriptions.paused_at marker would hand the user
 // free unlimited dialing. getAccessState in proxy.ts reads that marker.
+//
+// The paid days ride with it: paused_access_until, the end of the period if
+// that period was paid for. Stripe keeps moving current_period_end while
+// paused, so that column cannot answer it. Past those days the account is
+// read-only until Resume is pressed and paid (lib/subscriptionControl).
 // =============================================================================
 
 /** The billing log records 'pro' or 'wl'; anything else is left blank. */
@@ -41,7 +47,7 @@ function planOf(plan: string | null | undefined): 'pro' | 'wl' | null {
 async function loadSubscription(userId: string) {
   const { data } = await supabase
     .from('subscriptions')
-    .select('stripe_subscription_id, status, cancel_at_period_end, paused_at, plan')
+    .select('stripe_subscription_id, status, cancel_at_period_end, paused_at, paused_access_until, plan')
     .eq('user_id', userId)
     .in('status', ['active', 'past_due'])
     .order('created_at', { ascending: false })
@@ -87,6 +93,12 @@ export async function POST(req: Request) {
         )
       }
 
+      // Judged before pausing, on the period as it stands. If Stripe cannot be
+      // asked, nothing has changed yet and the pause simply fails.
+      const accessUntil = await paidThroughAtPause(
+        await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
+      )
+
       await stripe.subscriptions.update(sub.stripe_subscription_id, {
         pause_collection: { behavior: 'void' },
       })
@@ -96,7 +108,7 @@ export async function POST(req: Request) {
       // worst of both.
       const { error } = await supabase
         .from('subscriptions')
-        .update({ paused_at: new Date().toISOString() })
+        .update({ paused_at: new Date().toISOString(), paused_access_until: accessUntil })
         .eq('stripe_subscription_id', sub.stripe_subscription_id)
 
       if (error) {
@@ -133,31 +145,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Subscription is not paused' }, { status: 400 })
     }
 
-    // Clearing pause_collection puts the subscription back on schedule. If the
-    // paid period already elapsed while paused, Stripe bills on resume — which
-    // is the one moment this can fail.
-    // ── OUR MARKER FIRST ──────────────────────────────────────────────────
-    // The webhook now re-pauses any subscription our row says is paused
-    // (lib/subscriptionControl). Clearing Stripe first would let that put
-    // the pause straight back, so the marker goes first and is restored if
-    // Stripe refuses.
-    await supabase
-      .from('subscriptions')
-      .update({ paused_at: null })
-      .eq('stripe_subscription_id', sub.stripe_subscription_id)
-
-    let resumed: Awaited<ReturnType<typeof stripe.subscriptions.update>>
-    try {
-      resumed = await stripe.subscriptions.update(sub.stripe_subscription_id, {
-        pause_collection: null,
-      })
-    } catch (err) {
-      await supabase
-        .from('subscriptions')
-        .update({ paused_at: sub.paused_at })
-        .eq('stripe_subscription_id', sub.stripe_subscription_id)
-      throw err
-    }
+    // ── A RESUME AFTER THE PAID DAYS IS PAID FOR, THERE AND THEN ─────────
+    // Un-pausing alone does not bill until the old renewal day, so a resume in
+    // the middle of a voided week got the rest of it free. With paid days left
+    // nothing is charged; past them a full week is charged now and the plan's
+    // week restarts from this moment. The marker ordering (ours cleared first,
+    // restored if Stripe refuses) lives in lib/subscriptionControl.
+    const result = await resumePausedSubscription(sub)
 
     // ── DID THE CARD ACTUALLY GO THROUGH? ─────────────────────────────────
     // Product rule: a successful resume is SILENT — they just have access
@@ -165,20 +159,22 @@ export async function POST(req: Request) {
     // interrupting someone for, and it needs to point at the fix rather than
     // just saying no.
     //
+    // A declined resume charge changes nothing: still paused, nothing owed.
     // 'past_due' and 'unpaid' mean Stripe tried and the card refused;
-    // 'incomplete' means the first payment never completed. Any of the three
+    // 'incomplete' means the first payment never completed. Any of these
     // and they need a working card before access returns.
-    const billingFailed = ['past_due', 'unpaid', 'incomplete'].includes(resumed.status)
+    const billingFailed =
+      !!result.declined || ['past_due', 'unpaid', 'incomplete'].includes(result.status)
 
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({
-        paused_at: null,
-        // Keep our copy of the status honest — the webhook will confirm it,
-        // but the UI shouldn't have to wait on that round trip to know.
-        status: resumed.status,
-      })
-      .eq('stripe_subscription_id', sub.stripe_subscription_id)
+    // Keep our copy of the status honest — the webhook will confirm it, but
+    // the UI shouldn't have to wait on that round trip to know. Only once the
+    // resume has gone through: a declined one leaves the row as it was.
+    const { error } = result.declined || result.restartFailed
+      ? { error: null }
+      : await supabase
+        .from('subscriptions')
+        .update({ status: result.status })
+        .eq('stripe_subscription_id', sub.stripe_subscription_id)
 
     // ── EVERY RESUME IS RECORDED, WHATEVER HAPPENS NEXT ─────────────────
     // Stripe is un-paused by this point, so billing has restarted whether or
@@ -187,27 +183,36 @@ export async function POST(req: Request) {
     // with no notification and no line in the billing log. Logged first now.
     try {
       const { name, email } = await lookupUserIdentity(userId)
+      const charged = result.chargedCents > 0 ? ` Charged $${(result.chargedCents / 100).toFixed(2)} up front.` : ''
       await sendAdminPush(
         'sub_resumed',
-        billingFailed
+        result.restartFailed
+          ? `${name} paid to resume, but Stripe would not restart the plan.${charged} They have the week; restart it in Stripe.`
+          : billingFailed
           ? `${name} resumed their subscription, but the card was declined.`
-          : `${name} resumed their subscription. Billing has restarted.`
+          : `${name} resumed their subscription. Billing has restarted.${charged}`
       )
       await logBillingEvent({
         event_type: 'resume', clerk_id: userId, user_name: name, user_email: email,
         plan: planOf(sub.plan), stripe_subscription_id: sub.stripe_subscription_id,
-        detail: { source: 'customer', ...(billingFailed ? { billing_failed: true, status: resumed.status } : {}) },
+        ...(result.chargedCents > 0 ? { amount_cents: result.chargedCents } : {}),
+        detail: {
+          source: 'customer',
+          ...(result.chargedCents > 0 ? { charged_at_resume: true } : {}),
+          ...(billingFailed ? { billing_failed: true, status: result.status, declined: result.declined ?? null } : {}),
+          ...(result.restartFailed ? { restart_failed: result.restartFailed } : {}),
+        },
       })
     } catch (pushErr) {
       console.error('[stripe/pause] resume notification failed:', pushErr)
     }
 
     if (billingFailed) {
-      console.warn(`[stripe/pause] resume left subscription ${resumed.id} in status ${resumed.status}`)
+      console.warn(`[stripe/pause] resume of ${sub.stripe_subscription_id} failed: ${result.declined || result.status}`)
       return NextResponse.json({
         success: false,
         billingFailed: true,
-        status: resumed.status,
+        status: result.status,
         error: 'Your card was declined, so billing could not restart. Update your payment method to resume.',
         redirectTo: '/billing',
       }, { status: 402 })

@@ -15041,6 +15041,7 @@
   "components/teams/TeamModals.tsx"
  ],
  "PAUSED": [
+  "app/dashboard/layout.tsx",
   "components/teams/TeamFloor.tsx"
  ],
  "paused your seat, so dialing is paused.": [
@@ -17820,6 +17821,7 @@
   "app/join/[code]/JoinRedeemClient.tsx"
  ],
  "Settings": [
+  "app/dashboard/layout.tsx",
   "app/faq/mobile/view.tsx"
  ],
  "SETTINGS": [
@@ -23925,6 +23927,9 @@
  ],
  "Your subscription is live.": [
   "app/billing/success/page.tsx"
+ ],
+ "Your subscription is paused. Go into Settings and click Resume to unpause access.": [
+  "app/dashboard/layout.tsx"
  ],
  "YOUR SUBSCRIPTION IS SCHEDULED TO CANCEL": [
   "app/dashboard/settings/page.tsx"

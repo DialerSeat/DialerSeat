@@ -195,7 +195,12 @@ export async function GET(req: NextRequest) {
     // The overview asks something else, which is whether this person can use
     // the product. That is answered with the same ENTITLED_STATUSES the proxy
     // gates on, so the badge and the door can never disagree.
-    const entitled = !!sub && isEntitledStatus(sub.status) && !sub.cancel_at_period_end
+    //
+    // A paused plan reads INACTIVE here and is labelled PAUSED, even while it
+    // still has paid days left: it is not a customer paying weekly, and that
+    // is the question this list answers. The proxy alone decides the door.
+    const paused = !!sub?.paused_at && (sub.status === 'active' || sub.status === 'past_due')
+    const entitled = !!sub && isEntitledStatus(sub.status) && !sub.cancel_at_period_end && !paused
     const displayAsActive = isActive && !u.exclude_from_analytics
     const displayAsEntitled = entitled && !u.exclude_from_analytics
     return {
@@ -231,6 +236,8 @@ export async function GET(req: NextRequest) {
       is_active_subscription: displayAsActive,
       // Has access right now. The pill reads this.
       has_access: displayAsEntitled,
+      // Shown as PAUSED under Inactive.
+      paused,
     }
   })
 

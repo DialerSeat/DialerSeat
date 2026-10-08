@@ -1,7 +1,8 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { ENTITLED_STATUSES } from '@/lib/entitlement'
+import { ENTITLED_STATUSES, pausedAccessRunning } from '@/lib/entitlement'
+import { isOwnerFunded } from '@/lib/seatFunding'
 import {
   LOCALE_COOKIE, LOCALE_HEADER, LOCALE_PATH_HEADER, PROMPT_COOKIE, isLocalizablePath, splitLocalePrefix,
 } from '@/lib/i18n/locales'
@@ -181,6 +182,9 @@ interface AccessState {
   // An owner-funded seat that the owner has not accepted yet. Not full
   // access, but not "no account" either — see the branch that uses it.
   hasPendingOwnerFundedSeat: boolean
+  // Paused, and the paid days have run out. Read-only until they resume and
+  // the resume is paid, so they can still reach Settings to press it.
+  pausedOut: boolean
 }
 
 interface UserBrandAccess {
@@ -515,7 +519,7 @@ export default clerkMiddleware(async (auth, request) => {
     return withTenantHeader(NextResponse.next())
   }
 
-  const { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub, hasPendingOwnerFundedSeat } = await getAccessState(userId)
+  const { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub, hasPendingOwnerFundedSeat, pausedOut } = await getAccessState(userId)
 
   if (wlOnboardingPending && !isAdmin) {
     if (!isOnboardingAllowedRoute(request)) {
@@ -567,7 +571,11 @@ export default clerkMiddleware(async (auth, request) => {
     return withTenantHeader(res)
   }
 
-  if (isPreserved) {
+  // A paused plan whose paid days are over is read-only on the same terms as a
+  // preserved account: everything can be looked at, nothing that dials or
+  // writes goes through, and /api/stripe/ stays open so Resume can be pressed.
+  // The sitewide banner says to do exactly that.
+  if (isPreserved || pausedOut) {
     const method = request.method.toUpperCase()
     const isMutating = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
     const isApi = request.nextUrl.pathname.startsWith('/api/')
@@ -590,7 +598,8 @@ export default clerkMiddleware(async (auth, request) => {
 
     const res = NextResponse.next()
     res.headers.set('x-access-tier', tier)
-    res.headers.set('x-data-preserved', '1')
+    if (isPreserved) res.headers.set('x-data-preserved', '1')
+    if (pausedOut) res.headers.set('x-paused', '1')
     res.headers.set('x-read-only', '1')
     return withTenantHeader(res)
   }
@@ -693,12 +702,12 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       { data: subs },
       { data: userRow },
       { data: preservedRow },
-      { data: activeMembership },
+      { data: activeMemberships },
       { data: pendingRows },
     ] = await Promise.all([
       supabase
         .from('subscriptions')
-        .select('status, current_period_end, stripe_subscription_id, stripe_price_id, paused_at')
+        .select('status, current_period_end, stripe_subscription_id, stripe_price_id, paused_at, paused_access_until')
         .eq('user_id', clerkId)
         .order('created_at', { ascending: false }),
       supabase
@@ -722,14 +731,16 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       // cancelled seat leaves the member's status as 'active' (they stay on
       // the roster on purpose), so without this a suspended seat would keep
       // granting full dialing access that nobody is being billed for.
+      //
+      // Who pays is read too, and decided below: only a seat the OWNER funds
+      // grants access here. See the second hop after this query.
       supabase
         .from('team_members')
-        .select('id')
+        .select('billing_override, joined_via_code')
         .eq('user_id', clerkId)
         .eq('status', 'active')
         .is('seat_suspended_at', null)
-        .limit(1)
-        .maybeSingle(),
+        .limit(25),
 
       // ── PENDING IS NOT THE SAME AS SHUT OUT ─────────────────────────────
       // An approval-mode owner-funded code admits somebody as PENDING: the
@@ -757,7 +768,34 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
 
     const isAdmin = !!userRow?.is_admin
     const isPreserved = !!preservedRow
-    const hasActiveTeamAccess = !!activeMembership
+
+    // ── A TEAM SEAT GRANTS ACCESS ONLY WHEN THE OWNER PAYS FOR IT ─────────
+    // lib/subscription.ts has excluded agent-funded seats since 15 Sept, but
+    // this copy kept granting on ANY active seat. The dialer's own call route
+    // asks lib/subscription; predictive dialing (arm, heartbeat, session) is
+    // gated by nothing but this. So an agent on an agent-pays code whose own
+    // plan had stopped could not dial by hand and could dial predictively.
+    // An agent-funded seat's access comes from the agent's own plan, which the
+    // subscriptions loop below already decides. Same rule, lib/seatFunding.
+    const activeSeats = (activeMemberships || []) as Array<{
+      billing_override: string | null
+      joined_via_code: string | null
+    }>
+    let hasActiveTeamAccess = false
+    if (activeSeats.length > 0) {
+      const seatCodes = Array.from(new Set(
+        activeSeats.map(s => s.joined_via_code).filter((c): c is string => !!c)
+      ))
+      const codePayer = new Map<string, string | null>()
+      if (seatCodes.length > 0) {
+        const { data: codeRows } = await supabase
+          .from('team_codes')
+          .select('code, payer')
+          .in('code', seatCodes)
+        for (const c of codeRows || []) codePayer.set(c.code, c.payer)
+      }
+      hasActiveTeamAccess = activeSeats.some(s => isOwnerFunded(s, codePayer))
+    }
 
     // Second hop, skipped entirely when there is nothing pending — which is
     // the overwhelming majority of requests.
@@ -797,22 +835,17 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       tier = 'lapsed'
       for (const sub of subs) {
         // ── PAUSED ────────────────────────────────────────────────────────
-        // Pausing does not take away the week already paid for. Stripe's
-        // pause_collection stops the NEXT invoice, not the current period, so
-        // access runs to current_period_end and only then falls away.
+        // Pausing does not take away the days already paid for, and gives
+        // nothing past them. After that the account is read-only (pausedOut
+        // below): every lead, campaign and recording stays where it was, and
+        // Resume in Settings charges for a new week and opens it again.
         //
-        // After that they are "unsubscribed, with data": tier drops to lapsed,
-        // every lead, campaign and recording stays exactly where it was, and
-        // resuming is one click with no re-signup.
-        //
-        // Note Stripe still reports status 'active' throughout — pause_collection
-        // pauses invoicing, not the subscription — so without this branch a
-        // paused subscriber would keep full access forever and never be billed.
+        // NOT current_period_end. Stripe keeps rolling a paused plan's period
+        // forward every week, voiding each invoice, so that date is always a
+        // week away and access ran forever. paused_access_until is fixed when
+        // the pause is made (lib/entitlement).
         if (sub.paused_at) {
-          if (
-            sub.current_period_end &&
-            new Date(sub.current_period_end).getTime() > now
-          ) {
+          if (pausedAccessRunning(sub, now)) {
             tier = 'active'
             break
           }
@@ -840,7 +873,14 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       tier = 'active'
     }
 
-    const state: AccessState = { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub, hasActiveTeamAccess, hasPendingOwnerFundedSeat }
+    // Still holding a live plan that is paused, with nothing else granting
+    // access. A cancelled plan that happens to carry an old pause is not this:
+    // that person resubscribes, they do not resume.
+    const pausedOut = tier !== 'active' && (subs || []).some(
+      s => !!s.paused_at && (s.status === 'active' || s.status === 'past_due')
+    )
+
+    const state: AccessState = { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub, hasActiveTeamAccess, hasPendingOwnerFundedSeat, pausedOut }
 
     // Only cache a result that's safe to serve stale for the next minute.
     // "active" (and admin) status rarely flips moment-to-moment, so caching
@@ -862,7 +902,7 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
     return state
   } catch (err) {
     console.error('[proxy] access state lookup failed:', err)
-    return { tier: 'active', isAdmin: false, isPreserved: true, wlOnboardingPending: false, hasActiveWlSub: false, hasActiveTeamAccess: false, hasPendingOwnerFundedSeat: false }
+    return { tier: 'active', isAdmin: false, isPreserved: true, wlOnboardingPending: false, hasActiveWlSub: false, hasActiveTeamAccess: false, hasPendingOwnerFundedSeat: false, pausedOut: false }
   }
 }
 

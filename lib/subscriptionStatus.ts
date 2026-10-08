@@ -14,9 +14,16 @@
 // should keep evaluating status as of that past moment, since a
 // cancellation decided today doesn't rewrite whether someone was a real
 // paying customer back then.
+//
+// A PAUSED plan is not active either. Stripe reports it as 'active' for as long
+// as it stays paused, with every invoice voided, so on 8 Oct the Overview
+// counted four active users while none of the four was paying. Any truthy
+// paused_at counts; a caller reading Stripe directly passes pause_collection.
+// A row read without the column passes nothing and is judged as before.
 export function isSubscriptionTrulyActive(sub: {
   status: string
   cancel_at_period_end?: boolean | null
+  paused_at?: string | null
 }): boolean {
-  return sub.status === 'active' && !sub.cancel_at_period_end
+  return sub.status === 'active' && !sub.cancel_at_period_end && !sub.paused_at
 }

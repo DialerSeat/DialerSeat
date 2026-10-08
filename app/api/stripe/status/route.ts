@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { getAccessTier } from '@/lib/subscription'
+import { pausedAccessRunning } from '@/lib/entitlement'
 import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('stripe/status')
@@ -18,7 +19,7 @@ export async function GET() {
 
     const { data: sub } = await supabase
       .from('subscriptions')
-      .select('status, current_period_end, cancel_at_period_end, stripe_price_id')
+      .select('status, current_period_end, cancel_at_period_end, stripe_price_id, paused_at, paused_access_until')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -212,12 +213,26 @@ export async function GET() {
 
     const isActive = subStatusActive || wlActive || wlOnboardingPending
 
+    // ── PAUSED, AND THE PAID DAYS ARE OVER ──────────────────────────────
+    // Read-only until they resume (proxy.ts), and told so on every page with
+    // the way out: Settings, Resume. Not while paid days remain, when nothing
+    // is shut yet. tier is the door, so a paused agent on a seat somebody else
+    // pays for is not shut out and sees nothing.
+    const paused = !!sub.paused_at && (sub.status === 'active' || sub.status === 'past_due')
+    const pausedOut = paused && tier !== 'active'
+
     return NextResponse.json({
       hasSubscription: true,
       isActive,
       status: sub.status,
       currentPeriodEnd: sub.current_period_end,
       cancelAtPeriodEnd: sub.cancel_at_period_end,
+      paused,
+      // The end of the days already paid for, while some remain; null once
+      // they are over. Stripe keeps moving currentPeriodEnd while paused, so
+      // that is not it.
+      pausedAccessUntil: paused && pausedAccessRunning(sub) ? sub.paused_access_until : null,
+      pausedOut,
       tier,
       plan,
       wlActive,

@@ -42,7 +42,12 @@ async function fetchSubscriptionState(subId: string): Promise<BillingState> {
   // count toward forward-looking revenue. Same definition used for the admin active
   // label; only the revenue figure is affected — `state` below still
   // reports the literal Stripe status regardless.
-  const live = isSubscriptionTrulyActive({ status: sub.status, cancel_at_period_end: sub.cancel_at_period_end })
+  // A paused plan renews nothing either: Stripe voids every invoice it makes.
+  const live = isSubscriptionTrulyActive({
+    status: sub.status,
+    cancel_at_period_end: sub.cancel_at_period_end,
+    paused_at: sub.pause_collection ? 'paused' : null,
+  })
 
   const periodEndUnix =
     (item as any)?.current_period_end ??

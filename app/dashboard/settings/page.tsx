@@ -76,6 +76,11 @@ interface SubStatus {
   status: string | null
   currentPeriodEnd: string | null
   cancelAtPeriodEnd: boolean
+  /** Paused, and where the days already paid for end (null once they are
+   *  over). Stripe keeps moving currentPeriodEnd while a plan is paused, so it
+   *  is not that. */
+  paused?: boolean
+  pausedAccessUntil?: string | null
   tier?: 'active' | 'lapsed' | 'new'
   plan?: 'pro' | 'manager_plus' | 'both' | null
   wlActive?: boolean
@@ -715,7 +720,7 @@ export default function SettingsPage() {
                 </span>
               </div>
 
-              {sub?.currentPeriodEnd && sub?.tier !== 'lapsed' && (
+              {sub?.currentPeriodEnd && sub?.tier !== 'lapsed' && !sub?.paused && (
                 <div style={rowStyle}>
                   <span style={labelStyle}>
                     {sub.cancelAtPeriodEnd ? tr("ACCESS UNTIL") : tr("NEXT BILLING")}
@@ -895,10 +900,13 @@ export default function SettingsPage() {
             <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
               {paused ? (
                 <>
-                  {tr("Billing is paused. You can resume weekly billing at any time one click, no re-signup, and everything is exactly where you left it.")}{sub.currentPeriodEnd && (
+                  {tr("Billing is paused. You can resume weekly billing at any time one click, no re-signup, and everything is exactly where you left it.")}{/* The paid days, not currentPeriodEnd: Stripe rolls that forward
+                      every week a plan stays paused. Once they are over there is
+                      no current week, and the banner says what to do. */}
+                  {sub.pausedAccessUntil && (
                     <> {tr("Your current week runs to")}{' '}
                       <strong style={{ color: 'var(--brand-primary)' }}>
-                        {formatDate(sub.currentPeriodEnd)}
+                        {formatDate(sub.pausedAccessUntil)}
                       </strong>.
                     </>
                   )}

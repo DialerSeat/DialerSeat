@@ -64,6 +64,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     useState<Array<{ teamId: string; teamName: string; reason: string }>>([])
   const [awaitingApproval, setAwaitingApproval] =
     useState<Array<{ teamId: string; teamName: string }>>([])
+  // Paused with the paid days over: read-only until Resume in Settings.
+  const [pausedOut, setPausedOut] = useState(false)
   const [plan, setPlan] = useState<Plan>(null)
   const [seats, setSeats] = useState<SubsSummary | null>(null)
   const [pendingLogo, setPendingLogo] = useState<{ publicUrl: string; dataUrl: string } | null>(null)
@@ -149,6 +151,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setAwaitingApproval(d.awaitingApproval || [])
           setSeatLapsed(d.seatLapsed || [])
           setSeatsTakenOver(d.seatsTakenOver || [])
+          setPausedOut(!!d.pausedOut)
         })
         .catch(() => {
           if (cancelled) return
@@ -157,6 +160,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setAwaitingApproval([])
           setSeatLapsed([])
           setSeatsTakenOver([])
+          setPausedOut(false)
         })
     }
     const loadSeats = () => {
@@ -274,6 +278,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // both wrong and alarming: nothing lapsed, nobody owes anything, and the
     // person cannot do a single thing about it from here.
     primaryLabel = msg("AWAITING APPROVAL")
+    primaryColor = '#ffaa3e'
+    primaryWeight = 'bold'
+  } else if (pausedOut) {
+    // Still subscribed, only paused. "UNSUBSCRIBED" would send them looking
+    // for a checkout when the way back is Resume.
+    primaryLabel = msg("PAUSED")
     primaryColor = '#ffaa3e'
     primaryWeight = 'bold'
   } else if (tier === 'lapsed') {
@@ -487,7 +497,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           resubscribe when they have not lapsed — and when the thing they are
           actually waiting on is another person clicking accept — sends them to
           pay for something they were invited to for free. */}
-      {!isAdmin && !isAwaitingApproval && (tier === 'lapsed' || seatLapsed.length > 0) && !hasAnySeat && !hasManagerPlus && (
+      {/* Not for a paused plan either: checkout refuses anyone still holding
+          one, and the way back is Resume, which the banner points to. */}
+      {!isAdmin && !isAwaitingApproval && !pausedOut && (tier === 'lapsed' || seatLapsed.length > 0) && !hasAnySeat && !hasManagerPlus && (
         <Link
           href="/billing"
           style={{
@@ -731,6 +743,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             about restoring dialing, not about recovering an account.
             Suppressed when they already have their own plan, because then
             there is nothing to restore. */}
+        {/* ── PAUSED, AND THE PAID DAYS ARE OVER ────────────────────────────
+            Read-only until they resume and the resume is paid. Only once the
+            paid days have run out: before then nothing is shut, so there is
+            nothing to say. */}
+        {pausedOut && !isAdmin && (
+          <div style={{
+            padding: '10px 16px', background: '#2a1a05',
+            borderBottom: '1px solid #78350f', color: '#ffaa3e',
+            fontSize: 13, lineHeight: 1.5,
+          }}>
+            {tr("Your subscription is paused. Go into Settings and click Resume to unpause access.")}
+            <Link
+              href="/dashboard/settings"
+              style={{ color: '#ffd96a', marginInlineStart: 8, textDecoration: 'underline' }}
+            >
+              {tr("Settings")}</Link>
+          </div>
+        )}
+
         {seatLapsed.length > 0 && !hasOwnPlan && !isAwaitingApproval && (
           <div style={{
             padding: '10px 16px', background: '#2a1a05',
