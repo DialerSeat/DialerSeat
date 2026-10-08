@@ -2764,8 +2764,10 @@ export default function OpsMap() {
                 <RankList title="HOW DIALED" rows={ranks.source || []} colour={() => CYAN} />
                 <RankList title="BY AGENT" rows={ranks.agent || []} colour={() => GREEN} />
                 <RankList
-                  title={isVisitors ? 'TOP PLACES (VISITORS)' : 'TOP PLACES'}
-                  rows={points.slice(0, 8).map(p => ({ label: p.label, n: p.users, detail: p.online ? `${p.online} live` : '' }))}
+                  title={isVisitors ? `ALL PLACES (VISITORS) · ${points.length}` : 'TOP PLACES'}
+                  // Visitors list every place they came from, busiest first;
+                  // the panel scrolls. Other modes keep the top eight.
+                  rows={(isVisitors ? points : points.slice(0, 8)).map(p => ({ label: p.label, n: p.users, detail: p.online ? `${p.online} live` : '' }))}
                   colour={r => (r.detail ? GREEN : CYAN)}
                   onPick={l => { const p = points.find(x => x.label === l); if (p) focus(p.lat, p.lon, p.key) }}
                 />
