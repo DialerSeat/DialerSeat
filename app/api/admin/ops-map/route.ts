@@ -77,6 +77,29 @@ type PersonRow = {
   campaigns: number | string; leads: number | string
 }
 
+// ── PAUSED READS AS PAUSED ──────────────────────────────────────────────
+// Stripe keeps a paused plan's status 'active', so ops_map_people and
+// ops_map_place both report every paused account as active (and the People
+// tab counted it under PAYING). Nothing is billed while paused; the label
+// says so. Emails too, because the place panel's rows carry no id.
+async function pausedAccounts(): Promise<{ ids: Set<string>; emails: Set<string> }> {
+  const { data: subs } = await supabase
+    .from('subscriptions')
+    .select('user_id')
+    .not('paused_at', 'is', null)
+    .in('status', ['active', 'past_due'])
+  const ids = new Set((subs || []).map((s: { user_id: string }) => s.user_id))
+  if (ids.size === 0) return { ids, emails: new Set() }
+  const { data: users } = await supabase
+    .from('users')
+    .select('email')
+    .in('clerk_id', Array.from(ids))
+  const emails = new Set(
+    (users || []).map((u: { email: string | null }) => u.email).filter((e): e is string => !!e)
+  )
+  return { ids, emails }
+}
+
 /**
  * A human name for a country/region pair.
  *
@@ -152,7 +175,16 @@ export async function GET(req: NextRequest) {
         p_online_seconds: ONLINE_SECONDS,
       })
       if (error) throw error
-      return NextResponse.json({ success: true, place, detail: data })
+      const { emails: pausedEmails } = await pausedAccounts()
+      const detail = data && Array.isArray(data.people)
+        ? {
+            ...data,
+            people: data.people.map((p: { email?: string | null; status?: string | null }) =>
+              p.status === 'active' && p.email && pausedEmails.has(p.email) ? { ...p, status: 'paused' } : p
+            ),
+          }
+        : data
+      return NextResponse.json({ success: true, place, detail })
     }
 
     // ── ONE PERSON'S CALLS ───────────────────────────────────────────────
@@ -538,16 +570,7 @@ export async function GET(req: NextRequest) {
       connected: Number(r.connected) || 0,
     }))
 
-    // ── PAUSED READS AS PAUSED ────────────────────────────────────────────
-    // Stripe keeps a paused plan's status 'active', so ops_map_people reported
-    // every paused account as active (and counted it under PAYING). Nothing
-    // is billed while paused; the label says so.
-    const { data: pausedRows } = await supabase
-      .from('subscriptions')
-      .select('user_id')
-      .not('paused_at', 'is', null)
-      .in('status', ['active', 'past_due'])
-    const pausedIds = new Set((pausedRows || []).map((p: { user_id: string }) => p.user_id))
+    const { ids: pausedIds } = await pausedAccounts()
 
     const people = ((peopleRes.data || []) as PersonRow[]).map(r => ({
       id: r.clerk_id,

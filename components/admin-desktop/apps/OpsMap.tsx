@@ -1425,9 +1425,10 @@ export default function OpsMap() {
         }
         .om-t td { padding:2.5px 8px; white-space:nowrap; border-bottom:1px solid var(--om-row-border); }
         .om-t tr:hover td { background: var(--om-hover); }
-        .om-t tr.om-day td { color:${DIM}; font-size:9px; letter-spacing:1.2px;
-                             padding:6px 8px 2px; border-bottom:1px solid ${EDGE}; }
-        .om-t tr.om-day:hover td { background:none; }
+        .om-t tr.om-day td { color:${CYAN}; font-weight:700; font-size:9px; letter-spacing:1.2px;
+                             padding:5px 8px 3px; border-bottom:1px solid ${CYAN};
+                             background: color-mix(in srgb, ${CYAN} 10%, transparent); }
+        .om-t tr.om-day:hover td { background: color-mix(in srgb, ${CYAN} 10%, transparent); }
         .om-scroll { overflow:auto; min-height:0; }
         .om-scroll::-webkit-scrollbar { width:7px; height:7px; }
         .om-scroll::-webkit-scrollbar-thumb { background:${DIM}; border-radius:4px; }
