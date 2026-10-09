@@ -412,6 +412,10 @@ function Badge({ color, children }: { color: string; children: React.ReactNode }
 
 interface AdminData {
   range: Range; bucketSize: 'day' | 'week'
+  earnings: {
+    grossUsd: number; refundsUsd: number; disputesUsd: number; feesUsd: number
+    netUsd: number; payments: number; refunds: number
+  } | null
   summary: {
     totalUsers: number; payingActiveSubs: number; proSubs: number; wlSubs: number
     unknownPriceSubs: number; wrr: number; mrr: number; proWrr: number; wlWrr: number
@@ -483,6 +487,28 @@ function AdminRevenueView() {
               </div>
               <div className="an-stat-sub">PRO {fmtMoney(data.summary.proWrr)} · MGR+ {fmtMoney(data.summary.wlWrr)}</div>
               <div className="an-stat-sub" style={{ marginTop: 3 }}>{fmtMoney(data.summary.combinedMrr)} / MONTH</div>
+            </div>
+            {/* Money actually collected in the selected range, from Stripe's
+                own balance transactions, so it moves with the range filter
+                where the run-rate beside it cannot. A dash when Stripe could
+                not be read, never an estimate. */}
+            <div className="an-stat-card hero" style={{ borderTopColor: T.green }}>
+              <div className="an-stat-label">EARNINGS · {RANGE_LABELS[data.range]}</div>
+              <div className="an-stat-value" style={{ color: T.green }}>
+                {data.earnings ? fmtMoney(data.earnings.netUsd) : '-'}
+              </div>
+              {data.earnings && (
+                <>
+                  <div className="an-stat-sub">
+                    {fmtMoney(data.earnings.grossUsd)} COLLECTED · {data.earnings.payments} PAYMENT{data.earnings.payments === 1 ? '' : 'S'}
+                  </div>
+                  <div className="an-stat-sub" style={{ marginTop: 3 }}>
+                    REFUNDS {fmtMoney(data.earnings.refundsUsd)}
+                    {data.earnings.disputesUsd !== 0 && <> · DISPUTES {fmtMoney(data.earnings.disputesUsd)}</>}
+                    {' '}· FEES {fmtMoney(data.earnings.feesUsd)}
+                  </div>
+                </>
+              )}
             </div>
             {/* ── SEATS, AT WHAT THEY ACTUALLY BILL ────────────────────────
                 Kept beside subscription revenue rather than blended into it.

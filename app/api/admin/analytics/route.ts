@@ -3,6 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
 import { stripe } from '@/lib/stripe'
 import { isSubscriptionTrulyActive } from '@/lib/subscriptionStatus'
+import { stripeEarnings, type Earnings } from '@/lib/stripeEarnings'
 
 const supabase = getServiceClient('admin/analytics')
 
@@ -170,6 +171,13 @@ export async function GET(req: NextRequest) {
   const customStart = url.searchParams.get('start')
   const customEnd = url.searchParams.get('end')
   const { start, end } = rangeToBounds(range, customStart, customEnd)
+
+  // Started now, awaited at the end: the Stripe walk runs alongside the
+  // database reads. A failure shows a dash, never a guessed figure.
+  const earningsPromise: Promise<Earnings | null> = stripeEarnings(start, end).catch(err => {
+    console.warn('[admin/analytics] Stripe earnings failed:', err)
+    return null
+  })
 
   const now = Date.now()
   const day = 86400000
@@ -551,9 +559,13 @@ export async function GET(req: NextRequest) {
     else establishedPayingUsers++
   }
 
+  const earnings = await earningsPromise
+
   return NextResponse.json({
     success: true,
     range,
+    // Money actually collected in the range, from Stripe. See lib/stripeEarnings.
+    earnings,
     bucketSize: useWeekly ? 'week' : 'day',
     excludedUserCount: excluded.size,
     summary: {
