@@ -648,9 +648,14 @@ export default function AnalyticsPage({
               <div className="stat-value">{formatDuration(s.totalDuration || 0)}</div>
               <div className="stat-sub">{t("avg {duration}/call", { duration: formatDuration(s.avgCallLength || 0) })}</div>
             </div>
-            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.amber }}>
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.amber, minWidth: 0 }}>
               <div className="stat-label">{t("BEST CAMPAIGN")}</div>
-              <div className="stat-value" style={{ fontSize: s.bestCampaign ? 13 : 22, color: T.amber }}>
+              {/* Same size as the other boxes so the subtext lines up across the
+                  row. A long name stays on one line and ends in "…" rather
+                  than wrapping and pushing the subtext down; hover for all of it. */}
+              <div className="stat-value" title={s.bestCampaign || undefined} style={{
+                color: T.amber, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
                 {s.bestCampaign || '-'}
               </div>
               <div className="stat-sub">{s.bestCampaign ? `${s.bestCampaignRate}% conv` : t("need 5+ calls")}</div>
