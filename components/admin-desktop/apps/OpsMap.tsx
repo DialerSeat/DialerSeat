@@ -277,6 +277,9 @@ type IncomeBucket = { at: string; seatUsd: number; subUsd: number; events: numbe
 type Payload = {
   /** When this admin last had the notifications panel open, on any device. */
   logsSeenAt?: string | null
+  /** The latest CLOSED calls, whenever they happened. Only sent while the
+   *  CLOSED tab is open; see the closed flag on the request. */
+  closedFeed?: FeedRow[]
   notis: Noti[]
   logs: Noti[]
   visitors: Visitor[]
@@ -333,7 +336,7 @@ type Persisted = {
   compWindow?: '7d' | 'month' | 'all'
   showTargets?: boolean; feedView?: 'calls' | 'people' | 'logs'; focusLive?: boolean
   feedSize?: number
-  callFilter?: 'all' | 'live' | 'answered' | 'missed' | 'machine' | 'human'
+  callFilter?: 'all' | 'live' | 'answered' | 'missed' | 'machine' | 'human' | 'closed'
   peopleFilter?: 'all' | 'online' | 'paying' | 'seat' | 'dialed' | 'unplaced'
   peopleSort?: 'recent' | 'first'
   selected?: string | null
@@ -516,7 +519,7 @@ export default function OpsMap() {
   // bigger feed is a cost somebody should opt into rather than inherit.
   const [feedSize, setFeedSize] = useState<number>(
     FEED_SIZES.includes(saved.feedSize as number) ? saved.feedSize! : 80)
-  const [callFilter, setCallFilter] = useState<'all' | 'live' | 'answered' | 'missed' | 'machine' | 'human'>(saved.callFilter ?? 'all')
+  const [callFilter, setCallFilter] = useState<'all' | 'live' | 'answered' | 'missed' | 'machine' | 'human' | 'closed'>(saved.callFilter ?? 'all')
   // The PEOPLE view needs its own filter, not a shared one: "answered" means
   // nothing about an account.
   const [peopleFilter, setPeopleFilter] =
@@ -619,6 +622,7 @@ export default function OpsMap() {
     try {
       const res = await fetch(
         `/api/admin/ops-map?mode=${mode}&range=${range}&feed=${feedSize}` +
+        (callFilter === 'closed' ? '&closed=1' : '') +
         (scope === 'fast' ? '&scope=fast' : '')
       )
       const json = await res.json()
@@ -634,7 +638,7 @@ export default function OpsMap() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load')
     }
-  }, [mode, range, feedSize])
+  }, [mode, range, feedSize, callFilter])
 
   // No setState for "have we loaded yet" — that is `data === null`, and
   // deriving it removes a state that could disagree with the data it
@@ -865,7 +869,9 @@ export default function OpsMap() {
     return peopleSort === 'first' ? ta - tb : tb - ta
   })
 
-  const shownFeed = (data?.feed ?? []).filter(f => {
+  // CLOSED reads its own list: closed calls are rare enough that the latest
+  // loaded rows would almost never contain one.
+  const shownFeed = callFilter === 'closed' ? (data?.closedFeed ?? []) : (data?.feed ?? []).filter(f => {
     // Same predicate the DUR column uses, so what ACTIVE lists and what shows
     // a running clock can never disagree.
     if (callFilter === 'live') return liveSeconds(f, nowMs) !== null
@@ -1550,6 +1556,7 @@ export default function OpsMap() {
               {([
                 ['all', 'ALL'], ['live', 'ACTIVE'], ['answered', 'ANSWERED'],
                 ['missed', 'MISSED'], ['human', 'HUMAN'], ['machine', 'MACHINE'],
+                ['closed', 'CLOSED'],
               ] as const).map(([id, lbl]) => (
                 <button key={id} className="om-mini" data-on={callFilter === id}
                         onClick={() => setCallFilter(id)}>{lbl}</button>
@@ -2530,6 +2537,7 @@ export default function OpsMap() {
                       {([
                         ['all', 'ALL'], ['live', 'ACTIVE'], ['answered', 'ANSWERED'],
                         ['missed', 'MISSED'], ['human', 'HUMAN'], ['machine', 'MACHINE'],
+                        ['closed', 'CLOSED'],
                       ] as const).map(([id, lbl]) => (
                         // ACTIVE is a FILTER, not a status light. It used to
                         // paint itself green and append a running count
@@ -2596,6 +2604,8 @@ export default function OpsMap() {
                       ? allLogs.length + ' events · '
                         + allLogs.filter(r => r.kind === 'call').length + ' calls, '
                         + allLogs.filter(r => r.kind === 'log').length + ' log lines'
+                      : feedView === 'calls' && callFilter === 'closed'
+                      ? (data?.closedFeed ? shownFeed.length + ' closed, latest first' : 'loading closed calls…')
                       : feedView === 'calls'
                       ? shownFeed.length + ' of ' + (data?.feed ?? []).length
                         // A feed filled to its limit is a feed with older calls

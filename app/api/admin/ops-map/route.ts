@@ -214,6 +214,12 @@ export async function GET(req: NextRequest) {
     const feedLimit = Math.min(FEED_LIMIT_MAX, Math.max(1, parseInt(
       new URL(req.url).searchParams.get('feed') || String(FEED_LIMIT_DEFAULT), 10
     ) || FEED_LIMIT_DEFAULT))
+    // The live calls CLOSED tab. Closed calls are rare, so they are fetched as
+    // their own list, the latest ones whenever they happened, rather than
+    // filtered out of the latest feed rows (which would almost always be none).
+    // Kept separate from `feed` because the arcs, live-call detection and the
+    // merged timeline all read `feed` and must not change with the tab.
+    const wantClosed = new URL(req.url).searchParams.get('closed') === '1'
 
     // Bucket count follows the range: a day reads well in hours, ninety days
     // does not. Decided here so both the query and the axis label agree.
@@ -353,6 +359,10 @@ export async function GET(req: NextRequest) {
       fast ? EMPTY : supabase.rpc('ops_map_income_pulse', { p_since: since, p_buckets: buckets }),
     ])
     if (originsRes.error) throw originsRes.error
+    const closedRes = wantClosed
+      ? await supabase.rpc('ops_map_feed', { p_limit: feedLimit, p_disposition: 'CLOSED' })
+      : null
+    if (closedRes?.error) throw closedRes.error
 
     // ── ORIGINS ──────────────────────────────────────────────────────────
     type Pt = {
@@ -458,7 +468,7 @@ export async function GET(req: NextRequest) {
     for (const t of targets) t.codes.sort()
 
     // ── FEED ─────────────────────────────────────────────────────────────
-    const feed = ((feedRes.data || []) as FeedRowRaw[]).map(r => {
+    const toFeedRow = (r: FeedRowRaw) => {
       const targetState = stateForNumber(r.phone)
       return {
         id: r.call_id,
@@ -481,7 +491,9 @@ export async function GET(req: NextRequest) {
         campaign: r.campaign || null,
         recording: r.recording_status || null,
       }
-    })
+    }
+    const feed = ((feedRes.data || []) as FeedRowRaw[]).map(toFeedRow)
+    const closedFeed = closedRes ? ((closedRes.data || []) as FeedRowRaw[]).map(toFeedRow) : undefined
 
     // ── BREAKDOWN ────────────────────────────────────────────────────────
     const breakdown: Record<string, { label: string; n: number; detail: string }[]> = {
@@ -735,6 +747,7 @@ export async function GET(req: NextRequest) {
       ...(fast ? {} : { targets }),
       arcs,
       feed,
+      ...(closedFeed ? { closedFeed } : {}),
       // What the feed was actually allowed to hold. Reported because the
       // client's request is clamped here, and a dock saying "80 of 80" while
       // it asked for 5,000 is a dock that looks broken.
