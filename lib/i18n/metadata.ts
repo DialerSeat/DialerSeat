@@ -101,7 +101,9 @@ export async function localizeMetadata(meta: Metadata): Promise<Metadata> {
     alternates: { ...meta.alternates, canonical, languages },
   }
   if (dict) {
-    out.title = tr(meta.title, dict) as Metadata['title']
+    // Only when the page sets its own. Assigning undefined here erased the
+    // layout's title, so every language homepage went out with no <title>.
+    if (meta.title) out.title = tr(meta.title, dict) as Metadata['title']
     if (meta.description) out.description = translate(dict, meta.description)
     if (meta.openGraph) {
       out.openGraph = {
