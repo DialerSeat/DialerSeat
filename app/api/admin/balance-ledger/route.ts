@@ -4,7 +4,9 @@ import { requireAdmin } from '@/lib/admin'
 import { apiError } from '@/lib/apiError'
 import {
   COST_PER_MINUTE_USD, COST_PER_AMD_LEG_USD, COST_PER_RECORDED_MINUTE_USD,
+  COST_PER_NUMBER_PURCHASE_USD,
 } from '@/lib/telephonyCosts'
+import { balanceAccounting, readAll } from '@/lib/balanceAccounting'
 
 const supabase = getServiceClient('admin/balance-ledger')
 
@@ -18,18 +20,16 @@ export const runtime = 'nodejs'
 // telnyx_balance_snapshots, with the activity that happened in that interval
 // attached to it. Money out, money in, and what we can show for it.
 //
-// ATTRIBUTION IS EVIDENCE, NOT PROOF. We know what was dialed between two
-// readings and what our rates say that should have cost. We do NOT get an
-// itemised bill, so a line's explanation is "this is what happened while the
-// balance moved", not "this is what they charged for". Where the two disagree
-// the remainder is shown as unexplained rather than folded into a category to
-// make the row balance — an invented attribution is worse than an honest gap.
+// THE TOTALS come from lib/balanceAccounting, the same calculation as the
+// reconcile tab: spent is what left minus the hourly settlement refunds, and
+// explained is Telnyx's own itemised call.cost per leg plus detection, number
+// purchases, rent and tax. See that file for why the earlier figures called
+// most of the spend unexplained.
 //
-// WHAT LIVES IN THE GAP. Per-number purchase fees, E911, taxes, regulatory
-// surcharges, and number rental posting on Telnyx's own cycle rather than
-// evenly. None of those touch our tables. A gap is those before it is an
-// overcharge, and the way to tell them apart is shape over time: fees track the
-// size of the pool, usage tracks the dialing.
+// A LINE IS NOT RECONCILED ON ITS OWN. Telnyx reserves while calls run and
+// settles at the top of the hour, so one line's drop can belong to calls in
+// the line before it, and part of it comes back later. Each line shows what
+// was itemised inside it as evidence; only the window as a whole is balanced.
 // =============================================================================
 
 interface CallRow {
@@ -60,31 +60,42 @@ export async function GET(req: NextRequest) {
     ) || 30))
     const sinceIso = new Date(Date.now() - days * 24 * 60 * 60_000).toISOString()
 
-    const [snapsRes, callsRes, numbersRes] = await Promise.all([
-      supabase
+    const [snaps, calls, callCosts, numbersRes, accounting] = await Promise.all([
+      readAll<{
+        at: string; available_credit: string | number | null
+        balance: string | number | null; pending: string | number | null
+        heartbeat: boolean
+      }>((from, to) => supabase
         .from('telnyx_balance_snapshots')
         .select('at, available_credit, balance, pending, heartbeat')
         .gte('at', sinceIso)
         .order('at', { ascending: true })
-        .limit(20000),
-      supabase
+        .range(from, to)),
+      readAll<CallRow>((from, to) => supabase
         .from('calls')
         .select('id, user_id, phone_number, created_at, talk_seconds, amd_requested, amd_result, recording_duration, disposition')
         .gte('created_at', sinceIso)
         .order('created_at', { ascending: true })
-        .limit(200000),
+        .order('id', { ascending: true })
+        .range(from, to)),
+      // Telnyx's own itemised cost per leg, both legs of every call.
+      readAll<{ id: string; occurred_at: string; cost: string | number | null }>((from, to) => supabase
+        .from('telnyx_ledger_records')
+        .select('id, occurred_at, cost')
+        .eq('record_type', 'call.cost')
+        .eq('capture_window', 'webhook')
+        .gte('occurred_at', sinceIso)
+        .order('occurred_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to)),
       supabase
         .from('phone_numbers')
         .select('phone_number, acquired_at, monthly_cost_cents, status')
         .gte('acquired_at', sinceIso),
+      balanceAccounting(sinceIso),
     ])
+    if (numbersRes.error) throw numbersRes.error
 
-    const snaps = (snapsRes.data || []) as Array<{
-      at: string; available_credit: string | number | null
-      balance: string | number | null; pending: string | number | null
-      heartbeat: boolean
-    }>
-    const calls = (callsRes.data || []) as CallRow[]
     const numbers = (numbersRes.data || []) as Array<{
       phone_number: string; acquired_at: string | null
       monthly_cost_cents: number | null; status: string
@@ -93,6 +104,7 @@ export async function GET(req: NextRequest) {
     // Calls are already in time order, so each interval is a walk forward from
     // where the last one stopped rather than a scan of the whole array per row.
     let cursor = 0
+    let costCursor = 0
 
     interface Entry {
       at: string
@@ -109,6 +121,8 @@ export async function GET(req: NextRequest) {
         talkMinutes: number; minutesUsd: number
         recordedMinutes: number; recordingUsd: number
         numbersBought: string[]
+        /** Telnyx's itemised call.cost for legs that ended in this interval. */
+        carrierLegs: number; carrierUsd: number
       }
       explainedUsd: number
       unexplainedUsd: number | null
@@ -143,6 +157,15 @@ export async function GET(req: NextRequest) {
         recordedSeconds += Math.max(0, calls[j].recording_duration ?? 0)
       }
 
+      let carrierLegs = 0
+      let carrierUsd = 0
+      while (costCursor < callCosts.length && Date.parse(callCosts[costCursor].occurred_at) < startMs) costCursor++
+      for (let j = costCursor; j < callCosts.length; j++) {
+        if (Date.parse(callCosts[j].occurred_at) >= endMs) break
+        carrierLegs++
+        carrierUsd += Number(callCosts[j].cost ?? 0) || 0
+      }
+
       const boughtHere = numbers.filter(n => {
         if (!n.acquired_at) return false
         const t = Date.parse(n.acquired_at)
@@ -152,7 +175,10 @@ export async function GET(req: NextRequest) {
       const minutesUsd = (talkSeconds / 60) * COST_PER_MINUTE_USD
       const amdUsd = amdLegs * COST_PER_AMD_LEG_USD
       const recordingUsd = (recordedSeconds / 60) * COST_PER_RECORDED_MINUTE_USD
-      const explainedUsd = minutesUsd + amdUsd + recordingUsd
+      // What can be named inside this interval: their itemised legs, the
+      // detection call.cost does not carry, and any number bought. Evidence
+      // only; see the note at the top on why a line is not balanced alone.
+      const explainedUsd = carrierUsd + amdUsd + boughtHere.length * COST_PER_NUMBER_PURCHASE_USD
 
       entries.push({
         at: to.at,
@@ -182,22 +208,17 @@ export async function GET(req: NextRequest) {
           talkMinutes: talkSeconds / 60, minutesUsd,
           recordedMinutes: recordedSeconds / 60, recordingUsd,
           numbersBought: boughtHere.map(n => n.phone_number),
+          carrierLegs, carrierUsd,
         },
         explainedUsd,
-        // Only meaningful on money going OUT. A top-up has nothing to explain.
-        unexplainedUsd: delta < 0 ? Math.max(0, -delta - explainedUsd) : null,
+        // Not computed per line any more: a reservation dropped here and
+        // refunded at the hour read as unexplained when it was never spent.
+        // The window total is the figure.
+        unexplainedUsd: null,
       })
     }
 
     entries.reverse() // newest first, like a statement
-
-    const totalOut = entries.reduce((n, e) => e.deltaUsd < 0 ? n + -e.deltaUsd : n, 0)
-    // Deliberately NOT called "topped up". We observe the balance rising; we
-    // do not observe a payment. Until a credit is matched to something real,
-    // it is an unexplained movement in our favour and nothing more.
-    const totalCredited = entries.reduce((n, e) => e.deltaUsd > 0 ? n + e.deltaUsd : n, 0)
-    const totalExplained = entries.reduce(
-      (n, e) => n + (e.deltaUsd < 0 ? e.explainedUsd : 0), 0)
 
     // ── EVERY CHARGE, AND WHOSE CALL IT CAME FROM ─────────────────────────
     // Derived from our rates rather than read off a bill, because Telnyx does
@@ -292,49 +313,31 @@ export async function GET(req: NextRequest) {
       perUser: [...byUser.values()].sort((a, b) => b.totalUsd - a.totalUsd),
       // Two readings are the minimum for a single movement. Below that the
       // honest answer is that nothing was observed, not that nothing happened.
-      covered: snaps.length >= 2,
-      snapshots: snaps.length,
+      covered: accounting.covered,
+      snapshots: accounting.snapshots,
       watchingSince: snaps[0]?.at ?? null,
       balanceNow: snaps.length > 0 ? Number(snaps[snaps.length - 1].available_credit) : null,
       currency: 'USD',
+      // One calculation, shared with the reconcile tab: lib/balanceAccounting.
+      accounting,
       totals: {
-        // ── READ netOutUsd, NOT outUsd ───────────────────────────────
-        // outUsd is the sum of every DOWNWARD movement, and on its own it
-        // overstates spend — badly. Telnyx deducts against the balance as
-        // calls run and then SETTLES AT THE TOP OF THE HOUR, returning
-        // whatever it over-reserved. Those settlements come back as balance
-        // increases, so counting only the decreases bills you for the
-        // reservation and ignores the refund.
-        //
-        // The pattern is unmistakable once you look at the timestamps of the
-        // increases over 14-15 Sept: 15:01, 17:00 (three of them), 18:00,
-        // 21:00, 22:01, 02:00, 03:00, 16:00. Nearly every one lands in the
-        // first sixty seconds of an hour. The two that do not are the genuine
-        // top-ups, and they are round numbers: +$5.00 and +$10.00.
-        //
-        // Measured: sum-of-decreases said $16.80 for 14 Sept. Net, after the
-        // known $5.00 top-up, was about $9.54. Telnyx's own call.cost webhooks
-        // for that day totalled $2.86 of call charges, with the remainder
-        // being fees that never reach our tables. The $16.80 figure is not
-        // a smaller version of the truth, it is a different number entirely.
-        netOutUsd: Math.max(0, totalOut - totalCredited),
-        outUsd: totalOut,
-        // Kept under the old key so nothing reading this breaks, but it is
-        // credits observed, not deposits confirmed.
-        inUsd: totalCredited,
-        unverifiedCreditsUsd: totalCredited,
+        // What was actually charged: every drop minus the hourly settlement
+        // refunds. It used to be drops minus EVERY rise, deposits included,
+        // which read $0.00 for any window with a top-up in it.
+        netOutUsd: accounting.spentUsd,
+        // Every drop, reservations included. Not spend; kept for reference.
+        outUsd: accounting.grossOutUsd,
+        // Rises outside the top of the hour: money added. Observed, not a
+        // confirmed payment, so not called a top-up.
+        inUsd: accounting.depositsUsd,
+        settlementCreditsUsd: accounting.settlementCreditsUsd,
+        unverifiedCreditsUsd: accounting.depositsUsd,
         creditNote:
-          'Balance increases are reported as observed, not as confirmed top-ups. '
-          + 'MOST are Telnyx settling at the top of the hour and returning what it '
-          + 'over-reserved while calls were running — on 14-15 Sept nearly every '
-          + 'increase landed in the first sixty seconds of an hour, and the only two '
-          + 'that did not were round-number deposits. So outUsd counts reservations '
-          + 'and ignores the refunds: use netOutUsd for spend. For what was actually '
-          + 'charged per call, Telnyx call.cost webhooks are itemised and are the '
-          + 'better source; this ledger exists to catch the fees those never show '
-          + '— number rentals, E911, taxes, regulatory surcharges.',
-        explainedUsd: totalExplained,
-        unexplainedUsd: Math.max(0, totalOut - totalExplained),
+          'Balance rises in the first minutes of an hour are Telnyx returning what it '
+          + 'over-reserved while calls ran, and are netted out of spend. Every other '
+          + 'rise is counted as money added; it is observed, not a confirmed payment.',
+        explainedUsd: accounting.identified.totalUsd,
+        unexplainedUsd: accounting.unexplainedUsd,
       },
       entries,
     })

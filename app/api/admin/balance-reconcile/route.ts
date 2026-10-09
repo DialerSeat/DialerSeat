@@ -10,6 +10,7 @@ import {
   COST_PER_RECORDED_MINUTE_USD,
   TAX_RATE,
 } from '@/lib/telephonyCosts'
+import { balanceAccounting, readAll } from '@/lib/balanceAccounting'
 
 const supabase = getServiceClient('admin/balance-reconcile')
 
@@ -81,41 +82,42 @@ export async function GET(req: NextRequest) {
       parseInt(url.searchParams.get('hours') || '24', 10) || 24))
     const since = new Date(Date.now() - hours * 3600_000).toISOString()
 
-    const [snapRes, callRes, costRes] = await Promise.all([
-      supabase
+    // Paged: a plain read stops at the project's max-rows setting without
+    // saying so, and a busy day is several thousand calls and cost records.
+    const [snapRows, calls, costs, accounting] = await Promise.all([
+      readAll<{ balance: string | number; at: string }>((from, to) => supabase
         .from('telnyx_balance_snapshots')
         .select('balance, at')
         .gte('at', since)
         .order('at', { ascending: true })
-        .limit(5000),
-      supabase
+        .range(from, to)),
+      readAll<{
+        created_at: string; duration: number | null; answered_at: string | null
+        amd_result: string | null; recording_url: string | null
+      }>((from, to) => supabase
         .from('calls')
-        .select('created_at, duration, answered_at, amd_result, recording_url, telnyx_cost')
+        .select('id, created_at, duration, answered_at, amd_result, recording_url')
         .gte('created_at', since)
-        .limit(50000),
-      supabase
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to)),
+      // The webhook copy only. calls.telnyx_cost comes from the same webhook,
+      // so adding it as well counted every lead leg twice.
+      readAll<{ occurred_at: string | null; captured_at: string; cost: number | null }>((from, to) => supabase
         .from('telnyx_ledger_records')
-        .select('occurred_at, captured_at, cost')
+        .select('id, occurred_at, captured_at, cost')
         .eq('record_type', 'call.cost')
+        .eq('capture_window', 'webhook')
         .gte('captured_at', since)
-        .limit(50000),
+        .order('captured_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to)),
+      balanceAccounting(since),
     ])
 
-    const snaps: Snapshot[] = ((snapRes.data || []) as Array<{
-      balance: string | number; at: string
-    }>)
+    const snaps: Snapshot[] = snapRows
       .map(s => ({ balance: Number(s.balance), at: s.at }))
       .filter(s => Number.isFinite(s.balance))
-
-    const calls = (callRes.data || []) as Array<{
-      created_at: string; duration: number | null; answered_at: string | null
-      amd_result: string | null; recording_url: string | null
-      telnyx_cost: number | null
-    }>
-
-    const costs = (costRes.data || []) as Array<{
-      occurred_at: string | null; captured_at: string; cost: number | null
-    }>
 
     const windows: ReconcileWindow[] = []
 
@@ -165,9 +167,7 @@ export async function GET(req: NextRequest) {
         (recordedSec / 60) * COST_PER_RECORDED_MINUTE_USD
       const oursUsd = oursPreTax * (1 + TAX_RATE)
 
-      const theirsUsd =
-        gapCosts.reduce((n, c) => n + Number(c.cost ?? 0), 0) +
-        gapCalls.reduce((n, c) => n + Number(c.telnyx_cost ?? 0), 0)
+      const theirsUsd = gapCosts.reduce((n, c) => n + Number(c.cost ?? 0), 0)
 
       const moved = b.balance - a.balance
       const spent = moved < 0 ? -moved : 0
@@ -192,8 +192,14 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const spentTotal = windows.reduce((n, w) => n + (w.moved < 0 ? -w.moved : 0), 0)
-    const unexplainedTotal = windows.reduce((n, w) => n + w.unexplainedUsd, 0)
+    // ── THE TOTALS ARE THE WINDOW, NOT THE SUM OF ITS ROWS ───────────────
+    // Summing each row's drop counted reservations Telnyx handed back at the
+    // top of the hour as spend, and each row's residual with them: a row that
+    // reserved $0.80 and was refunded $0.60 an hour later showed $0.80 spent.
+    // Spent and unexplained come from lib/balanceAccounting, the same figures
+    // the statement shows. Rows stay as evidence of where money moved.
+    const spentTotal = accounting.spentUsd
+    const unexplainedTotal = accounting.unexplainedUsd
 
     // Windows where money left and NOTHING was dialled. These cannot be argued
     // about on rounding, because there is no usage to round. Surfaced on their
@@ -208,6 +214,7 @@ export async function GET(req: NextRequest) {
         ? 'Balance is only sampled while an admin has the ops map open, so a '
           + 'quiet period leaves no snapshots and cannot be reconciled.'
         : null,
+      accounting,
       spentTotalUsd: round4(spentTotal),
       theirsTotalUsd: round4(windows.reduce((n, w) => n + w.theirsUsd, 0)),
       oursTotalUsd: round4(windows.reduce((n, w) => n + w.oursUsd, 0)),

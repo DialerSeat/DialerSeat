@@ -53,9 +53,25 @@ interface Entry {
     talkMinutes: number; minutesUsd: number
     recordedMinutes: number; recordingUsd: number
     numbersBought: string[]
+    carrierLegs?: number; carrierUsd?: number
   }
   explainedUsd: number
   unexplainedUsd: number | null
+}
+
+/** lib/balanceAccounting, shared by the statement and the reconcile tab. */
+interface Accounting {
+  spentUsd: number
+  settlementCreditsUsd: number
+  depositsUsd: number
+  identified: {
+    callsUsd: number; callLegs: number
+    amdUsd: number; amdLegs: number
+    numberPurchasesUsd: number; numbersBought: number
+    numberRentUsd: number; numbersHeld: number
+    taxUsd: number; totalUsd: number
+  }
+  unexplainedUsd: number
 }
 
 interface Charge {
@@ -102,6 +118,7 @@ interface Ledger {
   balanceNow: number | null
   totals: { netOutUsd: number; outUsd: number; inUsd: number; explainedUsd: number; unexplainedUsd: number
             unverifiedCreditsUsd?: number; creditNote?: string }
+  accounting?: Accounting
   entries: Entry[]
   charges: Charge[]
   chargesTotal: number
@@ -359,24 +376,18 @@ export default function BalanceApp() {
                 data.balanceNow === null ? T.muted
                   : data.balanceNow < 10 ? T.red : data.balanceNow < 25 ? T.amber : T.green],
               // ── NET, BECAUSE TELNYX SETTLES ON THE HOUR ────────────────
-              // This tile used to show outUsd, the sum of every downward
-              // movement, and that roughly DOUBLES the real figure. Telnyx
-              // deducts as calls run and settles at the top of the hour,
-              // handing back whatever it over-reserved; counting only the
-              // decreases charges you for the reservation and drops the
-              // refund. Sum-of-decreases said $16.80 for 14 Sept against a
-              // real net of about $9.54.
+              // Every drop minus the refunds Telnyx posts at the top of the
+              // hour for what it over-reserved. Until 8 Oct this subtracted
+              // EVERY rise, deposits included, and read $0.00 for any window
+              // with a top-up in it. See lib/balanceAccounting.
               ['NET OUT', data.covered ? usd(data.totals.netOutUsd) : '-', T.red],
-              // Not "IN". We observe the balance rising; we never observe a
-              // payment. MOST of this is the hourly settlement above rather
-              // than money arriving -- the +$1.04 at 11:01 on 14 Sept followed
-              // by a $0.92 debit is that pattern, not a glitch, and nearly
-              // every increase on record lands in the first sixty seconds of
-              // an hour. The genuine deposits are the round numbers. Calling
-              // any of it "IN" turns a reservation refund into a top-up.
+              // Rises outside the top of the hour: money added. The hourly
+              // settlement refunds are no longer counted here, they are
+              // netted out of NET OUT instead.
               ['CREDITED', data.covered ? usd(data.totals.inUsd) : '-', T.green],
-              // The whole reason the app exists, so it gets a tile rather than
-              // a footnote.
+              // NET OUT minus what Telnyx itemised per leg, detection, number
+              // purchases, rent and tax. It used to be every drop minus a
+              // talk-time estimate, which called most of the spend unexplained.
               ['UNEXPLAINED', data.covered ? usd(data.totals.unexplainedUsd) : '-',
                 data.totals.unexplainedUsd > 0 ? T.amber : T.muted],
             ] as const).map(([label, value, colour]) => (
@@ -392,6 +403,21 @@ export default function BalanceApp() {
               </div>
             ))}
           </div>
+
+          {data.covered && data.accounting && (
+            <div style={{
+              fontSize: 11, color: T.muted, lineHeight: 1.8, marginBottom: 12, fontFamily: MONO,
+            }}>
+              {usd(data.accounting.spentUsd)} out = calls {usd(data.accounting.identified.callsUsd)}
+              {' '}({data.accounting.identified.callLegs.toLocaleString()} legs, Telnyx&apos;s own figure)
+              {' + '}detection {usd(data.accounting.identified.amdUsd)}
+              {' + '}numbers bought {usd(data.accounting.identified.numberPurchasesUsd)}
+              {' + '}rent {usd(data.accounting.identified.numberRentUsd)}
+              {' + '}tax {usd(data.accounting.identified.taxUsd)}
+              {' + '}unexplained {usd(data.accounting.unexplainedUsd)}
+              {' · '}{usd(data.accounting.settlementCreditsUsd)} of hourly refunds netted off
+            </div>
+          )}
 
           {!data.covered && (
             <div style={{
@@ -739,10 +765,10 @@ export default function BalanceApp() {
                           </>
                         )}
                       </div>
-                      {e.direction === 'out' && (e.unexplainedUsd ?? 0) > 0.0001 && (
-                        <div style={{ fontSize: 11, color: T.amber, marginTop: 4 }}>
-                          {usd(e.unexplainedUsd ?? 0)} of this is not explained by usage —
-                          fees, tax, or rental posting.
+                      {(e.activity.carrierLegs ?? 0) > 0 && (
+                        <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>
+                          Telnyx itemised {e.activity.carrierLegs} legs in this interval
+                          at {usd4(e.activity.carrierUsd ?? 0)}.
                         </div>
                       )}
                     </div>
@@ -756,7 +782,7 @@ export default function BalanceApp() {
           {tab === 'charges' && (
             <Panel
               title={`CHARGES · ${usd(data.chargedUsd)} across ${data.chargesTotal.toLocaleString()} calls`}
-              note="Each call that should have cost something, and whose it was. Derived from our rates, since Telnyx does not itemise per call. Calls that cost nothing are left out rather than listed at zero."
+              note="Each call that should have cost something, and whose it was. Derived from our rates. Calls that cost nothing are left out rather than listed at zero."
             >
               {data.charges.length === 0 ? (
                 <div style={{ fontSize: 12, color: T.muted }}>Nothing billable in this window.</div>
@@ -973,12 +999,12 @@ export default function BalanceApp() {
           )}
 
           <div style={{ fontSize: 10.5, color: T.muted, lineHeight: 1.8, marginTop: 4 }}>
-            Movements are what Telnyx actually took. Charges and per-person figures are
-            our own rates times usage, because Telnyx does not itemise per call. The
-            difference between the two is the UNEXPLAINED tile, and it is where
-            per-number purchase fees, E911, tax and rental posting live — none of which
-            reach our tables. Worth watching whether that gap tracks the size of the
-            pool or the volume of dialing; only the second would be a usage charge.
+            Movements are what Telnyx actually took, net of the refunds it posts at the
+            top of each hour. The UNEXPLAINED tile is that minus Telnyx&apos;s own
+            itemised cost for every call leg, detection, number purchases, rent and
+            tax. What is left is E911, regulatory fees and anything else that never
+            reaches our tables. Charges and per-person figures are still our rates
+            times usage.
           </div>
         </>
       )}
