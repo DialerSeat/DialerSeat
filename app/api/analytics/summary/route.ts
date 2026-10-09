@@ -120,23 +120,33 @@ export async function GET(req: NextRequest) {
     const d = outcomes[i]
     if (d !== null && CONVERSION_DISPS.includes(d)) campaignTotals[cid].converted++
   })
-  let bestCampaignId: string | null = null
-  let bestRate = 0
-  for (const [cid, t] of Object.entries(campaignTotals)) {
-    if (t.total >= 5) {
-      const rate = t.converted / t.total
-      if (rate > bestRate) {
-        bestRate = rate
-        bestCampaignId = cid
-      }
+  // ── ONLY CAMPAIGNS THAT STILL EXIST CAN WIN ────────────────────────────
+  // Deleting a campaign clears campaign_id on its calls, so they pool under
+  // 'unknown' along with dials made outside a campaign. That pool used to be
+  // allowed to win, and when it did there was no name to show, so the tile
+  // read "-" for an account with closes on a live campaign (John Doe, 8 Oct:
+  // the pool at 1.44% beat "Test updated" at 0.44%). A deleted campaign won
+  // the same way. Both are now skipped and the best remaining campaign wins.
+  const eligible = Object.entries(campaignTotals)
+    .filter(([cid, t]) => cid !== 'unknown' && t.total >= 5 && t.converted > 0)
+  const names = new Map<string, string>()
+  if (eligible.length > 0) {
+    const { data: cdata } = await supabase
+      .from('campaigns').select('id, name').in('id', eligible.map(([cid]) => cid))
+    for (const c of (cdata || []) as Array<{ id: string; name: string | null }>) {
+      names.set(c.id, c.name || 'Untitled')
     }
   }
-
   let bestCampaignName: string | null = null
-  if (bestCampaignId && bestCampaignId !== 'unknown') {
-    const { data: cdata } = await supabase
-      .from('campaigns').select('name').eq('id', bestCampaignId).single()
-    bestCampaignName = cdata?.name || null
+  let bestRate = 0
+  for (const [cid, t] of eligible) {
+    const name = names.get(cid)
+    if (!name) continue
+    const rate = t.converted / t.total
+    if (rate > bestRate) {
+      bestRate = rate
+      bestCampaignName = name
+    }
   }
 
   const conversionRate = reachedCalls > 0 ? (conversions / reachedCalls) * 100 : 0
