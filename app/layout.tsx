@@ -8,7 +8,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { getTenantBranding, getActiveTenantForUser } from '@/lib/tenant';
 import PageViewTracker from '@/components/PageViewTracker'
 import { LocaleProvider } from '@/lib/i18n/client';
-import { getClientDictionary, getDictionary, getLocale, getUrlLocale } from '@/lib/i18n/server';
+import { getDictionary, getLocale, getUrlLocale } from '@/lib/i18n/server';
 import { LOCALE_COOKIE, PROMPT_COOKIE, suggestLocale } from '@/lib/i18n/locales';
 import LanguagePrompt from '@/components/LanguagePrompt';
 import LocaleAccountSync from '@/components/LocaleAccountSync';
@@ -197,7 +197,6 @@ export default async function RootLayout({
   // in through a language address like /es/faq.
   const locale = await getLocale();
   const dict = await getDictionary();
-  const clientDict = await getClientDictionary();
   // Offer a language once, only to someone who has never chosen or been
   // asked. suggestLocale only ever returns an enabled, non-English language.
   const cookieStore = await cookies();
@@ -241,7 +240,7 @@ export default async function RootLayout({
         <body>
           {!branding && <StructuredData />}
 
-          <LocaleProvider initialLocale={locale} initialDict={clientDict}>
+          <LocaleProvider initialLocale={locale}>
             <ThemeProvider initialBranding={branding}>
               {children}
             </ThemeProvider>

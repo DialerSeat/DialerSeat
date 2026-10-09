@@ -93,15 +93,43 @@ export function registerAccountPersistence(fn: ((locale: Locale) => Promise<void
   persistToAccount = fn
 }
 
+// The dictionary arrives as its own cached file (a JS chunk per language),
+// not inside the page. Passed as a prop it was serialised into every page's
+// HTML: a Spanish page weighed 900 KB against 220 KB in English, and paid that
+// again on every page load. Now the browser downloads it once and reuses it.
+//
+// One promise per language, shared. use() reads its status, so a language
+// that has loaded never suspends again; during hydration the first read waits
+// for the file with the server's (already translated) HTML still on screen,
+// so nothing flashes English and nothing mismatches.
+type TrackedPromise = Promise<Dictionary | null> & { status?: string; value?: Dictionary | null }
+const dictionaries = new Map<Locale, TrackedPromise>()
+function dictionaryFor(locale: Locale): TrackedPromise {
+  let p = dictionaries.get(locale)
+  if (!p) {
+    p = loadDictionary(locale) as TrackedPromise
+    p.status = 'pending'
+    p.then((v) => { p!.status = 'fulfilled'; p!.value = v }, () => { p!.status = 'rejected' })
+    dictionaries.set(locale, p)
+  }
+  return p
+}
+
+// Start the download as soon as this module runs in the browser, before
+// React reaches the provider. The server already set <html lang>.
+if (typeof document !== 'undefined') {
+  const lang = document.documentElement.lang
+  if (lang && lang !== DEFAULT_LOCALE && isEnabledLocale(lang)) dictionaryFor(lang)
+}
+
 export function LocaleProvider({
   initialLocale,
-  initialDict,
   children,
 }: {
   initialLocale: Locale
-  initialDict: Dictionary | null
   children: React.ReactNode
 }) {
+  const initialDict = initialLocale === DEFAULT_LOCALE ? null : use(dictionaryFor(initialLocale) as Promise<Dictionary | null>)
   const [state, setState] = useState<I18nState>({ locale: initialLocale, dict: initialDict })
 
   // Kept in step during render, not in an effect, so a child's mount effect
@@ -112,7 +140,7 @@ export function LocaleProvider({
 
   const setLocale = useCallback(async (next: Locale, opts?: { persist?: boolean }) => {
     if (!isEnabledLocale(next)) return
-    const dict = await loadDictionary(next)
+    const dict = next === DEFAULT_LOCALE ? null : await dictionaryFor(next)
     writeCookie(LOCALE_COOKIE, next)
     writeCookie(PROMPT_COOKIE, '1')
     browserState = { locale: next, dict }
