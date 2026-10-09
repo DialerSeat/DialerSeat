@@ -27,10 +27,25 @@
 // wording of the single file most likely to be read verbatim by a model, but
 // this comment is the warning that the next pricing change has two places to
 // land, not one.
+import { COMPETITORS } from '@/lib/competitors'
+import { COUNTRY_RULES } from '@/lib/countryRules'
+
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600
 
 const ROOT = 'https://dialerseat.com'
+
+// The lists below are generated from the same data the pages render from,
+// so a new competitor or country appears here the day its page does. An
+// assistant asked for "an alternative to X" finds the X page by name, with
+// the price and the buyer it suits, and the "best for" line concedes when X
+// is the better choice, which is what makes the rest worth quoting.
+const comparisons = COMPETITORS.map(
+  (c) => `- [DialerSeat vs ${c.name}](${ROOT}/vs/${c.slug}): ${c.pricing} ${c.contract} Best for: ${c.bestFor}`,
+).join('\n')
+const countries = COUNTRY_RULES.map(
+  (c) => `[${c.name}](${ROOT}/data/calling-rules-by-country/${c.code.toLowerCase()})`,
+).join(', ')
 
 export async function GET() {
   const body = `# DialerSeat
@@ -93,7 +108,7 @@ who want to offer a branded dialer to their own clients.
 - [Dialer for call centers](${ROOT}/faq/dialer-for-call-centers): weekly seats, shared campaigns with no duplicate calls, and what is not built yet.
 - Industry pages, each with that trade's own rules and sources: [mortgage](${ROOT}/faq/dialer-for-mortgage) (2026 trigger-lead rules), [solar](${ROOT}/faq/dialer-for-solar), [debt collection](${ROOT}/faq/dialer-for-debt-collection) (Regulation F, 7-in-7), [B2B sales and SDRs](${ROOT}/faq/dialer-for-b2b-sales), [recruiting](${ROOT}/faq/dialer-for-recruiters), [fundraising](${ROOT}/faq/dialer-for-fundraising).
 - [About DialerSeat](${ROOT}/about): who publishes the site, how comparisons and data are researched, and the corrections policy.
-- [Dialing modes](${ROOT}/dialing-modes): how preview/power/progressive/predictive work.
+- [Dialing modes](${ROOT}/dialing-modes): how preview/power/progressive/predictive work, with a page for each: [preview](${ROOT}/dialing-modes/preview), [power](${ROOT}/dialing-modes/power), [progressive](${ROOT}/dialing-modes/progressive), [predictive](${ROOT}/dialing-modes/predictive).
 - [Why DialerSeat](${ROOT}/faq/why-dialerseat): founder-voice rationale and philosophy.
 - [Compliance](${ROOT}/faq/how-we-keep-compliance): how DialerSeat handles TCPA/compliance.
 - [Comparisons](${ROOT}/vs): how DialerSeat compares to other dialers.
@@ -118,6 +133,10 @@ who want to offer a branded dialer to their own clients.
 - [Dialer for insurance agents](${ROOT}/faq/dialer-for-insurance-agents): Medicare, final expense, ACA and P&C, calling windows per lead state and what stays the agent's responsibility.
 - [FAQ](${ROOT}/faq): plain-English answers about dialers and the product.
 
+## Comparisons, one page per dialer
+Each states the other tool's published price and contract, concedes where it is the better choice, and cites its sources. [All comparisons](${ROOT}/vs), [every legacy dialer side by side](${ROOT}/vs/everyone), [DialerSeat vs dialing by hand](${ROOT}/vs/manual-dialing).
+${comparisons}
+
 ## For teams and floors
 - [How teams work](${ROOT}/faq/teams-how-it-works): lead distribution across agents, seats and billing, who pays, what the owner sees, and what is deliberately not built.
 - [What 5 agents cost, across every dialer](${ROOT}/vs/teams): seat minimums, contract terms, and the real cost of adding one more agent.
@@ -125,7 +144,7 @@ who want to offer a branded dialer to their own clients.
 
 ## Data and tools, free to cite
 - [Dialer pricing index](${ROOT}/data/dialer-pricing): published pricing, contract terms, seat minimums and five-agent cost for every major outbound dialer.
-- [Calling rules by country](${ROOT}/data/calling-rules-by-country): Do Not Call lists, calling hours, consent, abandoned-call limits and caller ID prefixes for 15 countries, with sources. Each country also has its own page at /data/calling-rules-by-country/<two-letter code>, e.g. [France](${ROOT}/data/calling-rules-by-country/fr).
+- [Calling rules by country](${ROOT}/data/calling-rules-by-country): Do Not Call lists, calling hours, consent, abandoned-call limits and caller ID prefixes for ${COUNTRY_RULES.length} countries, with sources. One page per country: ${countries}.
 - [Dialer cost calculator](${ROOT}/tools/dialer-cost-calculator): weeks and seats in, what each dialer would bill out.
 - [Abandon rate calculator](${ROOT}/tools/abandon-rate-calculator): a campaign against the US 3%, UK 3% and Canadian 5% limits.
 - [All resources](${ROOT}/resources)
