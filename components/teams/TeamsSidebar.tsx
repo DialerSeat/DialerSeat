@@ -255,7 +255,7 @@ export default function TeamsSidebar({
 
   const [removeMode, setRemoveMode] = useState<'campaign' | 'team'>('team')
 
-  const confirmWord = leaveMode ? msg("LEAVE") : agentMode ? msg("REMOVE") : 'DELETE'
+  const confirmWord = leaveMode ? msg("LEAVE") : agentMode ? msg("REMOVE") : msg("DELETE")
   // The label shows the word in the reader's language, so accept that or the English.
   const confirmOk = [confirmWord, tr(confirmWord)].some(w => confirmText.trim().toUpperCase() === w.toUpperCase())
 
@@ -639,7 +639,7 @@ export default function TeamsSidebar({
                     >
                       {renameTarget.kind === 'member'
                         ? tr("Set nickname")
-                        : `Rename ${renameTarget.kind}`}
+                        : tr("Rename {kind}", { kind: tr(renameTarget.kind) })}
                       <span className="ts-menu-hint">{renameTarget.name}</span>
                     </button>
                   )}
@@ -782,7 +782,7 @@ export default function TeamsSidebar({
                       kind: 'team', id: team.id, teamId: team.id, label: team.name,
                     })}
                     aria-pressed={!!selected[team.id]}
-                    aria-label={`Select ${team.name}`}
+                    aria-label={tr("Select {name}", { name: team.name })}
                   />
                 )}
                 <button
@@ -824,7 +824,7 @@ export default function TeamsSidebar({
                         teamId: team.id, memberId: agent.memberId, label: agent.name,
                       })}
                       aria-pressed={!!selected[`roster:${agent.id}`]}
-                      aria-label={`Select ${agent.name}`}
+                      aria-label={tr("Select {name}", { name: agent.name })}
                     />
                   )}
                   <button
@@ -894,7 +894,7 @@ export default function TeamsSidebar({
                             campaignId: campaign.id, label: campaign.name,
                           })}
                           aria-pressed={!!selected[campaign.id]}
-                          aria-label={`Select ${campaign.name}`}
+                          aria-label={tr("Select {name}", { name: campaign.name })}
                         />
                       )}
                       <button
@@ -945,7 +945,7 @@ export default function TeamsSidebar({
                                 memberId: agent.memberId, label: agent.name,
                               })}
                               aria-pressed={!!selected[`${campaign.id}:${agent.id}`]}
-                              aria-label={`Select ${agent.name}`}
+                              aria-label={tr("Select {name}", { name: agent.name })}
                             />
                           )}
                           <button
@@ -980,7 +980,7 @@ export default function TeamsSidebar({
           <span style={{ flex: 1, fontSize: 11.5, color: TEXT_MUTED }}>
             {selectedList.length === 0
               ? tr("Tick what you want to change")
-              : `${selectedList.length} selected`}
+              : tr("{count} selected", { count: selectedList.length })}
           </span>
           <button className="ts-mini-btn" onClick={leaveSelectMode}>{tr("Cancel")}</button>
           {/* ── RENAME LIVES HERE TOO ──────────────────────────────────────
@@ -1057,15 +1057,11 @@ export default function TeamsSidebar({
             </h3>
             <p style={{ margin: '0 0 12px', fontSize: 12.5, color: TEXT_DIM, lineHeight: 1.6 }}>
               {leaveMode
-                ? 'You lose access to its campaigns straight away, and any seat the owner ' +
-                  'was paying for you ends. Nothing on the team is deleted. You would need ' +
-                  msg("a new code to come back.")
+                ? tr("You lose access to its campaigns straight away, and any seat the owner was paying for you ends. Nothing on the team is deleted. You would need a new code to come back.")
                 : agentMode && removeMode === 'campaign'
-                ? 'They stay on the team and keep their seat, this only takes away this ' +
-                  msg("one campaign. Add them back any time from Add People.")
+                ? tr("They stay on the team and keep their seat, this only takes away this one campaign. Add them back any time from Add People.")
                 : agentMode
-                ? 'They come off the team entirely: every campaign, and the seat you were ' +
-                  msg("paying for. They would need a new code to come back.")
+                ? tr("They come off the team entirely: every campaign, and the seat you were paying for. They would need a new code to come back.")
                 : tr("This cannot be undone.")}
             </p>
             <ul style={{

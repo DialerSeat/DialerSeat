@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // TEAM DETAIL — what a team looks like when you click it
@@ -295,10 +296,10 @@ export default function TeamDetail({
         display: 'grid', gap: 12, marginBottom: 4,
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
       }}>
-        <Stat label="Members" value={String(team.members.length)} />
-        <Stat label="Campaigns" value={String(team.campaigns.length)} />
-        <Stat label="Total Leads" value={totalLeads ? totalLeads.toLocaleString() : '-'} />
-        <Stat label="Dialed" value={calledLeads ? calledLeads.toLocaleString() : '-'} />
+        <Stat label={msg("Members")} value={String(team.members.length)} />
+        <Stat label={msg("Campaigns")} value={String(team.campaigns.length)} />
+        <Stat label={msg("Total Leads")} value={totalLeads ? totalLeads.toLocaleString() : '-'} />
+        <Stat label={msg("Dialed")} value={calledLeads ? calledLeads.toLocaleString() : '-'} />
       </div>
 
       {/* ── RENAME, WHERE THE NAME IS ─────────────────────────────────────
@@ -372,11 +373,11 @@ export default function TeamDetail({
                           code says so. */}
                       {campaignName
                         ? `${campaignName} · `
-                        : 'Team code: joins the team only, until you add them to a campaign · '}
+                        : t("Team code: joins the team only, until you add them to a campaign") + ' · '}
                       {c.payer === 'agent' ? t("agent pays their seat") : t("you pay the seat")}
                       {' · '}
-                      {c.max_uses ? t("{uses}/{max_uses} used", { uses, max_uses: c.max_uses }) : `${uses} used`}
-                      {c.is_active === false ? ' · inactive' : ''}
+                      {c.max_uses ? t("{uses}/{max_uses} used", { uses, max_uses: c.max_uses }) : t("{uses} used", { uses })}
+                      {c.is_active === false ? ' · ' + t("inactive") : ''}
                     </div>
                   </div>
                 )
@@ -522,7 +523,7 @@ export default function TeamDetail({
             <strong style={{ color: TEXT }}>
               {t("{totalSeats} active {value}", { totalSeats: seatTier.totalSeats, value: seatTier.totalSeats === 1 ? t("seat") : t("seats") })}
             </strong>
-            {' across your teams'}
+            {' ' + t("across your teams")}
             {seatTier.ownerPaidSeats !== seatTier.totalSeats && (
               <> · <strong style={{ color: TEXT }}>{seatTier.ownerPaidSeats}</strong> {t("you pay for")}</>
             )}

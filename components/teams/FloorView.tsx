@@ -27,13 +27,13 @@ function dur(seconds: number): string {
 }
 
 function ago(iso: string | null): string {
-  if (!iso) return 'never'
+  if (!iso) return t("never")
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (mins < 1) return msg("just now")
-  if (mins < 60) return `${mins}m ago`
+  if (mins < 1) return t("just now")
+  if (mins < 60) return t("{mins}m ago", { mins })
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  return `${Math.floor(hrs / 24)}d ago`
+  if (hrs < 24) return t("{hrs}h ago", { hrs })
+  return t("{days}d ago", { days: Math.floor(hrs / 24) })
 }
 
 export default function FloorView({ onBack }: { onBack: () => void }) {
@@ -196,7 +196,7 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
                   <div style={{ fontSize: 13.5, fontWeight: 500 }}>{u.name}</div>
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
                     {u.teamName}
-                    {u.suspended ? ' · seat paused' : t(" · last call {ago}", { ago: ago(u.lastCallAt) })}
+                    {u.suspended ? ' · ' + t("seat paused") : t(" · last call {ago}", { ago: ago(u.lastCallAt) })}
                   </div>
                 </div>
                 <div style={{ textAlign: 'end', fontSize: 11.5, color: DIM }}>

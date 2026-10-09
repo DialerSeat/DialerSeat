@@ -272,14 +272,14 @@ export default function TeamsManager() {
         return
       }
       if (data.nextStep === 'redirect_to_billing') {
-        setRedeemMessage({ type: 'info', text: `Joined ${data.team.name}. Redirecting to billing to complete your subscription...` })
+        setRedeemMessage({ type: 'info', text: tr("Joined {name}. Redirecting to billing to complete your subscription...", { name: data.team.name }) })
         setTimeout(() => router.push('/billing'), 1200)
       } else if (data.nextStep === 'awaiting_owner_approval') {
-        setRedeemMessage({ type: 'success', text: `Code redeemed for ${data.team.name}. Your request is pending approval from the team owner.` })
+        setRedeemMessage({ type: 'success', text: tr("Code redeemed for {name}. Your request is pending approval from the team owner.", { name: data.team.name }) })
         setRedeemCode('')
         loadTeams()
       } else if (data.nextStep === 'redirect_to_team') {
-        setRedeemMessage({ type: 'success', text: `Joined ${data.team.name}. Redirecting...` })
+        setRedeemMessage({ type: 'success', text: tr("Joined {name}. Redirecting...", { name: data.team.name }) })
         setTimeout(() => router.push(`/dashboard/teams/${data.team.id}/analytics`), 1000)
       } else {
         setRedeemMessage({ type: 'success', text: msg("Code redeemed.") })
@@ -974,7 +974,7 @@ export default function TeamsManager() {
                             />
                           </Section>
 
-                          <Section title="CAMPAIGNS & ACCESS" accent={T.accent}>
+                          <Section title={msg("CAMPAIGNS & ACCESS")} accent={T.accent}>
                             <CampaignsAccessPanel
                               teamId={team.id}
                               teamCampaigns={team.teamCampaigns}

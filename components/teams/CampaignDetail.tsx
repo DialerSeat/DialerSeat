@@ -845,9 +845,9 @@ export default function CampaignDetail({
         display: 'grid', gap: 12,
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
       }}>
-        <Stat label="Agents" value={String(agents.length)} />
-        <Stat label="Total Leads" value={data.totalLeads ? data.totalLeads.toLocaleString() : '-'} />
-        <Stat label="Dialed" value={data.calledLeads ? data.calledLeads.toLocaleString() : '-'} />
+        <Stat label={msg("Agents")} value={String(agents.length)} />
+        <Stat label={msg("Total Leads")} value={data.totalLeads ? data.totalLeads.toLocaleString() : '-'} />
+        <Stat label={msg("Dialed")} value={data.calledLeads ? data.calledLeads.toLocaleString() : '-'} />
         {/* No "Remaining" box. It was total minus dialed, sitting beside both
             of them, and the same number is stated twice more below — in the
             progress bar's percentage and in the Leads section's "N left to
@@ -950,24 +950,24 @@ export default function CampaignDetail({
               to the client. This lets the agent pick their own workflow on top
               of a mode that still governs the call. */}
           <Toggle
-            label="Let the agent choose their own mode"
-            hint={`Agents can switch between preview, power, progressive and predictive on this campaign. ${data.dialerMode} stays the default they start on, and still governs answering-machine detection and compliance.`}
+            label={msg("Let the agent choose their own mode")}
+            hint={tr("Agents can switch between preview, power, progressive and predictive on this campaign. {mode} stays the default they start on, and still governs answering-machine detection and compliance.", { mode: tr(data.dialerMode) })}
             on={data.agentPicksMode}
             busy={busy}
             onChange={v => patch({ agent_picks_mode: v })}
           />
 
           <Toggle
-            label="Answering machine detection"
-            hint="Holds the line briefly to work out whether a person or a machine picked up, then drops voicemails back into the queue instead of burning an agent on them."
+            label={msg("Answering machine detection")}
+            hint={msg("Holds the line briefly to work out whether a person or a machine picked up, then drops voicemails back into the queue instead of burning an agent on them.")}
             on={data.amdEnabled}
             busy={busy}
             onChange={v => patch({ amd_enabled: v })}
           />
 
           <Toggle
-            label="Record calls"
-            hint="Stores audio for every connected call on this campaign. Check your own obligations before turning this on, consent rules vary by state."
+            label={msg("Record calls")}
+            hint={msg("Stores audio for every connected call on this campaign. Check your own obligations before turning this on, consent rules vary by state.")}
             on={data.recordingEnabled}
             busy={busy}
             onChange={v => patch({ recording_enabled: v })}
@@ -1134,8 +1134,8 @@ export default function CampaignDetail({
             phone number is a list that can walk out the door. Saying so is the
             difference between a setting people find and one they never trust. */}
         <Toggle
-          label="Hide phone numbers until the lead answers"
-          hint="Agents see the lead's name and details but not the number, and it only appears once the lead answers. Blocks CSV export for everyone except you. Use this when you are handing a list to people you do not employ."
+          label={msg("Hide phone numbers until the lead answers")}
+          hint={msg("Agents see the lead's name and details but not the number, and it only appears once the lead answers. Blocks CSV export for everyone except you. Use this when you are handing a list to people you do not employ.")}
           on={data.maskLeadNumbers}
           busy={busy}
           onChange={v => patch({ mask_lead_numbers: v })}
@@ -1352,7 +1352,7 @@ export default function CampaignDetail({
                     color: picked.size === 0 || busy ? DIM : '#fff',
                     cursor: picked.size === 0 || busy ? 'not-allowed' : 'pointer',
                   }}
-                >{busy ? tr("Adding…") : `Add ${picked.size || ''}`.trim()}</button>
+                >{busy ? tr("Adding…") : (picked.size ? tr("Add {count}", { count: picked.size }) : tr("Add"))}</button>
               )}
             </div>
           </div>

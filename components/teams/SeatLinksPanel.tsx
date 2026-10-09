@@ -44,9 +44,9 @@ function campaignNameFor(refs: TeamCampaignRef[], campaignId: string | null): st
 }
 
 function usageLabel(code: TeamCode): string {
-  if (code.max_uses === 1) return code.use_count > 0 ? msg("Used") : msg("Unused, single use")
-  if (code.max_uses === null) return `${code.use_count} joined, unlimited`
-  return `${code.use_count} / ${code.max_uses} used`
+  if (code.max_uses === 1) return code.use_count > 0 ? t("Used") : t("Unused, single use")
+  if (code.max_uses === null) return t("{count} joined, unlimited", { count: code.use_count })
+  return t("{uses} / {max} used", { uses: code.use_count, max: code.max_uses })
 }
 
 export default function SeatLinksPanel({

@@ -161,10 +161,10 @@ function fmtDateTime(iso: string): string {
 function relTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime()
   const m = Math.floor(ms / 60000)
-  if (m < 1) return msg("just now")
-  if (m < 60) return `${m}m ago`
+  if (m < 1) return t("just now")
+  if (m < 60) return t("{mins}m ago", { mins: m })
   const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
+  if (h < 24) return t("{hrs}h ago", { hrs: h })
   return fmtDateTime(iso)
 }
 

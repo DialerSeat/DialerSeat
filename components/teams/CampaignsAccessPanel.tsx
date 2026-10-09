@@ -48,10 +48,10 @@ const T = {
 }
 
 const ACCESS_MODE_LABELS: Record<AccessMode, string> = {
-  owner_pays: 'OWNER PAYS',
-  agent_pays: 'AGENT PAYS',
-  public: 'PUBLIC',
-  free: 'FREE',
+  owner_pays: msg("OWNER PAYS"),
+  agent_pays: msg("AGENT PAYS"),
+  public: msg("PUBLIC"),
+  free: msg("FREE"),
 }
 
 export default function CampaignsAccessPanel({

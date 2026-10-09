@@ -599,6 +599,9 @@
  "{a} vs {b}: Pricing, Pros & Cons": [
   "app/vs/[matchup]/page.tsx"
  ],
+ "{answered} of {total} answered": [
+  "components/teams/TeamOverview.tsx"
+ ],
  "{brandName}, return to home": [
   "app/sign-in/[[...sign-in]]/page.tsx",
   "app/sign-up/[[...sign-up]]/page.tsx"
@@ -611,6 +614,34 @@
  ],
  "{calls} call{value} on {day}": [
   "components/teams/CampaignDetail.tsx"
+ ],
+ "{count} added": [
+  "app/dashboard/teams/page.tsx"
+ ],
+ "{count} already had access": [
+  "app/dashboard/teams/page.tsx"
+ ],
+ "{count} converted": [
+  "components/teams/AgentDetail.tsx"
+ ],
+ "{count} joined, unlimited": [
+  "components/teams/SeatLinksPanel.tsx"
+ ],
+ "{count} paid seat{s}": [
+  "components/teams/TeamOverview.tsx"
+ ],
+ "{count} selected": [
+  "components/teams/TeamsSidebar.tsx"
+ ],
+ "{count} skipped": [
+  "app/dashboard/teams/page.tsx"
+ ],
+ "{count} waiting to be let in": [
+  "components/teams/TeamOverview.tsx"
+ ],
+ "{days}d ago": [
+  "components/teams/AgentDetail.tsx",
+  "components/teams/FloorView.tsx"
  ],
  "{dialing} dialing out": [
   "components/teams/CampaignsAccessPanel.tsx"
@@ -629,6 +660,11 @@
  ],
  "{from}, {to} of {total}": [
   "components/DataTable.tsx"
+ ],
+ "{hrs}h ago": [
+  "app/dashboard/teams/[id]/analytics/page.tsx",
+  "components/teams/AgentDetail.tsx",
+  "components/teams/FloorView.tsx"
  ],
  "{label}, {count} lead{value}": [
   "app/dashboard/campaigns/page.tsx"
@@ -650,6 +686,11 @@
  ],
  "{memberCount} MEMBER{value} · {codeCount} CODE{value2} · {campaignCount} CAMPAIGN{value3}": [
   "components/teams/TeamsManager.tsx"
+ ],
+ "{mins}m ago": [
+  "app/dashboard/teams/[id]/analytics/page.tsx",
+  "components/teams/AgentDetail.tsx",
+  "components/teams/FloorView.tsx"
  ],
  "{name} on its own page": [
   "app/data/calling-rules-by-country/page.tsx"
@@ -682,11 +723,20 @@
  "{name}{value}, {total_leads} leads": [
   "app/dashboard/dialer/page.tsx"
  ],
+ "{noun} Name": [
+  "components/teams/TeamModals.tsx"
+ ],
  "{onCall} on a call": [
   "components/teams/CampaignsAccessPanel.tsx"
  ],
+ "{pct} of dials that rang": [
+  "app/dashboard/teams/page.tsx"
+ ],
  "{pct}% dialed{remainingLeads}": [
   "components/teams/CampaignDetail.tsx"
+ ],
+ "{percentOff}% off weekly": [
+  "app/dashboard/teams/page.tsx"
  ],
  "{percentOff}% off your weekly seat cost": [
   "components/teams/TeamDetail.tsx"
@@ -694,8 +744,20 @@
  "{price}/week": [
   "app/billing/success/page.tsx"
  ],
+ "{price}/wk": [
+  "components/teams/TeamFloor.tsx"
+ ],
+ "{rate}% of {calls} calls": [
+  "app/dashboard/teams/page.tsx"
+ ],
+ "{rate}% of dials that rang": [
+  "components/teams/AgentDetail.tsx"
+ ],
  "{ready} ready": [
   "components/teams/CampaignsAccessPanel.tsx"
+ ],
+ "{ready} ready · {dialing} dialing · {onCall} on a call": [
+  "components/teams/TeamOverview.tsx"
  ],
  "{remainingLeads} left to dial.": [
   "components/teams/CampaignDetail.tsx"
@@ -733,6 +795,12 @@
   "app/dashboard/recordings/page.tsx"
  ],
  "{totalSeats} active {value}": [
+  "components/teams/TeamDetail.tsx"
+ ],
+ "{uses} / {max} used": [
+  "components/teams/SeatLinksPanel.tsx"
+ ],
+ "{uses} used": [
   "components/teams/TeamDetail.tsx"
  ],
  "{uses}/{max_uses} used": [
@@ -2594,6 +2662,9 @@
  "A caller ID has a daily volume ceiling before answer rates fall. Why one number never works, how rotation and headroom protect an answer rate, and how to think about pool size without guessing.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
+ "A campaign has to belong to a team.": [
+  "components/teams/TeamModals.tsx"
+ ],
  "A campaign is just a mode, a list, and a script.": [
   "app/faq/campaigns/view.tsx"
  ],
@@ -2809,9 +2880,6 @@
   "lib/competitors.ts"
  ],
  "A new agency or floor": [
-  "components/teams/TeamsSidebar.tsx"
- ],
- "a new code to come back.": [
   "components/teams/TeamsSidebar.tsx"
  ],
  "A number in the lead’s own area code or state is preferred, but that is an ordering, not a filter. If a state runs out of fresh numbers, the dialer falls back to the rest of the pool with a slightly worse match. It never stops dialing because one area code is busy.": [
@@ -3032,6 +3100,9 @@
  ],
  "A team owner can give you access to their lead campaigns by sending you a code. Some team owners pay your $35 weekly seat for you. Others require you to subscribe yourself for $35 to access their leads. Either way, you join with a code from the team owner.": [
   "components/teams/TeamsManager.tsx"
+ ],
+ "A team owns campaigns and the agents who work them. You can invite people once it exists.": [
+  "components/teams/TeamModals.tsx"
  ],
  "A team seat bills from the day it opens, whatever the owner is on.": [
   "lib/canonicalFacts.ts"
@@ -3280,7 +3351,8 @@
   "lib/countryRules.ts"
  ],
  "across your teams": [
-  "app/dashboard/teams/page.tsx"
+  "app/dashboard/teams/page.tsx",
+  "components/teams/TeamDetail.tsx"
  ],
  "Action failed": [
   "components/teams/TeamsManager.tsx"
@@ -3310,6 +3382,9 @@
  "Active incident": [
   "app/status/page.tsx"
  ],
+ "Active Seats": [
+  "app/dashboard/teams/page.tsx"
+ ],
  "active seats). No discount was applied to the charges in this period.": [
   "app/dashboard/reports/ReportView.tsx"
  ],
@@ -3335,7 +3410,11 @@
   "lib/competitors.ts"
  ],
  "Add": [
-  "app/dashboard/teams/page.tsx"
+  "app/dashboard/teams/page.tsx",
+  "components/teams/CampaignDetail.tsx"
+ ],
+ "Add {count}": [
+  "components/teams/CampaignDetail.tsx"
  ],
  "Add a Dialpad Sell licence, separate from the phone system": [
   "lib/competitors.ts"
@@ -3550,7 +3629,8 @@
  ],
  "agent": [
   "app/faq/compliance-export/view.tsx",
-  "components/teams/TeamDetail.tsx"
+  "components/teams/TeamDetail.tsx",
+  "components/teams/TeamOverview.tsx"
  ],
  "Agent": [
   "app/dashboard/reports/ReportView.tsx",
@@ -3574,6 +3654,7 @@
  ],
  "AGENT PAYS": [
   "app/faq/dialerseat-teams/view.tsx",
+  "components/teams/CampaignsAccessPanel.tsx",
   "components/teams/RosterPanel.tsx",
   "components/teams/TeamsManager.tsx"
  ],
@@ -3598,13 +3679,18 @@
   "app/privacy/page.tsx"
  ],
  "agents": [
-  "components/teams/TeamDetail.tsx"
+  "components/teams/TeamDetail.tsx",
+  "components/teams/TeamOverview.tsx"
  ],
  "Agents": [
+  "components/teams/CampaignDetail.tsx",
   "components/tools/DialerCostCalculator.tsx"
  ],
  "AGENTS (SEATS)": [
   "components/tools/DialerCostCalculator.tsx"
+ ],
+ "Agents can switch between preview, power, progressive and predictive on this campaign. {mode} stays the default they start on, and still governs answering-machine detection and compliance.": [
+  "components/teams/CampaignDetail.tsx"
  ],
  "Agents can work from anywhere with a browser and an internet connection. There is no per-country restriction and no separate international seat price.": [
   "lib/canonicalFacts.ts"
@@ -3617,6 +3703,12 @@
  ],
  "Agents must have their own $35/wk sub to access.": [
   "components/teams/TeamsManager.tsx"
+ ],
+ "AGENTS ONLINE": [
+  "components/teams/TeamFloor.tsx"
+ ],
+ "Agents see the lead's name and details but not the number, and it only appears once the lead answers. Blocks CSV export for everyone except you. Use this when you are handing a list to people you do not employ.": [
+  "components/teams/CampaignDetail.tsx"
  ],
  "Agents see the new name in the dialer straight away. Nothing about the leads or settings changes.": [
   "components/teams/TeamModals.tsx"
@@ -4038,9 +4130,6 @@
  "And if it is wrong within the first day": [
   "app/faq/billing/view.tsx"
  ],
- "and it does not follow them to another team. Clear it to go back to their real name.": [
-  "components/teams/TeamModals.tsx"
- ],
  "and re- queued for when they enter their window. By 2 PM Pacific you'll have called a different mix than you did at 11 AM Eastern. The agent never thinks about it.": [
   "app/faq/how-we-keep-compliance/page.tsx"
  ],
@@ -4117,6 +4206,9 @@
  "Answer rate is": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
+ "Answered": [
+  "components/teams/TeamFloor.tsx"
+ ],
  "ANSWERED": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
@@ -4128,6 +4220,9 @@
  ],
  "Answered calls that end in seconds read as unwanted.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
+ ],
+ "Answering machine detection": [
+  "components/teams/CampaignDetail.tsx"
  ],
  "ANSWERING MACHINE DETECTION": [
   "app/dashboard/campaigns/page.tsx"
@@ -4213,6 +4308,9 @@
  ],
  "Anyone who joins {name} can use it": [
   "components/teams/CampaignDetail.tsx"
+ ],
+ "Anyone with this code joins {teamName}. You can regenerate it later without removing whoever already used it.": [
+  "components/teams/TeamModals.tsx"
  ],
  "Anyone you onboard sees what looks like a polished proprietary product. The fact that DialerSeat exists doesn't matter to them. To them, you built this.": [
   "app/faq/white-label/view.tsx"
@@ -4559,6 +4657,10 @@
  "avg {duration}/call": [
   "app/dashboard/analytics/page.tsx"
  ],
+ "avg {time} /call": [
+  "app/dashboard/teams/page.tsx",
+  "components/teams/AgentDetail.tsx"
+ ],
  "avg, /call": [
   "app/dashboard/teams/page.tsx",
   "components/teams/AgentDetail.tsx"
@@ -4717,6 +4819,9 @@
   "app/dialing-modes/power/page.tsx",
   "app/faq/what-is-a-power-dialer/page.tsx"
  ],
+ "Best Campaign": [
+  "app/dashboard/teams/page.tsx"
+ ],
  "BEST CAMPAIGN": [
   "app/dashboard/analytics/page.tsx",
   "components/WhitelabelLivePreview.tsx"
@@ -4795,7 +4900,8 @@
  ],
  "Billing": [
   "app/faq/view.tsx",
-  "app/terms/page.tsx"
+  "app/terms/page.tsx",
+  "components/teams/TeamFloor.tsx"
  ],
  "BILLING": [
   "app/vs/[matchup]/page.tsx"
@@ -5403,10 +5509,12 @@
  ],
  "Calls": [
   "app/faq/data-and-recordings/view.tsx",
+  "components/teams/AgentDetail.tsx",
   "components/teams/CampaignDetail.tsx"
  ],
  "CALLS": [
   "app/dashboard/teams/[id]/analytics/page.tsx",
+  "components/teams/AgentCard.tsx",
   "components/teams/TeamFloor.tsx"
  ],
  "calls answered": [
@@ -5435,6 +5543,12 @@
  ],
  "Calls still ringing don’t count yet.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
+ ],
+ "Calls today": [
+  "components/teams/TeamFloor.tsx"
+ ],
+ "CALLS TODAY": [
+  "components/teams/TeamFloor.tsx"
  ],
  "Calls, conversions, talk time, and where your closes come from: all tracked on the backend for you, the second each call ends. Nothing to log, and nothing to maintain. Upload infinite campaigns and toggle each one on or off for the smoothest possible workflow.": [
   "app/welcome/Showcase.tsx"
@@ -5557,8 +5671,14 @@
   "components/WhitelabelLivePreview.tsx",
   "components/teams/TeamsSidebar.tsx"
  ],
+ "CAMPAIGNS & ACCESS": [
+  "components/teams/TeamsManager.tsx"
+ ],
  "Campaigns are assigned to the team, so the whole floor works one list without anyone re-uploading it.": [
   "lib/canonicalFacts.ts"
+ ],
+ "Campaigns hold leads and belong to one team. Who can work it is set here and changed any time.": [
+  "components/teams/TeamModals.tsx"
  ],
  "Campaigns they can dial": [
   "components/teams/AgentDetail.tsx"
@@ -6060,6 +6180,9 @@
   "app/api/teams/codes/delete/route.ts",
   "app/api/teams/codes/regenerate/route.ts"
  ],
+ "Code redeemed for {name}. Your request is pending approval from the team owner.": [
+  "components/teams/TeamsManager.tsx"
+ ],
  "Code redeemed.": [
   "components/teams/TeamsManager.tsx"
  ],
@@ -6305,6 +6428,7 @@
  ],
  "CONNECT": [
   "app/dashboard/teams/[id]/analytics/page.tsx",
+  "components/teams/AgentCard.tsx",
   "components/teams/TeamFloor.tsx"
  ],
  "Connect rate": [
@@ -6312,7 +6436,8 @@
  ],
  "CONNECT RATE": [
   "app/dashboard/teams/[id]/analytics/page.tsx",
-  "app/data/connect-rates/page.tsx"
+  "app/data/connect-rates/page.tsx",
+  "components/teams/TeamFloor.tsx"
  ],
  "CONNECT RATE · {lookbackDays}D": [
   "components/teams/TeamOverview.tsx"
@@ -6454,6 +6579,9 @@
  "Contact rate": [
   "app/faq/dialer-glossary/page.tsx"
  ],
+ "Contact Rate": [
+  "app/dashboard/teams/page.tsx"
+ ],
  "Contact the vendor to add a licence": [
   "lib/competitors.ts"
  ],
@@ -6501,6 +6629,10 @@
  ],
  "Conversion Rate Over Time": [
   "components/teams/AnalyticsCharts.tsx"
+ ],
+ "Conversions": [
+  "app/dashboard/teams/page.tsx",
+  "components/teams/AgentDetail.tsx"
  ],
  "CONVERSIONS": [
   "app/dashboard/analytics/page.tsx",
@@ -7074,7 +7206,8 @@
   "app/dashboard/campaigns/page.tsx",
   "app/dashboard/leads/page.tsx",
   "app/dashboard/settings/page.tsx",
-  "components/teams/SeatLinksPanel.tsx"
+  "components/teams/SeatLinksPanel.tsx",
+  "components/teams/TeamsSidebar.tsx"
  ],
  "Delete \"{name}\"": [
   "app/onboarding/whitelabel/page.tsx"
@@ -7251,6 +7384,10 @@
  "Dial US based leads from any country in the world. No increased price jumps for dialing while abroad.": [
   "app/page.tsx"
  ],
+ "Dialed": [
+  "components/teams/CampaignDetail.tsx",
+  "components/teams/TeamDetail.tsx"
+ ],
  "DIALED": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
  ],
@@ -7379,7 +7516,8 @@
  ],
  "Dialer mode": [
   "app/faq/campaigns/view.tsx",
-  "components/teams/CampaignDetail.tsx"
+  "components/teams/CampaignDetail.tsx",
+  "components/teams/TeamFloor.tsx"
  ],
  "Dialer Mode": [
   "components/teams/TeamModals.tsx"
@@ -7974,6 +8112,7 @@
  "DIALING": [
   "app/dashboard/dialer/page.tsx",
   "app/vs/[matchup]/page.tsx",
+  "components/teams/AgentCard.tsx",
   "components/vs-competitor-view.tsx#prop"
  ],
  "DIALING {length} LINE{value} SIMULTANEOUSLY": [
@@ -8016,6 +8155,9 @@
  ],
  "Dialing Modes: Preview, Power, Progressive, Predictive | DialerSeat": [
   "app/dialing-modes/page.tsx"
+ ],
+ "Dialing now, {state}": [
+  "components/teams/AgentDetail.tsx"
  ],
  "Dialing resumes automatically once the window opens.": [
   "app/dashboard/dialer/page.tsx"
@@ -8709,7 +8851,8 @@
   "app/vs/view.tsx#prop"
  ],
  "Email": [
-  "app/faq/leads/view.tsx"
+  "app/faq/leads/view.tsx",
+  "components/teams/TeamFloor.tsx"
  ],
  "EMAIL": [
   "app/dashboard/campaigns/page.tsx",
@@ -9814,6 +9957,7 @@
  ],
  "FREE": [
   "app/faq/dialerseat-teams/view.tsx",
+  "components/teams/CampaignsAccessPanel.tsx",
   "components/teams/RosterPanel.tsx",
   "components/teams/TeamsManager.tsx"
  ],
@@ -10326,6 +10470,9 @@
  "Hidden \"Powered by DialerSeat\" your agents never see us": [
   "app/faq/white-label/view.tsx"
  ],
+ "Hide phone numbers until the lead answers": [
+  "components/teams/CampaignDetail.tsx"
+ ],
  "High voicemail rates kill power. Progressive cuts the machine wastage and keeps you within compliance lines all states recognize.": [
   "app/dialing-modes/progressive/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
@@ -10378,6 +10525,9 @@
  ],
  "Hold for my approval": [
   "components/teams/TeamModals.tsx"
+ ],
+ "Holds the line briefly to work out whether a person or a machine picked up, then drops voicemails back into the queue instead of burning an agent on them.": [
+  "components/teams/CampaignDetail.tsx"
  ],
  "Home": [
   "app/about/page.tsx",
@@ -11312,6 +11462,9 @@
  "In the US, no more than 3% of calls answered by a person, per campaign, over each 30-day period (FTC Telemarketing Sales Rule). In the UK, no more than 3% of live calls per campaign per 24 hours (Ofcom). In Canada, no more than 5% per calendar month (CRTC).": [
   "app/tools/abandon-rate-calculator/page.tsx"
  ],
+ "inactive": [
+  "components/teams/TeamDetail.tsx"
+ ],
  "Inactive": [
   "components/teams/CampaignDetail.tsx",
   "components/teams/TeamDetail.tsx"
@@ -11790,6 +11943,18 @@
  "joined {date}{joined_via_code}": [
   "components/teams/RosterPanel.tsx"
  ],
+ "Joined {name}. Redirecting to billing to complete your subscription...": [
+  "components/teams/TeamsManager.tsx"
+ ],
+ "Joined {name}. Redirecting...": [
+  "components/teams/TeamsManager.tsx"
+ ],
+ "Joined {teamName}, {count} campaign{s} unlocked.": [
+  "app/dashboard/teams/page.tsx"
+ ],
+ "Joined {teamName}.": [
+  "app/dashboard/teams/page.tsx"
+ ],
  "Joining": [
   "components/teams/TeamModals.tsx"
  ],
@@ -11894,6 +12059,9 @@
  ],
  "Larger operations that want a dialer and communications APIs from the same vendor.": [
   "lib/competitors.ts"
+ ],
+ "last {ago}": [
+  "components/teams/AgentDetail.tsx"
  ],
  "LAST {days} DAYS": [
   "app/dashboard/compliance/page.tsx"
@@ -12164,6 +12332,9 @@
  "Legal or business name": [
   "app/dashboard/reports/ReportView.tsx"
  ],
+ "Let the agent choose their own mode": [
+  "components/teams/CampaignDetail.tsx"
+ ],
  "Let them straight in": [
   "components/teams/TeamModals.tsx"
  ],
@@ -12306,6 +12477,12 @@
  ],
  "Live now": [
   "components/teams/FloorView.tsx"
+ ],
+ "LIVE NOW": [
+  "components/teams/TeamOverview.tsx"
+ ],
+ "Live state": [
+  "components/teams/TeamFloor.tsx"
  ],
  "Live status of the DialerSeat platform: application, database, and carrier connectivity. Every indicator is checked at page load, not published from a static file.": [
   "app/status/page.tsx"
@@ -13247,6 +13424,9 @@
  "Native Salesforce/HubSpot/Outreach sync": [
   "lib/competitorFeatures.ts"
  ],
+ "need {count}+ calls": [
+  "app/dashboard/teams/page.tsx"
+ ],
  "need 5+ calls": [
   "app/dashboard/analytics/page.tsx"
  ],
@@ -13267,6 +13447,10 @@
  ],
  "Network error, please try again.": [
   "app/dashboard/settings/page.tsx"
+ ],
+ "never": [
+  "components/teams/AgentDetail.tsx",
+  "components/teams/FloorView.tsx"
  ],
  "NEW": [
   "app/dashboard/dialer/page.tsx",
@@ -13465,6 +13649,9 @@
  ],
  "No card on file at the time this statement was generated.": [
   "app/dashboard/reports/ReportView.tsx"
+ ],
+ "No charge, covered by their seat on {team}": [
+  "components/teams/AgentDetail.tsx"
  ],
  "No code required": [
   "app/faq/dialerseat-teams/view.tsx"
@@ -13911,6 +14098,9 @@
  "Nobody is dialing right now. Agents appear here within seconds of going available.": [
   "components/teams/FloorView.tsx"
  ],
+ "Nobody matches “{query}”.": [
+  "app/dashboard/teams/page.tsx"
+ ],
  "Nobody on this team yet": [
   "components/teams/TeamsSidebar.tsx"
  ],
@@ -14279,6 +14469,10 @@
  "Oct, Dec": [
   "app/dashboard/reports/page.tsx"
  ],
+ "of {total}": [
+  "app/dashboard/teams/page.tsx",
+  "components/teams/AgentDetail.tsx"
+ ],
  "Of calls answered by a person, measured per campaign over its length if under 30 days, or over each 30-day period after that. The FCC sets the same 3% limit.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
@@ -14309,7 +14503,8 @@
   "app/tools/dialer-cost-calculator/page.tsx"
  ],
  "OFFLINE": [
-  "app/dashboard/dialer/page.tsx"
+  "app/dashboard/dialer/page.tsx",
+  "components/teams/AgentCard.tsx"
  ],
  "Offshore & Remote Agents": [
   "lib/canonicalFacts.ts"
@@ -14372,6 +14567,9 @@
  ],
  "On call": [
   "components/teams/FloorView.tsx"
+ ],
+ "ON CALL": [
+  "components/teams/AgentCard.tsx"
  ],
  "On DialerSeat you can add a number for every area code you call, rotate them automatically, and burn one the instant it gets flagged. The same goes for inbound, multiple ring-in lines per seat let you track which lead source, campaign, or market actually rings, all in one analytics view.": [
   "app/faq/why-we-charge/page.tsx"
@@ -14456,9 +14654,6 @@
  ],
  "One call at a time. Agent handles voicemails.": [
   "app/dialing-modes/view.tsx#prop"
- ],
- "one campaign. Add them back any time from Add People.": [
-  "components/teams/TeamsSidebar.tsx"
  ],
  "One clarification worth stating plainly: Manager+ is what the team": [
   "app/faq/manager-plus/view.tsx"
@@ -15034,6 +15229,7 @@
  ],
  "OWNER PAYS": [
   "app/faq/dialerseat-teams/view.tsx",
+  "components/teams/CampaignsAccessPanel.tsx",
   "components/teams/RosterPanel.tsx",
   "components/teams/TeamsManager.tsx"
  ],
@@ -15116,6 +15312,9 @@
  "Park": [
   "app/dashboard/teams/page.tsx"
  ],
+ "Park {count}": [
+  "app/dashboard/teams/page.tsx"
+ ],
  "Parked, not billed": [
   "app/dashboard/teams/page.tsx"
  ],
@@ -15193,9 +15392,6 @@
  "Paying for themselves, costs you nothing": [
   "components/teams/AgentDetail.tsx",
   "components/teams/CampaignDetail.tsx"
- ],
- "paying for. They would need a new code to come back.": [
-  "components/teams/TeamsSidebar.tsx"
  ],
  "Payment details": [
   "app/billing/page.tsx"
@@ -16364,6 +16560,7 @@
  ],
  "PUBLIC": [
   "app/faq/dialerseat-teams/view.tsx",
+  "components/teams/CampaignsAccessPanel.tsx",
   "components/teams/TeamsManager.tsx"
  ],
  "Public API + webhooks (any CRM)": [
@@ -16506,6 +16703,9 @@
  "Reachable and accepting queries": [
   "app/status/page.tsx"
  ],
+ "reached a person": [
+  "app/dashboard/teams/page.tsx"
+ ],
  "REACHED VOICEMAIL": [
   "app/dashboard/leads/page.tsx"
  ],
@@ -16565,6 +16765,9 @@
  ],
  "ready": [
   "components/teams/FloorView.tsx"
+ ],
+ "READY": [
+  "components/teams/AgentCard.tsx"
  ],
  "Ready to dial": [
   "components/teams/TeamDetail.tsx"
@@ -16678,6 +16881,9 @@
  "RECORD CALL": [
   "app/dashboard/dialer/page.tsx"
  ],
+ "Record calls": [
+  "components/teams/CampaignDetail.tsx"
+ ],
  "Record calls placed on this campaign.": [
   "app/dashboard/campaigns/page.tsx"
  ],
@@ -16735,6 +16941,7 @@
  ],
  "Recordings": [
   "app/dashboard/teams/page.tsx",
+  "components/teams/AgentDetail.tsx",
   "components/teams/CampaignDetail.tsx"
  ],
  "RECORDINGS": [
@@ -16923,6 +17130,12 @@
  "Rename": [
   "components/teams/TeamsSidebar.tsx"
  ],
+ "Rename {kind}": [
+  "components/teams/TeamsSidebar.tsx"
+ ],
+ "Rename {noun}": [
+  "components/teams/TeamModals.tsx"
+ ],
  "Rename campaign": [
   "components/teams/CampaignDetail.tsx"
  ],
@@ -16992,6 +17205,9 @@
  ],
  "Request a copy of the data we hold about you.": [
   "app/privacy/page.tsx"
+ ],
+ "Request sent to {teamName}. You get access once the owner approves.": [
+  "app/dashboard/teams/page.tsx"
  ],
  "Request-a-quote only": [
   "lib/competitorFeatures.ts"
@@ -17103,6 +17319,9 @@
  "Resume": [
   "app/dashboard/teams/page.tsx"
  ],
+ "Resume {count}": [
+  "app/dashboard/teams/page.tsx"
+ ],
  "Resume seat": [
   "components/teams/TeamModals.tsx"
  ],
@@ -17183,6 +17402,7 @@
  ],
  "ROSTER": [
   "components/teams/TeamFloor.tsx",
+  "components/teams/TeamOverview.tsx",
   "components/teams/TeamsManager.tsx"
  ],
  "ROSTER ONLY": [
@@ -17561,6 +17781,9 @@
  "Search answers...": [
   "app/faq/view.tsx#prop"
  ],
+ "Search by name or email…": [
+  "app/dashboard/teams/page.tsx"
+ ],
  "Search competitors...": [
   "app/vs/view.tsx#prop"
  ],
@@ -17577,6 +17800,9 @@
  "Search...": [
   "app/dashboard/recordings/page.tsx"
  ],
+ "Search…": [
+  "components/DataTable.tsx"
+ ],
  "Seasonal floors, weekly seats": [
   "lib/verticals.ts"
  ],
@@ -17592,6 +17818,7 @@
   "app/dashboard/teams/page.tsx",
   "app/faq/dialer-glossary/page.tsx",
   "components/teams/AgentDetail.tsx",
+  "components/teams/TeamFloor.tsx",
   "components/teams/TeamModals.tsx"
  ],
  "SEAT": [
@@ -17630,6 +17857,9 @@
  ],
  "Seat minimums, contracts, and the real cost of adding one more agent, across every major dialer.": [
   "app/vs/teams/page.tsx"
+ ],
+ "seat paused": [
+  "components/teams/FloorView.tsx"
  ],
  "Seat paused, cannot dial": [
   "components/teams/CampaignDetail.tsx"
@@ -17730,6 +17960,9 @@
   "app/vs/view.tsx"
  ],
  "Select": [
+  "components/teams/TeamsSidebar.tsx"
+ ],
+ "Select {name}": [
   "components/teams/TeamsSidebar.tsx"
  ],
  "Select a campaign": [
@@ -18077,6 +18310,9 @@
  ],
  "Show them.": [
   "app/faq/compliance-export/view.tsx"
+ ],
+ "showing {count}": [
+  "app/dashboard/teams/page.tsx"
  ],
  "Showing only {name}. Click to show everyone.": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
@@ -18630,6 +18866,9 @@
  "Stored in localStorage (not cookies) to remember your campaign selection, sidebar state, etc.": [
   "app/privacy/page.tsx"
  ],
+ "Stores audio for every connected call on this campaign. Check your own obligations before turning this on, consent rules vary by state.": [
+  "components/teams/CampaignDetail.tsx"
+ ],
  "Straightforward for a single agent to get running": [
   "lib/competitors.ts"
  ],
@@ -18835,6 +19074,7 @@
  ],
  "TALK": [
   "app/dashboard/teams/[id]/analytics/page.tsx",
+  "components/teams/AgentCard.tsx",
   "components/teams/TeamFloor.tsx"
  ],
  "Talk is $15 to $24 per user per month and Business, which includes the power dialer, is $47 to $57, depending on billing. Both plans require at least three users.": [
@@ -18845,12 +19085,18 @@
  ],
  "Talk time": [
   "app/faq/dialer-glossary/page.tsx",
-  "components/teams/CampaignDetail.tsx"
+  "components/teams/AgentDetail.tsx",
+  "components/teams/CampaignDetail.tsx",
+  "components/teams/TeamFloor.tsx"
+ ],
+ "Talk Time": [
+  "app/dashboard/teams/page.tsx"
  ],
  "TALK TIME": [
   "app/dashboard/analytics/page.tsx",
   "app/dashboard/teams/[id]/analytics/page.tsx",
-  "app/welcome/Showcase.tsx"
+  "app/welcome/Showcase.tsx",
+  "components/teams/TeamFloor.tsx"
  ],
  "Talkdesk Alternative: Dialer Pricing, Pros & Cons | DialerSeat": [
   "app/vs/talkdesk/page.tsx"
@@ -18935,6 +19181,9 @@
  ],
  "team code": [
   "app/dashboard/teams/page.tsx",
+  "components/teams/TeamDetail.tsx"
+ ],
+ "Team code: joins the team only, until you add them to a campaign": [
   "components/teams/TeamDetail.tsx"
  ],
  "Team does not belong to your tenant": [
@@ -20390,6 +20639,9 @@
  "They can't dial. They keep their account in read-only mode but team campaigns require an active sub to launch a call.": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
+ "They come off the team entirely: every campaign, and the seat you were paying for. They would need a new code to come back.": [
+  "components/teams/TeamsSidebar.tsx"
+ ],
  "They complete their own checkout before access turns on, nothing is billed to you.": [
   "components/teams/SeatLinksPanel.tsx"
  ],
@@ -20422,6 +20674,9 @@
  ],
  "They reduce common compliance risks but do not absolve you of responsibility for:": [
   "app/terms/page.tsx"
+ ],
+ "They stay on the team and keep their seat, this only takes away this one campaign. Add them back any time from Add People.": [
+  "components/teams/TeamsSidebar.tsx"
  ],
  "they're retained for 30 days, then automatically deleted (see our": [
   "app/faq/how-we-keep-compliance/page.tsx"
@@ -20584,6 +20839,9 @@
  ],
  "This week": [
   "app/dashboard/analytics/page.tsx"
+ ],
+ "THIS WEEK": [
+  "components/teams/TeamOverview.tsx"
  ],
  "This year": [
   "app/dashboard/reports/page.tsx"
@@ -20769,6 +21027,9 @@
  "Total": [
   "app/dashboard/reports/ReportView.tsx"
  ],
+ "Total Calls": [
+  "app/dashboard/teams/page.tsx"
+ ],
  "TOTAL CALLS": [
   "app/dashboard/analytics/page.tsx",
   "app/dashboard/teams/[id]/analytics/page.tsx",
@@ -20776,6 +21037,10 @@
  ],
  "Total DialerSeat cost": [
   "app/faq/manager-plus/view.tsx"
+ ],
+ "Total Leads": [
+  "components/teams/CampaignDetail.tsx",
+  "components/teams/TeamDetail.tsx"
  ],
  "TOTAL SEAT SPEND": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
@@ -22423,6 +22688,9 @@
  "What worked, what didn't, what we should fix, anything at all.": [
   "app/dashboard/settings/page.tsx"
  ],
+ "What you call them on this team. It does not change their account, and it does not follow them to another team. Clear it to go back to their real name.": [
+  "components/teams/TeamModals.tsx"
+ ],
  "What you earn at volume": [
   "app/dashboard/teams/page.tsx"
  ],
@@ -23234,6 +23502,9 @@
  "Worth knowing,": [
   "app/faq/data-and-recordings/view.tsx"
  ],
+ "WRAPPING": [
+  "components/teams/AgentCard.tsx"
+ ],
  "Write down what happened before moving on": [
   "app/vs/manual-dialing/page.tsx"
  ],
@@ -23693,6 +23964,9 @@
  ],
  "You load a list.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
+ "You lose access to its campaigns straight away, and any seat the owner was paying for you ends. Nothing on the team is deleted. You would need a new code to come back.": [
+  "components/teams/TeamsSidebar.tsx"
  ],
  "You make a handful of calls a day": [
   "app/vs/manual-dialing/page.tsx"

@@ -17,11 +17,11 @@ import { t } from '@/lib/i18n/client'
 // =============================================================================
 
 const STATE_LABEL: Record<LiveState, string> = {
-  on_call: 'ON CALL',
-  dialing: 'DIALING',
-  wrapping: 'WRAPPING',
-  ready: 'READY',
-  offline: 'OFFLINE',
+  on_call: msg("ON CALL"),
+  dialing: msg("DIALING"),
+  wrapping: msg("WRAPPING"),
+  ready: msg("READY"),
+  offline: msg("OFFLINE"),
 }
 
 // Semantic only. Green is "talking to someone", amber "available", grey
@@ -168,12 +168,12 @@ export default function AgentCard({
             fontVariantNumeric: 'tabular-nums',
           }}
         >
-          <Fig label="CALLS" value={String(member.callsToday)} />
+          <Fig label={msg("CALLS")} value={String(member.callsToday)} />
           <Fig
-            label="CONNECT"
+            label={msg("CONNECT")}
             value={member.connectRatePct === null ? '-' : `${member.connectRatePct}%`}
           />
-          <Fig label="TALK" value={mmss(member.talkSecondsToday)} />
+          <Fig label={msg("TALK")} value={mmss(member.talkSecondsToday)} />
         </div>
       </button>
     </>

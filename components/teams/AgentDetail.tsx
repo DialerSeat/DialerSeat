@@ -42,13 +42,13 @@ function dur(seconds: number | null | undefined): string {
 }
 
 function ago(iso: string | null): string {
-  if (!iso) return 'never'
+  if (!iso) return t("never")
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (mins < 1) return msg("just now")
-  if (mins < 60) return `${mins}m ago`
+  if (mins < 1) return t("just now")
+  if (mins < 60) return t("{mins}m ago", { mins })
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  return `${Math.floor(hrs / 24)}d ago`
+  if (hrs < 24) return t("{hrs}h ago", { hrs })
+  return t("{days}d ago", { days: Math.floor(hrs / 24) })
 }
 
 function Stat({ label, value, sub, accent }: {
@@ -230,7 +230,7 @@ export default function AgentDetail({
             background: live.onCall ? GREEN : ACCENT, flexShrink: 0,
           }} />
           <span style={{ fontSize: 13, color: TEXT }}>
-            {live.onCall ? t("On a call now") : `Dialing now, ${live.state || 'ready'}`}
+            {live.onCall ? t("On a call now") : t("Dialing now, {state}", { state: t(live.state || 'ready') })}
             {live.campaign && <span style={{ color: DIM }}> · {live.campaign}</span>}
             {live.mode && <span style={{ color: DIM }}> · {live.mode}</span>}
           </span>
@@ -241,17 +241,17 @@ export default function AgentDetail({
         display: 'grid', gap: 12,
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
       }}>
-        <Stat label="Calls" value={st.calls ? st.calls.toLocaleString() : '-'} sub={`last ${ago(st.lastCallAt)}`} />
+        <Stat label={msg("Calls")} value={st.calls ? st.calls.toLocaleString() : '-'} sub={t("last {ago}", { ago: ago(st.lastCallAt) })} />
         <Stat
-          label="Conversions"
+          label={msg("Conversions")}
           value={st.conversions ? String(st.conversions) : '-'}
-          sub={st.conversionRate === null ? undefined : `${st.conversionRate}% of dials that rang`}
+          sub={st.conversionRate === null ? undefined : t("{rate}% of dials that rang", { rate: st.conversionRate })}
           accent={st.conversions > 0 ? GREEN : undefined}
         />
         <Stat
-          label="Talk time"
+          label={msg("Talk time")}
           value={dur(st.talkSeconds)}
-          sub={st.avgTalkSeconds ? `avg ${dur(st.avgTalkSeconds)} /call` : msg("avg, /call")}
+          sub={st.avgTalkSeconds ? t("avg {time} /call", { time: dur(st.avgTalkSeconds) }) : t("avg, /call")}
         />
       </div>
 
@@ -272,9 +272,9 @@ export default function AgentDetail({
           calls.recording_url is a presigned S3 link Telnyx expires ten minutes
           after the call, so a direct src would be dead for anything but the
           call that just ended. */}
-      <Section title={`Recordings${
+      <Section title={`${t("Recordings")}${
         data.recordingsTotal ? ` (${Math.min(data.recordings?.length ?? 0, data.recordingsTotal)}${
-          data.recordingsTotal > (data.recordings?.length ?? 0) ? ` of ${data.recordingsTotal}` : ''})` : ''
+          data.recordingsTotal > (data.recordings?.length ?? 0) ? ' ' + t("of {total}", { total: data.recordingsTotal }) : ''})` : ''
       }`}>
         {!data.recordings || data.recordings.length === 0 ? (
           <div style={{
@@ -360,7 +360,7 @@ export default function AgentDetail({
                     : data.selfFunded || m.billingOverride === 'agent'
                     ? t("Paying for themselves, costs you nothing")
                     : m.seatCoveredBy
-                    ? `No charge, covered by their seat on ${m.coveredByTeam || msg("another of your teams")}`
+                    ? t("No charge, covered by their seat on {team}", { team: m.coveredByTeam || t("another of your teams") })
                     : m.pickedUp
                     ? t("You picked this seat up automatically")
                     : m.billingOverride === 'owner'
@@ -404,7 +404,7 @@ export default function AgentDetail({
                   <div style={{ color: TEXT, fontSize: 13 }}>
                     {c.calls ? c.calls.toLocaleString() : '-'}
                   </div>
-                  <div>{c.conversions > 0 ? `${c.conversions} converted` : t("no conversions")}</div>
+                  <div>{c.conversions > 0 ? t("{count} converted", { count: c.conversions }) : t("no conversions")}</div>
                 </div>
               </div>
             ))}

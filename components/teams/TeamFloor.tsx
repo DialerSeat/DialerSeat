@@ -199,13 +199,13 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
             display: 'flex', gap: 28, marginBottom: 18, flexWrap: 'wrap',
             fontVariantNumeric: 'tabular-nums',
           }}>
-            <Stat label="AGENTS ONLINE" value={String(online.length)} big />
-            <Stat label="CALLS TODAY" value={String(callsToday)} />
+            <Stat label={msg("AGENTS ONLINE")} value={String(online.length)} big />
+            <Stat label={msg("CALLS TODAY")} value={String(callsToday)} />
             <Stat
-              label="CONNECT RATE"
+              label={msg("CONNECT RATE")}
               value={callsToday >= 5 ? `${Math.round((answeredToday / callsToday) * 100)}%` : '-'}
             />
-            <Stat label="TALK TIME" value={mmss(talkToday)} />
+            <Stat label={msg("TALK TIME")} value={mmss(talkToday)} />
           </div>
 
           {!loaded ? (
@@ -283,17 +283,17 @@ export default function TeamFloor({ teamId, teamName }: { teamId: string; teamNa
             <AgentCard member={selected} selected onSelect={() => {}} />
 
             <dl style={{ marginTop: 18, fontSize: 12, display: 'grid', gap: 10 }}>
-              <Row k="Email" v={selected.email ?? '-'} />
-              <Row k="Live state" v={selected.live.replace('_', ' ')} />
-              <Row k="Dialer mode" v={selected.dialerMode ?? '-'} />
-              <Row k="Calls today" v={String(selected.callsToday)} />
-              <Row k="Answered" v={String(selected.answeredToday)} />
-              <Row k="Talk time" v={mmss(selected.talkSecondsToday)} />
-              <Row k="Seat" v={selected.seatSuspended ? msg("Paused") : selected.status} />
+              <Row k={msg("Email")} v={selected.email ?? '-'} />
+              <Row k={msg("Live state")} v={tr(selected.live.replace('_', ' '))} />
+              <Row k={msg("Dialer mode")} v={selected.dialerMode ? tr(selected.dialerMode) : '-'} />
+              <Row k={msg("Calls today")} v={String(selected.callsToday)} />
+              <Row k={msg("Answered")} v={String(selected.answeredToday)} />
+              <Row k={msg("Talk time")} v={mmss(selected.talkSecondsToday)} />
+              <Row k={msg("Seat")} v={selected.seatSuspended ? tr("Paused") : tr(selected.status)} />
               <Row
-                k="Billing"
+                k={msg("Billing")}
                 v={selected.seatPriceCents != null
-                  ? `$${(selected.seatPriceCents / 100).toFixed(2)}/wk`
+                  ? tr("{price}/wk", { price: '$' + (selected.seatPriceCents / 100).toFixed(2) })
                   : selected.billingOverride ?? '-'}
               />
             </dl>
@@ -333,7 +333,7 @@ function Pill({ live }: { live: LiveState }) {
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-      <dt style={{ color: 'var(--brand-muted-text)' }}>{k}</dt>
+      <dt style={{ color: 'var(--brand-muted-text)' }}>{tr(k)}</dt>
       <dd style={{ margin: 0, fontWeight: 500, textAlign: 'end' }}>{v}</dd>
     </div>
   )

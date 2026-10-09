@@ -152,7 +152,7 @@ export function CreateTeamModal({ onClose, onCreate, busy }: {
   return (
     <Shell
       title={tr("Create New Team")}
-      subtitle="A team owns campaigns and the agents who work them. You can invite people once it exists."
+      subtitle={msg("A team owns campaigns and the agents who work them. You can invite people once it exists.")}
       onClose={onClose}
       footer={
         <>
@@ -216,13 +216,12 @@ export function RenameModal({ kind, currentName, onClose, onSave, busy }: {
 
   return (
     <Shell
-      title={isMember ? tr("Set Nickname") : `Rename ${noun}`}
+      title={isMember ? tr("Set Nickname") : tr("Rename {noun}", { noun: tr(noun).toLowerCase() })}
       subtitle={
         kind === 'team'
           ? msg("Everyone on this team sees the new name, including agents already dialing.")
           : kind === 'member'
-            ? 'What you call them on this team. It does not change their account, ' +
-              msg("and it does not follow them to another team. Clear it to go back to their real name.")
+            ? msg("What you call them on this team. It does not change their account, and it does not follow them to another team. Clear it to go back to their real name.")
             : msg("Agents see the new name in the dialer straight away. Nothing about the leads or settings changes.")
       }
       onClose={onClose}
@@ -238,7 +237,7 @@ export function RenameModal({ kind, currentName, onClose, onSave, busy }: {
       }
     >
       <div>
-        <label style={label}>{isMember ? tr("Nickname") : `${noun} Name`}</label>
+        <label style={label}>{isMember ? tr("Nickname") : tr("{noun} Name", { noun: tr(noun) })}</label>
         <input
           autoFocus
           style={field}
@@ -289,7 +288,7 @@ export function CreateCampaignModal({
     return (
       <Shell
         title={tr("Create New Campaign")}
-        subtitle="A campaign has to belong to a team."
+        subtitle={msg("A campaign has to belong to a team.")}
         onClose={onClose}
         footer={<button style={btn} onClick={onClose}>{tr("Close")}</button>}
       >
@@ -315,7 +314,7 @@ export function CreateCampaignModal({
   return (
     <Shell
       title={tr("Create New Campaign")}
-      subtitle="Campaigns hold leads and belong to one team. Who can work it is set here and changed any time."
+      subtitle={msg("Campaigns hold leads and belong to one team. Who can work it is set here and changed any time.")}
       onClose={onClose}
       footer={
         <>
@@ -514,7 +513,7 @@ export function CreateCodeModal({
   return (
     <Shell
       title={tr("New Join Code")}
-      subtitle={`Anyone with this code joins ${teamName}. You can regenerate it later without removing whoever already used it.`}
+      subtitle={tr("Anyone with this code joins {teamName}. You can regenerate it later without removing whoever already used it.", { teamName })}
       onClose={onClose}
       footer={
         <>

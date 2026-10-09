@@ -165,35 +165,35 @@ export default function TeamOverview({
       {/* ── METRICS ─────────────────────────────────────────────────────── */}
       <div className="tov-grid">
         <Tile
-          label="LIVE NOW"
+          label={msg("LIVE NOW")}
           value={live ? String(live.online) : '-'}
-          suffix={live && live.online === 1 ? 'agent' : 'agents'}
+          suffix={live && live.online === 1 ? t("agent") : t("agents")}
           accent={isLive ? T.green : undefined}
           blink={isLive}
           detail={
             live && live.online > 0
-              ? `${live.ready} ready · ${live.dialing} dialing · ${live.onCall} on a call`
+              ? t("{ready} ready · {dialing} dialing · {onCall} on a call", { ready: live.ready, dialing: live.dialing, onCall: live.onCall })
               : msg("nobody dialing right now")
           }
         />
         <Tile
-          label="THIS WEEK"
+          label={msg("THIS WEEK")}
           value={data ? money(data.spend.weeklyCents) : '-'}
           detail={
             data
               ? data.spend.seatCount > 0
-                ? `${data.spend.seatCount} paid seat${data.spend.seatCount === 1 ? '' : 's'}`
+                ? t("{count} paid seat{s}", { count: data.spend.seatCount, s: data.spend.seatCount === 1 ? '' : 's' })
                 : msg("no seats billing yet")
               : ''
           }
         />
         <Tile
-          label="ROSTER"
+          label={msg("ROSTER")}
           value={data ? String(data.seats.active) : '-'}
-          suffix={data && data.seats.active === 1 ? 'agent' : 'agents'}
+          suffix={data && data.seats.active === 1 ? t("agent") : t("agents")}
           detail={
             data && data.seats.pending > 0
-              ? `${data.seats.pending} waiting to be let in`
+              ? t("{count} waiting to be let in", { count: data.seats.pending })
               : msg("nobody waiting")
           }
           accent={data && data.seats.pending > 0 ? T.amber : undefined}
@@ -207,7 +207,7 @@ export default function TeamOverview({
             : '-'}
           detail={
             data && data.calls.total > 0
-              ? `${data.calls.answered.toLocaleString()} of ${data.calls.total.toLocaleString()} answered`
+              ? t("{answered} of {total} answered", { answered: data.calls.answered.toLocaleString(), total: data.calls.total.toLocaleString() })
               : msg("no calls in this window")
           }
         />

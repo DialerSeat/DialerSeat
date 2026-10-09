@@ -240,8 +240,8 @@ function RecordingsFeed({ recordings, total, agents }: {
             transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform .15s',
           }}>▶</span>
           {tr("Recordings")}<span style={{ color: MUTED, fontWeight: 400 }}>
-            {matching.length}{total > recordings.length ? ` of ${total}` : ''}
-            {!expanded && hidden > 0 && ` · showing ${shown.length}`}
+            {matching.length}{total > recordings.length ? ' ' + tr("of {total}", { total }) : ''}
+            {!expanded && hidden > 0 && ' · ' + tr("showing {count}", { count: shown.length })}
           </span>
         </button>
         <label style={{ marginInlineStart: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1257,9 +1257,9 @@ export default function TeamsPage() {
         setAssignResult(data?.error || tr("Could not add those members."))
       } else {
         const parts: string[] = []
-        if (data.granted) parts.push(`${data.granted} added`)
-        if (data.alreadyHad) parts.push(`${data.alreadyHad} already had access`)
-        if (data.skipped?.length) parts.push(`${data.skipped.length} skipped`)
+        if (data.granted) parts.push(tr("{count} added", { count: data.granted }))
+        if (data.alreadyHad) parts.push(tr("{count} already had access", { count: data.alreadyHad }))
+        if (data.skipped?.length) parts.push(tr("{count} skipped", { count: data.skipped.length }))
         setAssignResult(parts.join(' · ') || tr("Nothing to do."))
         setSelectedMembers(new Set())
         setAssignTo('')
@@ -1744,7 +1744,7 @@ export default function TeamsPage() {
                         cursor: seatBusy ? 'wait' : 'pointer',
                         opacity: seatBusy ? 0.5 : 1,
                       }}
-                    >{seatBusy ? tr("Working…") : `Park ${selectedSeats.live.length}`}</button>
+                    >{seatBusy ? tr("Working…") : tr("Park {count}", { count: selectedSeats.live.length })}</button>
                   )}
                   {selectedSeats.parked.length > 0 && (
                     <button
@@ -1758,7 +1758,7 @@ export default function TeamsPage() {
                         cursor: seatBusy ? 'wait' : 'pointer',
                         opacity: seatBusy ? 0.5 : 1,
                       }}
-                    >{seatBusy ? tr("Working…") : `Resume ${selectedSeats.parked.length}`}</button>
+                    >{seatBusy ? tr("Working…") : tr("Resume {count}", { count: selectedSeats.parked.length })}</button>
                   )}
                   <button
                     onClick={() => {
@@ -1803,8 +1803,8 @@ export default function TeamsPage() {
                   })
                   setView('agent')
                 }}
-                searchPlaceholder="Search by name or email…"
-                emptyMessage={rosterSearch ? `Nobody matches “${rosterSearch}”.` : msg("No members yet.")}
+                searchPlaceholder={msg("Search by name or email…")}
+                emptyMessage={rosterSearch ? tr("Nobody matches “{query}”.", { query: rosterSearch }) : msg("No members yet.")}
                 theme={{ panel: PANEL, hairline: HAIRLINE, text: TEXT, muted: MUTED, dim: DIM }}
                 actions={
                   roster.length > 0 ? (
@@ -2184,7 +2184,7 @@ export default function TeamsPage() {
                         one person's name is the header contradicting the click
                         that got you here. */}
                     {scope.kind === 'all' || scope.kind === 'requests'
-                      ? (METRIC_VIEWS.find(m => m.key === metric)?.label || msg("All Users")).toUpperCase()
+                      ? tr(METRIC_VIEWS.find(m => m.key === metric)?.label || msg("All Users")).toUpperCase()
                       : tr(scopeLabel)}
                     <span style={{ fontSize: 12, color: MUTED }}>▾</span>
                   </button>
@@ -2252,43 +2252,43 @@ export default function TeamsPage() {
                 {/* A dash means no data, never a stand-in for a number we did
                     not fetch. Every value below is counted from call rows. */}
                 <StatTile
-                  label="Total Calls"
+                  label={msg("Total Calls")}
                   value={statsLoading ? '-' : fmtNum(stats?.tiles?.totalCalls)}
-                  sub={RANGES.find(r => r.key === range)?.label || ''}
+                  sub={tr(RANGES.find(r => r.key === range)?.label || '')}
                   accent="#2563eb"
                 />
                 <StatTile
-                  label="Contact Rate"
+                  label={msg("Contact Rate")}
                   value={statsLoading ? '-' : fmtPct(stats?.tiles?.contactRate)}
-                  sub="reached a person"
+                  sub={tr("reached a person")}
                   accent="#2563eb"
                 />
                 <StatTile
-                  label="Conversions"
+                  label={msg("Conversions")}
                   value={statsLoading ? '-' : fmtNum(stats?.tiles?.conversions)}
-                  sub={fmtPct(stats?.tiles?.conversionRate) + ' of dials that rang'}
+                  sub={tr("{pct} of dials that rang", { pct: fmtPct(stats?.tiles?.conversionRate) })}
                   accent="#16a34a"
                 />
                 <StatTile
-                  label="Talk Time"
+                  label={msg("Talk Time")}
                   value={statsLoading ? '-' : fmtDuration(stats?.tiles?.talkSecondsTotal)}
                   sub={stats?.tiles?.avgTalkSeconds
-                    ? `avg ${fmtDuration(stats.tiles.avgTalkSeconds)} /call`
-                    : msg("avg, /call")}
+                    ? tr("avg {time} /call", { time: fmtDuration(stats.tiles.avgTalkSeconds) })
+                    : tr("avg, /call")}
                   accent="#2563eb"
                 />
                 <StatTile
-                  label="Best Campaign"
+                  label={msg("Best Campaign")}
                   value={statsLoading ? '-' : (stats?.tiles?.bestCampaign?.name || '-')}
                   sub={stats?.tiles?.bestCampaign
-                    ? `${stats.tiles.bestCampaign.rate}% of ${stats.tiles.bestCampaign.calls} calls`
-                    : `need ${stats?.tiles?.minCallsToRank ?? 5}+ calls`}
+                    ? tr("{rate}% of {calls} calls", { rate: stats.tiles.bestCampaign.rate, calls: stats.tiles.bestCampaign.calls })
+                    : tr("need {count}+ calls", { count: stats?.tiles?.minCallsToRank ?? 5 })}
                   accent="#b45309"
                 />
                 <StatTile
-                  label="Active Seats"
+                  label={msg("Active Seats")}
                   value={String(seatCountForDisplay || 0)}
-                  sub={seatTier?.percentOff > 0 ? `${seatTier.percentOff}% off weekly` : msg("across your teams")}
+                  sub={seatTier?.percentOff > 0 ? tr("{percentOff}% off weekly", { percentOff: seatTier.percentOff }) : tr("across your teams")}
                   accent="#b45309"
                 />
               </div>
@@ -2513,10 +2513,10 @@ export default function TeamsPage() {
               setJoinMessage({
                 kind: 'success',
                 text: isPending
-                  ? `Request sent to ${teamName}. You get access once the owner approves.`
+                  ? tr("Request sent to {teamName}. You get access once the owner approves.", { teamName })
                   : grants > 0
-                    ? `Joined ${teamName}, ${grants} campaign${grants === 1 ? '' : 's'} unlocked.`
-                    : `Joined ${teamName}.`,
+                    ? tr("Joined {teamName}, {count} campaign{s} unlocked.", { teamName, count: grants, s: grants === 1 ? '' : 's' })
+                    : tr("Joined {teamName}.", { teamName }),
               })
             } catch {
               setJoinMessage({ kind: 'error', text: msg("Could not reach the server. Try again.") })

@@ -64,7 +64,7 @@ export default function DataTable<T>({
   columns, rows, rowKey, total, page, pageSize,
   loading, search, onSearch, onPage, onRowClick,
   emptyMessage = msg("Nothing here yet."),
-  searchPlaceholder = 'Search…',
+  searchPlaceholder = msg("Search…"),
   actions, theme,
 }: DataTableProps<T>) {
   const T_ = { ...DEFAULT_THEME, ...(theme || {}) }
@@ -120,7 +120,7 @@ export default function DataTable<T>({
                     color: T_.muted, fontWeight: 700, whiteSpace: 'nowrap',
                     padding: '9px 12px', borderBottom: `1px solid ${T_.hairline}`,
                   }}
-                >{c.header}</th>
+                >{c.header ? t(c.header) : ''}</th>
               ))}
             </tr>
           </thead>
