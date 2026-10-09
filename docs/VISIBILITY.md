@@ -197,6 +197,22 @@ Referrals from `chatgpt.com`, `perplexity.ai`, `gemini.google.com` and
   developer.chrome.com/origintrials (WebMCP) with a Google account; the token
   then goes in a `<meta http-equiv="origin-trial">` tag. Without it the tools
   are dormant and cost nothing.
+- **"AMD always on" in the comparison tables.** Nine rows in the /vs tables
+  (lib/competitorFeatures.ts, /vs/everyone, /vs/hookedcrm) say DialerSeat's
+  answering-machine detection is always on. It is a per-campaign setting, on
+  by default for progressive and predictive (app/api/campaigns/create). The
+  tables were left untouched on your instruction; "AMD voicemail filter
+  included" would be accurate.
+- **Clerk on public pages.** About 208 KB of the ~430 KB of JavaScript on a
+  marketing page is Clerk's sign-in UI, loaded for anonymous visitors.
+  Loading it only where someone signs in is the largest speed win left, and
+  an auth change worth doing carefully.
+- **Cold starts.** Every page renders on request; the first visit after idle
+  waited 4 to 7 seconds in two crawls (warm: 0.25 s). Pre-rendering the
+  marketing pages per language would remove it, at the cost of reworking how
+  the language cookie serves unprefixed addresses.
+- **Futura from fonts.cdnfonts.com.** A third-party host, and Futura is a
+  commercial typeface; check the licence or self-host a licensed copy.
 - **Description and title lengths.** Measured on 2026-10-05: 95 of the 143
   English pages in the sitemap have meta descriptions over 160 characters (the
   longest, `/faq/white-label-mobile`, is 282), and 56 titles run past 65
@@ -225,4 +241,8 @@ What the primary sources say, and what changed on the site because of it.
 | Structured data helps LLM-based search understand a page; IndexNow gets changes seen fast | Microsoft Bing (Fabrice Canel) on schema and LLMs; IndexNow docs | FAQ and breadcrumb JSON-LD translated per language; changed URLs submitted through IndexNow after each deploy |
 | Anthropic runs three crawlers with separate purposes | Anthropic crawler docs: `ClaudeBot`, `Claude-SearchBot`, `Claude-User` | All three allowed in `robots.txt` |
 | Agents in the browser can call a page's functions instead of scraping it | WebMCP, W3C Draft Community Group Report (2 Oct 2026); Chrome's WebMCP imperative API docs (`document.modelContext.registerTool`, origin trial) | `/tools/abandon-rate-calculator` registers `check_abandoned_call_rate` and `/tools/dialer-cost-calculator` registers `compare_dialer_cost` (`lib/webmcpTools.ts`), computed by the same function the page shows |
+| Full crawl, 1,030 URLs as Googlebot (2026-10-08): no broken links, redirects, orphans, duplicate titles or missing descriptions; sitemap index lastmod was always "now"; sitemap alternates lacked x-default; cross-links pointed at four non-canonical pages; glossary and /vs/manual-dialing had 3 and 1 inbound links | Own crawler | All fixed; the glossary and manual-dialing comparison now sit in rails shown on ~140 and ~68 pages |
+| llms.txt named none of the 29 competitor comparisons | Own check | Generated from lib/competitors.ts and lib/countryRules.ts: every /vs page with price and "best for", every mode page, all 15 country pages |
+| The site said multi-line predictive needs 8+ agents; the code gives every agent 2 or 3 lines | lib/predictive/pacing, docs/PREDICTIVE.md | Corrected on every page, all languages; hidden FAQ markup on /dialing-modes (not visible, partly wrong) removed |
+| "Parallel dialer" searches had no page | Google autocomplete, 1,134 suggestions mined | /faq/what-is-a-parallel-dialer, with a computed table of abandoned-call shares by lines and pickup rate |
 | Assistants cite comparison and "best of" lists heavily | Ahrefs: 43.8% of ChatGPT citations go to best-of lists | Section 4's list outreach stays the top off-site task |
