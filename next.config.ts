@@ -79,6 +79,13 @@ const nextConfig: NextConfig = {
         destination: '/sign-up',
         permanent: true,
       },
+      // Common guesses at the sitemap address. Unknown paths fall through to
+      // the sign-in page, which Search Console reported as "Sitemap is HTML".
+      ...['/sitemap', '/sitemap_index.xml', '/sitemap.xml.gz', '/sitemaps.xml', '/sitemap/sitemap.xml'].map((source) => ({
+        source,
+        destination: '/sitemap.xml',
+        permanent: true,
+      })),
     ]
   },
 }
