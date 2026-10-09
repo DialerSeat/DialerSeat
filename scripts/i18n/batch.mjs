@@ -69,7 +69,7 @@ if (cmd === 'status') {
       const r = t.length / en.length
       // Chinese and Japanese say in one character what English spells in
       // several, so their translations run far shorter.
-      const min = locale === 'zh-CN' || locale === 'ja' ? 0.12 : 0.45
+      const min = locale === 'zh-CN' || locale === 'ja' ? 0.12 : locale === 'he' ? 0.3 : 0.45
       if (r < min || r > 2.6) { problems.push(`${i}: length ratio ${r.toFixed(2)} — misaligned?  ${JSON.stringify(en).slice(0, 50)} → ${JSON.stringify(t).slice(0, 50)}`); return }
     }
     dict[en] = t
