@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LAND, BORDERS, MAP_W, MAP_H, project } from '@/lib/worldMap'
 
 // ── PALETTE ─────────────────────────────────────────────────────────────
@@ -383,6 +383,36 @@ const hhmmss = (iso: string) => {
   return d.toLocaleTimeString('en-US', {
     hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
   })
+}
+
+// ── WHICH DAY A ROW IS FROM ──────────────────────────────────────────────
+// The TIME column is a clock, and a clock cannot tell this afternoon from
+// yesterday's. Rather than a date on every row, one marker row where the
+// feed crosses into an earlier day, and none for today, so a feed of today's
+// calls reads exactly as it did. The full date is on the time's hover.
+const dayKey = (at: string | number) => new Date(at).toDateString()
+const dayLabel = (at: string | number, nowMs: number) => {
+  const d = new Date(at)
+  const yesterday = new Date(nowMs)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const date = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    .toUpperCase()
+  return d.toDateString() === yesterday.toDateString() ? 'YESTERDAY · ' + date : date
+}
+const fullStamp = (at: string | number) =>
+  new Date(at).toLocaleString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
+  })
+/** The marker row, when this row starts a day other than the one above it. */
+const dayMarker = (at: string | number, prevAt: string | number | null, nowMs: number, cols: number) => {
+  const day = dayKey(at)
+  if (day === (prevAt === null ? dayKey(nowMs) : dayKey(prevAt))) return null
+  return (
+    <tr className="om-day">
+      <td colSpan={cols}>{dayLabel(at, nowMs)}</td>
+    </tr>
+  )
 }
 
 // ── A CALL THAT HAS NOT ENDED YET ────────────────────────────────────────
@@ -1278,7 +1308,7 @@ export default function OpsMap() {
         </tr>
       </thead>
       <tbody>
-        {shownFeed.map(f => {
+        {shownFeed.map((f, i) => {
           const live = liveSeconds(f, nowMs)
           // A skipped call was never placed: no leg, no answer,
           // nothing billed. Printing "0s" in the red reserved
@@ -1287,8 +1317,10 @@ export default function OpsMap() {
           const neverPlaced = live === null
             && f.duration === 0 && !f.answered
           return (
-          <tr key={f.id} data-fresh={freshIds.has(f.id) ? '1' : undefined}>
-            <td style={{ color: CYAN }}>{hhmmss(f.at)}</td>
+          <Fragment key={f.id}>
+          {dayMarker(f.at, i === 0 ? null : shownFeed[i - 1].at, nowMs, 13)}
+          <tr data-fresh={freshIds.has(f.id) ? '1' : undefined}>
+            <td style={{ color: CYAN }} title={fullStamp(f.at)}>{hhmmss(f.at)}</td>
             <td style={{ color: GREEN }}>{f.agent}</td>
             <td className="om-hide-sm" style={{ color: f.poolNumber ? INK : DIM }}>
               {f.poolNumber ? prettyPhone(f.poolNumber) : '-'}
@@ -1333,6 +1365,7 @@ export default function OpsMap() {
               {f.recording === 'completed' ? 'rec' : '-'}
             </td>
           </tr>
+          </Fragment>
           )
         })}
         {shownFeed.length === 0 && (
@@ -1392,6 +1425,9 @@ export default function OpsMap() {
         }
         .om-t td { padding:2.5px 8px; white-space:nowrap; border-bottom:1px solid var(--om-row-border); }
         .om-t tr:hover td { background: var(--om-hover); }
+        .om-t tr.om-day td { color:${DIM}; font-size:9px; letter-spacing:1.2px;
+                             padding:6px 8px 2px; border-bottom:1px solid ${EDGE}; }
+        .om-t tr.om-day:hover td { background:none; }
         .om-scroll { overflow:auto; min-height:0; }
         .om-scroll::-webkit-scrollbar { width:7px; height:7px; }
         .om-scroll::-webkit-scrollbar-thumb { background:${DIM}; border-radius:4px; }
@@ -2634,10 +2670,12 @@ export default function OpsMap() {
                         </tr>
                       </thead>
                       <tbody>
-                        {allLogs.map(r => r.kind === 'call' ? (
-                          <tr key={'c' + r.call.id}
-                              data-fresh={freshIds.has(r.call.id) ? '1' : undefined}>
-                            <td style={{ color: CYAN }}>{hhmmss(r.call.at)}</td>
+                        {allLogs.map((r, i) => (
+                          <Fragment key={r.kind === 'call' ? 'c' + r.call.id : 'l' + r.log.id}>
+                          {dayMarker(r.at, i === 0 ? null : allLogs[i - 1].at, nowMs, 4)}
+                          {r.kind === 'call' ? (
+                          <tr data-fresh={freshIds.has(r.call.id) ? '1' : undefined}>
+                            <td style={{ color: CYAN }} title={fullStamp(r.call.at)}>{hhmmss(r.call.at)}</td>
                             <td style={{ color: GREEN }}>CALL</td>
                             <td className="om-hide-sm" style={{ color: GREEN }}>{r.call.agent}</td>
                             <td style={{ color: MUTED }}>
@@ -2655,8 +2693,8 @@ export default function OpsMap() {
                             </td>
                           </tr>
                         ) : (
-                          <tr key={'l' + r.log.id}>
-                            <td style={{ color: CYAN }}>{hhmmss(r.log.at)}</td>
+                          <tr>
+                            <td style={{ color: CYAN }} title={fullStamp(r.log.at)}>{hhmmss(r.log.at)}</td>
                             {/* The kind is the carrier of meaning here, so it
                                 gets the colour rather than the row. Unread is
                                 amber because it is the one thing nobody has
@@ -2676,6 +2714,8 @@ export default function OpsMap() {
                               {r.log.body ? ' · ' + r.log.body.slice(0, 90) : ''}
                             </td>
                           </tr>
+                          )}
+                          </Fragment>
                         ))}
                         {allLogs.length === 0 && (
                           <tr><td colSpan={4} style={{ color: DIM, padding: 10 }}>
