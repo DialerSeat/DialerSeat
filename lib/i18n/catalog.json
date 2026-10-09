@@ -142,6 +142,9 @@
  ", storing and processing that data on your behalf according to your instructions.": [
   "app/privacy/page.tsx"
  ],
+ ", the agent’s choice, in predictive mode. It works for one agent dialing alone as well as for a floor.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  ", the controller automatically degrades the campaign to 1× lines per agent (effectively progressive mode). One line can't abandon anyone. A line only comes back when the 30-day record, plus what that line could add, is projected to stay under": [
   "app/faq/how-we-keep-compliance/page.tsx"
  ],
@@ -1306,6 +1309,9 @@
  "▸ OUR PROMISE": [
   "app/faq/why-dialerseat/view.tsx"
  ],
+ "▸ PARALLEL DIALER": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "▸ PAYMENT METHODS & INVOICES": [
   "app/dashboard/settings/page.tsx"
  ],
@@ -1940,6 +1946,9 @@
  "$35 per seat per week on Pro. $75 per week on Manager+, which adds team ownership and white-labeling.": [
   "lib/competitors.ts"
  ],
+ "$35 per seat per week with the other three modes, billed weekly, no contract and no seat minimum.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "$35 per seat per week, billed weekly, with every dialing mode, local caller ID and recording included. No contract, no setup fee, no seat minimum, and calling is included. Manager+ at $75 a week adds team ownership, white-labeling and lead drip.": [
   "components/VerticalView.tsx"
  ],
@@ -2156,14 +2165,6 @@
  "1.5-3× lines per agent, routed by algorithm. Highest throughput, tightest compliance.": [
   "app/dialing-modes/preview/page.tsx"
  ],
- "1.5-3× lines per agent. Highest throughput, needs a team of 8+ to really engage, auto-degrade keeps it off the legal line.": [
-  "app/faq/what-is-a-power-dialer/page.tsx",
-  "app/faq/what-is-a-progressive-dialer/page.tsx"
- ],
- "1.5-3× lines per agent. Highest throughput, tightest compliance, needs a team.": [
-  "app/dialing-modes/power/page.tsx",
-  "app/dialing-modes/progressive/page.tsx"
- ],
  "1.6fr 1fr 0.5fr 0.6fr": [
   "app/dashboard/dialer/page.tsx"
  ],
@@ -2212,6 +2213,9 @@
  "12. Limitation of liability": [
   "app/terms/page.tsx"
  ],
+ "12% PICK UP": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "13. Contact us": [
   "app/privacy/page.tsx"
  ],
@@ -2241,6 +2245,17 @@
  ],
  "1fr 2fr": [
   "app/dashboard/dialer/page.tsx"
+ ],
+ "2 or 3 lines per agent": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
+ "2 or 3 lines per agent. Highest throughput, tightest compliance.": [
+  "app/dialing-modes/power/page.tsx",
+  "app/dialing-modes/progressive/page.tsx"
+ ],
+ "2 or 3 lines per agent. Highest throughput; auto-degrade keeps it off the legal line.": [
+  "app/faq/what-is-a-power-dialer/page.tsx",
+  "app/faq/what-is-a-progressive-dialer/page.tsx"
  ],
  "2-seat minimum": [
   "lib/competitorFeatures.ts"
@@ -2449,6 +2464,9 @@
  ],
  "5. Self-serve signup": [
   "app/vs/hookedcrm/view.tsx"
+ ],
+ "5% PICK UP": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "50-seat minimum on every plan": [
   "app/vs/everyone/view.tsx"
@@ -2811,6 +2829,15 @@
  "A number that has already made 40 calls today goes to the back of the queue, however good its match. This comes first on purpose, so one number never carries a whole area.": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
+ "A parallel dialer calls several numbers at once and connects the first person who answers. How it works, how it differs from power dialing, and the 3% rule.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
+ "A parallel dialer calls several numbers at once for one agent and connects the first person who answers. Less waiting between conversations, with one catch: when two people answer together, only one can be connected. Here is how it works, how it differs from power dialing, and how many lines the 3% rule allows.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
+ "A parallel dialer calls several numbers at the same time for one agent and connects the first person who answers. The other lines end when they reach voicemail or nobody picks up. It is the same idea as a predictive dialer: sales teams tend to say parallel, call centers say predictive.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "A payment method is required on file before accepting an owner-paid seat. Add a card in /billing first.": [
   "components/teams/TeamsManager.tsx"
  ],
@@ -2843,6 +2870,9 @@
  ],
  "A popular business phone system with the Power Dialer on its Professional tier.": [
   "lib/competitors.ts"
+ ],
+ "A power dialer calls one number at a time and moves to the next as soon as the call ends. A parallel dialer calls several at once, so the agent waits less between conversations, but if two people answer at the same moment only one can be connected and the other call is abandoned. Power dialing cannot abandon a call; parallel dialing has to be limited so it abandons few.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "A power dialer inside an agency platform": [
   "app/vs/view.tsx"
@@ -3700,6 +3730,9 @@
  "All four modes, local presence, recording, compliance export. Billed weekly, no contract, no setup fee, no seat minimum, no per-minute charge.": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
  ],
+ "All four modes, preview, power, progressive and predictive, are included on DialerSeat and chosen per campaign.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "All four: preview, power, progressive, and predictive. Each is available on every account at every tier, we don't gate dialing modes behind upgrades. Full breakdown on the": [
   "app/faq/view.tsx"
  ],
@@ -3879,6 +3912,9 @@
  ],
  "An address in the prefix area. Mobile numbers accept an address anywhere.": [
   "lib/countryRules.ts"
+ ],
+ "An agent can take one call. When two of the lines in a round reach a person at the same moment, the second is an abandoned call. How often that happens depends on how many lines you dial and how often people on the list pick up. With every line allowed to ring out, the share of people who answer and are left without an agent is:": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "An algorithm dressed as a dialer.": [
   "app/dialing-modes/predictive/page.tsx",
@@ -4169,6 +4205,9 @@
  "ANYONE": [
   "app/page.tsx"
  ],
+ "Anyone else who answered is abandoned.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "Anyone who can post leads to a URL.": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
@@ -4299,12 +4338,16 @@
  ],
  "Article": [
   "app/data/calling-rules-by-country/[code]/page.tsx",
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
   "app/faq/what-is-an-auto-dialer/page.tsx",
   "components/VerticalView.tsx",
   "components/vs-competitor-view.tsx"
  ],
  "As covered on": [
   "app/faq/numbers/view.tsx"
+ ],
+ "As many as the abandoned-call limit allows for that list, which depends on how often people answer. At a 5% pickup rate, two lines abandon about 1 in 40 people who answer; at 12%, three lines abandon about 1 in 9. That is why DialerSeat sets the line count from each campaign’s own record instead of a fixed number.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "as separate windows side by side, the way the multi-window screenshot above shows, and watch your floor's numbers move while you're actively managing seat codes in the window next to it.": [
   "app/faq/manager-plus/view.tsx"
@@ -4646,6 +4689,9 @@
  "before a call is treated as unanswered.": [
   "app/dialing-modes/view.tsx"
  ],
+ "Before each round DialerSeat projects the campaign’s 30-day abandon rate and runs fewer lines whenever more would push it past 2%, a margin under the 3% limit. A new campaign starts on one line until it has a record.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "Before hanging up on a call nobody has answered.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
@@ -4709,6 +4755,9 @@
  ],
  "Beyond individual recordings, there's a single export that pulls literally everything tied to your account into one JSON file, not a marketing “contact us for your data” process, an actual button that returns a file immediately.": [
   "app/faq/data-and-recordings/view.tsx"
+ ],
+ "Big cold lists, one agent or many": [
+  "app/dialing-modes/view.tsx#prop"
  ],
  "Big consumer lead lists where every minute of agent talk time produces revenue. This is the home turf.": [
   "app/dialing-modes/predictive/page.tsx",
@@ -5814,6 +5863,9 @@
  ],
  "Cheapest per-agent cost in the industry once you are past roughly 100 agents": [
   "lib/competitors.ts"
+ ],
+ "Check a campaign against it": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "Check a predictive campaign against the US 3% (FTC TSR), UK 3% (Ofcom) and Canada 5% (CRTC) abandoned-call limits. Enter answered and abandoned calls, get the rate and how many more calls you can abandon.": [
   "app/tools/abandon-rate-calculator/page.tsx"
@@ -7715,6 +7767,10 @@
  "DialerSeat sets one access mode per campaign-per-team. For tiered pricing, create separate teams (e.g. \"Premium\" with AGENT PAYS, \"Standard\" with OWNER PAYS) and put different members in each.": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
+ "DialerSeat sets the line count per agent, so predictive works for one agent as well as a floor. Each agent picks 2 or 3 lines, and the campaign's own 30-day record decides how many are legal at that moment; a new campaign starts on one line.": [
+  "app/dialing-modes/predictive/page.tsx",
+  "app/faq/what-is-a-predictive-dialer/page.tsx"
+ ],
  "DialerSeat Teams": [
   "app/faq/dialerseat-teams/page.tsx"
  ],
@@ -7828,6 +7884,7 @@
   "app/vs/nextiva/page.tsx"
  ],
  "DialerSeat vs Orum": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
   "app/vs/orum/page.tsx"
  ],
  "DialerSeat vs PhoneBurner": [
@@ -7908,9 +7965,6 @@
  "DialerSeat's mobile experience is a": [
   "app/faq/white-label-mobile/view.tsx"
  ],
- "DialerSeat's predictive controller engages true multi-line dialing at 8+ concurrent agents on a campaign, below that threshold it runs as progressive-equivalent so a small surprise in pickups can't spike your abandon rate.": [
-  "app/faq/what-is-a-predictive-dialer/page.tsx"
- ],
  "DialerSeat™ (\"we\", \"us\", \"our\") is an outbound calling platform for sales teams, call centers, and solo agents. We operate the website": [
   "app/privacy/page.tsx"
  ],
@@ -7989,6 +8043,9 @@
   "app/faq/how-we-measure-answer-rate/page.tsx",
   "app/welcome/Showcase.tsx"
  ],
+ "Dials 2 or 3 lines per agent, your choice, and connects the first person who answers. It is the only mode where abandoned calls are possible, so each campaign's own 30-day record sets the line count: DialerSeat runs fewer lines whenever more would push the projected abandon rate past 2% (the legal limit is 3%), starts a new campaign on one line until it has that record, and holds one line if the measured rate reaches 2.5%.": [
+  "app/dialing-modes/view.tsx#prop"
+ ],
  "Dials automatically with the agent already connected, so there is no connect delay when someone answers.": [
   "lib/canonicalFacts.ts"
  ],
@@ -7997,9 +8054,6 @@
  ],
  "Dials automatically with the agent already on the line, so there is no connect delay when somebody answers.": [
   "app/faq/dialer-glossary/page.tsx"
- ],
- "Dials multiple lines per agent using a pacing algorithm. Fastest mode, and the only one where abandoned calls are possible, so DialerSeat auto-throttles back to one line per agent when the rolling 30-day abandon rate hits 2.5%, keeping a buffer under the 3% legal cap. Runs single-line until a campaign has 8+ concurrent agents, the threshold where multi-line pacing is statistically safe.": [
-  "app/dialing-modes/view.tsx#prop"
  ],
  "Dials several lines at once and routes the first human answer to the agent. Highest conversations per hour.": [
   "lib/canonicalFacts.ts"
@@ -8312,6 +8366,9 @@
  ],
  "Does DialerSeat handle STIR/SHAKEN and CNAM?": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
+ ],
+ "Does DialerSeat have a parallel dialer?": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "Does DialerSeat have call monitoring, whisper, or barge?": [
   "app/faq/teams-how-it-works/page.tsx"
@@ -8962,6 +9019,9 @@
  "Every member dials it, nobody is billed for it.": [
   "components/teams/TeamModals.tsx"
  ],
+ "Every mode compared": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "Every mode you will need": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
@@ -9349,6 +9409,7 @@
   "app/faq/send-leads-from-your-crm/page.tsx",
   "app/faq/teams-how-it-works/page.tsx",
   "app/faq/view.tsx#prop",
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
   "app/faq/what-is-an-auto-dialer/page.tsx",
   "app/faq/white-label-mobile/view.tsx",
   "app/faq/white-label/view.tsx",
@@ -10032,6 +10093,7 @@
   "app/faq/scripts/view.tsx",
   "app/faq/send-leads-from-your-crm/page.tsx",
   "app/faq/view.tsx",
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
   "app/faq/what-is-an-auto-dialer/page.tsx",
   "app/faq/white-label/view.tsx",
   "app/faq/why-calls-show-spam-likely/page.tsx",
@@ -10286,6 +10348,9 @@
   "app/dialing-modes/predictive/page.tsx",
   "app/faq/what-is-a-predictive-dialer/page.tsx"
  ],
+ "High-volume cold lists, whether one agent is dialing or a whole floor.": [
+  "app/dialing-modes/view.tsx#prop"
+ ],
  "High-volume homeowner campaigns are exactly what gets numbers labelled Spam Likely. DialerSeat spreads calls across a pool of local numbers with per-number daily caps and answer-rate tracking, so one caller ID is not burned by a whole floor.": [
   "lib/verticals.ts"
  ],
@@ -10356,6 +10421,7 @@
   "app/faq/send-leads-from-your-crm/page.tsx",
   "app/faq/teams-how-it-works/page.tsx",
   "app/faq/view.tsx",
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
   "app/faq/what-is-a-power-dialer/page.tsx",
   "app/faq/what-is-a-predictive-dialer/page.tsx",
   "app/faq/what-is-a-preview-dialer/page.tsx",
@@ -10498,6 +10564,7 @@
   "app/faq/campaigns/view.tsx",
   "app/faq/dialer-glossary/page.tsx",
   "app/faq/how-we-keep-compliance/page.tsx",
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
  "HOW AMD WORKS": [
@@ -10550,6 +10617,9 @@
  ],
  "How DialerSeat Measures Answer Rate and Connect Rate | DialerSeat": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
+ ],
+ "How DialerSeat runs it": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "How DialerSeat teams actually work.": [
   "app/faq/teams-how-it-works/page.tsx"
@@ -10712,6 +10782,9 @@
  "how many leads were": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
+ "How many lines should a parallel dialer use?": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "How many numbers a predictive dialer calls at once for each available agent. More lines mean less waiting between conversations and more abandoned calls, which is why the rate is capped at 3%.": [
   "app/faq/dialer-glossary/page.tsx"
  ],
@@ -10784,6 +10857,9 @@
  ],
  "How often somebody picks up, as a share of the dials that actually rang. Dials that failed before reaching a phone are left out of the rate and kept in the dial count.": [
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "How parallel dialing works": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "How power dialing works": [
   "app/dialing-modes/power/page.tsx",
@@ -11101,6 +11177,9 @@
  "If the lead’s state in your list disagrees with their area code, DialerSeat matches their state instead. Someone who moved to Florida and kept a New York mobile number gets a Florida caller ID, because that is what looks local to them now.": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
+ "If the measured rate reaches 2.5%, the campaign drops to one line until it recovers.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "If the seats were bought by a company, put the company's legal name here, a deduction belongs to the entity that incurred the expense. Saved once and used on every statement.": [
   "app/dashboard/reports/ReportView.tsx"
  ],
@@ -11263,6 +11342,9 @@
  ],
  "Included in Manager+ ($75/wk), no separate mobile fee": [
   "app/faq/white-label-mobile/view.tsx"
+ ],
+ "Included in the seat.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "INCLUDED ON EVERY PLAN": [
   "app/faq/scripts/view.tsx"
@@ -11520,6 +11602,9 @@
  "Is Orum only for sales teams?": [
   "app/vs/orum/page.tsx"
  ],
+ "Is parallel dialing legal?": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "is paused until it clears. Nothing you need to do.": [
   "app/dashboard/dialer/page.tsx"
  ],
@@ -11616,6 +11701,9 @@
  ],
  "It listens for about a second and a half.": [
   "app/faq/how-does-amd-work/page.tsx"
+ ],
+ "It listens on every line.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "It listens.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
@@ -12132,6 +12220,9 @@
  "Lines per agent": [
   "app/faq/campaigns/view.tsx",
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "LINES PER AGENT": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "LINK": [
   "components/CiteThis.tsx#prop"
@@ -14340,6 +14431,10 @@
  "One agent": [
   "lib/competitors.ts"
  ],
+ "ONE AGENT OR A FLOOR": [
+  "app/dialing-modes/predictive/page.tsx",
+  "app/faq/what-is-a-predictive-dialer/page.tsx"
+ ],
  "One agent’s access to the dialer. DialerSeat charges $35 per seat per week with no minimum, so a seat is the whole unit of cost.": [
   "app/faq/dialer-glossary/page.tsx"
  ],
@@ -14401,6 +14496,9 @@
  "one level deep are read as if they were flat, which is how HubSpot’s": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
+ "One line at 2.5%.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "One line per agent, AMD pre-screens, agent only hears humans. The mode that emerged in the early 2000s as the safe middle ground between power and predictive.": [
   "app/dialing-modes/progressive/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
@@ -14425,6 +14523,7 @@
   "app/faq/dialer-modes/page.tsx"
  ],
  "ONE LINE, NO GAPS": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
  "One list, the whole floor, no double calls": [
@@ -14442,6 +14541,9 @@
  ],
  "One number at a time, the next dialed as the last ends.": [
   "lib/verticals.ts"
+ ],
+ "One number at a time, the next dialed as the last ends. It can never abandon a call, and the agent hears every ring that goes unanswered.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "one once detected. DialerSeat does not do voicemail drops today. When AMD calls a machine, the call ends and the queue advances nothing is left behind. It is on the list rather than shipped, and we would rather say that than have you plan a campaign around it.": [
   "app/faq/how-does-amd-work/page.tsx"
@@ -14981,6 +15083,18 @@
  "paper. Between them, these are the two names historians of the category point to. The mechanism itself predates both patents: mid-1980s call centers at large banks, retailers, and collection agencies were already running early predictive systems built on minicomputers and custom hardware.": [
   "app/faq/what-is-a-predictive-dialer/page.tsx"
  ],
+ "Parallel dialer": [
+  "app/faq/dialer-glossary/page.tsx"
+ ],
+ "Parallel dialer questions": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
+ "Parallel Dialer: How It Works and the 3% Rule | DialerSeat": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
+ "Parallel dialers built for large SDR teams dial more lines per rep and sell them as a premium tier.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "Parallel dialers built for SDR teams sync deeply with Salesforce and HubSpot. DialerSeat takes leads by CSV upload or an inbound webhook per campaign rather than a native CRM sync. If your reps live inside a CRM sequence, weigh that; if you want multi-line dialing without an annual contract and a three-seat minimum, it is a fit.": [
   "lib/verticals.ts"
  ],
@@ -14989,6 +15103,12 @@
  ],
  "Parallel dialing without enterprise pricing": [
   "app/vs/view.tsx"
+ ],
+ "Parallel or predictive dialer": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
+ "Parallel, power and predictive": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "Parallel/multi-line dialer cost": [
   "lib/competitorFeatures.ts"
@@ -15538,6 +15658,7 @@
  "Power dialer": [
   "app/faq/dialer-glossary/page.tsx",
   "app/faq/view.tsx",
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
   "app/faq/what-is-an-auto-dialer/page.tsx",
   "app/vs/everyone/view.tsx",
   "lib/competitorFeatures.ts"
@@ -15741,7 +15862,7 @@
  "Predictive dials more than one line at a time. When two people answer at once and no agent is free, the law requires a short recorded message with your business name and a number they can call back.": [
   "components/SellerIdentityDialog.tsx"
  ],
- "Predictive earns its keep when volume is the constraint, not quality, and when you have enough agents on the same campaign for the math to work.": [
+ "Predictive earns its keep when volume is the constraint, not quality.": [
   "app/dialing-modes/predictive/page.tsx",
   "app/faq/what-is-a-predictive-dialer/page.tsx"
  ],
@@ -15759,9 +15880,6 @@
  ],
  "PREDICTIVE ISN’T SET UP ON THIS CAMPAIGN": [
   "components/SellerIdentityDialog.tsx"
- ],
- "Predictive math breaks down below ~3 active agents on the same campaign. With 5+, the multiplier really starts paying.": [
-  "app/dialing-modes/predictive/page.tsx"
  ],
  "Predictive mode dials several leads at once and connects you to whoever answers": [
   "app/vs/manual-dialing/page.tsx"
@@ -15801,6 +15919,9 @@
  ],
  "PREDICTIVE UNLOCKED": [
   "app/dashboard/dialer/page.tsx"
+ ],
+ "Predictive will not start until your business name and callback number are in Settings, because an abandoned call has to play them.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "Predictive-only. A multiplier between": [
   "app/faq/campaigns/view.tsx"
@@ -17184,8 +17305,14 @@
  "Sales Hub per seat per month: Starter $20 ($7 billed annually), Professional $100 ($90 annually), Enterprise $150. Professional adds a one-time $1,500 onboarding fee and Enterprise $3,500. Free for up to two users.": [
   "lib/competitors.ts"
  ],
+ "Sales teams call the same thing parallel dialing.": [
+  "app/dialing-modes/predictive/page.tsx"
+ ],
  "Sales teams living inside HubSpot or Pipedrive who want calling and texting attached to it.": [
   "lib/competitors.ts"
+ ],
+ "Sales teams often call the predictive kind a parallel dialer.": [
+  "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
  "Sales teams that want their CRM and their dialer to be the same product, and are comfortable paying CRM prices for it.": [
   "lib/competitors.ts"
@@ -17867,6 +17994,7 @@
   "app/faq/dialer-for-real-estate/page.tsx"
  ],
  "SEVERAL LINES PER AGENT": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
  "Several lines per agent, the first person who answers reaches you. The most conversations per hour, and the mode the abandon rules apply to.": [
@@ -17889,6 +18017,18 @@
  ],
  "Several lines per setter; the first homeowner who answers reaches you.": [
   "lib/verticals.ts"
+ ],
+ "Several lines, one conversation, and the 3% rule": [
+  "app/faq/view.tsx"
+ ],
+ "Several lines, one conversation.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
+ "Several numbers at once, the first person who answers gets the agent. How it works and what the 3% rule allows.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
+ "Several numbers at once, the first person who answers gets the agent. Two names for one idea: sales teams say parallel, call centers say predictive.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "Shaped by real producers and updated constantly, the dialer that keeps getting better.": [
   "app/welcome/Showcase.tsx"
@@ -18905,15 +19045,6 @@
  "Teams is for running a floor. Whether you have sold twenty-five seats to an agency, staffed one room yourself, or you are a vendor handing lists to closers you do not employ: this is where you decide who dials what, and who pays for the privilege.": [
   "app/dashboard/teams/page.tsx"
  ],
- "TEAMS OF 5+": [
-  "app/dialing-modes/predictive/page.tsx"
- ],
- "TEAMS OF 8+": [
-  "app/faq/what-is-a-predictive-dialer/page.tsx"
- ],
- "Teams of 8+ concurrent agents": [
-  "app/dialing-modes/view.tsx#prop"
- ],
  "Teams of three or more who want a business phone system first, with power dialing included, and are comfortable committing for a year.": [
   "lib/competitors.ts"
  ],
@@ -18934,9 +19065,6 @@
  ],
  "Teams was designed around three specific operator types we've watched lose money to outdated tooling. If you're any of these, this is the product.": [
   "app/faq/dialerseat-teams/view.tsx"
- ],
- "Teams with 8+ agents dialing the same campaign at once.": [
-  "app/dialing-modes/view.tsx#prop"
  ],
  "Teams you own": [
   "app/faq/data-and-recordings/view.tsx"
@@ -19188,6 +19316,7 @@
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
  "The 3% rule in full": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
  "The 31-day rule": [
@@ -19220,6 +19349,9 @@
  "The agent doesn't hear it yet.": [
   "app/dialing-modes/progressive/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
+ ],
+ "The agent is ready.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "The agent reads the lead first and starts the call. Slowest, best for leads that cost real money.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
@@ -19275,11 +19407,17 @@
  "The campaign and team the leads belong to": [
   "app/privacy/page.tsx"
  ],
+ "The campaign’s own record sets the count.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "The carrier knows the customer and gave them this number.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
  "The carrier knows the customer, but didn’t give them this number.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
+ ],
+ "The catch: two people answer at once": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "The cheapest seat that carries voice at all is $105 a month, before the dialer": [
   "lib/competitors.ts"
@@ -19404,6 +19542,9 @@
  "The dialer shows you each lead before anything rings. You read their info, get ready, and press dial when you want to. One call at a time, fully at your pace.": [
   "app/faq/dialer-modes/page.tsx"
  ],
+ "The dialer starts a round: two or three numbers from the list, dialed together.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "The dialer terminal itself, same white-label skin. Manager+ doesn’t change what agents dial with, it changes what the owner sees around it.": [
   "app/faq/manager-plus/view.tsx"
  ],
@@ -19461,6 +19602,9 @@
  "The first line where AMD says": [
   "app/dialing-modes/predictive/page.tsx",
   "app/faq/what-is-a-predictive-dialer/page.tsx"
+ ],
+ "The first person through gets the agent.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "The first second or two of the call. AMD needs to hear the pickup before it can decide. That means when the audio finally reaches your headset, the person on the other end has already said \"Hello\" sometimes twice. Good agents adapt quickly (you open with \"Hi, this is Maria from...\" instead of waiting for them to speak), but it takes a session or two to get used to.": [
   "app/dialing-modes/progressive/page.tsx",
@@ -19652,6 +19796,9 @@
  ],
  "The next lead is dialed the moment you finish the last one": [
   "app/vs/manual-dialing/page.tsx"
+ ],
+ "The next round starts": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "The number shown on the phone you are calling. On an outbound floor it is chosen per call, from a pool.": [
   "app/faq/dialer-glossary/page.tsx"
@@ -19909,6 +20056,9 @@
  "The real cost is well above the headline": [
   "lib/competitors.ts"
  ],
+ "The recorded message is set up first.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "The registry is run by the FTC, and access is granted to the organization doing the calling, under its own registration and subscription. We can’t scrub against it on your behalf, so we say so plainly rather than let you assume otherwise.": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
@@ -20112,6 +20262,9 @@
  "The upload could not be completed. If this persists, contact support@dialerseat.com.": [
   "app/dashboard/campaigns/page.tsx"
  ],
+ "The US limit for telemarketing is 3% of calls answered by a person, per campaign, over each 30-day period. So more lines is not simply faster: on a list where people answer often, two lines can already be over the limit, and on a list where they rarely do, three can be safe.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "The usual workarounds are worse than the problem: charge resellers a large one-time fee to get a lightly-rebranded native app submitted under their own developer account (slow, expensive, and it goes stale the moment the platform ships an update), or skip mobile branding entirely and just show resellers' agents the vendor's own app with the vendor's own name on it, which is the most common outcome in this industry.": [
   "app/faq/white-label-mobile/view.tsx"
  ],
@@ -20154,6 +20307,9 @@
  ],
  "Their FAQ states an initial three-month commitment, after which you can continue month to month. That is the part worth pricing: three months is roughly thirteen weeks, so you are committing to thirteen weeks of a rate you have not been able to compare against anyone else, before you know whether the tool works on your list. DialerSeat bills weekly with no contract and no minimum term. The smallest thing you can buy is one week at $35, and the same thirteen weeks is $455 per seat if you keep going.": [
   "app/vs/dialer-io/page.tsx"
+ ],
+ "Their lead is on screen as the call connects.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "them": [
   "app/dashboard/teams/page.tsx",
@@ -20239,6 +20395,9 @@
  ],
  "They get logged with a disposition of": [
   "app/faq/how-does-amd-work/page.tsx"
+ ],
+ "They hear a short recorded message with your business name and callback number, which the law requires.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "They keep their place but cannot dial, and the seat stops being billed.": [
   "components/teams/TeamModals.tsx"
@@ -21018,6 +21177,7 @@
   "app/data/dialer-pricing/page.tsx",
   "app/faq/dialer-for-call-centers/page.tsx",
   "app/faq/dialer-for-real-estate/page.tsx",
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
   "app/faq/what-is-an-auto-dialer/page.tsx",
   "app/features/page.tsx",
   "app/pricing/page.tsx",
@@ -21274,6 +21434,9 @@
  ],
  "Voicemail drop only": [
   "lib/competitorFeatures.ts"
+ ],
+ "Voicemail greetings and rings that go nowhere are ended without the agent hearing them.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "Voicemail greetings sound different. They're longer, usually 4-15 seconds, run as a continuous monologue, and end with a beep. AMD looks at the duration of the initial speech, the pauses, the frequency profile, and (in modern systems) machine-learned signatures of common voicemail-greeting patterns. When the math says \"machine,\" the call drops before you ever pick up.": [
   "app/faq/how-does-amd-work/page.tsx"
@@ -22026,6 +22189,13 @@
  "What if a lead has moved and kept their old number?": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
+ "What is a parallel dialer?": [
+  "app/dialing-modes/predictive/page.tsx",
+  "app/faq/dialer-glossary/page.tsx",
+  "app/faq/view.tsx",
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
+  "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
  "What is a power dialer?": [
   "app/faq/view.tsx",
   "components/ExplainerCrossLinks.tsx"
@@ -22056,6 +22226,7 @@
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
  "WHAT IS AN AUTO DIALER": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx",
   "components/site-footer.tsx"
  ],
  "What is an auto dialer?": [
@@ -22093,6 +22264,9 @@
  ],
  "What is the best dialer for solar appointment setting?": [
   "lib/verticals.ts"
+ ],
+ "What is the difference between a parallel dialer and a power dialer?": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "What is the difference between an auto dialer and a predictive dialer?": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
@@ -22167,6 +22341,9 @@
  ],
  "What people actually want to know.": [
   "app/faq/why-we-charge/page.tsx"
+ ],
+ "What sales teams call a predictive dialer: several numbers dialed at once for one agent, the first person who answers connected. Anyone else who answers in the same round is an abandoned call.": [
+  "app/faq/dialer-glossary/page.tsx"
  ],
  "What smaller shops": [
   "app/dialing-modes/power/page.tsx",
@@ -22306,6 +22483,9 @@
  ],
  "When does DialerSeat make more sense?": [
   "app/vs/ringcentral/page.tsx"
+ ],
+ "when every line of this one has ended and the agent is ready again.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "When is a monthly dialer cheaper?": [
   "app/tools/dialer-cost-calculator/page.tsx"
@@ -23144,6 +23324,9 @@
  "Yes, with lead drip. It gives a team campaign its own webhook URL, and any tool that can send a web request, such as GoHighLevel, HubSpot, Zapier or a Google Sheet, can post new leads to it. They land in the campaign’s queue, and agents already dialing that campaign reach them without restarting. Lead drip is switched on from the campaign’s page in Teams, which comes with Manager+.": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
+ "Yes, within the abandoned-call rules. For US telemarketing calls, abandoned calls may not exceed 3% of calls answered by a person, per campaign, over each 30-day period, and a person who is not connected to an agent within 2 seconds must hear a recorded message with the seller’s name and a callback number. DialerSeat holds every predictive campaign under that limit. Whether it applies to a particular business-to-business call is a question for counsel.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
  "Yes, within the federal rules on abandoned calls, calling hours and consent. DialerSeat enforces the abandon-rate cap per campaign and the calling window per lead, but scrubbing the National Do Not Call Registry and keeping consent records for your leads stay your responsibility.": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
  ],
@@ -23248,6 +23431,9 @@
  ],
  "Yes. DialerSeat supports bulk import of leads, campaigns, and dispositions. Our team handles the conversion so you keep your call history and campaign structure intact.": [
   "app/vs/readymode/page.tsx"
+ ],
+ "Yes. DialerSeat’s predictive mode dials 2 or 3 lines per agent, the agent’s choice, and connects the first person who answers. It is included in the $35 per seat per week price with the other three modes, with no contract and no seat minimum.": [
+  "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
  "Yes. Each number’s answer rate is compared with the rest of the pool using only calls that rang, so a number is never held back because of dials that never reached anyone.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"

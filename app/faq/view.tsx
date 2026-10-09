@@ -349,6 +349,13 @@ const ANSWERS: HubItem[] = [
     keywords: 'auto dialer autodialer automatic dialer legal robocall definition',
   },
   {
+    href: '/faq/what-is-a-parallel-dialer',
+    label: msg("What is a parallel dialer?"),
+    note: msg("Several lines, one conversation, and the 3% rule"),
+    added: '2026-10-09',
+    keywords: 'parallel dialer multi-line multiline power vs parallel predictive sdr orum nooks',
+  },
+  {
     href: '/faq/dialer-glossary',
     label: msg("Dialer glossary"),
     note: msg("Every term in outbound calling, defined once"),

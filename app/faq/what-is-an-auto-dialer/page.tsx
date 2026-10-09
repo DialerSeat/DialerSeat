@@ -174,7 +174,9 @@ export default async function WhatIsAnAutoDialerPage() {
           </div>
           <p style={{ marginTop: 24 }}>
             {t("Most dialers sell these as tiers. On DialerSeat all four are included and chosen per campaign.")}{' '}
-            <Link href="/faq/dialer-modes">{t("Which mode to use when")}</Link>.
+            <Link href="/faq/dialer-modes">{t("Which mode to use when")}</Link>.{' '}
+            {t("Sales teams often call the predictive kind a parallel dialer.")}{' '}
+            <Link href="/faq/what-is-a-parallel-dialer">{t("What is a parallel dialer?")}</Link>
           </p>
         </GutsSection>
 

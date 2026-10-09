@@ -9,12 +9,12 @@ export const PAGE_DATES: Record<string, string> = {
   "/data/calling-rules-by-country": "2026-10-06",
   "/data/connect-rates": "2026-10-01",
   "/data/dialer-pricing": "2026-10-06",
-  "/dialing-modes": "2026-09-26",
-  "/dialing-modes/power": "2026-10-01",
-  "/dialing-modes/predictive": "2026-10-01",
+  "/dialing-modes": "2026-10-09",
+  "/dialing-modes/power": "2026-10-09",
+  "/dialing-modes/predictive": "2026-10-09",
   "/dialing-modes/preview": "2026-10-01",
-  "/dialing-modes/progressive": "2026-10-01",
-  "/faq": "2026-10-03",
+  "/dialing-modes/progressive": "2026-10-09",
+  "/faq": "2026-10-09",
   "/faq/10dlc-and-outbound-calling": "2026-09-25",
   "/faq/billing": "2026-09-25",
   "/faq/calling-hours": "2026-09-26",
@@ -31,7 +31,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/faq/dialer-for-real-estate": "2026-10-06",
   "/faq/dialer-for-recruiters": "2026-10-06",
   "/faq/dialer-for-solar": "2026-10-06",
-  "/faq/dialer-glossary": "2026-10-03",
+  "/faq/dialer-glossary": "2026-10-09",
   "/faq/dialer-modes": "2026-10-03",
   "/faq/dialerseat-teams": "2026-09-26",
   "/faq/how-does-amd-work": "2026-10-03",
@@ -54,7 +54,8 @@ export const PAGE_DATES: Record<string, string> = {
   "/faq/what-is-a-predictive-dialer": "2026-10-01",
   "/faq/what-is-a-preview-dialer": "2026-10-01",
   "/faq/what-is-a-progressive-dialer": "2026-10-01",
-  "/faq/what-is-an-auto-dialer": "2026-10-06",
+  "/faq/what-is-a-parallel-dialer": "2026-10-09",
+  "/faq/what-is-an-auto-dialer": "2026-10-09",
   "/faq/white-label": "2026-10-03",
   "/faq/white-label-mobile": "2026-09-26",
   "/faq/why-calls-show-spam-likely": "2026-09-25",
@@ -107,7 +108,7 @@ export const PAGE_DATES: Record<string, string> = {
 }
 
 /** Latest date across every page: the fallback for a route missing above. */
-export const SITE_UPDATED = '2026-10-06'
+export const SITE_UPDATED = '2026-10-09'
 
 /** The date a route last changed, as YYYY-MM-DD. */
 export function pageDate(path: string): string {

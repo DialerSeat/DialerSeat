@@ -124,6 +124,11 @@ const MODES: Term[] = [
     see: { href: '/dialing-modes/predictive', label: msg("Predictive dialing") },
   },
   {
+    term: 'Parallel dialer',
+    def: 'What sales teams call a predictive dialer: several numbers dialed at once for one agent, the first person who answers connected. Anyone else who answers in the same round is an abandoned call.',
+    see: { href: '/faq/what-is-a-parallel-dialer', label: msg("What is a parallel dialer?") },
+  },
+  {
     term: 'Lines per agent',
     def: 'How many calls a predictive dialer places at once for each free agent, often written 1x, 2x or 3x. More lines mean less waiting and more abandoned calls.',
   },

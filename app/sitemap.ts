@@ -122,6 +122,7 @@ function apexSitemap(): MetadataRoute.Sitemap {
     // /dialing-modes twin as canonical, and a sitemap should list only
     // canonical URLs. They still render and still pass links.
     e('/faq/what-is-an-auto-dialer', 0.9, 'monthly'),
+    e('/faq/what-is-a-parallel-dialer', 0.8, 'monthly'),
     e('/faq/why-is-compliance-important', 0.8, 'monthly'),
     e('/faq/how-we-keep-compliance', 0.85, 'monthly'),
     e('/faq/how-does-amd-work', 0.7, 'monthly'),

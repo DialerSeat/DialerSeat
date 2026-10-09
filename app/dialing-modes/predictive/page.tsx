@@ -442,15 +442,17 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
         <section className="dm-section">
           <h2>{t("When predictive wins")}</h2>
           <p>
-            {t("Predictive earns its keep when volume is the constraint, not quality, and when you have enough agents on the same campaign for the math to work.")}</p>
+            {t("Predictive earns its keep when volume is the constraint, not quality.")}{' '}
+            {t("Sales teams call the same thing parallel dialing.")}{' '}
+            <Link href="/faq/what-is-a-parallel-dialer">{t("What is a parallel dialer?")}</Link></p>
           <div className="dm-shines-grid">
             <div className="dm-shines-card">
               <h4>{t("HIGH-VOLUME B2C")}</h4>
               <p>{t("Big consumer lead lists where every minute of agent talk time produces revenue. This is the home turf.")}</p>
             </div>
             <div className="dm-shines-card">
-              <h4>{t("TEAMS OF 5+")}</h4>
-              <p>{t("Predictive math breaks down below ~3 active agents on the same campaign. With 5+, the multiplier really starts paying.")}</p>
+              <h4>{t("ONE AGENT OR A FLOOR")}</h4>
+              <p>{t("DialerSeat sets the line count per agent, so predictive works for one agent as well as a floor. Each agent picks 2 or 3 lines, and the campaign's own 30-day record decides how many are legal at that moment; a new campaign starts on one line.")}</p>
             </div>
             <div className="dm-shines-card">
               <h4>{t("ESTABLISHED CAMPAIGNS")}</h4>

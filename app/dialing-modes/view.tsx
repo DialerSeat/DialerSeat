@@ -123,7 +123,7 @@ export default function DialingModesView() {
                   how="Multi-line pacing algorithm, auto-throttled at 2.5% abandons."
                   speed="Fastest"
                   abandons="Capped under 3% by law"
-                  bestFor="Teams of 8+ concurrent agents"
+                  bestFor="Big cold lists, one agent or many"
                 />
               </tbody>
             </table>
@@ -166,8 +166,8 @@ export default function DialingModesView() {
             label="PREDICTIVE"
             slug="predictive"
             color={T.red}
-            body="Dials multiple lines per agent using a pacing algorithm. Fastest mode, and the only one where abandoned calls are possible, so DialerSeat auto-throttles back to one line per agent when the rolling 30-day abandon rate hits 2.5%, keeping a buffer under the 3% legal cap. Runs single-line until a campaign has 8+ concurrent agents, the threshold where multi-line pacing is statistically safe."
-            bestFor="Teams with 8+ agents dialing the same campaign at once."
+            body="Dials 2 or 3 lines per agent, your choice, and connects the first person who answers. It is the only mode where abandoned calls are possible, so each campaign's own 30-day record sets the line count: DialerSeat runs fewer lines whenever more would push the projected abandon rate past 2% (the legal limit is 3%), starts a new campaign on one line until it has that record, and holds one line if the measured rate reaches 2.5%."
+            bestFor="High-volume cold lists, whether one agent is dialing or a whole floor."
           />
         </section>
 

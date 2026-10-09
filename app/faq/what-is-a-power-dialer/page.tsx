@@ -512,7 +512,7 @@ export default async function PowerDialerPage() {
               <Link href="/dialing-modes/predictive" className="dm-other-card predictive">
                 <span className="pill">{t("PREDICTIVE")}</span>
                 <h3>{t("Multiple lines, agent prediction")}</h3>
-                <p>{t("1.5-3× lines per agent. Highest throughput, needs a team of 8+ to really engage, auto-degrade keeps it off the legal line.")}</p>
+                <p>{t("2 or 3 lines per agent. Highest throughput; auto-degrade keeps it off the legal line.")}</p>
               </Link>
             </div>
           </div>

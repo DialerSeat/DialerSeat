@@ -3,9 +3,7 @@ import JsonLd from '@/components/json-ld'
 import {
   organizationSchema,
   softwareApplicationSchema,
-  faqPageSchema,
   breadcrumbSchema,
-  DIALING_MODES_FAQS,
 } from '@/lib/schema'
 import DialingModesView from './view'
 import { msg } from '@/lib/i18n/msg'
@@ -41,7 +39,8 @@ export default function DialingModesPage() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema(DIALING_MODES_FAQS)} />
+      {/* No FAQPage here: its answers were not on the page, which Google's
+          FAQ markup rules forbid, and two of them had gone out of date. */}
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

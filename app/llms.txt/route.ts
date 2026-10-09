@@ -129,6 +129,7 @@ who want to offer a branded dialer to their own clients.
 - [Local presence dialing](${ROOT}/faq/local-presence-dialing): how a caller ID is chosen per call, area code then state then region, with per-number daily caps.
 - [Send leads from your CRM](${ROOT}/faq/send-leads-from-your-crm): lead drip, one webhook URL per campaign, accepting any CRM field names.
 - [How answer rate is measured](${ROOT}/faq/how-we-measure-answer-rate): dials that never rang are excluded from rates and kept in dial counts and cost.
+- [What is a parallel dialer?](${ROOT}/faq/what-is-a-parallel-dialer): parallel vs power vs predictive dialing, the share of answered calls abandoned at 2, 3 and 5 lines, and how DialerSeat sets 2 or 3 lines per agent from each campaign's own 30-day record.
 - [Dialer glossary](${ROOT}/faq/dialer-glossary): every term in outbound calling defined once, legal definitions where they exist.
 - [Dialer for insurance agents](${ROOT}/faq/dialer-for-insurance-agents): Medicare, final expense, ACA and P&C, calling windows per lead state and what stays the agent's responsibility.
 - [FAQ](${ROOT}/faq): plain-English answers about dialers and the product.
