@@ -538,6 +538,17 @@ export async function GET(req: NextRequest) {
       connected: Number(r.connected) || 0,
     }))
 
+    // ── PAUSED READS AS PAUSED ────────────────────────────────────────────
+    // Stripe keeps a paused plan's status 'active', so ops_map_people reported
+    // every paused account as active (and counted it under PAYING). Nothing
+    // is billed while paused; the label says so.
+    const { data: pausedRows } = await supabase
+      .from('subscriptions')
+      .select('user_id')
+      .not('paused_at', 'is', null)
+      .in('status', ['active', 'past_due'])
+    const pausedIds = new Set((pausedRows || []).map((p: { user_id: string }) => p.user_id))
+
     const people = ((peopleRes.data || []) as PersonRow[]).map(r => ({
       id: r.clerk_id,
       label: r.label,
@@ -563,7 +574,7 @@ export async function GET(req: NextRequest) {
       dialerMode: r.dialer_mode || null,
       online: !!r.online,
       lastHeartbeat: r.last_heartbeat,
-      status: r.status || null,
+      status: r.status === 'active' && pausedIds.has(r.clerk_id) ? 'paused' : r.status || null,
       plan: r.plan || null,
       // Who is paying for this seat, when it is not them. An owner-funded
       // agent holds no subscription of their own, so `status` alone reports

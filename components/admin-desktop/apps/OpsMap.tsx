@@ -3102,7 +3102,7 @@ function statusLabel(p: StatusLike): string {
 function statusColour(p: StatusLike): string {
   if (p.seatPayer) return VIOLET
   if (p.status === 'active') return GREEN
-  if (p.status === 'canceled' || p.status === 'unpaid') return AMBER
+  if (p.status === 'canceled' || p.status === 'unpaid' || p.status === 'paused') return AMBER
   if (!p.status) return DIM
   return MUTED
 }
