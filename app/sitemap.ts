@@ -222,6 +222,9 @@ function withLanguages(entries: MetadataRoute.Sitemap): MetadataRoute.Sitemap {
     if (!isLocalizablePath(path)) { out.push(entry); continue }
     const languages: Record<string, string> = {}
     for (const l of ENABLED_LOCALES) languages[l] = `${APEX}${localizedPath(l, path)}`
+    // The pages' own hreflang tags name English as x-default; the sitemap says
+    // the same, so the two sources never disagree.
+    languages['x-default'] = `${APEX}${path}`
     out.push({ ...entry, alternates: { languages } })
     for (const l of ENABLED_LOCALES) {
       if (l === 'en') continue

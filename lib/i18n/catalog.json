@@ -7307,7 +7307,8 @@
  "Dialer glossary": [
   "app/faq/dialer-glossary/page.tsx",
   "app/faq/view.tsx",
-  "app/resources/page.tsx"
+  "app/resources/page.tsx",
+  "lib/gutsRail.ts"
  ],
  "Dialer Glossary": [
   "app/faq/dialer-glossary/page.tsx"
@@ -7810,7 +7811,8 @@
   "app/vs/kixie/page.tsx"
  ],
  "DialerSeat vs manual dialing": [
-  "app/vs/manual-dialing/page.tsx"
+  "app/vs/manual-dialing/page.tsx",
+  "lib/gutsRail.ts"
  ],
  "DialerSeat vs Manual Dialing": [
   "app/vs/manual-dialing/page.tsx"

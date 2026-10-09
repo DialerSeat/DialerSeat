@@ -43,6 +43,9 @@ const RESOURCES: RailGroup = {
     { href: '/data/connect-rates', label: msg("Connect rates by state & hour") },
     { href: '/tools/dialer-cost-calculator', label: msg("Dialer cost calculator") },
     { href: '/tools/abandon-rate-calculator', label: msg("Abandon rate calculator") },
+    // Definitions are what search and AI answers quote; the glossary was
+    // reachable only from the FAQ index and two articles.
+    { href: '/faq/dialer-glossary', label: msg("Dialer glossary") },
     { href: '/resources', label: msg("All resources") },
   ],
 }
@@ -134,6 +137,9 @@ export function vsRail(activeSlug?: string): RailGroup[] {
         ...others,
         { href: '/vs/everyone', label: msg("Every legacy dialer") },
         { href: '/vs/teams', label: msg("Dialer pricing for teams") },
+        // The comparison every first-time buyer is really making; it had one
+        // inbound link.
+        { href: '/vs/manual-dialing', label: msg("DialerSeat vs manual dialing") },
         { href: '/vs', label: msg("All dialer comparisons") },
       ],
     },

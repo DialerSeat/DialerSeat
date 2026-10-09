@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { SITE_UPDATED } from '@/lib/pageDates'
 
 
 
@@ -49,11 +50,11 @@ function xmlEscape(s: string): string {
 }
 
 export async function GET() {
-  const now = new Date().toISOString()
-
-  
-  const entries: { loc: string; lastmod: string }[] = [
-    { loc: `${APEX}/sitemap.xml`, lastmod: now },
+  // lastmod is the newest real page date (lib/pageDates), not the time of the
+  // request: a lastmod that is always "now" says nothing, and Google ignores
+  // lastmod on a site where it is not consistently accurate.
+  const entries: { loc: string; lastmod?: string }[] = [
+    { loc: `${APEX}/sitemap.xml`, lastmod: SITE_UPDATED },
   ]
 
   try {
@@ -73,7 +74,7 @@ export async function GET() {
       for (const t of data) {
         const slug = (t.slug || '').toLowerCase()
         if (!validSlug(slug)) continue
-        const lastmod = t.updated_at ? new Date(t.updated_at).toISOString() : now
+        const lastmod = t.updated_at ? new Date(t.updated_at).toISOString() : undefined
         
         if (t.custom_domain) {
           entries.push({ loc: `https://${t.custom_domain}/sitemap.xml`, lastmod })
@@ -94,7 +95,7 @@ export async function GET() {
         (e) =>
           `  <sitemap>\n` +
           `    <loc>${xmlEscape(e.loc)}</loc>\n` +
-          `    <lastmod>${e.lastmod}</lastmod>\n` +
+          (e.lastmod ? `    <lastmod>${e.lastmod}</lastmod>\n` : '') +
           `  </sitemap>`,
       )
       .join('\n') +

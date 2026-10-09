@@ -80,19 +80,19 @@ export default function ExplainerCrossLinks({ current }: Props) {
         <div className="exp-xlinks-inner">
           <h2>{t("Other explainers")}</h2>
           <div className="exp-xlinks-grid">
-            <Link href="/faq/what-is-a-preview-dialer" className={`exp-xlink preview ${current === 'preview' ? 'current' : ''}`}>
+            <Link href="/dialing-modes/preview" className={`exp-xlink preview ${current === 'preview' ? 'current' : ''}`}>
               <span className="pill">{t("PREVIEW")}</span>
               <div>{t("What is a preview dialer?")}</div>
             </Link>
-            <Link href="/faq/what-is-a-power-dialer" className={`exp-xlink power ${current === 'power' ? 'current' : ''}`}>
+            <Link href="/dialing-modes/power" className={`exp-xlink power ${current === 'power' ? 'current' : ''}`}>
               <span className="pill">{t("POWER")}</span>
               <div>{t("What is a power dialer?")}</div>
             </Link>
-            <Link href="/faq/what-is-a-progressive-dialer" className={`exp-xlink progressive ${current === 'progressive' ? 'current' : ''}`}>
+            <Link href="/dialing-modes/progressive" className={`exp-xlink progressive ${current === 'progressive' ? 'current' : ''}`}>
               <span className="pill">{t("PROGRESSIVE")}</span>
               <div>{t("What is a progressive dialer?")}</div>
             </Link>
-            <Link href="/faq/what-is-a-predictive-dialer" className={`exp-xlink predictive ${current === 'predictive' ? 'current' : ''}`}>
+            <Link href="/dialing-modes/predictive" className={`exp-xlink predictive ${current === 'predictive' ? 'current' : ''}`}>
               <span className="pill">{t("PREDICTIVE")}</span>
               <div>{t("What is a predictive dialer?")}</div>
             </Link>
