@@ -66,7 +66,7 @@ export async function GET() {
   try {
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400_000).toISOString()
 
-    const [sizeRes, tablesRes, callsRes, eventsRes] = await Promise.all([
+    const [sizeRes, tablesRes, callsRes, eventsRes, clearRes] = await Promise.all([
       supabase.rpc('database_size_bytes'),
       supabase.rpc('table_sizes'),
       // The two dominant growth drivers, counted over a real week rather than
@@ -79,6 +79,9 @@ export async function GET() {
       supabase.from('call_events')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', sevenDaysAgo),
+      // What each CLEAR button would remove right now, by the same rules the
+      // delete uses (db/migrations/2026-10-08-storage-clear.sql).
+      supabase.rpc('storage_clear_preview'),
     ])
 
     const totalBytes = Number(sizeRes.data) || 0
@@ -135,6 +138,16 @@ export async function GET() {
 
       purgeableBytes,
       purgeableTables: purgeable.length,
+      // A failed preview hides the buttons rather than offering a clear whose
+      // reach nobody can see.
+      clearable: clearRes.error ? [] : ((clearRes.data || []) as Array<{
+        target: string; rows_to_clear: number; bytes_estimate: number | null; detail: string
+      }>).map(c => ({
+        target: c.target,
+        rows: Number(c.rows_to_clear) || 0,
+        bytes: c.bytes_estimate === null ? null : Number(c.bytes_estimate),
+        detail: c.detail,
+      })),
 
       tables: tables.slice(0, 25).map(t => ({
         name: t.table_name,
@@ -149,6 +162,44 @@ export async function GET() {
         // and somebody would delete twice.
         partition: t.table_name.startsWith(PARTITION_PREFIX),
       })),
+    })
+  } catch (err) {
+    return apiError(err, { route: 'admin/db-capacity' })
+  }
+}
+
+const CLEAR_TARGETS = new Set(['call_events', 'stripe_events', 'telnyx_events', 'page_views'])
+
+/**
+ * POST { target } — clear one "safe to delete" table by its fixed rule.
+ *
+ * The rules are in the database function, not here, so the preview the
+ * Storage app shows and what this deletes are the same query. Irreversible:
+ * the app asks before it calls this.
+ */
+export async function POST(req: Request) {
+  let adminId: string
+  try {
+    adminId = (await requireAdmin()).userId
+  } catch (res) {
+    return res as Response
+  }
+
+  try {
+    const body = await req.json().catch(() => ({})) as { target?: string }
+    const target = String(body.target || '')
+    if (!CLEAR_TARGETS.has(target)) {
+      return NextResponse.json({ success: false, error: 'Unknown table.' }, { status: 400 })
+    }
+    const { data, error } = await supabase.rpc('storage_clear', { p_target: target })
+    if (error) throw error
+    const row = ((data || []) as Array<{ rows_cleared: number; detail: string }>)[0]
+    console.log(`[db-capacity] ${adminId} cleared ${target}: ${row?.rows_cleared ?? 0} rows (${row?.detail ?? ''})`)
+    return NextResponse.json({
+      success: true,
+      target,
+      rowsCleared: Number(row?.rows_cleared ?? 0),
+      detail: row?.detail ?? '',
     })
   } catch (err) {
     return apiError(err, { route: 'admin/db-capacity' })

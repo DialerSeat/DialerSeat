@@ -36,7 +36,17 @@ interface Capacity {
   growthBytesPerDay: number; daysToFull: number | null
   sampleCalls: number; sampleEvents: number
   purgeableBytes: number; purgeableTables: number
+  clearable?: Clearable[]
   tables: TableRow[]
+}
+interface Clearable { target: string; rows: number; bytes: number | null; detail: string }
+
+/** What each CLEAR keeps, in words. The rules themselves live in storage_clear(). */
+const KEEPS: Record<string, string> = {
+  call_events: 'Drops whole months that ended more than 30 days ago. The current month is never touched.',
+  stripe_events: 'Removes processed webhook locks older than 30 days. Failed ones stay for retries.',
+  telnyx_events: 'Removes webhook locks past the 24 hour retry window. Swept every 10 minutes anyway.',
+  page_views: 'Removes visits older than 90 days. Each account’s latest visit stays, so the Map can still place them.',
 }
 
 function Panel({ title, note, children }: {
@@ -61,6 +71,8 @@ function Panel({ title, note, children }: {
 export default function StorageApp() {
   const [data, setData] = useState<Capacity | null>(null)
   const [loading, setLoading] = useState(true)
+  const [clearing, setClearing] = useState<string | null>(null)
+  const [clearMsg, setClearMsg] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -76,6 +88,30 @@ export default function StorageApp() {
   useEffect(() => {
     const id = setTimeout(() => { void load() }, 0)
     return () => clearTimeout(id)
+  }, [load])
+
+  const clear = useCallback(async (c: Clearable) => {
+    const what = c.target === 'call_events'
+      ? `Drop ${c.detail} (about ${c.rows.toLocaleString()} rows)?`
+      : `Delete ${c.rows.toLocaleString()} rows from ${c.target}?`
+    if (!window.confirm(`${what} This cannot be undone.`)) return
+    setClearing(c.target)
+    setClearMsg(null)
+    try {
+      const r = await fetch('/api/admin/db-capacity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: c.target }),
+      }).then(res => res.json())
+      setClearMsg(r.success
+        ? `Cleared ${Number(r.rowsCleared).toLocaleString()} rows from ${c.target}${c.target === 'call_events' && r.detail ? ` (${r.detail})` : ''}.`
+        : `Could not clear ${c.target}: ${r.error || 'request failed'}.`)
+    } catch {
+      setClearMsg(`Could not clear ${c.target}: request failed.`)
+    } finally {
+      setClearing(null)
+      void load()
+    }
   }, [load])
 
   const tone = data?.level === 'urgent' ? T.red : data?.level === 'warn' ? T.amber : T.green
@@ -202,6 +238,46 @@ export default function StorageApp() {
               number above will not move — which is how somebody ends up deleting
               the same thing twice.
             </div>
+
+            {(data.clearable?.length ?? 0) > 0 && (
+              <div style={{ marginTop: 12, borderTop: `1px solid ${T.surface}` }}>
+                {data.clearable!.map(c => (
+                  <div key={c.target} style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0',
+                    borderBottom: `1px solid ${T.surface}`,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: MONO, fontSize: 11.5 }}>
+                        {c.target}
+                        <span style={{ color: c.rows > 0 ? T.text : T.muted, marginLeft: 10 }}>
+                          {c.rows > 0
+                            ? `${c.rows.toLocaleString()} rows${c.bytes ? ` · ${mb(c.bytes)}` : ''}`
+                            : 'nothing to clear'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 10.5, color: T.muted, marginTop: 2, lineHeight: 1.5 }}>
+                        {KEEPS[c.target] ?? c.detail}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => void clear(c)}
+                      disabled={c.rows === 0 || clearing !== null}
+                      style={{
+                        background: c.rows === 0 ? T.surface : T.red,
+                        color: c.rows === 0 ? T.muted : '#fff',
+                        border: 'none', borderRadius: 3, fontSize: 10.5, letterSpacing: 1,
+                        padding: '7px 12px', fontFamily: FUTURA, flexShrink: 0,
+                        cursor: c.rows === 0 || clearing !== null ? 'not-allowed' : 'pointer',
+                        opacity: clearing !== null && clearing !== c.target ? 0.6 : 1,
+                      }}
+                    >{clearing === c.target ? 'CLEARING…' : 'CLEAR'}</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {clearMsg && (
+              <div style={{ fontSize: 11, color: T.text, marginTop: 10 }}>{clearMsg}</div>
+            )}
           </Panel>
 
           <Panel title="BY TABLE" note="Total size includes indexes and TOAST, which is what actually counts against the ceiling. Row counts are planner estimates, not exact counts.">
