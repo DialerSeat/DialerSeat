@@ -23,7 +23,7 @@ interface LogEntry {
   event_type:
     | 'account_created' | 'account_deleted' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
     | 'cancel_scheduled' | 'payment_failed' | 'pause' | 'resume'
-    | 'seat_charge'
+    | 'seat_charge' | 'suggestion'
   user_name: string
   user_email: string | null
   amount_cents: number | null
@@ -68,6 +68,7 @@ const C = {
   pause: '#9fb4d0',
   resume: '#7fd8ff',       // Light cyan: billing restarted on the same plan
   seat_charge: '#a0e838',  // Lime — a seat, distinct from a personal sub
+  suggestion: '#7dd3fc',   // Sky — somebody wrote in, not a billing event
   error: '#ff8844',        // Amber for errors
   amount: '#ffe048',       // Yellow for money
 } as const
@@ -248,6 +249,7 @@ export default function LogsApp() {
           { key: 'pause', label: 'paused', count: data?.counts.pauses ?? 0 },
           { key: 'resume', label: 'resumed', count: data?.counts.resumes ?? 0 },
           { key: 'seat_charge', label: 'seat charge', count: entries.filter(e => e.event_type === 'seat_charge').length },
+          { key: 'suggestion', label: 'suggestion', count: entries.filter(e => e.event_type === 'suggestion').length },
         ] as const).map((f, i) => (
           <button
             key={f.key}

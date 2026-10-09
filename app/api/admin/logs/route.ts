@@ -30,10 +30,10 @@ interface LogEntry {
   event_type:
     | 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel' | 'account_deleted'
     | 'cancel_scheduled' | 'payment_failed'
-    | 'seat_charge'
+    | 'seat_charge' | 'suggestion'
   user_name: string
   user_email: string | null
-  amount_cents: number
+  amount_cents: number | null
   date_iso: string
   retention_weeks: number | null
   source: string
@@ -214,6 +214,37 @@ export async function GET(req: NextRequest) {
       // together in the wrong order.
       entries.sort((a, b) => new Date(b.date_iso).getTime() - new Date(a.date_iso).getTime())
     }
+
+    // ── SUGGESTIONS, FROM THE ASK-US BOX ON /vs AND THE DIRECTORY ─────────
+    // Not billing, but something that happened and wants reading, so it is a
+    // line in the same timeline. The full text lives in the Suggestions app.
+    let sq = supabase
+      .from('suggestions')
+      .select('id, kind, message, email, source_path, created_at')
+      .order('created_at', { ascending: false })
+      .limit(MAX_ENTRIES)
+    if (windowStart) sq = sq.gte('created_at', windowStart)
+    const { data: suggestions, error: sugErr } = await sq
+    if (sugErr) console.error('[admin/logs] failed to read suggestions:', sugErr)
+    for (const s of (suggestions || []) as Array<{
+      id: string; kind: string | null; message: string | null; email: string | null
+      source_path: string | null; created_at: string
+    }>) {
+      const text = (s.message || '').trim()
+      entries.push({
+        id: `suggestion:${s.id}`,
+        event_type: 'suggestion',
+        user_name: s.kind === 'suggestion' ? 'new suggestion' : `new ${s.kind || 'question'}`,
+        user_email: s.email,
+        amount_cents: null,
+        date_iso: s.created_at,
+        retention_weeks: null,
+        source: 'supabase:suggestions',
+        detail: [text.length > 160 ? `${text.slice(0, 160)}…` : text, s.source_path]
+          .filter(Boolean).join(' · ') || null,
+      })
+    }
+    entries.sort((a, b) => new Date(b.date_iso).getTime() - new Date(a.date_iso).getTime())
 
     return NextResponse.json({
       entries: entries.slice(0, MAX_ENTRIES),

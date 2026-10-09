@@ -654,7 +654,35 @@ export async function GET(req: NextRequest) {
     }
 
     // One card-declined entry per decline, however many times it was reported.
-    const logs = normaliseBillingFeed((logsRes.data || []) as Array<{
+    // ── SUGGESTIONS ARE LOGS TOO ──────────────────────────────────────────
+    // Somebody writing in from /vs or the directory is something that
+    // happened, not just something that got pushed, so it sits in LOGS (and
+    // counts toward the new-logs badge) beside billing events. It still also
+    // reaches NOTIS through sendAdminPush, which writes admin_notifications.
+    const suggestionsRes = await supabase
+      .from('suggestions')
+      .select('id, kind, message, email, source_path, created_at')
+      .order('created_at', { ascending: false })
+      .limit(20)
+    if (suggestionsRes.error) console.error('[ops-map] suggestions read failed:', suggestionsRes.error)
+    const suggestionLogs = ((suggestionsRes.data || []) as Array<{
+      id: string; kind: string | null; message: string | null; email: string | null
+      source_path: string | null; created_at: string
+    }>).map(s => {
+      const text = (s.message || '').trim()
+      return {
+        id: `sug-${s.id}`,
+        kind: 'suggestion',
+        title: s.kind === 'suggestion' ? 'new suggestion' : `new ${s.kind || 'question'}`,
+        body: [text.length > 140 ? `${text.slice(0, 140)}…` : text, s.email || 'no email',
+               s.source_path].filter(Boolean).join(' · ') || null,
+        url: '/dashboard/admin/desktop?app=suggestions' as string | null,
+        unread: false,
+        at: s.created_at,
+      }
+    })
+
+    const billingLogs = normaliseBillingFeed((logsRes.data || []) as Array<{
       id: string; clerk_id: string | null; event_type: string | null
       user_name: string | null; user_email: string | null
       plan: string | null; amount_cents: number | null; created_at: string
@@ -674,6 +702,9 @@ export async function GET(req: NextRequest) {
       unread: false,
       at: l.created_at,
     }))
+    const logs = [...billingLogs, ...suggestionLogs]
+      .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0))
+      .slice(0, 40)
 
     const visitors = ((visitorsRes.data || []) as Array<{
       visitor_id: string; email: string | null; views: number | string
