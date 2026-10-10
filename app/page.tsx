@@ -18,6 +18,7 @@ import {
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { lineFitScale, blockFitScale, scaledSize } from '@/lib/i18n/fit'
+import FitHeadline from '@/components/FitHeadline'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 
 /**
@@ -503,17 +504,21 @@ export default async function Home({ searchParams }: PageProps) {
             }}>
               {t("▸ The predictive & auto dialer for people who live on the phone")}</div>
 
-            <h1 className="ds-hero-h1" style={{
-              fontSize: scaledSize('--hero-fs', lineFitScale([t("DIAL SMARTER."), t("CLOSE FASTER.")], ['DIAL SMARTER.', 'CLOSE FASTER.'])),
-              fontWeight: 'bold',
-              letterSpacing: '-3px',
-              lineHeight: '1.05',
-              maxWidth: '700px',
-            }}>
-              <span style={{ color: '#1a1c24' }}>{t("DIAL SMARTER.")}</span>
-              <br />
-              <span style={{ color: '#2a4a8a' }}>{t("CLOSE FASTER.")}</span>
-            </h1>
+            <FitHeadline
+              className="ds-hero-h1"
+              baseVar="--hero-fs"
+              style={{
+                fontSize: scaledSize('--hero-fs', lineFitScale([t("DIAL SMARTER."), t("CLOSE FASTER.")], ['DIAL SMARTER.', 'CLOSE FASTER.'])),
+                fontWeight: 'bold',
+                letterSpacing: '-3px',
+                lineHeight: '1.05',
+                maxWidth: '700px',
+              }}
+              lines={[
+                { text: t("DIAL SMARTER."), color: '#1a1c24' },
+                { text: t("CLOSE FASTER."), color: '#2a4a8a' },
+              ]}
+            />
           </div>
 
           <div className="ds-hero-showcase">
