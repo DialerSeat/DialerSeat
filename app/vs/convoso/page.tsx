@@ -60,7 +60,7 @@ const FAQS = [
   {
     question: msg("Does DialerSeat offer whitelabel like Convoso?"),
     answer:
-      'Yes: Manager+ is $75/month flat and includes full whitelabel, with no seat minimum to access it. Convoso does offer real admin/agent permission management through its Admin Portal, but we found no whitelabel or reseller program anywhere on their site; their partner integrations page routes to a quote request, not a rebranding option.',
+      'Yes: Manager+ is $75/week flat and includes full whitelabel, with no seat minimum to access it. Convoso does offer real admin/agent permission management through its Admin Portal, but we found no whitelabel or reseller program anywhere on their site; their partner integrations page routes to a quote request, not a rebranding option.',
   },
   {
     question: msg("Does DialerSeat work on mobile like Convoso?"),

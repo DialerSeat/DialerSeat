@@ -19,7 +19,7 @@ const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'BatchDialer Alternative: Pricing Without the Annual Prepay | DialerSeat',
   description:
-    "BatchDialer's advertised $95/seat is the annual prepay rate; month to month it is $119-$249. DialerSeat is $35/week billed weekly with all four dialer modes, automatic number cycling on every plan, multiple scripts per campaign, and whitelabel at $75/mo flat.",
+    "BatchDialer's advertised $95/seat is the annual prepay rate; month to month it is $119-$249. DialerSeat is $35/week billed weekly with all four dialer modes, automatic number cycling on every plan, multiple scripts per campaign, and whitelabel at $75/week flat.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/batchdialer',
   },
@@ -68,7 +68,7 @@ const FAQS = [
   {
     question: msg("Does either product offer whitelabel?"),
     answer:
-      msg("DialerSeat does, through Manager+ at $75 per month flat: your brand and your subdomain, at any team size. BatchDialer does not publish a whitelabel tier, so an agency reselling seats on BatchDialer is always reselling a branded third-party product."),
+      msg("DialerSeat does, through Manager+ at $75 per week flat: your brand and your subdomain, at any team size. BatchDialer does not publish a whitelabel tier, so an agency reselling seats on BatchDialer is always reselling a branded third-party product."),
   },
   {
     question: msg("When is BatchDialer the better choice?"),

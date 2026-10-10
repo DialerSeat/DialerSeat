@@ -4743,7 +4743,7 @@
  "BatchDialer publishes $95, $151 and $199 per agent per month, but those are annual prepay rates: their own pricing reaches $95 by billing Starter at roughly $1,142 per agent per year. Month to month the same tiers are $119, $189 and $249. DialerSeat is $35 per seat per week, billed weekly, with no commitment and nothing prepaid, you can cancel any week rather than committing to a year to reach a headline rate.": [
   "app/vs/batchdialer/page.tsx"
  ],
- "BatchDialer's advertised $95/seat is the annual prepay rate; month to month it is $119-$249. DialerSeat is $35/week billed weekly with all four dialer modes, automatic number cycling on every plan, multiple scripts per campaign, and whitelabel at $75/mo flat.": [
+ "BatchDialer's advertised $95/seat is the annual prepay rate; month to month it is $119-$249. DialerSeat is $35/week billed weekly with all four dialer modes, automatic number cycling on every plan, multiple scripts per campaign, and whitelabel at $75/week flat.": [
   "app/vs/batchdialer/page.tsx"
  ],
  "Be at least 18 years old": [
@@ -7667,7 +7667,7 @@
  "DialerSeat does not sell lead data, so you are not paying for a dataset you already have. Export your list from PropStream, BatchLeads, DealMachine, your MLS or your CRM as a CSV and upload it; the columns are detected automatically. If the tool can send a webhook, lead drip on Manager+ puts new leads straight into a running campaign.": [
   "app/faq/dialer-for-real-estate/page.tsx"
  ],
- "DialerSeat does, through Manager+ at $75 per month flat: your brand and your subdomain, at any team size. BatchDialer does not publish a whitelabel tier, so an agency reselling seats on BatchDialer is always reselling a branded third-party product.": [
+ "DialerSeat does, through Manager+ at $75 per week flat: your brand and your subdomain, at any team size. BatchDialer does not publish a whitelabel tier, so an agency reselling seats on BatchDialer is always reselling a branded third-party product.": [
   "app/vs/batchdialer/page.tsx"
  ],
  "DialerSeat doesn't process your resell payments for you. If you charge a buyer or agent more than the $35 seat cost, that markup is collected by you directly: Stripe, Venmo, invoicing, whatever you already use. We don't take a cut of it and we don't see the number. Payment routing for managers is on the roadmap; today the buyer-to-you transaction is yours to handle.": [
@@ -12767,10 +12767,10 @@
  "Manager+ (you, the owner)": [
   "app/faq/manager-plus/view.tsx"
  ],
- "Manager+ $75/mo flat": [
+ "Manager+ $75/week flat": [
   "lib/competitorFeatures.ts"
  ],
- "Manager+ adds full whitelabel for $75/month flat. We found no whitelabel or reseller program anywhere on Hooked CRM's site.": [
+ "Manager+ adds full whitelabel for $75/week flat. We found no whitelabel or reseller program anywhere on Hooked CRM's site.": [
   "app/vs/hookedcrm/view.tsx"
  ],
  "Manager+ adds whitelabel for $75/week, flat.": [
@@ -12797,7 +12797,7 @@
  "Manager+ unlocks white-label DialerSeat: your subdomain, your branding, full team control. After payment, you’ll pick your subdomain, upload your logo, and set your brand colors.": [
   "app/billing/page.tsx"
  ],
- "Manager+, $75/mo flat": [
+ "Manager+, $75/week flat": [
   "app/vs/everyone/view.tsx"
  ],
  "Manager+, DialerSeat's $75/week tier": [
@@ -21311,7 +21311,7 @@
  "Unknown lead": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
  ],
- "Unlike ReadyMode or Five9, Hooked CRM's per-seat price goes down as headcount grows, not up: $169 at 1-20 seats, down to $129 at 50-99. That's a genuinely fair structure for a growing team. What it doesn't include is whitelabel: we found no whitelabel or reseller program anywhere on their site. DialerSeat™ Manager+ is a flat $75/month add-on with full whitelabel included, on top of a price that never changes with seats either way: no bulk discount to chase, but no per-seat penalty to hit.": [
+ "Unlike ReadyMode or Five9, Hooked CRM's per-seat price goes down as headcount grows, not up: $169 at 1-20 seats, down to $129 at 50-99. That's a genuinely fair structure for a growing team. What it doesn't include is whitelabel: we found no whitelabel or reseller program anywhere on their site. DialerSeat™ Manager+ is a flat $75/week owner plan with full whitelabel included, on top of a seat price that never changes with headcount either way: no bulk discount to chase, but no per-seat penalty to hit.": [
   "app/vs/hookedcrm/view.tsx"
  ],
  "unlimited": [
@@ -23562,10 +23562,10 @@
  "Yes, in two cases under the Telemarketing Sales Rule: when the person has given you an express agreement in writing to be called, or when you have an established business relationship with them and they have not asked you to stop. The FTC’s guidance sets out the details of each.": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
- "Yes, Manager+ is $75/month flat and includes full whitelabel. We found no whitelabel or reseller program anywhere on CloudTalk’s site. CloudTalk does offer volume discounts for larger teams and call monitoring on its Expert tier, but the dialer add-on costs still apply regardless of tier.": [
+ "Yes, Manager+ is $75/week flat and includes full whitelabel. We found no whitelabel or reseller program anywhere on CloudTalk’s site. CloudTalk does offer volume discounts for larger teams and call monitoring on its Expert tier, but the dialer add-on costs still apply regardless of tier.": [
   "app/vs/cloudtalk/page.tsx"
  ],
- "Yes, Manager+ is $75/month flat and includes full whitelabel. We found no whitelabel or reseller program anywhere on Kixie’s site. Kixie’s team and coaching tools also require a tier upgrade above the entry Integrated plan.": [
+ "Yes, Manager+ is $75/week flat and includes full whitelabel. We found no whitelabel or reseller program anywhere on Kixie’s site. Kixie’s team and coaching tools also require a tier upgrade above the entry Integrated plan.": [
   "app/vs/kixie/page.tsx"
  ],
  "Yes, on every call, in every dialing mode including predictive, with no add-on. For each call DialerSeat picks a number from its pool that matches the prospect’s area code, then their state, then their region, and only then any number with capacity.": [
@@ -23610,19 +23610,19 @@
  "Yes: it's bundled into": [
   "app/faq/view.tsx"
  ],
- "Yes: Manager+ is $75/month flat and includes full whitelabel, no matter how many seats are on the account. None of the dialers on this page offer true whitelabel. ReadyMode and Five9 run referral/reseller programs that keep their name on the product; 3CX has an extensive MSP hosting-partner ecosystem, same limitation; Mojo and WAVV have no partner program of this kind at all. Several also re-price per seat as a team grows: ReadyMode jumps every seat from $199 to $249 once you add a 5th license, and Five9's manager tooling requires a 50-seat minimum just to get a quote.": [
+ "Yes: Manager+ is $75/week flat and includes full whitelabel, no matter how many seats are on the account. None of the dialers on this page offer true whitelabel. ReadyMode and Five9 run referral/reseller programs that keep their name on the product; 3CX has an extensive MSP hosting-partner ecosystem, same limitation; Mojo and WAVV have no partner program of this kind at all. Several also re-price per seat as a team grows: ReadyMode jumps every seat from $199 to $249 once you add a 5th license, and Five9's manager tooling requires a 50-seat minimum just to get a quote.": [
   "app/vs/everyone/page.tsx"
  ],
- "Yes: Manager+ is $75/month flat and includes full whitelabel, on the same product that already includes the dialer. We found no whitelabel or reseller program anywhere on Dialpad’s site, across either Dialpad Connect or Dialpad Sell.": [
+ "Yes: Manager+ is $75/week flat and includes full whitelabel, on the same product that already includes the dialer. We found no whitelabel or reseller program anywhere on Dialpad’s site, across either Dialpad Connect or Dialpad Sell.": [
   "app/vs/dialpad/page.tsx"
  ],
- "Yes: Manager+ is $75/month flat and includes full whitelabel, with no license minimum. We found no whitelabel or reseller program anywhere on Aircall’s site. Aircall’s Custom tier, typically requiring 25+ licenses, is quote-based rather than published.": [
+ "Yes: Manager+ is $75/week flat and includes full whitelabel, with no license minimum. We found no whitelabel or reseller program anywhere on Aircall’s site. Aircall’s Custom tier, typically requiring 25+ licenses, is quote-based rather than published.": [
   "app/vs/aircall/page.tsx"
  ],
- "Yes: Manager+ is $75/month flat and includes full whitelabel, with no seat minimum to access it. Convoso does offer real admin/agent permission management through its Admin Portal, but we found no whitelabel or reseller program anywhere on their site; their partner integrations page routes to a quote request, not a rebranding option.": [
+ "Yes: Manager+ is $75/week flat and includes full whitelabel, with no seat minimum to access it. Convoso does offer real admin/agent permission management through its Admin Portal, but we found no whitelabel or reseller program anywhere on their site; their partner integrations page routes to a quote request, not a rebranding option.": [
   "app/vs/convoso/page.tsx"
  ],
- "Yes: Manager+ is $75/month flat and includes full whitelabel, with no seat minimum. We found no whitelabel or reseller program anywhere on JustCall’s site. JustCall’s Business tier, which includes HIPAA compliance, requires a 10-seat minimum.": [
+ "Yes: Manager+ is $75/week flat and includes full whitelabel, with no seat minimum. We found no whitelabel or reseller program anywhere on JustCall’s site. JustCall’s Business tier, which includes HIPAA compliance, requires a 10-seat minimum.": [
   "app/vs/justcall/page.tsx"
  ],
  "Yes: that is what it is built for, and the HubSpot and Pipedrive integration is a genuine strength. If your team works leads inside a CRM and wants calling and texting attached to that workflow, Aloware fits the shape of the job better than a list dialer does.": [

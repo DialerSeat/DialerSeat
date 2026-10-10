@@ -55,7 +55,7 @@ const FAQS = [
   {
     question: msg("Does DialerSeat offer whitelabel like Kixie?"),
     answer:
-      msg("Yes, Manager+ is $75/month flat and includes full whitelabel. We found no whitelabel or reseller program anywhere on Kixie’s site. Kixie’s team and coaching tools also require a tier upgrade above the entry Integrated plan."),
+      msg("Yes, Manager+ is $75/week flat and includes full whitelabel. We found no whitelabel or reseller program anywhere on Kixie’s site. Kixie’s team and coaching tools also require a tier upgrade above the entry Integrated plan."),
   },
   {
     question: msg("Does DialerSeat work on mobile like Kixie?"),

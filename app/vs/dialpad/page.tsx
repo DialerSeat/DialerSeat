@@ -60,7 +60,7 @@ const FAQS = [
   {
     question: msg("Does DialerSeat offer whitelabel like Dialpad?"),
     answer:
-      msg("Yes: Manager+ is $75/month flat and includes full whitelabel, on the same product that already includes the dialer. We found no whitelabel or reseller program anywhere on Dialpad’s site, across either Dialpad Connect or Dialpad Sell."),
+      msg("Yes: Manager+ is $75/week flat and includes full whitelabel, on the same product that already includes the dialer. We found no whitelabel or reseller program anywhere on Dialpad’s site, across either Dialpad Connect or Dialpad Sell."),
   },
   {
     question: msg("Why do \"best dialer\" lists recommend Dialpad?"),

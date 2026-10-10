@@ -131,7 +131,7 @@ const SWITCHING_FROM = [
 ]
 
 const teamScaling: FeatureRow[] = [
-  { feature: msg("Whitelabel available"), ds: 'Manager+, $75/mo flat', rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: msg("Whitelabel available"), ds: 'Manager+, $75/week flat', rm: false, mo: false, pb: false, f9: false, cv: false },
   { feature: msg("Manager/supervisor seat"), ds: 'Included in Manager+', rm: 'Admin seat can’t dial', mo: false, pb: 'Requires Professional tier', f9: 'Requires 50-seat Optimum quote', cv: 'Custom quote' },
   { feature: msg("Live call monitoring / coaching"), ds: true, rm: 'iQ tier only', mo: false, pb: 'Professional tier ($195+/seat)', f9: 'Optimum tier, custom quote', cv: true },
   { feature: msg("Price change as team grows"), ds: 'None: flat $35/wk per seat', rm: '+$50/seat at 5th license', mo: 'None: but no team plan exists', pb: '+$30-$50/seat per tier', f9: '50-seat minimum on every plan', cv: '~20-seat minimum before you can meaningfully start' },

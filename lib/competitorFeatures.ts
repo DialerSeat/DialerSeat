@@ -96,7 +96,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
   { feature: 'Multiple scripts per campaign', dialerseat: true, competitor: 'One script per campaign' },
   { feature: 'Live mid-call script switching', dialerseat: true, competitor: false },
   { feature: 'Calling window per lead timezone', dialerseat: 'Enforced server-side', competitor: 'Not published' },
-  { feature: 'Whitelabel / your own brand', dialerseat: 'Manager+ $75/mo flat', competitor: false },
+  { feature: 'Whitelabel / your own brand', dialerseat: 'Manager+ $75/week flat', competitor: false },
   { feature: 'Inbound lead webhook (any CRM)', dialerseat: true, competitor: 'Zapier, API, PropStream, BatchLeads' },
   { feature: 'Full dialer on phone + tablet', dialerseat: 'PWA install', competitor: 'Desktop-focused' },
   { feature: 'Industry-agnostic', dialerseat: true, competitor: 'Real estate investor ecosystem' },

@@ -55,7 +55,7 @@ const FAQS = [
   {
     question: msg("Does DialerSeat offer whitelabel like JustCall?"),
     answer:
-      msg("Yes: Manager+ is $75/month flat and includes full whitelabel, with no seat minimum. We found no whitelabel or reseller program anywhere on JustCall’s site. JustCall’s Business tier, which includes HIPAA compliance, requires a 10-seat minimum."),
+      msg("Yes: Manager+ is $75/week flat and includes full whitelabel, with no seat minimum. We found no whitelabel or reseller program anywhere on JustCall’s site. JustCall’s Business tier, which includes HIPAA compliance, requires a 10-seat minimum."),
   },
   {
     question: msg("Does DialerSeat work on mobile like JustCall?"),

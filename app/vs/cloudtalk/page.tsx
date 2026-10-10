@@ -60,7 +60,7 @@ const FAQS = [
   {
     question: msg("Does DialerSeat offer whitelabel like CloudTalk?"),
     answer:
-      msg("Yes, Manager+ is $75/month flat and includes full whitelabel. We found no whitelabel or reseller program anywhere on CloudTalk’s site. CloudTalk does offer volume discounts for larger teams and call monitoring on its Expert tier, but the dialer add-on costs still apply regardless of tier."),
+      msg("Yes, Manager+ is $75/week flat and includes full whitelabel. We found no whitelabel or reseller program anywhere on CloudTalk’s site. CloudTalk does offer volume discounts for larger teams and call monitoring on its Expert tier, but the dialer add-on costs still apply regardless of tier."),
   },
   {
     question: msg("Does DialerSeat work on mobile like CloudTalk?"),

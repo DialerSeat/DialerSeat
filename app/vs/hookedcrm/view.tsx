@@ -366,7 +366,7 @@ export default function VsHookedCrmView() {
           <div className="vs-section-eyebrow">{t("SCALING A TEAM")}</div>
           <h2 className="vs-section-h2">{t("Credit where it's due, growing your team doesn't cost you more per seat.")}</h2>
           <p className="vs-section-lede">
-            {t("Unlike ReadyMode or Five9, Hooked CRM's per-seat price goes down as headcount grows, not up: $169 at 1-20 seats, down to $129 at 50-99. That's a genuinely fair structure for a growing team. What it doesn't include is whitelabel: we found no whitelabel or reseller program anywhere on their site. DialerSeat™ Manager+ is a flat $75/month add-on with full whitelabel included, on top of a price that never changes with seats either way: no bulk discount to chase, but no per-seat penalty to hit.")}</p>
+            {t("Unlike ReadyMode or Five9, Hooked CRM's per-seat price goes down as headcount grows, not up: $169 at 1-20 seats, down to $129 at 50-99. That's a genuinely fair structure for a growing team. What it doesn't include is whitelabel: we found no whitelabel or reseller program anywhere on their site. DialerSeat™ Manager+ is a flat $75/week owner plan with full whitelabel included, on top of a seat price that never changes with headcount either way: no bulk discount to chase, but no per-seat penalty to hit.")}</p>
 
           <div className="price-grid">
             <div className="price-card winner">
@@ -435,7 +435,7 @@ export default function VsHookedCrmView() {
             <div className="win-card">
               <div className="win-card-title">{t("6. Whitelabel available")}</div>
               <p className="win-card-body">
-                {t("Manager+ adds full whitelabel for $75/month flat. We found no whitelabel or reseller program anywhere on Hooked CRM's site.")}</p>
+                {t("Manager+ adds full whitelabel for $75/week flat. We found no whitelabel or reseller program anywhere on Hooked CRM's site.")}</p>
             </div>
           </div>
         </div>

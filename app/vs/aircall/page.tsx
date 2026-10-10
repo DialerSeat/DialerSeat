@@ -60,7 +60,7 @@ const FAQS = [
   {
     question: msg("Does DialerSeat offer whitelabel like Aircall?"),
     answer:
-      msg("Yes: Manager+ is $75/month flat and includes full whitelabel, with no license minimum. We found no whitelabel or reseller program anywhere on Aircall’s site. Aircall’s Custom tier, typically requiring 25+ licenses, is quote-based rather than published."),
+      msg("Yes: Manager+ is $75/week flat and includes full whitelabel, with no license minimum. We found no whitelabel or reseller program anywhere on Aircall’s site. Aircall’s Custom tier, typically requiring 25+ licenses, is quote-based rather than published."),
   },
   {
     question: msg("Is Aircall’s list price the real price?"),
