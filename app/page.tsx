@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { lineFitScale, blockFitScale, scaledSize } from '@/lib/i18n/fit'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 
 /**
@@ -503,7 +504,7 @@ export default async function Home({ searchParams }: PageProps) {
               {t("▸ The predictive & auto dialer for people who live on the phone")}</div>
 
             <h1 className="ds-hero-h1" style={{
-              fontSize: 'var(--hero-fs)',
+              fontSize: scaledSize('--hero-fs', lineFitScale([t("DIAL SMARTER."), t("CLOSE FASTER.")], ['DIAL SMARTER.', 'CLOSE FASTER.'])),
               fontWeight: 'bold',
               letterSpacing: '-3px',
               lineHeight: '1.05',
@@ -642,7 +643,7 @@ export default async function Home({ searchParams }: PageProps) {
 
           <div className="ds-volume-copy">
             <h2 style={{
-              fontSize: 'var(--section-fs)',
+              fontSize: scaledSize('--section-fs', blockFitScale([t("FOR SALES TEAMS, CALL CENTERS, AGENCIES, AND"), t("ANYONE"), t("WHO WORKS LEADS.")].join(' '), 'FOR SALES TEAMS, CALL CENTERS, AGENCIES, AND ANYONE WHO WORKS LEADS.')),
               fontWeight: 'bold',
               letterSpacing: '-1px',
               lineHeight: '1.15',
@@ -727,7 +728,7 @@ export default async function Home({ searchParams }: PageProps) {
           <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
             {t("▸ How it works")}</div>
           <h2 style={{
-            fontSize: 'var(--section-fs)',
+            fontSize: scaledSize('--section-fs', blockFitScale(t("FROM ZERO TO DIALING IN UNDER 2 MINUTES."), 'FROM ZERO TO DIALING IN UNDER 2 MINUTES.')),
             fontWeight: 'bold',
             letterSpacing: '-1px',
             lineHeight: '1.15',
@@ -805,7 +806,7 @@ export default async function Home({ searchParams }: PageProps) {
           <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
             {t("▸ Why DialerSeat")}</div>
           <h2 style={{
-            fontSize: 'var(--section-fs)',
+            fontSize: scaledSize('--section-fs', blockFitScale(t("THE NUMBERS SPEAK FOR THEMSELVES."), 'THE NUMBERS SPEAK FOR THEMSELVES.')),
             fontWeight: 'bold',
             letterSpacing: '-1px',
             lineHeight: '1.15',
@@ -892,7 +893,7 @@ export default async function Home({ searchParams }: PageProps) {
           <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
             {t("▸ Simple pricing")}</div>
           <h2 style={{
-            fontSize: 'var(--section-fs)',
+            fontSize: scaledSize('--section-fs', blockFitScale(t("ONE PLAN. EVERYTHING INCLUDED. NO SURPRISES."), 'ONE PLAN. EVERYTHING INCLUDED. NO SURPRISES.')),
             fontWeight: 'bold',
             letterSpacing: '-1px',
             lineHeight: '1.15',
