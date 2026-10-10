@@ -343,3 +343,55 @@ centres use katakana loanwords, so those stay.
 | sign in / sign up | ログイン / 登録 |
 | calling window / calling hours | 発信可能時間帯 |
 | compliance | コンプライアンス |
+
+## Filipino (fil) — Tagalog-based Filipino as spoken in call centres
+
+Filipino agents work in English all day, so everyday call-centre English stays
+English where Filipinos themselves use it ("Taglish" register, not deep
+Tagalog). Natural, friendly "ikaw/ka" address; "po" only in customer-facing
+scripts.
+
+| English | Filipino | Note |
+|---|---|---|
+| lead | lead | keep; used as-is on Philippine floors |
+| campaign | campaign | keep |
+| dialer | dialer | keep |
+| seat | seat | keep; "puwesto" reads as a physical desk |
+| agent | agent | keep |
+| call / calls | tawag | |
+| dial | i-dial / mag-dial | |
+| disposition | disposition | keep |
+| voicemail | voicemail | keep |
+| predictive / power / progressive / preview | keep in English | mode names |
+| team | team | keep |
+| owner | may-ari | |
+| week / weekly | linggo / lingguhan | |
+| cancel anytime | i-cancel kahit kailan | |
+| compliance | compliance | keep |
+| sign in / sign up | Mag-sign in / Mag-sign up | |
+
+## Hindi (hi) — standard Hindi in Devanagari, "आप"
+
+Formal-friendly "आप". Industry terms that Indian BPO staff use in English are
+transliterated (लीड, कैंपेन, डायलर), not replaced with Sanskritised coinages
+nobody on a floor would say. US legal terms (TCPA, DNC, FTC) stay in Latin
+letters.
+
+| English | Hindi | Note |
+|---|---|---|
+| lead | लीड | |
+| campaign | कैंपेन | |
+| dialer | डायलर | |
+| seat | सीट | |
+| agent | एजेंट | |
+| call | कॉल | |
+| dial | डायल करें | |
+| disposition | डिस्पोज़िशन | |
+| voicemail | वॉइसमेल | |
+| predictive / power / progressive / preview | प्रेडिक्टिव / पावर / प्रोग्रेसिव / प्रीव्यू | |
+| team | टीम | |
+| owner | मालिक | |
+| week / weekly | हफ़्ता / साप्ताहिक | |
+| cancel anytime | कभी भी रद्द करें | |
+| compliance | अनुपालन | |
+| sign in / sign up | साइन इन / साइन अप | |

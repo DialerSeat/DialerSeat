@@ -15,6 +15,8 @@ const LOADERS: Record<Exclude<Locale, 'en'>, () => Promise<{ default: Dictionary
   'zh-CN': () => import('./client/zh-CN.json'),
   he: () => import('./client/he.json'),
   ja: () => import('./client/ja.json'),
+  fil: () => import('./client/fil.json'),
+  hi: () => import('./client/hi.json'),
 }
 
 export async function loadDictionary(locale: Locale): Promise<Dictionary | null> {

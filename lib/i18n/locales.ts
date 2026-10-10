@@ -18,6 +18,8 @@ export const LOCALES = [
   { code: 'zh-CN', label: '简体中文', short: '中文', dir: 'ltr' },
   { code: 'he', label: 'עברית', short: 'HE', dir: 'rtl' },
   { code: 'ja', label: '日本語', short: 'JA', dir: 'ltr' },
+  { code: 'fil', label: 'Filipino', short: 'FIL', dir: 'ltr' },
+  { code: 'hi', label: 'हिन्दी', short: 'HI', dir: 'ltr' },
 ] as const
 
 export type Locale = (typeof LOCALES)[number]['code']
@@ -110,7 +112,7 @@ export function localeFromAcceptLanguage(header: string | null | undefined): Loc
     // Chinese devices say zh-CN, zh-Hans or plain zh; older Android still
     // sends Hebrew under its retired code, iw.
     const match: Locale | null =
-      base === 'pt' ? 'pt-BR' : base === 'zh' ? 'zh-CN' : base === 'iw' ? 'he' : isLocale(base) ? base : null
+      base === 'pt' ? 'pt-BR' : base === 'zh' ? 'zh-CN' : base === 'iw' ? 'he' : base === 'tl' ? 'fil' : isLocale(base) ? base : null
     if (match && match !== 'en') return match
   }
   return null
@@ -148,6 +150,8 @@ const URL_SLUG: Record<Exclude<Locale, 'en'>, string> = {
   'zh-CN': 'zh-cn',
   he: 'he',
   ja: 'ja',
+  fil: 'fil',
+  hi: 'hi',
 }
 
 /** The URL prefix for a language, e.g. "/es". Empty for English. */
@@ -193,8 +197,9 @@ export function splitLocalePrefix(pathname: string): { locale: Locale; rest: str
 // Stripe Elements' own locale codes (docs.stripe.com/js/appendix/supported_locales).
 // Spanish is es-419, Latin American. English returns undefined so the
 // payment form keeps the options it has always had.
-const STRIPE_LOCALE: Record<Exclude<Locale, 'en'>, 'es-419' | 'pt-BR' | 'fr' | 'ar' | 'it' | 'de' | 'zh' | 'he' | 'ja'> = {
-  es: 'es-419', 'pt-BR': 'pt-BR', fr: 'fr', ar: 'ar', it: 'it', de: 'de', 'zh-CN': 'zh', he: 'he', ja: 'ja',
+// Stripe has no Hindi, so Hindi checkout follows the browser (Stripe's 'auto').
+const STRIPE_LOCALE: Record<Exclude<Locale, 'en'>, 'es-419' | 'pt-BR' | 'fr' | 'ar' | 'it' | 'de' | 'zh' | 'he' | 'ja' | 'fil' | 'auto'> = {
+  es: 'es-419', 'pt-BR': 'pt-BR', fr: 'fr', ar: 'ar', it: 'it', de: 'de', 'zh-CN': 'zh', he: 'he', ja: 'ja', fil: 'fil', hi: 'auto',
 }
 export function stripeLocale(locale: Locale) {
   return locale === 'en' ? undefined : STRIPE_LOCALE[locale]

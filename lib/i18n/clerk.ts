@@ -8,6 +8,7 @@ import { deDE } from '@clerk/localizations/de-DE'
 import { zhCN } from '@clerk/localizations/zh-CN'
 import { heIL } from '@clerk/localizations/he-IL'
 import { jaJP } from '@clerk/localizations/ja-JP'
+import { hiIN } from '@clerk/localizations/hi-IN'
 import type { Locale } from './locales'
 import { translate, type Dictionary } from './translate'
 
@@ -18,8 +19,10 @@ import { translate, type Dictionary } from './translate'
 //
 // Spanish is Latin American (es-MX), for the Colombian, Mexican and Dominican
 // centres this is for.
-const CLERK: Record<Exclude<Locale, 'en'>, object> = {
-  es: esMX, 'pt-BR': ptBR, fr: frFR, ar: arSA, it: itIT, de: deDE, 'zh-CN': zhCN, he: heIL, ja: jaJP,
+// Clerk ships no Filipino pack; Filipino gets Clerk's English plus our own
+// translated sign-in copy.
+const CLERK: Partial<Record<Exclude<Locale, 'en'>, object>> = {
+  es: esMX, 'pt-BR': ptBR, fr: frFR, ar: arSA, it: itIT, de: deDE, 'zh-CN': zhCN, he: heIL, ja: jaJP, hi: hiIN,
 }
 
 type Tree = { [k: string]: string | Tree }
@@ -42,5 +45,5 @@ function merge(base: Tree, over: Tree): Tree {
 /** English gets `custom` exactly as written; other languages get Clerk's plus ours translated. */
 export function clerkLocalization<T extends object>(locale: Locale, dict: Dictionary | null, custom: T): T {
   if (locale === 'en') return custom
-  return merge(CLERK[locale] as Tree, translateTree(custom as unknown as Tree, dict)) as unknown as T
+  return merge((CLERK[locale] ?? {}) as Tree, translateTree(custom as unknown as Tree, dict)) as unknown as T
 }

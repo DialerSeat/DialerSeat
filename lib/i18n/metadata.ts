@@ -15,7 +15,7 @@ import { translate, type Dictionary } from './translate'
 
 const APEX = 'https://dialerseat.com'
 const OG_LOCALE: Record<Locale, string> = {
-  en: 'en_US', es: 'es_LA', 'pt-BR': 'pt_BR', fr: 'fr_FR', ar: 'ar_AR', it: 'it_IT', de: 'de_DE', 'zh-CN': 'zh_CN', he: 'he_IL', ja: 'ja_JP',
+  en: 'en_US', es: 'es_LA', 'pt-BR': 'pt_BR', fr: 'fr_FR', ar: 'ar_AR', it: 'it_IT', de: 'de_DE', 'zh-CN': 'zh_CN', he: 'he_IL', ja: 'ja_JP', fil: 'fil_PH', hi: 'hi_IN',
 }
 
 function pathOf(canonical: unknown): string | null {

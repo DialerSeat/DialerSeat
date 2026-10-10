@@ -39,6 +39,9 @@ describe('languages', () => {
     expect(localeFromAcceptLanguage('zh-Hans-CN,zh;q=0.9')).toBe('zh-CN')
     expect(localeFromAcceptLanguage('iw-IL')).toBe('he')
     expect(localeFromAcceptLanguage('ja-JP')).toBe('ja')
+    expect(localeFromAcceptLanguage('fil-PH')).toBe('fil')
+    expect(localeFromAcceptLanguage('tl')).toBe('fil')
+    expect(localeFromAcceptLanguage('hi-IN,en;q=0.8')).toBe('hi')
   })
 
   it('English keeps its existing, unprefixed addresses', () => {

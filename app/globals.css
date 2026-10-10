@@ -338,3 +338,9 @@ html[lang="zh-CN"] body *,
 html[lang="ja"] body * {
   letter-spacing: 0 !important;
 }
+
+/* Hindi: wide tracking breaks Devanagari conjuncts and the headline bar
+   (shirorekha) into separate pieces, so it is off. */
+html[lang="hi"] body * {
+  letter-spacing: 0 !important;
+}
