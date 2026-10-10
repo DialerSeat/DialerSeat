@@ -29,7 +29,7 @@ export const DEFAULT_LOCALE: Locale = 'en'
 // Hidden until translated. A language goes in here only when its dictionary
 // covers every string in the catalog — tests/unit/i18nCoverage.test.ts fails
 // the build otherwise — because a half-translated screen reads as broken.
-export const ENABLED_LOCALES: readonly Locale[] = ['en', 'es', 'pt-BR', 'fr', 'ar', 'it', 'de', 'zh-CN', 'he', 'ja']
+export const ENABLED_LOCALES: readonly Locale[] = ['en', 'es', 'pt-BR', 'fr', 'ar', 'it', 'de', 'zh-CN', 'he', 'ja', 'fil', 'hi']
 
 export const LOCALE_COOKIE = 'ds_lang'
 // Set once the visitor has answered the language prompt either way, so it
