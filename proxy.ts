@@ -94,6 +94,12 @@ const isPublicRoute = createRouteMatcher([
   // per hashed IP, and written by the service role into a table with RLS on
   // and no policies. There is nothing to read and nothing worth forging.
   '/api/suggestions',
+  // Presence ping (components/PresenceBeacon). Past the access gates on
+  // purpose: its whole job is to show people without an active plan as
+  // online, and the gates send those to /welcome or answer read-only 403s.
+  // The route checks the Clerk session itself and only stamps the caller's
+  // own last_active_at, so nothing here is open to a signed-out request.
+  '/api/presence',
   '/terms',
   '/privacy',
   '/faq(.*)',
