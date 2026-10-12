@@ -20,13 +20,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: tenant } = await supabase
-    .from('white_label_tenants')
-    .select('id')
-    .eq('owner_clerk_id', userId)
-    .eq('status', 'active')
-    .eq('is_active', true)
-    .maybeSingle()
+  // ── WHICH BRAND ────────────────────────────────────────────────────────
+  // An owner can hold several. The one being edited is the one they are
+  // viewing (users.active_tenant_id) when they own it, otherwise their
+  // oldest. This used maybeSingle, which errors on a second brand and
+  // answered "no active tenant" to somebody who owned fifteen.
+  const [{ data: owned }, { data: me }] = await Promise.all([
+    supabase
+      .from('white_label_tenants')
+      .select('id')
+      .eq('owner_clerk_id', userId)
+      .eq('status', 'active')
+      .eq('is_active', true)
+      .order('created_at', { ascending: true }),
+    supabase.from('users').select('active_tenant_id').eq('clerk_id', userId).maybeSingle(),
+  ])
+  const ownedRows = (owned || []) as Array<{ id: string }>
+  const tenant = ownedRows.find(t => t.id === me?.active_tenant_id) ?? ownedRows[0] ?? null
 
   if (!tenant) {
     return NextResponse.json({ success: false, error: 'No active tenant found for this account' }, { status: 404 })

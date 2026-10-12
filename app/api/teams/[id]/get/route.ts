@@ -135,6 +135,9 @@ export async function GET(
       .select('id, slug, brand_name, logo_url, primary_color, custom_domain, status, is_active')
       .eq('owner_clerk_id', team.owner_id)
       .eq('is_active', true)
+      // An owner can hold several brands; their oldest, rather than an error.
+      .order('created_at', { ascending: true })
+      .limit(1)
       .maybeSingle()
 
     return NextResponse.json({

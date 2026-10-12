@@ -35,6 +35,8 @@ export async function POST(req: NextRequest) {
         .select('id')
         .eq('owner_clerk_id', userId)
         .eq('is_active', true)
+        // An owner can hold several; any one of them is enough here.
+        .limit(1)
         .maybeSingle(),
       supabase
         .from('subscriptions')

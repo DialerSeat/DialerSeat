@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
+import { revalidateTag } from 'next/cache'
+import { userCacheTag } from '@/lib/tenant'
+import { addProjectDomain } from '@/lib/vercelDomains'
 
 const supabase = getServiceClient('admin/tenants')
+
+/** The column is NOT NULL with an email check, so a blank field cannot insert. */
+const DEFAULT_SUPPORT_EMAIL = 'support@dialerseat.com'
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/
 const RESERVED_SLUGS = new Set([
@@ -50,7 +56,10 @@ export async function POST(req: NextRequest) {
     const slug = String(body.slug ?? '').trim().toLowerCase()
     const brandName = String(body.brand_name ?? '').trim()
     const ownerClerkId = String(body.owner_clerk_id ?? '').trim()
-    const supportEmail = String(body.support_email ?? '').trim() || null
+    const supportEmail = String(body.support_email ?? '').trim() || DEFAULT_SUPPORT_EMAIL
+    // A demo brand is never billed and is never switched off by a billing
+    // event (see the white-label handlers in the Stripe webhook).
+    const isDemo = !!body.is_demo
     const primaryColor = typeof body.primary_color === 'string' && HEX_RE.test(body.primary_color)
       ? body.primary_color
       : COLOR_DEFAULTS.primary_color
@@ -104,6 +113,7 @@ export async function POST(req: NextRequest) {
         support_email: supportEmail,
         status: 'active',
         is_active: true,
+        is_demo: isDemo,
         primary_color: primaryColor,
         sidebar_color: COLOR_DEFAULTS.sidebar_color,
         accent_color: COLOR_DEFAULTS.sidebar_color, // legacy mirror
@@ -115,7 +125,20 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json({ success: true, tenant })
+    // ── THE SUBDOMAIN HAS TO EXIST TOO ─────────────────────────────────
+    // There is no wildcard domain: each brand's slug.dialerseat.com is added
+    // to the Vercel project one at a time, as self-serve onboarding does.
+    // Without this an admin-made brand saved fine and its address did not
+    // load. A failure is reported, not fatal: the brand exists either way.
+    const domain = await addProjectDomain(slug)
+    if (!domain.ok && !domain.skipped) {
+      console.error(`[admin/tenants] domain provision failed for ${slug}:`, domain.error)
+    }
+
+    // The owner's brand switcher is cached for a minute; show it now.
+    revalidateTag(userCacheTag(ownerClerkId), { expire: 0 })
+
+    return NextResponse.json({ success: true, tenant, domainProvisioned: domain.ok, domainError: domain.ok ? null : domain.error ?? null })
   } catch (err: any) {
     console.error('[admin/tenants] POST failed:', err)
     const status = err?.status === 401 || err?.status === 403 ? err.status : 500

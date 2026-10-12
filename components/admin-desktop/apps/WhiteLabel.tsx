@@ -100,6 +100,62 @@ interface TeamRow {
   createdAt: string
 }
 
+// ── PEOPLE A BRAND CAN BE ASSIGNED TO ───────────────────────────────────────
+// The owner used to be typed in as a raw Clerk id. Picked by name instead,
+// from the same list the Overview shows.
+interface AssignableUser {
+  clerk_id: string
+  email: string | null
+  username: string | null
+  first_name: string | null
+  last_name: string | null
+}
+
+function userLabel(u: AssignableUser): string {
+  const name = [u.first_name, u.last_name].filter(Boolean).join(' ').trim()
+  return name ? `${name}${u.email ? ` · ${u.email}` : ''}` : (u.email || u.username || u.clerk_id)
+}
+
+function useAssignableUsers() {
+  const [users, setUsers] = useState<AssignableUser[]>([])
+  useEffect(() => {
+    let alive = true
+    fetch('/api/admin/users')
+      .then(r => r.json())
+      .then(j => {
+        if (!alive) return
+        const list = ((j?.users ?? []) as AssignableUser[])
+          .slice()
+          .sort((a, b) => userLabel(a).localeCompare(userLabel(b)))
+        setUsers(list)
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+  return users
+}
+
+function OwnerPicker({ users, value, onChange }: {
+  users: AssignableUser[]
+  value: string
+  onChange: (clerkId: string) => void
+}) {
+  const [q, setQ] = useState('')
+  const needle = q.trim().toLowerCase()
+  const shown = needle
+    ? users.filter(u => userLabel(u).toLowerCase().includes(needle) || u.clerk_id === value)
+    : users
+  return (
+    <div style={{ display: 'grid', gap: 4 }}>
+      <input className="wl-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or email" />
+      <select className="wl-input" value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Choose a user…</option>
+        {shown.map(u => <option key={u.clerk_id} value={u.clerk_id}>{userLabel(u)}</option>)}
+      </select>
+    </div>
+  )
+}
+
 async function readError(res: Response): Promise<string> {
   try {
     const j = await res.json()
@@ -261,6 +317,11 @@ function TenantsSubTab() {
   const [error, setError] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [selected, setSelected] = useState<Tenant | null>(null)
+  const users = useAssignableUsers()
+  const ownerName = (id: string) => {
+    const u = users.find(x => x.clerk_id === id)
+    return u ? userLabel(u) : `${id.slice(0, 16)}...`
+  }
 
   const fetchTenants = useCallback(async () => {
     setLoading(true)
@@ -362,8 +423,8 @@ function TenantsSubTab() {
                     border: `1px solid currentColor`, borderRadius: 2,
                   }}>{(t.status || 'active').toUpperCase()}</span>
                 </td>
-                <td style={{ fontFamily: 'monospace', fontSize: 10, color: C.muted }}>
-                  {t.owner_clerk_id.slice(0, 16)}...
+                <td style={{ fontSize: 10, color: C.muted }}>
+                  {ownerName(t.owner_clerk_id)}
                 </td>
                 <td style={{ fontSize: 10, color: C.muted }}>
                   {new Date(t.created_at).toLocaleDateString()}
@@ -384,22 +445,29 @@ function TenantsSubTab() {
         </table>
       )}
 
-      {showCreate && <CreateTenantModal onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); fetchTenants() }} />}
-      {selected && <TenantDetailModal tenant={selected} onClose={() => setSelected(null)} onUpdated={fetchTenants} />}
+      {showCreate && <CreateTenantModal users={users} onClose={() => setShowCreate(false)} onCreated={(keepOpen) => { if (!keepOpen) setShowCreate(false); fetchTenants() }} />}
+      {selected && <TenantDetailModal tenant={selected} users={users} onClose={() => setSelected(null)} onUpdated={fetchTenants} />}
     </div>
   )
 }
 
-function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function CreateTenantModal({ users, onClose, onCreated }: {
+  users: AssignableUser[]
+  onClose: () => void
+  /** keepOpen: "create & add another", so a run of brands for one owner is quick. */
+  onCreated: (keepOpen: boolean) => void
+}) {
   const [slug, setSlug] = useState('')
   const [brandName, setBrandName] = useState('')
   const [ownerClerkId, setOwnerClerkId] = useState('')
   const [supportEmail, setSupportEmail] = useState('')
   const [primaryColor, setPrimaryColor] = useState('#4a9eff')
+  const [isDemo, setIsDemo] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [made, setMade] = useState<string[]>([])
 
-  const submit = async () => {
+  const submit = async (keepOpen: boolean) => {
     setSubmitting(true)
     setErr(null)
     try {
@@ -408,11 +476,22 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           slug, brand_name: brandName, owner_clerk_id: ownerClerkId,
-          support_email: supportEmail, primary_color: primaryColor,
+          support_email: supportEmail, primary_color: primaryColor, is_demo: isDemo,
         }),
       })
       if (!res.ok) throw new Error(await readError(res))
-      onCreated()
+      const json = await res.json().catch(() => ({}))
+      if (json?.domainProvisioned === false) {
+        setErr(`Created, but ${slug}.dialerseat.com could not be added to the project${json?.domainError ? ` (${json.domainError})` : ''}. The brand exists; its address may not load yet.`)
+      }
+      if (keepOpen) {
+        // Owner, colour and demo stay, so the next brand is two fields away.
+        setMade(m => [...m, slug])
+        setSlug('')
+        setBrandName('')
+      }
+      // Stays open on a domain failure so the warning above is read.
+      onCreated(keepOpen || json?.domainProvisioned === false)
     } catch (e: any) {
       setErr(e?.message ?? 'Failed')
     } finally {
@@ -432,11 +511,11 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
           <input className="wl-input" value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="Your Company Dialer" />
         </div>
         <div>
-          <label className="wl-label">Owner Clerk ID <span style={{ color: C.muted }}>(user_... must already exist in users)</span></label>
-          <input className="wl-input" value={ownerClerkId} onChange={(e) => setOwnerClerkId(e.target.value)} placeholder="user_..." style={{ fontFamily: 'monospace' }} />
+          <label className="wl-label">Assign to <span style={{ color: C.muted }}>(they own it: it appears in their brand switcher and they can edit it)</span></label>
+          <OwnerPicker users={users} value={ownerClerkId} onChange={setOwnerClerkId} />
         </div>
         <div>
-          <label className="wl-label">Support Email <span style={{ color: C.muted }}>(optional)</span></label>
+          <label className="wl-label">Support Email <span style={{ color: C.muted }}>(optional, defaults to support@dialerseat.com)</span></label>
           <input className="wl-input" type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} placeholder="support@yourcompany.com" />
         </div>
         <div>
@@ -453,9 +532,23 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
           </div>
         )}
 
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+          <input type="checkbox" checked={isDemo} onChange={(e) => setIsDemo(e.target.checked)} />
+          Demo (not billed, never switched off by billing)
+        </label>
+
+        {made.length > 0 && (
+          <div style={{ fontSize: 10.5, color: C.green, lineHeight: 1.6 }}>
+            Created {made.length}: {made.join(', ')}
+          </div>
+        )}
+
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 6 }}>
-          <button className="wl-btn" onClick={onClose} disabled={submitting}>Cancel</button>
-          <button className="wl-btn primary" onClick={submit} disabled={submitting || !slug || !brandName || !ownerClerkId}>
+          <button className="wl-btn" onClick={onClose} disabled={submitting}>{made.length > 0 ? 'Done' : 'Cancel'}</button>
+          <button className="wl-btn" onClick={() => submit(true)} disabled={submitting || !slug || !brandName || !ownerClerkId}>
+            {submitting ? 'Creating...' : 'Create & add another'}
+          </button>
+          <button className="wl-btn primary" onClick={() => submit(false)} disabled={submitting || !slug || !brandName || !ownerClerkId}>
             {submitting ? 'Creating...' : 'Create Tenant'}
           </button>
         </div>
@@ -464,13 +557,33 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
   )
 }
 
-function TenantDetailModal({ tenant, onClose, onUpdated }: {
+function TenantDetailModal({ tenant, users, onClose, onUpdated }: {
   tenant: Tenant
+  users: AssignableUser[]
   onClose: () => void
   onUpdated: () => void
 }) {
   const [working, setWorking] = useState<string | null>(null)
+  const [owner, setOwner] = useState(tenant.owner_clerk_id)
   const [err, setErr] = useState<string | null>(null)
+
+  const assign = async () => {
+    setWorking('owner')
+    setErr(null)
+    try {
+      const res = await fetch(`/api/admin/tenants/${tenant.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner_clerk_id: owner }),
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      onUpdated()
+      onClose()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setWorking(null)
+    }
+  }
 
   const setStatus = async (status: Tenant['status']) => {
     setWorking('status')
@@ -531,7 +644,15 @@ function TenantDetailModal({ tenant, onClose, onUpdated }: {
         <Field label="ID" value={tenant.id} mono />
         <Field label="Slug" value={tenant.slug} mono />
         <Field label="Brand Name" value={tenant.brand_name} />
-        <Field label="Owner" value={tenant.owner_clerk_id} mono />
+        <div>
+          <label className="wl-label">Assigned to</label>
+          <OwnerPicker users={users} value={owner} onChange={setOwner} />
+          {owner !== tenant.owner_clerk_id && owner && (
+            <button className="wl-btn primary" style={{ marginTop: 6 }} onClick={assign} disabled={working !== null}>
+              {working === 'owner' ? 'Assigning...' : 'Assign'}
+            </button>
+          )}
+        </div>
         <Field label="Support Email" value={tenant.support_email ?? '(none)'} />
         <Field label="Custom Domain" value={tenant.custom_domain ?? '(none)'} mono />
         <Field label="Stripe Customer" value={tenant.stripe_customer_id ?? '(none)'} mono />

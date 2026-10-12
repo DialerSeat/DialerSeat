@@ -113,14 +113,14 @@ async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding
     return null
   }
 
-  const [{ data: ownedTenant }, { data: memberRows }] = await Promise.all([
+  // Owned brands are a list: one person can own several (see proxy.ts).
+  const [{ data: ownedTenants }, { data: memberRows }] = await Promise.all([
     supabase
       .from('white_label_tenants')
       .select('id')
       .eq('owner_clerk_id', clerkId)
       .eq('status', 'active')
-      .eq('is_active', true)
-      .maybeSingle(),
+      .eq('is_active', true),
     supabase
       .from('team_members')
       .select('teams!inner(owner_id)')
@@ -129,7 +129,7 @@ async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding
   ])
 
   const accessibleTenantIds = new Set<string>()
-  if (ownedTenant) accessibleTenantIds.add(ownedTenant.id)
+  for (const t of ownedTenants || []) accessibleTenantIds.add(t.id)
 
   const ownerClerkIds: string[] = []
   for (const row of memberRows || []) {
@@ -190,7 +190,7 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
 
   const [
     { data: user },
-    { data: ownedTenant },
+    { data: ownedTenants },
     { data: memberRows },
     { data: selfSubs },
   ] = await Promise.all([
@@ -199,13 +199,15 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
       .select('active_tenant_id')
       .eq('clerk_id', clerkId)
       .maybeSingle(),
+    // Every brand this person owns, oldest first, so a showcase account with
+    // fifteen assigned brands can switch between all fifteen.
     supabase
       .from('white_label_tenants')
       .select('id, slug, brand_name, logo_url, status, is_active')
       .eq('owner_clerk_id', clerkId)
       .eq('status', 'active')
       .eq('is_active', true)
-      .maybeSingle(),
+      .order('created_at', { ascending: true }),
     supabase
       .from('team_members')
       .select('team_id, created_at, teams!inner(id, owner_id)')
@@ -220,12 +222,14 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
 
   const available: AvailableTenant[] = []
 
-  if (ownedTenant) {
+  const ownedIds = new Set<string>()
+  for (const owned of ownedTenants || []) {
+    ownedIds.add(owned.id)
     available.push({
-      id: ownedTenant.id,
-      slug: ownedTenant.slug,
-      brand_name: ownedTenant.brand_name,
-      logo_url: ownedTenant.logo_url,
+      id: owned.id,
+      slug: owned.slug,
+      brand_name: owned.brand_name,
+      logo_url: owned.logo_url,
       role: 'owner',
     })
   }
@@ -253,7 +257,7 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
     })
 
     for (const t of sortedTenants) {
-      if (ownedTenant && t.id === ownedTenant.id) continue
+      if (ownedIds.has(t.id)) continue
       available.push({
         id: t.id,
         slug: t.slug,
@@ -275,7 +279,7 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
     return false
   })
 
-  const canSeeStandard = hasSelfSub || !!ownedTenant
+  const canSeeStandard = hasSelfSub || ownedIds.size > 0
 
   const savedThemes: SavedThemeOption[] = []
 

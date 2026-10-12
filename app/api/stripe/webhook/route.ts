@@ -791,6 +791,8 @@ async function routeWhitelabel(
       .from('white_label_tenants')
       .update({ is_active: false })
       .eq('owner_clerk_id', clerkId)
+      // Demo brands are not billed, so no billing event switches them off.
+      .eq('is_demo', false)
   }
 
   
@@ -827,6 +829,7 @@ async function markWhitelabelCanceled(
       .from('white_label_tenants')
       .update({ is_active: false })
       .eq('owner_clerk_id', clerkId)
+      .eq('is_demo', false)
 
     // ── ONLY IF THEY HAVE NOTHING ELSE ────────────────────────────────────
     // This set the user to 'canceled' unconditionally. Somebody who cancels

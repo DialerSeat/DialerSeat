@@ -336,13 +336,17 @@ async function lookupUserBrandAccess(clerkId: string): Promise<UserBrandAccess> 
 
     const [
       { data: userRow },
-      { data: ownedTenant },
+      { data: ownedTenants },
       { data: memberRows },
       { data: selfSubs },
     ] = await Promise.all([
       supabase.from('users').select('active_tenant_id').eq('clerk_id', clerkId).maybeSingle(),
+      // A list, not maybeSingle: one person can own several brands (an admin
+      // assigns demo brands to a showcase account). maybeSingle errors on a
+      // second row and returned null, which took away access to ALL of them.
       supabase.from('white_label_tenants').select('id, slug')
-        .eq('owner_clerk_id', clerkId).eq('status', 'active').eq('is_active', true).maybeSingle(),
+        .eq('owner_clerk_id', clerkId).eq('status', 'active').eq('is_active', true)
+        .order('created_at', { ascending: true }),
       supabase.from('team_members').select('team_id, teams!inner(owner_id)')
         .eq('user_id', clerkId).eq('status', 'active'),
       supabase.from('subscriptions').select('status, current_period_end').eq('user_id', clerkId),
@@ -351,9 +355,9 @@ async function lookupUserBrandAccess(clerkId: string): Promise<UserBrandAccess> 
     const accessibleTenantIds: string[] = []
     const slugById = new Map<string, string>()
 
-    if (ownedTenant) {
-      accessibleTenantIds.push(ownedTenant.id)
-      slugById.set(ownedTenant.id, ownedTenant.slug)
+    for (const owned of ownedTenants || []) {
+      accessibleTenantIds.push(owned.id)
+      slugById.set(owned.id, owned.slug)
     }
 
     const ownerClerkIds: string[] = []
@@ -388,7 +392,7 @@ async function lookupUserBrandAccess(clerkId: string): Promise<UserBrandAccess> 
           new Date(s.current_period_end).getTime() > now) return true
       return false
     })
-    const canSeeStandard = hasSelfSub || !!ownedTenant
+    const canSeeStandard = hasSelfSub || (ownedTenants || []).length > 0
 
     access = { accessibleSlugs, selectedSlug, canSeeStandard }
   } catch (err) {

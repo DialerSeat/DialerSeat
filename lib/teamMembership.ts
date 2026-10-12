@@ -21,6 +21,9 @@ export async function assignOwnerTenantIfWhitelabeled(
     .eq('owner_clerk_id', ownerId)
     .eq('status', 'active')
     .eq('is_active', true)
+    // An owner can hold several brands; their oldest, rather than an error.
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle()
 
   if (!ownerTenant) return null
