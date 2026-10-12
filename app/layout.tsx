@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { getTenantBranding, getActiveTenantForUser } from '@/lib/tenant';
 import PageViewTracker from '@/components/PageViewTracker'
 import PresenceBeacon from '@/components/PresenceBeacon'
+import DemoPhoneMask from '@/components/DemoPhoneMask'
 import { LocaleProvider } from '@/lib/i18n/client';
 import { getDictionary, getLocale, getUrlLocale } from '@/lib/i18n/server';
 import { LOCALE_COOKIE, PROMPT_COOKIE, suggestLocale } from '@/lib/i18n/locales';
@@ -253,6 +254,7 @@ export default async function RootLayout({
               alike, without each new route having to remember to opt in. */}
           <PageViewTracker />
           <PresenceBeacon />
+          <DemoPhoneMask />
           <script
             dangerouslySetInnerHTML={{
               __html:

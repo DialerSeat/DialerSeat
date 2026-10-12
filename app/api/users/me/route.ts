@@ -19,10 +19,15 @@ export async function GET() {
     }
     const { data } = await supabase
       .from('users')
-      .select('is_admin')
+      .select('is_admin, demo_phone_mask')
       .eq('clerk_id', userId)
       .maybeSingle()
-    return NextResponse.json({ is_admin: data?.is_admin === true }, { status: 200 })
+    return NextResponse.json({
+      is_admin: data?.is_admin === true,
+      // Display-only phone mask for filming on a demo account. See
+      // components/DemoPhoneMask.
+      demo_phone_mask: data?.demo_phone_mask === true,
+    }, { status: 200 })
   } catch {
     return NextResponse.json({ is_admin: false }, { status: 200 })
   }
