@@ -150,6 +150,15 @@ export default function WhitelabelOnboardingPage() {
 
   const [loading, setLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
+  // ── ADMIN MODE ──────────────────────────────────────────────────────────
+  // Opened from the admin desktop as ?tenant=<id> right after a brand is
+  // created: the same form, acting on that brand rather than the admin's own
+  // (see /api/whitelabel/onboarding). Read in the load effect, not during
+  // render, so the server and first client render agree.
+  const [adminTenantId, setAdminTenantId] = useState<string | null>(null)
+  const [adminOwnerLabel, setAdminOwnerLabel] = useState<string | null>(null)
+  const [adminSaved, setAdminSaved] = useState(false)
+  const tenantQuery = adminTenantId ? `?tenant=${encodeURIComponent(adminTenantId)}` : ''
   const [brandName, setBrandName] = useState('')
   const [slug, setSlug] = useState('')
   const [originalSlug, setOriginalSlug] = useState('')
@@ -187,15 +196,19 @@ export default function WhitelabelOnboardingPage() {
   useEffect(() => {
     if (!isLoaded || !user?.id) return
     let cancelled = false
+    const tid = new URLSearchParams(window.location.search).get('tenant')
 
     Promise.all([
-      fetch('/api/whitelabel/onboarding').then(r => r.json()).catch(() => null),
+      fetch(`/api/whitelabel/onboarding${tid ? `?tenant=${encodeURIComponent(tid)}` : ''}`).then(r => r.json()).catch(() => null),
       fetch('/api/whitelabel/custom-themes').then(r => r.json()).catch(() => null),
     ]).then(([tenantData, themesData]) => {
       if (cancelled) return
+      setAdminTenantId(tid)
 
       const themes: SavedTheme[] = themesData?.themes || []
       setSavedThemes(themes)
+
+      if (tenantData?.adminMode) setAdminOwnerLabel(tenantData.ownerLabel || null)
 
       if (tenantData?.tenant) {
         setEditMode(true)
@@ -367,7 +380,7 @@ export default function WhitelabelOnboardingPage() {
       try {
         const fd = new FormData()
         fd.append('logo', logoFile)
-        const upRes = await fetch('/api/whitelabel/upload-logo', {
+        const upRes = await fetch(`/api/whitelabel/upload-logo${tenantQuery}`, {
           method: 'POST',
           body: fd,
         })
@@ -538,7 +551,8 @@ export default function WhitelabelOnboardingPage() {
       setError(msg("Logo is required."))
       return
     }
-    if (editMode && !logoFile && !existingLogoUrl) {
+    // An admin setting a brand up may not have its logo yet.
+    if (editMode && !logoFile && !existingLogoUrl && !adminTenantId) {
       setError(msg("Logo is required."))
       return
     }
@@ -568,7 +582,7 @@ export default function WhitelabelOnboardingPage() {
 
         const fd = new FormData()
         fd.append('logo', logoFile)
-        const upRes = await fetch('/api/whitelabel/upload-logo', {
+        const upRes = await fetch(`/api/whitelabel/upload-logo${tenantQuery}`, {
           method: 'POST',
           body: fd,
         })
@@ -581,7 +595,7 @@ export default function WhitelabelOnboardingPage() {
         logoUrl = upData.url
       }
 
-      const res = await fetch('/api/whitelabel/onboarding', {
+      const res = await fetch(`/api/whitelabel/onboarding${tenantQuery}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -618,6 +632,17 @@ export default function WhitelabelOnboardingPage() {
         } catch {}
       }
 
+      // Admin mode stays put: the next brand is set up from the admin desktop,
+      // and this tab is just this one brand's settings.
+      if (adminTenantId) {
+        setOriginalSlug(slug.trim())
+        if (logoUrl) setExistingLogoUrl(logoUrl)
+        setLogoFile(null)
+        setAdminSaved(true)
+        setSubmitting(false)
+        return
+      }
+
       router.push('/dashboard')
     } catch (err: any) {
       setError(err.message || msg("Something went wrong."))
@@ -628,6 +653,11 @@ export default function WhitelabelOnboardingPage() {
   
   
   const handleCancel = async () => {
+    // Opened in its own tab by the admin desktop; nothing to abandon.
+    if (adminTenantId) {
+      window.close()
+      return
+    }
     if (editMode) {
       router.push('/dashboard')
       return
@@ -686,6 +716,12 @@ export default function WhitelabelOnboardingPage() {
           <div style={titleStyle}>
             {editMode ? tr("EDIT YOUR WHITELABEL DIALER") : tr("CUSTOMIZE YOUR WHITELABEL DIALER")}
           </div>
+          {adminTenantId && (
+            <div style={{ ...subtitleStyle, fontWeight: 'bold' }}>
+              Admin: setting up {brandName || 'this brand'}{adminOwnerLabel ? ` for ${adminOwnerLabel}` : ''}
+              {adminSaved && <> · Saved. Live at {originalSlug}.dialerseat.com within 60 seconds.</>}
+            </div>
+          )}
           <div style={subtitleStyle}>
             {editMode
               ? tr("Your tenant is live. Make changes anytime, they propagate within 60 seconds.")

@@ -470,6 +470,12 @@ function CreateTenantModal({ users, onClose, onCreated }: {
   const submit = async (keepOpen: boolean) => {
     setSubmitting(true)
     setErr(null)
+    // ── ITS SETTINGS OPEN IN A NEW TAB ───────────────────────────────────
+    // The onboarding page, in admin mode for the brand just made, so logo,
+    // colours and login link are filled in on the owner's own screen. The tab
+    // is opened HERE, inside the click, because a window.open after the
+    // request returns is no longer a user gesture and gets popup-blocked.
+    const settingsTab = window.open('about:blank', '_blank')
     try {
       const res = await fetch('/api/admin/tenants', {
         method: 'POST',
@@ -481,6 +487,12 @@ function CreateTenantModal({ users, onClose, onCreated }: {
       })
       if (!res.ok) throw new Error(await readError(res))
       const json = await res.json().catch(() => ({}))
+      const newId = json?.tenant?.id as string | undefined
+      if (settingsTab && newId) {
+        settingsTab.location.href = `/onboarding/whitelabel?tenant=${encodeURIComponent(newId)}`
+      } else if (settingsTab) {
+        settingsTab.close()
+      }
       if (json?.domainProvisioned === false) {
         setErr(`Created, but ${slug}.dialerseat.com could not be added to the project${json?.domainError ? ` (${json.domainError})` : ''}. The brand exists; its address may not load yet.`)
       }
@@ -493,6 +505,7 @@ function CreateTenantModal({ users, onClose, onCreated }: {
       // Stays open on a domain failure so the warning above is read.
       onCreated(keepOpen || json?.domainProvisioned === false)
     } catch (e: any) {
+      settingsTab?.close()
       setErr(e?.message ?? 'Failed')
     } finally {
       setSubmitting(false)
@@ -659,6 +672,12 @@ function TenantDetailModal({ tenant, users, onClose, onUpdated }: {
         <Field label="Stripe Subscription" value={tenant.stripe_subscription_id ?? '(none)'} mono />
         <Field label="Status" value={`${tenant.status || 'active'}${tenant.is_active ? '' : ' (inactive)'}${tenant.is_demo ? ' · DEMO' : ''}`} />
         <Field label="Subdomain URL" value={`https://${tenant.slug}.dialerseat.com`} link />
+        <div>
+          <button
+            className="wl-btn"
+            onClick={() => window.open(`/onboarding/whitelabel?tenant=${encodeURIComponent(tenant.id)}`, '_blank')}
+          >Open settings ↗</button>
+        </div>
 
         <div>
           <label className="wl-label">Theme Tokens</label>

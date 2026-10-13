@@ -58,10 +58,80 @@ async function slugChangeAvailableAt(tenantId: string): Promise<string | null> {
   return null
 }
 
-export async function GET() {
+// ── ADMIN MODE: ?tenant=<id> ────────────────────────────────────────────────
+// The admin desktop opens this page for a brand it just created, so its
+// settings are filled in on the same screen an owner onboards with. With
+// ?tenant= and an admin caller, GET and POST act on THAT brand instead of
+// the caller's own, and skip the white-label subscription checks: the admin
+// is setting up somebody else's brand, often a demo nobody pays for.
+// Anybody who is not an admin is refused rather than falling back silently.
+interface AdminTarget {
+  id: string; slug: string; slug_changed_at: string | null; owner_clerk_id: string
+}
+
+async function adminTarget(
+  req: NextRequest, userId: string
+): Promise<{ target: AdminTarget | null; refused: NextResponse | null }> {
+  const tenantId = new URL(req.url).searchParams.get('tenant')
+  if (!tenantId) return { target: null, refused: null }
+  const { data: me } = await supabase
+    .from('users').select('is_admin').eq('clerk_id', userId).maybeSingle()
+  if (!me?.is_admin) {
+    return { target: null, refused: NextResponse.json({ error: 'forbidden' }, { status: 403 }) }
+  }
+  const { data: t } = await supabase
+    .from('white_label_tenants')
+    .select('id, slug, slug_changed_at, owner_clerk_id')
+    .eq('id', tenantId)
+    .maybeSingle()
+  if (!t) {
+    return { target: null, refused: NextResponse.json({ error: 'tenant_missing' }, { status: 404 }) }
+  }
+  return { target: t as AdminTarget, refused: null }
+}
+
+export async function GET(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
+  const { target, refused } = await adminTarget(req, userId)
+  if (refused) return refused
+  if (target) {
+    const { data: tenant } = await supabase
+      .from('white_label_tenants')
+      .select(`
+        id, brand_name, slug, logo_url, slug_changed_at, is_active,
+        primary_color, sidebar_color, header_bg_color, page_bg_color,
+        login_link_label, login_link_text, login_link_url
+      `)
+      .eq('id', target.id)
+      .maybeSingle()
+    const { data: owner } = await supabase
+      .from('users').select('first_name, last_name, email').eq('clerk_id', target.owner_clerk_id).maybeSingle()
+    const ownerLabel = [owner?.first_name, owner?.last_name].filter(Boolean).join(' ').trim()
+      || owner?.email || target.owner_clerk_id
+    return NextResponse.json({
+      status: 'complete',
+      adminMode: true,
+      ownerLabel,
+      existingSubdomain: tenant?.slug,
+      tenant: tenant ? {
+        brand_name: tenant.brand_name,
+        slug: tenant.slug,
+        logo_url: tenant.logo_url,
+        primary_color: tenant.primary_color,
+        sidebar_color: tenant.sidebar_color,
+        header_bg_color: tenant.header_bg_color,
+        page_bg_color: tenant.page_bg_color,
+        login_link_label: tenant.login_link_label,
+        login_link_text: tenant.login_link_text,
+        login_link_url: tenant.login_link_url,
+      } : null,
+      canChangeSlugAt: await slugChangeAvailableAt(target.id),
+      isActive: tenant?.is_active ?? true,
+    })
   }
 
   const { data: user } = await supabase
@@ -126,6 +196,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
+  const { target, refused } = await adminTarget(req, userId)
+  if (refused) return refused
+
   let body: any
   try {
     body = await req.json()
@@ -184,7 +257,8 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     )
   }
-  if (!logoUrl) {
+  // An admin setting up a brand may not have its logo yet; an owner must.
+  if (!logoUrl && !target) {
     return NextResponse.json(
       { error: 'missing_logo', detail: 'Upload your logo first.' },
       { status: 400 }
@@ -243,14 +317,15 @@ export async function POST(req: NextRequest) {
     .eq('clerk_id', userId)
     .maybeSingle()
 
-  if (!user || !user.wl_subscription_id) {
+  // The subscription gate is the owner's; an admin editing a brand skips it.
+  if (!target && (!user || !user.wl_subscription_id)) {
     return NextResponse.json(
       { error: 'no_subscription', detail: 'Active white-label subscription required.', redirectTo: '/billing?plan=wl' },
       { status: 403 }
     )
   }
 
-  const status = user.wl_onboarding_status || 'not_started'
+  const status = target ? 'complete' : (user?.wl_onboarding_status || 'not_started')
   if (status !== 'pending' && status !== 'complete') {
     return NextResponse.json(
       { error: 'no_subscription', detail: 'Active white-label subscription required.', redirectTo: '/billing?plan=wl' },
@@ -265,7 +340,7 @@ export async function POST(req: NextRequest) {
     .eq('is_active', true)
     .maybeSingle()
 
-  if (collision && collision.owner_clerk_id !== userId) {
+  if (collision && (target ? collision.id !== target.id : collision.owner_clerk_id !== userId)) {
     return NextResponse.json({ error: 'taken' }, { status: 409 })
   }
 
@@ -282,7 +357,7 @@ export async function POST(req: NextRequest) {
       .select('owner_clerk_id')
       .eq('id', redirecting.tenant_id)
       .maybeSingle()
-    if (!t || t.owner_clerk_id !== userId) {
+    if (target ? redirecting.tenant_id !== target.id : (!t || t.owner_clerk_id !== userId)) {
       return NextResponse.json(
         { error: 'redirecting', detail: 'This subdomain is being redirected from a recent change.' },
         { status: 409 }
@@ -311,9 +386,9 @@ export async function POST(req: NextRequest) {
         secondary_color: LEGACY_SECONDARY_DEFAULT,
         background_color: LEGACY_BACKGROUND_DEFAULT,
         text_color: LEGACY_TEXT_DEFAULT,
-        support_email: user.email || 'support@dialerseat.com',
-        stripe_customer_id: user.stripe_customer_id,
-        stripe_subscription_id: user.wl_subscription_id,
+        support_email: user?.email || 'support@dialerseat.com',
+        stripe_customer_id: user?.stripe_customer_id ?? null,
+        stripe_subscription_id: user?.wl_subscription_id ?? null,
         status: 'active',
         is_active: true,
         slug_changed_at: now.toISOString(),
@@ -355,11 +430,16 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const { data: existing } = await supabase
-    .from('white_label_tenants')
-    .select('id, slug, slug_changed_at')
-    .eq('owner_clerk_id', userId)
-    .maybeSingle()
+  const { data: owned } = target
+    ? { data: null }
+    : await supabase
+        .from('white_label_tenants')
+        .select('id, slug, slug_changed_at')
+        .eq('owner_clerk_id', userId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+  const existing = target ?? owned
 
   if (!existing) {
     return NextResponse.json({ error: 'tenant_missing' }, { status: 500 })
@@ -368,7 +448,7 @@ export async function POST(req: NextRequest) {
   const slugChanged = existing.slug !== subdomain
   const updates: Record<string, any> = {
     brand_name: brandName,
-    logo_url: logoUrl,
+    logo_url: logoUrl || null,
     primary_color: primaryColor,
     sidebar_color: sidebarColor,
     header_bg_color: headerBgColor,

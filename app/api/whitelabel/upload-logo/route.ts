@@ -76,11 +76,27 @@ export async function POST(req: NextRequest) {
 
   const { data: user } = await supabase
     .from('users')
-    .select('wl_onboarding_status')
+    .select('wl_onboarding_status, is_admin')
     .eq('clerk_id', userId)
     .single()
 
-  if (!user || (user.wl_onboarding_status !== 'pending' && user.wl_onboarding_status !== 'complete')) {
+  // ── ADMIN MODE: ?tenant=<id> ──────────────────────────────────────────
+  // The admin desktop sets up a brand on somebody else's behalf (see the
+  // onboarding route). The logo goes in that brand's own folder, so it can
+  // never be swept up by the cleanup of another brand's uploads.
+  const adminTenantId = new URL(req.url).searchParams.get('tenant')
+  let adminFolder: string | null = null
+  if (adminTenantId) {
+    if (!user?.is_admin) {
+      return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+    }
+    const { data: t } = await supabase
+      .from('white_label_tenants').select('id, owner_clerk_id').eq('id', adminTenantId).maybeSingle()
+    if (!t) return NextResponse.json({ error: 'tenant_missing' }, { status: 404 })
+    adminFolder = `tenants/${t.owner_clerk_id}/${t.id}`
+  }
+
+  if (!adminFolder && (!user || (user.wl_onboarding_status !== 'pending' && user.wl_onboarding_status !== 'complete'))) {
     return NextResponse.json(
       { error: 'not_in_whitelabel_flow', detail: 'You must have an active white-label subscription to upload logos.' },
       { status: 403 }
@@ -130,7 +146,7 @@ export async function POST(req: NextRequest) {
     } catch {}
   }
 
-  const baseFolder = `tenants/${userId}`
+  const baseFolder = adminFolder ?? `tenants/${userId}`
 
   try {
 
@@ -147,14 +163,18 @@ export async function POST(req: NextRequest) {
       if (fname) protectedFilenames.add(fname)
     }
 
-    const { data: tenant } = await supabase
-      .from('white_label_tenants')
-      .select('logo_url')
-      .eq('owner_clerk_id', userId)
-      .maybeSingle()
+    // Every brand this person owns, not one: an owner can hold several, and
+    // maybeSingle errored on the second, so nothing was protected and a new
+    // upload deleted the logo another brand was still showing.
+    const { data: ownedTenants } = adminTenantId
+      ? await supabase.from('white_label_tenants').select('logo_url').eq('id', adminTenantId)
+      : await supabase
+          .from('white_label_tenants')
+          .select('logo_url')
+          .eq('owner_clerk_id', userId)
 
-    if (tenant?.logo_url) {
-      const fname = filenameFromUrl(tenant.logo_url)
+    for (const tenant of ownedTenants || []) {
+      const fname = tenant.logo_url ? filenameFromUrl(tenant.logo_url) : null
       if (fname) protectedFilenames.add(fname)
     }
 
