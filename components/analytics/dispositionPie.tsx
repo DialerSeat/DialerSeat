@@ -73,7 +73,13 @@ export function renderDispositionLabels(props: {
   labelColor?: string
 }) {
   const { cx, cy, outerRadius, index, data, chartHeight } = props
-  const labelColor = props.labelColor ?? T.text
+  // ── THE TEXT FOLLOWS THE BACKGROUND ────────────────────────────────────
+  // Fixed near-black ink vanished whenever a brand's page colour was dark,
+  // because the chart card is drawn from that colour. --brand-on-page-bg is
+  // the theme's own contrast pick for exactly that background (ThemeProvider),
+  // so the labels read on any brand. T.text stays as the fallback, which is
+  // the value DialerSeat's default theme resolves to anyway.
+  const labelColor = props.labelColor ?? `var(--brand-on-page-bg, ${T.text})`
   // Recharts invokes `label` once per slice. We only want to compute
   // and draw the *entire* label set a single time (on the first slice)
   // so labels don't get stacked on top of themselves N times.
@@ -208,7 +214,9 @@ export function renderDispositionLabels(props: {
               dy={4}
               textAnchor={textAnchor}
               fontSize={fontSize}
-              fill={labelColor}
+              // As a style rather than the fill attribute: var() is a CSS
+              // value, and the style property resolves it everywhere.
+              style={{ fill: labelColor }}
             >
               {it.name}
             </text>
