@@ -7387,20 +7387,6 @@ function DialerPageInner() {
         </div>
       </div>
 
-      {isPredictive && pacingInfo?.isDegraded && (
-        <div style={{
-          padding: '8px 20px',
-          background: '#f8e8e8',
-          borderBottom: `2px solid ${terminalRed}`,
-          color: terminalRed,
-          fontSize: 11,
-          letterSpacing: 1,
-          textAlign: 'center',
-          fontWeight: 'bold',
-        }}>
-          {tr("⚠ AUTO-DEGRADED TO PROGRESSIVE, abandon rate {abandonRate} (legal cap 3%)", { abandonRate: formatAbandonRate(pacingInfo.abandonRate) })}</div>
-      )}
-
       {isPredictive && shouldYield && !pacingInfo?.isDegraded && (
         <div style={{
           padding: '8px 20px',
