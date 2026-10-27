@@ -104,6 +104,10 @@ export async function createSeatRoom(
     name: `ds-seat-${sessionId}-${Date.now()}`,
     beep_enabled: 'never',
     start_conference_on_create: true,
+    // Telnyx defaults comfort_noise to TRUE: a constant low hiss played into
+    // the room whenever nobody is speaking. The seat sits alone in this room
+    // while lines ring, so the agent heard it as static for the whole dial.
+    comfort_noise: false,
   })
   const id = (r.data?.id as string | undefined) ?? null
   return { ok: r.ok && !!id, conferenceId: id, error: r.error }

@@ -355,16 +355,32 @@ async function placeRound(input: RunControllerInput, snap: Snapshot): Promise<Co
     const stats = new Map(((statRows || []) as Array<Record<string, unknown>>).map(r => [r.campaign_id as string, r]))
     const perCampaign = campaignIds.map(id => {
       const st = stats.get(id)
-      return {
-        id,
-        result: legalLineCount({
-          cap,
-          humanRate: estimateHumanRate(Number(st?.humans_14d ?? 0), Number(st?.dials_14d ?? 0)),
-          answered30d: Number(st?.answered_30d ?? 0),
-          abandoned30d: Number(st?.abandoned_30d ?? 0),
-          sellerMessageReady: sellers.get(id)?.ready === true,
-        }),
+      const computed = legalLineCount({
+        cap,
+        humanRate: estimateHumanRate(Number(st?.humans_14d ?? 0), Number(st?.dials_14d ?? 0)),
+        answered30d: Number(st?.answered_30d ?? 0),
+        abandoned30d: Number(st?.abandoned_30d ?? 0),
+        sellerMessageReady: sellers.get(id)?.ready === true,
+      })
+      // ── B2B: THE ABANDON-RATE HOLDS DO NOT APPLY ─────────────────────────
+      // Every campaign on this platform calls businesses, so the 'law'
+      // projection and the 'degraded' trip no longer reduce the line count:
+      // the round runs the lines settings allow. measuredPct stays in the
+      // result so the dialer still shows the real 30-day rate. Still in
+      // force: the seller-details gate above, the platform ceiling, the hard
+      // cap, and the runaway breaker.
+      if (computed.limitedBy === 'law' || computed.limitedBy === 'degraded') {
+        return {
+          id,
+          result: {
+            ...computed,
+            lines: cap,
+            limitedBy: 'cap' as const,
+            reason: `${cap} line${cap === 1 ? '' : 's'} as chosen, abandon-rate hold not applied`,
+          },
+        }
       }
+      return { id, result: computed }
     })
     binding = perCampaign.reduce((a, b) => (b.result.lines < a.result.lines ? b : a))
   }
