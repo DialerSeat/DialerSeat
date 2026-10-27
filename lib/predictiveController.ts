@@ -70,6 +70,12 @@ const TICK_LOCK_MS = 15_000
 
 /** Nobody new is rung on a number this engine rang in the last minute. */
 const RECENTLY_DIALED_MS = 60_000
+/**
+ * How long a lead the agent spoke to stays off the dial list while it waits
+ * for the agent's disposition. Long enough for any wrap-up, short enough that
+ * a lead the agent never dispositioned is not lost for the day.
+ */
+const PENDING_DISPOSITION_MS = 30 * 60_000
 
 export interface ControllerResult {
   fired: number
@@ -520,6 +526,30 @@ async function placeRound(input: RunControllerInput, snap: Snapshot): Promise<Co
   const recentPhones = new Set(
     (recentCalls || []).map(c => c.phone_number).filter((p): p is string => !!p).map(normalizePhone)
   )
+  // ── NOT A LEAD THE AGENT SPOKE TO AND HAS NOT DISPOSITIONED YET ─────────
+  // When a call ends the claim is released at once (events webhook) while the
+  // agent is still filling in the disposition, and the next round can start
+  // that same moment. Until DO NOT CALL / NOT INTERESTED is saved the lead
+  // looks like any other dialable lead, repeats included, and was dialed
+  // again straight after the agent had dealt with it. A call the agent took
+  // (calls.handled_by, set when predictive joins it to their seat) that has no
+  // disposition yet is exactly that lead. Held back, never dialed: if the
+  // lookup fails nothing is held, which is how it behaved before.
+  const pendingDisposition = new Set<string>()
+  try {
+    const { data: pendingRows } = await supabase
+      .from('calls')
+      .select('lead_id')
+      .eq('dial_group_id', sessionId)
+      .not('handled_by', 'is', null)
+      .is('disposition', null)
+      .gte('created_at', new Date(Date.now() - PENDING_DISPOSITION_MS).toISOString())
+    for (const r of (pendingRows || []) as Array<{ lead_id: string | null }>) {
+      if (r.lead_id) pendingDisposition.add(r.lead_id)
+    }
+  } catch (err) {
+    console.error('[controller] pending-disposition lookup failed', err)
+  }
   const repeatIds = new Set(repeats.map(l => l.id))
   const roundPhones = new Set<string>()
   const toDial: ClaimedLead[] = []
@@ -527,6 +557,7 @@ async function placeRound(input: RunControllerInput, snap: Snapshot): Promise<Co
   for (const lead of claimed) {
     const phone = normalizePhone(lead.phone)
     const blockedAsRecent = !repeatIds.has(lead.id) && recentPhones.has(phone)
+    if (pendingDisposition.has(lead.id)) { dropped.push(lead.id); continue }
     if (!phone || roundPhones.has(phone) || blockedAsRecent) { dropped.push(lead.id); continue }
     if (panelOrder && !panelPosition.has(lead.id)) { dropped.push(lead.id); continue }
     roundPhones.add(phone)
