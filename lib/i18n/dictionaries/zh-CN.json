@@ -7643,5 +7643,6 @@
  "Zapier, API, PropStream, BatchLeads": "Zapier、API、PropStream、BatchLeads",
  "Zero": "零",
  "Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.": "按设计零放弃风险，每个坐席一条线路。无需操心，你就 100% 符合 FTC 和 TCPA 规则。",
- "ZONE": "时区"
+ "ZONE": "时区",
+ "You must name the campaign.": "保存前请先为活动命名。"
 }

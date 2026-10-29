@@ -7719,5 +7719,6 @@
  "Zapier, API, PropStream, BatchLeads": "Zapier, API, PropStream, BatchLeads",
  "Zero": "Zéro",
  "Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.": "Aucun risque d'abandon par conception, une ligne par agent. Vous restez à 100 % dans les règles de la FTC et de la TCPA sans y penser.",
- "ZONE": "FUSEAU"
+ "ZONE": "FUSEAU",
+ "You must name the campaign.": "Nommez votre campagne avant de l'enregistrer."
 }

@@ -1070,7 +1070,8 @@ function DialerPageInner() {
       } catch { /* already gone */ }
       console.warn(`[sip] ended a stray agent leg the page was no longer using (${why})`)
       reportAgentLegEnded({
-        why: msgText("stray agent leg ended"),
+        // A server-side label for the agent-leg log, never shown to anyone.
+        why: "stray agent leg ended",
         leadSid: null,
         byUs: true,
         immediate: true,

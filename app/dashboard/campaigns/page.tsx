@@ -321,11 +321,26 @@ export default function CampaignsPage() {
   // error, and both paths below go through it so the two cannot drift.
   const nameProblem = (() => {
     const n = campaignName.trim()
-    if (!n) return msgText("Name your campaign before saving it.")
+    if (!n) return msgText("You must name the campaign.")
     if (/^untitled(\s*\(\d+\))?$/i.test(n)) return msgText("Give it a real name, not \"Untitled\".")
     if (n.length > 120) return msgText("That name is too long (120 characters max).")
     return null
   })()
+  // ── SAY IT WHEN THEY PRESS THE BUTTON ─────────────────────────────────
+  // The create buttons used to sit disabled with the reason in a hover title,
+  // which a phone never shows, and the red line only appeared once somebody
+  // had started typing. So a person who uploaded a file and never typed a
+  // name saw a dead button and no reason, and on 29 Oct 2026 one asked for a
+  // refund over it. The buttons stay pressable; pressing one unnamed shows the
+  // message and puts the cursor in the name box.
+  const [nameAttempted, setNameAttempted] = useState(false)
+  const nameInputRef = useRef<HTMLInputElement | null>(null)
+  const refuseUnnamed = (): boolean => {
+    if (!nameProblem) return false
+    setNameAttempted(true)
+    nameInputRef.current?.focus()
+    return true
+  }
   const [createMode, setCreateMode] = useState<DialerMode>('progressive')
   const [createAmd, setCreateAmd] = useState<boolean>(true) // tracks mode default + user override — true matches AMD_DEFAULT_BY_MODE.progressive
   // ── RECORDING IS OFF ON A NEW CAMPAIGN ────────────────────────────────
@@ -614,6 +629,11 @@ export default function CampaignsPage() {
 
   const finishParseForCreate = (file: File, sheetName?: string) => {
     setCsvName(file.name)
+    // No name typed yet: take it from the file ("October leads.csv" ->
+    // "October leads"), visibly, in the name box, so it can still be changed.
+    // A name already typed is never overwritten.
+    const stem = file.name.replace(/\.[^.]+$/, '').trim().slice(0, 120)
+    if (stem) setCampaignName(prev => (prev.trim() ? prev : stem))
     parseLeadsFile(file, sheetName)
       .then(parsed => setCsvData(parsed))
       .catch(err => {
@@ -674,6 +694,7 @@ export default function CampaignsPage() {
 
   const resetCreateForm = () => {
     setCampaignName('')
+    setNameAttempted(false)
     // SANDBOX DEFAULT: new campaigns default to progressive mode (per
     // build instruction — most current subscribers are already on
     // progressive, so this is the more representative mode to test
@@ -733,7 +754,7 @@ export default function CampaignsPage() {
   
   const createBlankSheet = async () => {
     if (!user) return
-    if (nameProblem) { alert(nameProblem); return }
+    if (refuseUnnamed()) return
     setCreating(true)
     try {
       const res = await fetch('/api/campaigns/create', {
@@ -795,7 +816,7 @@ export default function CampaignsPage() {
 
   const handleCreate = async () => {
     if (!user) return
-    if (nameProblem) { alert(nameProblem); return }
+    if (refuseUnnamed()) return
     setCreating(true)
     try {
       
@@ -3127,6 +3148,7 @@ export default function CampaignsPage() {
                 placeholder={tr("NEW CAMPAIGN NAME")}
                 value={campaignName}
                 onChange={e => setCampaignName(e.target.value)}
+                ref={nameInputRef}
                 autoFocus
               />
               <button className="settings-close" onClick={() => setShowCreate(false)}>×</button>
@@ -3137,7 +3159,7 @@ export default function CampaignsPage() {
                 started typing, or after a failed attempt — telling a person
                 they have not filled in a field they have not reached yet is
                 nagging, not help. */}
-            {nameProblem && campaignName.length > 0 && (
+            {nameProblem && (campaignName.length > 0 || nameAttempted) && (
               <div style={{
                 padding: '8px 16px', fontSize: 12, color: '#8a1a1a',
                 background: '#f7e0e0', borderBottom: '1px solid #e0c4c4',
@@ -3335,7 +3357,7 @@ export default function CampaignsPage() {
                     type="button"
                     className="cmp-blank-sheet-btn"
                     onClick={createBlankSheet}
-                    disabled={creating || !!nameProblem}
+                    disabled={creating}
                     title={nameProblem ?? tr("Open a blank lead sheet")}
                   >{tr("▤ START A BLANK LEAD SHEET")}</button>
                   <span className="cmp-blank-sheet-tip">
@@ -3405,7 +3427,7 @@ export default function CampaignsPage() {
                 <button
                   className="ds-btn primary"
                   onClick={handleCreate}
-                  disabled={creating || !!nameProblem}
+                  disabled={creating}
                   title={nameProblem ?? tr("Create this campaign")}
                 >{creating ? tr("CREATING…") : tr("CREATE CAMPAIGN")}</button>
               </div>

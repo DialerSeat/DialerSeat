@@ -1788,9 +1788,6 @@
  "⚠ AMD COULD NOT TELL: LISTEN AND SKIP IF IT IS A MACHINE": [
   "app/dashboard/dialer/page.tsx"
  ],
- "⚠ AUTO-DEGRADED TO PROGRESSIVE, abandon rate {abandonRate} (legal cap 3%)": [
-  "app/dashboard/dialer/page.tsx"
- ],
  "⚠ AUTO-DEGRADED: abandon rate trigger": [
   "app/dashboard/dialer/page.tsx"
  ],
@@ -13361,8 +13358,6 @@
   "app/onboarding/whitelabel/page.tsx"
  ],
  "Name your campaign before saving it.": [
-  "app/api/campaigns/create/route.ts",
-  "app/dashboard/campaigns/page.tsx",
   "components/teams/TeamModals.tsx"
  ],
  "Named dialer modes (power/predictive/etc.)": [
@@ -23985,6 +23980,10 @@
  ],
  "You must have an active white-label subscription to upload logos.": [
   "app/api/whitelabel/upload-logo/route.ts"
+ ],
+ "You must name the campaign.": [
+  "app/api/campaigns/create/route.ts",
+  "app/dashboard/campaigns/page.tsx"
  ],
  "You must verbally inform the other party they are on a recorded line by law in CA, CT, FL, IL, MD, MA, MI, MT, NV, NH, PA, WA.": [
   "app/dashboard/recordings/page.tsx"

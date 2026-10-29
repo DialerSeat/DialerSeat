@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     const finalName = (typeof name === 'string' ? name.trim() : '')
     if (!finalName) {
       return NextResponse.json(
-        { success: false, error: 'Name your campaign before saving it.' },
+        { success: false, error: 'You must name the campaign.' },
         { status: 400 }
       )
     }

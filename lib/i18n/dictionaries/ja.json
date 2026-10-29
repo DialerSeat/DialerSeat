@@ -7643,5 +7643,6 @@
  "Zapier, API, PropStream, BatchLeads": "Zapier、API、PropStream、BatchLeads",
  "Zero": "ゼロ",
  "Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.": "エージェント1人につき1回線なので、設計上、放棄のリスクはゼロ。何も考えなくても FTC と TCPA のルールを100%守れます。",
- "ZONE": "タイムゾーン"
+ "ZONE": "タイムゾーン",
+ "You must name the campaign.": "保存する前にキャンペーンに名前を付けてください。"
 }
