@@ -1028,6 +1028,18 @@ function DialerPageInner() {
   // Sessions this page ended through releaseAgentLeg, so a Terminated state
   // can tell our own ending from the far end's (see onInvite).
   const agentLegsEndedByUsRef = useRef<WeakSet<object>>(new WeakSet())
+  // ── EVERY AGENT LEG THIS PAGE HAS ACCEPTED AND NOT YET SEEN END ─────────
+  // swCallRef and predictiveSeatRef each hold ONE session, and a new INVITE
+  // overwrote them without ending the one already there. That session stayed
+  // connected with nothing pointing at it, and our server cannot end it: the
+  // browser holds it. On 28 Oct 2026 four of these stayed up for three to six
+  // and a half hours. Every accepted session is tracked here so none can be
+  // forgotten, and sweepStrayAgentLegs ends any the page is no longer using.
+  const liveAgentLegsRef = useRef<Set<StrayableLeg>>(new Set())
+  // A leg releaseAgentLeg is deliberately holding open until the billing floor
+  // passes, and when that hold ends. The sweep leaves these alone; ending one
+  // early is exactly the short call the hold exists to prevent.
+  const agentLegHoldUntilRef = useRef<WeakMap<object, number>>(new WeakMap())
   // ── PREDICTIVE: THE SEAT ──────────────────────────────────────────────
   // The one agent leg a predictive session keeps for its whole run
   // (docs/PREDICTIVE.md). Held apart from swCallRef on purpose: every
@@ -1036,6 +1048,44 @@ function DialerPageInner() {
   // page, or by the server once STOP has let the last line finish.
   const predictiveSeatRef = useRef<{ bye?: () => unknown; hangup?: () => unknown } | null>(null)
 
+  // ── END ANY AGENT LEG THE PAGE IS NO LONGER USING ─────────────────────
+  // Run when a new agent leg is established (the moment the old one would
+  // otherwise be overwritten and forgotten) and every few seconds as a sweep.
+  // A connected session that is neither the current call nor the predictive
+  // seat, and is not inside a deliberate billing-floor hold, has nobody on it:
+  // the page has already moved on and cannot hear or end it any other way.
+  const sweepStrayAgentLegs = (why: string) => {
+    const now = Date.now()
+    for (const s of Array.from(liveAgentLegsRef.current)) {
+      if (s === swCallRef.current || s === predictiveSeatRef.current) continue
+      // The string, because SessionState is only imported inside the SIP effect.
+      if (s?.state !== 'Established') continue
+      const holdUntil = agentLegHoldUntilRef.current.get(s)
+      if (holdUntil !== undefined && now < holdUntil + 5_000) continue
+      liveAgentLegsRef.current.delete(s)
+      agentLegsEndedByUsRef.current.add(s)
+      try {
+        if (s.bye) s.bye()
+        else if (s.reject) s.reject()
+      } catch { /* already gone */ }
+      console.warn(`[sip] ended a stray agent leg the page was no longer using (${why})`)
+      reportAgentLegEnded({
+        why: msgText("stray agent leg ended"),
+        leadSid: null,
+        byUs: true,
+        immediate: true,
+        heldMs: 0,
+        sipCallId: s?.request?.callId ?? null,
+      })
+    }
+  }
+  // The sweep, every five seconds while this page is open. A stray leg is the
+  // one leg nothing else on our side can end, so it is caught here, within
+  // seconds, rather than by the server watchdog that cannot touch it.
+  useEffect(() => {
+    const id = setInterval(() => sweepStrayAgentLegs('periodic sweep'), 5_000)
+    return () => clearInterval(id)
+  }, [])
   // ── PREDICTIVE: GIVE THE SEAT BACK ────────────────────────────────────
   // Only when the agent leaves: offline, or the page going away. STOP does not
   // call this; the server releases the seat once the last line has ended, so a
@@ -2030,12 +2080,16 @@ function DialerPageInner() {
             // engine runs, the only INVITE this browser receives is its seat.
             const isSeat =
               dialerModeRef.current === 'predictive' && predictiveEngineStartedRef.current
+            liveAgentLegsRef.current.add(invitation)
             try {
               invitation.stateChange.addListener((state: any) => {
                 if (state === SessionState.Established) {
                   if (isSeat) {
                     predictiveSeatRef.current = invitation
                     attachSIPAudio(invitation)
+                    // A previous seat this page was holding is now forgotten
+                    // unless it is ended here. See liveAgentLegsRef.
+                    sweepStrayAgentLegs('new seat connected')
                     return
                   }
                   // Billing on this leg starts HERE, not at the INVITE. The
@@ -2043,7 +2097,9 @@ function DialerPageInner() {
                   agentLegAnsweredAtRef.current = Date.now()
                   swCallRef.current = invitation
                   attachSIPAudio(invitation)
+                  sweepStrayAgentLegs('new agent leg connected')
                 } else if (state === SessionState.Terminated) {
+                  liveAgentLegsRef.current.delete(invitation)
                   if (swCallRef.current === invitation) swCallRef.current = null
                   if (predictiveSeatRef.current === invitation) predictiveSeatRef.current = null
                   // Not ended by releaseAgentLeg, so the far end (Telnyx, the
@@ -2067,12 +2123,20 @@ function DialerPageInner() {
               // Attach immediately as well — don't wait only on the Established
               // event. The SDH/peer connection exists right after accept(), so
               // wiring audio now shaves the gap to first sound.
+              // Only if nothing newer has taken the slot while accept() was in
+              // flight. Pointing the ref back at this leg would make the newer
+              // one look stray, and the sweep would end a live call.
+              let ownsSlot = false
               if (isSeat) {
-                predictiveSeatRef.current = invitation
-              } else {
+                if (!predictiveSeatRef.current || predictiveSeatRef.current === invitation) {
+                  predictiveSeatRef.current = invitation
+                  ownsSlot = true
+                }
+              } else if (!swCallRef.current || swCallRef.current === invitation) {
                 swCallRef.current = invitation
+                ownsSlot = true
               }
-              attachSIPAudio(invitation)
+              if (ownsSlot) attachSIPAudio(invitation)
             } catch (err) {
               // sip.js calls getUserMedia while building the answer, so a
               // blocked/denied microphone surfaces HERE — as a failed accept,
@@ -3426,8 +3490,10 @@ function DialerPageInner() {
     // shared element, and getAudioEl clears that mute when the next call
     // attaches its track.
     silenceSIPAudio()
+    agentLegHoldUntilRef.current.set(session, Date.now() + wait)
     setTimeout(end, wait)
   }
+
 
   // `why` is required for the reason releaseAgentLeg's is: it is how an ended
   // agent leg is traced back to the code path that ended it.
@@ -8312,6 +8378,14 @@ const navLinkStyle: React.CSSProperties = {
  * which is one of the paths being traced. Never throws: a record must not be
  * the reason a call misbehaves.
  */
+/** The part of a sip.js session the stray-leg sweep touches. */
+interface StrayableLeg {
+  state?: string
+  bye?: () => unknown
+  reject?: () => unknown
+  request?: { callId?: string }
+}
+
 function reportAgentLegEnded(r: {
   why: string
   leadSid: string | null

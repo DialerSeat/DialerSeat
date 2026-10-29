@@ -50,7 +50,27 @@
 //
 // Everything else is left alone. The default verdict is always 'leave'.
 
-export type WatchdogRule = 'row_finished' | 'untracked' | 'runaway'
+//   seat          A predictive seat (docs/PREDICTIVE.md): the agent's one line
+//                 for a whole session, in a conference of its own. It has no
+//                 calls row BY DESIGN, so it used to read as untracked and was
+//                 ended at 120s — every four minutes on 28 Oct 2026 the engine
+//                 placed a seat, this ended it, and the engine placed another,
+//                 and the browser halves of those killed seats were what stayed
+//                 up for hours. A seat is now left alone while its agent's
+//                 heartbeat is fresh, and ended the moment it is not: a seat
+//                 with nobody behind it is the most expensive leg there is.
+export type WatchdogRule = 'row_finished' | 'untracked' | 'runaway' | 'seat_abandoned'
+
+/** A seat whose agent has not beaten in this long has nobody on it. Beats are
+ *  5s apart, but a browser throttles timers in a background tab to about one
+ *  a minute, so an agent who switched tabs mid-session can go ~60s between
+ *  beats while still on their seat. Three minutes clears that with room, and
+ *  is still minutes, not the hours a forgotten seat ran for before. */
+export const SEAT_ABANDONED_AFTER_SECONDS = 180
+
+/** Telnyx ends a conference at four hours and the engine rotates the seat at
+ *  3.5 (lib/predictive/seat SEAT_ROTATE_AFTER_MS). Past this it is a runaway. */
+export const SEAT_MAX_SECONDS = 4 * 60 * 60 + 10 * 60
 
 export interface WatchdogThresholds {
   /** Gates the hangup itself. False still produces verdicts, for reporting. */
@@ -84,6 +104,9 @@ export interface WatchdogInput {
   row: LegRow | null
   /** Prior observations, or null the very first time a leg is seen. */
   sighting: LegSighting | null
+  /** Set when this leg is a predictive seat: how long since its agent's last
+   *  heartbeat, in seconds (null when the session has none). */
+  seat?: { heartbeatAgeSeconds: number | null } | null
 }
 
 export interface WatchdogVerdict {
@@ -140,6 +163,25 @@ export function classifyLeg(
   const end = (rule: WatchdogRule, reason: string): WatchdogVerdict => ({
     callControlId, action: 'end', rule, ageSeconds, ageIsLowerBound, reason,
   })
+
+  // ── A PREDICTIVE SEAT IS JUDGED BY ITS AGENT, NOT BY ITS ROW ───────────
+  // Ahead of every other rule: a seat has no calls row on purpose, so the
+  // untracked rule below would end it, and that is the bug this replaced.
+  if (input.seat) {
+    const hb = input.seat.heartbeatAgeSeconds
+    if (hb === null || hb >= SEAT_ABANDONED_AFTER_SECONDS) {
+      return end(
+        'seat_abandoned',
+        hb === null
+          ? 'predictive seat with no agent heartbeat at all'
+          : `predictive seat, agent last heard from ${hb}s ago`,
+      )
+    }
+    if (ageSeconds !== null && ageSeconds >= SEAT_MAX_SECONDS) {
+      return end('runaway', `predictive seat up ${ageSeconds}s, past the ${SEAT_MAX_SECONDS}s seat ceiling`)
+    }
+    return leave(`predictive seat, agent heard from ${hb}s ago`)
+  }
 
   // Nothing can date this leg: no row, and this is the first time it has been
   // seen. It is recorded now and judged on the next pass. A leg that cannot be
@@ -221,7 +263,7 @@ export function summariseSweep(verdicts: WatchdogVerdict[]): {
   untrackedLive: number
 } {
   const byRule: Record<WatchdogRule, number> = {
-    row_finished: 0, untracked: 0, runaway: 0,
+    row_finished: 0, untracked: 0, runaway: 0, seat_abandoned: 0,
   }
   let ended = 0
   for (const v of verdicts) {

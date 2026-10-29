@@ -5,6 +5,26 @@ import { logCallEvent } from '@/lib/callEvents'
 import { listLiveLegs, killLegs } from '@/lib/liveLegs'
 import { getPlatformConfig } from '@/lib/platformConfig'
 import { classifyLeg, summariseSweep, type WatchdogThresholds, type WatchdogVerdict } from '@/lib/legWatchdog'
+import { readAll } from '@/lib/balanceAccounting'
+
+/**
+ * Every predictive seat on record, keyed by its leg, with how long since its
+ * agent last beat. A seat has no calls row by design; without this it reads
+ * as untracked and was ended at 120s (lib/legWatchdog, the seat rule).
+ */
+async function seatHeartbeats(db: ReturnType<typeof getServiceClient>, now: number) {
+  const { data, error } = await db
+    .from('agent_sessions')
+    .select('predictive_seat_call_control_id, last_heartbeat')
+    .not('predictive_seat_call_control_id', 'is', null)
+  if (error) throw error
+  const out = new Map<string, number | null>()
+  for (const s of (data || []) as Array<{ predictive_seat_call_control_id: string; last_heartbeat: string | null }>) {
+    const t = s.last_heartbeat ? Date.parse(s.last_heartbeat) : NaN
+    out.set(s.predictive_seat_call_control_id, Number.isFinite(t) ? Math.max(0, Math.round((now - t) / 1000)) : null)
+  }
+  return out
+}
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -19,7 +39,7 @@ export const runtime = 'nodejs'
 // entire reason there was once a report of 100 legs in flight at 400-500
 // seconds each with the balance draining behind them.
 //
-// Runs every two minutes. The whole point is to catch a runaway inside the
+// Runs every minute. The whole point is to catch a runaway inside the
 // billing minute it starts, not after lunch.
 //
 // ── OBSERVATION AND TEARDOWN ARE SEPARATE SWITCHES ─────────────────────────
@@ -59,22 +79,29 @@ const CLOSE_ORPHAN_ROW_SECONDS = 90
 
 async function correlationRows(db: ReturnType<typeof getServiceClient>) {
   const since = new Date(Date.now() - CORRELATION_WINDOW_HOURS * 60 * 60_000).toISOString()
-  const { data } = await db
+  // ── PAGED, BECAUSE A CAPPED READ MAKES LIVE CALLS LOOK UNTRACKED ───────
+  // This was one read with .limit(20000), which the project's max-rows setting
+  // silently cuts to 1,000. Past 1,000 calls in twelve hours, whichever rows
+  // fell off the page had live legs this cron would read as untracked and end
+  // two minutes in: a real conversation hung up for being on page two.
+  const data = await readAll<{
+    call_control_id: string | null; agent_call_control_id: string | null
+    created_at: string; phone_number: string | null; user_id: string | null
+    duration: number | null; disposition: string | null
+  }>((from, to) => db
     .from('calls')
-    .select('call_control_id, agent_call_control_id, created_at, phone_number, user_id, duration, disposition')
+    .select('id, call_control_id, agent_call_control_id, created_at, phone_number, user_id, duration, disposition')
     .gte('created_at', since)
     .or('call_control_id.not.is.null,agent_call_control_id.not.is.null')
-    .limit(20000)
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
+    .range(from, to))
 
   // One dial is two legs, and both are indexed to the same row — keying on the
   // lead alone would report every agent leg as untracked, which is the one
   // label here that is supposed to mean something is wrong.
   const map = new Map<string, CorrelatedRow>()
-  for (const r of (data || []) as Array<{
-    call_control_id: string | null; agent_call_control_id: string | null
-    created_at: string; phone_number: string | null; user_id: string | null
-    duration: number | null; disposition: string | null
-  }>) {
+  for (const r of data) {
     const v: CorrelatedRow = {
       createdAt: r.created_at, duration: r.duration, disposition: r.disposition,
       phone: r.phone_number, userId: r.user_id,
@@ -235,6 +262,10 @@ export async function GET(req: Request) {
       if (upsertErr) console.error('[leg-watchdog] sighting upsert failed:', upsertErr.message)
     }
 
+    // A failed read throws rather than returning an empty map: with no seats
+    // known, every live seat would read as untracked and be ended.
+    const seats = await seatHeartbeats(db, now)
+
     // Verdicts are computed against the sighting as it stood BEFORE this pass
     // incremented it, plus this pass — which is what times_seen now holds.
     const verdicts: WatchdogVerdict[] = legs.map(l => {
@@ -242,6 +273,7 @@ export async function GET(req: Request) {
       const prior = sightingById.get(l.callControlId)
       return classifyLeg({
         callControlId: l.callControlId,
+        seat: seats.has(l.callControlId) ? { heartbeatAgeSeconds: seats.get(l.callControlId) ?? null } : null,
         row: row
           ? { createdAt: row.createdAt, duration: row.duration, disposition: row.disposition }
           : null,

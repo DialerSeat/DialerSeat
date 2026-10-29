@@ -205,3 +205,72 @@ describe('summariseSweep counts by rule, not just a total', () => {
     expect(s.untrackedLive).toBe(1)
   })
 })
+
+// ── PREDICTIVE SEATS ─────────────────────────────────────────────────────────
+// A seat has no calls row by design. Read as untracked, it was ended at 120s,
+// every four minutes, on 28 Oct 2026, and the browser halves of those killed
+// seats were the legs that stayed up for hours.
+describe('a predictive seat is judged by its agent, not its row', () => {
+  const seen = (s: number, times = 10) => ({ firstSeenAt: ago(s), timesSeen: times })
+
+  it('leaves a seat whose agent is present, however long it has been untracked', () => {
+    const v = classifyLeg(
+      { callControlId: 's', row: null, sighting: seen(900), seat: { heartbeatAgeSeconds: 4 } },
+      T, NOW,
+    )
+    expect(v.action).toBe('leave')
+  })
+
+  it('leaves a present seat past the ordinary runaway ceiling, below the seat ceiling', () => {
+    const v = classifyLeg(
+      { callControlId: 's', row: null, sighting: seen(2 * 3600), seat: { heartbeatAgeSeconds: 5 } },
+      T, NOW,
+    )
+    expect(v.action).toBe('leave')
+  })
+
+  it('leaves a seat whose agent is in a throttled background tab', () => {
+    // A hidden tab beats about once a minute; that agent is still there.
+    const v = classifyLeg(
+      { callControlId: 's', row: null, sighting: seen(900), seat: { heartbeatAgeSeconds: 90 } },
+      T, NOW,
+    )
+    expect(v.action).toBe('leave')
+  })
+
+  it('ends a seat once its agent has been silent for minutes', () => {
+    const v = classifyLeg(
+      { callControlId: 's', row: null, sighting: seen(300), seat: { heartbeatAgeSeconds: 200 } },
+      T, NOW,
+    )
+    expect(v.action).toBe('end')
+    expect(v.rule).toBe('seat_abandoned')
+  })
+
+  it('ends a seat on its first sighting when nobody is behind it', () => {
+    const v = classifyLeg(
+      { callControlId: 's', row: null, sighting: seen(0, 1), seat: { heartbeatAgeSeconds: null } },
+      T, NOW,
+    )
+    expect(v.action).toBe('end')
+    expect(v.rule).toBe('seat_abandoned')
+  })
+
+  it('ends a seat past the seat ceiling even with its agent present', () => {
+    const v = classifyLeg(
+      { callControlId: 's', row: null, sighting: seen(4.5 * 3600), seat: { heartbeatAgeSeconds: 3 } },
+      T, NOW,
+    )
+    expect(v.action).toBe('end')
+    expect(v.rule).toBe('runaway')
+  })
+
+  it('still ends an untracked leg that is not a seat', () => {
+    const v = classifyLeg(
+      { callControlId: 'x', row: null, sighting: seen(900, 5) },
+      T, NOW,
+    )
+    expect(v.action).toBe('end')
+    expect(v.rule).toBe('untracked')
+  })
+})
