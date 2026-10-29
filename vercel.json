@@ -50,6 +50,10 @@
       "schedule": "0 7 * * *"
     },
     {
+      "path": "/api/cron/low-balance",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/agent-spend",
       "schedule": "*/10 * * * *"
     },

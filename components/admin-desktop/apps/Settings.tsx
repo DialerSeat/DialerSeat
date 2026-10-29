@@ -40,6 +40,7 @@ type NotifKey =
   | 'payment_failed'
   | 'checkout_stalled'
   | 'agent_spend'
+  | 'low_balance'
   | 'agent_online'
   // Operational events — see NOTIF_ROWS below
   | 'agent_leg_refused'
@@ -72,6 +73,7 @@ const NOTIF_ROWS: NotifRow[] = [
   // one you answer with an email the same day.
   { key: 'checkout_stalled', label: 'Stalled At Checkout', description: 'Someone reached the card form 30 minutes ago and left without paying' },
   { key: 'agent_spend', label: 'Agent Daily Spend', description: 'One agent\'s carrier spend today passed the daily threshold. Dialing continues' },
+  { key: 'low_balance', label: 'Telnyx Balance Low', description: 'The Telnyx balance dropped below $5. Once per drop, again after a top-up' },
   // Not an alert. With few enough customers to care about each one, knowing
   // somebody is actually dialing right now is the most useful thing you can
   // be told.
@@ -99,6 +101,7 @@ interface PrefsResponse {
   payment_failed: boolean
   checkout_stalled: boolean
   agent_spend: boolean
+  low_balance: boolean
   agent_online: boolean
   agent_leg_refused: boolean
   pool_capacity: boolean
@@ -118,6 +121,7 @@ const DEFAULT_PREFS: PrefsResponse = {
   payment_failed: true,
   checkout_stalled: true,
   agent_spend: true,
+  low_balance: true,
   agent_online: true,
   agent_leg_refused: true,
   pool_capacity: true,
@@ -2366,6 +2370,7 @@ export default function SettingsApp() {
     payment_failed: prefs.payment_failed,
     checkout_stalled: prefs.checkout_stalled,
     agent_spend: prefs.agent_spend,
+    low_balance: prefs.low_balance,
     agent_online: prefs.agent_online,
     sub_paused: prefs.sub_paused,
     sub_resumed: prefs.sub_resumed,
