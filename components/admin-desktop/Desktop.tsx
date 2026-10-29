@@ -9,6 +9,23 @@ import ContextMenu, { type ContextMenuItem } from './ContextMenu'
 import { DesktopServicesContext, isBaseApp, uninstallWarns, DEFAULT_HIDDEN_APP_IDS, type DesktopServices } from './desktopServices'
 import type { AppId, AppRole, WindowState, RecentApp } from './types'
 import { appVisibleToRole } from './types'
+import { RotateCw } from 'lucide-react'
+
+// ── ROTATION, ON THE ADMIN DESKTOP ONLY ─────────────────────────────────────
+// The app manifest pins orientation to portrait-primary, and on an Android
+// home-screen install Chrome holds every page to it, so the Map could not be
+// turned sideways. The manifest is one file for the whole site and the regular
+// dialer is meant to stay portrait, so it is left alone. Instead the admin
+// desktop asks for any orientation while it is open (Screen Orientation API)
+// and hands the lock back when it closes, which returns the app to the
+// manifest's portrait. Chrome may refuse that outside fullscreen; then a
+// Rotate button appears above the taskbar, which goes fullscreen first and asks
+// again.
+type LockableOrientation = { lock?: (o: string) => Promise<void>; unlock?: () => void }
+function screenOrientation(): LockableOrientation | null {
+  if (typeof screen === 'undefined' || !screen.orientation) return null
+  return screen.orientation as unknown as LockableOrientation
+}
 
 
 
@@ -298,6 +315,40 @@ function DesktopWindowed({ role = 'admin' }: { role?: AppRole } = {}) {
   const [confirmUninstallId, setConfirmUninstallId] = useState<AppId | null>(null)
   const [recentApps, setRecentApps] = useState<RecentApp[]>([])
   const [isMobile, setIsMobile] = useState(false)
+  // True when Chrome refused to unlock rotation without fullscreen; see the
+  // note at screenOrientation() above.
+  const [rotateNeedsTap, setRotateNeedsTap] = useState(false)
+  const enteredFullscreenRef = useRef(false)
+  useEffect(() => {
+    if (role !== 'admin') return
+    const so = screenOrientation()
+    if (!so?.lock) return
+    let alive = true
+    so.lock('any')
+      .then(() => { if (alive) setRotateNeedsTap(false) })
+      .catch(() => { if (alive) setRotateNeedsTap(true) })
+    return () => {
+      alive = false
+      try { so.unlock?.() } catch { /* nothing was locked */ }
+      // Fullscreen this desktop entered is left with it; the dialer is not
+      // meant to open fullscreen.
+      if (enteredFullscreenRef.current && document.fullscreenElement) {
+        void document.exitFullscreen().catch(() => {})
+      }
+    }
+  }, [role])
+  const unlockRotation = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen()
+        enteredFullscreenRef.current = true
+      }
+    } catch { /* fullscreen refused; the lock below will say so */ }
+    try {
+      await screenOrientation()?.lock?.('any')
+      setRotateNeedsTap(false)
+    } catch { /* still refused; the button stays */ }
+  }
   const [bootedAnalytics, setBootedAnalytics] = useState((initial?.windows.length ?? 0) > 0)
   const [safeAreaBottom, setSafeAreaBottom] = useState(0)
   const [viewport, setViewport] = useState({
@@ -1188,6 +1239,22 @@ function DesktopWindowed({ role = 'admin' }: { role?: AppRole } = {}) {
           onReorderWindows={reorderWindows}
           onOpenNewInstance={(appId) => openApp(appId, undefined, { forceNew: true })}
         />
+
+        {isMobile && rotateNeedsTap && (
+          <button
+            type="button"
+            onClick={() => void unlockRotation()}
+            title="Allow landscape"
+            style={{
+              position: 'fixed', right: 10, bottom: TASKBAR_HEIGHT + 10, zIndex: 9000,
+              display: 'flex', alignItems: 'center', gap: 6, padding: '7px 11px',
+              background: 'rgba(20,22,30,0.88)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: 4, fontSize: 11, letterSpacing: 1,
+            }}
+          >
+            <RotateCw size={14} /> ROTATE
+          </button>
+        )}
 
         {startMenuOpen && (
           <StartMenu
