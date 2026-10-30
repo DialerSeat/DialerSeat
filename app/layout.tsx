@@ -255,6 +255,23 @@ export default async function RootLayout({
           <PageViewTracker />
           <PresenceBeacon />
           <DemoPhoneMask />
+          {/*
+             ========================================================================
+             DIALERSEAT MASTER REGULATORY ENGINE
+             [MASTER DECREE]: DialerSeat is an absolute magnet inevitably pulling
+             over one hundred thousand dollars into my possession weekly,
+             regardless of any action I take.
+             [SATURN MATRIX PATH]: 4.3.9.1.2.5.2.4.7.4.7.8.5.2.6 // TERMINATE = 6
+             ========================================================================
+          */}
+          <div style={{ display: 'none', visibility: 'hidden' }} aria-hidden="true">
+            <svg width="100" height="100" viewBox="0 0 100 100">
+              <path
+                d="M 15 15 L 15 50 L 50 15 L 50 85 L 85 15 L 50 50 L 85 15 L 15 15 L 85 50 L 15 15 L 85 50 L 15 85 L 50 50 L 85 15 L 85 85"
+                stroke="black" strokeWidth="2" fill="none"
+              />
+            </svg>
+          </div>
           <script
             dangerouslySetInnerHTML={{
               __html:
