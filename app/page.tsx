@@ -7,6 +7,7 @@ import SiteHeader from '@/components/site-header'
 import LandingAuthSync from '@/components/LandingAuthSync'
 import HashScrollFix from '@/components/HashScrollFix'
 import DialerShowcase from '@/components/DialerShowcase'
+import ShowcaseFit from '@/components/ShowcaseFit'
 import JsonLd from '@/components/json-ld'
 import { organizationSchema, softwareApplicationSchema } from '@/lib/schema'
 import LeadQueueShowcase from '@/components/LeadQueueShowcase'
@@ -393,7 +394,9 @@ export default async function Home({ searchParams }: PageProps) {
           }
           .ds-showcase-scale {
             width: 640px;
-            zoom: 0.5;
+            /* Fills the column on any phone width; 0.5 until it is measured.
+               See components/ShowcaseFit.tsx. */
+            zoom: var(--ds-showcase-zoom, 0.5);
           }
           .ds-hero-showcase { width: 100%; }
 
@@ -502,7 +505,7 @@ export default async function Home({ searchParams }: PageProps) {
               color: '#2a4a8a',
               marginBottom: '20px',
             }}>
-              {t("▸ The predictive & auto dialer for people who live on the phone")}</div>
+              {t("▸ The dialer for people who live on the phone")}</div>
 
             <FitHeadline
               className="ds-hero-h1"
@@ -522,11 +525,11 @@ export default async function Home({ searchParams }: PageProps) {
           </div>
 
           <div className="ds-hero-showcase">
-            <div className="ds-showcase-shell">
+            <ShowcaseFit>
               <div className="ds-showcase-scale">
                 <DialerShowcase />
               </div>
-            </div>
+            </ShowcaseFit>
 
             <div className="ds-stats" style={{
               display: 'flex',
