@@ -87,7 +87,7 @@ export default async function AboutPage() {
 
         <GutsSection icon="info" title={t("What DialerSeat is")}>
           <p>
-            {t("An outbound calling platform, founded in 2025, for solo agents through mid-size floors: {audience}. All four dialing modes, answering-machine detection and compliance tooling are included in one weekly seat price.", { audience: FACTS.audience.join(', ').toLowerCase() })}</p>
+            {t("An outbound calling platform for solo agents through mid-size floors: {audience}. All four dialing modes, answering-machine detection and compliance tooling are included in one weekly seat price.", { audience: FACTS.audience.join(', ').toLowerCase() })}</p>
           <p>
             {t("Every comparison, data page and guide on this site is published by DialerSeat as a company and checked against the method below. Pages carry the date they last changed.")}</p>
           <ul className="guts-list good">

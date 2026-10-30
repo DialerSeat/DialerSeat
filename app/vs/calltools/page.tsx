@@ -51,11 +51,6 @@ const FAQS = [
       msg("No. $35 per seat per week is the whole bill for the software, charged weekly, cancellable any week. There is no onboarding fee, no implementation project and no minimum term."),
   },
   {
-    question: msg("Is CallTools better for large contact centres?"),
-    answer:
-      msg("It is a mature contact-centre platform with reporting depth built for supervisors managing large floors, and if that is what you need it is a reasonable choice. DialerSeat is built for teams that want the dialing without the platform around it."),
-  },
-  {
     question: msg("Can I try either without talking to sales?"),
     answer:
       msg("DialerSeat, yes, sign up and dial. CallTools is quote-based, so the real number requires a sales conversation."),

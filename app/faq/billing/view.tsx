@@ -123,7 +123,7 @@ export default function BillingFaqView() {
           <section className="faq-section">
             <h2>{t("▸ WHAT YOU CAN ACTUALLY LOSE")}</h2>
             <p>
-              <strong>{t("One week. $35.")}</strong> {t("There is no free trial, which is deliberate, a card up front is the cheapest way to filter out signups that were never going to dial. What it means for you is that the most you can ever be out is a single week.")}</p>
+              <strong>{t("One week. $35.")}</strong> {t("The most you can ever be out is a single week.")}</p>
             <p>
               <strong>{t("After that: one week. $35.")}</strong> {t("That is the whole downside, and it is worth saying plainly, because most of this industry does not let you find out this cheaply. There is no annual contract to break, no setup fee to write off and no implementation project to walk away from, the incumbents commonly charge $500-$2,000 before the first call is placed.")}</p>
             <p>

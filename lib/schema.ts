@@ -18,7 +18,6 @@ export function organizationSchema() {
     logo: `${SITE_URL}/icons/android-chrome-512x512.png`,
     description:
       'The modern dialer for sales teams and solo agents. Multi-line predictive dialing with per-campaign mode configuration, multiple scripts per campaign, server-side TCPA enforcement, and carrier-level STIR/SHAKEN A-attestation where supported. A flat $35/week per seat, no annual contracts.',
-    foundingDate: '2025',
     // The subjects the site publishes on. Part of the same entity signal as
     // sameAs below: it tells a knowledge graph what this organization is an
     // authority about, which is the basis for being named when those topics

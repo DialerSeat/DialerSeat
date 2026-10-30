@@ -82,11 +82,6 @@ const FAQS = [
       msg("Calling is included in the seat price. There is no per-minute charge and no credit balance to top up, and unlimited phone numbers with local presence are included."),
   },
   {
-    question: msg("Is there a free trial?"),
-    answer:
-      msg("No. Billing starts the day you sign up. Because billing is weekly and you can cancel any week, the most a trial run can cost is one week, $35 per seat."),
-  },
-  {
     question: msg("Can I cancel any time?"),
     answer:
       msg("Yes. Cancel any week from Settings. Access runs to the end of the week you paid for, and your leads, recordings and history are kept if the subscription lapses."),

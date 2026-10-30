@@ -62,11 +62,6 @@ const FAQS = [
     answer:
       msg("Yes. DialerSeat lets you set the dialer mode: preview, power, progressive, or predictive: per campaign, so a cold list can run predictive while hot follow-ups run preview, all in the same account at the same price. WAVV’s dialer speed is tied to which priced tier the account is on."),
   },
-  {
-    question: msg("Does DialerSeat offer a free trial like WAVV?"),
-    answer:
-      msg("No. WAVV offers a 7-day trial and DialerSeat does not, that one is theirs. DialerSeat bills from day one at $35 per seat per week, weekly with no annual contract, so the most you can be out is a single week. The card up front is deliberate: it is the cheapest way to filter out signups that were never going to dial."),
-  },
 ]
 
 export default function Page() {

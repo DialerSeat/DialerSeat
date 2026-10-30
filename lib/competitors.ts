@@ -100,7 +100,6 @@ export const DIALERSEAT = {
     'White-label reseller option on Manager+',
   ],
   friction: [
-    'Newer product with a smaller review footprint than the incumbents',
     'National DNC scrubbing and consent records remain the customer’s responsibility',
     'No built-in lead marketplace: bring your own list',
   ],
@@ -132,7 +131,7 @@ export const COMPETITORS: Competitor[] = [
       'Annual commitment',
       'Interface and device support show their age',
     ],
-    bestFor: 'Established call centers that want a single system of record and will absorb onboarding.',
+    bestFor: 'Buyers prepared for a sales-led onboarding and a setup fee before the first call.',
     team: {
       minimum: 'Quoted per deployment',
       addingASeat: 'Contact the vendor; setup fee applies before the first call',
@@ -212,7 +211,7 @@ export const COMPETITORS: Competitor[] = [
       'Implementation fees on top of seat cost',
       'Overbuilt for teams under roughly fifty seats',
     ],
-    bestFor: 'Contact centers of 50-500+ seats with procurement and a dedicated ops function.',
+    bestFor: 'Buyers with a procurement process who want an enterprise sales cycle.',
     team: {
       minimum: 'Enterprise-scale',
       addingASeat: 'A sales conversation and a revised contract',
@@ -238,7 +237,7 @@ export const COMPETITORS: Competitor[] = [
       'Aimed at roughly 20+ seat operations',
       'Usage billing makes the monthly cost harder to predict',
     ],
-    bestFor: 'Outbound floors of 20+ seats that need aggressive pacing and will negotiate a contract.',
+    bestFor: 'Buyers willing to negotiate a contract before they can dial.',
     team: {
       minimum: 'Seat minimum applies',
       addingASeat: 'Renegotiate the quote; usage billing changes with volume',
@@ -479,7 +478,7 @@ export const COMPETITORS: Competitor[] = [
       'Pricing is quote-based, so the real number requires a sales conversation',
       'SMS is billed separately per message',
     ],
-    bestFor: 'Established outbound teams that want a full contact-centre platform and will absorb onboarding.',
+    bestFor: 'Buyers prepared for a sales-led onboarding into a full contact-centre platform.',
     team: {
       minimum: 'Quoted per deployment',
       addingASeat: 'Contact the vendor to add a licence',
@@ -622,7 +621,7 @@ export const COMPETITORS: Competitor[] = [
       'Positioned for larger operations: the economics do not favour a handful of agents',
       'More platform than a team that just wants to dial a list needs',
     ],
-    bestFor: 'Larger operations that want a dialer and communications APIs from the same vendor.',
+    bestFor: 'Buyers who want a dialer and communications APIs from the same vendor.',
     team: {
       minimum: 'Platform fee plus at least one seat',
       addingASeat: 'Add a seat at roughly $99/month on top of the platform fee',

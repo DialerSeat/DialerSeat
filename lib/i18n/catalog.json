@@ -1560,6 +1560,9 @@
  "▸ THE CONSENT COLUMNS ARE OPTIONAL BUT WORTH USING": [
   "app/faq/leads/view.tsx"
  ],
+ "▸ The dialer for people who live on the phone": [
+  "app/page.tsx"
+ ],
  "▸ THE FEDERAL RULE": [
   "app/faq/calling-hours/page.tsx"
  ],
@@ -1571,9 +1574,6 @@
  ],
  "▸ THE ONLY THING A LEAD ACTUALLY NEEDS": [
   "app/faq/leads/view.tsx"
- ],
- "▸ The predictive & auto dialer for people who live on the phone": [
-  "app/page.tsx"
  ],
  "▸ THE PRINCIPLE": [
   "app/faq/how-we-keep-compliance/page.tsx"
@@ -3565,6 +3565,9 @@
  "Advanced analytics": [
   "app/faq/manager-plus/view.tsx"
  ],
+ "Advanced caller-ID reputation monitoring and assisted remediation: every number is checked daily against the rest of the pool, a number that starts getting flagged is slowed down automatically until it recovers, and numbers are registered with the carrier registry. This matters most for an agency running high-volume campaigns.": [
+  "lib/canonicalFacts.ts"
+ ],
  "Advertised around $95/seat on annual prepay; month to month is roughly $119-$249.": [
   "lib/competitors.ts"
  ],
@@ -4069,7 +4072,7 @@
  "An invented campaign, to show the arithmetic. Not our data.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
- "An outbound calling platform, founded in 2025, for solo agents through mid-size floors: {audience}. All four dialing modes, answering-machine detection and compliance tooling are included in one weekly seat price.": [
+ "An outbound calling platform for solo agents through mid-size floors: {audience}. All four dialing modes, answering-machine detection and compliance tooling are included in one weekly seat price.": [
   "app/about/page.tsx"
  ],
  "An unanswered predictive call rings for 20 seconds before the dialer gives up, above the 15-second minimum.": [
@@ -4150,6 +4153,9 @@
  ],
  "and we will build something around how you actually run.": [
   "app/dashboard/teams/page.tsx"
+ ],
+ "and we will price it with you.": [
+  "app/faq/view.tsx"
  ],
  "and we will put together a partnership that fits how you actually run.": [
   "components/teams/TeamDetail.tsx"
@@ -4398,6 +4404,9 @@
  "Are calls that are still ringing counted as unanswered?": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
+ "Are DialerSeat's numbers spam-free?": [
+  "app/faq/view.tsx"
+ ],
  "are enforced per lead state, including the states stricter than 8 a.m. to 9 p.m.": [
   "app/faq/dialer-for-real-estate/page.tsx"
  ],
@@ -4409,6 +4418,9 @@
  ],
  "are summarised from the regulator or statute, linked beside the summary, with the date they were checked. Anything we could not verify is left out.": [
   "app/about/page.tsx"
+ ],
+ "Are there reviews of DialerSeat?": [
+  "app/faq/view.tsx"
  ],
  "Are voicemail drops a separate feature?": [
   "app/faq/how-does-amd-work/page.tsx"
@@ -5143,6 +5155,21 @@
  ],
  "Buyers create their own DialerSeat accounts (or use existing ones), redeem the code, start dialing.": [
   "app/faq/dialerseat-teams/view.tsx"
+ ],
+ "Buyers prepared for a sales-led onboarding and a setup fee before the first call.": [
+  "lib/competitors.ts"
+ ],
+ "Buyers prepared for a sales-led onboarding into a full contact-centre platform.": [
+  "lib/competitors.ts"
+ ],
+ "Buyers who want a dialer and communications APIs from the same vendor.": [
+  "lib/competitors.ts"
+ ],
+ "Buyers willing to negotiate a contract before they can dial.": [
+  "lib/competitors.ts"
+ ],
+ "Buyers with a procurement process who want an enterprise sales cycle.": [
+  "lib/competitors.ts"
  ],
  "by default, then automatically deleted. You can download recordings before that period expires. We do not analyze the content of your recordings.": [
   "app/privacy/page.tsx"
@@ -6253,6 +6280,9 @@
  "Compared with": [
   "app/dashboard/reports/ReportView.tsx"
  ],
+ "comparison": [
+  "app/faq/view.tsx"
+ ],
  "Comparisons": [
   "app/vs/3cx/page.tsx",
   "app/vs/[matchup]/page.tsx",
@@ -6464,7 +6494,8 @@
   "app/faq/how-does-amd-work/page.tsx"
  ],
  "connect-rate data": [
-  "app/faq/how-we-measure-answer-rate/page.tsx"
+  "app/faq/how-we-measure-answer-rate/page.tsx",
+  "app/faq/view.tsx"
  ],
  "CONNECTED": [
   "app/dashboard/dialer/page.tsx",
@@ -6564,9 +6595,6 @@
  "Contact center tiers exist for teams that grow into them": [
   "lib/competitors.ts"
  ],
- "Contact centers of 50-500+ seats with procurement and a dedicated ops function.": [
-  "lib/competitors.ts"
- ],
  "Contact Centre Seat around $99/month, Engagement Platform around $399/month, Trust Center around $499/month. Seats are priced per agent on top of a platform fee.": [
   "lib/competitors.ts"
  ],
@@ -6578,6 +6606,9 @@
  ],
  "Contact Rate": [
   "app/dashboard/teams/page.tsx"
+ ],
+ "contact sales@dialerseat.com": [
+  "app/faq/view.tsx"
  ],
  "Contact the vendor to add a licence": [
   "lib/competitors.ts"
@@ -7613,6 +7644,9 @@
  "DialerSeat ·": [
   "app/dashboard/reports/ReportView.tsx"
  ],
+ "DialerSeat also has advanced caller-ID reputation monitoring and assisted remediation: every number is checked daily against the rest of the pool, and one that starts getting flagged is slowed down automatically until it recovers. That matters a lot for an agency running high-volume campaigns.": [
+  "app/faq/view.tsx"
+ ],
  "DialerSeat Analytics": [
   "app/welcome/Showcase.tsx"
  ],
@@ -7883,6 +7917,9 @@
  ],
  "DialerSeat Pro: one agent seat, all features, billed weekly.": [
   "app/billing/page.tsx"
+ ],
+ "DialerSeat publishes the evidence instead of asking you to take it on trust: a live": [
+  "app/faq/view.tsx"
  ],
  "DialerSeat publishes this page, so read the DialerSeat column with that in mind. Competitor pricing and capability are taken from each vendor’s own published material and independent review sites at the time of writing, and vendors change their pricing without telling us. Check theirs before you decide. If something here is out of date or wrong,": [
   "components/vs-competitor-view.tsx"
@@ -8457,6 +8494,9 @@
  "Do you need consent to make marketing calls in {name}?": [
   "app/data/calling-rules-by-country/page.tsx"
  ],
+ "Do you offer a discount for a large floor?": [
+  "app/faq/view.tsx"
+ ],
  "Do you offer a white-label option?": [
   "app/faq/view.tsx"
  ],
@@ -8519,9 +8559,6 @@
   "app/vs/mojo/page.tsx"
  ],
  "Does DialerSeat include predictive dialing at every price point?": [
-  "app/vs/wavv/page.tsx"
- ],
- "Does DialerSeat offer a free trial like WAVV?": [
   "app/vs/wavv/page.tsx"
  ],
  "Does DialerSeat offer the same parallel dialing as Orum?": [
@@ -8984,9 +9021,6 @@
  "Errors and crash reports (via Sentry)": [
   "app/privacy/page.tsx"
  ],
- "Established call centers that want a single system of record and will absorb onboarding.": [
-  "lib/competitors.ts"
- ],
  "ESTABLISHED CAMPAIGNS": [
   "app/dialing-modes/predictive/page.tsx",
   "app/faq/what-is-a-predictive-dialer/page.tsx"
@@ -8995,9 +9029,6 @@
   "lib/competitors.ts"
  ],
  "Established in the industry with a long operating history": [
-  "lib/competitors.ts"
- ],
- "Established outbound teams that want a full contact-centre platform and will absorb onboarding.": [
   "lib/competitors.ts"
  ],
  "EU/EEA/UK residents (GDPR):": [
@@ -9182,9 +9213,6 @@
  ],
  "Every outbound call is cryptographically signed at the carrier level confirming the number is verified, owned, and authorized to call from, the FCC-mandated framework carriers use to separate legitimate businesses from spoofed robocall traffic. A-Level is the highest attestation tier; calls without it get automatically deprioritized by carrier filtering.": [
   "app/faq/numbers/view.tsx"
- ],
- "Every outbound number carries STIR/SHAKEN A-attestation, is registered for CNAM and the Free Caller Registry, and dials with local presence by default, the carrier-level protections that most dialers sell as separate add-ons are just the default here. No number places more than 60 calls a day, load spreads across the pool before any number runs hot, and every number is checked daily against the rest: one that falls well behind is slowed down automatically until it recovers.": [
-  "app/faq/view.tsx"
  ],
  "Every outbound number is registered with the carrier registry (CNAM).": [
   "lib/canonicalFacts.ts"
@@ -9895,7 +9923,7 @@
  "for what a failed card actually does and how mid-week seat changes are billed.": [
   "app/faq/view.tsx"
  ],
- "for what's still on you (list quality, consent, DNC scrubbing), since no infrastructure makes a number permanently immune to flagging.": [
+ "for what's still on you: list quality, consent and DNC scrubbing.": [
   "app/faq/view.tsx"
  ],
  "Force Power, continuous single line": [
@@ -10059,6 +10087,9 @@
  ],
  "From October 17, 2026, commercial calls must come from numbers in the 400 range. Carriers block commercial calls from any other numbering.": [
   "lib/countryRules.ts"
+ ],
+ "from real calls, and a compliance export for every campaign. Every": [
+  "app/faq/view.tsx"
  ],
  "From roughly $150/month at the entry tier, more once outbound features are needed": [
   "lib/competitors.ts"
@@ -10794,9 +10825,6 @@
  ],
  "How do you calculate the abandon rate?": [
   "app/tools/abandon-rate-calculator/page.tsx"
- ],
- "How do you keep numbers from getting flagged as spam?": [
-  "app/faq/view.tsx"
  ],
  "How does AMD work?": [
   "app/faq/how-does-amd-work/page.tsx",
@@ -11704,9 +11732,6 @@
  "Is calling included, or is there a per-minute charge?": [
   "app/pricing/page.tsx"
  ],
- "Is CallTools better for large contact centres?": [
-  "app/vs/calltools/page.tsx"
- ],
  "Is Close cheaper than DialerSeat?": [
   "app/vs/close/page.tsx"
  ],
@@ -11780,9 +11805,6 @@
   "app/data/calling-rules-by-country/[code]/page.tsx",
   "app/data/calling-rules-by-country/page.tsx"
  ],
- "Is there a free trial?": [
-  "app/pricing/page.tsx"
- ],
  "Is there a mobile app?": [
   "app/faq/view.tsx"
  ],
@@ -11833,9 +11855,6 @@
  ],
  "It has": [
   "app/dashboard/campaigns/page.tsx"
- ],
- "It is a mature contact-centre platform with reporting depth built for supervisors managing large floors, and if that is what you need it is a reasonable choice. DialerSeat is built for teams that want the dialing without the platform around it.": [
-  "app/vs/calltools/page.tsx"
  ],
  "It is not a separate product. It does not replace your account. It does not bypass platform billing. It is a structured way to rent dialing access to premium campaigns you own, with the audit trail, attribution, and analytics your business actually needs.": [
   "app/faq/dialerseat-teams/view.tsx"
@@ -12052,9 +12071,6 @@
   "lib/competitorFeatures.ts"
  ],
  "Large integration marketplace": [
-  "lib/competitors.ts"
- ],
- "Larger operations that want a dialer and communications APIs from the same vendor.": [
   "lib/competitors.ts"
  ],
  "last {ago}": [
@@ -13471,12 +13487,6 @@
  "New URL": [
   "components/teams/CampaignDetail.tsx"
  ],
- "Newer product with a smaller review footprint than the incumbents": [
-  "lib/competitors.ts"
- ],
- "Newer product with a smaller third-party review footprint than long-established incumbents.": [
-  "lib/canonicalFacts.ts"
- ],
  "NEWEST {length} SHOWN OF {recordingsTotal}. NARROW BY AGENT, CAMPAIGN OR DATE TO SEE OLDER ONES.": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
  ],
@@ -13708,9 +13718,6 @@
  ],
  "No file provided": [
   "app/api/manager/desktop-prefs/wallpaper/route.ts"
- ],
- "No free trial. Billing starts the day you sign up, a card up front is the filter.": [
-  "lib/canonicalFacts.ts"
  ],
  "No infrastructure makes a number permanently immune. Call-analytics apps also score numbers on how the people you call respond, including complaints and blocks. The platform removes every carrier-level and volume-level cause of flagging; these are the ones only you control.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
@@ -14009,9 +14016,6 @@
  "No. Auto dialers are legal in the US. What the law regulates is how they are used: prerecorded or artificial-voice calls need the person’s consent, predictive dialers must keep abandoned calls under 3% of answered calls per campaign per 30 days, calls must respect calling hours and the Do Not Call Registry, and caller ID must be shown. Some states add their own rules.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
- "No. Billing starts the day you sign up. Because billing is weekly and you can cancel any week, the most a trial run can cost is one week, $35 per seat.": [
-  "app/pricing/page.tsx"
- ],
  "No. Collection calls are not telemarketing, so the National Do Not Call Registry does not apply. The FDCPA and Regulation F do, as do the TCPA’s rules on prerecorded messages and autodialed calls.": [
   "lib/verticals.ts"
  ],
@@ -14077,9 +14081,6 @@
  ],
  "No. This is the difference that makes an offshore floor viable at all: at $95-$250 per seat per month on other platforms, the software costs more than the wage, so the model does not work. At $35 per week it does.": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
- ],
- "No. WAVV offers a 7-day trial and DialerSeat does not, that one is theirs. DialerSeat bills from day one at $35 per seat per week, weekly with no annual contract, so the most you can be out is a single week. The card up front is deliberate: it is the cheapest way to filter out signups that were never going to dial.": [
-  "app/vs/wavv/page.tsx"
  ],
  "Nobody can dial without a paid seat, whichever way round it is.": [
   "components/teams/TeamModals.tsx"
@@ -15160,9 +15161,6 @@
  ],
  "Outbound dialing is a weekly rhythm. Most operators dial Monday through Friday, evaluate Friday afternoon, plan the next week. A weekly bill matches that rhythm. If a week is slow, you're traveling, you took on a different project, a campaign dried up, you pause for that week. You don't owe us 30 days' notice.": [
   "app/faq/why-we-charge/page.tsx"
- ],
- "Outbound floors of 20+ seats that need aggressive pacing and will negotiate a contract.": [
-  "lib/competitors.ts"
  ],
  "Outbound phone number provisioning (where applicable)": [
   "app/terms/page.tsx"
@@ -16986,6 +16984,9 @@
  "RECRUITING": [
   "lib/verticals.ts"
  ],
+ "Recruiting a floor of more than 15 agents, or need call-center supervision, advanced quality assurance and enterprise-level support? Contact sales@dialerseat.com for a discount.": [
+  "lib/canonicalFacts.ts"
+ ],
  "RECURRING REVENUE": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
@@ -18648,6 +18649,9 @@
  "Spam Likely is a score on your number, not a verdict on you. How carriers and call-protection apps decide, what STIR/SHAKEN does and does not prove, why CNAM rarely shows on mobiles, and what you can actually control.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
+ "Spam-free numbers: no number places more than 60 calls a day, so no caller ID is burned by volume.": [
+  "lib/canonicalFacts.ts"
+ ],
  "SPEED": [
   "app/dialing-modes/view.tsx"
  ],
@@ -18785,6 +18789,9 @@
  "STATES & TERRITORIES": [
   "app/faq/calling-hours/page.tsx"
  ],
+ "states the other tool's published price and cites its sources.": [
+  "app/faq/view.tsx"
+ ],
  "Status": [
   "app/dashboard/reports/ReportView.tsx",
   "app/faq/campaigns/view.tsx",
@@ -18794,6 +18801,9 @@
   "app/dashboard/dialer/page.tsx",
   "app/dashboard/settings/page.tsx",
   "components/teams/TeamFloor.tsx"
+ ],
+ "status page": [
+  "app/faq/view.tsx"
  ],
  "Status partially unavailable": [
   "app/status/page.tsx"
@@ -20032,6 +20042,9 @@
  "The most you can be out is one week, $35. What cancel actually does, what a failed card does, and how refunds work.": [
   "app/faq/billing/page.tsx"
  ],
+ "The most you can ever be out is a single week.": [
+  "app/faq/billing/view.tsx"
+ ],
  "The National Do Not Call Registry.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
@@ -20577,11 +20590,11 @@
  "There are two, and they do different jobs. STIR/SHAKEN is a cryptographic attestation attached to the call itself, telling the receiving carrier that the network placing the call has verified the caller has the right to use that number. CNAM is the caller-name database that decides what text appears on the handset. Neither is a registration you complete once for your business the way 10DLC is, they are properties of the numbers you dial from.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
+ "There is no annual contract to lock you in, so the simplest review is your own: one week, $35, on your own list.": [
+  "app/faq/view.tsx"
+ ],
  "There is no built-in lead marketplace.": [
   "app/pricing/page.tsx"
- ],
- "There is no free trial, which is deliberate, a card up front is the cheapest way to filter out signups that were never going to dial. What it means for you is that the most you can ever be out is a single week.": [
-  "app/faq/billing/view.tsx"
  ],
  "There is no number dashboard to babysit and no setting to tune. Caps, load spreading, daily checks and throttling all run on their own, on every plan, at $35 per seat per week.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
@@ -23725,8 +23738,14 @@
  "Yes. HighLevel’s phone system includes a power dialer that works through a call list automatically. Its own announcement of the feature does not say whether it dials more than one line at a time or which plans include it. DialerSeat includes multi-line predictive dialing alongside preview, power and progressive on every seat.": [
   "app/vs/gohighlevel/page.tsx"
  ],
+ "Yes. If you are recruiting a floor of more than 15 agents, or you need call-center supervision, advanced quality assurance and enterprise-level support,": [
+  "app/faq/view.tsx"
+ ],
  "Yes. In the US, predictive dialers are legal as long as they meet conditions set by the FTC’s Telemarketing Sales Rule and the FCC’s TCPA rules: abandon no more than 3% of calls answered by a person per campaign over each 30-day period, let an unanswered call ring at least 15 seconds or four rings, play a recorded message naming the seller and a callback number when no agent is free, offer an automated opt-out, keep records, and call only between 8 a.m. and 9 p.m. in the called person’s local time.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
+ ],
+ "Yes. No number places more than 60 calls a day, so no caller ID gets burned by volume, and load spreads across the pool before any number runs hot. Every outbound number carries STIR/SHAKEN A-attestation, is registered for CNAM and the Free Caller Registry, and dials with local presence by default.": [
+  "app/faq/view.tsx"
  ],
  "Yes. Numbers in the pool carry A-attestation under STIR/SHAKEN and are CNAM-registered. You do not file anything, and there is no separate fee for it. This is a meaningful part of why a number reaches a handset looking like a real business rather than a suspected robocall.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"

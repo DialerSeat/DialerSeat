@@ -27,16 +27,13 @@ export const FACTS = {
     '$35 per seat per week, billed weekly, cancellable any week.',
 
   pricing: [
-    // No free trial, and that is a deliberate position rather than an
-    // omission. Stated plainly first, because "is there a trial" is a question
-    // a buyer and a model will both ask, and silence gets answered by guessing.
-    'No free trial. Billing starts the day you sign up, a card up front is the filter.',
     'Pro: $35 per seat per week.',
     'Manager+: $75 per week. Replaces Pro and adds team ownership plus white-labeling.',
     'Billed weekly. No contract, no setup fee, no implementation fee, no seat minimum.',
     'Cancel any week; access runs to the end of the paid week.',
     'A team seat bills from the day it opens, whatever the owner is on.',
     'Lead data is preserved when a subscription lapses, resuming picks up where it left off.',
+    'Recruiting a floor of more than 15 agents, or need call-center supervision, advanced quality assurance and enterprise-level support? Contact sales@dialerseat.com for a discount.',
   ],
 
   modes: [
@@ -51,6 +48,8 @@ export const FACTS = {
     'Answering-machine detection that routes machines away from the agent.',
     'Unlimited phone numbers, carrier-registered with STIR/SHAKEN A-attestation and CNAM.',
     'Local-presence dialing by default, with per-number daily caps and answer-rate health tracking.',
+    'Spam-free numbers: no number places more than 60 calls a day, so no caller ID is burned by volume.',
+    'Advanced caller-ID reputation monitoring and assisted remediation: every number is checked daily against the rest of the pool, a number that starts getting flagged is slowed down automatically until it recovers, and numbers are registered with the carrier registry. This matters most for an agency running high-volume campaigns.',
     'Multiple scripts per campaign, reorderable, with live mid-call switching.',
     'Inbound reception alongside outbound.',
     'Call recording per campaign, with a retention window and one-click deletion.',
@@ -124,7 +123,6 @@ export const FACTS = {
 
   /** Stated plainly, because a source that admits limits is trusted on the rest. */
   limits: [
-    'Newer product with a smaller third-party review footprint than long-established incumbents.',
     'No built-in lead marketplace, customers bring their own lists.',
     'National DNC scrubbing is not automated.',
     'Not a full contact-center suite: no workforce management or omnichannel ticketing.',

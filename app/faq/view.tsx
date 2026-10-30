@@ -619,6 +619,16 @@ export default function FaqView() {
             </details>
 
             <details>
+              <summary>{t("Are there reviews of DialerSeat?")}</summary>
+              <div className="faqx-answer">
+                <p>
+                  {t("DialerSeat publishes the evidence instead of asking you to take it on trust: a live")}{" "}<Link href="/status">{t("status page")}</Link>{t(",")}{" "}<Link href="/data/connect-rates">{t("connect-rate data")}</Link> {t("from real calls, and a compliance export for every campaign. Every")}{" "}<Link href="/vs">{t("comparison")}</Link> {t("states the other tool's published price and cites its sources.")}</p>
+                <p>
+                  {t("There is no annual contract to lock you in, so the simplest review is your own: one week, $35, on your own list.")}</p>
+              </div>
+            </details>
+
+            <details>
               <summary>{t("Which dialing modes do you support?")}</summary>
               <div className="faqx-answer">
                 <p>
@@ -672,14 +682,16 @@ export default function FaqView() {
             </details>
 
             <details>
-              <summary>{t("How do you keep numbers from getting flagged as spam?")}</summary>
+              <summary>{t("Are DialerSeat's numbers spam-free?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  {t("Every outbound number carries STIR/SHAKEN A-attestation, is registered for CNAM and the Free Caller Registry, and dials with local presence by default, the carrier-level protections that most dialers sell as separate add-ons are just the default here. No number places more than 60 calls a day, load spreads across the pool before any number runs hot, and every number is checked daily against the rest: one that falls well behind is slowed down automatically until it recovers.")}</p>
+                  {t("Yes. No number places more than 60 calls a day, so no caller ID gets burned by volume, and load spreads across the pool before any number runs hot. Every outbound number carries STIR/SHAKEN A-attestation, is registered for CNAM and the Free Caller Registry, and dials with local presence by default.")}</p>
+                <p>
+                  {t("DialerSeat also has advanced caller-ID reputation monitoring and assisted remediation: every number is checked daily against the rest of the pool, and one that starts getting flagged is slowed down automatically until it recovers. That matters a lot for an agency running high-volume campaigns.")}</p>
                 <p>
                   {t("See")}{" "}<Link href="/faq/how-we-keep-numbers-clean">{t("how we keep our numbers clean")}</Link> {t("for the whole system with the actual thresholds, and")}{' '}
                   <Link href="/faq/why-calls-show-spam-likely">{t("why calls show Spam Likely")}</Link>{' '}
-                  {t("for what's still on you (list quality, consent, DNC scrubbing), since no infrastructure makes a number permanently immune to flagging.")}</p>
+                  {t("for what's still on you: list quality, consent and DNC scrubbing.")}</p>
               </div>
             </details>
 
@@ -708,6 +720,14 @@ export default function FaqView() {
                   {t("Yes:")}{" "}<strong>{t("Manager+")}</strong>{t(", at $75/week. It's what the team owner pays to create and own a team; each individual seat inside the team still runs $35/week, regardless of team size. You can configure it so the owner pays for the whole team's seats, or so individual agents pay for their own access. Both flows are supported.")}</p>
                 <p>
                   {t("See")}{" "}<Link href="/faq/dialerseat-teams">{t("DialerSeat for teams")}</Link> {t("for the full breakdown: owner-paid vs. agent-paid mechanics, shared campaigns, team-mode predictive routing, and how seat cancellations work.")}</p>
+              </div>
+            </details>
+
+            <details>
+              <summary>{t("Do you offer a discount for a large floor?")}</summary>
+              <div className="faqx-answer">
+                <p>
+                  {t("Yes. If you are recruiting a floor of more than 15 agents, or you need call-center supervision, advanced quality assurance and enterprise-level support,")}{" "}<a href="mailto:sales@dialerseat.com">{t("contact sales@dialerseat.com")}</a> {t("and we will price it with you.")}</p>
               </div>
             </details>
 

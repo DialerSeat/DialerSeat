@@ -67,7 +67,6 @@ alternative to legacy dialers, with compliance tooling (TCPA-aware workflows,
 genuine answering-machine detection) included rather than sold as an add-on.
 
 ## Key facts
-- No free trial. Billing starts at signup, a card up front is the filter.
 - Pricing: $35/week per seat on Pro. $75/week on Manager+,
   which replaces Pro and adds team ownership plus white-labeling. No
   long-term contract. Cancel anytime.
