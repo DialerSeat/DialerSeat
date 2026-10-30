@@ -118,6 +118,9 @@ export default async function CallingRulesByCountry() {
           dateModified: UPDATED,
           creator: { '@id': 'https://dialerseat.com/#organization' },
           isAccessibleForFree: true,
+          // Reusable with credit (creditText below). Google flags a Dataset
+          // without a license (Search Console, 29 Oct 2026).
+          license: 'https://creativecommons.org/licenses/by/4.0/',
           creditText: msg("Outbound calling rules by country, DialerSeat"),
           spatialCoverage: COUNTRY_RULES.map((c) => c.name),
           distribution: {

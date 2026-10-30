@@ -120,6 +120,9 @@ export default async function DialerPricingIndex() {
           dateModified: UPDATED,
           creator: { '@id': 'https://dialerseat.com/#organization' },
           isAccessibleForFree: true,
+          // Reusable with credit (creditText below). Google flags a Dataset
+          // without a license (Search Console, 29 Oct 2026).
+          license: 'https://creativecommons.org/licenses/by/4.0/',
           creditText: msg("Dialer Pricing Index, DialerSeat"),
           keywords: ['dialer pricing', 'predictive dialer', 'auto dialer', 'call center software'],
           variableMeasured: ['pricing', msg("contract terms"), msg("smallest purchase"), msg("five-agent cost")],
