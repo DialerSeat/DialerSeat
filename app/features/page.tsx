@@ -8,6 +8,8 @@ import PageStamp from '@/components/PageStamp'
 import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
+import ProductShot from '@/components/ProductShot'
+import { PRODUCT_SHOTS } from '@/lib/screenshots'
 import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import { primeLocale, t } from '@/lib/i18n/server'
@@ -106,6 +108,14 @@ export default async function FeaturesPage() {
 
         <GutsSection icon="swap" title={t("Four dialing modes, chosen per campaign")}>
           <p>{t("All four are included at the base price. Each campaign picks its own mode, so one list can run predictive while another runs preview.")}</p>
+          {/* The claim is that all four live in one dropdown rather than in
+              four price tiers. The dropdown is in the capture, so show it
+              rather than asking to be taken at our word. */}
+          <ProductShot
+            shot={PRODUCT_SHOTS[0]}
+            priority
+            caption="The MODE dropdown on the live dialer. Every mode in it is in the $35 seat, and the campaign chooses, not the plan."
+          />
           <div className="guts-grid-2">
             {FACTS.modes.map(([mode, body]) => (
               <Link key={mode} href={MODE_ROUTES[mode]} className="guts-panel">
@@ -142,6 +152,10 @@ export default async function FeaturesPage() {
         </GutsSection>
 
         <GutsSection icon="team" title={t("Teams")}>
+          <ProductShot
+            shot={PRODUCT_SHOTS[3]}
+            caption="What an owner sees across a floor: contact rate, talk time, conversions and active seats, for one agent or everybody at once. The figures are a test account's own history, not a performance claim."
+          />
           <div className="guts-grid-2">
             <div className="guts-panel">
               <div className="role">{t("SEATS")}</div>

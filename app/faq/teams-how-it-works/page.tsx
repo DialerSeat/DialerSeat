@@ -4,7 +4,9 @@ import JsonLd from '@/components/json-ld'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import ProductShot from '@/components/ProductShot'
 import { FACTS } from '@/lib/canonicalFacts'
+import { PRODUCT_SHOTS } from '@/lib/screenshots'
 import { primeLocale, t as tr } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -181,6 +183,14 @@ export default async function TeamsHowItWorksPage() {
             <ul style={{ margin: '12px 0 0', paddingInlineStart: 18, fontSize: 14.5, lineHeight: 1.85 }}>
               {FACTS.teams.notYet.map(l => <li key={l} style={{ marginBottom: 6 }}>{tr(l)}</li>)}
             </ul>
+          </section>
+
+          <section style={{ marginTop: 52 }}>
+            <h2 style={{ fontSize: 25, fontWeight: 'bold', letterSpacing: -0.4, margin: 0 }}>{tr("What the owner sees")}</h2>
+            <ProductShot
+              shot={PRODUCT_SHOTS[3]}
+              caption="Calls, contact rate, conversions, talk time and active seats across the team, for one agent or everybody at once. The figures are a test account's own history, not a performance claim."
+            />
           </section>
 
           <section style={{ marginTop: 52 }}>

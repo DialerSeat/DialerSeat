@@ -6,6 +6,8 @@ import SiteFooter from '@/components/site-footer'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { t } from '@/lib/i18n/client'
+import ProductShot from '@/components/ProductShot'
+import { PRODUCT_SHOTS } from '@/lib/screenshots'
 
 const T = {
   bg: '#f0f1f4',
@@ -140,6 +142,14 @@ export default function DialingModesView() {
 
         <section style={{ marginBottom: 48 }}>
           <SectionLabel>{t("THE MODES")}</SectionLabel>
+
+          {/* This page explains four modes and then asks the reader to believe
+              they are one dropdown rather than four price tiers. The dropdown
+              is right there in the capture. */}
+          <ProductShot
+            shot={PRODUCT_SHOTS[0]}
+            caption="All four modes in the MODE dropdown on the live dialer, chosen per campaign. None of them is a paid upgrade."
+          />
 
           <ModeCard
             label="PREVIEW"

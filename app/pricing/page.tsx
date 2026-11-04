@@ -8,7 +8,9 @@ import PageStamp from '@/components/PageStamp'
 import DialerCostCalculator from '@/components/tools/DialerCostCalculator'
 import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import ProductShot from '@/components/ProductShot'
 import { FACTS } from '@/lib/canonicalFacts'
+import { PRODUCT_SHOTS } from '@/lib/screenshots'
 import { DIALERSEAT } from '@/lib/competitors'
 import { BILLED_DIALERS, DIALERSEAT_WEEKLY, billedCost } from '@/lib/weeklyBilling'
 import { pageDate } from '@/lib/pageDates'
@@ -213,6 +215,13 @@ export default async function PricingPage() {
         </GutsSection>
 
         <GutsSection icon="check" title={t("What $35 a week includes")}>
+          {/* A price page that lists what you get and shows none of it is
+              asking to be taken at its word. This is the screen the list is
+              describing. */}
+          <ProductShot
+            shot={PRODUCT_SHOTS[0]}
+            caption={null}
+          />
           <ul className="guts-list good">
             {FACTS.features.slice(0, 9).map((f) => (
               <li key={f}>{t(f)}</li>

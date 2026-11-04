@@ -8,6 +8,8 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
 import { t } from '@/lib/i18n/client'
+import ShotSlideshow from '@/components/ShotSlideshow'
+import { WHITE_LABEL_SHOTS } from '@/lib/screenshots'
 
 
 
@@ -258,6 +260,16 @@ export default function View() {
 
             <p className="muted">
               {t("And every dollar an agent pays you above the $35/seat passthrough is yours. Same margin math as standard manager mode, just with your brand on top.")}</p>
+          </section>
+
+          {/* ── THE THEMES ─────────────────────────────────────────────────
+              The page that sells white-labeling had no picture of a
+              white-labeled dashboard on it. */}
+          <section className="faq-section">
+            <h2>{t("▸ TEN BRANDS, ONE DASHBOARD")}</h2>
+            <p>
+              {t("The same analytics screen under ten different operator themes. Your logo, your colours, your own subdomain or custom domain. These are unedited captures, not mockups.")}</p>
+            <ShotSlideshow shots={WHITE_LABEL_SHOTS} />
           </section>
 
           {/* ── WHAT'S INCLUDED ────────────────────────────────────────────── */}
