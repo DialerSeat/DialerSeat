@@ -4,7 +4,7 @@ import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
 import { listLiveLegs, killLegs } from '@/lib/liveLegs'
 import { getPlatformConfig } from '@/lib/platformConfig'
-import { classifyLeg, summariseSweep, type WatchdogThresholds, type WatchdogVerdict } from '@/lib/legWatchdog'
+import { classifyLeg, seatLegs, summariseSweep, type WatchdogThresholds, type WatchdogVerdict } from '@/lib/legWatchdog'
 import { readAll } from '@/lib/balanceAccounting'
 
 /**
@@ -264,7 +264,9 @@ export async function GET(req: Request) {
 
     // A failed read throws rather than returning an empty map: with no seats
     // known, every live seat would read as untracked and be ended.
-    const seats = await seatHeartbeats(db, now)
+    // The seat legs, and each one's browser-side twin through the shared
+    // call session (lib/legWatchdog seatLegs).
+    const seats = seatLegs(legs, await seatHeartbeats(db, now))
 
     // Verdicts are computed against the sighting as it stood BEFORE this pass
     // incremented it, plus this pass — which is what times_seen now holds.

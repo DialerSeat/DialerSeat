@@ -251,6 +251,38 @@ export function classifyLeg(
 }
 
 /**
+ * Which live legs belong to a predictive seat, and how long since its agent
+ * last beat. A seat is two legs: the one we place (its call_control_id is on
+ * agent_sessions) and the browser-side twin Telnyx creates, which has its own
+ * call_control_id and no calls row. Keyed on the seat's id alone, the twin
+ * read as untracked and was ended two to three minutes in, which dropped the
+ * agent's seat: on 30 Oct 2026 one session went through 34 seats in 99
+ * minutes, and all 38 legs ended that way from 29 Oct were seat twins.
+ *
+ * Every live leg sharing a call session with a live seat leg gets that seat's
+ * heartbeat age. A twin whose seat leg is no longer live is not covered and
+ * stays an ordinary untracked leg, which is right: nobody is behind it.
+ */
+export function seatLegs(
+  legs: Array<{ callControlId: string; callSessionId: string | null }>,
+  seatHeartbeatById: Map<string, number | null>,
+): Map<string, number | null> {
+  const out = new Map<string, number | null>()
+  const bySession = new Map<string, number | null>()
+  for (const l of legs) {
+    if (!seatHeartbeatById.has(l.callControlId)) continue
+    const age = seatHeartbeatById.get(l.callControlId) ?? null
+    out.set(l.callControlId, age)
+    if (l.callSessionId) bySession.set(l.callSessionId, age)
+  }
+  for (const l of legs) {
+    if (out.has(l.callControlId) || !l.callSessionId) continue
+    if (bySession.has(l.callSessionId)) out.set(l.callControlId, bySession.get(l.callSessionId) ?? null)
+  }
+  return out
+}
+
+/**
  * Summarise a sweep for the cron's response and the ops log.
  *
  * Counts by rule rather than a bare total, because "ended 4 legs" and "ended 4

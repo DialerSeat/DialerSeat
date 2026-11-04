@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { classifyLeg, summariseSweep, type WatchdogThresholds } from '@/lib/legWatchdog'
+import { classifyLeg, seatLegs, summariseSweep, type WatchdogThresholds } from '@/lib/legWatchdog'
 
 // =============================================================================
 // THE COST OF A WRONG ANSWER HERE IS A CALL CUT OFF MID-SENTENCE
@@ -272,5 +272,48 @@ describe('a predictive seat is judged by its agent, not its row', () => {
     )
     expect(v.action).toBe('end')
     expect(v.rule).toBe('untracked')
+  })
+})
+
+// ── A SEAT'S TWIN IS PART OF THE SEAT ───────────────────────────────────────
+// All 38 legs the watchdog ended from 29 Oct 2026 were the browser-side twins
+// of live seats, which dropped the agent's line every two to three minutes.
+describe('seatLegs', () => {
+  const seats = new Map<string, number | null>([['seat-a', 4], ['seat-gone', 2]])
+
+  it('covers the seat leg and its twin in the same call session', () => {
+    const m = seatLegs([
+      { callControlId: 'seat-a', callSessionId: 's1' },
+      { callControlId: 'twin-a', callSessionId: 's1' },
+    ], seats)
+    expect(m.get('seat-a')).toBe(4)
+    expect(m.get('twin-a')).toBe(4)
+  })
+
+  it('does not cover a twin whose seat leg is no longer live', () => {
+    const m = seatLegs([{ callControlId: 'twin-orphan', callSessionId: 's9' }], seats)
+    expect(m.has('twin-orphan')).toBe(false)
+  })
+
+  it('does not cover legs in other sessions or with no session', () => {
+    const m = seatLegs([
+      { callControlId: 'seat-a', callSessionId: 's1' },
+      { callControlId: 'lead-1', callSessionId: 's2' },
+      { callControlId: 'mystery', callSessionId: null },
+    ], seats)
+    expect(m.has('lead-1')).toBe(false)
+    expect(m.has('mystery')).toBe(false)
+  })
+
+  it('gives the twin the seat verdict, so it is left while the agent is present', () => {
+    const m = seatLegs([
+      { callControlId: 'seat-a', callSessionId: 's1' },
+      { callControlId: 'twin-a', callSessionId: 's1' },
+    ], seats)
+    const v = classifyLeg(
+      { callControlId: 'twin-a', row: null, sighting: { firstSeenAt: ago(600), timesSeen: 10 }, seat: { heartbeatAgeSeconds: m.get('twin-a') ?? null } },
+      T, NOW,
+    )
+    expect(v.action).toBe('leave')
   })
 })

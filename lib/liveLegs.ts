@@ -26,6 +26,13 @@ const TELNYX_API = 'https://api.telnyx.com/v2'
 
 export interface LiveLeg {
   callControlId: string
+  /**
+   * Shared by every leg of one call (Telnyx ActiveCall.call_session_id,
+   * documented as "ID shared by related call legs of the same phone call").
+   * It is how a predictive seat's browser-side twin, which has its own
+   * call_control_id, is recognised as part of the seat.
+   */
+  callSessionId: string | null
   /** Clerk id from the leg's client_state, when it carries one. */
   userId: string | null
   /** From our calls row, when one matches. Null means we lost track of it. */
@@ -97,12 +104,13 @@ export async function listLiveLegs(
 
     const legs: LiveLeg[] = rows
       .filter((c: { call_control_id?: string }) => !!c.call_control_id)
-      .map((c: { call_control_id: string; client_state?: string | null; direction?: string | null }) => {
+      .map((c: { call_control_id: string; call_session_id?: string | null; client_state?: string | null; direction?: string | null }) => {
         const owner = parseClientState(c.client_state)
         const row = rowsByCallControlId.get(c.call_control_id)
         const startedAt = row?.created_at ?? null
         return {
           callControlId: c.call_control_id,
+          callSessionId: c.call_session_id ?? null,
           userId: owner?.u ?? row?.user_id ?? null,
           startedAt,
           ageSeconds: startedAt
