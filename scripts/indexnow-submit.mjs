@@ -35,7 +35,11 @@ const key = process.env.INDEXNOW_KEY || REPO_KEY
 const args = process.argv.slice(2)
 const sinceIdx = args.indexOf('--since')
 const since = sinceIdx >= 0 ? args[sinceIdx + 1] : null
-const paths = args.filter((a, i) => !a.startsWith('--') && i !== sinceIdx + 1)
+// The guard on sinceIdx matters: indexOf returns -1 when --since is absent,
+// so `i !== sinceIdx + 1` was dropping argument 0, the FIRST path given.
+// `indexnow-submit /pricing` submitted nothing and reported 'Nothing to
+// submit'; a two-path run silently sent only the second one.
+const paths = args.filter((a, i) => !a.startsWith('--') && !(sinceIdx >= 0 && i === sinceIdx + 1))
 
 async function sitemapEntries() {
   const res = await fetch(`${APEX}/sitemap.xml`)
