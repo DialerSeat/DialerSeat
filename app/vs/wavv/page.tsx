@@ -3,11 +3,10 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
-import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
+import { prosConsKeywords } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
-  faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
@@ -41,29 +40,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("How does DialerSeat compare to WAVV on price?"),
-    answer:
-      'DialerSeat is $35 per seat per week, billed weekly, cancel any time, with preview, power, and multi-line predictive dialing all included at that one price. WAVV publishes three separate tiers: $59/month for manual preview dialing, $99/month for single-line auto-dial, and $149/month for multi-line predictive dialing across up to three lines, plus a $1/month fee per phone number on top of whichever plan you choose.',
-  },
-  {
-    question: msg("Does DialerSeat include predictive dialing at every price point?"),
-    answer:
-      msg("Yes. Every DialerSeat seat includes multi-line predictive dialing, along with preview and power dialing, at the same $35/week price. WAVV requires upgrading to its top Multi Line tier to get predictive dialing across multiple lines."),
-  },
-  {
-    question: msg("Does WAVV charge extra for phone numbers?"),
-    answer:
-      msg("Yes, WAVV charges $1 per phone number per month on top of its plan pricing. DialerSeat includes unlimited dial-out numbers and multiple inbound numbers per seat at no additional cost."),
-  },
-  {
-    question: msg("Can I switch dialer modes per campaign in DialerSeat?"),
-    answer:
-      msg("Yes. DialerSeat lets you set the dialer mode: preview, power, progressive, or predictive: per campaign, so a cold list can run predictive while hot follow-ups run preview, all in the same account at the same price. WAVV’s dialer speed is tied to which priced tier the account is on."),
-  },
-]
-
 export default function Page() {
   const competitor = competitorBySlug(SLUG)
   if (!competitor) notFound()
@@ -72,7 +48,6 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

@@ -8,7 +8,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import PageStamp from '@/components/PageStamp'
 import CiteThis from '@/components/CiteThis'
 import { resourcesRail } from '@/lib/gutsRail'
-import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { breadcrumbSchema } from '@/lib/schema'
 import { COUNTRY_RULES, RULES_CHECKED, type CountryRule } from '@/lib/countryRules'
 import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -48,19 +48,6 @@ const FIELDS: { key: keyof CountryRule; label: string }[] = [
   { key: 'localNumber', label: msg("Getting a local number") },
 ]
 
-// Built during render, after primeLocale(), so the questions and answers are
-// in the page's language for the visible list and the FAQ markup alike.
-function faqsFor(c: CountryRule) {
-  const name = countryName(t, c)
-  const out: { question: string; answer: string }[] = []
-  if (c.hours) out.push({ question: t('What are the telemarketing calling hours in {name}?', { name }), answer: t(c.hours) })
-  if (c.consent) out.push({ question: t('Do you need consent to cold call in {name}?', { name }), answer: t(c.consent) })
-  if (c.dnc) out.push({ question: t('Is there a Do Not Call list in {name}?', { name }), answer: t(c.dnc) })
-  if (c.dialer) out.push({ question: t('What are the auto dialer rules in {name}?', { name }), answer: t(c.dialer) })
-  if (c.callerId) out.push({ question: t('What caller ID rules apply to marketing calls in {name}?', { name }), answer: t(c.callerId) })
-  return out
-}
-
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
   const { code } = await params
   const c = byCode(code)
@@ -89,13 +76,11 @@ export default async function CountryRulesPage({ params }: { params: Promise<{ c
 
   const ROUTE = `/data/calling-rules-by-country/${c.code.toLowerCase()}`
   const updated = pageDate(ROUTE)
-  const faqs = faqsFor(c)
   const name = countryName(t, c)
   const others = COUNTRY_RULES.filter((o) => o.code !== c.code)
 
   return (
     <>
-      {faqs.length > 0 && <JsonLd data={faqPageSchema(faqs)} />}
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

@@ -3,11 +3,10 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
-import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
+import { prosConsKeywords } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
-  faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
@@ -42,24 +41,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("What does Ringover cost?"),
-    answer:
-      msg("Talk is $15 to $24 per user per month and Business, which includes the power dialer, is $47 to $57, depending on how you are billed. Both published plans require at least three users and a twelve-month commitment."),
-  },
-  {
-    question: msg("Does Ringover require a contract?"),
-    answer:
-      msg("Yes. Both of Ringover’s published plans carry a twelve-month commitment and a three-user minimum. DialerSeat bills weekly with no contract and a one-seat minimum."),
-  },
-  {
-    question: msg("What is the smallest Ringover plan with a power dialer?"),
-    answer:
-      msg("Business with three users, at $141 to $171 a month depending on billing, committed for twelve months: $1,692 to $2,052 over the year. The smallest DialerSeat purchase with every dialer mode is one seat for one week at $35."),
-  },
-]
-
 export default function Page() {
   const competitor = competitorBySlug(SLUG)
   if (!competitor) notFound()
@@ -68,7 +49,6 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

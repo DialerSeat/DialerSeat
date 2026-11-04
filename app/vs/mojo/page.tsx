@@ -3,11 +3,10 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
-import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
+import { prosConsKeywords } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
-  faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
@@ -41,39 +40,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("How does DialerSeat compare to Mojo Dialer on price?"),
-    answer:
-      msg("DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with everything included. Mojo Dialer advertises $139/month for Triple Line, but real customer bills land at $250-$350 once the $10/mo Agent Access fee and $25-$49 data add-ons (FSBO, Pre-Foreclosure, Neighborhood, Skip Tracer) are stacked. DialerSeat has no required access fee and no per-dataset subscriptions."),
-  },
-  {
-    question: msg("What does one week of Mojo Dialer cost compared to DialerSeat?"),
-    answer:
-      msg("Mojo Dialer bills by the month, so using it for one week still costs a full month: $139 for Triple Line plus the $10 Agent Access licence, before any data add-on. DialerSeat bills by the week, so one week costs $35 and four weeks cost $140, with every dialer mode included."),
-  },
-  {
-    question: msg("Is DialerSeat only for real estate?"),
-    answer:
-      msg("No. DialerSeat is industry-agnostic from day one: insurance (life, health, IUL, veterans), real estate, financial services, B2B SaaS, fundraising, debt resolution, mortgage, solar, recruiting, and more. Mojo is built around FSBO, expired, and neighborhood data which works well for real estate but limits other industries."),
-  },
-  {
-    question: msg("Does DialerSeat have triple-line dialing like Mojo?"),
-    answer:
-      msg("Yes, and also real predictive dialing with proper pacing and abandon-rate caps. Mojo offers triple-line but no true predictive mode. DialerSeat supports four modes (Preview, Power, Progressive, Predictive) configurable per campaign."),
-  },
-  {
-    question: msg("Can I use my preferred real estate data with DialerSeat?"),
-    answer:
-      'Yes. Export the list from your FSBO, expired or skip-tracing provider as a CSV and upload it; the columns are detected automatically. If your CRM or data tool can send a webhook, lead drip on Manager+ pushes new leads straight into a running campaign. You keep your preferred data source without paying Mojo a markup.',
-  },
-  {
-    question: msg("Does DialerSeat work on mobile?"),
-    answer:
-      msg("Yes. DialerSeat installs as a Progressive Web App on iPhone, iPad, Android, macOS, and Windows. Field agents can dial from an iPad, solo agents can close from their phone between meetings. Mojo offers mobile web only."),
-  },
-]
-
 export default function Page() {
   const competitor = competitorBySlug(SLUG)
   if (!competitor) notFound()
@@ -82,7 +48,6 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

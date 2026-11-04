@@ -3,11 +3,10 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
-import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
+import { prosConsKeywords } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
-  faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
@@ -39,24 +38,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("How much does CallTools cost?"),
-    answer:
-      msg("Roughly $119.99 per user per month month-to-month, or about $101.99 on an annual commitment. Those are starting figures, CallTools prices by quote, and reported setup fees run $500-$1,500 before the first call, with complex CRM integrations quoted separately at $2,000-$5,000. SMS is billed per message on top."),
-  },
-  {
-    question: msg("Does DialerSeat charge a setup fee?"),
-    answer:
-      msg("No. $35 per seat per week is the whole bill for the software, charged weekly, cancellable any week. There is no onboarding fee, no implementation project and no minimum term."),
-  },
-  {
-    question: msg("Can I try either without talking to sales?"),
-    answer:
-      msg("DialerSeat, yes, sign up and dial. CallTools is quote-based, so the real number requires a sales conversation."),
-  },
-]
-
 export default function Page() {
   const competitor = competitorBySlug(SLUG)
   if (!competitor) notFound()
@@ -65,7 +46,6 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

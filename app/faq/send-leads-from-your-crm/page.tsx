@@ -5,7 +5,7 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
-import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -74,34 +74,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("Can I send leads into DialerSeat automatically from my CRM?"),
-    answer:
-      msg("Yes, with lead drip. It gives a team campaign its own webhook URL, and any tool that can send a web request, such as GoHighLevel, HubSpot, Zapier or a Google Sheet, can post new leads to it. They land in the campaign’s queue, and agents already dialing that campaign reach them without restarting. Lead drip is switched on from the campaign’s page in Teams, which comes with Manager+."),
-  },
-  {
-    question: msg("What format does the DialerSeat webhook accept?"),
-    answer:
-      'JSON, sent with Content-Type: application/json. You can send one lead as an object, several as an array, or wrap them as {"leads": [...]}, up to 500 per request. Field names do not have to match ours: phone, phone_number, mobile or cell all work, and fields nested one level deep, like HubSpot’s properties, are read as if they were flat.',
-  },
-  {
-    question: msg("What happens to fields DialerSeat does not recognise?"),
-    answer:
-      msg("They are kept with the lead rather than thrown away. A field nobody anticipated is often the one an agent needs during the call."),
-  },
-  {
-    question: msg("How do I know if my leads arrived?"),
-    answer:
-      msg("Every response says how many leads were accepted, how many were skipped because that number was already on the campaign, and how many were rejected and why. It also says whether the campaign is live or paused. Every request is logged too, so you can read it back later from the campaign."),
-  },
-]
-
 export default async function Page() {
   await primeLocale()
   return (
     <>
-      <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

@@ -50,6 +50,29 @@ function textOf(v: unknown): string | null {
   return null
 }
 
+// ── NO " | DialerSeat" ON THE TAB TITLE ─────────────────────────────
+// Search results cut a title at about 60 characters, and the suffix spent 13
+// of them on all but nine pages: 89 of 147 English titles ran past the cut,
+// 22 without it. Nobody searching "dialer cost calculator" typed the brand,
+// and Google shows the site name above the result anyway. The homepage carries
+// the brand ("DialerSeat, Dial Smarter. Close Faster."), which this leaves
+// alone. Stripped here, after translation, so all twelve languages lose it
+// and the page files keep their strings (they are the translation keys).
+// og:title is untouched: a shared card has no site name above it.
+// \s* not \s+: the Japanese and Chinese titles close on a full-width bracket
+// or question mark with no space before the bar.
+const BRAND_SUFFIX = /\s*\|\s*DialerSeat\s*$/
+
+function withoutBrandSuffix(v: unknown): unknown {
+  if (typeof v === 'string') return v.replace(BRAND_SUFFIX, '')
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    const o = { ...(v as Record<string, unknown>) }
+    for (const k of ['default', 'absolute']) if (typeof o[k] === 'string') o[k] = (o[k] as string).replace(BRAND_SUFFIX, '')
+    return o
+  }
+  return v
+}
+
 /**
  * What every page's metadata gets, in every language:
  *
@@ -64,6 +87,7 @@ function textOf(v: unknown): string | null {
 export function withShareImage(meta: Metadata, locale: Locale = 'en'): Metadata {
   const out: Metadata = { ...meta }
   delete out.keywords
+  if (meta.title) out.title = withoutBrandSuffix(meta.title) as Metadata['title']
   const title = textOf(meta.openGraph?.title) ?? textOf(meta.twitter?.title) ?? textOf(meta.title)
   const url = shareImageUrl(title, locale)
   out.openGraph = {

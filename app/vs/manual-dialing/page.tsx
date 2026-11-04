@@ -5,7 +5,7 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { vsRail } from '@/lib/gutsRail'
-import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -63,34 +63,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("Is a dialer worth it compared to dialing manually?"),
-    answer:
-      msg("It depends on how much of your day is calling. A dialer removes the work between conversations: finding and dialing the next number, waiting through rings, sitting through voicemail greetings, and logging the result. If you make a handful of warm callbacks a day, dialing by hand is fine. If calling is most of your day, those gaps add up to most of it."),
-  },
-  {
-    question: msg("What are the cons of manual dialing?"),
-    answer:
-      msg("Every step between conversations falls on you, voicemails and unanswered rings take the same time as live calls, you have to check each lead’s local time yourself to stay inside legal calling hours, results live in a spreadsheet you keep by hand, and dialing everything from your own number concentrates all of it on one caller ID."),
-  },
-  {
-    question: msg("Why does calling from my cell phone get my number marked as spam?"),
-    answer:
-      msg("Because all of your calls come from one number. Call-protection providers score numbers on how people respond to them, and a single number placing a high volume of calls to people who decline or hang up builds a poor reputation fast. On a personal cell, that label follows you onto your personal calls too. DialerSeat spreads calls across a pool and caps each number at 60 calls a day."),
-  },
-  {
-    question: msg("When is dialing by hand the better choice?"),
-    answer:
-      msg("When you make only a few calls a day, when every call is a warm callback to someone expecting you, or when you are testing whether outbound calling works for your business at all. There is no reason to pay for a dialer to make ten calls."),
-  },
-]
-
 export default async function Page() {
   await primeLocale()
   return (
     <>
-      <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

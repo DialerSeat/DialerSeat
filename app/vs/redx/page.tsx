@@ -3,11 +3,10 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
-import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
+import { prosConsKeywords } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
-  faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
@@ -42,29 +41,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("What does REDX cost?"),
-    answer:
-      msg("Each lead list (expired, FSBO, FRBO, pre-foreclosure or GeoLeads) is $60 a month or $600 a year. Bundles are Core at $199 a month, Connect at $299 with a single-line power dialer, and Pro at $349 with a triple-line dialer. Extra users are $75 a month on Core and Connect and $99 on Pro."),
-  },
-  {
-    question: msg("Is the REDX dialer single-line or multi-line?"),
-    answer:
-      msg("Both, depending on the bundle: single-line on Connect at $299 a month and triple-line on Pro at $349. The Core bundle does not include the dialer."),
-  },
-  {
-    question: msg("Can I buy the REDX dialer without leads?"),
-    answer:
-      msg("REDX’s pricing page lists the dialer only as part of its Connect and Pro lead bundles, with no standalone dialer price. DialerSeat is the reverse: a dialer at $35 a week with no leads included, for agents who already have a source."),
-  },
-  {
-    question: msg("Does DialerSeat come with real estate leads?"),
-    answer:
-      msg("No. DialerSeat is a dialer only, so you bring your own list, whether that is expireds and FSBOs from a data provider or leads from your own marketing. If you want leads and a dialer from one vendor, REDX is built for exactly that."),
-  },
-]
-
 export default function Page() {
   const competitor = competitorBySlug(SLUG)
   if (!competitor) notFound()
@@ -73,7 +49,6 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

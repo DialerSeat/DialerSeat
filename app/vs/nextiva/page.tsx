@@ -3,11 +3,10 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
-import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
+import { prosConsKeywords } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
-  faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
@@ -45,29 +44,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("What does Nextiva cost?"),
-    answer:
-      'Nextiva publishes Core at $23 per user per month, or $15 billed annually; Engage at $50, or $25 annually; and Scale at $75 annually. Its contact center starts at $75 per agent per month. The lowest figure on every plan requires annual billing.',
-  },
-  {
-    question: msg("Does Nextiva have a predictive dialer?"),
-    answer:
-      msg("Not on the business phone plans. Progressive and predictive dialing are listed in the contact center Professional tier, which Nextiva does not price publicly. So the plans you can see a price for are not the plans that dial."),
-  },
-  {
-    question: msg("Is Nextiva or DialerSeat better for outbound calling?"),
-    answer:
-      msg("DialerSeat, if dialing is the job. All four dialing modes, answering machine detection, local presence and the compliance tooling are in the $35 weekly seat. Nextiva is a phone system first, and reaching predictive dialing means a contact center tier and a sales conversation."),
-  },
-  {
-    question: msg("When is Nextiva the better buy?"),
-    answer:
-      'When you need a business phone system: extensions, an auto attendant, video meetings and SMS for a whole company that also makes some outbound calls. DialerSeat is not a phone system and does not try to be one.',
-  },
-]
-
 export default function Page() {
   const competitor = competitorBySlug(SLUG)
   if (!competitor) notFound()
@@ -76,7 +52,6 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

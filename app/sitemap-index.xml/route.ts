@@ -74,6 +74,12 @@ export async function GET() {
       for (const t of data) {
         const slug = (t.slug || '').toLowerCase()
         if (!validSlug(slug)) continue
+        // A tenant's sitemap lists only /, /sign-in and /sign-up: the first
+        // redirects to sign-in and the other two are disallowed by that
+        // tenant's own robots.txt. Submitting them (test1-8 included) gave
+        // crawlers nothing to index and Search Console only errors. Tenants
+        // come back here when they have a public page worth indexing.
+        continue
         const lastmod = t.updated_at ? new Date(t.updated_at).toISOString() : undefined
         
         if (t.custom_domain) {

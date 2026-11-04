@@ -5,7 +5,7 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
-import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -74,39 +74,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("What is local presence dialing?"),
-    answer:
-      msg("Local presence dialing means calling each prospect from a phone number local to them, so the caller ID shows a familiar area code instead of an out-of-state one. Many people are more willing to answer a call that looks local."),
-  },
-  {
-    question: msg("Does DialerSeat do local presence dialing?"),
-    answer:
-      msg("Yes, on every call, in every dialing mode including predictive, with no add-on. For each call DialerSeat picks a number from its pool that matches the prospect’s area code, then their state, then their region, and only then any number with capacity."),
-  },
-  {
-    question: msg("What if a lead has moved and kept their old number?"),
-    answer:
-      msg("If the lead’s state in your list disagrees with their area code, DialerSeat matches their state instead. Someone who moved to Florida and kept a New York mobile number gets a Florida caller ID, because that is what looks local to them now."),
-  },
-  {
-    question: msg("Does local presence burn out numbers faster?"),
-    answer:
-      msg("It can, if every call to one area goes out on one number. DialerSeat prevents that. Once a number has made 40 calls in a day it moves to the back of the queue however good its match, so calls spread across the pool, and no number places more than 60 calls a day."),
-  },
-  {
-    question: msg("Does a redial use the same caller ID?"),
-    answer:
-      msg("Yes, when it comes within three minutes. On an iPhone with Allow Repeated Calls switched on in Focus, a second call from the same caller within three minutes is let through, so DialerSeat redials from the number the prospect just saw. After three minutes it goes back to ordinary local matching."),
-  },
-]
-
 export default async function Page() {
   await primeLocale()
   return (
     <>
-      <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

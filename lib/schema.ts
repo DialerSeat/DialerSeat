@@ -100,7 +100,6 @@ export function softwareApplicationSchema() {
       'Inbound team numbers',
       'TCPA windows enforced server-side per lead state',
       'STIR/SHAKEN A-attestation',
-      'All outbound numbers carrier-registered (CNAM, FCR)',
       'Local presence dialing',
       'Calendar-aligned analytics (Sunday + 1st-of-month resets)',
       'Lapsed-user data preservation',

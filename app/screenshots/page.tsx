@@ -8,7 +8,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import PageStamp from '@/components/PageStamp'
 import WhiteLabelSlideshow from './view'
 import { resourcesRail } from '@/lib/gutsRail'
-import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { breadcrumbSchema } from '@/lib/schema'
 import { PRODUCT_SHOTS, ALL_SHOTS } from '@/lib/screenshots'
 import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -82,35 +82,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("What does DialerSeat look like?"),
-    answer:
-      msg("DialerSeat is a browser dialer with a dark-trim terminal as its main screen: a lead queue down the middle, the dialing mode and redial setting across the top, the day's metrics and a manual dial pad down the right, and a system log underneath. Alongside it are Campaigns, Recordings, Leads, Teams and Settings. Screenshots of each are on dialerseat.com/screenshots."),
-  },
-  {
-    question: msg("Is there a demo of DialerSeat?"),
-    answer:
-      msg("There is no sales demo to sit through and no free trial. Signing up puts you straight into the product, and the screenshots on dialerseat.com/screenshots show every screen beforehand so you know what you are buying. Billing starts the day you sign up and you can cancel any week."),
-  },
-  {
-    question: msg("Can DialerSeat be white-labeled with my own branding?"),
-    answer:
-      msg("Yes, on Manager+ at $75 a week. Your logo, your colour theme and your own subdomain or custom domain, so the people you sell seats to never see the DialerSeat name. The same dashboard is shown in ten different brand themes on dialerseat.com/screenshots."),
-  },
-  {
-    question: msg("Are the numbers in the DialerSeat screenshots real results?"),
-    answer:
-      msg("No, and they are not presented as any. The figures on those screens are a test account's own call history, shown so the charts are not empty. They are not a benchmark, a typical result or a promise. Real platform-wide connect-rate data, with sample sizes, is published separately at dialerseat.com/data/connect-rates."),
-  },
-]
-
 export default async function ScreenshotsPage() {
   await primeLocale()
 
   return (
     <>
-      <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

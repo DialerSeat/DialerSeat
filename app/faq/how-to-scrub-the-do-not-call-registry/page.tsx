@@ -5,7 +5,7 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
-import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -72,34 +72,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("Does DialerSeat scrub my list against the National Do Not Call Registry?"),
-    answer:
-      msg("No. Registry access requires your own organization’s registration and subscription with the FTC, so scrubbing is your responsibility. Remove registered numbers from your list before you upload it. DialerSeat does block numbers automatically when someone presses 9 on its abandoned-call message or texts STOP."),
-  },
-  {
-    question: msg("How much does the Do Not Call Registry cost?"),
-    answer:
-      msg("From October 1, 2026, the FTC charges $85 per area code, with the first five area codes free and a maximum of $23,425."),
-  },
-  {
-    question: msg("How often do I have to scrub against the Do Not Call Registry?"),
-    answer:
-      msg("To stay within the Telemarketing Sales Rule’s safe harbor, the copy of the registry you scrub against must be no more than 31 days old on the date of each call. In practice that means downloading it again and re-scrubbing at least every 31 days."),
-  },
-  {
-    question: msg("Can I ever call a number on the Do Not Call Registry?"),
-    answer:
-      msg("Yes, in two cases under the Telemarketing Sales Rule: when the person has given you an express agreement in writing to be called, or when you have an established business relationship with them and they have not asked you to stop. The FTC’s guidance sets out the details of each."),
-  },
-]
-
 export default async function Page() {
   await primeLocale()
   return (
     <>
-      <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

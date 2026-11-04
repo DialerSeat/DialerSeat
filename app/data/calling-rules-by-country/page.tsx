@@ -7,7 +7,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import PageStamp from '@/components/PageStamp'
 import CiteThis from '@/components/CiteThis'
 import { resourcesRail } from '@/lib/gutsRail'
-import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { breadcrumbSchema } from '@/lib/schema'
 import { COUNTRY_RULES, RULES_CHECKED, type CountryRule } from '@/lib/countryRules'
 import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -79,19 +79,6 @@ const FIELDS: { key: keyof CountryRule; label: string }[] = [
   { key: 'localNumber', label: msg("GETTING A LOCAL NUMBER") },
 ]
 
-/** Question-and-answer pairs built only from the verified fields. */
-// Called during render, after primeLocale(), so the markup is in the page's language.
-function faqs() {
-  const out: { question: string; answer: string }[] = []
-  for (const c of COUNTRY_RULES) {
-    const name = countryName(t, c)
-    if (c.hours) out.push({ question: t('What are the telemarketing calling hours in {name}?', { name }), answer: t(c.hours) })
-    if (c.consent) out.push({ question: t('Do you need consent to make marketing calls in {name}?', { name }), answer: t(c.consent) })
-    if (c.dnc) out.push({ question: t('Is there a Do Not Call list in {name}?', { name }), answer: t(c.dnc) })
-  }
-  return out
-}
-
 const anchor = (c: CountryRule) => c.code.toLowerCase()
 
 export default async function CallingRulesByCountry() {
@@ -100,7 +87,6 @@ export default async function CallingRulesByCountry() {
 
   return (
     <>
-      <JsonLd data={faqPageSchema(faqs())} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

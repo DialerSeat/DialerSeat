@@ -46,7 +46,7 @@ export const FACTS = {
   features: [
     'All four dialer modes included at the base price, selectable per campaign.',
     'Answering-machine detection that routes machines away from the agent.',
-    'Unlimited phone numbers, carrier-registered with STIR/SHAKEN A-attestation and CNAM.',
+    'Unlimited phone numbers with STIR/SHAKEN A-attestation.',
     'Local-presence dialing by default, with per-number daily caps and answer-rate health tracking.',
     'Spam-free numbers: no number places more than 60 calls a day, so no caller ID is burned by volume.',
     'Advanced caller-ID reputation monitoring and assisted remediation: every number is checked daily against the rest of the pool, a number that starts getting flagged is slowed down automatically until it recovers, and numbers are registered with the carrier registry. This matters most for an agency running high-volume campaigns.',
@@ -65,7 +65,6 @@ export const FACTS = {
     'TCPA calling windows are enforced server-side, per lead, against the lead’s own state, not the agent’s.',
     'The predictive dialer enforces the FTC Telemarketing Sales Rule 3% abandon-rate cap automatically.',
     'Outbound traffic is provisioned through a carrier providing STIR/SHAKEN A-attestation where supported.',
-    'Every outbound number is registered with the carrier registry (CNAM).',
     'An internal suppression list blocks numbers from being dialed again once added.',
     'National DNC list scrubbing and consent records remain the customer’s responsibility. ' +
       'DialerSeat does not automate them, and says so rather than implying coverage it does not provide.',

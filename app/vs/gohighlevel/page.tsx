@@ -3,11 +3,10 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
-import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
+import { prosConsKeywords } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
-  faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
@@ -42,24 +41,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("What does GoHighLevel cost?"),
-    answer:
-      msg("Starter is $97 a month, Unlimited $297 and Agency Pro $497, month to month with a 14-day trial. Calling runs through its LC Phone system and is billed per minute from a prepaid wallet: US outbound calls are about $0.018 a minute and local numbers $1.15 a month. An agency rebilling usage to clients can add its own markup on top."),
-  },
-  {
-    question: msg("Does GoHighLevel have a power dialer?"),
-    answer:
-      msg("Yes. HighLevel’s phone system includes a power dialer that works through a call list automatically. Its own announcement of the feature does not say whether it dials more than one line at a time or which plans include it. DialerSeat includes multi-line predictive dialing alongside preview, power and progressive on every seat."),
-  },
-  {
-    question: msg("Should an agency use GoHighLevel’s dialer or DialerSeat?"),
-    answer:
-      msg("If your clients already run on HighLevel and dialing is an occasional task, its built-in dialer keeps everything in one account. If dialing is the job, a dedicated dialer gives you predictive and multi-line dialing, calling with no per-minute wallet, and white-labeling on Manager+ for $75 a week. You can also run both: on team campaigns, Manager+ includes lead drip, a webhook that takes leads straight from HighLevel into a DialerSeat campaign."),
-  },
-]
-
 export default function Page() {
   const competitor = competitorBySlug(SLUG)
   if (!competitor) notFound()
@@ -68,7 +49,6 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

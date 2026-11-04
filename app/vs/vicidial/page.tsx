@@ -3,11 +3,10 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
-import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
+import { prosConsKeywords } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
-  faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
@@ -39,34 +38,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("Is VICIdial really free?"),
-    answer:
-      msg("The software genuinely is, it is open source under the AGPL with no per-seat licence, and that is not a trick. What is not free is everything required to run it: a server, SIP trunking, and someone who knows Asterisk. Published total-cost-of-ownership analyses put realistic VICIdial cost at $130-$400+ per agent per month, rising toward $195-$728 once administration labour is counted. Industry salary data puts a dedicated VICIdial administrator near $97,000 a year."),
-  },
-  {
-    question: msg("At what size does VICIdial become the cheaper option?"),
-    answer:
-      msg("Roughly 30 agents is the commonly cited floor, and the economics get genuinely compelling past 100. Below about 30 agents the fixed overhead, the server, the trunk minimums, and above all the person maintaining it, is spread over too few seats to beat a per-seat hosted product. Above 100 agents almost nothing beats it on cost."),
-  },
-  {
-    question: msg("What does DialerSeat do that VICIdial does not?"),
-    answer:
-      msg("Nothing you could not build in VICIdial given enough configuration time: that is the honest answer, and it is why VICIdial has the install base it has. The difference is what arrives already done: per-lead TCPA calling windows enforced server-side, a 3% abandon-rate cap, STIR/SHAKEN attestation, number rotation with answer-rate monitoring, and someone else on call when it breaks at 9am."),
-  },
-  {
-    question: msg("Can I move from VICIdial to DialerSeat?"),
-    answer:
-      "Lead lists export from VICIdial as CSV and import directly. What does not transfer is your configuration: campaigns, dispositions and pacing are set up again, which for most floors is an afternoon rather than a project. Recordings stay where they are; we do not import call history.",
-  },
-  {
-    question: msg("Is DialerSeat open source?"),
-    answer:
-      msg("No. If not being able to read and modify the source is a dealbreaker, VICIdial is the answer and no comparison page should pretend otherwise. That is a real requirement for some operations and we do not meet it."),
-  },
-]
-
 export default function Page() {
   const competitor = competitorBySlug(SLUG)
   if (!competitor) notFound()
@@ -75,7 +46,6 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

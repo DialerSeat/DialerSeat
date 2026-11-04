@@ -21349,7 +21349,7 @@
  "Unlimited numbers means nothing if they all get": [
   "app/faq/numbers/view.tsx"
  ],
- "Unlimited numbers with STIR/SHAKEN A-attestation and CNAM registration": [
+ "Unlimited numbers with STIR/SHAKEN A-attestation": [
   "lib/competitors.ts"
  ],
  "Unlimited outbound calling": [
@@ -21358,7 +21358,7 @@
  "Unlimited outbound numbers and unlimited minutes": [
   "app/faq/manager-plus/view.tsx"
  ],
- "Unlimited phone numbers, carrier-registered with STIR/SHAKEN A-attestation and CNAM.": [
+ "Unlimited phone numbers with STIR/SHAKEN A-attestation.": [
   "lib/canonicalFacts.ts"
  ],
  "Unlimited team creation.": [

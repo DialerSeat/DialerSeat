@@ -4,7 +4,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import JsonLd from '@/components/json-ld'
 import GutsShell from '@/components/GutsShell'
 import { vsRail } from '@/lib/gutsRail'
-import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { organizationSchema, breadcrumbSchema } from '@/lib/schema'
 import {
   COMPETITORS,
   DIALERSEAT,
@@ -211,30 +211,9 @@ export default async function MatchupPage(
 
   const { a, b } = m
 
-  const faqs = [
-    {
-      question: `Is ${a.name} or ${b.name} cheaper?`,
-      answer:
-        `${a.name}: ${a.pricing} ${a.contract} ${b.name}: ${b.pricing} ${b.contract} ` +
-        `Compare the total including add-ons and minimums rather than the headline rate, for several ` +
-        msg("tools in this category the advertised number excludes the dialer itself."),
-    },
-    {
-      question: `Which one should I pick, ${a.name} or ${b.name}?`,
-      answer:
-        `Pick ${a.name} if you are ${a.bestFor.charAt(0).toLowerCase()}${a.bestFor.slice(1)} ` +
-        `Pick ${b.name} if you are ${b.bestFor.charAt(0).toLowerCase()}${b.bestFor.slice(1)}`,
-    },
-    {
-      question: `Do ${a.name} and ${b.name} both offer predictive dialing?`,
-      answer: `${a.name}: ${a.dialing} ${b.name}: ${b.dialing}`,
-    },
-  ]
-
   return (
     <>
       <JsonLd data={organizationSchema()} />
-      <JsonLd data={faqPageSchema(faqs)} />
       <JsonLd data={breadcrumbSchema([
         { name: msg("Home"), url: '/' },
         { name: msg("Comparisons"), url: '/vs' },

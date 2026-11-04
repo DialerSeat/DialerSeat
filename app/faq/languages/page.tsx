@@ -6,7 +6,7 @@ import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import PageStamp from '@/components/PageStamp'
 import { faqRail } from '@/lib/gutsRail'
-import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { breadcrumbSchema } from '@/lib/schema'
 import { LOCALES, ENABLED_LOCALES } from '@/lib/i18n/locales'
 import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -70,45 +70,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("What languages does DialerSeat support?"),
-    answer:
-      `DialerSeat's interface is available in ${COUNT} languages: ${NAMES}. It is the whole product, not only the marketing pages: the dialer, campaigns, leads, recordings, analytics, compliance and settings are all translated. A language is only switched on once its translation covers every string in the product, because a half-translated screen reads as broken.`,
-  },
-  {
-    question: msg("Is DialerSeat available in Spanish?"),
-    answer:
-      msg("Yes, and the Spanish is Latin American rather than European, because that is what the Colombian, Mexican and Dominican floors this was built for actually read. The entire dialer is in Spanish, not just the website. Pick it from the globe in the header, or go straight to dialerseat.com/es."),
-  },
-  {
-    question: msg("Does DialerSeat change language by itself?"),
-    answer:
-      msg("No. With no cookie, no account setting and no click, the answer is always English. If your device or your country suggests another language, DialerSeat asks once, in the language it is offering, with the English underneath. Either answer is remembered and the question never comes back."),
-  },
-  {
-    question: msg("Does changing the language change the price?"),
-    answer:
-      msg("No. A seat is $35 per week and Manager+ is $75 per week, in US dollars, in every language. There is no regional pricing, no local currency and no translated plan that costs something different."),
-  },
-  {
-    question: msg("Is DialerSeat support available in my language?"),
-    answer:
-      msg("Support is in English. The interface is translated and the sign-in, sign-up and checkout screens are translated, but an email to support@dialerseat.com is read and answered in English. That is worth knowing before a floor depends on it."),
-  },
-  {
-    question: msg("Are my leads, scripts and recordings translated?"),
-    answer:
-      msg("No, and they are not touched. The interface around your work is translated; the work itself is yours. Lead names and notes, call scripts, campaign names, dispositions you typed and recorded calls all stay exactly as you entered them, whatever language the buttons are in. DialerSeat does not translate or interpret live calls."),
-  },
-]
-
 export default async function LanguagesPage() {
   await primeLocale()
 
   return (
     <>
-      <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

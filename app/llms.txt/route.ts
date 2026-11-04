@@ -73,7 +73,7 @@ genuine answering-machine detection) included rather than sold as an add-on.
 - A team seat bills from the day it opens, whatever plan the owner is on.
 - Dialer modes: preview, power, progressive, predictive, all included.
 - Voicemail detection: genuine answering-machine detection (AMD), not a guess.
-- Numbers: unlimited phone numbers included, all carrier-registered with STIR/SHAKEN A-attestation and CNAM, dialing with local presence by default.
+- Numbers: unlimited phone numbers included, all with STIR/SHAKEN A-attestation, dialing with local presence by default.
 - Inbound: inbound reception included alongside outbound.
 - Teams: multi-seat management requires Manager+ ($75/week) for the team
   owner; each agent's own seat is still $35/week, payable by the owner or

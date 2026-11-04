@@ -3,11 +3,10 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
-import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
+import { prosConsKeywords } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
-  faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
@@ -45,29 +44,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("What does Talkdesk cost?"),
-    answer:
-      msg("Talkdesk publishes four seat prices: Digital Essentials at $85 per user per month, Voice Essentials at $105, Elite at $165 and Industry Experience Clouds at $225. Those are the seats. The outbound dialer is part of the Proactive Outbound Engagement add-on, and its price is not published."),
-  },
-  {
-    question: msg("Does Talkdesk include a predictive dialer?"),
-    answer:
-      msg("Not in the seat price. Talkdesk Dialer, which covers preview and predictive dialing, is sold inside the Proactive Outbound Engagement add-on. You will need a quote to know what outbound actually costs."),
-  },
-  {
-    question: msg("Is Talkdesk or DialerSeat cheaper for an outbound team?"),
-    answer:
-      msg("DialerSeat, and by enough that the add-on price does not change the answer. Five DialerSeat seats are $175 a week, with all four dialing modes included, and you can stop paying for any of them next week. Five Talkdesk Voice Essentials seats are $525 a month before the dialer add-on is priced at all."),
-  },
-  {
-    question: msg("When is Talkdesk the right choice?"),
-    answer:
-      'When you are running a contact center rather than a dialing floor: inbound queues across several channels, workforce management, quality management and industry compliance tooling. DialerSeat does none of that. It dials.',
-  },
-]
-
 export default function Page() {
   const competitor = competitorBySlug(SLUG)
   if (!competitor) notFound()
@@ -76,7 +52,6 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

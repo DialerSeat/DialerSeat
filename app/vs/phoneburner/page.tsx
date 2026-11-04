@@ -3,11 +3,10 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
-import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
+import { prosConsKeywords } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
-  faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
@@ -41,34 +40,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("How does DialerSeat compare to PhoneBurner on price?"),
-    answer:
-      msg("DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with everything in one tier: no upgrades needed for inbound numbers, advanced reporting, or the lead webhook. PhoneBurner advertises $140/seat/month at the Professional tier but real bills land at $200-$250 once Premium-tier features (inbound numbers, advanced reporting) and annual-contract assumptions are factored in."),
-  },
-  {
-    question: msg("Does PhoneBurner have multi-line dialing?"),
-    answer:
-      msg("No. PhoneBurner is single-line only, one call per agent at a time. That is the most-cited complaint in PhoneBurner reviews on G2 and Reddit. DialerSeat supports four dialer modes (Preview, Power, Progressive, Predictive) configurable per campaign, including multi-line predictive with proper pacing."),
-  },
-  {
-    question: msg("Can I use single-line on DialerSeat if I prefer it?"),
-    answer:
-      'Yes. Use Preview or Power mode for single-line dialing, same approach PhoneBurner uses. DialerSeat does not force multi-line on anyone; it makes multi-line available when you want it.',
-  },
-  {
-    question: msg("Does DialerSeat support flexible dial-list sizes?"),
-    answer:
-      msg("Yes. Any list size: 1 contact, 17 contacts, 4,000 contacts. No forced 10/25/50 increments. Plus single-contact calling for one-off calls. Both are commonly-cited PhoneBurner frustrations."),
-  },
-  {
-    question: msg("Is DialerSeat compliant with TCPA?"),
-    answer:
-      msg("DialerSeat enforces TCPA calling windows server-side per lead state, provisions outbound traffic through a carrier providing STIR/SHAKEN A-attestation where supported, and registers every outbound number with the carrier registry (CNAM, FCR). The predictive dialer enforces the FTC Telemarketing Sales Rule 3% abandon-rate cap automatically."),
-  },
-]
-
 export default function Page() {
   const competitor = competitorBySlug(SLUG)
   if (!competitor) notFound()
@@ -77,7 +48,6 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

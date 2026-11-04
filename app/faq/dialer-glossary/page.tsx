@@ -5,7 +5,7 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
-import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t as tr } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -70,34 +70,6 @@ const baseMetadata: Metadata = {
 export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
-
-const FAQS = [
-  {
-    question: msg("What is an abandoned call?"),
-    answer:
-      msg("Under the FTC’s Telemarketing Sales Rule, a call is abandoned when a person answers it and is not connected to a sales representative within two seconds of finishing their greeting. Predictive dialers cause them by dialing more numbers than there are free agents."),
-  },
-  {
-    question: msg("What is AMD, or answering machine detection?"),
-    answer:
-      msg("Software that listens to how a call is answered and decides whether it reached a person or a voicemail greeting, so the dialer can pass people to an agent and handle machines separately. It is a judgement made on audio, so it is never perfect."),
-  },
-  {
-    question: msg("What is the difference between connect rate and contact rate?"),
-    answer:
-      msg("Connect rate is how often somebody picks up. Contact rate is how often the agent actually spoke to the right person and got an outcome, which is a smaller number. A call answered by a voicemail greeting can raise connect rate without raising contact rate."),
-  },
-  {
-    question: msg("What is local presence dialing?"),
-    answer:
-      msg("Calling each prospect from a phone number local to them, so the caller ID shows a familiar area code. DialerSeat matches the prospect’s area code first, then their state, then their region."),
-  },
-  {
-    question: msg("What does “lines per agent” mean?"),
-    answer:
-      msg("How many numbers a predictive dialer calls at once for each available agent. More lines mean less waiting between conversations and more abandoned calls, which is why the rate is capped at 3%."),
-  },
-]
 
 /** One definition. `see` is an internal page that explains it properly. */
 type Term = { term: string; def: string; see?: { href: string; label: string } }
@@ -300,7 +272,6 @@ export default async function Page() {
   await primeLocale()
   return (
     <>
-      <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

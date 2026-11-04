@@ -5,7 +5,7 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
-import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -57,34 +57,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("Why do my outbound calls show up as Spam Likely?"),
-    answer:
-      msg("Because a call-protection provider scored your number as risky before the phone rang. Those scores are built from how people respond to the number: whether it has an established history, whether people answer, whether they stay on the line, and whether they complain or block it. Heavy volume on one number, low answer rates and complaints are the usual causes."),
-  },
-  {
-    question: msg("Does STIR/SHAKEN stop my calls being labelled as spam?"),
-    answer:
-      'No. STIR/SHAKEN proves your caller ID is not spoofed, and A-attestation, the top grade, means your carrier knows you and gave you the number. It says nothing about whether people want the call. A properly signed call from a number with a poor reputation can still be labelled. Low attestation makes labelling more likely; high attestation does not prevent it.',
-  },
-  {
-    question: msg("Will CNAM stop my calls showing as spam?"),
-    answer:
-      msg("Not on most consumer phones. CNAM displays a business name of up to 15 characters, but according to the carrier Telnyx, wireless carriers generally do not use the CNAM service, so it may not show on mobiles at all. It helps on landlines. It is not a spam fix, and the Free Caller Registry states its registration data is not used to deliver caller name either."),
-  },
-  {
-    question: msg("What can I do about my calls being marked as spam?"),
-    answer:
-      'Spread volume across enough numbers that none dials heavily, call people who expect to hear from you, scrub against the Do Not Call Registry, keep lists fresh, and register your numbers with the Free Caller Registry. A dialer should handle the carrier and volume side automatically; consent and list quality stay with you.',
-  },
-]
-
 export default async function Page() {
   await primeLocale()
   return (
     <>
-      <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

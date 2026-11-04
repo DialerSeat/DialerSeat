@@ -3,11 +3,10 @@ import { notFound } from 'next/navigation'
 import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
 import { competitorBySlug } from '@/lib/competitors'
-import { prosConsKeywords, prosConsFaqs } from '@/lib/vsSeo'
+import { prosConsKeywords } from '@/lib/vsSeo'
 import {
   organizationSchema,
   softwareApplicationSchema,
-  faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
 import { msg } from '@/lib/i18n/msg'
@@ -41,34 +40,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("How does DialerSeat compare to CloudTalk on price?"),
-    answer:
-      msg("DialerSeat is $35 per seat per week, billed weekly, with every dialer mode included. CloudTalk's cheapest published tier (Lite) runs about $19/user/month on annual billing, but that's a phone-system seat, not a dialer. Power Dialer is a separate $15/user/month add-on, and Parallel Dialer (multi-line) is a separate $39/user/month add-on, both stacked on top of the base seat."),
-  },
-  {
-    question: msg("Does CloudTalk’s advertised price include a power dialer?"),
-    answer:
-      "No. Power Dialer and Parallel Dialer are listed as separate paid add-ons on CloudTalk's own pricing page, on top of whichever base tier (Lite, Starter, Essential, or Expert) you're subscribed to. A seat with Power Dialer realistically runs $34+/user/month; with Parallel/multi-line dialing, $58+/user/month. DialerSeat includes every dialer mode, predictive, power, progressive, and preview, in the one $35/week price.",
-  },
-  {
-    question: msg("Why does CloudTalk’s pricing page show prices in euros?"),
-    answer:
-      msg("CloudTalk’s pricing page renders in euros by default for every visitor, including US buyers, based on multiple independent reports checking the page directly. This makes straightforward dollar comparison harder than it should be for US-based teams. DialerSeat publishes pricing in US dollars on the homepage."),
-  },
-  {
-    question: msg("Does DialerSeat offer whitelabel like CloudTalk?"),
-    answer:
-      msg("Yes, Manager+ is $75/week flat and includes full whitelabel. We found no whitelabel or reseller program anywhere on CloudTalk’s site. CloudTalk does offer volume discounts for larger teams and call monitoring on its Expert tier, but the dialer add-on costs still apply regardless of tier."),
-  },
-  {
-    question: msg("Does DialerSeat work on mobile like CloudTalk?"),
-    answer:
-      msg("Yes: the full dialer experience, not a companion app. DialerSeat installs as a Progressive Web App on iPhone, iPad, Android, macOS, and Windows with the same dialer modes as desktop. CloudTalk does have a mobile app, but the same Power Dialer and Parallel Dialer add-on costs apply there as well, the mobile app doesn’t change what’s included in the base seat price."),
-  },
-]
-
 export default function Page() {
   const competitor = competitorBySlug(SLUG)
   if (!competitor) notFound()
@@ -77,7 +48,6 @@ export default function Page() {
     <>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema([...FAQS, ...prosConsFaqs(SLUG)])} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

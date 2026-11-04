@@ -5,7 +5,7 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
-import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -64,34 +64,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("How does DialerSeat calculate answer rate?"),
-    answer:
-      msg("Answered calls divided by dials that actually rang. A dial that failed before it reached the phone, with no answer and no ring time at all, is left out of the answer, connect and contact rates, because nobody had the chance to pick up. It is still counted in your dial totals and in your costs, because it was attempted and billed."),
-  },
-  {
-    question: msg("Why not divide by every dial?"),
-    answer:
-      msg("Because a dial that never rang tells you nothing about your list, your hours or your caller ID. Dividing by every dial would lower the rate every time something failed on the way out, and you would go looking for the problem in the wrong place."),
-  },
-  {
-    question: msg("Are calls that are still ringing counted as unanswered?"),
-    answer:
-      msg("No. A call is not counted either way until it has finished. Counting a call that is ringing right now as a miss would pull the rate down during every busy hour."),
-  },
-  {
-    question: msg("Does the same rule apply to phone number health?"),
-    answer:
-      msg("Yes. Each number’s answer rate is compared with the rest of the pool using only calls that rang, so a number is never held back because of dials that never reached anyone."),
-  },
-]
-
 export default async function Page() {
   await primeLocale()
   return (
     <>
-      <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },

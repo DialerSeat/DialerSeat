@@ -95,7 +95,7 @@ export const DIALERSEAT = {
     'Self-serve signup: no demo required to see pricing or start dialing',
     'Server-side TCPA calling-window enforcement per lead state',
     'FTC Telemarketing Sales Rule 3% abandon-rate cap enforced in predictive',
-    'Unlimited numbers with STIR/SHAKEN A-attestation and CNAM registration',
+    'Unlimited numbers with STIR/SHAKEN A-attestation',
     'Multiple scripts per campaign with live mid-call switching',
     'White-label reseller option on Manager+',
   ],

@@ -7,7 +7,7 @@ import GutsShell, { GutsSection } from '@/components/GutsShell'
 import PageStamp from '@/components/PageStamp'
 import ShotSlideshow from '@/components/ShotSlideshow'
 import { resourcesRail } from '@/lib/gutsRail'
-import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { breadcrumbSchema } from '@/lib/schema'
 import { PRODUCT_SHOTS, WHITE_LABEL_SHOTS } from '@/lib/screenshots'
 import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -77,35 +77,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
-  {
-    question: msg("Does DialerSeat have a partner or affiliate program?"),
-    answer:
-      msg("Yes, and it is arranged one partner at a time rather than through a public sign-up form. Business owners, call floors and call centers, lead vendors, agency owners, trainers and creators who put agents on seats can agree partner codes, creator codes, commission and discounted seats directly. No terms are published, because they depend on the number of users brought, how well those users are retained, and the value added to the partnership. Email team@dialerseat.com with a proposal or a question."),
-  },
-  {
-    question: msg("Does DialerSeat offer discounted seats?"),
-    answer:
-      msg("Discounted and sponsored partner seats are supported. Per-seat pricing is set on the seat rather than on a plan, so a discounted seat can sit on the same team as a standard one without anybody changing tiers. How large a discount is and who qualifies for one are not published. Email team@dialerseat.com to ask."),
-  },
-  {
-    question: msg("Is there a creator code for DialerSeat?"),
-    answer:
-      msg("Partner and creator codes exist and are issued case by case, not from a public dashboard. A code is what attributes a seat to you, and you can hold as many as you need. The terms attached to a code are agreed with you first, and social or audience promotion counts toward them. Email team@dialerseat.com."),
-  },
-  {
-    question: msg("How is a DialerSeat partnership paid?"),
-    answer:
-      msg("Weekly, in line with the rest of the product. It rolls over with the seats week after week rather than paying once at signup, and it is weighted toward seats that stay open rather than seats that merely open. Exact figures are agreed per partner and are not published. Email team@dialerseat.com."),
-  },
-]
-
 export default async function PartnersPage() {
   await primeLocale()
 
   return (
     <>
-      <JsonLd data={faqPageSchema(FAQS)} />
       <JsonLd
         data={breadcrumbSchema([
           { name: msg("Home"), url: '/' },
