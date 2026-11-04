@@ -38,6 +38,7 @@ const RESOURCES: RailGroup = {
   items: [
     { href: '/pricing', label: msg("Pricing: a week costs a week") },
     { href: '/features', label: msg("Features: everything in a seat") },
+    { href: '/screenshots', label: msg("Screenshots: what it looks like") },
     { href: '/data/dialer-pricing', label: msg("Dialer pricing index") },
     { href: '/data/calling-rules-by-country', label: msg("Calling rules by country") },
     { href: '/data/connect-rates', label: msg("Connect rates by state & hour") },

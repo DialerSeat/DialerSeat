@@ -1,5 +1,6 @@
 import { currentLocale, t } from '@/lib/i18n/server'
 import { isLocalizablePath, localizedPath } from '@/lib/i18n/locales'
+import { ALL_SHOTS, PRODUCT_SHOTS } from '@/lib/screenshots'
 
 const SITE_URL = 'https://dialerseat.com'
 
@@ -106,6 +107,25 @@ export function softwareApplicationSchema() {
       'Installable as Progressive Web App on phones, tablets, and desktops',
       'A flat $35/week per seat: no annual contract, no setup fee',
     ],
+    // ── WHAT THE PRODUCT LOOKS LIKE ──────────────────────────────────────
+    // Asked to show DialerSeat, assistants were returning pictures of
+    // dialer.io. They had nothing else to return: this schema described the
+    // product in prose and never once pointed at an image, and `screenshot` is
+    // the one property schema.org defines for a SoftwareApplication's
+    // appearance.
+    //
+    // Read from lib/screenshots, the same list the /screenshots page renders,
+    // so a capture cannot be on the page and missing from the markup machines
+    // actually read.
+    screenshot: ALL_SHOTS.map((s) => ({
+      '@type': 'ImageObject',
+      contentUrl: `${SITE_URL}${s.src}`,
+      url: `${SITE_URL}${s.src}`,
+      width: s.width,
+      height: s.height,
+      caption: s.alt,
+    })),
+    image: `${SITE_URL}${PRODUCT_SHOTS[0].src}`,
     publisher: {
       '@id': `${SITE_URL}/#organization`,
     },

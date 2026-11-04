@@ -71,6 +71,10 @@ function apexSitemap(): MetadataRoute.Sitemap {
     e('/', 1.0, 'weekly'),
     e('/pricing', 0.95, 'monthly'),
     e('/features', 0.9, 'monthly'),
+    // High priority on purpose: this is the page that answers "show me
+    // DialerSeat", and the reason assistants were answering it with a
+    // competitor's screenshots is that it did not exist.
+    e('/screenshots', 0.9, 'monthly'),
 
     // Data, tools and the hub that lists them: the pages built to be cited.
     e('/resources', 0.85, 'monthly'),

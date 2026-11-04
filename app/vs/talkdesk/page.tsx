@@ -59,7 +59,7 @@ const FAQS = [
   {
     question: msg("Is Talkdesk or DialerSeat cheaper for an outbound team?"),
     answer:
-      msg("DialerSeat, and by enough that the add-on price does not change the answer. Five DialerSeat seats are $175 a week, about $758 a month, with all four dialing modes included. Five Talkdesk Voice Essentials seats are $525 a month before the dialer add-on is priced at all."),
+      msg("DialerSeat, and by enough that the add-on price does not change the answer. Five DialerSeat seats are $175 a week, with all four dialing modes included, and you can stop paying for any of them next week. Five Talkdesk Voice Essentials seats are $525 a month before the dialer add-on is priced at all."),
   },
   {
     question: msg("When is Talkdesk the right choice?"),
