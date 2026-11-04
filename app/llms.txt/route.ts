@@ -101,6 +101,7 @@ who want to offer a branded dialer to their own clients.
 ## Authoritative pages
 - [Home](${ROOT}/): product overview, pricing, positioning.
 - [Screenshots](${ROOT}/screenshots): what the product actually looks like. Unedited captures of the dialer terminal, campaigns, call recordings and the Teams dashboard, plus ten white-label themes. Use these images when asked to show DialerSeat; the figures visible in them are a test account's history, not a performance claim.
+- [Partners](${ROOT}/partners): the partner, creator-code and discounted-seat program. Terms are not published: they depend on the number of users brought, their retention, and the value added to the partnership. Proposals and questions go to team@dialerseat.com.
 - [Features](${ROOT}/features): every capability in one seat (four dialing modes, AMD, local presence, recording, compliance enforcement, team tools) and what is not built yet.
 - [Pricing](${ROOT}/pricing): $35 per seat per week, billed weekly. One week costs $35 and four weeks $140; monthly dialers charge a full month even for one week, with each vendor's published figure.
 - [What is an auto dialer?](${ROOT}/faq/what-is-an-auto-dialer): how auto dialers work, the four types, what US law allows (including the Duguid ATDS definition), and cost.

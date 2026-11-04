@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import { headers } from 'next/headers'
 import { COMPETITORS, crossShoppedPairs, matchupSlug } from '@/lib/competitors'
 import { pageDate } from '@/lib/pageDates'
+import { ALL_SHOTS } from '@/lib/screenshots'
 import { VERTICALS } from '@/lib/verticals'
 import { COUNTRY_RULES } from '@/lib/countryRules'
 import { ENABLED_LOCALES, isLocalizablePath, localizedPath } from '@/lib/i18n/locales'
@@ -74,7 +75,11 @@ function apexSitemap(): MetadataRoute.Sitemap {
     // High priority on purpose: this is the page that answers "show me
     // DialerSeat", and the reason assistants were answering it with a
     // competitor's screenshots is that it did not exist.
-    e('/screenshots', 0.9, 'monthly'),
+    // The images are DECLARED, not left to be inferred. Google Images reads
+    // <image:image> children off the page's sitemap entry; without them the
+    // only path to these files was the page's own markup, which was itself
+    // returning 404 to crawlers until 4 Nov (see proxy.ts).
+    { ...e('/screenshots', 0.9, 'monthly'), images: ALL_SHOTS.map(s => `${APEX}${s.src}`) },
 
     // Data, tools and the hub that lists them: the pages built to be cited.
     e('/resources', 0.85, 'monthly'),
@@ -82,6 +87,7 @@ function apexSitemap(): MetadataRoute.Sitemap {
     e('/data/calling-rules-by-country', 0.9, 'monthly'),
     ...COUNTRY_RULES.map(c => e(`/data/calling-rules-by-country/${c.code.toLowerCase()}`, 0.75, 'monthly')),
     e('/about', 0.6, 'monthly'),
+    e('/partners', 0.6, 'monthly'),
     e('/tools/dialer-cost-calculator', 0.85, 'monthly'),
     e('/tools/abandon-rate-calculator', 0.8, 'monthly'),
     

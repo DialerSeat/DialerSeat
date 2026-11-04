@@ -20,6 +20,11 @@ import { msg } from '@/lib/i18n/msg'
 const SITE_INFO: RailGroup = {
   label: msg("SITE INFO"),
   items: [
+    // A back-page link on purpose. The partner program is not product
+    // navigation and does not belong in the header, but an agency owner
+    // reading a /vs page is exactly who it is for, and a page nobody links
+    // to is a page no crawler weights.
+    { href: '/partners', label: msg("Partners & creator codes") },
     { href: '/privacy', label: msg("Privacy Policy") },
     { href: '/terms', label: msg("Terms of Use") },
   ],
@@ -86,7 +91,9 @@ export function resourcesRail(activePath?: string): RailGroup[] {
     },
     { ...INDUSTRIES, items: INDUSTRIES.items.filter((i) => i.href !== activePath) },
     { ...RESOURCES, items: RESOURCES.items.filter((i) => i.href !== activePath) },
-    SITE_INFO,
+    // Filtered too, now that SITE_INFO holds a page that uses this rail: a
+    // sidebar offering you the page you are already on reads as a mistake.
+    { ...SITE_INFO, items: SITE_INFO.items.filter((i) => i.href !== activePath) },
   ]
 }
 

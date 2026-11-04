@@ -43,6 +43,18 @@ const isPublicRoute = createRouteMatcher([
   '/features',
   '/resources',
   '/about',
+  // ── THE SAME BUG AS THE CRAWLER FILES ABOVE, TWICE MORE ──────────────
+  // /screenshots shipped on 3 Nov and was never added here, so auth.protect()
+  // rewrote every signed-out request to a 404 — Googlebot included. Verified
+  // with curl on 2026-11-04: 404 with X-Clerk-Auth-Reason: protect-rewrite,
+  // while /features and /resources beside it returned 200. The page built to
+  // stop assistants showing pictures of a competitor was unreachable to every
+  // machine that would have read it, and the sitemap was advertising it.
+  //
+  // A new public marketing page has to be added in THREE places: here, in
+  // MARKETING_ONLY_PATHS below, and in app/sitemap.ts.
+  '/screenshots',
+  '/partners',
   '/status',
   // The IndexNow key file, served by app/[indexnowKey] at /<key>.txt. The key
   // is an environment variable, so it is matched by shape rather than by name.
@@ -215,6 +227,11 @@ const MARKETING_ONLY_PATHS = [
   /^\/features$/,
   /^\/resources$/,
   /^\/about$/,
+  // Our screenshots and our partner terms are ours. On a reseller's own
+  // subdomain they redirect to the apex like every other marketing page,
+  // rather than rendering our name and our prices under their brand.
+  /^\/screenshots$/,
+  /^\/partners$/,
   /^\/data(\/.*)?$/,
   /^\/tools(\/.*)?$/,
   /^\/terms$/,
