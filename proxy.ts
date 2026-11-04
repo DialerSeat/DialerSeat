@@ -51,8 +51,10 @@ const isPublicRoute = createRouteMatcher([
   // stop assistants showing pictures of a competitor was unreachable to every
   // machine that would have read it, and the sitemap was advertising it.
   //
-  // A new public marketing page has to be added in THREE places: here, in
-  // MARKETING_ONLY_PATHS below, and in app/sitemap.ts.
+  // A new public marketing page has to be registered in FOUR places: here,
+  // in MARKETING_ONLY_PATHS below, in app/sitemap.ts, and in PUBLIC_PREFIXES
+  // in scripts/gen-page-dates.mjs — miss the last one and the page prints
+  // the site-wide fallback date instead of its own.
   '/screenshots',
   '/partners',
   '/status',

@@ -5,8 +5,10 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import GutsShell, { GutsSection } from '@/components/GutsShell'
 import PageStamp from '@/components/PageStamp'
+import ShotSlideshow from '@/components/ShotSlideshow'
 import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
+import { PRODUCT_SHOTS, WHITE_LABEL_SHOTS } from '@/lib/screenshots'
 import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import { primeLocale, t } from '@/lib/i18n/server'
@@ -43,7 +45,7 @@ const SITE_URL = 'https://dialerseat.com'
 const baseMetadata: Metadata = {
   title: 'Partner & Creator Program: Codes, Commission, Discounted Seats | DialerSeat',
   description:
-    'DialerSeat partnerships for agency owners, lead generators, trainers and creators: partner and creator codes, commission that rolls over weekly, weighting toward retention, and discounted seats. Terms depend on the number of users you bring, retention, and the value you add to the partnership, and are agreed one partner at a time. Email team@dialerseat.com with a proposal or a question.',
+    'DialerSeat partnerships for business owners, call floors and call centers, lead vendors, agency owners and creators: partner and creator codes, commission that rolls over weekly, weighting toward retention, and discounted seats. Terms depend on the number of users you bring, retention, and the value you add to the partnership, and are agreed one partner at a time. Email team@dialerseat.com with a proposal or a question.',
   keywords: [
     'DialerSeat partner program',
     'DialerSeat affiliate program',
@@ -52,6 +54,9 @@ const baseMetadata: Metadata = {
     'creator code dialer',
     'discounted dialer seats',
     'white label dialer partner',
+    'dialer for call centers partner',
+    'lead vendor dialer partnership',
+    'bulk dialer seats discount',
   ],
   alternates: { canonical: `${SITE_URL}${ROUTE}` },
   openGraph: {
@@ -76,7 +81,7 @@ const FAQS = [
   {
     question: msg("Does DialerSeat have a partner or affiliate program?"),
     answer:
-      msg("Yes, and it is arranged one partner at a time rather than through a public sign-up form. Agency owners, lead generators, trainers and creators who put agents on seats can agree partner codes, creator codes, commission and discounted seats directly. No terms are published, because they depend on the number of users brought, how well those users are retained, and the value added to the partnership. Email team@dialerseat.com with a proposal or a question."),
+      msg("Yes, and it is arranged one partner at a time rather than through a public sign-up form. Business owners, call floors and call centers, lead vendors, agency owners, trainers and creators who put agents on seats can agree partner codes, creator codes, commission and discounted seats directly. No terms are published, because they depend on the number of users brought, how well those users are retained, and the value added to the partnership. Email team@dialerseat.com with a proposal or a question."),
   },
   {
     question: msg("Does DialerSeat offer discounted seats?"),
@@ -132,16 +137,77 @@ export default async function PartnersPage() {
           <p>
             {t("Not a sign-up form and not an affiliate dashboard. These are deals, and they get agreed one at a time.")}
           </p>
-          <ul className="guts-list good">
-            <li>{t("Agency owners and floor managers already putting agents on seats.")}</li>
-            <li>{t("Lead generators whose buyers need somewhere to dial the leads.")}</li>
-            <li>{t("Trainers, coaches and creators with an audience that dials for a living.")}</li>
-            <li>{t("Resellers who want the dialer carrying their own brand rather than ours.")}</li>
-            <li>{t("Anyone bringing a floor rather than a handful of signups.")}</li>
-          </ul>
+          <div className="guts-grid-2">
+
+            <div className="guts-panel">
+              <div className="role">{t("BUSINESS OWNERS")}</div>
+              <p>
+                {t("You are already paying for the dialer, and you are paying for it by the month whether your people dialed that month or not. Here a seat is $35 a week and it stops the week you stop it. Put your own people on seats under your team, keep every recording, disposition and note in one place, and the seats you bring count toward the arrangement. Nothing to install and nothing to provision: an agent opens a browser and dials.")}
+              </p>
+            </div>
+
+            <div className="guts-panel">
+              <div className="role">{t("CALL FLOORS AND CALL CENTERS")}</div>
+              <p>
+                {t("A floor is exactly where the rest of this category starts charging you for being a floor: seat minimums, a quote instead of a price, an annual term, a per-seat rate that climbs once you add the fifth one. A seat here is $35 a week at two agents and $35 a week at two hundred. Two agents are never handed the same lead, because a lead is claimed in the database before it is dialed and the claim is a lease that comes back if a browser dies mid-call. Calling windows are enforced against the lead's own state rather than the agent's, which is what makes a remote or offshore floor safe to run. And no caller ID gets burned by the volume, because no number places more than 60 calls a day.")}
+              </p>
+            </div>
+
+            <div className="guts-panel">
+              <div className="role">{t("LEAD VENDORS")}</div>
+              <p>
+                {t("Your buyers' real problem is not the leads, it is the three days between buying them and dialing them. Every campaign has its own inbound webhook, so leads can land in a buyer's dialer straight from your system through Zapier, Make or a direct post, the moment you sell them. Put buyers on seats under your code and what you sell arrives somewhere already set up to work it. A buyer who starts dialing the same day is a buyer who comes back.")}
+              </p>
+            </div>
+
+            <div className="guts-panel">
+              <div className="role">{t("AGENCY OWNERS AND RESELLERS")}</div>
+              <p>
+                {t("Manager+ is $75 a week flat, the same at 2 seats as at 200, and it white-labels the platform: your logo, your colours, your own subdomain or custom domain. Your agents sign in to your brand. Issue codes that bill to you or bill to the agent, set a seat price that differs from the standard one without anybody moving tiers, and pull one campaign from somebody without removing them from the team.")}
+              </p>
+            </div>
+
+          </div>
+          <p className="guts-note">
+            {t("One honest thing, because you will find it out anyway: seats on agent-pays codes are still charged by us directly, so DialerSeat appears on that agent's card statement until payment routing ships. What you charge them on top is yours and runs separately.")}
+          </p>
+          <div className="guts-btns">
+            <Link href="/faq/managers" className="guts-btn secondary">{t("THE MANAGER MATH")}</Link>
+            <Link href="/faq/white-label" className="guts-btn secondary">{t("WHITE LABEL, HONESTLY")}</Link>
+          </div>
         </GutsSection>
 
-        <GutsSection icon="swap" title={t("How a team works underneath you")}>
+        {/* ── WHAT THEY WILL ACTUALLY BE WORKING IN ──────────────────────
+            Captions on, because somebody weighing a partnership is being
+            asked to put their own name next to this product and should see
+            the screens before they do. */}
+        <GutsSection icon="phone" title={t("What you would be putting them in")}>
+          <p>
+            {t("Unedited captures of the running product. Every screen here is in the $35 seat. No tier unlocks a dialing mode, nothing is an add-on, and there is nothing a partner has to call somebody to switch on.")}
+          </p>
+          <ShotSlideshow shots={PRODUCT_SHOTS} captions />
+          <div className="guts-btns">
+            <Link href="/screenshots" className="guts-btn secondary">{t("ALL SCREENSHOTS")}</Link>
+            <Link href="/features" className="guts-btn secondary">{t("EVERYTHING IN A SEAT")}</Link>
+          </div>
+        </GutsSection>
+
+        {/* ── THE SAME PRODUCT, CARRYING SOMEBODY ELSE'S NAME ──────────── */}
+        <GutsSection icon="swap" title={t("And what it looks like carrying your name")}>
+          <p>
+            {t("The same dashboard on Manager+, under ten operator brands. Your logo, your colours, your own domain. The agents you bring sign in to your brand rather than ours, which is the difference between reselling a dialer and having one.")}
+          </p>
+          <ShotSlideshow shots={WHITE_LABEL_SHOTS} />
+          <p style={{ marginTop: 20 }}>
+            {t("Manager+ is $75 a week and replaces Pro for the owner. The seats underneath stay $35 a week each, with no minimum and no markup for being a team.")}
+          </p>
+          <div className="guts-btns">
+            <Link href="/faq/white-label" className="guts-btn secondary">{t("HOW WHITE LABEL WORKS")}</Link>
+            <Link href="/faq/manager-plus" className="guts-btn secondary">{t("WHAT MANAGER+ ADDS")}</Link>
+          </div>
+        </GutsSection>
+
+        <GutsSection icon="list" title={t("How a team works underneath you")}>
           <p>
             {t("The team machinery is already built, and it is the same machinery whether you are a partner or an in-house manager. You own the team. Agents join it with a code you issue.")}
           </p>
