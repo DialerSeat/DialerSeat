@@ -230,6 +230,13 @@ const ANSWERS: HubItem[] = [
     keywords: 'team agency seats',
   },
   {
+    href: '/faq/languages',
+    label: msg("Languages"),
+    note: msg("The whole dialer, not just the website"),
+    added: '2026-11-04',
+    keywords: 'language spanish translation multilingual espanol international offshore',
+  },
+  {
     href: '/faq/teams-how-it-works',
     label: msg("How teams actually work"),
     note: msg("Seats, lead distribution, and who gets billed"),

@@ -187,6 +187,7 @@ function apexSitemap(): MetadataRoute.Sitemap {
     // Teams is the highest-intent cluster on the site — a manager comparing
     // seat economics is closer to buying than anyone reading a feature page.
     e('/vs/teams', 0.9, 'monthly'),
+    e('/faq/languages', 0.75, 'monthly'),
     e('/faq/teams-how-it-works', 0.85, 'monthly'),
     e('/faq/dialer-for-offshore-agents', 0.85, 'monthly'),
 
