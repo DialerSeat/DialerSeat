@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 const baseMetadata: Metadata = {
   title: 'Phone Numbers & Caller ID: Avoiding Spam Likely | DialerSeat',
   description:
-    'How DialerSeat handles outbound numbers: STIR/SHAKEN A-attestation, CNAM and Free Caller Registry registration, local presence dialing, and pool rotation, the real mechanics behind not getting flagged Spam Likely or Scam Likely.',
+    'How DialerSeat handles outbound numbers: STIR/SHAKEN A-attestation, Free Caller Registry registration, local presence dialing, and pool rotation, the real mechanics behind not getting flagged Spam Likely or Scam Likely.',
   alternates: {
     canonical: 'https://dialerseat.com/faq/numbers',
   },
@@ -28,14 +28,14 @@ const baseMetadata: Metadata = {
   openGraph: {
     title: 'Phone Numbers & Caller ID: DialerSeat',
     description:
-      'STIR/SHAKEN A-attestation, CNAM registration, local presence, and pool rotation, how DialerSeat keeps your outbound numbers from getting flagged.',
+      'STIR/SHAKEN A-attestation, Free Caller Registry registration, local presence, and pool rotation, how DialerSeat keeps your outbound numbers from getting flagged.',
     url: 'https://dialerseat.com/faq/numbers',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Phone Numbers & Caller ID: DialerSeat',
-    description: 'STIR/SHAKEN A-attestation, CNAM registration, local presence, and pool rotation, how DialerSeat keeps your outbound numbers from getting flagged.',
+    description: 'STIR/SHAKEN A-attestation, Free Caller Registry registration, local presence, and pool rotation, how DialerSeat keeps your outbound numbers from getting flagged.',
   },
 }
 

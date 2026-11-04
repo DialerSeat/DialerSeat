@@ -16,12 +16,12 @@ import { localizeMetadata } from '@/lib/i18n/metadata'
 const baseMetadata: Metadata = {
   title: 'Do I Need 10DLC Registration to Make Outbound Calls? | DialerSeat',
   description:
-    '10DLC is an SMS framework. It does not apply to voice calls. The voice equivalents are STIR/SHAKEN attestation and CNAM registration, and DialerSeat handles both. What each one actually does.',
+    '10DLC is an SMS framework. It does not apply to voice calls. The voice equivalents are STIR/SHAKEN attestation and CNAM registration. What each one actually does, and which one DialerSeat handles.',
   alternates: { canonical: 'https://dialerseat.com/faq/10dlc-and-outbound-calling' },
   openGraph: {
     title: 'Do I Need 10DLC to Make Outbound Calls?',
     description:
-      'No, 10DLC is for text messaging. The voice equivalents are STIR/SHAKEN and CNAM, and they are handled for you.',
+      'No, 10DLC is for text messaging. The voice equivalents are STIR/SHAKEN and CNAM, and STIR/SHAKEN is handled for you.',
     url: 'https://dialerseat.com/faq/10dlc-and-outbound-calling',
     type: 'article',
   },
@@ -55,7 +55,7 @@ const FAQS = [
   {
     question: msg("Does DialerSeat handle STIR/SHAKEN and CNAM?"),
     answer:
-      msg("Yes. Numbers in the pool carry A-attestation under STIR/SHAKEN and are CNAM-registered. You do not file anything, and there is no separate fee for it. This is a meaningful part of why a number reaches a handset looking like a real business rather than a suspected robocall."),
+      msg("STIR/SHAKEN, yes. Numbers in the pool carry A-attestation, you do not file anything, and there is no separate fee for it. CNAM, no: wireless carriers generally do not display a caller name, so on a mobile it would not show. What the person sees is the number, and the city and state their phone reads from its area code, which is why calls go out from a local number by default."),
   },
   {
     question: msg("Will registering for 10DLC stop my calls being flagged as spam?"),
@@ -126,7 +126,7 @@ export default async function Page() {
           <div className="exp-section-label">{t("▸ WHAT DIALERSEAT DOES")}</div>
           <h2>{t("Handled, with nothing to file.")}</h2>
           <p>
-            {t("Numbers in the DialerSeat pool carry A-attestation under STIR/SHAKEN and are CNAM-registered. There is no form for you to submit and no separate charge.")}</p>
+            {t("Numbers in the DialerSeat pool carry A-attestation under STIR/SHAKEN. There is no form for you to submit and no separate charge.")}</p>
           <p>
             {t("Attestation is necessary and not sufficient. A number that dials heavily will eventually accumulate declines and reports regardless of how well it is signed, which is why the pool rotates across numbers rather than leaning on one, tracks answer rate per number, and retires numbers whose delivery has degraded rather than dialing them into the ground.")}{' '}
             <Link href="/faq/numbers">{t("How the number pool works")}</Link> {t("covers the mechanics.")}</p>
@@ -145,7 +145,7 @@ export default async function Page() {
 
         <DialingModeCTA
           headline="Nothing to register. Start dialing."
-          description="A-attestation and CNAM come with every number in the pool, at no extra cost and with no forms to file. $35/week per seat."
+          description="A-attestation comes with every number in the pool, at no extra cost and with no forms to file. $35/week per seat."
         />
         <ExplainerCrossLinks current="registration" />
         </div>

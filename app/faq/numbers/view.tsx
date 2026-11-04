@@ -98,7 +98,7 @@ export default function NumbersFaqView() {
 
           <div className="faq-badge-row">
             <span className="faq-badge hi">{t("STIR/SHAKEN A-ATTESTATION")}</span>
-            <span className="faq-badge">{t("CNAM + FREE CALLER REGISTRY")}</span>
+            <span className="faq-badge">{t("FREE CALLER REGISTRY")}</span>
             <span className="faq-badge">{t("LOCAL PRESENCE DIALING")}</span>
             <span className="faq-badge">{t("INCLUDED IN EVERY $35/WK SEAT")}</span>
           </div>
@@ -138,8 +138,8 @@ export default function NumbersFaqView() {
               <div className="num-layer">
                 <div className="num-layer-num">2</div>
                 <div className="num-layer-body">
-                  <h4>{t("CNAM & FREE CALLER REGISTRY REGISTRATION")}</h4>
-                  <p>{t("Numbers are registered so your business identity: not just a raw number: pushes to caller ID displays and to the reputation databases used by Hiya, First Orion, and TNS. An unregistered number calling at volume is the single most common reason a legitimate business gets treated like a scam operation.")}</p>
+                  <h4>{t("FREE CALLER REGISTRY REGISTRATION")}</h4>
+                  <p>{t("Numbers are registered so your business identity: not just a raw number: reaches the reputation databases used by Hiya, First Orion, and TNS. An unregistered number calling at volume is the single most common reason a legitimate business gets treated like a scam operation.")}</p>
                 </div>
               </div>
               <div className="num-layer">
@@ -176,7 +176,7 @@ export default function NumbersFaqView() {
               </div>
               <div className="num-math-row">
                 <span className="num-math-label">{t("2. Active")}</span>
-                <span className="num-math-val">{t("In rotation, dialing under A-attestation + CNAM")}</span>
+                <span className="num-math-val">{t("In rotation, dialing under A-attestation")}</span>
               </div>
               <div className="num-math-row">
                 <span className="num-math-label">{t("3. Monitored")}</span>
@@ -206,7 +206,7 @@ export default function NumbersFaqView() {
                 <div className="num-vs-cell them">{t("Varies by provider: often B or C-level, sometimes not disclosed at all")}</div>
               </div>
               <div className="num-vs-row">
-                <div className="num-vs-cell label">{t("CNAM / registry registration")}</div>
+                <div className="num-vs-cell label">{t("Registry registration")}</div>
                 <div className="num-vs-cell them">{t("Frequently a paid add-on, or left to the customer to handle themselves")}</div>
               </div>
               <div className="num-vs-row">
@@ -229,7 +229,7 @@ export default function NumbersFaqView() {
                 <div className="num-vs-cell us">{t("A-Level, on every number, by default")}</div>
               </div>
               <div className="num-vs-row">
-                <div className="num-vs-cell label">{t("CNAM / registry registration")}</div>
+                <div className="num-vs-cell label">{t("Registry registration")}</div>
                 <div className="num-vs-cell us">{t("Included, every outbound number is carrier-registered")}</div>
               </div>
               <div className="num-vs-row">
@@ -259,7 +259,7 @@ export default function NumbersFaqView() {
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
           <div className="faq-callout">
             <p>
-              <strong>{t("One honest note:")}{" "}</strong> {t("no infrastructure, ours or anyone else's, makes a number permanently immune to flagging. Carrier scoring models evolve constantly, and even a fully registered, A-attested number can pick up a label if it's dialed hard enough against a bad list. What A-attestation, CNAM registration, and per-number caps do is remove the infrastructure-level causes so the only variable left is how the campaign is actually run, which is genuinely within your control.")}</p>
+              <strong>{t("One honest note:")}{" "}</strong> {t("no infrastructure, ours or anyone else's, makes a number permanently immune to flagging. Carrier scoring models evolve constantly, and even a fully registered, A-attested number can pick up a label if it's dialed hard enough against a bad list. What A-attestation, registry registration, and per-number caps do is remove the infrastructure-level causes so the only variable left is how the campaign is actually run, which is genuinely within your control.")}</p>
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
@@ -277,7 +277,7 @@ export default function NumbersFaqView() {
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
           <div className="faq-cta">
             <div className="faq-cta-eyebrow">{t("▸ DIAL FROM NUMBERS THAT ACTUALLY GET ANSWERED")}</div>
-            <h3 className="faq-cta-h">{t("$35/week. A-attestation, CNAM, and local presence included.")}</h3>
+            <h3 className="faq-cta-h">{t("$35/week. A-attestation and local presence included.")}</h3>
             <p>
               {t("No separate reputation-monitoring subscription, no add-on fee for local presence. It's the default on every seat.")}</p>
             <a href={isSignedIn ? '/dashboard/dialer' : '/sign-up'} className="faq-cta-btn">

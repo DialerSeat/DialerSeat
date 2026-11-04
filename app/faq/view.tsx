@@ -148,7 +148,7 @@ const ANSWERS: HubItem[] = [
   {
     href: '/faq/numbers',
     label: msg("Phone numbers & caller ID"),
-    note: msg("Attestation, CNAM, and avoiding Spam Likely"),
+    note: msg("Attestation, local presence, and avoiding Spam Likely"),
     added: '2026-07-18',
     keywords: 'stir shaken local presence flagged',
   },
@@ -692,7 +692,7 @@ export default function FaqView() {
               <summary>{t("Are DialerSeat's numbers spam-free?")}</summary>
               <div className="faqx-answer">
                 <p>
-                  {t("Yes. No number places more than 60 calls a day, so no caller ID gets burned by volume, and load spreads across the pool before any number runs hot. Every outbound number carries STIR/SHAKEN A-attestation, is registered for CNAM and the Free Caller Registry, and dials with local presence by default.")}</p>
+                  {t("Yes. No number places more than 60 calls a day, so no caller ID gets burned by volume, and load spreads across the pool before any number runs hot. Every outbound number carries STIR/SHAKEN A-attestation, is registered with the Free Caller Registry, and dials with local presence by default.")}</p>
                 <p>
                   {t("DialerSeat also has advanced caller-ID reputation monitoring and assisted remediation: every number is checked daily against the rest of the pool, and one that starts getting flagged is slowed down automatically until it recovers. That matters a lot for an agency running high-volume campaigns.")}</p>
                 <p>

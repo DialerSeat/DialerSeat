@@ -2066,7 +2066,7 @@
  "$35/week, and what the incumbents stack on top": [
   "app/faq/view.tsx"
  ],
- "$35/week. A-attestation, CNAM, and local presence included.": [
+ "$35/week. A-attestation and local presence included.": [
   "app/faq/numbers/view.tsx"
  ],
  "$35/week. All four dialing modes. No call-volume limits.": [
@@ -2260,7 +2260,7 @@
  "10DLC is an SMS framework. For voice, what matters is STIR/SHAKEN attestation and CNAM.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
- "10DLC is an SMS framework. It does not apply to voice calls. The voice equivalents are STIR/SHAKEN attestation and CNAM registration, and DialerSeat handles both. What each one actually does.": [
+ "10DLC is an SMS framework. It does not apply to voice calls. The voice equivalents are STIR/SHAKEN attestation and CNAM registration. What each one actually does, and which one DialerSeat handles.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
  "10DLC stands for": [
@@ -3164,7 +3164,7 @@
  "A wrong address and a revoked one get exactly the same response, so nobody can probe for a URL that used to work.": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
- "A-attestation and CNAM come with every number in the pool, at no extra cost and with no forms to file. $35/week per seat.": [
+ "A-attestation comes with every number in the pool, at no extra cost and with no forms to file. $35/week per seat.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx#prop"
  ],
  "A-Level, on every number, by default": [
@@ -4562,7 +4562,7 @@
  "Attestation proves your number isn’t spoofed. It says nothing about whether anyone wants your call. A C-grade call is far more likely to be labelled, but an A-grade call from a number people keep rejecting can still be labelled. Attestation is about identity. The label is about reputation.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
- "Attestation, CNAM, and avoiding Spam Likely": [
+ "Attestation, local presence, and avoiding Spam Likely": [
   "app/faq/view.tsx"
  ],
  "AUDIO": [
@@ -6181,13 +6181,13 @@
   "app/faq/10dlc-and-outbound-calling/page.tsx",
   "app/faq/dialer-glossary/page.tsx"
  ],
- "CNAM / registry registration": [
+ "Registry registration": [
   "app/faq/numbers/view.tsx"
  ],
- "CNAM & FREE CALLER REGISTRY REGISTRATION": [
+ "FREE CALLER REGISTRY REGISTRATION": [
   "app/faq/numbers/view.tsx"
  ],
- "CNAM + FREE CALLER REGISTRY": [
+ "FREE CALLER REGISTRY": [
   "app/faq/numbers/view.tsx"
  ],
  "CNAM is the caller name that can appear under a number: up to 15 characters, like a business name. It is often sold as a spam fix. It mostly isn’t.": [
@@ -10778,7 +10778,7 @@
  "How DialerSeat dials, and how we stay compliant doing it. Plain-English explanation of preview, power, progressive, and predictive dialing modes, the TCPA and FTC TSR safe harbor, and what our software enforces in code.": [
   "app/dialing-modes/page.tsx"
  ],
- "How DialerSeat handles outbound numbers: STIR/SHAKEN A-attestation, CNAM and Free Caller Registry registration, local presence dialing, and pool rotation, the real mechanics behind not getting flagged Spam Likely or Scam Likely.": [
+ "How DialerSeat handles outbound numbers: STIR/SHAKEN A-attestation, Free Caller Registry registration, local presence dialing, and pool rotation, the real mechanics behind not getting flagged Spam Likely or Scam Likely.": [
   "app/faq/numbers/page.tsx"
  ],
  "How DialerSeat Keeps Its Numbers From Getting Flagged": [
@@ -11472,7 +11472,7 @@
  "in predictive mode.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
- "In rotation, dialing under A-attestation + CNAM": [
+ "In rotation, dialing under A-attestation": [
   "app/faq/numbers/view.tsx"
  ],
  "in seats on DialerSeat, plus $75 for the Manager+ owner. The same ten seats on a platform charging $250 per user per month is roughly": [
@@ -12576,7 +12576,7 @@
  "Local caller ID and number rotation": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
- "Local caller ID by default, numbers spread across a pool with per-number daily caps, and carrier registration with STIR/SHAKEN attestation and CNAM, so calls to mobiles are not labelled before they are answered.": [
+ "Local caller ID by default, numbers spread across a pool with per-number daily caps, and STIR/SHAKEN attestation, so calls to mobiles are not labelled before they are answered.": [
   "lib/verticals.ts"
  ],
  "Local caller ID matched to each candidate’s area code, state or region.": [
@@ -13722,7 +13722,7 @@
  "No infrastructure makes a number permanently immune. Call-analytics apps also score numbers on how the people you call respond, including complaints and blocks. The platform removes every carrier-level and volume-level cause of flagging; these are the ones only you control.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
  ],
- "no infrastructure, ours or anyone else's, makes a number permanently immune to flagging. Carrier scoring models evolve constantly, and even a fully registered, A-attested number can pick up a label if it's dialed hard enough against a bad list. What A-attestation, CNAM registration, and per-number caps do is remove the infrastructure-level causes so the only variable left is how the campaign is actually run, which is genuinely within your control.": [
+ "no infrastructure, ours or anyone else's, makes a number permanently immune to flagging. Carrier scoring models evolve constantly, and even a fully registered, A-attested number can pick up a label if it's dialed hard enough against a bad list. What A-attestation, registry registration, and per-number caps do is remove the infrastructure-level causes so the only variable left is how the campaign is actually run, which is genuinely within your control.": [
   "app/faq/numbers/view.tsx"
  ],
  "No lead management, dispositions, or answering-machine detection": [
@@ -13980,7 +13980,7 @@
  "No workforce management, shift scheduling, or forecasting.": [
   "lib/canonicalFacts.ts"
  ],
- "No, 10DLC is for text messaging. The voice equivalents are STIR/SHAKEN and CNAM, and they are handled for you.": [
+ "No, 10DLC is for text messaging. The voice equivalents are STIR/SHAKEN and CNAM, and STIR/SHAKEN is handled for you.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
  "No, and chasing that is how a pool becomes expensive. DialerSeat prefers a caller ID matching the lead’s area code when one is available, falls back to the same state, then to any healthy number. A pool covering the regions your list actually concentrates in gets most of the benefit. Buying a number for every area code in the country gets very little more for a great deal more cost.": [
@@ -14429,10 +14429,10 @@
  "Numbers are included, not metered.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx#prop"
  ],
- "Numbers are registered so your business identity: not just a raw number: pushes to caller ID displays and to the reputation databases used by Hiya, First Orion, and TNS. An unregistered number calling at volume is the single most common reason a legitimate business gets treated like a scam operation.": [
+ "Numbers are registered so your business identity: not just a raw number: reaches the reputation databases used by Hiya, First Orion, and TNS. An unregistered number calling at volume is the single most common reason a legitimate business gets treated like a scam operation.": [
   "app/faq/numbers/view.tsx"
  ],
- "Numbers in the DialerSeat pool carry A-attestation under STIR/SHAKEN and are CNAM-registered. There is no form for you to submit and no separate charge.": [
+ "Numbers in the DialerSeat pool carry A-attestation under STIR/SHAKEN. There is no form for you to submit and no separate charge.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
  "Numbers included": [
@@ -18829,7 +18829,7 @@
  "STIR/SHAKEN A-attestation on outbound calls where supported": [
   "app/terms/page.tsx"
  ],
- "STIR/SHAKEN A-attestation, CNAM registration, local presence, and pool rotation, how DialerSeat keeps your outbound numbers from getting flagged.": [
+ "STIR/SHAKEN A-attestation, Free Caller Registry registration, local presence, and pool rotation, how DialerSeat keeps your outbound numbers from getting flagged.": [
   "app/faq/numbers/page.tsx"
  ],
  "STIR/SHAKEN attestation": [
@@ -19152,7 +19152,7 @@
   "app/dialing-modes/progressive/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
  ],
- "TCPA window check on every dial. CNAM-aware caller-ID routing. National DNC scrubbing is still on you, see": [
+ "TCPA window check on every dial. Local caller ID by default. National DNC scrubbing is still on you, see": [
   "app/dialing-modes/predictive/page.tsx",
   "app/faq/what-is-a-predictive-dialer/page.tsx"
  ],
@@ -23744,10 +23744,10 @@
  "Yes. In the US, predictive dialers are legal as long as they meet conditions set by the FTC’s Telemarketing Sales Rule and the FCC’s TCPA rules: abandon no more than 3% of calls answered by a person per campaign over each 30-day period, let an unanswered call ring at least 15 seconds or four rings, play a recorded message naming the seller and a callback number when no agent is free, offer an automated opt-out, keep records, and call only between 8 a.m. and 9 p.m. in the called person’s local time.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
- "Yes. No number places more than 60 calls a day, so no caller ID gets burned by volume, and load spreads across the pool before any number runs hot. Every outbound number carries STIR/SHAKEN A-attestation, is registered for CNAM and the Free Caller Registry, and dials with local presence by default.": [
+ "Yes. No number places more than 60 calls a day, so no caller ID gets burned by volume, and load spreads across the pool before any number runs hot. Every outbound number carries STIR/SHAKEN A-attestation, is registered with the Free Caller Registry, and dials with local presence by default.": [
   "app/faq/view.tsx"
  ],
- "Yes. Numbers in the pool carry A-attestation under STIR/SHAKEN and are CNAM-registered. You do not file anything, and there is no separate fee for it. This is a meaningful part of why a number reaches a handset looking like a real business rather than a suspected robocall.": [
+ "STIR/SHAKEN, yes. Numbers in the pool carry A-attestation, you do not file anything, and there is no separate fee for it. CNAM, no: wireless carriers generally do not display a caller name, so on a mobile it would not show. What the person sees is the number, and the city and state their phone reads from its area code, which is why calls go out from a local number by default.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
  "Yes. Open team settings, find the member, click Remove. Their access to all team campaigns is revoked within seconds. Their personal account is untouched.": [

@@ -369,7 +369,7 @@ export const VERTICALS: Vertical[] = [
         icon: 'phone',
         title: 'Getting past “Spam Likely” to the decision maker',
         body:
-          'Local caller ID by default, numbers spread across a pool with per-number daily caps, and carrier registration with STIR/SHAKEN attestation and CNAM, so calls to mobiles are not labelled before they are answered.',
+          'Local caller ID by default, numbers spread across a pool with per-number daily caps, and STIR/SHAKEN attestation, so calls to mobiles are not labelled before they are answered.',
         links: [{ href: '/faq/why-calls-show-spam-likely', label: 'Why calls get flagged' }],
       },
     ],

@@ -118,7 +118,7 @@ who want to offer a branded dialer to their own clients.
 - [White-label](${ROOT}/faq/white-label): reseller/agency program.
 - [White-label on mobile](${ROOT}/faq/white-label-mobile): how branding carries onto the installable mobile PWA.
 - [DialerSeat on mobile](${ROOT}/faq/mobile): standard-account PWA install instructions for iPhone and Android.
-- [Phone numbers & caller ID](${ROOT}/faq/numbers): STIR/SHAKEN A-attestation, CNAM registration, local presence, and avoiding spam/scam-likely flags.
+- [Phone numbers & caller ID](${ROOT}/faq/numbers): STIR/SHAKEN A-attestation, Free Caller Registry registration, local presence, and avoiding spam/scam-likely flags.
 - [Uploading & managing leads](${ROOT}/faq/leads): CSV column auto-detection, consent fields, and the 3-attempt retry cycle.
 - [Call scripts](${ROOT}/faq/scripts): personal and team-shared scripts, attaching to campaigns, reordering.
 - [Setting up a campaign](${ROOT}/faq/campaigns): dialer mode, AMD toggle and defaults, predictive pacing.

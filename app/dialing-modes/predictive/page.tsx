@@ -501,7 +501,7 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
               <li>{t("Recovery threshold at 2.0%, stays degraded with a 0.5% safety buffer until the rate clearly drops.")}</li>
               <li>{t("Live abandon-rate display in the agent terminal so you always know where the campaign is sitting.")}</li>
               <li>{t("AMD pre-screen so machine pickups never count as abandons against your number.")}</li>
-              <li>{t("TCPA window check on every dial. CNAM-aware caller-ID routing. National DNC scrubbing is still on you, see")}{" "}<Link href="/faq/how-we-keep-compliance">{t("how we keep compliance")}</Link> {t("for the full split.")}</li>
+              <li>{t("TCPA window check on every dial. Local caller ID by default. National DNC scrubbing is still on you, see")}{" "}<Link href="/faq/how-we-keep-compliance">{t("how we keep compliance")}</Link> {t("for the full split.")}</li>
             </ul>
           </div>
         </section>
