@@ -20,6 +20,11 @@ const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclud
   .split(/\r?\n/)
   .filter((f) => /\.(tsx?|mjs)$/.test(f))
   .filter((f) => !/admin-desktop|^app\/api\/admin\/|^app\/dashboard\/admin\/|^app\/dashboard\/manager\/desktop|^lib\/i18n\//.test(f))
+  // The free tools launched in English only (lib/tools/registry `englishOnly`),
+  // so their strings do not count against a language being complete. When they
+  // are translated, drop this line, clear `englishOnly` and switch their pages
+  // to localizeMetadata. The two original calculators are translated already.
+  .filter((f) => !/^lib\/tools\/|^app\/tools\/(?!abandon-rate-calculator\/|dialer-cost-calculator\/)|^components\/tools\/(?!AbandonRateCalculator|DialerCostCalculator)/.test(f))
 
 const catalog = new Map() // text → Set(files)
 const add = (text, file) => {

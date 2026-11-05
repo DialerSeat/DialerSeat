@@ -7670,5 +7670,8 @@
  "The most you can ever be out is a single week.": "失う可能性があるのは、最大でも1週間分だけです。",
  "There is no annual contract to lock you in, so the simplest review is your own: one week, $35, on your own list.": "縛られる年間契約はないので、いちばん簡単なレビューはご自身で試すことです。1週間、$35、ご自身のリストで。",
  "Yes. If you are recruiting a floor of more than 15 agents, or you need call-center supervision, advanced quality assurance and enterprise-level support,": "はい。15人を超えるエージェントのコールセンターを立ち上げる予定がある場合、またはコールセンターの監督、高度な品質保証、エンタープライズレベルのサポートが必要な場合は、",
- "Yes. No number places more than 60 calls a day, so no caller ID gets burned by volume, and load spreads across the pool before any number runs hot. Every outbound number carries STIR/SHAKEN A-attestation, is registered with the Free Caller Registry, and dials with local presence by default.": "はい。1つの番号からの発信は1日60件までなので、件数のせいで発信者番号が使えなくなることはなく、どの番号も負荷が偏る前にプール全体へ分散されます。すべての発信番号は STIR/SHAKEN の A 認証を備え、Free Caller Registry に登録され、標準でローカルプレゼンスで発信します。"
+ "Yes. No number places more than 60 calls a day, so no caller ID gets burned by volume, and load spreads across the pool before any number runs hot. Every outbound number carries STIR/SHAKEN A-attestation, is registered with the Free Caller Registry, and dials with local presence by default.": "はい。1つの番号からの発信は1日60件までなので、件数のせいで発信者番号が使えなくなることはなく、どの番号も負荷が偏る前にプール全体へ分散されます。すべての発信番号は STIR/SHAKEN の A 認証を備え、Free Caller Registry に登録され、標準でローカルプレゼンスで発信します。",
+ "Free tools": "無料ツール",
+ "Every free tool": "すべての無料ツール",
+ "Lead list cleaner, phone number formatter, area code lookup, calling hours by state, Erlang C, script generators and more. No signup.": "リードリストのクリーナー、電話番号フォーマッター、市外局番検索、州ごとの発信可能時間、Erlang C、スクリプト生成など。登録不要。"
 }

@@ -2,6 +2,14 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import DialerCostCalculator from '@/components/tools/DialerCostCalculator'
 import AbandonRateCalculator from '@/components/tools/AbandonRateCalculator'
+import LeadListCleaner from '@/components/tools/LeadListCleaner'
+import PhoneNumberFormatter from '@/components/tools/PhoneNumberFormatter'
+import PhoneNumberExtractor from '@/components/tools/PhoneNumberExtractor'
+import AreaCodeLookup from '@/components/tools/AreaCodeLookup'
+import CallingHoursChecker from '@/components/tools/CallingHoursChecker'
+import { ErlangCCalculator, AhtCalculator, CallsPerHourCalculator, ContactRateCalculator, ColdCallsPerDayCalculator, CostPerLeadCalculator, DncCostCalculator } from '@/components/tools/MathTools'
+import { ColdCallScriptGenerator, VoicemailScriptGenerator } from '@/components/tools/ScriptTools'
+import { ColdCallingTracker, TcpaChecklist } from '@/components/tools/TrackerAndChecklist'
 
 // =============================================================================
 // /embed/<tool> — the calculators, framed on somebody else's page
@@ -19,6 +27,22 @@ import AbandonRateCalculator from '@/components/tools/AbandonRateCalculator'
 const TOOLS = {
   'dialer-cost-calculator': { title: 'Dialer cost calculator', Tool: DialerCostCalculator },
   'abandon-rate-calculator': { title: 'Abandon rate calculator', Tool: AbandonRateCalculator },
+  'lead-list-cleaner': { title: 'Lead list cleaner', Tool: LeadListCleaner },
+  'phone-number-formatter': { title: 'Phone number formatter', Tool: PhoneNumberFormatter },
+  'phone-number-extractor': { title: 'Phone number extractor', Tool: PhoneNumberExtractor },
+  'area-code-lookup': { title: 'Area code lookup', Tool: AreaCodeLookup },
+  'telemarketing-calling-hours': { title: 'Telemarketing calling hours', Tool: CallingHoursChecker },
+  'tcpa-compliance-checklist': { title: 'TCPA compliance checklist', Tool: TcpaChecklist },
+  'dnc-registry-cost-calculator': { title: 'Do Not Call registry cost calculator', Tool: DncCostCalculator },
+  'erlang-c-calculator': { title: 'Erlang C calculator', Tool: ErlangCCalculator },
+  'average-handle-time-calculator': { title: 'Average handle time calculator', Tool: AhtCalculator },
+  'calls-per-hour-calculator': { title: 'Calls per hour calculator', Tool: CallsPerHourCalculator },
+  'contact-rate-calculator': { title: 'Contact rate calculator', Tool: ContactRateCalculator },
+  'cold-calls-per-day-calculator': { title: 'Cold calls per day calculator', Tool: ColdCallsPerDayCalculator },
+  'cost-per-lead-calculator': { title: 'Cost per lead calculator', Tool: CostPerLeadCalculator },
+  'cold-call-script-generator': { title: 'Cold call script generator', Tool: ColdCallScriptGenerator },
+  'sales-voicemail-script-generator': { title: 'Sales voicemail script generator', Tool: VoicemailScriptGenerator },
+  'cold-calling-tracker': { title: 'Cold calling tracker', Tool: ColdCallingTracker },
 } as const
 
 type ToolSlug = keyof typeof TOOLS

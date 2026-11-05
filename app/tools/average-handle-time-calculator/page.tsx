@@ -1,0 +1,41 @@
+import type { Metadata } from 'next'
+import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
+import { AhtCalculator } from '@/components/tools/MathTools'
+import { msg } from '@/lib/i18n/msg'
+
+// /tools/average-handle-time-calculator: built from the spec in docs/seo (book ch 6, 7); demand
+// checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
+
+const ROUTE = '/tools/average-handle-time-calculator'
+
+export const metadata: Metadata = toolMetadata({
+  route: ROUTE,
+  title: "Average Handle Time Calculator (AHT)",
+  description: "Calculate average handle time from talk, hold and after-call work, see what share each takes, and what a call costs in agent time.",
+  social: "Average handle time calculator",
+})
+
+const FAQS = [
+  { question: msg("How do you calculate average handle time?"), answer: msg("Add total talk time, hold time and after-call work, then divide by the number of calls handled. 600 minutes over 120 calls is an AHT of 5 minutes.") },
+  { question: msg("What is a good AHT?"), answer: msg("It depends on the call. Shorter is not better if it means rushed conversations; hold time and wrap-up are the parts worth shrinking first.") },
+  { question: msg("Is AHT the same as talk time?"), answer: msg("No. Talk time is only the conversation. AHT adds hold and the work after the call, which is often a third of the total.") },
+]
+
+export default function Page() {
+  return (
+    <ToolPage
+      route={ROUTE}
+      name={msg("Average handle time calculator")}
+      eyebrow={msg("▸ FREE TOOL · AVERAGE HANDLE TIME")}
+      h1={msg("What is your")}
+      h1Second={msg("average handle time?")}
+      answer={msg("Average handle time is talk time plus hold time plus after-call work, divided by the calls handled. Enter your totals to get AHT in minutes and seconds, the share each part takes, how many calls an agent can handle an hour, and what each call costs in agent time.")}
+      tool={<AhtCalculator />}
+      toolIcon="scale"
+      faqs={FAQS}
+      related={[{ href: "/tools/erlang-c-calculator", label: msg("ERLANG C CALCULATOR") }, { href: "/tools/calls-per-hour-calculator", label: msg("CALLS PER HOUR") }]}
+      pitch={msg("DialerSeat’s dispositions and notes take a click, which keeps wrap-up short. $35 a week per seat.")}
+      embedHeight={560}
+    />
+  )
+}

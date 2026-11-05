@@ -149,6 +149,8 @@ ${comparisons}
 - [Calling rules by country](${ROOT}/data/calling-rules-by-country): Do Not Call lists, calling hours, consent, abandoned-call limits and caller ID prefixes for ${COUNTRY_RULES.length} countries, with sources. One page per country: ${countries}.
 - [Dialer cost calculator](${ROOT}/tools/dialer-cost-calculator): weeks and seats in, what each dialer would bill out.
 - [Abandon rate calculator](${ROOT}/tools/abandon-rate-calculator): a campaign against the US 3%, UK 3% and Canadian 5% limits.
+- [Lead list cleaner](${ROOT}/tools/lead-list-cleaner): fixes any lead sheet for import: headers, p:+1 phones, states, full names, duplicates. Runs in the browser.
+- [All free tools](${ROOT}/tools): phone number formatter and extractor, area code lookup, telemarketing calling hours by state, TCPA checklist, Do Not Call registry cost, Erlang C staffing, AHT, calls per hour, contact rate, cold calls per day, cost per lead, cold call and voicemail script generators, cold calling tracker.
 - [All resources](${ROOT}/resources)
 
 ## Machine-readable surfaces

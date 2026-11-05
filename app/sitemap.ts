@@ -6,6 +6,7 @@ import { ALL_SHOTS } from '@/lib/screenshots'
 import { VERTICALS } from '@/lib/verticals'
 import { COUNTRY_RULES } from '@/lib/countryRules'
 import { ENABLED_LOCALES, isLocalizablePath, localizedPath } from '@/lib/i18n/locales'
+import { TOOLS, toolPath, ENGLISH_ONLY_PATHS } from '@/lib/tools/registry'
 
 
 
@@ -88,8 +89,9 @@ function apexSitemap(): MetadataRoute.Sitemap {
     ...COUNTRY_RULES.map(c => e(`/data/calling-rules-by-country/${c.code.toLowerCase()}`, 0.75, 'monthly')),
     e('/about', 0.6, 'monthly'),
     e('/partners', 0.6, 'monthly'),
-    e('/tools/dialer-cost-calculator', 0.85, 'monthly'),
-    e('/tools/abandon-rate-calculator', 0.8, 'monthly'),
+    // Every free tool and the hub that lists them (lib/tools/registry).
+    e('/tools', 0.85, 'monthly'),
+    ...TOOLS.map(t => e(toolPath(t.slug), 0.8, 'monthly')),
     
     e('/dialing-modes', 0.9, 'monthly'),
     e('/dialing-modes/preview', 0.8, 'monthly'),
@@ -231,7 +233,9 @@ function withLanguages(entries: MetadataRoute.Sitemap): MetadataRoute.Sitemap {
   for (const entry of entries) {
     const path = entry.url.startsWith(APEX) ? entry.url.slice(APEX.length) || '/' : null
     if (!path) { out.push(entry); continue }
-    if (!isLocalizablePath(path)) { out.push(entry); continue }
+    // English-only tools (not yet translated) list no language versions, so no
+    // crawler is sent to a Spanish address that shows English.
+    if (!isLocalizablePath(path) || ENGLISH_ONLY_PATHS.has(path)) { out.push(entry); continue }
     const languages: Record<string, string> = {}
     for (const l of ENABLED_LOCALES) languages[l] = `${APEX}${localizedPath(l, path)}`
     // The pages' own hreflang tags name English as x-default; the sitemap says

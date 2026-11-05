@@ -84,6 +84,12 @@ const TOOLS = [
     title: msg("Abandon rate calculator"),
     body: msg("Check a predictive campaign against the US, UK and Canadian abandoned-call limits. Embeddable."),
   },
+  {
+    href: '/tools',
+    role: 'FREE TOOLS',
+    title: msg("Every free tool"),
+    body: msg("Lead list cleaner, phone number formatter, area code lookup, calling hours by state, Erlang C, script generators and more. No signup."),
+  },
 ]
 
 const GUIDES = [

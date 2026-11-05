@@ -49,6 +49,7 @@ const RESOURCES: RailGroup = {
     { href: '/data/connect-rates', label: msg("Connect rates by state & hour") },
     { href: '/tools/dialer-cost-calculator', label: msg("Dialer cost calculator") },
     { href: '/tools/abandon-rate-calculator', label: msg("Abandon rate calculator") },
+    { href: '/tools', label: msg("Free tools") },
     // Definitions are what search and AI answers quote; the glossary was
     // reachable only from the FAQ index and two articles.
     { href: '/faq/dialer-glossary', label: msg("Dialer glossary") },

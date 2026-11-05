@@ -7670,5 +7670,8 @@
  "The most you can ever be out is a single week.": "你最多只会损失一周的费用。",
  "There is no annual contract to lock you in, so the simplest review is your own: one week, $35, on your own list.": "没有年度合同绑定你，所以最简单的评价就是你自己的：一周，35 美元，用你自己的名单试。",
  "Yes. If you are recruiting a floor of more than 15 agents, or you need call-center supervision, advanced quality assurance and enterprise-level support,": "有。如果你正在组建超过 15 名坐席的呼叫团队，或需要呼叫中心监督、高级质量保证和企业级支持，",
- "Yes. No number places more than 60 calls a day, so no caller ID gets burned by volume, and load spreads across the pool before any number runs hot. Every outbound number carries STIR/SHAKEN A-attestation, is registered with the Free Caller Registry, and dials with local presence by default.": "是的。每个号码每天最多拨打 60 通，不会因为拨打量过大而让来电显示号码报废，而且在任何号码过热之前，负载就会分摊到整个号码池。每个外呼号码都带有 STIR/SHAKEN A 级认证，已在 Free Caller Registry 登记，并默认使用本地号码外呼。"
+ "Yes. No number places more than 60 calls a day, so no caller ID gets burned by volume, and load spreads across the pool before any number runs hot. Every outbound number carries STIR/SHAKEN A-attestation, is registered with the Free Caller Registry, and dials with local presence by default.": "是的。每个号码每天最多拨打 60 通，不会因为拨打量过大而让来电显示号码报废，而且在任何号码过热之前，负载就会分摊到整个号码池。每个外呼号码都带有 STIR/SHAKEN A 级认证，已在 Free Caller Registry 登记，并默认使用本地号码外呼。",
+ "Free tools": "免费工具",
+ "Every free tool": "所有免费工具",
+ "Lead list cleaner, phone number formatter, area code lookup, calling hours by state, Erlang C, script generators and more. No signup.": "线索名单清理、电话号码格式化、区号查询、各州拨打时段、Erlang C、话术生成器等。无需注册。"
 }
