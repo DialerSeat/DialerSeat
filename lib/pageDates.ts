@@ -75,6 +75,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/terms": "2026-10-06",
   "/tools/abandon-rate-calculator": "2026-10-06",
   "/tools/dialer-cost-calculator": "2026-10-06",
+  "/tools/state-do-not-call-lists": "2026-11-05",
   "/vs": "2026-10-06",
   "/vs/[matchup]": "2026-10-30",
   "/vs/3cx": "2026-10-30",

@@ -6,7 +6,7 @@ A plan, not yet built. These are links between your own pages. They spread what 
 
 Counted from page content, with header, footer, nav and rail removed:
 
-- **39 of 46 FAQ pages get no link from any /vs/ page.** The other 7 get one or none that matter; the most any FAQ page gets from /vs/ is 1.
+- **42 of 46 FAQ pages get no link from any /vs/ page.** The other 4 get exactly one.
 - **15 of 32 competitor pages get no link from any FAQ page:** wavv, cloudtalk, dialpad, dialedin, ringcentral, smrtphone, aloware, ytel, 3cx, dialer-io, gohighlevel, ringover, talkdesk, nextiva, manual-dialing.
 - /vs/readymode, in the sampled page, links only to the /faq index, not to one specific answer.
 - /faq/dialer-for-insurance-agents links to no competitor page, while /faq/dialer-for-real-estate links to three.
@@ -14,7 +14,7 @@ Counted from page content, with header, footer, nav and rail removed:
 
 ## Rules for this map
 
-- Every term below came back from Google autocomplete on 4 or 5 Nov. These are searched phrases, not guesses.
+- Terms in the "Terms worth working in" table all came back from Google autocomplete on 4 or 5 Nov. In the link tables most do too; a few are plain page names (why DialerSeat, send leads from your CRM, how many numbers do you need).
 - Use a term only where the page it points to really answers it. A term gets used once as the link text, never repeated down the page.
 - Links go in a small "Related" block at the end of a page, so your existing copy isn't reworded. Changing your titles or body text stays your call.
 - New link labels need translating into 11 languages unless they reuse strings that already exist. Where a page's own title already reads well, reuse it.
@@ -26,7 +26,7 @@ Each competitor page gets the block for its segment, plus the row for any named 
 
 | Competitor pages | Link to | Link text (searched term) |
 |---|---|---|
-| **Call center:** readymode, convoso, five9, vicidial, calltools, dialedin, ytel, talkdesk, string | /faq/is-a-predictive-dialer-legal | is a predictive dialer legal |
+| **Call center:** readymode, convoso, five9, vicidial, calltools, dialedin, ytel, talkdesk | /faq/is-a-predictive-dialer-legal | is a predictive dialer legal |
 | | /faq/how-does-amd-work | answering machine detection |
 | | /tools/abandon-rate-calculator | abandon rate formula |
 | | /tools/erlang-c-calculator | call center staffing calculator |
@@ -60,8 +60,8 @@ Each competitor page gets the block for its segment, plus the row for any named 
 | dialer-for-real-estate | Already links to mojo, batchdialer, redx; add /vs/wavv | Mojo Dialer alternatives |
 | send-leads-from-your-crm | /vs/gohighlevel, /vs/hubspot | dialer for HubSpot, power dialer for GoHighLevel |
 | local-presence-dialing | /vs/gohighlevel, /vs/ringcentral | GHL local presence dialing, RingCentral local presence dialing |
-| why-we-charge | /vs/readymode, /vs/mojo, /data/dialer-pricing | ReadyMode $199 a week's cost, Mojo $149, power dialer pricing |
-| why-dialerseat | /vs/everyone, /vs/dialer-io | dialer vs every other dialer |
+| why-we-charge | /vs/readymode, /vs/mojo, /data/dialer-pricing | ReadyMode alternatives, Mojo Dialer alternatives, power dialer pricing |
+| why-dialerseat | /vs/everyone | best auto dialer software |
 | how-to-remove-spam-likely | /faq/why-we-dont-rest-flagged-numbers, /faq/how-we-keep-numbers-clean | number reputation, A-level attestation |
 | 10dlc-and-outbound-calling | /faq/how-to-remove-spam-likely | Free Caller Registry |
 
