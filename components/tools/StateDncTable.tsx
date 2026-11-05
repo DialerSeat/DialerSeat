@@ -102,8 +102,19 @@ export default function StateDncTable() {
   return (
     <div className="tk">
       <ToolStyles />
+      <style>{`
+        @media (max-width: 640px) {
+          .sdnc thead { display: none; }
+          .sdnc tr, .sdnc td { display: block; }
+          .sdnc tr { padding: 12px 4px; border-bottom: 1px solid #d6dbe3; }
+          .sdnc td { border: 0; padding: 4px 8px; }
+          .sdnc td:nth-child(2)::before { content: 'Who runs it: '; font-weight: 700; }
+          .sdnc td:nth-child(3)::before { content: 'Cost: '; font-weight: 700; }
+          .sdnc td:nth-child(4)::before { content: 'Refreshed: '; font-weight: 700; }
+        }
+      `}</style>
       <div className="tk-tablewrap" style={{ maxHeight: 'none' }}>
-        <table className="tk-table">
+        <table className="tk-table sdnc">
           <thead>
             <tr><th>State</th><th>Who runs it</th><th>What telemarketers pay</th><th>Refreshed</th></tr>
           </thead>
