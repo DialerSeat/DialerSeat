@@ -4,15 +4,11 @@ import { requireAdmin } from '@/lib/admin'
 import { revalidateTag } from 'next/cache'
 import { userCacheTag } from '@/lib/tenant'
 import { changeProjectDomain, removeProjectDomain } from '@/lib/vercelDomains'
+import { isReservedSubdomain } from '@/lib/reservedSubdomains'
 
 const supabase = getServiceClient('admin/tenants/[id]')
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/
-const RESERVED_SLUGS = new Set([
-  'www', 'app', 'api', 'admin', 'dashboard', 'mail', 'smtp', 'ftp', 'blog',
-  'docs', 'help', 'support', 'status', 'dev', 'staging', 'test', 'demo-internal',
-  'clerk', 'stripe', 'assets', 'cdn', 'static',
-])
 const HEX_RE = /^#[0-9a-fA-F]{6}$/
 const STATUSES = new Set(['active', 'suspended', 'cancelled'])
 
@@ -120,7 +116,7 @@ export async function PATCH(
             { status: 400 }
           )
         }
-        if (RESERVED_SLUGS.has(newSlug)) {
+        if (isReservedSubdomain(newSlug)) {
           return NextResponse.json({ success: false, error: `"${newSlug}" is a reserved slug` }, { status: 400 })
         }
         const { data: taken } = await supabase

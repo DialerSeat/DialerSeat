@@ -7,26 +7,9 @@ import {
   changeProjectDomain,
 } from '@/lib/vercelDomains'
 import { submitOnTenantLive } from '@/lib/indexnow'
+import { isReservedSubdomain } from '@/lib/reservedSubdomains'
 
 const supabase = getServiceClient('whitelabel/onboarding')
-
-const RESERVED = new Set([
-  'www', 'api', 'app', 'admin', 'mail', 'email', 'support',
-  'dashboard', 'billing', 'auth', 'docs', 'help', 'status',
-  'staging', 'dev', 'test', 'preview', 'sandbox',
-  'cdn', 'assets', 'static', 'media', 'images', 'files',
-  // Vendor names stay blocked even after we stop using them: dropping
-  // 'signalwire' here would newly allow a tenant to claim that subdomain,
-  // which is worse than an obsolete entry costing nothing.
-  'sip', 'voice', 'webhook', 'webhooks', 'signalwire', 'telnyx',
-  'stripe', 'clerk', 'supabase', 'vercel', 'sentry',
-  'dialerseat', 'whitelabel', 'wl', 'onboarding',
-  'manager', 'managers', 'pro', 'team', 'teams',
-  'signin', 'signup', 'login', 'logout', 'account', 'settings',
-  'terms', 'privacy', 'about', 'contact', 'pricing', 'faq',
-  'home', 'blog', 'callback', 'oauth', 'saml',
-  'referral', 'promo', 'public', 'upload',
-])
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/
 const HEX_RE = /^#[0-9a-fA-F]{6}$/
@@ -230,7 +213,7 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     )
   }
-  if (RESERVED.has(subdomain)) {
+  if (isReservedSubdomain(subdomain)) {
     return NextResponse.json({ error: 'reserved_subdomain' }, { status: 400 })
   }
   if (!HEX_RE.test(primaryColor)) {

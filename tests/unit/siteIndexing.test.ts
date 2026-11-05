@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { COMPETITORS, SEARCHED_PAIRS, crossShoppedPairs, matchupSlug } from '@/lib/competitors'
 import { VERTICALS } from '@/lib/verticals'
+import { isReservedSubdomain } from '@/lib/reservedSubdomains'
 
 // =============================================================================
 // A PAGE NOBODY LINKS TO AND NOTHING LISTS DOES NO WORK
@@ -149,5 +150,110 @@ describe('head-to-head pages', () => {
   it('generates a unique slug for every pair', () => {
     const slugs = crossShoppedPairs().map(([a, b]) => matchupSlug(a, b))
     expect(new Set(slugs).size).toBe(slugs.length)
+  })
+})
+
+// =============================================================================
+// A PUBLIC PAGE HAS TO BE REGISTERED IN FIVE PLACES
+// =============================================================================
+// /screenshots shipped on 3 November and was never added to isPublicRoute in
+// proxy.ts, so Clerk's auth.protect() rewrote every signed-out request to a
+// 404 — Googlebot included. Verified with curl on 4 November: 404 with
+// X-Clerk-Auth-Reason: protect-rewrite, while /features and /resources beside
+// it returned 200. The page built so that assistants would stop illustrating
+// DialerSeat with a competitor's screenshots was unreachable to every machine
+// that would have read it, and the sitemap was advertising it the whole time.
+//
+// Nothing failed. The page worked perfectly for the signed-in author, which is
+// the only person who never sees the bug.
+//
+// Writing the page is one step of five, and the other four are all invisible
+// from a browser that is signed in:
+//   proxy.ts isPublicRoute        — or a crawler gets a 404
+//   proxy.ts MARKETING_ONLY_PATHS — or our page renders under a reseller brand
+//   app/sitemap.ts                — or nothing tells Google it exists
+//   scripts/gen-page-dates.mjs    — or it stamps the site-wide fallback date
+//   lib/reservedSubdomains.ts     — or a tenant can claim its name
+// =============================================================================
+
+const proxySource = readFileSync(join(process.cwd(), 'proxy.ts'), 'utf8')
+const pageDatesSource = readFileSync(join(process.cwd(), 'scripts', 'gen-page-dates.mjs'), 'utf8')
+
+/**
+ * Top-level routes a signed-out visitor is meant to reach. Derived from the
+ * filesystem, so a new page is in scope the moment it exists.
+ */
+function publicTopLevelRoutes(): string[] {
+  // Signed-in destinations, not marketing pages.
+  const PRIVATE = new Set(['billing', 'dashboard', 'welcome'])
+  return readdirSync(APP, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => d.name)
+    .filter(name => !name.startsWith('[') && !name.startsWith('_'))
+    .filter(name => !PRIVATE.has(name))
+    .filter(name => existsSync(join(APP, name, 'page.tsx')))
+    .sort()
+}
+
+/** The lines of the array literal that starts at `from`, up to its closing `]`. */
+function blockBody(from: number): string[] {
+  const rest = proxySource.slice(from)
+  const end = rest.search(/^\]\)?/m)
+  return rest.slice(0, end < 0 ? undefined : end).split(/\r?\n/)
+}
+
+/** The route patterns inside a createRouteMatcher([...]) assigned to `name`. */
+function matcherPatterns(name: string): string[] {
+  const start = proxySource.indexOf(`const ${name} = createRouteMatcher([`)
+  if (start < 0) throw new Error(`${name} not found in proxy.ts`)
+  // ── STRIP THE COMMENTS BEFORE PAIRING QUOTES ───────────────────────
+  // proxy.ts is more comment than code, and the prose says "the client's
+  // cookie guess". One apostrophe puts quote-pairing out of phase for the
+  // rest of the block: the first version of this read 28 of the 44 patterns
+  // and called /faq, /vs, /terms, /privacy and /dialing-modes unprotected
+  // pages. They were listed all along, below the apostrophe.
+  return blockBody(start)
+    .filter(line => !line.trim().startsWith('//'))
+    .flatMap(line => [...line.matchAll(/'([^']+)'/g)].map(m => m[1]))
+}
+
+describe('every public page is registered where it has to be', () => {
+  it('is public in proxy.ts, so a signed-out crawler is not rewritten to a 404', () => {
+    const patterns = matcherPatterns('isPublicRoute')
+    const missing = publicTopLevelRoutes().filter(
+      name => !patterns.some(p => p === `/${name}` || p.startsWith(`/${name}(`))
+    )
+    expect(missing, 'these pages are behind auth.protect()').toEqual([])
+  })
+
+  it('is in the sitemap', () => {
+    const missing = publicTopLevelRoutes().filter(name => !sitemapSource.includes(`'/${name}'`))
+    expect(missing, 'these pages are in no sitemap entry').toEqual([])
+  })
+
+  it('is in PUBLIC_PREFIXES, so it stamps its own date and not the fallback', () => {
+    const missing = publicTopLevelRoutes().filter(name => !pageDatesSource.includes(`'/${name}'`))
+    expect(missing, 'these pages will print the site-wide fallback date').toEqual([])
+  })
+
+  it('redirects to the apex on a tenant subdomain', () => {
+    // Our prices and our name under somebody else's brand. The exception is
+    // deliberate and narrow: /status reports the platform the reseller is
+    // selling, so it stays reachable on their subdomain.
+    const EXEMPT = new Set(['status'])
+    const start = proxySource.indexOf('const MARKETING_ONLY_PATHS = [')
+    const patterns = blockBody(start)
+      .filter(line => !line.trim().startsWith('//'))
+      .join(' ')
+    const missing = publicTopLevelRoutes()
+      .filter(name => !EXEMPT.has(name))
+      // The entries are regex literals, so the slash is escaped: /^\/faq…
+      .filter(name => !patterns.includes(String.raw`\/` + name))
+    expect(missing, 'these pages render under a reseller brand').toEqual([])
+  })
+
+  it('has its name reserved, so no tenant can claim the subdomain', () => {
+    const missing = publicTopLevelRoutes().filter(name => !isReservedSubdomain(name))
+    expect(missing, 'a tenant could take these subdomains').toEqual([])
   })
 })

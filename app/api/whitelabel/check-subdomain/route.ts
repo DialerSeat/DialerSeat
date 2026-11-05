@@ -1,26 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
+import { isReservedSubdomain } from '@/lib/reservedSubdomains'
 
 const supabase = getServiceClient('whitelabel/check-subdomain')
-
-const RESERVED = new Set([
-  'www', 'api', 'app', 'admin', 'mail', 'email', 'support',
-  'dashboard', 'billing', 'auth', 'docs', 'help', 'status',
-  'staging', 'dev', 'test', 'preview', 'sandbox',
-  'cdn', 'assets', 'static', 'media', 'images', 'files',
-  // Vendor names stay blocked even after we stop using them: dropping
-  // 'signalwire' here would newly allow a tenant to claim that subdomain,
-  // which is worse than an obsolete entry costing nothing.
-  'sip', 'voice', 'webhook', 'webhooks', 'signalwire', 'telnyx',
-  'stripe', 'clerk', 'supabase', 'vercel', 'sentry',
-  'dialerseat', 'whitelabel', 'wl', 'onboarding',
-  'manager', 'managers', 'pro', 'team', 'teams',
-  'signin', 'signup', 'login', 'logout', 'account', 'settings',
-  'terms', 'privacy', 'about', 'contact', 'pricing', 'faq',
-  'home', 'blog', 'callback', 'oauth', 'saml',
-  'referral', 'promo', 'public', 'upload',
-])
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/
 
@@ -44,7 +27,7 @@ export async function GET(req: NextRequest) {
   if (!SLUG_RE.test(slug)) {
     return NextResponse.json({ available: false, reason: 'invalid' })
   }
-  if (RESERVED.has(slug)) {
+  if (isReservedSubdomain(slug)) {
     return NextResponse.json({ available: false, reason: 'reserved' })
   }
 

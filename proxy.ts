@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ENTITLED_STATUSES, pausedAccessRunning } from '@/lib/entitlement'
 import { isOwnerFunded } from '@/lib/seatFunding'
+import { isReservedSubdomain } from '@/lib/reservedSubdomains'
 import {
   LOCALE_COOKIE, LOCALE_HEADER, LOCALE_PATH_HEADER, PROMPT_COOKIE, isLocalizablePath, splitLocalePrefix,
 } from '@/lib/i18n/locales'
@@ -213,12 +214,6 @@ interface UserBrandAccess {
   canSeeStandard: boolean
 }
 
-const RESERVED_SUBDOMAINS = new Set([
-  'www', 'app', 'api', 'admin', 'dashboard', 'static', 'cdn', 'assets',
-  'mail', 'email', 'smtp', 'imap', 'pop',
-  'docs', 'blog', 'help', 'support', 'status',
-])
-
 const PRIMARY_DOMAINS = ['dialerseat.com', 'localhost']
 
 const MARKETING_ONLY_PATHS = [
@@ -256,7 +251,7 @@ function extractTenantSlug(hostname: string): string | null {
   if (!primary) return null
   const subdomain = host.slice(0, -1 - primary.length)
   if (subdomain.includes('.')) return null
-  if (RESERVED_SUBDOMAINS.has(subdomain)) return null
+  if (isReservedSubdomain(subdomain)) return null
   if (!/^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/.test(subdomain)) return null
   return subdomain
 }

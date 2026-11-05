@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/admin'
 import { revalidateTag } from 'next/cache'
 import { userCacheTag } from '@/lib/tenant'
 import { addProjectDomain } from '@/lib/vercelDomains'
+import { isReservedSubdomain } from '@/lib/reservedSubdomains'
 
 const supabase = getServiceClient('admin/tenants')
 
@@ -11,12 +12,6 @@ const supabase = getServiceClient('admin/tenants')
 const DEFAULT_SUPPORT_EMAIL = 'support@dialerseat.com'
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/
-const RESERVED_SLUGS = new Set([
-  'www', 'app', 'api', 'admin', 'dashboard', 'mail', 'smtp', 'ftp', 'blog',
-  'docs', 'help', 'support', 'status', 'dev', 'staging', 'test', 'demo-internal',
-  'clerk', 'stripe', 'assets', 'cdn', 'static',
-])
-
 const HEX_RE = /^#[0-9a-fA-F]{6}$/
 
 const COLOR_DEFAULTS = {
@@ -70,7 +65,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-    if (RESERVED_SLUGS.has(slug)) {
+    if (isReservedSubdomain(slug)) {
       return NextResponse.json(
         { success: false, error: `"${slug}" is a reserved slug` },
         { status: 400 }
