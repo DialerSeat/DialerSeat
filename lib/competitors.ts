@@ -971,8 +971,46 @@ export function crossShoppedPairs(): Array<[Competitor, Competitor]> {
       pairs.push([pool[i], pool[j]])
     }
   }
+  // ── PAIRS PEOPLE ACTUALLY SEARCH, ACROSS SEGMENTS ───────────────────
+  // The segment gate keeps out pairs nobody compares, and also kept out pairs
+  // people demonstrably do. Each pair below came back from Google autocomplete
+  // on 2026-11-04 as "a vs b" (or "b vs a"): a suggestion exists only when
+  // people type it. Same template, same verified data, a real question.
+  const seen = new Set(pairs.map(([a, b]) => matchupSlug(a, b)))
+  const index = (c: Competitor) => COMPETITORS.indexOf(c)
+  for (const [x, y] of SEARCHED_PAIRS) {
+    const a = competitorBySlug(x)
+    const b = competitorBySlug(y)
+    if (!a || !b) continue
+    const [first, second] = index(a) < index(b) ? [a, b] : [b, a]
+    const slug = matchupSlug(first, second)
+    if (seen.has(slug)) continue
+    seen.add(slug)
+    pairs.push([first, second])
+  }
   return pairs
 }
+
+/** Autocomplete-verified on 2026-11-04; see crossShoppedPairs(). */
+const SEARCHED_PAIRS: Array<[string, string]> = [
+  ['readymode', 'mojo'],
+  ['readymode', 'batchdialer'],
+  ['readymode', 'kixie'],
+  ['mojo', 'calltools'],
+  ['mojo', 'phoneburner'],
+  ['mojo', 'redx'],
+  ['batchdialer', 'calltools'],
+  ['kixie', 'wavv'],
+  ['kixie', 'aircall'],
+  ['kixie', 'ringcentral'],
+  ['justcall', 'aircall'],
+  ['justcall', 'cloudtalk'],
+  ['justcall', 'dialpad'],
+  ['aircall', 'dialpad'],
+  ['aircall', 'ringcentral'],
+  ['cloudtalk', 'dialpad'],
+  ['vicidial', '3cx'],
+]
 
 /** URL slug for a head-to-head, always in registry order so it is stable. */
 export function matchupSlug(a: Competitor, b: Competitor): string {
