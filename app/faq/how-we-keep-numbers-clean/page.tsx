@@ -178,6 +178,7 @@ export default async function Page() {
           <div className="guts-btns">
             <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
             <Link href="/faq/numbers" className="guts-btn secondary">{t("PHONE NUMBERS & CALLER ID")}</Link>
+            <Link href="/faq/how-to-remove-spam-likely" className="guts-btn secondary">{t("How to remove Spam Likely")}</Link>
           </div>
           <p className="guts-note">
             {t("Attestation behaviour is from")}{' '}

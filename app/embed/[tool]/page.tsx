@@ -10,6 +10,7 @@ import CallingHoursChecker from '@/components/tools/CallingHoursChecker'
 import { ErlangCCalculator, AhtCalculator, CallsPerHourCalculator, ContactRateCalculator, ColdCallsPerDayCalculator, CostPerLeadCalculator, DncCostCalculator } from '@/components/tools/MathTools'
 import { ColdCallScriptGenerator, VoicemailScriptGenerator } from '@/components/tools/ScriptTools'
 import { ColdCallingTracker, TcpaChecklist } from '@/components/tools/TrackerAndChecklist'
+import StateDncTable from '@/components/tools/StateDncTable'
 
 // =============================================================================
 // /embed/<tool> — the calculators, framed on somebody else's page
@@ -33,6 +34,7 @@ const TOOLS = {
   'area-code-lookup': { title: 'Area code lookup', Tool: AreaCodeLookup },
   'telemarketing-calling-hours': { title: 'Telemarketing calling hours', Tool: CallingHoursChecker },
   'tcpa-compliance-checklist': { title: 'TCPA compliance checklist', Tool: TcpaChecklist },
+  'state-do-not-call-lists': { title: 'State Do Not Call lists', Tool: StateDncTable },
   'dnc-registry-cost-calculator': { title: 'Do Not Call registry cost calculator', Tool: DncCostCalculator },
   'erlang-c-calculator': { title: 'Erlang C calculator', Tool: ErlangCCalculator },
   'average-handle-time-calculator': { title: 'Average handle time calculator', Tool: AhtCalculator },

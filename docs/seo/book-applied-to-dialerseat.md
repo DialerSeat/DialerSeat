@@ -55,7 +55,7 @@ Contract and demo-led dialers forecast revenue on monthly and annual commitments
 ### 2. Lead outreach with the data nobody else has (ch 24, 28)
 "Go and measure something" is the book's fallback for a product with no story, and DialerSeat has already measured three things:
 - **/faq/why-we-dont-rest-flagged-numbers**: rested numbers came back worse than new ones, and cutting volume recovered them in days. A counterintuitive finding with data is exactly the "we measured something nobody has" shape.
-- **/data/connect-rates**: live answer rates by state and hour from real calls. No competitor can copy it. Publish the quarterly "best time to cold call, by state" from it (`docs/VISIBILITY.md` §4).
+- **/data/connect-rates**: live answer rates by state and hour from real calls. No competitor can copy it. Publish the quarterly "best time to cold call, by state" from it (`docs/VISIBILITY.md` §4). **Correction, 5 Nov:** the page shows 1 publishable row and 55 dashes, so don't pitch it or build on it until the buckets pass 250 calls.
 - **/data/dialer-pricing**: 30 dialers' published prices, contract terms and minimums: the book's "test 50 tools" study, already done.
 
 Pitch these, never the product. The rhythm: **3–5 targeted emails a day plus 2–3 genuine community answers a week**, aiming at 20–30 referring domains a quarter. Expect about 2 links per 50 emails; judge on an 8–12 week lag; stop a campaign only if 100 well-targeted emails produce nothing, which means the sentence needs work, not more emails. The book's biggest mistake was starting this in month seven. DialerSeat is in month three.

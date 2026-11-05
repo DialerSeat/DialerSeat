@@ -13,6 +13,8 @@ import { pageDate } from '@/lib/pageDates'
 import { withShareImage } from '@/lib/i18n/metadata'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import ToolLinks from '@/components/ToolLinks'
+import { TOOLS } from '@/lib/tools/registry'
 
 // =============================================================================
 // ONE LAYOUT FOR EVERY FREE TOOL
@@ -42,6 +44,18 @@ export function toolMetadata(o: { route: string; title: string; description: str
     openGraph: { title: o.social, description: o.description, url, type: 'website' },
     twitter: { card: 'summary_large_image', title: o.social, description: o.description },
   })
+}
+
+/**
+ * The next three tools in this tool's group, wrapping round, so every tool gets
+ * links from its neighbours instead of depending on the hub.
+ */
+function neighbours(route: string): string[] {
+  const slug = route.replace('/tools/', '')
+  const group = TOOLS.filter((x) => x.group === TOOLS.find((y) => y.slug === slug)?.group)
+  const at = group.findIndex((x) => x.slug === slug)
+  if (at < 0) return []
+  return [1, 2, 3].map((n) => group[(at + n) % group.length]).filter((x) => x.slug !== slug).map((x) => x.slug)
 }
 
 export default async function ToolPage(p: {
@@ -123,6 +137,8 @@ export default async function ToolPage(p: {
           </div>
           <CiteThis title={t(p.name)} path={p.route} embedPath={`/embed${p.route.replace('/tools', '')}`} embedHeight={p.embedHeight ?? 560} />
         </GutsSection>
+
+        <ToolLinks slugs={neighbours(p.route)} />
       </GutsShell>
       <SiteFooter />
     </>

@@ -185,7 +185,7 @@ export default async function Page() {
           </div>
         </GutsSection>
 
-        <ToolLinks slugs={['dnc-registry-cost-calculator', 'tcpa-compliance-checklist']} />
+        <ToolLinks slugs={['state-do-not-call-lists', 'dnc-registry-cost-calculator', 'tcpa-compliance-checklist']} />
 
       </GutsShell>
       <SiteFooter />

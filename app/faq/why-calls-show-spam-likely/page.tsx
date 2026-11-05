@@ -189,6 +189,7 @@ export default async function Page() {
             <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
             <Link href="/faq/how-we-keep-numbers-clean" className="guts-btn secondary">
               {t("HOW WE DO IT")}</Link>
+            <Link href="/faq/how-to-remove-spam-likely" className="guts-btn secondary">{t("How to remove Spam Likely")}</Link>
           </div>
           <p className="guts-note">
             {t("Attestation grades are the STIR/SHAKEN framework’s own definitions. Reputation factors are summarised from")}{' '}
