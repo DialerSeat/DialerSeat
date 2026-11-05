@@ -4,6 +4,7 @@ import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
 import { isCallableNow } from '@/lib/callingWindow'
+import { readLeadFields } from '@/lib/leadHeaders'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -252,7 +253,8 @@ export async function POST(req: Request) {
       let built: LeadRow | null = null
 
       if (typeof lead === 'object' && lead !== null && !Array.isArray(lead)) {
-        // Only match recognized header name variants — no positional
+        // Only match recognized headers (any case or punctuation, see
+        // lib/leadHeaders.ts) — no positional
         // fallback to keys[0]/keys[1]. A positional fallback silently
         // assigns whatever happens to be in the first/second column to
         // first_name/last_name even when that column is something else
@@ -260,21 +262,9 @@ export async function POST(req: Request) {
         // is exactly what produced rows where last_name showed a raw phone
         // number. Leaving these blank when no recognized header matches is
         // more honest than guessing from column position.
-        const first_name = lead['first_name'] || lead['First Name'] ||
-          lead['firstname'] || lead['FirstName'] ||
-          lead['first'] || lead['First'] ||
-          lead['name'] || lead['Name'] || ''
-
-        const last_name = lead['last_name'] || lead['Last Name'] ||
-          lead['lastname'] || lead['LastName'] ||
-          lead['last'] || lead['Last'] || ''
-
-        phone = lead['phone'] || lead['Phone'] || lead['phone_number'] ||
-          lead['Phone Number'] || lead['PHONE'] || lead['mobile'] ||
-          lead['Mobile'] || lead['cell'] || lead['Cell'] ||
-          Object.values(lead).find((v: any) =>
-            typeof v === 'string' && v.replace(/\D/g, '').length >= 10
-          ) as string || ''
+        const fields = readLeadFields(lead)
+        const { first_name, last_name, email, state } = fields
+        phone = fields.phone
 
         built = {
           campaign_id,
@@ -282,8 +272,8 @@ export async function POST(req: Request) {
           first_name,
           last_name,
           phone: String(phone).replace(/\D/g, ''),
-          email: lead['email'] || lead['Email'] || lead['EMAIL'] || '',
-          state: lead['state'] || lead['State'] || lead['STATE'] || '',
+          email,
+          state,
           status: 'uncalled',
           extra_data: lead,
           ...parseConsent(lead),

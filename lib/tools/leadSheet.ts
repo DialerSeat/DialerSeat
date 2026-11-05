@@ -8,10 +8,10 @@ import { checkPhone, STATE_NAMES } from '@/lib/tools/phone'
 // Mirrors what app/api/leads/upload and lib/parseLeadsFile actually accept, so
 // a sheet that comes out of here imports with nothing lost:
 //
-//   - Headers are matched by EXACT spelling there: first_name / First Name /
-//     firstname / name …, never "FIRST NAME" or "Last name". A sheet with
-//     those headers imported with every name blank. Output uses first_name,
-//     last_name, phone, email, state, which always match.
+//   - Headers are read ignoring case and punctuation there (lib/leadHeaders.ts),
+//     but it only knows what a header says, not what the column holds. Output
+//     maps columns by their contents to first_name, last_name, phone, email,
+//     state, which always match.
 //   - The importer splits rows on every comma and strips quotes; it does not
 //     understand quoted fields. A comma inside a cell shifts every column
 //     after it. Output cells therefore carry no commas, quotes, tabs or line
