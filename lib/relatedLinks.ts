@@ -29,6 +29,7 @@ const SEGMENT: Record<Competitor['segment'], RelatedLink[]> = {
     { href: '/faq/how-does-amd-work', label: 'Answering machine detection' },
     { href: '/tools/abandon-rate-calculator', label: 'Abandon rate formula' },
     { href: '/tools/erlang-c-calculator', label: 'Call center staffing calculator' },
+    { href: '/faq/dialer-for-call-centers', label: 'Dialer for call centers' },
     { href: '/faq/why-we-charge', label: 'Predictive dialer pricing' },
   ],
   real_estate: [
@@ -42,6 +43,7 @@ const SEGMENT: Record<Competitor['segment'], RelatedLink[]> = {
     { href: '/dialing-modes/power', label: 'Power dialer vs predictive dialer' },
     { href: '/faq/what-is-a-parallel-dialer', label: 'Parallel dialer vs power dialer' },
     { href: '/faq/send-leads-from-your-crm', label: 'Send leads from your CRM' },
+    { href: '/faq/dialer-for-b2b-sales', label: 'Dialer for B2B sales' },
     { href: '/faq/why-we-charge', label: 'Power dialer pricing' },
   ],
   phone_system: [
@@ -97,7 +99,16 @@ export const RELATED_BY_ROUTE: Record<string, RelatedLink[]> = {
     { href: '/vs/orum', label: 'Orum alternative' },
     { href: '/dialing-modes/power', label: 'Power dialer vs predictive dialer' },
   ],
-  '/faq/what-is-an-auto-dialer': [COMPARE_ALL, PRICING_INDEX],
+  '/faq/what-is-an-auto-dialer': [
+    COMPARE_ALL,
+    PRICING_INDEX,
+    { href: '/vs/manual-dialing', label: 'Dialer vs dialing by hand' },
+    { href: '/vs/dialpad', label: 'Dialpad alternative' },
+    { href: '/vs/nextiva', label: 'Nextiva alternative' },
+    { href: '/vs/cloudtalk', label: 'CloudTalk alternative' },
+    { href: '/vs/ringover', label: 'Ringover alternative' },
+    { href: '/vs/3cx', label: '3CX alternative' },
+  ],
   '/faq/dialer-for-insurance-agents': [
     { href: '/vs/readymode', label: 'ReadyMode alternative' },
     { href: '/vs/convoso', label: 'Convoso alternative' },
@@ -107,8 +118,13 @@ export const RELATED_BY_ROUTE: Record<string, RelatedLink[]> = {
     { href: '/vs/five9', label: 'Five9 alternative' },
     { href: '/vs/vicidial', label: 'VICIdial alternative' },
     { href: '/vs/talkdesk', label: 'Talkdesk alternative' },
+    { href: '/vs/dialedin', label: 'DialedIn alternative' },
+    { href: '/vs/ytel', label: 'Ytel alternative' },
   ],
-  '/faq/dialer-for-real-estate': [{ href: '/vs/wavv', label: 'WAVV alternative' }],
+  '/faq/dialer-for-real-estate': [
+    { href: '/vs/wavv', label: 'WAVV alternative' },
+    { href: '/vs/smrtphone', label: 'smrtPhone alternative' },
+  ],
   '/faq/dialer-for-offshore-agents': [COMPARE_ALL],
   '/faq/dialer-for-mortgage': [COMPARE_ALL, PRICING_INDEX],
   '/faq/dialer-for-solar': [COMPARE_ALL, PRICING_INDEX],
@@ -118,6 +134,7 @@ export const RELATED_BY_ROUTE: Record<string, RelatedLink[]> = {
   '/faq/dialer-for-b2b-sales': [
     { href: '/vs/orum', label: 'Orum alternative' },
     { href: '/vs/kixie', label: 'Kixie alternative' },
+    { href: '/vs/aloware', label: 'Aloware alternative' },
     PRICING_INDEX,
   ],
   '/faq/send-leads-from-your-crm': [
@@ -133,7 +150,7 @@ export const RELATED_BY_ROUTE: Record<string, RelatedLink[]> = {
     { href: '/vs/mojo', label: 'Mojo Dialer alternative' },
     PRICING_INDEX,
   ],
-  '/faq/why-dialerseat': [COMPARE_ALL, PRICING_INDEX],
+  '/faq/why-dialerseat': [COMPARE_ALL, PRICING_INDEX, { href: '/vs/dialer-io', label: 'DialerSeat vs Dialer.io' }],
   '/faq/how-to-remove-spam-likely': [
     { href: '/faq/why-we-dont-rest-flagged-numbers', label: 'Why resting a flagged number backfires' },
     { href: '/faq/how-we-keep-numbers-clean', label: 'Number reputation and A-level attestation' },
