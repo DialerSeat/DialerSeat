@@ -34,7 +34,7 @@ export default function Page() {
       toolIcon="phone"
       faqs={FAQS}
       related={[{ href: "/tools/telemarketing-calling-hours", label: msg("CALLING HOURS BY STATE") }, { href: "/faq/local-presence-dialing", label: msg("LOCAL PRESENCE DIALING") }]}
-      pitch={msg("DialerSeat uses this same table to call each lead in their own time zone, and calls from a local number in their area code. $35 a week per seat.")}
+      pitch={msg("DialerSeat uses this same table to call each lead in their own time zone, and dials with local presence by default. $35 a week per seat.")}
       embedHeight={820}
     />
   )

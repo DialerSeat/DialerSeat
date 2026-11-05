@@ -18,7 +18,7 @@ export const metadata: Metadata = toolMetadata({
 const FAQS = [
   { question: msg("How do you calculate average handle time?"), answer: msg("Add total talk time, hold time and after-call work, then divide by the number of calls handled. 600 minutes over 120 calls is an AHT of 5 minutes.") },
   { question: msg("What is a good AHT?"), answer: msg("It depends on the call. Shorter is not better if it means rushed conversations; hold time and wrap-up are the parts worth shrinking first.") },
-  { question: msg("Is AHT the same as talk time?"), answer: msg("No. Talk time is only the conversation. AHT adds hold and the work after the call, which is often a third of the total.") },
+  { question: msg("Is AHT the same as talk time?"), answer: msg("No. Talk time is only the conversation. AHT adds hold time and the work after the call, so it is always the larger number.") },
 ]
 
 export default function Page() {
@@ -34,7 +34,7 @@ export default function Page() {
       toolIcon="scale"
       faqs={FAQS}
       related={[{ href: "/tools/erlang-c-calculator", label: msg("ERLANG C CALCULATOR") }, { href: "/tools/calls-per-hour-calculator", label: msg("CALLS PER HOUR") }]}
-      pitch={msg("DialerSeat’s dispositions and notes take a click, which keeps wrap-up short. $35 a week per seat.")}
+      pitch={msg("In DialerSeat, dispositions and notes stay on the lead across sessions and seats. $35 a week per seat.")}
       embedHeight={560}
     />
   )

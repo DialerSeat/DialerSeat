@@ -17,7 +17,7 @@ export const metadata: Metadata = toolMetadata({
 
 const FAQS = [
   { question: msg("How do you calculate calls per hour?"), answer: msg("Divide the dials made by the hours spent dialing. 240 dials in 4 hours is 60 calls per hour.") },
-  { question: msg("How many calls per hour is good for cold calling?"), answer: msg("By hand on one line, 40 to 60 dials an hour is typical. With more lines, most of the waiting on unanswered calls disappears, so dials rise while conversations stay the agent’s limit.") },
+  { question: msg("How many calls per hour is good for cold calling?"), answer: msg("There is no single right number: it depends on your list, your talk time and how many lines you run. On one line, every unanswered call’s ring time comes out of your hour. With more lines that waiting overlaps, so dials rise while conversations stay the agent’s limit.") },
   { question: msg("Why not just add more lines?"), answer: msg("Every extra line raises the chance two people answer at once. In the US no more than 3% of answered calls may be abandoned, which caps how far lines can go.") },
 ]
 

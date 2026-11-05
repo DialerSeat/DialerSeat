@@ -18,7 +18,7 @@ export const metadata: Metadata = toolMetadata({
 const FAQS = [
   { question: msg("What is Erlang C?"), answer: msg("A formula that predicts how long callers wait for a given number of agents, from call volume and handle time. Call centers use it to find the fewest agents that still hit a service level.") },
   { question: msg("What is a good service level?"), answer: msg("80% of calls answered within 20 seconds is the common target for inbound queues, but the right number is whatever your callers will tolerate before hanging up.") },
-  { question: msg("What is shrinkage?"), answer: msg("Paid time an agent is not available for calls: breaks, training, meetings, absence. 30% is a common planning figure; use your own if you track it.") },
+  { question: msg("What is shrinkage?"), answer: msg("Paid time an agent is not available for calls: breaks, training, meetings, absence. The 30% filled in here is a placeholder; use your own figure if you track it.") },
 ]
 
 export default function Page() {

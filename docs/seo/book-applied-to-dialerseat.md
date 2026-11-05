@@ -167,7 +167,7 @@ The book calls this the cheapest growth available, and DialerSeat has no instrum
 | 3 | You can't pick the winner; make attempts cheap; keep the losers | Done: losers kept; matchups added cheaply from existing data |
 | 4 | Lose the head term; win where supply is thin | Queued: failure searches, integrations, niches, Vulcan7/Nooks |
 | 5 | The moat is what their business model forbids | Done: weekly billing identified; needs repeating everywhere (gem 1) |
-| 6 | Sixty doors: one job, one page, no account | Queued: autocomplete-confirmed tool list |
+| 6 | Sixty doors: one job, one page, no account | Done: /tools hub and 16 new tools live, each from autocomplete-confirmed demand |
 | 7 | The page spec, built backwards | Partly: suffix and canonicals done; titles, descriptions and direct answers drafted (Yours to approve) |
 | 8 | Schema changes screen space, not rank | Done: standalone breadcrumbs, free WebApplication, no fake ratings, no hidden FAQ |
 | 9 | The name is a distribution channel | Partly: alternateName done; sameAs profiles, GBP, Bing Places (Yours) |
@@ -196,7 +196,7 @@ The book calls this the cheapest growth available, and DialerSeat has no instrum
 | 32 | No data on day one: four binary questions | Done: crawlable, indexed (Google), demand checked |
 | 33 | Measuring answer engines: a floor, not a number | Done: referrer segment query and prompt set |
 | 34 | What it costs to charge money | N/A: billing already live on Vercel Pro and Stripe |
-| 35 | The tools are the marketing | Queued: tool list; embeds already exist |
+| 35 | The tools are the marketing | Done: free, no account, no ads, one line about DialerSeat at the end, every tool embeddable. Next: pitch them (gem 2) |
 | 36 | Re-run the analysis when data doubles | Done: baseline saved, same-script rule written |
 | 37 | Programmatic pages: verify demand, prove the template | Done: 17 verified pairs added; 23 unverified waiting 120 days |
 | 38 | The page, assembled | Done: `scripts/seo-check.mjs` |

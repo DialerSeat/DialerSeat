@@ -34,7 +34,7 @@ export default function Page() {
       toolIcon="chat"
       faqs={FAQS}
       related={[{ href: "/tools/cold-call-script-generator", label: msg("COLD CALL SCRIPTS") }, { href: "/faq/how-does-amd-work", label: msg("ANSWERING MACHINE DETECTION") }]}
-      pitch={msg("DialerSeat’s answering machine detection tells a voicemail from a person, so agents decide whether to leave one.")}
+      pitch={msg("DialerSeat’s answering machine detection routes machines away from your agents, so their time goes to people. $35 a week per seat.")}
       embedHeight={900}
     />
   )

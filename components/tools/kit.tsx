@@ -35,6 +35,8 @@ export const TOOL_CSS = `
 .tk-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
 .tk-btn { font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 1px; padding: 9px 14px; border-radius: 8px; border: 1px solid #2a6eff; background: #2a6eff; color: #fff; cursor: pointer; }
 .tk-btn.ghost { background: #fff; color: #2a6eff; }
+.tk-field label.tk-btn { display: inline-block; margin: 0; font-size: 12px; letter-spacing: 1px; color: #fff; text-transform: none; cursor: pointer; }
+.tk-field label.tk-btn.ghost { color: #2a6eff; }
 .tk-btn:disabled { opacity: .5; cursor: default; }
 .tk-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 12px; }
 .tk-table th { text-align: start; font-size: 10px; letter-spacing: 1.5px; color: #5a6072; padding: 8px; border-bottom: 1px solid #d6dbe3; text-transform: uppercase; }

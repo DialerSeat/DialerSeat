@@ -16,7 +16,7 @@ export const metadata: Metadata = toolMetadata({
 })
 
 const FAQS = [
-  { question: msg("How many cold calls should I make per day?"), answer: msg("Enough to hit your goal at your own rates, which this works out. With a typical 5% to 10% contact rate, a few appointments a week can take a hundred or more dials a day.") },
+  { question: msg("How many cold calls should I make per day?"), answer: msg("Enough to hit your goal at your own rates, which is what this works out. There is no universal number, because a change in contact rate or booking rate moves the answer a long way.") },
   { question: msg("How many calls does it take to make a sale?"), answer: msg("Sales goal back through close rate, booking rate and contact rate. The result here shows dials per sale for your numbers.") },
   { question: msg("Where do I get my rates?"), answer: msg("From last month: appointments that closed, conversations that booked, and dials that reached the person. The defaults are placeholders, not benchmarks.") },
 ]

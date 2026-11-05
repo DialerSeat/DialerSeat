@@ -28,7 +28,7 @@ const PACKS: Record<Industry, Pack> = {
   real_estate: {
     label: 'Real estate',
     offer: 'helping homeowners in {area} sell without guessing at the price',
-    reason: "I'm calling because a few homes near you sold recently, and some owners nearby want to know what that means for theirs.",
+    reason: "I'm calling to offer you a free estimate of what your home could sell for today.",
     questions: ['Have you thought about what your home would sell for today?', "If you did move, where would you go next?", 'Is there anything that would make selling worth it for you this year?'],
     objections: [
       ["I'm not selling.", "Totally fair. Most people I call aren't, today. Would it still be useful to know what your place is worth, so you have the number when it matters?"],
@@ -39,18 +39,18 @@ const PACKS: Record<Industry, Pack> = {
   insurance: {
     label: 'Insurance',
     offer: 'reviewing coverage so families in {area} are not overpaying or underinsured',
-    reason: "I'm calling because you asked about coverage options, and I want to make sure you got real answers rather than a brochure.",
+    reason: "I'm calling to see whether your coverage still fits, and whether you're paying more than you need to.",
     questions: ['What made you look into coverage in the first place?', 'Is there anyone who depends on your income?', "What's your monthly budget so we only look at what fits?"],
     objections: [
       ["I'm not interested.", "I understand. Before I go, can I ask: is it the cost, or that you're already covered?"],
-      ['I already have a policy.', "Great. When was it last reviewed? Prices and needs change, and a ten-minute check often finds money."],
-      ["I can't afford it.", "That's exactly why I'd look first: some options cost less than people expect. What would a comfortable number be?"],
+      ['I already have a policy.', "Great. When was it last reviewed? Prices and needs change, and a ten-minute check tells you either way."],
+      ["I can't afford it.", "That's exactly why I'd look first, so you know for sure. What would a comfortable number be?"],
     ],
   },
   mortgage: {
     label: 'Mortgage',
     offer: 'helping homeowners in {area} see whether refinancing or a new purchase makes sense this year',
-    reason: "I'm calling because you looked into home financing, and rates have moved since, so the numbers may look different now.",
+    reason: "I'm calling about home financing, to see whether the numbers could work better for you.",
     questions: ['What rate are you on now, roughly?', 'Are you looking to lower the payment, take cash out, or buy something new?', 'How long do you plan to stay in the home?'],
     objections: [
       ["Rates are too high.", "They might be for some people. Can I run your numbers so you know for sure, instead of guessing?"],
@@ -61,10 +61,10 @@ const PACKS: Record<Industry, Pack> = {
   solar: {
     label: 'Solar',
     offer: 'showing homeowners in {area} what solar would actually save on their electric bill',
-    reason: "I'm calling because homes on your street have been comparing their electric bills against solar, and I wanted to offer you the same numbers.",
+    reason: "I'm calling to offer you a free estimate of what solar would do to your electric bill.",
     questions: ['Roughly what is your electric bill in summer?', 'Do you own the home?', 'Does your roof get sun most of the day?'],
     objections: [
-      ["It's too expensive.", "That's the most common worry. A lot of people pay nothing upfront. Can I show you your own numbers before you decide?"],
+      ["It's too expensive.", "That's fair to worry about. Can I show you your own numbers, so you're deciding on the real cost rather than a guess?"],
       ["I'm renting.", "Thanks for telling me, then it isn't something you can decide on. I'll take you off my list."],
       ['Send me information.', "Sure. The useful version is your own estimate. Would 15 minutes this week work to go through it?"],
     ],
@@ -82,7 +82,7 @@ const PACKS: Record<Industry, Pack> = {
   },
   recruiting: {
     label: 'Recruiting',
-    offer: 'connecting people in {area} with roles that pay better than the one they are in',
+    offer: 'connecting people in {area} with roles worth moving for',
     reason: "I'm calling because your background lines up with a role I'm filling, and I'd rather ask you directly than send a generic message.",
     questions: ["What would make a move worth it for you?", 'Are you open to hearing about roles right now, or happy where you are?', "What's the right salary range for your next step?"],
     objections: [
@@ -154,7 +154,7 @@ export function ColdCallScriptGenerator() {
       <Inputs {...s} />
       <div className="tk-row"><CopyButton text={script} label="COPY SCRIPT" /></div>
       <div className="tk-out">{script}</div>
-      <p className="tk-foot">{t("Read it out loud before the first call and change anything that doesn't sound like you. A script that sounds read is worse than none. Put your own words in the brackets.")}</p>
+      <p className="tk-foot">{t("Read it out loud before the first call and change anything that doesn't sound like you. Put your own words in the brackets, and say only what is true of the person you're calling: if the reason for the call doesn't fit your list, change it.")}</p>
     </div>
   )
 }

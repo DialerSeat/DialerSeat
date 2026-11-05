@@ -71,7 +71,7 @@ export function ErlangCCalculator() {
           </div>
         </>
       )}
-      <p className="tk-foot">{t("Erlang C: traffic = calls × handle time ÷ interval length. The probability a call waits comes from the Erlang C formula; service level = 1 − P(wait) × e^(−(agents − traffic) × target seconds ÷ handle time). It assumes callers don't hang up while waiting, so it slightly overstates the agents a queue with abandons needs. Occupancy above about 85% for long stretches burns agents out.")}</p>
+      <p className="tk-foot">{t("Erlang C: traffic = calls × handle time ÷ interval length. The probability a call waits comes from the Erlang C formula; service level = 1 − P(wait) × e^(−(agents − traffic) × target seconds ÷ handle time). It assumes callers don't hang up while waiting, so it slightly overstates the agents a queue with abandons needs. Very high occupancy for long stretches burns agents out, so treat the result as the floor rather than the plan.")}</p>
     </div>
   )
 }
@@ -181,7 +181,7 @@ export function ContactRateCalculator() {
         <NumField id="cr-r" label="Dials that rang" value={rang} onChange={setRang} hint="Reached a phone. Failed-to-connect dials are left out." />
         <NumField id="cr-a" label="Answered" value={answered} onChange={setAnswered} hint="Picked up, by a person or a voicemail." />
         <NumField id="cr-h" label="Answered by a person" value={humans} onChange={setHumans} />
-        <NumField id="cr-c" label="Right-party conversations" value={conversations} onChange={setConversations} hint="Spoke to the person you meant to reach." />
+        <NumField id="cr-c" label="Calls with a real outcome" value={conversations} onChange={setConversations} hint="Closed, appointment, not interested, do not call." />
       </div>
       <div className="tk-stats">
         <Stat value={pct(base ? answered / base : NaN)} label="Answer rate" />
@@ -189,7 +189,7 @@ export function ContactRateCalculator() {
         <Stat value={pct(base ? conversations / base : NaN)} label="Contact rate" />
         <Stat value={pct(dials ? (dials - rang) / dials : NaN)} label="Dials that never rang" />
       </div>
-      <p className="tk-foot">{t("Answer rate = answered ÷ dials that rang. Connect rate = answered by a person ÷ dials that rang. Contact rate = right-party conversations ÷ dials that rang. Dividing by dials that rang, not every dial, keeps a technical failure from being blamed on your list. Dials that never rang still count in your dial totals and costs.")}</p>
+      <p className="tk-foot">{t("Answer rate = answered ÷ dials that rang. Connect rate = answered by a person ÷ dials that rang. Contact rate = calls with a real outcome ÷ dials that rang. Dividing by dials that rang, not every dial, keeps a technical failure from being blamed on your list. Dials that never rang still count in your dial totals and costs.")}</p>
     </div>
   )
 }
