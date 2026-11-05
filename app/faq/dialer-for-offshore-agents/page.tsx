@@ -9,6 +9,8 @@ import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import ToolLinks from '@/components/ToolLinks'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 // =============================================================================
 // /faq/dialer-for-offshore-agents — the wedge nobody is priced for
@@ -188,6 +190,7 @@ export default async function OffshoreAgentsPage() {
           </div>
         </div>
         <ToolLinks slugs={['telemarketing-calling-hours', 'cold-call-script-generator']} />
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/dialer-for-offshore-agents']} />
 
       </GutsShell>
     </>

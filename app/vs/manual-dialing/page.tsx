@@ -9,6 +9,8 @@ import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 // =============================================================================
 // /vs/manual-dialing — "is a dialer even worth it?"
@@ -154,6 +156,8 @@ export default async function Page() {
             <Link href="/dialing-modes" className="guts-btn secondary">{t("SEE THE DIALER MODES")}</Link>
           </div>
         </GutsSection>
+
+        <RelatedLinks links={RELATED_BY_ROUTE['/vs/manual-dialing']} />
 
       </GutsShell>
       <SiteFooter />

@@ -10,6 +10,8 @@ import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import ToolLinks from '@/components/ToolLinks'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 // =============================================================================
 // /faq/dialer-for-insurance-agents
@@ -217,6 +219,7 @@ export default async function Page() {
         </GutsSection>
 
         <ToolLinks slugs={['cold-call-script-generator', 'sales-voicemail-script-generator', 'lead-list-cleaner']} />
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/dialer-for-insurance-agents']} />
 
       </GutsShell>
       <SiteFooter />

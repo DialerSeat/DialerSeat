@@ -44,6 +44,7 @@ Repeat this loop for every new page:
 19. Read every fact from the primary source and date it. If the source doesn't give a price, say that.
 20. Link it from the pages whose readers need it, and from its neighbours.
 21. Add a dated line to [measurement.md](measurement.md) saying what it should do, before it ships.
+21a. Run `node scripts/gen-page-dates.mjs` before committing, so the sitemap's lastmod says the day the page really changed. `lib/pageDates.ts` is generated; never edit it by hand. A new page in `lib/tools/registry.ts` reaches the sitemap by itself; any other new page needs adding to `app/sitemap.ts`.
 22. Ship one or two a week. Keep the losers.
 
 **Live doors:** 18 tools at /tools, the Spam Likely fix page, 49 matchup pages, 32 competitor pages.
@@ -66,7 +67,7 @@ Repeat this loop for every new page:
 ## Stage 5: Link the site to itself
 
 23. **Done** Tools link to their neighbours and from relevant FAQ pages.
-24. **[Claude]** Connect FAQ and vs pages. They barely link to each other today; see [internal-link-map.md](internal-link-map.md).
+24. **Done** Connect FAQ and vs pages through `lib/relatedLinks.ts`; see [internal-link-map.md](internal-link-map.md). Translated pages don't show these links yet.
 25. Anchor text is the phrase people search, used only where the page really answers it.
 
 ## Stage 6: Earn links (this is what moves rankings)

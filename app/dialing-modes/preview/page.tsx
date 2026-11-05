@@ -10,6 +10,7 @@ import DialingModeCTA from '@/components/DialingModeCTA'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -508,6 +509,8 @@ export default async function PreviewDialerPage() {
           description="Upload a CSV, pick preview mode, and dial. $35/week per seat, no contract. Cancel anytime."
         />
         </div>
+        <ToolLinks slugs={['cold-call-script-generator', 'lead-list-cleaner']} />
+
       </GutsShell>
       <SiteFooter />
     </>

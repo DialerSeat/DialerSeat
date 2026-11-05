@@ -12,6 +12,8 @@ import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 const baseMetadata: Metadata = {
   title: 'Do I Need 10DLC Registration to Make Outbound Calls? | DialerSeat',
@@ -149,6 +151,8 @@ export default async function Page() {
         />
         <ExplainerCrossLinks current="registration" />
         </div>
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/10dlc-and-outbound-calling']} />
+
       </GutsShell>
       <SiteFooter />
     </>

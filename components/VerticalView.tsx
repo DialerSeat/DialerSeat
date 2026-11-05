@@ -13,6 +13,8 @@ import { getT, primeLocale, t } from '@/lib/i18n/server'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import { msg } from '@/lib/i18n/msg'
 import ToolLinks from '@/components/ToolLinks'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 // =============================================================================
 // ONE INDUSTRY PAGE, FROM ONE RECORD
@@ -155,6 +157,7 @@ export default async function VerticalView({ v }: { v: Vertical }) {
         </GutsSection>
 
         <ToolLinks slugs={['cold-call-script-generator', 'sales-voicemail-script-generator', 'lead-list-cleaner']} />
+        <RelatedLinks links={RELATED_BY_ROUTE[`/faq/dialer-for-${v.slug}`]} />
 
       </GutsShell>
       <SiteFooter />

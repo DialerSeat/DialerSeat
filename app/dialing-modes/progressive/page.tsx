@@ -10,6 +10,7 @@ import DialingModeCTA from '@/components/DialingModeCTA'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -503,6 +504,8 @@ export default async function ProgressiveDialerPage() {
           description="If your current dialer is making you sit through six voicemails for every connect, progressive cuts that to zero. $35/week per seat, no contract."
         />
         </div>
+        <ToolLinks slugs={['calls-per-hour-calculator', 'cold-calls-per-day-calculator']} />
+
       </GutsShell>
       <SiteFooter />
     </>

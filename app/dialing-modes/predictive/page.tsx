@@ -10,6 +10,9 @@ import DialingModeCTA from '@/components/DialingModeCTA'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
+import ToolLinks from '@/components/ToolLinks'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -536,6 +539,10 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
           description="The controller does the math. Auto-degrades before you hit the FTC cap. Live abandon-rate display in the terminal. $35/week per seat, no contract."
         />
         </div>
+        <RelatedLinks links={RELATED_BY_ROUTE['/dialing-modes/predictive']} />
+
+        <ToolLinks slugs={['erlang-c-calculator', 'calls-per-hour-calculator']} />
+
       </GutsShell>
       <SiteFooter />
     </>

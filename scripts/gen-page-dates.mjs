@@ -31,7 +31,9 @@ const PUBLIC_PREFIXES = ['/', '/faq', '/vs', '/dialing-modes', '/data', '/tools'
 
 /** Shared sources whose edits change the rendered content of a route family. */
 const SHARED = {
-  '/vs/': ['lib/competitors.ts', 'lib/competitorFeatures.ts', 'components/vs-competitor-view.tsx'],
+  '/vs/': ['lib/competitors.ts', 'lib/competitorFeatures.ts', 'components/vs-competitor-view.tsx', 'lib/relatedLinks.ts'],
+  '/tools/': ['components/tools/ToolPage.tsx', 'lib/tools/registry.ts'],
+  '/faq/dialer-for-': ['components/VerticalView.tsx', 'lib/verticals.ts'],
   '/data/dialer-pricing': ['lib/competitors.ts'],
   '/pricing': ['lib/competitors.ts', 'lib/weeklyBilling.ts'],
   '/data/calling-rules-by-country': ['lib/countryRules.ts'],

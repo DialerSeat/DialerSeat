@@ -29,6 +29,8 @@ import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
 import { t } from '@/lib/i18n/client'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 
 export default function WhyDialerSeatView() {
@@ -501,6 +503,7 @@ export default function WhyDialerSeatView() {
           </section>
 
         </div>
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/why-dialerseat']} />
       </GutsShell>
       <SiteFooter />
     </>

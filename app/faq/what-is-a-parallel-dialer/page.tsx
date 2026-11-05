@@ -11,6 +11,8 @@ import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 // =============================================================================
 // /faq/what-is-a-parallel-dialer
@@ -222,6 +224,8 @@ export default async function WhatIsAParallelDialerPage() {
             <Link href="/faq/what-is-an-auto-dialer" className="guts-btn secondary">{t("WHAT IS AN AUTO DIALER")}</Link>
           </div>
         </GutsSection>
+
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/what-is-a-parallel-dialer']} />
 
       </GutsShell>
       <SiteFooter />

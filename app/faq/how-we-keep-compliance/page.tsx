@@ -13,6 +13,8 @@ import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import ToolLinks from '@/components/ToolLinks'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -191,6 +193,7 @@ export default async function Page() {
         </section>
 
         <ToolLinks slugs={['tcpa-compliance-checklist', 'telemarketing-calling-hours']} />
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/how-we-keep-compliance']} />
 
         <ExplainerCrossLinks current="compliance-how" />
 

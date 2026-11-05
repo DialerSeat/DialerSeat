@@ -11,6 +11,8 @@ import { pageDate } from '@/lib/pageDates'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 // =============================================================================
 // /faq/how-to-remove-spam-likely — the fix, not the explanation
@@ -248,6 +250,8 @@ export default async function Page() {
             </div>
           ))}
         </GutsSection>
+
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/how-to-remove-spam-likely']} />
 
       </GutsShell>
       <SiteFooter />

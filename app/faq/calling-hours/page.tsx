@@ -14,6 +14,8 @@ import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import ToolLinks from '@/components/ToolLinks'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 const baseMetadata: Metadata = {
   title: 'Telemarketing Calling Hours by State: What DialerSeat Enforces | DialerSeat',
@@ -238,6 +240,7 @@ export default async function Page() {
           description="DialerSeat checks every lead against its own local window before it dials, server-side. $35/week per seat, every dialer mode included."
         />
         <ToolLinks slugs={['telemarketing-calling-hours', 'area-code-lookup']} />
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/calling-hours']} />
 
         <ExplainerCrossLinks current="calling-hours" />
         </div>

@@ -12,6 +12,8 @@ import { vsRail } from '@/lib/gutsRail'
 import { COMPETITORS, DIALERSEAT, crossShoppedPairs, matchupSlug, type Competitor } from '@/lib/competitors'
 import { featuresFor } from '@/lib/competitorFeatures'
 import { t } from '@/lib/i18n/client'
+import RelatedLinks from '@/components/RelatedLinks'
+import { relatedForCompetitor } from '@/lib/relatedLinks'
 
 // =============================================================================
 // DATA-DRIVEN COMPETITOR PAGE
@@ -255,6 +257,8 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
             <Link href="/faq" className="guts-btn secondary">{t("READ THE FAQ")}</Link>
           </div>
         </GutsSection>
+
+        <RelatedLinks links={relatedForCompetitor(c)} />
 
       </GutsShell>
 

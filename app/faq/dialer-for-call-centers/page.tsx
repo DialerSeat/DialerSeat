@@ -13,6 +13,8 @@ import { localizeMetadata } from '@/lib/i18n/metadata'
 import { primeLocale, t as tr } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import ToolLinks from '@/components/ToolLinks'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 // =============================================================================
 // /faq/dialer-for-call-centers
@@ -174,6 +176,7 @@ export default async function DialerForCallCentersPage() {
         </GutsSection>
 
         <ToolLinks slugs={['erlang-c-calculator', 'average-handle-time-calculator', 'calls-per-hour-calculator']} />
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/dialer-for-call-centers']} />
 
       </GutsShell>
       <SiteFooter />

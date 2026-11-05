@@ -12,6 +12,8 @@ import { localizeMetadata } from '@/lib/i18n/metadata'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import ToolLinks from '@/components/ToolLinks'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 // =============================================================================
 // /faq/dialer-for-real-estate
@@ -214,6 +216,7 @@ export default async function DialerForRealEstatePage() {
         </GutsSection>
 
         <ToolLinks slugs={['cold-call-script-generator', 'sales-voicemail-script-generator', 'lead-list-cleaner']} />
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/dialer-for-real-estate']} />
 
       </GutsShell>
       <SiteFooter />

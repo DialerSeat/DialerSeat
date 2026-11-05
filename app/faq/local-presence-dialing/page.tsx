@@ -10,6 +10,8 @@ import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import ToolLinks from '@/components/ToolLinks'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 // =============================================================================
 // /faq/local-presence-dialing
@@ -179,6 +181,7 @@ export default async function Page() {
         </GutsSection>
 
         <ToolLinks slugs={['area-code-lookup']} />
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/local-presence-dialing']} />
 
       </GutsShell>
       <SiteFooter />

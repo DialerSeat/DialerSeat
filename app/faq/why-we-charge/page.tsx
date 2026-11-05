@@ -12,6 +12,8 @@ import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -204,6 +206,8 @@ export default async function Page() {
           description="$35 a week per seat for Pro. $75/week for Manager+ with white-label and teams. The best way to see if it's worth it is to use it for a week."
         />
         </div>
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/why-we-charge']} />
+
       </GutsShell>
       <SiteFooter />
     </>

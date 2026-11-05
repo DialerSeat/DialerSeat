@@ -12,6 +12,8 @@ import { localizeMetadata } from '@/lib/i18n/metadata'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import ToolLinks from '@/components/ToolLinks'
+import RelatedLinks from '@/components/RelatedLinks'
+import { RELATED_BY_ROUTE } from '@/lib/relatedLinks'
 
 // =============================================================================
 // /faq/what-is-an-auto-dialer
@@ -244,6 +246,7 @@ export default async function WhatIsAnAutoDialerPage() {
         </GutsSection>
 
         <ToolLinks slugs={['calls-per-hour-calculator', 'cold-calls-per-day-calculator']} />
+        <RelatedLinks links={RELATED_BY_ROUTE['/faq/what-is-an-auto-dialer']} />
 
       </GutsShell>
       <SiteFooter />
