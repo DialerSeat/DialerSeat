@@ -3969,6 +3969,9 @@
  "Allow Repeated Calls": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
+ "Almost nobody else in this category does this, and they are not quiet about it. ReadyMode's published requirements rule out Wi-Fi, cellular and Bluetooth headsets. PhoneBurner's support centre says there is no mobile app and that phone use is not recommended. Five9's requirements page asks for a computer and a USB headset. Those are their words, on their own pages.": [
+  "app/features/page.tsx"
+ ],
  "Aloware Alternative: Pricing, Pros & Cons | DialerSeat": [
   "app/vs/aloware/page.tsx"
  ],
@@ -8111,6 +8114,7 @@
   "lib/competitors.ts"
  ],
  "DIALING FROM A PHONE": [
+  "app/features/page.tsx",
   "app/screenshots/page.tsx"
  ],
  "DIALING FROM ABROAD": [
@@ -8986,6 +8990,9 @@
  "Every feature. Every competitor.": [
   "app/vs/everyone/view.tsx"
  ],
+ "Every free tool": [
+  "app/resources/page.tsx"
+ ],
  "Every indicator below is checked live when this page loads. Nothing here is published from a static file, so it can report a problem before we have noticed one.": [
   "app/status/page.tsx"
  ],
@@ -9842,6 +9849,9 @@
  ],
  "Free to the whole team, no seat charged": [
   "components/teams/TeamModals.tsx"
+ ],
+ "Free tools": [
+  "lib/gutsRail.ts"
  ],
  "Free trial": [
   "lib/competitorFeatures.ts"
@@ -11885,6 +11895,9 @@
  "Lead is not on this campaign": [
   "app/api/calls/outbound/route.ts"
  ],
+ "Lead list cleaner, phone number formatter, area code lookup, calling hours by state, Erlang C, script generators and more. No signup.": [
+  "app/resources/page.tsx"
+ ],
  "LEAD LISTS · DIALING CAMPAIGNS": [
   "app/dashboard/campaigns/page.tsx"
  ],
@@ -13774,6 +13787,9 @@
  ],
  "Not a companion app and not a cut-down view: the dialer itself, running in the phone's browser, with the audio going through the browser rather than through a second call to a bridge number. It installs to the home screen and runs full-screen from there.": [
   "app/screenshots/page.tsx"
+ ],
+ "Not a companion app with a slice of the product in it. The dialer terminal itself, in the phone's browser, installed to the home screen and running full-screen from there, with the audio going through the browser rather than through a second call to a bridge number.": [
+  "app/features/page.tsx"
  ],
  "Not a full contact-center suite: no workforce management or omnichannel ticketing.": [
   "lib/canonicalFacts.ts"
@@ -17633,7 +17649,8 @@
   "app/faq/dialer-modes/page.tsx"
  ],
  "SEE THE SCREENS": [
-  "app/faq/languages/page.tsx"
+  "app/faq/languages/page.tsx",
+  "app/features/page.tsx"
  ],
  "See what five agents cost on every tool →": [
   "app/vs/view.tsx"
@@ -20349,6 +20366,9 @@
  ],
  "THE WHOLE SYSTEM": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
+ ],
+ "The whole thing runs on a phone": [
+  "app/features/page.tsx"
  ],
  "The window belongs to the lead, not the agent. What the federal rule says, which states go further, and what DialerSeat blocks automatically.": [
   "app/faq/calling-hours/page.tsx"

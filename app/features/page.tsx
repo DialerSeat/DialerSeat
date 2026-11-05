@@ -9,7 +9,7 @@ import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema } from '@/lib/schema'
 import { FACTS } from '@/lib/canonicalFacts'
 import ProductShot from '@/components/ProductShot'
-import { PRODUCT_SHOTS } from '@/lib/screenshots'
+import { PRODUCT_SHOTS, MOBILE_SHOTS } from '@/lib/screenshots'
 import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import { primeLocale, t } from '@/lib/i18n/server'
@@ -134,6 +134,27 @@ export default async function FeaturesPage() {
             <Link href="/faq/how-does-amd-work" className="guts-btn secondary">{t("HOW AMD WORKS")}</Link>
             <Link href="/faq/local-presence-dialing" className="guts-btn secondary">{t("LOCAL PRESENCE")}</Link>
             <Link href="/faq/numbers" className="guts-btn secondary">{t("NUMBERS & CALLER ID")}</Link>
+          </div>
+        </GutsSection>
+
+        {/* -- THE PHONE ------------------------------------------------
+            /faq/mobile carries the evidence. This is the buying page, so it
+            gets the claim and one capture, and sends anybody who does not
+            believe it to the four vendors who say it in their own words. */}
+        <GutsSection icon="phone" title={t("The whole thing runs on a phone")}>
+          <p>
+            {t("Not a companion app with a slice of the product in it. The dialer terminal itself, in the phone's browser, installed to the home screen and running full-screen from there, with the audio going through the browser rather than through a second call to a bridge number.")}
+          </p>
+          <ProductShot
+            shot={MOBILE_SHOTS[0]}
+            caption={null}
+          />
+          <p>
+            {t("Almost nobody else in this category does this, and they are not quiet about it. ReadyMode's published requirements rule out Wi-Fi, cellular and Bluetooth headsets. PhoneBurner's support centre says there is no mobile app and that phone use is not recommended. Five9's requirements page asks for a computer and a USB headset. Those are their words, on their own pages.")}
+          </p>
+          <div className="guts-btns">
+            <Link href="/faq/mobile" className="guts-btn secondary">{t("DIALING FROM A PHONE")}</Link>
+            <Link href="/screenshots" className="guts-btn secondary">{t("SEE THE SCREENS")}</Link>
           </div>
         </GutsSection>
 
