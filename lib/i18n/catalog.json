@@ -304,6 +304,9 @@
  ". Not local to the agent, not local to the company, not local to wherever the server is.": [
   "app/faq/calling-hours/page.tsx"
  ],
+ ". One form submits your numbers and your business details to First Orion, Hiya and Transaction Network Services at the same time, and the registry says that reaches over 400 million US wireless subscribers. There is no need to register a number more than once, and it costs nothing.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  ". One line per agent (zero abandonment, like power), but the audio gets filtered through detection before reaching the agent. You only hear humans.": [
   "app/dialing-modes/progressive/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
@@ -1467,6 +1470,9 @@
  ],
  "▸ Remote & offshore": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
+ ],
+ "▸ REMOVING A SPAM LABEL": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "▸ RESOURCES": [
   "app/resources/page.tsx"
@@ -2923,6 +2929,9 @@
  "A new agency or floor": [
   "components/teams/TeamsSidebar.tsx"
  ],
+ "A number already in a request cannot be resubmitted, and one inside a cooldown window comes back ineligible. Repeat filings cost you the wait, not less of it.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "A number in the lead’s own area code or state is preferred, but that is an ordering, not a filter. If a state runs out of fresh numbers, the dialer falls back to the rest of the pool with a slightly worse match. It never stops dialing because one area code is busy.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
  ],
@@ -4295,6 +4304,9 @@
  "Answer rate": [
   "app/faq/dialer-glossary/page.tsx"
  ],
+ "Answer rate and how long people stay on the line are both graded. A list nobody recognises scores you down twice.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Answer rate is": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
@@ -4550,6 +4562,9 @@
  ],
  "Ask for a revised quote: seat pricing is not published": [
   "lib/competitors.ts"
+ ],
+ "Ask two or three people you actually call what they see. The label shown to a stranger is the one costing you money.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Ask us directly": [
   "app/faq/view.tsx#prop",
@@ -4843,6 +4858,9 @@
  ],
  "Because the FTC has been writing checks with a lot of zeros on them for over twenty years, and it's not going to stop just because your dialer's out of date.": [
   "app/faq/why-is-compliance-important/page.tsx"
+ ],
+ "Because the label is a behaviour score, not a record. Getting a number re-evaluated resets the verdict, not the cause. If the same volume per number, the same unanswered calls and the same short calls continue, the score returns to where it was. The pattern is what has to change: fewer calls per number per day, lists people expect calls from, and an opening they stay on the line for.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Because they bill by the month or the year. The shortest term you can buy from ReadyMode, PhoneBurner, Mojo Dialer, WAVV, BatchDialer or Kixie is one month, $95 to $199 or more per seat depending on the vendor, so a one-week project, a seasonal hire or a trial run still pays for the month. DialerSeat bills by the week, so one week costs $35 and four weeks cost $140.": [
   "app/pricing/page.tsx"
@@ -5218,6 +5236,9 @@
  "Buyers with a procurement process who want an enterprise sales cycle.": [
   "lib/competitors.ts"
  ],
+ "Buying a new number and carrying on.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "by default, then automatically deleted. You can download recordings before that period expires. We do not analyze the content of your recordings.": [
   "app/privacy/page.tsx"
  ],
@@ -5316,6 +5337,9 @@
  "call over (hangup poll)": [
   "app/dashboard/dialer/page.tsx"
  ],
+ "Call people who expect it.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Call people who expect to hear from you. Consent is the single biggest factor.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
  ],
@@ -5389,6 +5413,9 @@
  ],
  "CALL VOLUME OVER TIME": [
   "app/welcome/Showcase.tsx"
+ ],
+ "Call your own number from a phone on each network that matters to you, and write down the exact wording you see. Spam Likely, Scam Likely, Potential Spam and Telemarketer are different labels from different systems.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "call_id": [
   "app/faq/compliance-export/view.tsx"
@@ -6190,6 +6217,9 @@
   "app/faq/10dlc-and-outbound-calling/page.tsx",
   "app/faq/dialer-glossary/page.tsx"
  ],
+ "CNAM is a name lookup, not a reputation signal. It changes nothing about the score, wireless carriers generally do not use it, and the registry itself notes that its data is not used to deliver caller name.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "CNAM is the caller name that can appear under a number: up to 15 characters, like a business name. It is often sold as a spam fix. It mostly isn’t.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
@@ -6344,6 +6374,9 @@
  ],
  "Complaints and blocks.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
+ ],
+ "Complaints are a direct input, and the people most likely to complain are the ones who asked not to be called.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Complex CRM integrations are quoted separately, reportedly $2,000-$5,000": [
   "lib/competitors.ts"
@@ -8440,6 +8473,9 @@
   "app/faq/why-calls-show-spam-likely/page.tsx",
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
  ],
+ "Do this before you pay anyone. A remediation service that charges you to submit the same free form is selling you the form.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Do you have a team plan?": [
   "app/faq/view.tsx"
  ],
@@ -8463,6 +8499,9 @@
  "Does an offshore agent cost more per seat?": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
+ "Does CNAM or a caller name fix a spam label?": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Does DialerSeat handle STIR/SHAKEN and CNAM?": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
@@ -8477,6 +8516,9 @@
  ],
  "Does it work on both iPhone and Android?": [
   "app/faq/mobile/page.tsx"
+ ],
+ "Does registering with the Free Caller Registry remove a spam label?": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Does the Do Not Call Registry apply to B2B cold calls?": [
   "lib/verticals.ts"
@@ -8657,6 +8699,9 @@
  ],
  "earns 5% off your weekly seat cost, twenty-five earns 10%, counted across every team you own, not per team.": [
   "app/dashboard/teams/page.tsx"
+ ],
+ "Easing off early is recoverable. Running it hot until the label lands is not.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Eastern": [
   "app/faq/calling-hours/page.tsx"
@@ -8883,6 +8928,9 @@
  "Every call is recorded server-side automatically, there's no per-call toggle to remember to turn on. Recordings show up in your dashboard shortly after the call ends, playable directly in the browser or downloadable as a file.": [
   "app/faq/data-and-recordings/view.tsx"
  ],
+ "Every call is signed at A-attestation where the carrier supports it.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Every call is signed at the highest level": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
  ],
@@ -9023,8 +9071,14 @@
  "Every number checked daily against the pool, struggling ones slowed automatically": [
   "app/faq/numbers/view.tsx"
  ],
+ "Every number in our pool is registered with all three providers, confirmed rather than just submitted.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Every number is checked against its peers, daily": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
+ ],
+ "Every number is checked daily against the rest of the pool, and one that starts slipping is slowed down automatically until it recovers.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Every one of these gets read and answered, and answered one at a time. A proposal with real numbers in it moves faster than an introduction.": [
   "app/partners/page.tsx"
@@ -9390,6 +9444,7 @@
   "app/faq/dialer-for-offshore-agents/page.tsx",
   "app/faq/dialer-for-real-estate/page.tsx",
   "app/faq/dialer-glossary/page.tsx",
+  "app/faq/how-to-remove-spam-likely/page.tsx",
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx",
   "app/faq/how-we-keep-numbers-clean/page.tsx",
   "app/faq/how-we-measure-answer-rate/page.tsx",
@@ -9472,6 +9527,9 @@
  "Feedback isn't a roadmap item. It's the roadmap.": [
   "app/faq/why-dialerseat/view.tsx"
  ],
+ "Fewer calls per number per day.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "FIELD": [
   "app/faq/leads/view.tsx"
  ],
@@ -9486,6 +9544,9 @@
  ],
  "FILE NOT SUPPORTED": [
   "app/dashboard/campaigns/page.tsx"
+ ],
+ "Filing again and again.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Find the next number and type it in": [
   "app/vs/manual-dialing/page.tsx"
@@ -9514,6 +9575,9 @@
  "FIRST NAME": [
   "app/dashboard/campaigns/page.tsx",
   "app/dashboard/leads/page.tsx"
+ ],
+ "First, find out what you are actually dealing with": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "first.": [
   "app/faq/how-we-keep-compliance/page.tsx"
@@ -9810,6 +9874,7 @@
   "app/api/teams/access/grant/route.ts"
  ],
  "Free Caller Registry": [
+  "app/faq/how-to-remove-spam-likely/page.tsx",
   "app/faq/how-we-keep-numbers-clean/page.tsx",
   "app/faq/local-presence-dialing/page.tsx",
   "app/faq/why-calls-show-spam-likely/page.tsx"
@@ -10079,6 +10144,7 @@
   "app/faq/dialer-for-real-estate/page.tsx",
   "app/faq/dialer-glossary/page.tsx",
   "app/faq/dialerseat-teams/view.tsx",
+  "app/faq/how-to-remove-spam-likely/page.tsx",
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx",
   "app/faq/how-we-keep-numbers-clean/page.tsx",
   "app/faq/how-we-measure-answer-rate/page.tsx",
@@ -10411,6 +10477,7 @@
   "app/faq/dialerseat-teams/page.tsx",
   "app/faq/how-does-amd-work/page.tsx",
   "app/faq/how-many-numbers-do-i-need/page.tsx",
+  "app/faq/how-to-remove-spam-likely/page.tsx",
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx",
   "app/faq/how-we-keep-compliance/page.tsx",
   "app/faq/how-we-keep-numbers-clean/page.tsx",
@@ -10648,6 +10715,9 @@
  "How do calling hours work when the agent is in a different timezone?": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
+ "How do I remove the Spam Likely label from my phone number?": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "How do I set up a campaign?": [
   "app/faq/view.tsx"
  ],
@@ -10721,6 +10791,9 @@
  ],
  "How lead vendors monetize their premium campaigns through seat-based access, agency owners run producer floors with full attribution, and shared pools dial the same list without stepping on each other. Plus all four billing modes including FREE.": [
   "app/faq/dialerseat-teams/page.tsx"
+ ],
+ "How long does it take to get a spam label removed?": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "How many calls a predictive dialer places at once for each free agent, often written 1x, 2x or 3x. More lines mean less waiting and more abandoned calls.": [
   "app/faq/dialer-glossary/page.tsx"
@@ -10864,11 +10937,26 @@
  "HOW TO ACTUALLY START": [
   "app/faq/managers/view.tsx"
  ],
+ "How to get “Spam Likely”": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "How to get leads into a DialerSeat campaign: accepted file formats, which column headers get auto-detected, optional consent fields, what happens to bad rows, and how the 3-attempt retry cycle actually works.": [
   "app/faq/leads/page.tsx"
  ],
  "How to pull a per-campaign compliance record from DialerSeat: AMD results, abandon flags, dispositions, and call duration by date range, with phone-number redaction on by default, the actual export tool behind the compliance claims.": [
   "app/faq/compliance-export/page.tsx"
+ ],
+ "How to remove “Spam Likely”": [
+  "app/faq/view.tsx"
+ ],
+ "How to Remove “Spam Likely” From Your Number": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
+ "How to Remove “Spam Likely” From Your Number: The Actual Steps": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
+ "How to remove Spam Likely": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "How to scrub": [
   "app/faq/dialer-glossary/page.tsx"
@@ -10878,6 +10966,9 @@
  ],
  "How to Scrub Against the Do Not Call Registry": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
+ ],
+ "HOW TO SCRUB DNC": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "How to scrub your list": [
   "app/faq/dialer-for-insurance-agents/page.tsx",
@@ -10948,6 +11039,9 @@
  ],
  "How we keep numbers clean": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
+ ],
+ "HOW WE KEEP NUMBERS CLEAN": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "how we keep our numbers clean": [
   "app/faq/view.tsx",
@@ -11304,6 +11398,9 @@
  "Industry-specific clouds for healthcare, financial services and retail": [
   "lib/competitors.ts"
  ],
+ "Ineligible.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Infrastructure removes the carrier-level causes of flagging. It doesn't remove the behavioral ones, those come from how a campaign is actually run, and no dialer can fix them for you:": [
   "app/faq/numbers/view.tsx"
  ],
@@ -11510,6 +11607,9 @@
  ],
  "Issued {shortDate}": [
   "app/dashboard/reports/ReportView.tsx"
+ ],
+ "It also states that even after a number is successfully remediated, calls from it can still be blocked or labelled by downstream filters and carriers, which are outside its control.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "It also stays quiet where it should. The Philippines, India and Jamaica have no suggestion attached to them at all, because call-center work in those countries is done in English and offering to switch would be presumptuous. Filipino and Hindi are both in the menu for anyone who wants them.": [
   "app/faq/languages/page.tsx"
@@ -12356,6 +12456,9 @@
  "Long operating history under the ChaseData name": [
   "lib/competitors.ts"
  ],
+ "Looked at, and left flagged.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Loop forever, or until you set yourself offline.": [
   "app/dialing-modes/power/page.tsx",
   "app/faq/what-is-a-power-dialer/page.tsx"
@@ -12891,6 +12994,9 @@
  "Most of our customers switch from ReadyMode, Mojo, or Five9 because they're tired of paying for features they don't use, UI they don't like, and contracts they can't escape.": [
   "app/vs/everyone/view.tsx"
  ],
+ "Most of the steps above are things software can do once and keep doing, which is the argument for having the dialer handle numbers rather than bringing your own and managing the labels yourself.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Most of your seats are paid for by the agents themselves, so the weekly discount does not apply, it only reduces what": [
   "components/teams/TeamDetail.tsx"
  ],
@@ -13145,6 +13251,9 @@
  ],
  "Neither owner nor agents pay any per-campaign seat charge. Best for small agencies under corporate billing, internal training accounts, comping a seat, or premium-campaign memberships with a flat external access fee.": [
   "app/faq/dialerseat-teams/view.tsx"
+ ],
+ "Neither the registry nor the carriers publish a turnaround time. Every specific figure in circulation comes from a company selling remediation, so treat it as marketing rather than a timetable. A re-evaluation can come back as remediated, as still needing review, or as refused, and a number that was recently submitted can be ineligible to go again while it is in a cooldown window.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "NEON THEME": [
   "app/faq/white-label-mobile/view.tsx"
@@ -13502,6 +13611,9 @@
  "No number dials itself into the ground.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
  ],
+ "No number places more than 60 calls a day, so volume never burns a caller ID in the first place.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "No number places more than 60 calls a day. Once it reaches its limit, it rests until the next day.": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
@@ -13680,6 +13792,9 @@
  "No, and chasing that is how a pool becomes expensive. DialerSeat prefers a caller ID matching the lead’s area code when one is available, falls back to the same state, then to any healthy number. A pool covering the regions your list actually concentrates in gets most of the benefit. Buying a number for every area code in the country gets very little more for a great deal more cost.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
+ "No, and the registry says so itself: registration does not guarantee that your calls will never be blocked or labelled. What it does is establish the number as belonging to a real business rather than a bad actor, and it reaches all three call-protection providers in one free submission that covers over 400 million US wireless subscribers. It is worth doing first and it is not a fix on its own.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "No, and this is the expensive version of the misunderstanding: teams spend weeks on brand registration expecting their answer rate to recover, and nothing changes, because the framework they registered with never touched voice. Call labelling is driven by attestation, by the calling patterns attached to a number, and by how many people decline or report it. What actually helps is A-attestation, rotating across a pool rather than burning one number, and retiring numbers whose answer rate has degraded.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
@@ -13700,6 +13815,9 @@
  ],
  "No. Auto dialers are legal in the US. What the law regulates is how they are used: prerecorded or artificial-voice calls need the person’s consent, predictive dialers must keep abandoned calls under 3% of answered calls per campaign per 30 days, calls must respect calling hours and the Do Not Call Registry, and caller ID must be shown. Some states add their own rules.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
+ "No. CNAM is a name lookup, not a reputation signal, and it does not change how any analytics provider scores a number. Wireless carriers generally do not use the CNAM service at all, so on a consumer list most of the people you call would never see the name. The Free Caller Registry also notes that its registration data is not used to deliver caller name.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "No. Collection calls are not telemarketing, so the National Do Not Call Registry does not apply. The FDCPA and Regulation F do, as do the TCPA’s rules on prerecorded messages and autodialed calls.": [
   "lib/verticals.ts"
@@ -13742,6 +13860,9 @@
  ],
  "Nobody on this team yet": [
   "components/teams/TeamsSidebar.tsx"
+ ],
+ "Nobody publishes a turnaround time. Every specific number of days you will read comes from a firm selling removal.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "nobody waiting": [
   "components/teams/TeamOverview.tsx"
@@ -13823,6 +13944,9 @@
  "Not built yet, and not what DialerSeat is": [
   "app/features/page.tsx"
  ],
+ "Not cleared automatically, and now in front of a person.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Not configured in this environment": [
   "app/status/page.tsx"
  ],
@@ -13834,6 +13958,9 @@
  ],
  "NOT ENOUGH DATA YET": [
   "app/data/connect-rates/page.tsx"
+ ],
+ "Not flagged.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Not found": [
   "app/api/calls/check/route.ts",
@@ -13932,6 +14059,9 @@
  ],
  "Not stated. The lowest advertised price on every plan requires annual billing.": [
   "lib/competitors.ts"
+ ],
+ "Not submitted at all, typically because the number is inside a cooldown window from a previous request. Filing repeatedly does not speed anything up.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Not sure on the mode? Start with POWER.": [
   "app/dashboard/campaigns/page.tsx"
@@ -14052,6 +14182,7 @@
   "app/dashboard/layout.tsx"
  ],
  "NUMBERS & CALLER ID": [
+  "app/faq/how-to-remove-spam-likely/page.tsx",
   "app/features/page.tsx"
  ],
  "Numbers a dialer refuses to call again. On DialerSeat, pressing 9 on the abandoned-call message blocks a number across your account, and a text saying STOP blocks it platform-wide.": [
@@ -14126,6 +14257,9 @@
  ],
  "OFF BY DEFAULT": [
   "app/faq/campaigns/view.tsx"
+ ],
+ "off your number.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Offer": [
   "app/components/StructuredData.tsx",
@@ -14563,6 +14697,9 @@
  "Only the team owner can revoke access": [
   "app/api/teams/access/revoke/route.ts"
  ],
+ "Only until the new number is burned the same way, which is usually quick. Reputation systems grade maturity, so a string of fresh numbers rotated through looks worse than one number with an established history. We have measured this on our own pool: resting a flagged number did not heal it, and cutting the volume on it did, within days.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Only used to reply. Leave it blank to stay anonymous.": [
   "components/SuggestionModal.tsx"
  ],
@@ -14738,6 +14875,9 @@
  ],
  "OTHERS": [
   "app/page.tsx"
+ ],
+ "Our carrier is Telnyx, and its published remediation documentation names the five outcomes, which is the clearest public description of what actually happens to one of these requests:": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Our carrier signs a call from a number owned on our account with A. Every number in the DialerSeat pool is bought and owned there, and the tool that brings an existing number into the pool only accepts one that is already owned. So there is no path for a B or C signature to reach your calls.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
@@ -15043,6 +15183,9 @@
  ],
  "Pay-per-result.": [
   "app/faq/dialerseat-teams/view.tsx"
+ ],
+ "Paying for guaranteed removal.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Paying for themselves": [
   "app/dashboard/teams/page.tsx"
@@ -16326,6 +16469,9 @@
  "Questions about this Privacy Policy, or want to exercise a data right? Email us at": [
   "app/privacy/page.tsx"
  ],
+ "Questions people ask about this": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Queue is empty.": [
   "app/dashboard/dialer/page.tsx"
  ],
@@ -16405,6 +16551,9 @@
  ],
  "Read those four and the result stops being surprising.": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
+ ],
+ "Read what it promises carefully, because it is unusually honest: registration does not guarantee that your calls will never be blocked or labelled. What it does is establish the number as belonging to a legitimate business rather than a bad actor, which is a data point each provider feeds into its own analysis. It is the right first step and it is not the fix.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Read your call recordings unless you specifically ask us to for support": [
   "app/privacy/page.tsx"
@@ -16704,17 +16853,29 @@
  "Refunds are only considered within 24 hours of the charge going through. Once that 24-hour window has passed, the charge is final, canceling afterward stops future billing (see Cancellation, above) but does not refund the period you're already in. Contact": [
   "app/terms/page.tsx"
  ],
+ "Refused.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Regenerate": [
   "components/teams/TeamDetail.tsx"
  ],
  "Regenerating a code stops the old one working immediately and does not remove anyone who already joined with it.": [
   "components/teams/TeamDetail.tsx"
  ],
+ "Register once, ask for a re-evaluation, then fix the pattern that caused it. The steps, the limits, and what does not work.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Register your organization": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
+ "Register, re-evaluate, then fix what caused it": [
+  "app/faq/view.tsx"
+ ],
  "Registering numbers with the Free Caller Registry": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
+ ],
+ "Registering says who you are. A remediation request asks the analytics networks to look at a specific number again. You submit the numbers with a plain description of what you use them for, your carrier forwards the request, and each number comes back with its own verdict rather than a single yes or no.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "REGISTRATION": [
   "components/ExplainerCrossLinks.tsx"
@@ -16751,6 +16912,9 @@
  ],
  "Reliable and well supported": [
   "lib/competitors.ts"
+ ],
+ "Remediated.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Remote and offshore agents": [
   "app/faq/teams-how-it-works/page.tsx",
@@ -16877,6 +17041,9 @@
  "Reputation monitoring": [
   "app/faq/numbers/view.tsx"
  ],
+ "Reputation systems grade maturity, so a run of fresh numbers rotated through reads worse than one number with a history. You buy a few weeks and a worse starting position.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Request a copy of the data we hold about you.": [
   "app/privacy/page.tsx"
  ],
@@ -16913,6 +17080,9 @@
  ],
  "Requires Professional tier": [
   "app/vs/everyone/view.tsx"
+ ],
+ "Requires review.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Research first, then call. For the accounts that matter.": [
   "lib/verticals.ts"
@@ -17432,6 +17602,9 @@
   "app/dashboard/leads/page.tsx",
   "app/dashboard/recordings/page.tsx"
  ],
+ "Scrub against the Do Not Call Registry.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Scrub against the National Do Not Call Registry. That stays the seller’s responsibility, covered on": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
  ],
@@ -17867,6 +18040,9 @@
  ],
  "SETTING": [
   "app/faq/campaigns/view.tsx"
+ ],
+ "Setting a caller name.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Setting it up": [
   "app/faq/dialer-glossary/page.tsx"
@@ -18523,6 +18699,15 @@
  "Status partially unavailable": [
   "app/status/page.tsx"
  ],
+ "Step one: register the number, once, for free": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
+ "Step three: change what got it labelled": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
+ "Step two: ask for a re-evaluation": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Still have questions?": [
   "app/vs/everyone/view.tsx"
  ],
@@ -18558,6 +18743,9 @@
  ],
  "STIR/SHAKEN, yes. Numbers in the pool carry A-attestation, you do not file anything, and there is no separate fee for it. CNAM, no: wireless carriers generally do not display a caller name, so on a mobile it would not show. What the person sees is the number, and the city and state their phone reads from its area code, which is why calls go out from a local number by default.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
+ ],
+ "Stop dialling a number that is already struggling.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Stop listening to voicemail greetings.": [
   "app/faq/how-does-amd-work/page.tsx#prop"
@@ -19117,6 +19305,9 @@
  "Telnyx credentials missing": [
   "app/api/recordings/sync/route.ts"
  ],
+ "Telnyx states plainly that submitting a remediation request does not guarantee a number will be removed from any spam or block list.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Telnyx telephony credential not configured on server": [
   "app/api/calls/token/route.ts"
  ],
@@ -19231,6 +19422,9 @@
  "That name is too long (120 characters max).": [
   "app/dashboard/campaigns/page.tsx",
   "components/teams/TeamModals.tsx"
+ ],
+ "That network had nothing on it to begin with, which is how you learn the label was coming from somewhere else.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "That number came from our own calls. Two separate analyses in September both found that numbers dialing lightly were answered roughly 1.8 to 1.9 times as often as numbers dialing heavily. The heaviest days partly overlapped with a period when the dialer itself had problems, so treat the size of the gap with some caution. The direction held both times.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
@@ -19400,6 +19594,9 @@
  ],
  "The carrier knows the customer, but didn’t give them this number.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
+ ],
+ "The carriers do not guarantee it, so nobody reselling access to them can. A service doing this honestly is filing the free form and chasing it for you, which is a real service at a fair price and not a guarantee.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "The catch: two people answer at once": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
@@ -19847,6 +20044,9 @@
  ],
  "The national registry is only half of it. When someone tells you directly not to call them again, the rule says you must not call them again on behalf of that seller, whether or not they are on the registry. Keep a record of every one of those requests and remove those numbers before any future upload.": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
+ ],
+ "The network re-evaluated the number and cleared it.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "The next lead is dialed the moment you finish the last one": [
   "app/vs/manual-dialing/page.tsx"
@@ -20327,6 +20527,9 @@
  "The three numbers": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
+ "The three providers jointly run the": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "The time zone comes from the lead's state column when it has one, and from the area code when it does not. When neither resolves, the check": [
   "app/faq/calling-hours/page.tsx"
  ],
@@ -20432,11 +20635,20 @@
  "There is no built-in lead marketplace.": [
   "app/pricing/page.tsx"
  ],
+ "There is no button that deletes it, and nobody can remove it on demand. Three steps, in order: register the number free at the Free Caller Registry, which sends it to First Orion, Hiya and TNS in one go; ask those networks to re-evaluate the number; then change the calling pattern that got it labelled, because the label is a score that is recalculated continuously and will come back if the behaviour does not change.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
+ "There is no button that deletes it. The label is a score three analytics companies keep on your number, recalculated from how your calls go. Removing it is three steps: register the number free, ask for a re-evaluation, and change the calling pattern that caused the score. Skip the third and it comes back.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "There is no live interpretation and no translated transcription. The agent speaks the language the agent speaks.": [
   "app/faq/languages/page.tsx"
  ],
  "There is no number dashboard to babysit and no setting to tune. Caps, load spreading, daily checks and throttling all run on their own, on every plan, at $35 per seat per week.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
+ ],
+ "There is no single label and no single list. Three companies score numbers for the US carriers, each carrier uses one of them, and the call-screening apps people install run their own on top. So the same number can be clean on one network and labelled on another, and a fix on one provider does not clear the others.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "There is no universal correct figure, and anyone who quotes you one with confidence is guessing, carrier scoring is opaque and it changes. DialerSeat sets and enforces the cap for you, tuned against live answer-rate data rather than a number picked once and forgotten. What matters on your side is that the volume is spread across a pool instead of concentrated on one caller ID.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
@@ -20617,6 +20829,9 @@
  ],
  "This is the one place a failed payment has an immediate, visible effect: white-label goes inactive the moment a charge fails, not after a grace period. The moment payment succeeds again, whether from an automatic retry or you updating your card: it reactivates on its own, no support ticket required.": [
   "app/faq/billing/view.tsx"
+ ],
+ "This is the step people skip, and it is the one that decides whether the label stays off. A re-evaluation resets the verdict. It does not reset the cause. The score is recalculated from how your calls keep going, so the same pattern rebuilds the same score.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "This is the whole product.": [
   "app/screenshots/page.tsx"
@@ -21292,6 +21507,7 @@
   "app/data/dialer-pricing/page.tsx",
   "app/faq/dialer-for-call-centers/page.tsx",
   "app/faq/dialer-for-real-estate/page.tsx",
+  "app/faq/how-to-remove-spam-likely/page.tsx",
   "app/faq/languages/page.tsx",
   "app/faq/what-is-a-parallel-dialer/page.tsx",
   "app/faq/what-is-an-auto-dialer/page.tsx",
@@ -21583,6 +21799,9 @@
  "Volume on a single caller ID is what gets it labelled.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
+ "Volume on a single number is the fastest way to burn it. Spreading the same campaign across more numbers costs less than remediation does.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "vs": [
   "components/vs-competitor-view.tsx"
  ],
@@ -21860,6 +22079,9 @@
  "We fixed it.": [
   "app/vs/everyone/view.tsx"
  ],
+ "We have measured this on our own number pool rather than repeating industry advice, and the result was the opposite of what the advice says. Resting a flagged number did not heal it: numbers came back from rest worse than new ones. Cutting the volume on the number recovered it, in days.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "We have no plans to raise either tier. If we ever needed to, existing customers would be grandfathered at the rate they signed up at. The price you're looking at today is the price you'll keep paying.": [
   "app/faq/why-we-charge/page.tsx"
  ],
@@ -22096,6 +22318,9 @@
  "What a dialer actually removes from your day, and when dialing by hand is genuinely fine.": [
   "app/vs/manual-dialing/page.tsx"
  ],
+ "What a dialer should be doing for you": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "What a dialer should handle, and what’s yours": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
@@ -22176,6 +22401,9 @@
  ],
  "What does Manager+ at $75 / week add?": [
   "app/faq/why-we-charge/page.tsx"
+ ],
+ "What does not work": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "WHAT DOES THIS LINK DO?": [
   "components/teams/SeatLinksPanel.tsx"
@@ -22440,6 +22668,9 @@
  ],
  "WHAT WE HAVE NOT BUILT": [
   "app/faq/teams-how-it-works/page.tsx"
+ ],
+ "WHAT WE MEASURED": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "What we tried first": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
@@ -22950,6 +23181,9 @@
  "Why DialerSeat? The Thesis, The Team, The Comparison | DialerSeat": [
   "app/faq/why-dialerseat/page.tsx"
  ],
+ "Why did my number get flagged again after it was cleared?": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
  "Why Do My Calls Show “Spam Likely”?": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
@@ -22986,6 +23220,9 @@
  ],
  "Why it happens": [
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "WHY IT HAPPENS": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Why it matters: an example": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
@@ -23077,6 +23314,9 @@
  ],
  "Widely reported 1-2 sec lag on parallel tier": [
   "lib/competitorFeatures.ts"
+ ],
+ "Will a new phone number fix Spam Likely?": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Will call quality be acceptable from overseas?": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
@@ -23924,6 +24164,9 @@
  ],
  "Your name (if provided)": [
   "app/privacy/page.tsx"
+ ],
+ "Your number is labelled Spam Likely or Scam Likely and you want it gone. You cannot delete the label yourself: you register once for free, file a re-evaluation, and fix the calling pattern that caused it. What each step really does, what nobody can promise you, and what does not work.": [
+  "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "YOUR NUMBERS ON THIS CAMPAIGN": [
   "components/teams/CampaignDetail.tsx"

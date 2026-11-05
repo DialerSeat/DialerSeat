@@ -167,6 +167,13 @@ const ANSWERS: HubItem[] = [
     keywords: 'spam flagged numbers cooldown rotate throttle reputation hiya',
   },
   {
+    href: '/faq/how-to-remove-spam-likely',
+    label: msg("How to remove “Spam Likely”"),
+    note: msg("Register, re-evaluate, then fix what caused it"),
+    added: '2026-11-05',
+    keywords: 'remove spam likely scam likely flagged label fix remediation free caller registry carrier',
+  },
+  {
     href: '/faq/why-calls-show-spam-likely',
     label: msg("Why calls show “Spam Likely”"),
     note: msg("How call labels are decided, and what you control"),

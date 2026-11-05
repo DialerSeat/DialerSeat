@@ -157,6 +157,7 @@ function apexSitemap(): MetadataRoute.Sitemap {
     // because it answers the question people actually search; the other two
     // explain what we do about it once they are here.
     e('/faq/why-calls-show-spam-likely', 0.85, 'monthly'),
+    e('/faq/how-to-remove-spam-likely', 0.85, 'monthly'),
     e('/faq/how-we-keep-numbers-clean', 0.8, 'monthly'),
     e('/faq/why-we-dont-rest-flagged-numbers', 0.75, 'monthly'),
 
