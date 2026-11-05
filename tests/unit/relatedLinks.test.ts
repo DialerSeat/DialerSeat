@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { COMPETITORS } from '@/lib/competitors'
 import { RELATED_BY_ROUTE, relatedForCompetitor, type RelatedLink } from '@/lib/relatedLinks'
+import { ENABLED_LOCALES } from '@/lib/i18n/locales'
+import { ENGLISH_ONLY_PATHS } from '@/lib/tools/registry'
 
 const pageExists = (route: string) =>
   existsSync(join(process.cwd(), 'app', route, 'page.tsx'))
@@ -40,5 +42,26 @@ describe('related links', () => {
   it('a page uses its own phrase over its segment phrase for the same target', () => {
     const links = relatedForCompetitor({ slug: 'gohighlevel', segment: 'sales_crm' })
     expect(links.find((l) => l.href === '/faq/send-leads-from-your-crm')?.label).toBe('Power dialer for GoHighLevel')
+  })
+})
+
+describe('related links in every language', () => {
+  const shownAbroad = [
+    ...Object.values(RELATED_BY_ROUTE).flat(),
+    ...COMPETITORS.flatMap((c) => relatedForCompetitor(c)),
+  ].filter((l) => !ENGLISH_ONLY_PATHS.has(l.href))
+  const labels = new Set(['Related', ...shownAbroad.map((l) => l.label)])
+
+  for (const locale of ENABLED_LOCALES.filter((l) => l !== 'en')) {
+    it(`${locale}: the browser dictionary has every label shown on a translated page`, () => {
+      const dict = JSON.parse(readFileSync(join(process.cwd(), 'lib/i18n/dictionaries/client', `${locale}.json`), 'utf8'))
+      expect([...labels].filter((k) => !dict[k]?.trim())).toEqual([])
+    })
+  }
+
+  it('every competitor page still has links on a translated page', () => {
+    for (const c of COMPETITORS) {
+      expect(relatedForCompetitor(c).filter((l) => !ENGLISH_ONLY_PATHS.has(l.href)).length, c.slug).toBeGreaterThan(2)
+    }
   })
 })

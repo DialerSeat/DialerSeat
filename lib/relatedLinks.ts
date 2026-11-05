@@ -1,4 +1,5 @@
 import type { Competitor } from '@/lib/competitors'
+import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
 // THE LINKS BETWEEN FAQ ANSWERS AND COMPARISON PAGES
@@ -14,59 +15,65 @@ import type { Competitor } from '@/lib/competitors'
 //   - A href is the canonical address. /faq/what-is-a-power-dialer and
 //     /faq/what-is-a-predictive-dialer declare /dialing-modes/* as canonical, so
 //     links go there. tests/unit/relatedLinks.test.ts checks every target exists.
-//   - English only for now: these are English search phrases and have no
-//     translations. components/RelatedLinks shows nothing on a translated page.
+//   - Translated in all 12 languages, using each dictionary's existing words for
+//     the same terms. A link to a tool still in English only (lib/tools/registry)
+//     keeps a plain label: components/RelatedLinks hides it on translated pages
+//     rather than sending a reader to English. Wrap the label in msg() when the
+//     tool is translated.
 // =============================================================================
 
 export interface RelatedLink {
   href: string
   label: string
+  vars?: Record<string, string>
 }
+
+const ALT = msg("{name} alternative")
 
 const SEGMENT: Record<Competitor['segment'], RelatedLink[]> = {
   call_center: [
-    { href: '/faq/is-a-predictive-dialer-legal', label: 'Is a predictive dialer legal?' },
-    { href: '/faq/how-does-amd-work', label: 'Answering machine detection' },
-    { href: '/tools/abandon-rate-calculator', label: 'Abandon rate formula' },
+    { href: '/faq/is-a-predictive-dialer-legal', label: msg("Is a predictive dialer legal?") },
+    { href: '/faq/how-does-amd-work', label: msg("Answering machine detection") },
+    { href: '/tools/abandon-rate-calculator', label: msg("Abandon rate formula") },
     { href: '/tools/erlang-c-calculator', label: 'Call center staffing calculator' },
-    { href: '/faq/dialer-for-call-centers', label: 'Dialer for call centers' },
-    { href: '/faq/why-we-charge', label: 'Predictive dialer pricing' },
+    { href: '/faq/dialer-for-call-centers', label: msg("Dialer for call centers") },
+    { href: '/faq/why-we-charge', label: msg("Predictive dialer pricing") },
   ],
   real_estate: [
-    { href: '/faq/dialer-for-real-estate', label: 'Power dialer for real estate' },
-    { href: '/faq/local-presence-dialing', label: 'Local presence dialing' },
-    { href: '/faq/how-to-remove-spam-likely', label: 'How to remove Spam Likely' },
+    { href: '/faq/dialer-for-real-estate', label: msg("Power dialer for real estate") },
+    { href: '/faq/local-presence-dialing', label: msg("Local presence dialing") },
+    { href: '/faq/how-to-remove-spam-likely', label: msg("How to remove Spam Likely") },
     { href: '/tools/lead-list-cleaner', label: 'Lead list cleaner' },
-    { href: '/faq/why-we-charge', label: 'Power dialer pricing' },
+    { href: '/faq/why-we-charge', label: msg("Power dialer pricing") },
   ],
   sales_crm: [
-    { href: '/dialing-modes/power', label: 'Power dialer vs predictive dialer' },
-    { href: '/faq/what-is-a-parallel-dialer', label: 'Parallel dialer vs power dialer' },
-    { href: '/faq/send-leads-from-your-crm', label: 'Send leads from your CRM' },
-    { href: '/faq/dialer-for-b2b-sales', label: 'Dialer for B2B sales' },
-    { href: '/faq/why-we-charge', label: 'Power dialer pricing' },
+    { href: '/dialing-modes/power', label: msg("Power dialer vs predictive dialer") },
+    { href: '/faq/what-is-a-parallel-dialer', label: msg("Parallel dialer vs power dialer") },
+    { href: '/faq/send-leads-from-your-crm', label: msg("Send leads from your CRM") },
+    { href: '/faq/dialer-for-b2b-sales', label: msg("Dialer for B2B sales") },
+    { href: '/faq/why-we-charge', label: msg("Power dialer pricing") },
   ],
   phone_system: [
-    { href: '/faq/what-is-an-auto-dialer', label: 'What is an auto dialer?' },
-    { href: '/faq/why-calls-show-spam-likely', label: 'Why calls show Spam Likely' },
-    { href: '/faq/how-many-numbers-do-i-need', label: 'How many numbers do you need?' },
-    { href: '/faq/why-we-charge', label: 'Auto dialer pricing' },
+    { href: '/faq/what-is-an-auto-dialer', label: msg("What is an auto dialer?") },
+    { href: '/faq/why-calls-show-spam-likely', label: msg("Why calls show Spam Likely") },
+    { href: '/faq/how-many-numbers-do-i-need', label: msg("How many numbers do you need?") },
+    { href: '/faq/why-we-charge', label: msg("Auto dialer pricing") },
   ],
 }
 
 /** On top of the segment's links, for pages with a more specific question. */
 const COMPETITOR_EXTRA: Record<string, RelatedLink[]> = {
   gohighlevel: [
-    { href: '/faq/send-leads-from-your-crm', label: 'Power dialer for GoHighLevel' },
-    { href: '/faq/local-presence-dialing', label: 'Local presence dialing' },
+    { href: '/faq/send-leads-from-your-crm', label: msg("Power dialer for GoHighLevel") },
+    { href: '/faq/local-presence-dialing', label: msg("Local presence dialing") },
   ],
-  hubspot: [{ href: '/faq/send-leads-from-your-crm', label: 'Dialer for HubSpot' }],
-  ringcentral: [{ href: '/faq/local-presence-dialing', label: 'Local presence dialing' }],
-  'dialer-io': [{ href: '/faq/why-dialerseat', label: 'Why DialerSeat' }],
+  hubspot: [{ href: '/faq/send-leads-from-your-crm', label: msg("Dialer for HubSpot") }],
+  ringcentral: [{ href: '/faq/local-presence-dialing', label: msg("Local presence dialing") }],
+  'dialer-io': [{ href: '/faq/why-dialerseat', label: msg("Why DialerSeat?") }],
 }
 
 const COMPETITOR_ALL: RelatedLink[] = [
-  { href: '/tools/dialer-cost-calculator', label: 'Dialer cost calculator' },
+  { href: '/tools/dialer-cost-calculator', label: msg("Dialer cost calculator") },
 ]
 
 /** Links for a /vs/<competitor> page, without repeating a target. */
@@ -80,50 +87,50 @@ export function relatedForCompetitor(c: Pick<Competitor, 'slug' | 'segment'>): R
   })
 }
 
-const COMPARE_ALL: RelatedLink = { href: '/vs/everyone', label: 'DialerSeat vs every other dialer' }
-const PRICING_INDEX: RelatedLink = { href: '/data/dialer-pricing', label: 'Dialer pricing index' }
+const COMPARE_ALL: RelatedLink = { href: '/vs/everyone', label: msg("DialerSeat vs every other dialer") }
+const PRICING_INDEX: RelatedLink = { href: '/data/dialer-pricing', label: msg("Dialer pricing index") }
 
 /** Links for an FAQ or explainer page, keyed by its route. */
 export const RELATED_BY_ROUTE: Record<string, RelatedLink[]> = {
   '/dialing-modes/power': [
-    { href: '/vs/phoneburner', label: 'PhoneBurner alternative' },
-    { href: '/vs/kixie', label: 'Kixie alternative' },
-    { href: '/vs/mojo', label: 'Mojo Dialer alternative' },
+    { href: '/vs/phoneburner', label: ALT, vars: { name: "PhoneBurner" } },
+    { href: '/vs/kixie', label: ALT, vars: { name: "Kixie" } },
+    { href: '/vs/mojo', label: ALT, vars: { name: "Mojo Dialer" } },
   ],
   '/dialing-modes/predictive': [
-    { href: '/vs/readymode', label: 'ReadyMode alternative' },
-    { href: '/vs/convoso', label: 'Convoso alternative' },
-    { href: '/faq/is-a-predictive-dialer-legal', label: 'Is a predictive dialer legal?' },
+    { href: '/vs/readymode', label: ALT, vars: { name: "ReadyMode" } },
+    { href: '/vs/convoso', label: ALT, vars: { name: "Convoso" } },
+    { href: '/faq/is-a-predictive-dialer-legal', label: msg("Is a predictive dialer legal?") },
   ],
   '/faq/what-is-a-parallel-dialer': [
-    { href: '/vs/orum', label: 'Orum alternative' },
-    { href: '/dialing-modes/power', label: 'Power dialer vs predictive dialer' },
+    { href: '/vs/orum', label: ALT, vars: { name: "Orum" } },
+    { href: '/dialing-modes/power', label: msg("Power dialer vs predictive dialer") },
   ],
   '/faq/what-is-an-auto-dialer': [
     COMPARE_ALL,
     PRICING_INDEX,
-    { href: '/vs/manual-dialing', label: 'Dialer vs dialing by hand' },
-    { href: '/vs/dialpad', label: 'Dialpad alternative' },
-    { href: '/vs/nextiva', label: 'Nextiva alternative' },
-    { href: '/vs/cloudtalk', label: 'CloudTalk alternative' },
-    { href: '/vs/ringover', label: 'Ringover alternative' },
-    { href: '/vs/3cx', label: '3CX alternative' },
+    { href: '/vs/manual-dialing', label: msg("Dialer vs dialing by hand") },
+    { href: '/vs/dialpad', label: ALT, vars: { name: "Dialpad" } },
+    { href: '/vs/nextiva', label: ALT, vars: { name: "Nextiva" } },
+    { href: '/vs/cloudtalk', label: ALT, vars: { name: "CloudTalk" } },
+    { href: '/vs/ringover', label: ALT, vars: { name: "Ringover" } },
+    { href: '/vs/3cx', label: ALT, vars: { name: "3CX" } },
   ],
   '/faq/dialer-for-insurance-agents': [
-    { href: '/vs/readymode', label: 'ReadyMode alternative' },
-    { href: '/vs/convoso', label: 'Convoso alternative' },
-    { href: '/vs/calltools', label: 'CallTools alternative' },
+    { href: '/vs/readymode', label: ALT, vars: { name: "ReadyMode" } },
+    { href: '/vs/convoso', label: ALT, vars: { name: "Convoso" } },
+    { href: '/vs/calltools', label: ALT, vars: { name: "CallTools" } },
   ],
   '/faq/dialer-for-call-centers': [
-    { href: '/vs/five9', label: 'Five9 alternative' },
-    { href: '/vs/vicidial', label: 'VICIdial alternative' },
-    { href: '/vs/talkdesk', label: 'Talkdesk alternative' },
-    { href: '/vs/dialedin', label: 'DialedIn alternative' },
-    { href: '/vs/ytel', label: 'Ytel alternative' },
+    { href: '/vs/five9', label: ALT, vars: { name: "Five9" } },
+    { href: '/vs/vicidial', label: ALT, vars: { name: "VICIdial" } },
+    { href: '/vs/talkdesk', label: ALT, vars: { name: "Talkdesk" } },
+    { href: '/vs/dialedin', label: ALT, vars: { name: "DialedIn" } },
+    { href: '/vs/ytel', label: ALT, vars: { name: "Ytel" } },
   ],
   '/faq/dialer-for-real-estate': [
-    { href: '/vs/wavv', label: 'WAVV alternative' },
-    { href: '/vs/smrtphone', label: 'smrtPhone alternative' },
+    { href: '/vs/wavv', label: ALT, vars: { name: "WAVV" } },
+    { href: '/vs/smrtphone', label: ALT, vars: { name: "smrtPhone" } },
   ],
   '/faq/dialer-for-offshore-agents': [COMPARE_ALL],
   '/faq/dialer-for-mortgage': [COMPARE_ALL, PRICING_INDEX],
@@ -132,31 +139,31 @@ export const RELATED_BY_ROUTE: Record<string, RelatedLink[]> = {
   '/faq/dialer-for-recruiters': [COMPARE_ALL, PRICING_INDEX],
   '/faq/dialer-for-fundraising': [COMPARE_ALL, PRICING_INDEX],
   '/faq/dialer-for-b2b-sales': [
-    { href: '/vs/orum', label: 'Orum alternative' },
-    { href: '/vs/kixie', label: 'Kixie alternative' },
-    { href: '/vs/aloware', label: 'Aloware alternative' },
+    { href: '/vs/orum', label: ALT, vars: { name: "Orum" } },
+    { href: '/vs/kixie', label: ALT, vars: { name: "Kixie" } },
+    { href: '/vs/aloware', label: ALT, vars: { name: "Aloware" } },
     PRICING_INDEX,
   ],
   '/faq/send-leads-from-your-crm': [
-    { href: '/vs/gohighlevel', label: 'GoHighLevel alternative' },
-    { href: '/vs/hubspot', label: 'HubSpot calling alternative' },
+    { href: '/vs/gohighlevel', label: ALT, vars: { name: "GoHighLevel" } },
+    { href: '/vs/hubspot', label: ALT, vars: { name: "HubSpot" } },
   ],
   '/faq/local-presence-dialing': [
-    { href: '/vs/gohighlevel', label: 'GoHighLevel alternative' },
-    { href: '/vs/ringcentral', label: 'RingCentral alternative' },
+    { href: '/vs/gohighlevel', label: ALT, vars: { name: "GoHighLevel" } },
+    { href: '/vs/ringcentral', label: ALT, vars: { name: "RingCentral" } },
   ],
   '/faq/why-we-charge': [
-    { href: '/vs/readymode', label: 'ReadyMode alternative' },
-    { href: '/vs/mojo', label: 'Mojo Dialer alternative' },
+    { href: '/vs/readymode', label: ALT, vars: { name: "ReadyMode" } },
+    { href: '/vs/mojo', label: ALT, vars: { name: "Mojo Dialer" } },
     PRICING_INDEX,
   ],
-  '/faq/why-dialerseat': [COMPARE_ALL, PRICING_INDEX, { href: '/vs/dialer-io', label: 'DialerSeat vs Dialer.io' }],
+  '/faq/why-dialerseat': [COMPARE_ALL, PRICING_INDEX, { href: '/vs/dialer-io', label: msg("DialerSeat vs Dialer.io") }],
   '/faq/how-to-remove-spam-likely': [
-    { href: '/faq/why-we-dont-rest-flagged-numbers', label: 'Why resting a flagged number backfires' },
-    { href: '/faq/how-we-keep-numbers-clean', label: 'Number reputation and A-level attestation' },
+    { href: '/faq/why-we-dont-rest-flagged-numbers', label: msg("Why resting a flagged number backfires") },
+    { href: '/faq/how-we-keep-numbers-clean', label: msg("Number reputation and A-level attestation") },
   ],
   '/faq/10dlc-and-outbound-calling': [
-    { href: '/faq/how-to-remove-spam-likely', label: 'Free Caller Registry and Spam Likely' },
+    { href: '/faq/how-to-remove-spam-likely', label: msg("Free Caller Registry and Spam Likely") },
   ],
   '/faq/how-we-keep-compliance': [
     { href: '/tools/state-do-not-call-lists', label: 'State do not call lists' },
@@ -166,7 +173,7 @@ export const RELATED_BY_ROUTE: Record<string, RelatedLink[]> = {
   ],
   '/vs/manual-dialing': [
     { href: '/tools/calls-per-hour-calculator', label: 'Calls per hour calculator' },
-    { href: '/faq/what-is-an-auto-dialer', label: 'What is an auto dialer?' },
-    { href: '/dialing-modes/power', label: 'Power dialer vs predictive dialer' },
+    { href: '/faq/what-is-an-auto-dialer', label: msg("What is an auto dialer?") },
+    { href: '/dialing-modes/power', label: msg("Power dialer vs predictive dialer") },
   ],
 }

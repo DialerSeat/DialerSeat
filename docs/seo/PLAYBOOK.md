@@ -67,7 +67,7 @@ Repeat this loop for every new page:
 ## Stage 5: Link the site to itself
 
 23. **Done** Tools link to their neighbours and from relevant FAQ pages.
-24. **Done** Connect FAQ and vs pages through `lib/relatedLinks.ts`; see [internal-link-map.md](internal-link-map.md). Translated pages don't show these links yet.
+24. **Done** Connect FAQ and vs pages through `lib/relatedLinks.ts`; see [internal-link-map.md](internal-link-map.md). They show in all 12 languages, leaving out links to tools still in English.
 25. Anchor text is the phrase people search, used only where the page really answers it.
 
 ## Stage 6: Earn links (this is what moves rankings)

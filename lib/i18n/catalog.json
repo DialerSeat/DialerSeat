@@ -698,6 +698,9 @@
  "{n} OF {total}": [
   "components/ShotSlideshow.tsx"
  ],
+ "{name} alternative": [
+  "lib/relatedLinks.ts"
+ ],
  "{name} on its own page": [
   "app/data/calling-rules-by-country/page.tsx"
  ],
@@ -3216,6 +3219,9 @@
  "Abandon Rate Calculator: The 3% Rule for Predictive Dialers | DialerSeat": [
   "app/tools/abandon-rate-calculator/page.tsx"
  ],
+ "Abandon rate formula": [
+  "lib/relatedLinks.ts"
+ ],
  "Abandon rate, and the 3% rule": [
   "app/faq/dialer-glossary/page.tsx"
  ],
@@ -4252,7 +4258,8 @@
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
  "Answering machine detection": [
-  "components/teams/CampaignDetail.tsx"
+  "components/teams/CampaignDetail.tsx",
+  "lib/relatedLinks.ts"
  ],
  "ANSWERING MACHINE DETECTION": [
   "app/dashboard/campaigns/page.tsx"
@@ -4606,6 +4613,9 @@
  ],
  "Auto dialer is the umbrella term. A predictive dialer is one kind of auto dialer: it dials several lines per agent at once and uses a pacing algorithm to connect answered calls as agents come free. Power and progressive dialers dial one line at a time; preview dialers let the agent read the lead before the call starts.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
+ "Auto dialer pricing": [
+  "lib/relatedLinks.ts"
  ],
  "Auto dialer questions": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
@@ -7385,7 +7395,8 @@
  "Dialer cost calculator": [
   "app/resources/page.tsx",
   "app/tools/dialer-cost-calculator/page.tsx",
-  "lib/gutsRail.ts"
+  "lib/gutsRail.ts",
+  "lib/relatedLinks.ts"
  ],
  "Dialer Cost Calculator: Weekly vs Monthly Billing, Any Team Size | DialerSeat": [
   "app/tools/dialer-cost-calculator/page.tsx"
@@ -7396,6 +7407,9 @@
  "DIALER DISCONNECTED, reconnecting. Calls cannot connect until this clears.": [
   "app/dashboard/dialer/page.tsx"
  ],
+ "Dialer for B2B sales": [
+  "lib/relatedLinks.ts"
+ ],
  "Dialer for B2B sales & SDRs": [
   "app/faq/view.tsx"
  ],
@@ -7405,10 +7419,14 @@
  "Dialer for call centers": [
   "app/faq/dialer-for-call-centers/page.tsx",
   "app/faq/view.tsx",
-  "app/resources/page.tsx"
+  "app/resources/page.tsx",
+  "lib/relatedLinks.ts"
  ],
  "Dialer for debt collection": [
   "app/faq/view.tsx"
+ ],
+ "Dialer for HubSpot": [
+  "lib/relatedLinks.ts"
  ],
  "Dialer for insurance agents": [
   "app/faq/dialer-for-insurance-agents/page.tsx",
@@ -7542,7 +7560,8 @@
  "Dialer pricing index": [
   "app/data/dialer-pricing/page.tsx",
   "app/resources/page.tsx",
-  "lib/gutsRail.ts"
+  "lib/gutsRail.ts",
+  "lib/relatedLinks.ts"
  ],
  "Dialer Pricing Index": [
   "app/data/dialer-pricing/page.tsx",
@@ -7574,6 +7593,9 @@
  ],
  "Dialer Seat": [
   "app/components/StructuredData.tsx"
+ ],
+ "Dialer vs dialing by hand": [
+  "lib/relatedLinks.ts"
  ],
  "Dialer.io Alternative: Published Pricing, No 3-Month Commitment | DialerSeat": [
   "app/vs/dialer-io/page.tsx"
@@ -7910,7 +7932,8 @@
   "app/vs/dialedin/page.tsx"
  ],
  "DialerSeat vs Dialer.io": [
-  "app/vs/dialer-io/page.tsx"
+  "app/vs/dialer-io/page.tsx",
+  "lib/relatedLinks.ts"
  ],
  "DialerSeat vs Dialpad": [
   "app/vs/dialpad/page.tsx"
@@ -7920,6 +7943,9 @@
  ],
  "DialerSeat vs Every Legacy Dialer: ReadyMode, Mojo, PhoneBurner, Five9, and More": [
   "app/vs/everyone/page.tsx"
+ ],
+ "DialerSeat vs every other dialer": [
+  "lib/relatedLinks.ts"
  ],
  "DialerSeat vs Five9": [
   "app/vs/everyone/view.tsx",
@@ -9767,6 +9793,9 @@
  "FREE CALLER REGISTRY": [
   "app/faq/numbers/view.tsx"
  ],
+ "Free Caller Registry and Spam Likely": [
+  "lib/relatedLinks.ts"
+ ],
  "FREE CALLER REGISTRY REGISTRATION": [
   "app/faq/numbers/view.tsx"
  ],
@@ -10662,7 +10691,8 @@
   "app/faq/view.tsx"
  ],
  "How many numbers do you need?": [
-  "components/ExplainerCrossLinks.tsx"
+  "components/ExplainerCrossLinks.tsx",
+  "lib/relatedLinks.ts"
  ],
  "How many phone numbers a dialer needs": [
   "app/resources/page.tsx"
@@ -10810,7 +10840,10 @@
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "How to remove Spam Likely": [
-  "app/faq/how-to-remove-spam-likely/page.tsx"
+  "app/faq/how-to-remove-spam-likely/page.tsx",
+  "app/faq/how-we-keep-numbers-clean/page.tsx",
+  "app/faq/why-calls-show-spam-likely/page.tsx",
+  "lib/relatedLinks.ts"
  ],
  "How to scrub": [
   "app/faq/dialer-glossary/page.tsx"
@@ -11378,7 +11411,8 @@
  ],
  "Is a predictive dialer legal?": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx",
-  "app/faq/view.tsx"
+  "app/faq/view.tsx",
+  "lib/relatedLinks.ts"
  ],
  "Is a Predictive Dialer Legal?": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
@@ -12227,7 +12261,8 @@
   "app/faq/numbers/view.tsx",
   "app/faq/view.tsx",
   "app/resources/page.tsx",
-  "app/vs/everyone/view.tsx"
+  "app/vs/everyone/view.tsx",
+  "lib/relatedLinks.ts"
  ],
  "LOCAL PRESENCE DIALING": [
   "app/faq/numbers/view.tsx"
@@ -13965,6 +14000,9 @@
  "Number registration is inconsistent at most competitors. TCPA enforcement is often partial rather than server-side per lead state. We register every outbound number with the carrier registry and enforce TCPA windows server-side. We respect the laws so you do not get blocked or fined.": [
   "app/vs/everyone/view.tsx"
  ],
+ "Number reputation and A-level attestation": [
+  "lib/relatedLinks.ts"
+ ],
  "Number rotation": [
   "app/faq/dialer-glossary/page.tsx"
  ],
@@ -14855,6 +14893,9 @@
  "Parallel dialer questions": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
+ "Parallel dialer vs power dialer": [
+  "lib/relatedLinks.ts"
+ ],
  "Parallel Dialer: How It Works and the 3% Rule | DialerSeat": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
@@ -15442,6 +15483,12 @@
  "Power Dialer cost": [
   "lib/competitorFeatures.ts"
  ],
+ "Power dialer for GoHighLevel": [
+  "lib/relatedLinks.ts"
+ ],
+ "Power dialer for real estate": [
+  "lib/relatedLinks.ts"
+ ],
  "Power dialer included in Connect at any tier": [
   "lib/competitorFeatures.ts"
  ],
@@ -15457,11 +15504,17 @@
  "Power dialer only; parallel tier costs more": [
   "lib/competitorFeatures.ts"
  ],
+ "Power dialer pricing": [
+  "lib/relatedLinks.ts"
+ ],
  "Power Dialer requires the $50 tier": [
   "lib/competitors.ts"
  ],
  "Power Dialer requires tier upgrade": [
   "lib/competitorFeatures.ts"
+ ],
+ "Power dialer vs predictive dialer": [
+  "lib/relatedLinks.ts"
  ],
  "Power Dialer: How It Works, When to Use It, and the History | DialerSeat": [
   "app/dialing-modes/power/page.tsx",
@@ -15588,6 +15641,9 @@
  ],
  "Predictive dialer for cold outbound": [
   "lib/competitorFeatures.ts"
+ ],
+ "Predictive dialer pricing": [
+  "lib/relatedLinks.ts"
  ],
  "Predictive Dialer: How It Works, the 3% Rule, and the History | DialerSeat": [
   "app/dialing-modes/predictive/page.tsx",
@@ -16667,6 +16723,9 @@
  "rejected": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
+ "Related": [
+  "components/RelatedLinks.tsx"
+ ],
  "Reliable and well supported": [
   "lib/competitors.ts"
  ],
@@ -17663,7 +17722,8 @@
  ],
  "Send leads from your CRM": [
   "app/faq/send-leads-from-your-crm/page.tsx",
-  "app/faq/view.tsx"
+  "app/faq/view.tsx",
+  "lib/relatedLinks.ts"
  ],
  "Send leads here": [
   "components/teams/CampaignDetail.tsx"
@@ -22192,7 +22252,8 @@
  "What is an auto dialer?": [
   "app/faq/view.tsx",
   "app/faq/what-is-an-auto-dialer/page.tsx",
-  "app/resources/page.tsx"
+  "app/resources/page.tsx",
+  "lib/relatedLinks.ts"
  ],
  "What Is an Auto Dialer? How It Works, Types, and Is It Legal | DialerSeat": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
@@ -22838,7 +22899,8 @@
   "app/faq/view.tsx"
  ],
  "Why calls show Spam Likely": [
-  "app/faq/why-calls-show-spam-likely/page.tsx"
+  "app/faq/why-calls-show-spam-likely/page.tsx",
+  "lib/relatedLinks.ts"
  ],
  "WHY CALLS SHOW SPAM LIKELY": [
   "app/faq/local-presence-dialing/page.tsx"
@@ -22857,7 +22919,8 @@
  "Why DialerSeat?": [
   "app/faq/view.tsx",
   "app/faq/why-dialerseat/page.tsx",
-  "lib/gutsRail.ts"
+  "lib/gutsRail.ts",
+  "lib/relatedLinks.ts"
  ],
  "WHY DIALERSEAT?": [
   "app/faq/view.tsx",
@@ -22932,6 +22995,9 @@
  ],
  "Why predictive dialing is regulated at all": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
+ ],
+ "Why resting a flagged number backfires": [
+  "lib/relatedLinks.ts"
  ],
  "Why the industry needs a reset.": [
   "app/vs/everyone/view.tsx"
