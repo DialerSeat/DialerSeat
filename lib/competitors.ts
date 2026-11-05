@@ -992,7 +992,7 @@ export function crossShoppedPairs(): Array<[Competitor, Competitor]> {
 }
 
 /** Autocomplete-verified on 2026-11-04; see crossShoppedPairs(). */
-const SEARCHED_PAIRS: Array<[string, string]> = [
+export const SEARCHED_PAIRS: Array<[string, string]> = [
   ['readymode', 'mojo'],
   ['readymode', 'batchdialer'],
   ['readymode', 'kixie'],

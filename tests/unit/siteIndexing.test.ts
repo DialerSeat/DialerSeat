@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { COMPETITORS, crossShoppedPairs, matchupSlug } from '@/lib/competitors'
+import { COMPETITORS, SEARCHED_PAIRS, crossShoppedPairs, matchupSlug } from '@/lib/competitors'
 import { VERTICALS } from '@/lib/verticals'
 
 // =============================================================================
@@ -127,12 +127,15 @@ describe('every /faq page is in the sitemap', () => {
 })
 
 describe('head-to-head pages', () => {
-  it('only pairs tools within the same segment', () => {
+  it('only pairs tools within the same segment, or pairs people search', () => {
     // The gate that keeps 21 competitors from becoming 210 near-identical
-    // pages. A cross-segment pair means the segment check regressed.
+    // pages. A cross-segment pair means the segment check regressed, unless it
+    // is one of the autocomplete-verified SEARCHED_PAIRS.
+    const searched = new Set(SEARCHED_PAIRS.flatMap(([x, y]) => [`${x}-vs-${y}`, `${y}-vs-${x}`]))
     const crossSegment = crossShoppedPairs()
       .filter(([a, b]) => a.segment !== b.segment)
       .map(([a, b]) => matchupSlug(a, b))
+      .filter((slug) => !searched.has(slug))
     expect(crossSegment).toEqual([])
   })
 
