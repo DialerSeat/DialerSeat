@@ -207,8 +207,18 @@ export function stripeLocale(locale: Locale) {
 
 // The public pages that have language addresses. Mirrors MARKETING_ONLY_PATHS
 // in proxy.ts, which is what actually serves /es/… — keep the two in step.
+//
+// THEY HAD ALREADY DRIFTED. /screenshots and /partners were added to
+// MARKETING_ONLY_PATHS and not here, so proxy.ts never recognised /ja/partners
+// as a public page and auth.protect() bounced every signed-out visitor to
+// Clerk. Caught on 5 Nov by opening the Japanese page; the English one was
+// fine, which is why nothing looked wrong.
+//
+// It also made /faq/languages wrong where it says every public page exists at
+// its own language address, and cost those two pages their hreflang
+// alternates and their eleven entries each in the sitemap.
 export function isLocalizablePath(path: string): boolean {
   return path === '/' ||
     /^\/(faq|vs|dialing-modes|data|tools|managers|white-label)(\/|$)/.test(path) ||
-    /^\/(pricing|features|about|resources|terms|privacy)$/.test(path)
+    /^\/(pricing|features|about|resources|terms|privacy|screenshots|partners)$/.test(path)
 }

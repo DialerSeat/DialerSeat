@@ -9,9 +9,12 @@ import FaqTheme from '@/components/faq-theme'
 import GutsShell from '@/components/GutsShell'
 import { faqRail } from '@/lib/gutsRail'
 import { SITE } from '@/lib/siteTheme'
+import { pageDate } from '@/lib/pageDates'
 import { t } from '@/lib/i18n/client'
 import { msg } from '@/lib/i18n/msg'
 
+
+const UPDATED = pageDate('/faq/mobile')
 
 type Slide = { src: string; alt: string; caption: string; isJpg?: boolean }
 
@@ -165,7 +168,26 @@ export default function MobileFaqView() {
           .mob-install-card code {
             background: ${SITE.surface}; padding: 1px 6px; border-radius: 3px;
             font-size: 13px; font-family: monospace;
-          }@media (max-width: 768px) {
+          }/* COMPETITOR EVIDENCE CARDS */
+          .mob-rival-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 24px 0;
+          }
+          .mob-rival {
+            background: ${SITE.surface}; border: 1px solid ${SITE.border};
+            border-radius: 8px; padding: 22px 24px;
+          }
+          .mob-rival-name {
+            font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+            font-weight: 700; color: ${SITE.muted}; margin-bottom: 12px;
+          }
+          .mob-rival p { font-size: 14.5px; line-height: 1.7; margin: 0 0 12px; }
+          .mob-rival p:last-child { margin-bottom: 0; }
+          .mob-rival-so {
+            padding-top: 12px; border-top: 1px solid ${SITE.border};
+            color: ${SITE.muted};
+          }
+          @media (max-width: 768px) {
+            .mob-rival-grid { grid-template-columns: 1fr; gap: 14px; }
             .mob-phone-shell { width: 150px; }
             .mob-carousel-arrow { width: 30px; height: 30px; font-size: 16px; }
             .mob-install-grid { grid-template-columns: 1fr; }
@@ -174,7 +196,11 @@ export default function MobileFaqView() {
 
         <article className="faq-root">
           <div className="faq-eyebrow">{t("▸ DIALERSEAT ON YOUR PHONE")}</div>
-          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>{t("LAST UPDATED 07/28/2026")}</span>
+          {/* Was the literal string "LAST UPDATED 07/28/2026", typed into the
+              markup, so it stayed at July through every edit made after it.
+              The date now comes from lib/pageDates, which is generated from
+              the page's own git history. */}
+          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>{t("LAST UPDATED {d}", { d: UPDATED })}</span>
 
           <h1 className="faq-h1">
             {t("The full dialer. Installed to your")}{" "}<em>{t("home screen.")}</em>
@@ -182,6 +208,9 @@ export default function MobileFaqView() {
 
           <p className="faq-deck">
             {t("DialerSeat runs as a complete Progressive Web App (PWA) on mobile: the same terminal, the same analytics, the same teams tools you get on desktop, installed to your phone in under a minute. No App Store, no separate download, no stripped-down “mobile version.”")}</p>
+
+          <p className="faq-deck" style={{ marginTop: 14 }}>
+            {t("That is rarer than it should be. Most of this category rules a handset out in its own published requirements, in writing, and the four examples are further down this page.")}</p>
 
           <div className="faq-badge-row">
             <span className="faq-badge hi">{t("FREE ON EVERY PLAN")}</span>
@@ -262,6 +291,91 @@ export default function MobileFaqView() {
             </ul>
             <p className="muted">
               {t("The one place mobile intentionally trades convenience for practicality is dense side-by-side views, the desktop app's multi-window layout (analytics and teams open next to each other) doesn't translate to a phone screen, so those stay single-view on mobile and swap via the sidebar instead.")}</p>
+          </section>
+
+          {/* -- WHY THE CATEGORY DOES NOT DO THIS -------------------------
+              Every claim here is read off the vendor's own published
+              material, not off a review site and not off our own comparison
+              pages. Named in prose rather than linked, which is how the /vs
+              pages cite as well. */}
+          <section className="faq-section">
+            <h2>{t("▸ WHY ALMOST NOBODY ELSE DOES THIS")}</h2>
+            <p>
+              {t("Running a dialer on a phone sounds like table stakes. In this category it is close to unheard of, and the vendors are not quiet about it: the requirement that rules a handset out is usually printed on their own support pages. Four of the best-known names, in their own published words.")}</p>
+
+            <div className="mob-rival-grid">
+              <div className="mob-rival">
+                <div className="mob-rival-name">{t("ReadyMode")}</div>
+                <p>
+                  {t("Its published system requirements call for Windows or Chrome OS, and say Mac OS is not supported. A wired USB headset is required, with analog and Bluetooth headsets listed as unsupported. A network cable and a NIC are required, with Wi-Fi listed as unsupported, and cellular and satellite connections are named as unsupported as well.")}</p>
+                <p className="mob-rival-so">
+                  {t("A phone has no Ethernet port and no USB headset, and reaches the internet over exactly the two connections that page rules out. This is not a product that happens to be awkward on mobile: every link in the chain is excluded in writing.")}</p>
+              </div>
+
+              <div className="mob-rival">
+                <div className="mob-rival-name">{t("PhoneBurner")}</div>
+                <p>
+                  {t("Its support centre answers the question directly: there is no PhoneBurner mobile app for Apple or Android. Using the platform from a phone is possible but not recommended, the page says the usage may be unstable and that optimal performance is not guaranteed, and it tells you that you must switch your browser to full desktop mode.")}</p>
+                <p className="mob-rival-so">
+                  {t("What is supported is using a cell phone as the handset while the software runs on a computer. That is a phone in the call, not a dialer on the phone, and it still leaves a laptop open in front of you.")}</p>
+              </div>
+
+              <div className="mob-rival">
+                <div className="mob-rival-name">{t("Five9")}</div>
+                <p>
+                  {t("Its public system requirements page is close to one sentence on the subject: what an agent needs is a computer, a USB headset and a high-speed internet connection.")}</p>
+                <p className="mob-rival-so">
+                  {t("Two of those three are the two a phone does not have.")}</p>
+              </div>
+
+              <div className="mob-rival">
+                <div className="mob-rival-name">{t("Mojo")}</div>
+                <p>
+                  {t("Mojo does ship a phone app, Mojo on the Go, which is the exception in this list and worth saying so. What its own pricing page separates is the interesting part: Agent Access, the lead manager for contacts, imports, notes and activity, is $10 a user, and dialing is a different purchase on top, at $89 a licence for the single-line dialer or $139 for the three-line one, for each user who needs to dial at the same time as somebody else.")}</p>
+                <p className="mob-rival-so">
+                  {t("A companion app is a useful thing and we are not pretending otherwise. The structure underneath it is the point: there, managing leads and dialing them are two products. Here they are one seat.")}</p>
+              </div>
+            </div>
+
+            <p className="muted">
+              {t("Each of those is taken from the vendor's own requirements or support pages rather than from a review site, and it is worth checking them yourself rather than believing us: those are the pages that tell you what you are actually buying, and almost nobody reads them until something does not work.")}</p>
+          </section>
+
+          {/* -- WHY IT IS HARD -------------------------------------------- */}
+          <section className="faq-section">
+            <h2>{t("▸ WHY IT IS HARDER THAN IT LOOKS")}</h2>
+            <p>
+              {t("The reason for that wired USB headset is not laziness. Most of this category grew out of on-premise call-centre software, where the agent's audio came from a softphone application talking to a desk phone or a headset over a cable, on a wired office network. Move that to a handset and the entire audio path has to be rebuilt, so most of them did not move it.")}</p>
+            <p>
+              {t("DialerSeat's agent leg is a SIP registration over a WebSocket, with the audio carried by WebRTC inside the browser itself. There is no softphone to install and no bridge number to call, which is what collapses the requirement down to a browser and a microphone, and a phone has both. What is left is the work of making a browser behave on a phone, and that part is real:")}</p>
+            <ul>
+              <li>{t("A phone locking, a real call arriving, or another app taking the microphone suspends the browser's audio. The code that wakes it back up stays attached for the whole shift rather than firing once, because the first version removed itself after the first unlock and the dialer went silent for the rest of the day.")}</li>
+              <li>{t("Safari still only exposes the prefixed audio API, and an audio element has to be marked for inline playback or iOS pulls the call into its own full-screen player.")}</li>
+              <li>{t("The CSS viewport height unit lies on a mobile browser as the address bar hides and shows, so the terminal is sized in dynamic viewport units instead and stops jumping under your thumb.")}</li>
+              <li>{t("The notch and the dynamic island cover the top of a fixed panel, and the inset has to be applied to the fixed element itself rather than to anything inside it.")}</li>
+              <li>{t("The metrics column becomes a drawer you pull from the right edge. The lead profile has a button that takes it full-screen for the length of a call. The disposition sheet caps the profile above it, so the buttons you press at the end of every single call are never below the fold.")}</li>
+            </ul>
+            <p className="muted">
+              {t("None of that is visible when it works, which is rather the point. It is also most of the reason the usual answer to mobile in this category is a support article explaining why you should use a laptop.")}</p>
+          </section>
+
+          {/* -- WHAT IS WORSE --------------------------------------------
+              The page sells hard above, so it owes a straight answer here.
+              Everything in this list is a real property of the product on a
+              handset, not a softened one. */}
+          <section className="faq-section">
+            <h2>{t("▸ WHAT IS HONESTLY WORSE ON A PHONE")}</h2>
+            <p>
+              {t("A phone is a smaller screen with a smaller battery. Some of this genuinely is better at a desk, and you should know which parts before planning a shift around it.")}</p>
+            <ul>
+              <li><strong>{t("Set-up work is a desktop job.")}</strong> {t("Uploading a lead file and mapping its columns, writing scripts and configuring a campaign are all faster on a keyboard with room to see the whole thing at once.")}</li>
+              <li><strong>{t("Dense tables stay dense.")}</strong> {t("The leads list and the compliance export have a lot of columns, and a phone screen means scrolling across them.")}</li>
+              <li><strong>{t("One screen is one screen.")}</strong> {t("You cannot put your CRM next to the dialer on a handset the way you can on a monitor.")}</li>
+              <li><strong>{t("Set auto-lock to Never for a shift.")}</strong> {t("Audio comes back when you touch the screen, but a phone that puts itself to sleep between calls is still a phone that put itself to sleep.")}</li>
+              <li><strong>{t("Keep it on a charger.")}</strong> {t("A continuous call with the screen on is about the most demanding thing a phone does. For an hour between appointments it is nothing; for a full day of dialing, plug it in.")}</li>
+            </ul>
+            <p>
+              {t("What it is genuinely good at is the rest of the day. A floor manager checking the numbers between meetings, an agent working a callback list from a car park, a closer running a drip list in the evening without opening a laptop, somebody covering an hour of a shift from somewhere they did not plan to be. That is work that otherwise does not happen at all.")}</p>
           </section>
 
           {/* ── HONEST LIMITATION ──────────────────────────────────────────── */}

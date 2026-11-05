@@ -16,10 +16,12 @@ import { msg } from '@/lib/i18n/msg'
 //   app/llms.txt          the URL list an assistant retrieves
 //   app/sitemap.ts        so the page is crawled at all
 //
-// EVERY IMAGE IS A REAL CAPTURE of the running product, taken 14 Oct 2026.
+// EVERY IMAGE IS A REAL CAPTURE of the running product: the fourteen desktop
+// frames on 14 Oct 2026, the four phone frames on 19 Jul 2026, off a real
+// handset rather than a resized browser window.
 // Nothing here is a mockup, a render or a composite, and nothing may be added
 // that is. A screenshot is evidence; the moment one is dressed up it stops
-// being evidence and takes the other twelve down with it.
+// being evidence and takes the other seventeen down with it.
 //
 // THE NUMBERS IN THEM ARE A TEST ACCOUNT'S OWN HISTORY, not a performance
 // claim, and the page says so in as many words. Lead names are placeholders
@@ -97,5 +99,51 @@ export const WHITE_LABEL_SHOTS: Shot[] = Array.from({ length: 10 }, (_, i) => {
   }
 })
 
+// ── THE PRODUCT ON A PHONE ───────────────────────────────────────────
+// Portrait, 1125x2436, taken on a real iPhone rather than a browser window
+// narrowed to look like one. That distinction is the whole point of these
+// four: a resized desktop window proves nothing about whether a dialer can
+// hold a SIP registration and a microphone on a handset, and the rest of this
+// category publishes requirements that rule a handset out.
+//
+// They are listed as their own group because they are a different shape. A
+// 1125x2436 frame dropped into a slideshow built around a 1919x991 stage is
+// cropped to a sliver of itself, which is how a real capture ends up looking
+// like a mockup.
+export const MOBILE_SHOTS: Shot[] = [
+  {
+    src: '/faq-images/regular-mobile/dialer-progressive.png',
+    title: msg("The dialer, on a phone"),
+    width: 1125,
+    height: 2436,
+    alt: msg("The DialerSeat dialer terminal running on an iPhone, showing the status, duration, connected rate and MODE tiles, a campaign selected, the lead profile panel and the SET AVAILABLE TO DIAL button"),
+    caption: msg("The same terminal, not a cut-down version of it. Status, duration, connected rate and the MODE dropdown are all still there, the lead profile has a button that takes it full-screen for the length of a call, and the tab on the right edge pulls out the metrics column. Shown idle, before a campaign is started."),
+  },
+  {
+    src: '/faq-images/regular-mobile/analytics-overview.png',
+    title: msg("Analytics, on a phone"),
+    width: 1125,
+    height: 2436,
+    alt: msg("The DialerSeat analytics overview on an iPhone, showing total calls, hours dialed, conversions, closed, talk time, a best-campaign tile reading as a dash, and a call volume chart"),
+    caption: msg("Total calls, hours dialed, conversions, closed and talk time, with the call-volume chart underneath, on a 375-point screen. Note the BEST CAMPAIGN tile: it reads as a dash and says it needs five calls first, rather than crowning a winner out of two."),
+  },
+  {
+    src: '/faq-images/regular-mobile/sidebar-nav.png',
+    title: msg("The same navigation"),
+    width: 1125,
+    height: 2436,
+    alt: msg("The DialerSeat navigation drawer open on an iPhone, listing Analytics, Dialer, Campaigns, Recordings, Leads, Teams and Settings, with the signed-in user and plan at the bottom"),
+    caption: msg("Analytics, Dialer, Campaigns, Recordings, Leads, Teams, Settings. The same seven places as the desktop sidebar, with the same permissions behind them, because it is the same application and not a companion app with a subset of it."),
+  },
+  {
+    src: '/faq-images/regular-mobile/landing-page.jpg',
+    title: msg("Before you sign up"),
+    width: 1125,
+    height: 2436,
+    alt: msg("The DialerSeat marketing landing page on an iPhone, as a visitor sees it before signing up"),
+    caption: msg("The public site on the same handset. There is no separate mobile address and no stripped mobile site to be redirected into."),
+  },
+]
+
 /** Every screenshot, for the software schema and the machine-readable files. */
-export const ALL_SHOTS: Shot[] = [...PRODUCT_SHOTS, ...WHITE_LABEL_SHOTS]
+export const ALL_SHOTS: Shot[] = [...PRODUCT_SHOTS, ...WHITE_LABEL_SHOTS, ...MOBILE_SHOTS]

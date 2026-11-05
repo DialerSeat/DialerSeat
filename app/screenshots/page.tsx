@@ -9,7 +9,7 @@ import PageStamp from '@/components/PageStamp'
 import WhiteLabelSlideshow from './view'
 import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema } from '@/lib/schema'
-import { PRODUCT_SHOTS, ALL_SHOTS } from '@/lib/screenshots'
+import { PRODUCT_SHOTS, MOBILE_SHOTS, ALL_SHOTS } from '@/lib/screenshots'
 import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import { primeLocale, t } from '@/lib/i18n/server'
@@ -183,6 +183,60 @@ export default async function ScreenshotsPage() {
             <Link href="/faq/white-label" className="guts-btn secondary">{t("HOW WHITE LABEL WORKS")}</Link>
             <Link href="/faq/manager-plus" className="guts-btn secondary">{t("WHAT MANAGER+ ADDS")}</Link>
           </div>
+        </GutsSection>
+
+        {/* ── ON A PHONE ─────────────────────────────────────────────────
+            Portrait captures off a real handset. They go after the desktop
+            frames rather than among them because they are a different shape,
+            and a 1125x2436 frame in a row built for 1919x991 is cropped to a
+            sliver of itself. */}
+        <GutsSection icon="phone" title={t("The same product, on a phone")}>
+          <p>
+            {t("Not a companion app and not a cut-down view: the dialer itself, running in the phone's browser, with the audio going through the browser rather than through a second call to a bridge number. It installs to the home screen and runs full-screen from there.")}
+          </p>
+          <div className="shots-phones">
+            {MOBILE_SHOTS.map((shot) => (
+              <figure key={shot.src} className="shots-phone">
+                <Image
+                  src={shot.src}
+                  alt={t(shot.alt)}
+                  width={shot.width}
+                  height={shot.height}
+                  sizes="(max-width: 700px) 45vw, 240px"
+                />
+                <figcaption>
+                  <strong>{t(shot.title)}</strong>
+                  <span>{t(shot.caption)}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+          <div className="guts-btns">
+            <Link href="/faq/mobile" className="guts-btn secondary">{t("DIALING FROM A PHONE")}</Link>
+          </div>
+          <style>{`
+            .shots-phones {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 20px;
+              margin: 22px 0 8px;
+            }
+            .shots-phone { margin: 0; }
+            .shots-phone img {
+              width: 100%; height: auto; display: block;
+              border: 1px solid #c4c8d0; border-radius: 10px;
+            }
+            .shots-phone figcaption {
+              margin-top: 10px; font-size: 13.5px; line-height: 1.55; color: #4a5160;
+            }
+            .shots-phone figcaption strong { display: block; margin-bottom: 4px; color: #1a1d26; }
+            /* Two across on a phone, because four portrait frames side by side
+               on a 375px screen is four unreadable strips. */
+            @media (max-width: 700px) {
+              .shots-phones { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+              .shots-phone figcaption { font-size: 12.5px; }
+            }
+          `}</style>
         </GutsSection>
 
         {/* ── WHAT IS IN THE SEAT ────────────────────────────────────────── */}

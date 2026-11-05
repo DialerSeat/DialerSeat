@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { COMPETITORS, SEARCHED_PAIRS, crossShoppedPairs, matchupSlug } from '@/lib/competitors'
 import { VERTICALS } from '@/lib/verticals'
 import { isReservedSubdomain } from '@/lib/reservedSubdomains'
+import { isLocalizablePath } from '@/lib/i18n/locales'
 
 // =============================================================================
 // A PAGE NOBODY LINKS TO AND NOTHING LISTS DOES NO WORK
@@ -167,13 +168,19 @@ describe('head-to-head pages', () => {
 // Nothing failed. The page worked perfectly for the signed-in author, which is
 // the only person who never sees the bug.
 //
-// Writing the page is one step of five, and the other four are all invisible
-// from a browser that is signed in:
+// Writing the page is one step of six, and the other five are all invisible
+// from a browser that is signed in and reading English:
 //   proxy.ts isPublicRoute        — or a crawler gets a 404
 //   proxy.ts MARKETING_ONLY_PATHS — or our page renders under a reseller brand
+//   lib/i18n/locales.ts           — or /ja/<page> bounces to the sign-in
 //   app/sitemap.ts                — or nothing tells Google it exists
 //   scripts/gen-page-dates.mjs    — or it stamps the site-wide fallback date
 //   lib/reservedSubdomains.ts     — or a tenant can claim its name
+//
+// The fifth was found by this file's own existence and not by this file: the
+// day after the five-point version shipped, /ja/partners still bounced to
+// Clerk, because isLocalizablePath is a sixth list and /partners was not in
+// it. Its own comment says it mirrors MARKETING_ONLY_PATHS. It did not.
 // =============================================================================
 
 const proxySource = readFileSync(join(process.cwd(), 'proxy.ts'), 'utf8')
@@ -255,5 +262,28 @@ describe('every public page is registered where it has to be', () => {
   it('has its name reserved, so no tenant can claim the subdomain', () => {
     const missing = publicTopLevelRoutes().filter(name => !isReservedSubdomain(name))
     expect(missing, 'a tenant could take these subdomains').toEqual([])
+  })
+
+  it('has a language address, so /ja/<page> is not bounced to the sign-in', () => {
+    // isLocalizablePath is what tells proxy.ts that /ja/partners is a public
+    // page at all. A page missing from it is reachable in English and behind
+    // the sign-in in eleven other languages — and loses its hreflang
+    // alternates and its eleven sitemap entries at the same time.
+    const EXEMPT = new Set(['status'])
+    const missing = publicTopLevelRoutes()
+      .filter(name => !EXEMPT.has(name))
+      .filter(name => !isLocalizablePath(`/${name}`))
+    expect(missing, 'these pages have no language addresses').toEqual([])
+  })
+
+  it('keeps isLocalizablePath and MARKETING_ONLY_PATHS in step', () => {
+    // isLocalizablePath's own comment says it mirrors MARKETING_ONLY_PATHS.
+    // Asserting it is cheaper than discovering in Japanese that it stopped.
+    const start = proxySource.indexOf('const MARKETING_ONLY_PATHS = [')
+    const names = blockBody(start)
+      .filter(line => !line.trim().startsWith('//'))
+      .flatMap(line => [...line.matchAll(/\\\/([a-z-]+)/g)].map(m => m[1]))
+    const drifted = [...new Set(names)].filter(name => !isLocalizablePath(`/${name}`))
+    expect(drifted, 'in MARKETING_ONLY_PATHS but with no language address').toEqual([])
   })
 })
