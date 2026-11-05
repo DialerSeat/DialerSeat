@@ -147,7 +147,7 @@ The book calls this the cheapest growth available, and DialerSeat has no instrum
 
 | | Why it's yours |
 |---|---|
-| Add `www.dialerseat.com` in Vercel → dialer-seat → Settings → Domains → **Add Domain**, then choose "Redirect to dialerseat.com" (308). Don't edit the existing dialerseat.com row: that's where "a domain cannot redirect to itself" comes from. | Needs your Vercel login; the change was blocked for me. |
+| Add `www.dialerseat.com` in Vercel → dialer-seat → Settings → Domains → **Add Domain**, then choose "Redirect to dialerseat.com" (308). Don't edit the existing dialerseat.com row: that's where "a domain cannot redirect to itself" comes from. Cloudflare is already right: www is a DNS-only CNAME to cname.vercel-dns.com. If Vercel says the domain is linked to another account, it shows a TXT value: add it in Cloudflare as a TXT record named `_vercel` (on the apex, not `_vercel.www`), then click Verify & claim. | Needs your Vercel login; the change was blocked for me. |
 | Approve or edit the copy review (titles, descriptions, country openers). | Your copy. |
 | Create the company profiles and directory listings; send me the URLs for `sameAs`. | Your accounts. |
 | Bing Webmaster Tools is set up (confirmed by Joshua, 4 Nov). Bing still sends about 6% as many visits as Google: check Site Explorer for how many URLs Bing has indexed, and claim Bing Places. Export Search Console monthly. | Your Google and Microsoft logins. |
