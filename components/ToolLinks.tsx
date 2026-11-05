@@ -26,8 +26,8 @@ export default async function ToolLinks({ slugs }: { slugs: string[] }) {
     <section className="guts-sec">
       <style>{`
         .tool-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; text-align: start; }
-        .tool-links a { display: block; padding: 16px 18px; background: #fff; border: 1px solid #d8dce4; border-radius: 8px; color: #1a1c24; text-decoration: none; }
-        .tool-links a:hover { border-color: #2a6eff; }
+        .guts-sec .tool-links a:not(.guts-btn) { display: block; padding: 16px 18px; background: #fff; border: 1px solid #d8dce4; border-radius: 8px; color: #1a1c24; text-decoration: none; }
+        .guts-sec .tool-links a:not(.guts-btn):hover { border-color: #2a6eff; }
         .tool-links b { display: block; font-size: 14px; margin-bottom: 4px; }
         .tool-links span { display: block; font-size: 13px; line-height: 1.45; color: #5a6072; }
       `}</style>
