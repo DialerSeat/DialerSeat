@@ -12,6 +12,9 @@ export function organizationSchema() {
     '@type': 'Organization',
     '@id': `${SITE_URL}/#organization`,
     name: 'DialerSeat',
+    // Every way the name gets typed, so a search for any of them resolves to
+    // this entity rather than to a near-miss like dialer.io.
+    alternateName: ['Dialer Seat', 'dialerseat', 'dialerseat.com'],
     url: SITE_URL,
     // /logo.png never existed (404), so Google had no usable logo for the
     // entity. Organization logos must be crawlable and at least 112x112; the

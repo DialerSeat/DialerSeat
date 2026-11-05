@@ -116,6 +116,11 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
       '@id': `${BASE}/#website`,
       url: BASE,
       name: 'DialerSeat',
+      // The spellings people type when they search for the site. Google reads
+      // WebSite name and alternateName for the site name shown above results;
+      // with dialer.io one letter-swap away, saying which strings mean this
+      // site is the cheap half of winning the brand query (book ch 9-10).
+      alternateName: ['Dialer Seat', 'dialerseat', 'dialerseat.com'],
       description: 'Dial smarter. Close faster. $35/week.',
       publisher: {
         '@id': `${BASE}/#organization`,
