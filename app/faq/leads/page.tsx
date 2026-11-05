@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import LeadsFaqView from './view'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -51,7 +52,7 @@ export default function LeadsFaqPage() {
         { name: msg("Faq"), url: '/faq' },
         { name: msg("Uploading & Managing Leads"), url: '/faq/leads' },
       ])} />
-      <LeadsFaqView />
+      <LeadsFaqView tools={<ToolLinks slugs={['lead-list-cleaner', 'phone-number-formatter']} />} />
     </>
   )
 }

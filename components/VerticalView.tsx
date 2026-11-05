@@ -12,6 +12,7 @@ import type { Vertical } from '@/lib/verticals'
 import { getT, primeLocale, t } from '@/lib/i18n/server'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import { msg } from '@/lib/i18n/msg'
+import ToolLinks from '@/components/ToolLinks'
 
 // =============================================================================
 // ONE INDUSTRY PAGE, FROM ONE RECORD
@@ -152,6 +153,8 @@ export default async function VerticalView({ v }: { v: Vertical }) {
             ))}
           </div>
         </GutsSection>
+
+        <ToolLinks slugs={['cold-call-script-generator', 'sales-voicemail-script-generator', 'lead-list-cleaner']} />
 
       </GutsShell>
       <SiteFooter />

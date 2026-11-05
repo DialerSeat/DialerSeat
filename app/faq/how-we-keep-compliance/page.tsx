@@ -12,6 +12,7 @@ import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -188,6 +189,8 @@ export default async function Page() {
           <p>
             {t("We obviously can't guarantee your compliance, that depends on what you actually do with the platform, what consent you have, what state you're calling into. But we can guarantee that the dialer itself won't be the reason you end up in trouble. That's the line we drew, and we held it.")}</p>
         </section>
+
+        <ToolLinks slugs={['tcpa-compliance-checklist', 'telemarketing-calling-hours']} />
 
         <ExplainerCrossLinks current="compliance-how" />
 

@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import ScriptsFaqView from './view'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -51,7 +52,7 @@ export default function ScriptsFaqPage() {
         { name: msg("Faq"), url: '/faq' },
         { name: msg("Call Scripts"), url: '/faq/scripts' },
       ])} />
-      <ScriptsFaqView />
+      <ScriptsFaqView tools={<ToolLinks slugs={['cold-call-script-generator', 'sales-voicemail-script-generator']} />} />
     </>
   )
 }

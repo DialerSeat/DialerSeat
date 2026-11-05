@@ -5,6 +5,7 @@ import { t } from '@/lib/i18n/client'
 import {
   parseDelimited, looksLikeHeader, guessColumns, cleanLeads, toImportCsv, TEMPLATE_CSV,
   FIELD_LABELS, type ColumnGuess, type FieldType,
+  keepFullNumbers,
 } from '@/lib/tools/leadSheet'
 import { downloadText } from '@/lib/tools/phone'
 import { ToolStyles, Stat, fmt } from './kit'
@@ -72,6 +73,7 @@ export default function LeadListCleaner() {
         const XLSX = await import('xlsx')
         const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' })
         const sheet = wb.Sheets[wb.SheetNames[0]]
+        keepFullNumbers(sheet)
         setText(XLSX.utils.sheet_to_csv(sheet, { blankrows: false }))
       } else {
         setText(await f.text())

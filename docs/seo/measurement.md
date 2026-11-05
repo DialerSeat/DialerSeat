@@ -16,6 +16,7 @@ The book's measurement discipline (ch 14, 15, 22, 33, 36, Appendices C, D, F) se
 | 2026-11-04 | 17 autocomplete-verified matchup pages (e.g. readymode-vs-mojo, wavv-vs-kixie) | 4085b01c6, f6c2b9123 | Indexed within weeks; at least 8 of 17 show impressions for their own "a vs b" query by 31 Jan 2027 (prediction 1). | 2027-01-31 |
 
 | 2026-11-05 | /tools hub and 16 free tools (lead list cleaner, phone formatter and extractor, area code lookup, calling hours, TCPA checklist, DNC cost, Erlang C, AHT, calls per hour, contact rate, cold calls per day, cost per lead, script and voicemail generators, tracker). English only. | d0f21c8c6 | Indexed within weeks. At least 8 of 17 tool pages show Search Console impressions by 28 Feb 2027, and at least one earns an unsolicited link by 31 May 2027 (ch 24, 35). Which ones win can't be predicted (ch 3): do not delete the rest. Fewer lead-upload support issues. | 2027-02-28 |
+| 2026-11-05 | 19 FAQ and vertical pages link to the tools that fit them, English versions only (translated pages get them once a tool is translated) | this commit | Tool pages are found sooner: they stop depending on the hub and sitemap alone. Check in Search Console's Links report that the tools show internal links from these pages. No rank claim. | 2026-12-05 |
 
 Add a row before every SEO change ships, not after. **Never ship a big change and a reindex request together**: the reindex will take the credit (ch 22).
 

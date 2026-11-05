@@ -9,6 +9,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 // =============================================================================
 // /faq/local-presence-dialing
@@ -176,6 +177,8 @@ export default async function Page() {
               {t("WHY CALLS SHOW SPAM LIKELY")}</Link>
           </div>
         </GutsSection>
+
+        <ToolLinks slugs={['area-code-lookup']} />
 
       </GutsShell>
       <SiteFooter />

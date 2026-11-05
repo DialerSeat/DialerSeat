@@ -9,6 +9,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 // =============================================================================
 // /faq/how-to-scrub-the-do-not-call-registry
@@ -183,6 +184,8 @@ export default async function Page() {
               {t("IS A PREDICTIVE DIALER LEGAL?")}</Link>
           </div>
         </GutsSection>
+
+        <ToolLinks slugs={['dnc-registry-cost-calculator', 'tcpa-compliance-checklist']} />
 
       </GutsShell>
       <SiteFooter />

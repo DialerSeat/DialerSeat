@@ -11,6 +11,7 @@ import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import ToolLinks from '@/components/ToolLinks'
 
 // =============================================================================
 // /faq/what-is-an-auto-dialer
@@ -241,6 +242,8 @@ export default async function WhatIsAnAutoDialerPage() {
             <Link href="/faq/dialer-glossary" className="guts-btn secondary">{t("DIALER GLOSSARY")}</Link>
           </div>
         </GutsSection>
+
+        <ToolLinks slugs={['calls-per-hour-calculator', 'cold-calls-per-day-calculator']} />
 
       </GutsShell>
       <SiteFooter />

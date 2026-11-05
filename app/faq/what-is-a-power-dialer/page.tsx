@@ -11,6 +11,7 @@ import { SITE } from '@/lib/siteTheme'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -524,6 +525,8 @@ export default async function PowerDialerPage() {
           description="Every account gets every mode. Pick power, start dialing, and change your mind any time. $35/week per seat, no contract."
         />
         </div>
+        <ToolLinks slugs={['calls-per-hour-calculator', 'cold-calls-per-day-calculator']} />
+
       </GutsShell>
       <SiteFooter />
     </>

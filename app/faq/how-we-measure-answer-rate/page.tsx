@@ -9,6 +9,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 // =============================================================================
 // /faq/how-we-measure-answer-rate
@@ -160,6 +161,8 @@ export default async function Page() {
             <Link href="/data/connect-rates" className="guts-btn secondary">{t("SEE CONNECT-RATE DATA")}</Link>
           </div>
         </GutsSection>
+
+        <ToolLinks slugs={['contact-rate-calculator']} />
 
       </GutsShell>
       <SiteFooter />

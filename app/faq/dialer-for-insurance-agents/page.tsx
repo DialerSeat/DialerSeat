@@ -9,6 +9,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 // =============================================================================
 // /faq/dialer-for-insurance-agents
@@ -214,6 +215,8 @@ export default async function Page() {
             <Link href="/faq/why-we-charge" className="guts-btn secondary">{t("WHY WE CHARGE THIS")}</Link>
           </div>
         </GutsSection>
+
+        <ToolLinks slugs={['cold-call-script-generator', 'sales-voicemail-script-generator', 'lead-list-cleaner']} />
 
       </GutsShell>
       <SiteFooter />

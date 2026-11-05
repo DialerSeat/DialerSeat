@@ -9,6 +9,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 // =============================================================================
 // /faq/is-a-predictive-dialer-legal
@@ -195,6 +196,8 @@ export default async function Page() {
               {t("WHAT IS A PREDICTIVE DIALER?")}</Link>
           </div>
         </GutsSection>
+
+        <ToolLinks slugs={['tcpa-compliance-checklist', 'telemarketing-calling-hours']} />
 
       </GutsShell>
       <SiteFooter />

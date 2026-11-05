@@ -12,6 +12,7 @@ import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import { primeLocale, t as tr } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import ToolLinks from '@/components/ToolLinks'
 
 // =============================================================================
 // /faq/dialer-for-call-centers
@@ -171,6 +172,8 @@ export default async function DialerForCallCentersPage() {
             <Link href="/vs/teams" className="guts-btn secondary">{tr("TEAM PRICING")}</Link>
           </div>
         </GutsSection>
+
+        <ToolLinks slugs={['erlang-c-calculator', 'average-handle-time-calculator', 'calls-per-hour-calculator']} />
 
       </GutsShell>
       <SiteFooter />

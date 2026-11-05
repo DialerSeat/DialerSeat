@@ -63,6 +63,20 @@ const slug = (h: string) => h.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').r
 
 // ── CSV IN ─────────────────────────────────────────────────────────────
 
+/**
+ * Excel keeps a phone number as a number and only displays it as 3.18E+09. The
+ * full value is still in the cell, so write that out instead of the display
+ * text, which would throw the digits away. Dates are small serial numbers and
+ * keep their formatting.
+ */
+export function keepFullNumbers(sheet: Record<string, unknown>): void {
+  for (const [ref, cell] of Object.entries(sheet)) {
+    if (ref.startsWith('!')) continue
+    const c = cell as { t?: string; v?: unknown; w?: string }
+    if (c.t === 'n' && typeof c.v === 'number' && Number.isInteger(c.v) && Math.abs(c.v) >= 1e9) c.w = String(c.v)
+  }
+}
+
 /** RFC 4180 parsing with comma, tab or semicolon, whichever the first line uses. */
 export function parseDelimited(text: string): string[][] {
   const clean = text.replace(/^﻿/, '')

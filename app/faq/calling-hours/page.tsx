@@ -13,6 +13,7 @@ import { STATE_TIMEZONES } from '@/lib/timezones'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 const baseMetadata: Metadata = {
   title: 'Telemarketing Calling Hours by State: What DialerSeat Enforces | DialerSeat',
@@ -236,6 +237,8 @@ export default async function Page() {
           headline="Stop worrying about what time it is where they are."
           description="DialerSeat checks every lead against its own local window before it dials, server-side. $35/week per seat, every dialer mode included."
         />
+        <ToolLinks slugs={['telemarketing-calling-hours', 'area-code-lookup']} />
+
         <ExplainerCrossLinks current="calling-hours" />
         </div>
       </GutsShell>

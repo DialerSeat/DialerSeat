@@ -12,6 +12,7 @@ import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 const baseMetadata: Metadata = {
   title: 'How Many Phone Numbers Does an Outbound Dialer Need? | DialerSeat',
@@ -149,6 +150,8 @@ export default async function Page() {
           headline="Numbers are included, not metered."
           description="Buy what your volume needs, rotate automatically, retire what degrades. No per-number fee. $35/week per seat."
         />
+        <ToolLinks slugs={['cold-calls-per-day-calculator']} />
+
         <ExplainerCrossLinks current="pool-sizing" />
         </div>
       </GutsShell>

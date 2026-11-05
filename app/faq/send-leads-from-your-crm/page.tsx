@@ -9,6 +9,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 // =============================================================================
 // /faq/send-leads-from-your-crm — lead drip
@@ -186,6 +187,8 @@ export default async function Page() {
             <Link href="/faq/manager-plus" className="guts-btn secondary">{t("WHAT MANAGER+ ADDS")}</Link>
           </div>
         </GutsSection>
+
+        <ToolLinks slugs={['lead-list-cleaner']} />
 
       </GutsShell>
       <SiteFooter />

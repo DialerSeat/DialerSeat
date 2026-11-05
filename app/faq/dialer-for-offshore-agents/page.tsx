@@ -8,6 +8,7 @@ import { FACTS } from '@/lib/canonicalFacts'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 // =============================================================================
 // /faq/dialer-for-offshore-agents — the wedge nobody is priced for
@@ -186,6 +187,8 @@ export default async function OffshoreAgentsPage() {
               {t("WHAT 5 AGENTS COST ELSEWHERE")}</Link>
           </div>
         </div>
+        <ToolLinks slugs={['telemarketing-calling-hours', 'cold-call-script-generator']} />
+
       </GutsShell>
     </>
   )

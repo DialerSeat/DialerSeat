@@ -11,6 +11,7 @@ import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import ToolLinks from '@/components/ToolLinks'
 
 // =============================================================================
 // /faq/dialer-for-real-estate
@@ -211,6 +212,8 @@ export default async function DialerForRealEstatePage() {
             ))}
           </div>
         </GutsSection>
+
+        <ToolLinks slugs={['cold-call-script-generator', 'sales-voicemail-script-generator', 'lead-list-cleaner']} />
 
       </GutsShell>
       <SiteFooter />

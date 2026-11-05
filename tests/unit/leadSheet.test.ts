@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { parseDelimited, looksLikeHeader, guessColumns, cleanLeads, toImportCsv, readState } from '@/lib/tools/leadSheet'
+import * as XLSX from 'xlsx'
+import { parseDelimited, looksLikeHeader, guessColumns, cleanLeads, toImportCsv, readState, keepFullNumbers } from '@/lib/tools/leadSheet'
 import { checkPhone, extractNanp } from '@/lib/tools/phone'
 import { parseCSVText } from '@/lib/parseLeadsFile'
 import { normalizeState } from '@/lib/normalizeState'
@@ -108,5 +109,32 @@ describe('phone helpers', () => {
 
   it('extracts numbers from text without taking digits out of longer runs', () => {
     expect(extractNanp('Call (312) 555-0147 or 312.555.0188. Order #4155550132998')).toEqual(['3125550147', '3125550188'])
+  })
+})
+
+describe('numbers a spreadsheet has been at', () => {
+  it('reads the full number from an Excel cell displayed as 3.18E+09, and leaves dates alone', () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['First Name', 'Phone Number', 'State', 'Signed'],
+      ['Sam Roe', 3175550142, 'IN', 45000],
+      ['Jan Doe', 13175550143, 'TX', 45001],
+    ])
+    for (const ref of ['B2', 'B3']) { ws[ref].z = '0.00E+00'; delete ws[ref].w }
+    for (const ref of ['D2', 'D3']) ws[ref].z = 'yyyy-mm-dd'
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Leads')
+    const back = XLSX.read(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }), { type: 'array' })
+    const sheet = back.Sheets.Leads
+    keepFullNumbers(sheet)
+    const rows = parseDelimited(XLSX.utils.sheet_to_csv(sheet, { blankrows: false }))
+    expect(rows[1][1]).toBe('3175550142')
+    expect(rows[2][1]).toBe('13175550143')
+    expect(rows[1][3]).toBe('2023-03-15')
+  })
+
+  it('accepts what still has every digit and refuses to guess what does not', () => {
+    expect(checkPhone('3175550142.0')).toMatchObject({ ok: true, e164: '+13175550142' })
+    expect(checkPhone('3.175550142E+9')).toMatchObject({ ok: true, e164: '+13175550142' })
+    expect(checkPhone('3.18E+09')).toMatchObject({ ok: false, reason: expect.stringContaining('Rounded') })
   })
 })

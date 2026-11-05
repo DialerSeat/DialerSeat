@@ -12,6 +12,7 @@ import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -160,6 +161,8 @@ export default async function Page() {
           <p>
             {t("We'd rather build it correctly the first time. It's cheaper for everyone involved, and it lets us sleep at night.")}</p>
         </section>
+
+        <ToolLinks slugs={['tcpa-compliance-checklist', 'telemarketing-calling-hours']} />
 
         <ExplainerCrossLinks current="compliance-why" />
 

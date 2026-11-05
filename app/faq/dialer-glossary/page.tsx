@@ -9,6 +9,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import { primeLocale, t as tr } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import { localizeMetadata } from '@/lib/i18n/metadata'
+import ToolLinks from '@/components/ToolLinks'
 
 // =============================================================================
 // /faq/dialer-glossary
@@ -320,6 +321,8 @@ export default async function Page() {
             <Link href="/faq" className="guts-btn secondary">{tr("ALL ANSWERS")}</Link>
           </div>
         </GutsSection>
+
+        <ToolLinks slugs={['contact-rate-calculator', 'erlang-c-calculator', 'average-handle-time-calculator']} />
 
       </GutsShell>
       <SiteFooter />

@@ -1,4 +1,5 @@
 'use client'
+import type { ReactNode } from 'react'
 import Link from '@/components/LocaleLink'
 import { useUser } from '@clerk/nextjs'
 import SiteHeader from '@/components/site-header'
@@ -10,7 +11,7 @@ import { SITE } from '@/lib/siteTheme'
 import { t } from '@/lib/i18n/client'
 
 
-export default function ScriptsFaqView() {
+export default function ScriptsFaqView({ tools }: { tools?: ReactNode }) {
   const { isSignedIn } = useUser()
 
   return (
@@ -174,6 +175,7 @@ export default function ScriptsFaqView() {
             </a>
           </div>
         </article>
+        {tools}
       </GutsShell>
       <SiteFooter />
     </>

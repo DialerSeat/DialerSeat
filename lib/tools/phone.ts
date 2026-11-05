@@ -58,8 +58,18 @@ export function checkPhone(raw: string): PhoneVerdict {
   // A label in front of the number is formatting, not data: Facebook lead ads
   // export "p:+15555550100", other tools "tel:", "cell:", "Phone:". The dialer's
   // importer strips non-digits and accepts these, so they are accepted here.
-  const value = raw.trim().replace(/^(?:p|ph|phone|tel|cell|mobile|m|c|h|w|home|work)\s*[:#]\s*/i, '')
+  let value = raw.trim().replace(/^(?:p|ph|phone|tel|cell|mobile|m|c|h|w|home|work)\s*[:#]\s*/i, '')
   if (!value) return { ok: false, reason: 'Empty' }
+  // What a spreadsheet does to a number column. 3175550100.0 still has every
+  // digit, and so does 3.175550142E+9 once expanded, because the mantissa carries them
+  // all. 3.18E+09 does not: the rest of the number no longer exists anywhere
+  // in this file, and guessing it would dial a stranger.
+  if (/^\d{10,11}\.0+$/.test(value)) value = value.replace(/\.0+$/, '')
+  const sci = value.match(/^(\d)\.?(\d*)e\+?(\d{1,2})$/i)
+  if (sci) {
+    if (sci[2].length < Number(sci[3])) return { ok: false, reason: 'Rounded by a spreadsheet: the digits are gone, use the original file' }
+    value = sci[1] + sci[2]
+  }
   if (/[a-zA-Z]/.test(value.replace(/\b(ext|x)\.?\s*\d+$/i, ''))) return { ok: false, reason: 'Contains letters' }
   const e164 = normalizeToE164(value.replace(/\s*(ext|x)\.?\s*\d+$/i, ''))
   if (!e164) return { ok: false, reason: 'Wrong number of digits' }
