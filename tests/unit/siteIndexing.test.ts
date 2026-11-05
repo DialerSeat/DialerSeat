@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { COMPETITORS, SEARCHED_PAIRS, crossShoppedPairs, matchupSlug } from '@/lib/competitors'
+import { COMPETITOR_FEATURES } from '@/lib/competitorFeatures'
 import { VERTICALS } from '@/lib/verticals'
 import { isReservedSubdomain } from '@/lib/reservedSubdomains'
 import { isLocalizablePath } from '@/lib/i18n/locales'
@@ -77,6 +78,17 @@ describe('every /vs page is discoverable', () => {
       .filter(slug => slug !== 'teams')
       .filter(slug => !vsIndexSource.includes(`/vs/${slug}'`))
     expect(missing, 'these /vs pages are linked from nowhere').toEqual([])
+  })
+
+  it('has no feature matrix for a competitor that does not exist', () => {
+    // The reverse of the test above, and the one that was missing. hookedcrm
+    // sat in COMPETITOR_FEATURES for months with no registry entry and no
+    // page.tsx: 28 lines of researched claims about a company, unreachable,
+    // because featuresFor() is only ever called with a registry slug. Deleted
+    // 5 Nov 2026 along with its orphaned view.tsx.
+    const slugs = new Set(COMPETITORS.map(c => c.slug))
+    const orphans = Object.keys(COMPETITOR_FEATURES).filter(k => !slugs.has(k))
+    expect(orphans, 'feature matrices no page can reach').toEqual([])
   })
 
   it('has a page for every competitor in the registry', () => {

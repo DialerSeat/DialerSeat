@@ -113,12 +113,15 @@ function apexSitemap(): MetadataRoute.Sitemap {
     // cannot silently produce an unindexed page.
     //
     // hookedcrm used to be hand-listed here on the grounds that it "has a page
-    // but is not in the registry". It has neither. There is no page.tsx under
-    // app/vs/hookedcrm — only an orphaned view.tsx nothing imports — so the
-    // route 404s, and the sitemap was submitting it to crawlers at priority
-    // 0.8. That is the exact failure the paragraph above describes, arriving
-    // from the other direction: the generated list cannot go stale, and the
-    // one entry kept out of it did.
+    // but is not in the registry". It had neither: no page.tsx under
+    // app/vs/hookedcrm, only an orphaned view.tsx nothing imported, so the
+    // route 404'd while the sitemap submitted it to crawlers at priority 0.8.
+    // That is the exact failure the paragraph above describes, arriving from
+    // the other direction: the generated list cannot go stale, and the one
+    // entry kept out of it did.
+    //
+    // The orphan and its COMPETITOR_FEATURES entry were deleted on 5 Nov 2026.
+    // Both are in git if the page is ever written for real.
     //
     // If the page comes back, it comes back through COMPETITORS like every
     // other one, and the sitemap picks it up with no edit here.

@@ -858,20 +858,8 @@
  "/md": [
   "app/resources/page.tsx"
  ],
- "/month flat": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "/resources": [
   "app/about/page.tsx"
- ],
- "/seat/month": [
-  "app/vs/hookedcrm/view.tsx"
- ],
- "/seat/month at 50+ seats": [
-  "app/vs/hookedcrm/view.tsx"
- ],
- "/seat/week": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "/status": [
   "app/about/page.tsx"
@@ -1150,9 +1138,6 @@
  ],
  "▸ BONUS: AGED LEADS, TRACKED AUTOMATICALLY": [
   "app/faq/dialerseat-teams/view.tsx"
- ],
- "▸ BOTTOM LINE": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "▸ BRAND NAME": [
   "app/onboarding/whitelabel/page.tsx"
@@ -1917,9 +1902,6 @@
  "$0 (unlimited)": [
   "lib/competitorFeatures.ts"
  ],
- "$0 setup fee": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "$0, the team owner covers this seat.": [
   "app/join/[code]/JoinRedeemClient.tsx"
  ],
@@ -2019,12 +2001,6 @@
  "$35 a week per seat for Pro. $75/week for Manager+ with white-label and teams. The best way to see if it's worth it is to use it for a week.": [
   "app/faq/why-we-charge/page.tsx#prop"
  ],
- "$35 a week per seat. Preview, Power, Progressive, and Predictive dialing, named and included, not a mystery you find out about on a sales call. Self-serve signup means first dial in under 10 minutes.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
- "$35 a week, flat, versus $129-$169 a month plus add-ons.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "$35 a week, per seat. Unlimited dial-out numbers, multiple inbound numbers, every dialer mode, no per-minute charges. Manager+, our white-label tier, is $75/week and adds teams, shared campaigns, and your own branding. Here's why we can price this way.": [
   "app/faq/why-we-charge/page.tsx"
  ],
@@ -2038,8 +2014,7 @@
   "components/teams/TeamsManager.tsx"
  ],
  "$35 per seat per week": [
-  "app/terms/page.tsx",
-  "app/vs/hookedcrm/view.tsx"
+  "app/terms/page.tsx"
  ],
  "$35 per seat per week and $75 for Manager+, in US dollars, in every language.": [
   "app/faq/languages/page.tsx"
@@ -2072,9 +2047,6 @@
  ],
  "$35 per week per seat. That's the whole price.": [
   "app/faq/why-dialerseat/view.tsx"
- ],
- "$35 this week. Cancel before next Monday and you owe nothing more. Hooked CRM bills monthly per seat with no weekly option published.": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "$35-$95+/mo by tier": [
   "lib/competitorFeatures.ts"
@@ -2129,7 +2101,6 @@
  ],
  "$35/wk, cancel anytime": [
   "app/vs/everyone/view.tsx",
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "$35/wk: no prepay": [
@@ -2243,9 +2214,6 @@
  ],
  "1. DRY RUN BY DEFAULT": [
   "app/faq/data-and-recordings/view.tsx"
- ],
- "1. Named, configurable dialer modes": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "1. SHARE THE LOAD": [
   "app/faq/local-presence-dialing/page.tsx"
@@ -2384,9 +2352,6 @@
  "2. UPLOAD LEADS": [
   "app/faq/campaigns/view.tsx"
  ],
- "2. Weekly billing": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "2. What we collect": [
   "app/privacy/page.tsx"
  ],
@@ -2440,9 +2405,6 @@
  ],
  "3. Monitored": [
   "app/faq/numbers/view.tsx"
- ],
- "3. No usage-based charges": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "3. REGISTERED FIRST": [
   "app/faq/local-presence-dialing/page.tsx"
@@ -2520,9 +2482,6 @@
  "4. ADJUST MODE-SPECIFIC SETTINGS": [
   "app/faq/campaigns/view.tsx"
  ],
- "4. AI features included, not upsold": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "4. RECORDS": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
@@ -2559,9 +2518,6 @@
  "5. DIAL": [
   "app/faq/campaigns/view.tsx"
  ],
- "5. Self-serve signup": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "5% PICK UP": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
@@ -2582,9 +2538,6 @@
  ],
  "6. TCPA and telemarketing compliance": [
   "app/terms/page.tsx"
- ],
- "6. Whitelabel available": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "63.1% answered.": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
@@ -3055,9 +3008,6 @@
  "A quoted three-month commitment against a published weekly price, and four dialer modes against three.": [
   "app/vs/dialer-io/page.tsx"
  ],
- "A real CRM and calling workspace. An unclear dialer.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "A real estate dialer for agents, wholesalers and their VAs: multi-line predictive, local caller ID, calling windows per lead state, and $35 per seat per week with no contract. Bring your list from any data tool.": [
   "app/faq/dialer-for-real-estate/page.tsx"
  ],
@@ -3474,9 +3424,6 @@
  "actually running the sales floor.": [
   "app/faq/managers/view.tsx"
  ],
- "Actually see the dialer modes before you buy.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "Ad-hoc charges sit outside the seat price and are documented separately by the vendor": [
   "lib/competitors.ts"
  ],
@@ -3793,24 +3740,10 @@
  "Aggregate, anonymized usage data informs what we build next. We do not analyze individual user behavior for marketing purposes.": [
   "app/privacy/page.tsx"
  ],
- "AI add-on stacks on top of seat price": [
-  "app/vs/hookedcrm/view.tsx",
-  "lib/competitorFeatures.ts"
- ],
  "AI call coaching / review": [
   "lib/competitorFeatures.ts"
  ],
- "AI coaching/reporting still a per-seat add-on at every tier": [
-  "app/vs/hookedcrm/view.tsx"
- ],
- "AI features cost extra, per seat": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "AI voice/answering-machine detection": [
-  "lib/competitorFeatures.ts"
- ],
- "AI-assisted call notes": [
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Aimed at roughly 20+ seat operations": [
@@ -3874,9 +3807,6 @@
  "All dialer comparisons": [
   "app/vs/everyone/view.tsx",
   "lib/gutsRail.ts"
- ],
- "All dialer modes included, no add-on": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "All four are included at the base price. Each campaign picks its own mode, so one list can run predictive while another runs preview.": [
   "app/features/page.tsx"
@@ -4064,7 +3994,6 @@
   "app/vs/everyone/view.tsx"
  ],
  "AMD voicemail filter always on": [
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "AMD voicemail filter included": [
@@ -5162,10 +5091,6 @@
  "Built-in CRM many teams run their whole operation on": [
   "lib/competitors.ts"
  ],
- "Built-in CRM with lead profiles": [
-  "app/vs/hookedcrm/view.tsx",
-  "lib/competitorFeatures.ts"
- ],
  "Bundesnetzagentur: proof of consent (§7a UWG)": [
   "lib/countryRules.ts"
  ],
@@ -5871,9 +5796,6 @@
  "Can two agents on the same campaign call the same lead?": [
   "app/vs/teams/page.tsx"
  ],
- "Can you actually run a dialer from a phone?": [
-  "app/faq/mobile/page.tsx"
- ],
  "Can't find yours?": [
   "app/faq/view.tsx#prop",
   "app/vs/view.tsx#prop"
@@ -5921,9 +5843,6 @@
  ],
  "Cancel anytime, absolutely no strings attached. Stay for the right reasons, not because you have to.": [
   "app/welcome/Showcase.tsx"
- ],
- "Cancel anytime, no monthly lock-in": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Cancel anytime. Your leads, recordings, and campaigns stay yours.": [
   "app/dialing-modes/view.tsx"
@@ -6037,9 +5956,6 @@
  ],
  "Charges": [
   "app/dashboard/reports/ReportView.tsx"
- ],
- "Cheaper per seat at scale": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "CHEAPER THAN OTHERS": [
   "app/page.tsx"
@@ -7056,9 +6972,6 @@
  "Credit where due: Orum&apos;s AI-driven parallel dialing, up to 5: 10 lines at once, is a real, effective way to increase raw call volume for teams that can afford it. But it comes at a reported $250 to $800 per user per month, annual billing only, a 3-seat minimum, and pricing you can only get by requesting a demo. Reviewers also consistently flag a 1-2 second connection lag when a parallel-dialed call bridges to a rep, and numbers getting flagged &ldquo;Spam Likely&rdquo; over time. DialerSeat™ is self-serve, published pricing, one seat minimum, and every dialer mode included from day one.": [
   "lib/competitorFeatures.ts"
  ],
- "Credit where it's due, growing your team doesn't cost you more per seat.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "Critical retention invariant violated. Nothing was deleted.": [
   "app/api/cron/data-retention/route.ts"
  ],
@@ -7336,9 +7249,6 @@
  ],
  "Demo + sales process first": [
   "lib/competitorFeatures.ts"
- ],
- "Demo required to sign up": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Dense tables stay dense.": [
   "app/faq/mobile/view.tsx"
@@ -7831,8 +7741,7 @@
   "app/faq/numbers/view.tsx"
  ],
  "DIALERSEAT MANAGER+": [
-  "app/page.tsx",
-  "app/vs/hookedcrm/view.tsx"
+  "app/page.tsx"
  ],
  "DialerSeat Manager+ analytics overview, white-labeled, showing total calls, hours dialed, conversions, closed deals, talk time, and best campaign": [
   "app/faq/manager-plus/view.tsx"
@@ -8018,9 +7927,6 @@
  ],
  "DialerSeat vs GoHighLevel": [
   "app/vs/gohighlevel/page.tsx"
- ],
- "DIALERSEAT VS HOOKED CRM": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "DialerSeat vs HubSpot": [
   "app/vs/hubspot/page.tsx"
@@ -8456,9 +8362,6 @@
  "Do not enter an EIN or SSN. DialerSeat does not store tax identifiers, and this statement does not need one to be valid.": [
   "app/dashboard/reports/ReportView.tsx"
  ],
- "Do other dialers work on a phone?": [
-  "app/faq/mobile/page.tsx"
- ],
  "Do people rarely complain about it or block it?": [
   "app/faq/why-calls-show-spam-likely/page.tsx",
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
@@ -8513,9 +8416,6 @@
  ],
  "Does it work for offshore agents calling US leads?": [
   "app/faq/dialer-for-call-centers/page.tsx"
- ],
- "Does it work on both iPhone and Android?": [
-  "app/faq/mobile/page.tsx"
  ],
  "Does registering with the Free Caller Registry remove a spam label?": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
@@ -9490,9 +9390,6 @@
  "FCC’s rules, 47 CFR 64.1200": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
- "Feature": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "FEATURE": [
   "app/page.tsx",
   "app/vs/everyone/view.tsx",
@@ -9503,9 +9400,6 @@
  ],
  "FEATURE REQUEST WEIGHT": [
   "app/faq/manager-plus/view.tsx"
- ],
- "FEATURE-BY-FEATURE": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Features": [
   "app/features/page.tsx",
@@ -9559,9 +9453,6 @@
  ],
  "First dial after signup": [
   "lib/competitorFeatures.ts"
- ],
- "First dial in under 10 minutes": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "First dial under 10 minutes": [
   "lib/competitorFeatures.ts"
@@ -9619,14 +9510,8 @@
  "flagged.": [
   "app/faq/numbers/view.tsx"
  ],
- "Flat $35/week covers calling. Hooked CRM adds per-minute call charges, per-number fees, API request fees, and recording storage fees on top of the seat price.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "Flat membership, free dialing.": [
   "app/faq/dialerseat-teams/view.tsx"
- ],
- "Flat weekly billing": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Flexible seat billing.": [
   "app/faq/why-we-charge/page.tsx"
@@ -9956,19 +9841,11 @@
  "from {teamName}? Their call history stays; their access does not.": [
   "components/teams/TeamModals.tsx"
  ],
- "From $0.042/min": [
-  "app/vs/hookedcrm/view.tsx",
-  "lib/competitorFeatures.ts"
- ],
  "From $19/seat; Power Dialer is +$15/seat/month and Parallel Dialer is +$39/seat/month.": [
   "lib/competitors.ts"
  ],
  "From $375 a month on contact center Essential, which does not include predictive dialing": [
   "lib/competitors.ts"
- ],
- "From $4.60/mo": [
-  "app/vs/hookedcrm/view.tsx",
-  "lib/competitorFeatures.ts"
  ],
  "From $59/month; the Multi Line plan required for predictive is $149/month, plus $1/month per number.": [
   "lib/competitors.ts"
@@ -10066,9 +9943,6 @@
  ],
  "Full white-labeling": [
   "app/faq/manager-plus/view.tsx"
- ],
- "Full whitelabel: your brand, your domain": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Functional preferences:": [
   "app/privacy/page.tsx"
@@ -10168,7 +10042,6 @@
   "app/pricing/page.tsx",
   "app/screenshots/page.tsx",
   "app/vs/everyone/view.tsx",
-  "app/vs/hookedcrm/view.tsx",
   "app/vs/manual-dialing/page.tsx",
   "app/vs/view.tsx",
   "app/welcome/Showcase.tsx",
@@ -10574,30 +10447,11 @@
  "Honest side-by-side comparisons of DialerSeat against every major outbound dialer and business phone system. Pricing, features, what each tool wins at, who should switch.": [
   "app/vs/page.tsx"
  ],
- "Honest side-by-side, checked directly against Hooked CRM's own product pages. Green ✓ = confirmed support, red ✕ = not available or not found, amber = present but structured as an add-on, or a claim we couldn't independently confirm. Hooked CRM's CRM automation and AI notes are real strengths, their outbound dialer specifics are the gap.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "Honestly, often. There is no reason to pay for a dialer to make ten calls.": [
   "app/vs/manual-dialing/page.tsx"
  ],
  "Honoring opt-out requests during and after calls": [
   "app/terms/page.tsx"
- ],
- "Hooked CRM": [
-  "app/vs/hookedcrm/view.tsx"
- ],
- "HOOKED CRM": [
-  "app/vs/hookedcrm/view.tsx"
- ],
- "Hooked CRM markets itself as \"The All-in-One Dialer & CRM,\" but their own product pages never name a single dialer mode: no power, predictive, or progressive dialing anywhere in their documentation. DialerSeat™ gives you all four, configurable per campaign, at": [
-  "app/vs/hookedcrm/view.tsx"
- ],
- "Hooked CRM's calling workspace, CRM platform, and Tacklebox AI product pages are genuinely strong on inbound call handling, automatic lead creation, AI-assisted notes, and supervisor tools like monitor, whisper, and barge. What none of their public pages describe is a named outbound dialing mode: no predictive, power, or progressive dialer terminology anywhere on their site, unlike every other dialer in this category. DialerSeat™ is built specifically for outbound: four dialer modes, lead lists, and dispositions, all included.": [
-  "app/vs/hookedcrm/view.tsx",
-  "lib/competitorFeatures.ts"
- ],
- "Hooked CRM's published pricing is genuinely more transparent than most legacy dialers real numbers, no demo required to see them. Their per-seat price actually drops as your team grows: $169/seat at 1-20 seats, $149/seat at 21-49, $129/seat at 50-99, custom above that. The catch is what's not in the base price: Tacklebox AI (their AI coaching and reporting layer) is a separate $59-$79/seat add-on, and calls, phone numbers, API requests, and recording storage are all billed on top by usage. DialerSeat™ is $35/week, flat, cancel anytime: every dialer mode, AI or not, included at that one price.": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Hop back in.": [
   "app/faq/view.tsx",
@@ -11182,9 +11036,6 @@
  "If any of these is a requirement, one of the enterprise platforms above is the better buy and we would rather you found that out here than after paying us.": [
   "app/vs/teams/page.tsx"
  ],
- "if outbound cold-calling volume is the job you want a specific, named dialer mode for a specific campaign, not a generalized calling workspace. Stay on Hooked CRM if your priority is inbound lead handling, an AI-assisted CRM layer, and supervisor coaching tools, and outbound dialing mode is a secondary concern.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "If that describes you, take {name}. It is a real product with real strengths and no comparison page should talk you out of the right tool.": [
   "components/vs-competitor-view.tsx"
  ],
@@ -11581,9 +11432,6 @@
  "Is the FCC one-to-one consent rule in effect?": [
   "lib/verticals.ts"
  ],
- "Is there a DialerSeat mobile app?": [
-  "app/faq/mobile/page.tsx"
- ],
  "Is there a mobile app?": [
   "app/faq/view.tsx"
  ],
@@ -11850,7 +11698,6 @@
  ],
  "Lapsed-user data preservation": [
   "app/vs/everyone/view.tsx",
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Large integration marketplace": [
@@ -11900,9 +11747,6 @@
  ],
  "Last updated 07/28/2026": [
   "app/vs/everyone/view.tsx"
- ],
- "Last Updated 07/28/2026": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "LAST UPDATED 07/28/2026": [
   "app/faq/billing/view.tsx",
@@ -12249,10 +12093,6 @@
  "Live agent monitoring.": [
   "app/faq/managers/view.tsx"
  ],
- "Live call monitor / whisper / barge": [
-  "app/vs/hookedcrm/view.tsx",
-  "lib/competitorFeatures.ts"
- ],
  "Live call monitoring / coaching": [
   "app/vs/everyone/view.tsx"
  ],
@@ -12271,7 +12111,6 @@
  ],
  "Live mid-call script switching": [
   "app/vs/everyone/view.tsx",
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Live monitoring of FTC TSR § 310.4(b)(4) safe-harbor compliance + TCPA one-to-one consent (FCC Jan 2025) for every campaign you own. Abandon rates calculated over a rolling 30-day window per campaign.": [
@@ -12575,9 +12414,6 @@
  ],
  "Manager+ $75/week flat": [
   "lib/competitorFeatures.ts"
- ],
- "Manager+ adds full whitelabel for $75/week flat. We found no whitelabel or reseller program anywhere on Hooked CRM's site.": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Manager+ adds whitelabel for $75/week, flat.": [
   "app/vs/view.tsx"
@@ -13018,9 +12854,6 @@
  "Most teams never build an offshore floor because the dialer costs more per seat than the agent does per hour. That is a pricing problem, not a technical one.": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
- "Mostly not, and their own documentation says so. ReadyMode's published system requirements call for Windows or Chrome OS with a wired USB headset and a network cable, and list Bluetooth headsets, Wi-Fi, cellular and satellite connections as unsupported. PhoneBurner's support centre says there is no mobile app for Apple or Android, that phone use is not recommended and may be unstable, and that you must switch the browser to full desktop mode. Five9's public requirements page asks for a computer, a USB headset and a high-speed internet connection. Mojo does ship a phone app, and its own pricing page sells lead management and dialing separately: Agent Access at $10 a user, then $89 or $139 a licence for the single-line or three-line dialer.": [
-  "app/faq/mobile/page.tsx"
- ],
  "Mountain": [
   "app/faq/calling-hours/page.tsx"
  ],
@@ -13117,7 +12950,6 @@
  ],
  "Multiple scripts per campaign": [
   "app/vs/everyone/view.tsx",
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "MULTIPLE SCRIPTS PER CAMPAIGN": [
@@ -13180,10 +13012,6 @@
  ],
  "Name your campaign before saving it.": [
   "components/teams/TeamModals.tsx"
- ],
- "Named dialer modes (power/predictive/etc.)": [
-  "app/vs/hookedcrm/view.tsx",
-  "lib/competitorFeatures.ts"
  ],
  "Named here rather than discovered after you pay. If one of these is a requirement, an enterprise contact-centre platform is genuinely the better buy, see the": [
   "app/faq/teams-how-it-works/page.tsx"
@@ -13376,7 +13204,6 @@
   "lib/competitorFeatures.ts"
  ],
  "No annual contract required": [
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "no answer": [
@@ -13580,9 +13407,6 @@
  "No migration required: the CRM stays the system of record": [
   "lib/competitors.ts"
  ],
- "No mobile app found on their site": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "No monthly statements yet. One appears here for each month in which a seat was billed, the first will show up once your first seat charge settles.": [
   "app/dashboard/reports/page.tsx"
  ],
@@ -13598,9 +13422,6 @@
  ],
  "no more than 31 days old": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
- ],
- "No named dialer mode published": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "No national Do Not Call list. A bill to create one is before Congress.": [
   "lib/countryRules.ts"
@@ -13640,12 +13461,6 @@
  ],
  "No per-minute archival fees.": [
   "app/faq/why-we-charge/page.tsx"
- ],
- "No per-minute or per-number charges": [
-  "app/vs/hookedcrm/view.tsx"
- ],
- "No per-seat AI upsell, included at every tier": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "No per-seat fee for anyone": [
   "app/faq/dialerseat-teams/view.tsx"
@@ -13710,9 +13525,6 @@
  "No seats yet.": [
   "components/teams/FloorView.tsx"
  ],
- "No separate AI tier to unlock. Hooked CRM's Tacklebox AI is a $59-$79/seat add-on stacked on top of every plan, including their top published tier.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "No separate reputation-monitoring subscription, no add-on fee for local presence. It's the default on every seat.": [
   "app/faq/numbers/view.tsx"
  ],
@@ -13762,23 +13574,11 @@
  "No usable phone numbers. Each lead needs a 10-digit US number.": [
   "app/api/ingest/leads/[token]/route.ts"
  ],
- "No usage-based call/number charges": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "No valid fields to update": [
   "app/api/campaigns/update/route.ts"
  ],
  "No vendor can raise your price, deprecate your setup, or lock your data in": [
   "lib/competitors.ts"
- ],
- "No weekly billing option": [
-  "app/vs/hookedcrm/view.tsx"
- ],
- "No whitelabel found. Tacklebox AI still $59/seat extra even at scale.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
- "No whitelabel or reseller program found": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "No wizard, no required setup flow, no fields you're forced to fill in before you can dial. Create one, it's active immediately, and every setting below has a sane default so you can start dialing before you've touched a single toggle.": [
   "app/faq/campaigns/view.tsx"
@@ -13966,7 +13766,6 @@
   "app/api/calls/check/route.ts",
   "app/api/calls/hangup/route.ts",
   "app/api/campaigns/delete/route.ts",
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Not from the dashboard. The window is enforced server-side, which means it cannot be bypassed by a client-side change or by an agent choosing a different mode. An override exists at the account level for specific named accounts with a documented reason, and every overridden call is logged with the reason it would otherwise have been blocked.": [
@@ -14016,7 +13815,6 @@
   "lib/competitors.ts"
  ],
  "Not published": [
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Not published; quotes commonly land at $175+ per seat per month": [
@@ -14041,11 +13839,6 @@
   "app/api/teams/members/nickname/route.ts"
  ],
  "Not specified": [
-  "app/vs/hookedcrm/view.tsx",
-  "lib/competitorFeatures.ts"
- ],
- "Not specified anywhere on their site": [
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Not stated": [
@@ -14343,9 +14136,6 @@
  ],
  "On DialerSeat, AMD runs through Telnyx's native call detection, tuned for speed so the analysis window stays short. That's short enough that most humans wait, but it's never going to be zero. It's a trade-off.": [
   "app/faq/how-does-amd-work/page.tsx"
- ],
- "On DialerSeat, yes, including the dialer terminal itself. The agent leg is a SIP registration over a WebSocket with the audio carried by WebRTC inside the browser, so there is no softphone to install and no bridge number to call, and the requirement comes down to a browser and a microphone.": [
-  "app/faq/mobile/page.tsx"
  ],
  "On Manager+ the whole platform carries your logo, your colours and your own domain, so the agents you bring never see our name.": [
   "app/partners/page.tsx"
@@ -15306,7 +15096,6 @@
  ],
  "Per-campaign dialer mode": [
   "app/vs/everyone/view.tsx",
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Per-campaign lines-per-agent setting (1-5). Default 1.5-3 depending on campaign maturity.": [
@@ -15318,20 +15107,6 @@
  ],
  "Per-campaign, per-date-range export of AMD results, abandon flags, and dispositions, redacted by default. The receipts behind the compliance claims.": [
   "app/faq/compliance-export/page.tsx"
- ],
- "Per-minute call charges from $0.042/min": [
-  "app/vs/hookedcrm/view.tsx"
- ],
- "Per-minute call charges on top of seat price": [
-  "app/vs/hookedcrm/view.tsx",
-  "lib/competitorFeatures.ts"
- ],
- "Per-number charges": [
-  "app/vs/hookedcrm/view.tsx",
-  "lib/competitorFeatures.ts"
- ],
- "Per-number charges from $4.60/mo": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Per-number fee": [
   "lib/competitorFeatures.ts"
@@ -15346,7 +15121,6 @@
   "app/faq/dialerseat-teams/view.tsx"
  ],
  "Per-seat cost": [
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Per-seat monthly pricing, with some capability behind higher tiers.": [
@@ -15606,9 +15380,6 @@
  "plus": [
   "app/faq/manager-plus/view.tsx"
  ],
- "Plus $35/week per seat, same rate at any team size": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "Plus you actually see what they're doing.": [
   "app/faq/managers/view.tsx"
  ],
@@ -15807,7 +15578,6 @@
  ],
  "Predictive dialer (multi-line)": [
   "app/vs/everyone/view.tsx",
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Predictive dialer for call centers": [
@@ -16070,15 +15840,8 @@
  "Preview, power, progressive, and predictive. Each trades speed against regulatory exposure. Here's what each one does, in plain terms, and what DialerSeat enforces to keep you compliant.": [
   "app/dialing-modes/view.tsx"
  ],
- "Preview, Power, Progressive, Predictive": [
-  "app/vs/hookedcrm/view.tsx",
-  "lib/competitorFeatures.ts"
- ],
  "Preview, power, progressive, predictive, all four dialing modes summarized in plain terms.": [
   "app/faq/dialer-modes/page.tsx"
- ],
- "Preview, Power, Progressive, Predictive, pick per campaign. Hooked CRM's own product pages describe call handling and monitoring but never name a specific outbound dialing mode.": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Preview, power, progressive, predictive: in one page": [
   "app/faq/view.tsx"
@@ -16118,7 +15881,6 @@
   "app/page.tsx",
   "app/partners/page.tsx",
   "app/vs/[matchup]/page.tsx",
-  "app/vs/hookedcrm/view.tsx",
   "components/ExplainerCrossLinks.tsx",
   "components/VerticalView.tsx",
   "components/site-footer.tsx",
@@ -16364,22 +16126,17 @@
   "components/teams/CampaignsAccessPanel.tsx",
   "components/teams/TeamsManager.tsx"
  ],
- "Public API + webhooks (any CRM)": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "Public API + webhooks (works with any CRM)": [
   "app/vs/everyone/view.tsx"
  ],
  "Public per-seat pricing": [
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Public per-unit pricing": [
   "lib/competitorFeatures.ts"
  ],
  "Public pricing on website": [
-  "app/vs/everyone/view.tsx",
-  "app/vs/hookedcrm/view.tsx"
+  "app/vs/everyone/view.tsx"
  ],
  "Public: anyone in the team, seat still required": [
   "components/teams/TeamModals.tsx"
@@ -17531,9 +17288,6 @@
  "SCALING": [
   "app/vs/everyone/view.tsx"
  ],
- "SCALING A TEAM": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "Scenario A: You upload a list at 11 AM ET": [
   "app/faq/how-we-keep-compliance/page.tsx"
  ],
@@ -17745,9 +17499,6 @@
  "SEAT SPEND": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
  ],
- "Seat tiers + usage + AI add-on": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "Seat usage": [
   "components/teams/FloorView.tsx"
  ],
@@ -17872,7 +17623,6 @@
   "app/vs/everyone/view.tsx"
  ],
  "Self-serve signup, no demo required": [
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Self-serve signup: no demo required to see pricing or start dialing": [
@@ -18029,9 +17779,6 @@
   "app/faq/what-is-a-predictive-dialer/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
  ],
- "Set-up work is a desktop job: uploading a lead file and mapping its columns, writing scripts and configuring a campaign are all faster on a keyboard. Dense tables like the leads list and the compliance export mean scrolling across columns, and you cannot put a CRM beside the dialer on one handset. For a full shift, set auto-lock to Never and keep the phone on a charger.": [
-  "app/faq/mobile/page.tsx"
- ],
  "Set-up work is a desktop job.": [
   "app/faq/mobile/view.tsx"
  ],
@@ -18077,7 +17824,6 @@
  ],
  "Setup fee": [
   "app/vs/everyone/view.tsx",
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Setup Fee": [
@@ -18091,9 +17837,6 @@
  ],
  "Setup fees are commonly $500-$1,500 before the first call": [
   "lib/competitors.ts"
- ],
- "Setup fees not published": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Setup fees, contract terms and trial terms are not published": [
   "lib/competitors.ts"
@@ -18256,9 +17999,6 @@
  "Sign up, create your first team, and generate your first seat code in the next few minutes. White-labeling is a setting away once you're in.": [
   "app/faq/manager-plus/view.tsx"
  ],
- "Sign up, enter card, start dialing in under 10 minutes. Hooked CRM's site routes every plan through \"Book a demo\" or \"Talk to sales.\"": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "Sign up, sign in on your phone's browser, and install it to your home screen in the next sixty seconds.": [
   "app/faq/mobile/view.tsx"
  ],
@@ -18319,9 +18059,6 @@
  ],
  "Six failures every legacy dialer shares. Not one of them is a technical limit; each is a pricing or packaging decision somebody made on purpose.": [
   "app/vs/everyone/view.tsx"
- ],
- "Six things Hooked CRM doesn't publish.": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "SKIP": [
   "app/dashboard/dialer/page.tsx",
@@ -18629,9 +18366,6 @@
  "Starter at $97 a month": [
   "lib/competitors.ts"
  ],
- "Starter tier is $169/seat. Tacklebox AI is $59-$79/seat extra.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "state": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
@@ -18717,7 +18451,6 @@
  ],
  "STIR/SHAKEN A-attestation": [
   "app/vs/everyone/view.tsx",
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "STIR/SHAKEN A-ATTESTATION": [
@@ -18955,9 +18688,6 @@
   "app/dialing-modes/progressive/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
  ],
- "Switch to DialerSeat™": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "switched on in Focus, a second call from the same caller within three minutes gets through even when the phone is silencing calls. That is a big part of what 2x and 3x dialing is for.": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
@@ -18975,10 +18705,6 @@
  ],
  "system. AMD is on. TCPA window enforcement is on. Predictive pacing is available if they want it. Your script is preloaded. They get connected calls faster than they would on their own setup, which means they hit your refund window less often.": [
   "app/faq/managers/view.tsx"
- ],
- "Tacklebox AI add-on": [
-  "app/vs/hookedcrm/view.tsx",
-  "lib/competitorFeatures.ts"
  ],
  "Take a typical “$99/month” dialer. By the time you add the things you actually need to use it:": [
   "app/faq/why-we-charge/page.tsx"
@@ -19077,7 +18803,6 @@
   "app/faq/what-is-a-power-dialer/page.tsx"
  ],
  "TCPA windows enforced server-side": [
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Team": [
@@ -19159,9 +18884,6 @@
  ],
  "Team ownership and white-label, at $75/week": [
   "app/faq/view.tsx"
- ],
- "Team performance + campaign oversight": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "TEAM PRICING": [
   "app/faq/dialer-for-call-centers/page.tsx",
@@ -20310,9 +20032,6 @@
  "The public site on the same handset. There is no separate mobile address and no stripped mobile site to be redirected into.": [
   "lib/screenshots.ts"
  ],
- "THE QUICK VERDICT": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "The real cost is well above the headline": [
   "lib/competitors.ts"
  ],
@@ -20629,9 +20348,6 @@
  "There is no annual contract to lock you in, so the simplest review is your own: one week, $35, on your own list.": [
   "app/faq/view.tsx"
  ],
- "There is no App Store or Play Store download. DialerSeat installs to a phone's home screen as a Progressive Web App and runs full-screen from there, and it is the same application as the desktop one rather than a companion app with a subset of it: Analytics, Dialer, Campaigns, Recordings, Leads, Teams and Settings, with the same permissions behind them.": [
-  "app/faq/mobile/page.tsx"
- ],
  "There is no built-in lead marketplace.": [
   "app/pricing/page.tsx"
  ],
@@ -20682,9 +20398,6 @@
  ],
  "They are on your team but not on any campaign yet. Adding them costs nothing, their seat is already paid for.": [
   "components/teams/AgentDetail.tsx"
- ],
- "They call themselves a dialer.": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "They can dial again and billing restarts.": [
   "components/teams/TeamModals.tsx"
@@ -21376,9 +21089,6 @@
  "Unknown lead": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
  ],
- "Unlike ReadyMode or Five9, Hooked CRM's per-seat price goes down as headcount grows, not up: $169 at 1-20 seats, down to $129 at 50-99. That's a genuinely fair structure for a growing team. What it doesn't include is whitelabel: we found no whitelabel or reseller program anywhere on their site. DialerSeat™ Manager+ is a flat $75/week owner plan with full whitelabel included, on top of a seat price that never changes with headcount either way: no bulk discount to chase, but no per-seat penalty to hit.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "unlimited": [
   "app/faq/why-we-charge/page.tsx"
  ],
@@ -21606,9 +21316,6 @@
  ],
  "Usage billing makes the monthly cost harder to predict": [
   "lib/competitors.ts"
- ],
- "Usage fees (minutes, numbers, API) apply regardless of tier": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Usage-based billing makes a heavy dialing day cost more than a light one": [
   "lib/competitors.ts"
@@ -22019,9 +21726,6 @@
  "We": [
   "app/privacy/page.tsx"
  ],
- "We actually list our dialer modes.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "We aim for high uptime but do not promise specific availability levels. The service depends on third-party providers (Supabase, Vercel, Clerk, Stripe, Telnyx) whose outages affect DialerSeat. We will make reasonable efforts to notify you of planned maintenance and to resolve outages promptly.": [
   "app/terms/page.tsx"
  ],
@@ -22230,14 +21934,10 @@
  ],
  "Weekly billing option": [
   "app/vs/everyone/view.tsx",
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Weekly billing with no annual commitment and no implementation fee": [
   "lib/competitors.ts"
- ],
- "Weekly billing, cancel any time": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Weekly Cost": [
   "app/page.tsx"
@@ -22535,9 +22235,6 @@
  ],
  "WHAT IS THIS?": [
   "components/SuggestionModal.tsx"
- ],
- "What is worse about dialing from a phone?": [
-  "app/faq/mobile/page.tsx"
  ],
  "What It Admits To": [
   "components/teams/TeamModals.tsx"
@@ -22846,17 +22543,11 @@
  "Where DialerSeat is not the right choice": [
   "app/about/page.tsx"
  ],
- "WHERE DIALERSEAT WINS": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "Where do these prices come from?": [
   "app/data/dialer-pricing/page.tsx"
  ],
  "Where each tool wins": [
   "components/vs-competitor-view.tsx"
- ],
- "Where each tool wins.": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Where is my data hosted?": [
   "app/faq/view.tsx"
@@ -23051,9 +22742,6 @@
  ],
  "Whitelabel available": [
   "app/vs/everyone/view.tsx"
- ],
- "Whitelabel, flat rate": [
-  "app/vs/hookedcrm/view.tsx"
  ],
  "Whitelisted agents, they pay their own": [
   "components/teams/TeamModals.tsx"
@@ -23375,9 +23063,6 @@
  "with the vendor’s page and the row is corrected and re-dated.": [
   "app/data/dialer-pricing/page.tsx"
  ],
- "with weekly billing and zero contract.": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "with your name, account email, and a clear statement that you opt out, within 30 days of the date you first agreed to these Terms (or, for existing users, within 30 days of the date this arbitration provision was added or updated). If you opt out, disputes between you and DialerSeat will be resolved in the courts described above rather than through arbitration, and the rest of these Terms remain in effect.": [
   "app/terms/page.tsx"
  ],
@@ -23436,9 +23121,6 @@
  "Works on desktop and mobile browsers, no install required.": [
   "lib/canonicalFacts.ts"
  ],
- "Works on every device (PWA install)": [
-  "app/vs/hookedcrm/view.tsx"
- ],
  "Works on Mobile": [
   "app/page.tsx"
  ],
@@ -23447,7 +23129,6 @@
   "lib/competitorFeatures.ts"
  ],
  "Works on phones + tablets (PWA install)": [
-  "app/vs/hookedcrm/view.tsx",
   "lib/competitorFeatures.ts"
  ],
  "Works with any CRM, Zapier, Make, a Google Sheet, or a script.": [
@@ -23581,9 +23262,6 @@
  ],
  "Yes. No number places more than 60 calls a day, so no caller ID gets burned by volume, and load spreads across the pool before any number runs hot. Every outbound number carries STIR/SHAKEN A-attestation, is registered with the Free Caller Registry, and dials with local presence by default.": [
   "app/faq/view.tsx"
- ],
- "Yes. On iPhone the install is done from Safari, using Share and then Add to Home Screen, which is an Apple restriction rather than ours: other iOS browsers cannot trigger it. On Android it is Chrome's three-dot menu and Install app. Either way updates arrive in the background the way the website updates, with no release to wait for.": [
-  "app/faq/mobile/page.tsx"
  ],
  "Yes. Open team settings, find the member, click Remove. Their access to all team campaigns is revoked within seconds. Their personal account is untouched.": [
   "app/faq/dialerseat-teams/view.tsx"
