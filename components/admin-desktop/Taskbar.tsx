@@ -439,7 +439,7 @@ function DBrandMark({ size = 32 }: { size?: number }) {
         width: size,
         height: size,
         display: 'block',
-        filter: 'drop-shadow(0 0 6px rgba(120,180,255,0.6)) drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
+        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
         userSelect: 'none',
         pointerEvents: 'none',
       }}

@@ -119,7 +119,6 @@ export default function VsHookedCrmView() {
             border-radius: 8px;
             text-decoration: none;
             display: inline-block;
-            box-shadow: 0 0 24px rgba(74,158,255,0.4);
           }
           .vs-section { max-width: 1080px; margin: 0 auto; padding: 80px 32px; }
           .vs-section-eyebrow { font-size: 11px; letter-spacing: 4px; color: ${T.muted}; font-weight: bold; margin-bottom: 12px; }
@@ -138,7 +137,7 @@ export default function VsHookedCrmView() {
           .verdict-text { font-size: 17px; line-height: 1.7; color: ${T.text}; margin: 0; }
           .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
           .price-card { padding: 32px; border-radius: 12px; background: ${T.surface}; border: 1px solid ${T.border}; position: relative; }
-          .price-card.winner { border: 2px solid ${T.blue}; box-shadow: 0 8px 32px rgba(74,158,255,0.12); }
+          .price-card.winner { border: 2px solid ${T.blue}; }
           .price-card-label { font-size: 11px; letter-spacing: 3px; font-weight: bold; color: ${T.muted}; margin-bottom: 8px; }
           .price-card.winner .price-card-label { color: ${T.blue}; }
           .price-card-name { font-size: 24px; font-weight: 800; color: ${T.text}; margin-bottom: 16px; }

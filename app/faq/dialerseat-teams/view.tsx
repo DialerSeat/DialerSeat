@@ -351,7 +351,6 @@ export default function DialerSeatTeamsFaqView() {
             font-weight: bold;
             border-radius: 8px;
             text-decoration: none;
-            box-shadow: 0 0 20px rgba(74,158,255,0.3);
           }
           .tfaq-btn-secondary {
             padding: 14px 28px;

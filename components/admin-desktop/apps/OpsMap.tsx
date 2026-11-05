@@ -100,7 +100,7 @@ const THEME_CSS = `
     --om-amber-soft: rgba(194,118,10,0.18);
     /* The active chip is solid accent on light — on white, only fill reads. */
     --om-chip-on-bg:#1d6fe0; --om-chip-on-fg:#ffffff; --om-chip-on-edge:#1d6fe0;
-    --om-chip-on-shadow: 0 1px 2px rgba(29,111,224,0.30);
+    --om-chip-on-shadow: none;
   }
   [data-om-theme="dark"] {
     --om-page:#0c1016; --om-void:#161c26; --om-sea:#12171f;

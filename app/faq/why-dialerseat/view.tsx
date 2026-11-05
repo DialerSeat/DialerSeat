@@ -262,7 +262,6 @@ export default function WhyDialerSeatView() {
             font-weight: bold;
             border-radius: 8px;
             text-decoration: none;
-            box-shadow: 0 0 20px rgba(74,158,255,0.3);
           }
           .why-btn-secondary {
             padding: 14px 28px;

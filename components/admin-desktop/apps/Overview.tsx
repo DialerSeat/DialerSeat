@@ -541,7 +541,6 @@ export default function OverviewApp() {
         }
         .ovr-status-dot.blue {
           background: ${T.blue};
-          box-shadow: 0 0 6px ${T.blue};
           animation: pulse-blue 2s ease-in-out infinite;
         }
         @keyframes pulse-blue {

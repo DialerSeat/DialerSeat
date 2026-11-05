@@ -106,7 +106,6 @@ export default function ManagerPlusFaqView() {
           }
           .mp-tier-card.hi {
             border: 2px solid ${SITE.deep};
-            box-shadow: 0 4px 20px rgba(42,74,138,0.12);
           }
           .mp-tier-name {
             font-size: 11px; letter-spacing: 2px; font-weight: bold; color: ${SITE.muted};
