@@ -72,6 +72,8 @@ Repeat this loop for every new page:
 
 ## Stage 6: Earn links (this is what moves rankings)
 
+**Ready to use:** [link-kit.md](link-kit.md) has the emails, directory copy and launch post. [link-targets.csv](link-targets.csv) has the sites to pitch and doubles as the tracking sheet.
+
 26. **[Joshua]** Launch where a small product can win: Peerlist Launchpad first, Uneed and MicroLaunch the same week, Product Hunt 1–2 weeks later. Open on a moment (an agent needing two weeks of dialing and being quoted an annual contract), name the villain, give the one checkable claim, use four screenshots, and answer every comment that day.
 27. **[Joshua]** Send 3–5 targeted emails a day and post 2–3 genuine community answers a week. Aim for 20–30 referring domains a quarter. Expect about 2 links per 50 emails, judged on an 8–12 week lag.
 28. Pitch the data, never the product:
@@ -100,6 +102,7 @@ Repeat this loop for every new page:
 ## Waiting on your approval
 
 40. **[Joshua]** Review [copy-review-2026-11-04.md](copy-review-2026-11-04.md): 22 titles, 98 descriptions and the country openers.
+40a. **[Joshua]** Review [page-drafts-2026-11-06.md](page-drafts-2026-11-06.md): 19 tool headlines, two new pages and a new headline for the pricing index.
 41. **[Joshua]** Pick one wording for /faq/numbers: "A-Level, on every number, by default" or "where supported". Every other page says the second.
 
 ## Never
@@ -112,3 +115,5 @@ Repeat this loop for every new page:
 - A customer's real leads in samples, tests or public pages.
 - Judging traffic before late January, or daily.
 - Touching the dialer for any of this.
+- Stating DialerSeat's price as a monthly figure. It is $35 a week. Competitors' monthly prices are quoted as they publish them.
+- Pitching a competitor's price without opening their pricing page first. On 6 Nov 2026 ReadyMode, PhoneBurner, WAVV, Ringover and smrtPhone had all moved.
