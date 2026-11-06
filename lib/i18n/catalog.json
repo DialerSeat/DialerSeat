@@ -3159,14 +3159,14 @@
  "A prerecorded or artificial-voice marketing call needs the person’s prior express written consent, whatever dialed it.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
+ "A price you get after a demo, against $35 a week per seat, published.": [
+  "app/vs/ytel/page.tsx"
+ ],
  "A proprietary number-health system that monitors caller IDs, cools down flagged ones and rotates them back in": [
   "lib/competitors.ts"
  ],
  "A published price against a three-month commitment": [
   "app/vs/view.tsx"
- ],
- "A published starting price is a good start. What matters is which tier the dialing actually lives in.": [
-  "app/vs/dialedin/page.tsx"
  ],
  "a PWA is not a listing in the App Store or Play Store. There's no storefront presence, no App Store search visibility, and no push-notification behavior identical to a fully native app on every device (iOS PWA support in particular trails Android in a few areas, like background sync). For a branded internal tool your agents install once and use daily, none of that matters. If your business model depends specifically on public App Store discoverability for an end-consumer app, that's a different product need than what white-labeling a dialer solves.": [
   "app/faq/white-label-mobile/view.tsx"
@@ -3188,6 +3188,9 @@
  ],
  "A regulatory inquiry.": [
   "app/faq/compliance-export/view.tsx"
+ ],
+ "A reported starting price is only a start. What matters is which tier the dialing actually lives in.": [
+  "app/vs/dialedin/page.tsx"
  ],
  "A resting number is invisible.": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
@@ -8428,7 +8431,7 @@
  "DialerSeat in {count} languages": [
   "app/faq/languages/page.tsx"
  ],
- "DialerSeat is $35 a week per seat: preview, power, and multi-line predictive dialing all included, no tier to unlock. WAVV starts at $59/month and requires its $149/month Multi Line plan for predictive dialing, plus $1/month per phone number.": [
+ "DialerSeat is $35 a week per seat: preview, power, and multi-line predictive dialing all included, no tier to unlock. WAVV starts at $99/month and requires its $149/month Multi Line plan for predictive dialing, plus $1/month per phone number.": [
   "app/vs/wavv/page.tsx"
  ],
  "DialerSeat is $35 per seat per week with every dialer mode included, billed weekly with no contract. The multi-line dialers we compare against bill by the month or the year, so a week with them costs a full month: $239 or more for ReadyMode, $149 for Mojo Dialer.": [
@@ -16629,9 +16632,6 @@
  "Per-seat price overrides are supported, so a partner or discounted seat can differ without a separate plan.": [
   "lib/canonicalFacts.ts"
  ],
- "Per-seat pricing plus a platform fee versus per-seat pricing.": [
-  "app/vs/ytel/page.tsx"
- ],
  "Per-seat pricing, no capacity planning": [
   "lib/competitorFeatures.ts"
  ],
@@ -23793,7 +23793,7 @@
  "WAVV Alternative: Every Dialer Mode, One Flat Price | DialerSeat": [
   "app/vs/wavv/page.tsx"
  ],
- "WAVV charges more the harder you dial, $59 to $149/month depending on the mode. DialerSeat is $35 a week, flat, every mode included. Weekly billing, cancel any time.": [
+ "WAVV charges more the harder you dial, $99 to $149/month depending on the mode. DialerSeat is $35 a week, flat, every mode included. Weekly billing, cancel any time.": [
   "app/vs/wavv/page.tsx"
  ],
  "WAVV is a legitimate dialer with a real trial and real month-to-month billing, this isn't the \"opaque enterprise pricing\" story. Where the two products diverge is structure: WAVV splits its dialer into three priced tiers, so the calling speed you get depends on which plan you're willing to pay for. DialerSeat™ doesn't tier the dialer, every seat gets every mode.": [
@@ -26286,7 +26286,7 @@
  "YOURS": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
- "Ytel Alternative: No Platform Fee on Top of Seats | DialerSeat": [
+ "Ytel Alternative: A Published Price, $35 a Week | DialerSeat": [
   "app/vs/ytel/page.tsx"
  ],
  "Ytel no longer publishes prices, so the number takes a demo. DialerSeat is $35 per seat per week, published on the homepage.": [

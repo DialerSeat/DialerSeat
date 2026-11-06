@@ -23,14 +23,14 @@ const baseMetadata: Metadata = {
   },
   openGraph: {
     title: 'DialerSeat vs DialedIn',
-    description: "A published starting price is a good start. What matters is which tier the dialing actually lives in.",
+    description: "A reported starting price is only a start. What matters is which tier the dialing actually lives in.",
     url: 'https://dialerseat.com/vs/dialedin',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DialerSeat vs DialedIn',
-    description: "A published starting price is a good start. What matters is which tier the dialing actually lives in.",
+    description: "A reported starting price is only a start. What matters is which tier the dialing actually lives in.",
   },
 }
 

@@ -16,21 +16,21 @@ const SLUG = 'ytel'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'Ytel Alternative: No Platform Fee on Top of Seats | DialerSeat',
+  title: 'Ytel Alternative: A Published Price, $35 a Week | DialerSeat',
   description: "Ytel no longer publishes prices, so the number takes a demo. DialerSeat is $35 per seat per week, published on the homepage.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/ytel',
   },
   openGraph: {
     title: 'DialerSeat vs Ytel',
-    description: "Per-seat pricing plus a platform fee versus per-seat pricing.",
+    description: "A price you get after a demo, against $35 a week per seat, published.",
     url: 'https://dialerseat.com/vs/ytel',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DialerSeat vs Ytel',
-    description: "Per-seat pricing plus a platform fee versus per-seat pricing.",
+    description: "A price you get after a demo, against $35 a week per seat, published.",
   },
 }
 

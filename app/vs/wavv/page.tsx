@@ -18,21 +18,21 @@ const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'WAVV Alternative: Every Dialer Mode, One Flat Price | DialerSeat',
   description:
-    'DialerSeat is $35 a week per seat: preview, power, and multi-line predictive dialing all included, no tier to unlock. WAVV starts at $59/month and requires its $149/month Multi Line plan for predictive dialing, plus $1/month per phone number.',
+    'DialerSeat is $35 a week per seat: preview, power, and multi-line predictive dialing all included, no tier to unlock. WAVV starts at $99/month and requires its $149/month Multi Line plan for predictive dialing, plus $1/month per phone number.',
   alternates: {
     canonical: 'https://dialerseat.com/vs/wavv',
   },
   openGraph: {
     title: 'DialerSeat vs WAVV',
     description:
-      'WAVV charges more the harder you dial, $59 to $149/month depending on the mode. DialerSeat is $35 a week, flat, every mode included. Weekly billing, cancel any time.',
+      'WAVV charges more the harder you dial, $99 to $149/month depending on the mode. DialerSeat is $35 a week, flat, every mode included. Weekly billing, cancel any time.',
     url: 'https://dialerseat.com/vs/wavv',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DialerSeat vs WAVV',
-    description: 'WAVV charges more the harder you dial, $59 to $149/month depending on the mode. DialerSeat is $35 a week, flat, every mode included. Weekly billing, cancel any time.',
+    description: 'WAVV charges more the harder you dial, $99 to $149/month depending on the mode. DialerSeat is $35 a week, flat, every mode included. Weekly billing, cancel any time.',
   },
 }
 
