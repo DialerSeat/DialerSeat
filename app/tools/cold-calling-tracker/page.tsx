@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Free cold calling tracker")}
       eyebrow={msg("▸ FREE TOOL · COLD CALLING TRACKER")}
-      h1={msg("Track every call")}
-      h1Second={msg("without a spreadsheet.")}
+      h1={msg("Cold calling tracker:")}
+      h1Second={msg("every call, no spreadsheet.")}
       answer={msg("Log each call with the person’s name, number, outcome, notes and a follow-up date, and the tracker keeps score: calls made, how many reached a person, appointments booked and follow-ups due today. Everything is saved in this browser only. Export to CSV whenever you like, or download a blank template for Excel or Google Sheets.")}
       tool={<ColdCallingTracker />}
       toolIcon="table"

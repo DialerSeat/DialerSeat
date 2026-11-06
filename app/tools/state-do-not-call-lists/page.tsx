@@ -35,8 +35,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("State Do Not Call lists")}
       eyebrow={msg("▸ FREE REFERENCE · STATE DO NOT CALL LISTS")}
-      h1={msg("Which states run")}
-      h1Second={msg("their own list?")}
+      h1={msg("State Do Not Call lists:")}
+      h1Second={msg("which states run their own?")}
       answer={msg("The national registry is not the only list. These eleven states are the ones compliance vendors usually name, and each row was read from the state’s own site: who runs the list, what a telemarketer pays and how often it changes. Where the state did not publish a current price, the row says that rather than quoting an old one.")}
       tool={<StateDncTable />}
       toolIcon="list"

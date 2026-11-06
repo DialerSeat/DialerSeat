@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Erlang C call center staffing calculator")}
       eyebrow={msg("▸ FREE TOOL · ERLANG C STAFFING CALCULATOR")}
-      h1={msg("How many agents")}
-      h1Second={msg("does your queue need?")}
+      h1={msg("Erlang C calculator:")}
+      h1Second={msg("how many agents does your queue need?")}
       answer={msg("Enter the calls you expect in an interval, the average handle time and your service level target, such as 80% answered within 20 seconds. The Erlang C formula gives the agents needed on the phones, the staff to schedule once shrinkage is counted, plus occupancy and average speed of answer.")}
       tool={<ErlangCCalculator />}
       toolIcon="team"

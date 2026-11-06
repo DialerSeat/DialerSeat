@@ -1194,6 +1194,7 @@
  "▸ COMMON QUESTIONS": [
   "app/faq/10dlc-and-outbound-calling/page.tsx",
   "app/faq/calling-hours/page.tsx",
+  "app/faq/cheapest-power-dialer/page.tsx",
   "app/faq/dialerseat-teams/view.tsx",
   "app/faq/how-does-amd-work/page.tsx",
   "app/faq/how-many-numbers-do-i-need/page.tsx",
@@ -1653,6 +1654,9 @@
  "▸ THE FEDERAL RULE": [
   "app/faq/calling-hours/page.tsx"
  ],
+ "▸ THE MATH": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "▸ THE MECHANISMS": [
   "app/faq/how-we-keep-compliance/page.tsx"
  ],
@@ -1672,6 +1676,9 @@
   "app/faq/10dlc-and-outbound-calling/page.tsx",
   "app/faq/how-does-amd-work/page.tsx",
   "app/faq/why-we-charge/page.tsx"
+ ],
+ "▸ THE SMALLEST PURCHASE": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "▸ THE TAKEAWAY": [
   "app/faq/why-is-compliance-important/page.tsx"
@@ -1759,6 +1766,9 @@
  ],
  "▸ WHEN A NUMBER GOES BAD": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
+ ],
+ "▸ WHEN SOMETHING ELSE IS CHEAPER": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "▸ WHEN THIS ACTUALLY GETS USED": [
   "app/faq/compliance-export/view.tsx"
@@ -2001,6 +2011,9 @@
  "$100 to $200 a week": [
   "app/faq/managers/view.tsx"
  ],
+ "$109, one month, plus calling": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "$115 separately, through Stripe or Venmo or whatever you set up on your side. Payment routing for managers is on the roadmap, but right now the agent-to-you transaction is yours to handle.": [
   "app/faq/managers/view.tsx"
  ],
@@ -2009,6 +2022,12 @@
  ],
  "$119-$249/mo ($95-$199 annual)": [
   "lib/competitorFeatures.ts"
+ ],
+ "$119, one month": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
+ "$138, one month, for the two-seat minimum": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "$139 per month for Triple Line plus the $10 Agent Access licence, before data add-ons": [
   "lib/weeklyBilling.ts"
@@ -2034,6 +2053,9 @@
  "$165 per user per month billed monthly on Standard; $140 needs annual billing": [
   "lib/weeklyBilling.ts"
  ],
+ "$165, one month": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "$165+/mo, contract for less": [
   "lib/competitorFeatures.ts"
  ],
@@ -2057,6 +2079,9 @@
  ],
  "$239 per license per month billed monthly on Starter; $199 needs a 12-month term paid upfront": [
   "lib/weeklyBilling.ts"
+ ],
+ "$239, one month": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "$239+/mo": [
   "app/page.tsx",
@@ -2133,6 +2158,9 @@
  "$35 per week per seat. That's the whole price.": [
   "app/faq/why-dialerseat/view.tsx"
  ],
+ "$35, one week": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "$35. No contract. Cancel any time. The dialer is the one we use ourselves: if you don't like it, leave, and your data stays yours.": [
   "app/faq/why-dialerseat/view.tsx"
  ],
@@ -2197,6 +2225,9 @@
  ],
  "$49-$119/mo add-on packages": [
   "lib/competitorFeatures.ts"
+ ],
+ "$49, one month": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "$50 per area code per quarter; all six for $300 a quarter or $1,200 a year": [
   "components/tools/StateDncTable.tsx"
@@ -2265,6 +2296,9 @@
  "$750 per year, four lists included": [
   "components/tools/StateDncTable.tsx"
  ],
+ "$79, one month, plus $0.03 a minute": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "$85 per area code": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
@@ -2277,6 +2311,9 @@
  ],
  "$99-$149/mo + mandatory fee": [
   "lib/competitorFeatures.ts"
+ ],
+ "$99, one month": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "$99/mo": [
   "app/faq/why-we-charge/page.tsx"
@@ -2295,6 +2332,9 @@
  ],
  "1 line: dials / hour": [
   "components/tools/MathTools.tsx#prop"
+ ],
+ "1 week": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "1 WEEK": [
   "app/pricing/page.tsx"
@@ -2460,6 +2500,9 @@
   "app/faq/what-is-a-power-dialer/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
  ],
+ "2 weeks": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "2-seat minimum": [
   "lib/competitorFeatures.ts"
  ],
@@ -2511,6 +2554,9 @@
  "3 (~$9,000/yr floor)": [
   "lib/competitorFeatures.ts"
  ],
+ "3 lines per agent": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "3 lines: conversations / hour": [
   "components/tools/MathTools.tsx#prop"
  ],
@@ -2519,6 +2565,9 @@
  ],
  "3 on Starter, 5 on Pro/Enterprise": [
   "lib/competitorFeatures.ts"
+ ],
+ "3 weeks": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "3-ATTEMPT RETRY BUILT IN": [
   "app/faq/leads/view.tsx"
@@ -2619,6 +2668,9 @@
  ],
  "4 modes incl. predictive": [
   "lib/competitorFeatures.ts"
+ ],
+ "4 weeks": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "4 WEEKS": [
   "app/pricing/page.tsx"
@@ -2759,6 +2811,15 @@
  "A \"connect\" is a call the carrier reported as answered.": [
   "app/data/connect-rates/page.tsx"
  ],
+ "A $165 monthly plan": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
+ "A $49 monthly plan": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
+ "A $99 monthly plan": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "A 30-day money-back guarantee": [
   "lib/competitors.ts"
  ],
@@ -2830,9 +2891,6 @@
  ],
  "A code that brings forty agents who are gone by the second week is not the same thing as a code that brings ten who are still dialing months later. A program that treats those two the same teaches people to chase the first one, and we would rather not pay for churn.": [
   "app/partners/page.tsx"
- ],
- "A cold call script": [
-  "app/tools/cold-call-script-generator/page.tsx"
  ],
  "A Colombian address in the prefix area. Toll-free numbers accept an address anywhere.": [
   "lib/countryRules.ts"
@@ -3044,6 +3102,9 @@
  ],
  "A Medicare pitch and a final expense pitch are different conversations, and an agent switching between them mid-day should not be switching campaigns to find the right words. Campaigns carry multiple scripts, reorderable, switchable mid-call, and notes and dispositions stay with the lead across sessions and across seats.": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
+ ],
+ "A monthly plan costs the same whether you dial for one week or four. DialerSeat costs $35 for each week you use it. The shorter the job, the further ahead weekly billing gets.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "A multi-line dialer aimed at real-estate investors, with a headline rate tied to annual prepay.": [
   "lib/competitors.ts"
@@ -3393,6 +3454,9 @@
   "app/tools/tcpa-compliance-checklist/page.tsx",
   "components/site-footer.tsx"
  ],
+ "Abandon rate calculator:": [
+  "app/tools/abandon-rate-calculator/page.tsx"
+ ],
  "Abandon Rate Calculator: The 3% Rule for Predictive Dialers | DialerSeat": [
   "app/tools/abandon-rate-calculator/page.tsx"
  ],
@@ -3628,12 +3692,6 @@
  "Active, billed weekly": [
   "components/teams/AgentDetail.tsx"
  ],
- "actually compliant?": [
-  "app/tools/tcpa-compliance-checklist/page.tsx"
- ],
- "actually cost you?": [
-  "app/tools/dialer-cost-calculator/page.tsx"
- ],
  "actually running the sales floor.": [
   "app/faq/managers/view.tsx"
  ],
@@ -3839,6 +3897,9 @@
  ],
  "After that: one week. $35.": [
   "app/faq/billing/view.tsx"
+ ],
+ "Against a $99 plan, DialerSeat costs less for up to two weeks and more from the third. Against a $165 plan, it costs less for all four.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "Aged and shared leads need a local number": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
@@ -4329,9 +4390,6 @@
  "An honest side-by-side of {a} and {b}: what each costs, which dialing modes you actually get, the pros and cons of each, and which buyer each suits.": [
   "app/vs/[matchup]/page.tsx"
  ],
- "an hour, really?": [
-  "app/tools/calls-per-hour-calculator/page.tsx"
- ],
  "An initial three-month commitment, then month to month.": [
   "lib/competitors.ts"
  ],
@@ -4518,7 +4576,7 @@
  "Answer, connect and contact rate calculator": [
   "app/tools/contact-rate-calculator/page.tsx"
  ],
- "Answer, connect,": [
+ "answer, connect, contact.": [
   "app/tools/contact-rate-calculator/page.tsx"
  ],
  "Answered": [
@@ -4761,6 +4819,9 @@
  "Are voicemail drops a separate feature?": [
   "app/faq/how-does-amd-work/page.tsx"
  ],
+ "are you inside the 3% rule?": [
+  "app/tools/abandon-rate-calculator/page.tsx"
+ ],
  "Are you sure you want to delete": [
   "components/teams/TeamsManager.tsx"
  ],
@@ -4771,6 +4832,9 @@
   "app/tools/telemarketing-calling-hours/page.tsx"
  ],
  "Area code lookup with time zone": [
+  "app/tools/area-code-lookup/page.tsx"
+ ],
+ "Area code lookup:": [
   "app/tools/area-code-lookup/page.tsx"
  ],
  "Area Code Lookup: State, Time Zone & Local Time": [
@@ -5048,10 +5112,10 @@
  "Average Handle Time Calculator (AHT)": [
   "app/tools/average-handle-time-calculator/page.tsx"
  ],
- "Average handle time is talk time plus hold time plus after-call work, divided by the calls handled. Enter your totals to get AHT in minutes and seconds, the share each part takes, how many calls an agent can handle an hour, and what each call costs in agent time.": [
+ "Average handle time calculator:": [
   "app/tools/average-handle-time-calculator/page.tsx"
  ],
- "average handle time?": [
+ "Average handle time is talk time plus hold time plus after-call work, divided by the calls handled. Enter your totals to get AHT in minutes and seconds, the share each part takes, how many calls an agent can handle an hour, and what each call costs in agent time.": [
   "app/tools/average-handle-time-calculator/page.tsx"
  ],
  "Average speed of answer": [
@@ -5197,9 +5261,6 @@
  "before you upload it to DialerSeat, unless one of the exceptions below applies to that person.": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
- "before you upload it.": [
-  "app/tools/lead-list-cleaner/page.tsx"
- ],
  "Before your call ever rings, something has already decided what the person on the other end will see. Here is what that something is, what it looks at, and which parts of it you can actually change.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
@@ -5276,6 +5337,9 @@
  ],
  "Bill you:": [
   "app/privacy/page.tsx"
+ ],
+ "Billed": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "BILLED": [
   "app/pricing/page.tsx"
@@ -6035,6 +6099,9 @@
   "lib/relatedLinks.ts",
   "lib/tools/registry.ts"
  ],
+ "Calls per hour calculator:": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
+ ],
  "Calls Per Hour Calculator: Dials per Hour, 1 to 3 Lines": [
   "app/tools/calls-per-hour-calculator/page.tsx"
  ],
@@ -6289,7 +6356,7 @@
  "Can two agents on the same campaign call the same lead?": [
   "app/vs/teams/page.tsx"
  ],
- "Can you call": [
+ "can you call that state now?": [
   "app/tools/telemarketing-calling-hours/page.tsx"
  ],
  "Can you call this state right now? The federal window in every lead's local time.": [
@@ -6485,6 +6552,20 @@
  "Cheapest per-agent cost in the industry once you are past roughly 100 agents": [
   "lib/competitors.ts"
  ],
+ "Cheapest power dialer": [
+  "app/faq/cheapest-power-dialer/page.tsx",
+  "app/resources/page.tsx",
+  "lib/relatedLinks.ts"
+ ],
+ "Cheapest Power Dialer: It Depends How Long You Dial": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
+ "Cheapest power dialer: it depends how long you dial.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
+ "Cheapest Power Dialer: What You Actually Pay First | DialerSeat": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "Check a campaign against it": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
@@ -6567,11 +6648,11 @@
  "Clean a lead list, format phone numbers, check what time it is in an area code, stay inside calling hours, staff a queue or write tomorrow's script. Every tool is free, needs no account, and runs in your browser: the ones that read your lists never upload them.": [
   "app/tools/page.tsx"
  ],
+ "clean a list in one paste.": [
+  "app/tools/phone-number-formatter/page.tsx"
+ ],
  "Clean a list into E.164 or (555) 555-0100, drop duplicates, flag numbers that can't be dialed.": [
   "lib/tools/registry.ts"
- ],
- "Clean a phone list": [
-  "app/tools/phone-number-formatter/page.tsx"
  ],
  "Clean analytics": [
   "lib/competitors.ts"
@@ -6633,6 +6714,7 @@
  ],
  "Close": [
   "app/dashboard/teams/page.tsx",
+  "app/faq/cheapest-power-dialer/page.tsx",
   "app/faq/manager-plus/view.tsx",
   "components/SuggestionModal.tsx",
   "components/onboarding/PreviewOnboarding.tsx",
@@ -6738,6 +6820,9 @@
  ],
  "COLD CALLING TRACKER": [
   "app/tools/cold-calls-per-day-calculator/page.tsx"
+ ],
+ "Cold calling tracker:": [
+  "app/tools/cold-calling-tracker/page.tsx"
  ],
  "Cold Calling Tracker: Free, No Signup, Export to CSV": [
   "app/tools/cold-calling-tracker/page.tsx"
@@ -7166,6 +7251,9 @@
  "CONTACT RATE CALCULATOR": [
   "app/tools/calls-per-hour-calculator/page.tsx"
  ],
+ "Contact rate calculator:": [
+  "app/tools/contact-rate-calculator/page.tsx"
+ ],
  "contact sales@dialerseat.com": [
   "app/faq/view.tsx"
  ],
@@ -7181,9 +7269,6 @@
  ],
  "Contact whoever runs this team, only they can resume it.": [
   "components/teams/TeamDetail.tsx"
- ],
- "contact: the right way.": [
-  "app/tools/contact-rate-calculator/page.tsx"
  ],
  "Contains letters": [
   "lib/tools/phone.ts"
@@ -7339,6 +7424,9 @@
   "app/tools/cost-per-lead-calculator/page.tsx",
   "lib/tools/registry.ts"
  ],
+ "Cost per lead calculator:": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
  "Cost Per Lead Calculator: Per Lead, Appointment & Sale": [
   "app/tools/cost-per-lead-calculator/page.tsx"
  ],
@@ -7356,9 +7444,6 @@
  ],
  "Cost to you:": [
   "app/join/[code]/JoinRedeemClient.tsx"
- ],
- "cost you?": [
-  "app/tools/dnc-registry-cost-calculator/page.tsx"
  ],
  "Cost:": [
   "app/join/[code]/JoinRedeemClient.tsx"
@@ -8067,6 +8152,9 @@
  "DialedIn, formerly ChaseData, is reported to start around $89 per user per month with outbound features arriving further up the tiers. DialerSeat includes predictive, power, progressive and preview at $35 per seat per week.": [
   "app/vs/dialedin/page.tsx"
  ],
+ "Dialer": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "DIALER": [
   "app/dashboard/layout.tsx",
   "app/data/dialer-pricing/page.tsx",
@@ -8075,6 +8163,9 @@
   "components/DialerShowcase.tsx",
   "components/WhitelabelLivePreview.tsx",
   "components/onboarding/PreviewOnboarding.tsx"
+ ],
+ "dialer cost calculator": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "Dialer cost calculator": [
   "app/resources/page.tsx",
@@ -8086,8 +8177,14 @@
  "DIALER COST CALCULATOR": [
   "app/tools/cost-per-lead-calculator/page.tsx"
  ],
+ "Dialer cost calculator:": [
+  "app/tools/dialer-cost-calculator/page.tsx"
+ ],
  "Dialer Cost Calculator: Weekly vs Monthly Billing, Any Team Size | DialerSeat": [
   "app/tools/dialer-cost-calculator/page.tsx"
+ ],
+ "Dialer cost, answered.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "Dialer disconnected": [
   "lib/dispositions.ts"
@@ -8526,7 +8623,8 @@
   "app/vs/manual-dialing/page.tsx"
  ],
  "DialerSeat pricing": [
-  "app/pricing/page.tsx"
+  "app/pricing/page.tsx",
+  "lib/relatedLinks.ts"
  ],
  "DIALERSEAT PRICING": [
   "app/faq/what-is-an-auto-dialer/page.tsx",
@@ -9140,6 +9238,9 @@
  "Do Not Call Registry Cost Calculator": [
   "app/tools/dnc-registry-cost-calculator/page.tsx"
  ],
+ "Do Not Call registry cost:": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
+ ],
  "Do Not Call Registry scrubbing, and any state registry or calling-hour rule stricter than the federal one.": [
   "lib/verticals.ts"
  ],
@@ -9240,9 +9341,6 @@
  ],
  "Does using offshore agents change my compliance obligations?": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
- ],
- "does your queue need?": [
-  "app/tools/erlang-c-calculator/page.tsx"
  ],
  "Doesn't the \"hello? ... hello?\" delay annoy people?": [
   "app/faq/how-does-amd-work/page.tsx"
@@ -9410,6 +9508,9 @@
  ],
  "Each outcome is recorded, so the lead is retried, called back at the time you set, or taken off the list.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
+ "Each price is for one seat on the cheapest plan with power dialing, read from the vendor’s own pricing page on 6 November 2026. Prices change, so check before you buy.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "Each row is the same record the matching comparison page renders from, so the index, the comparison pages and the machine-readable copies always agree. Prices are the vendor’s own published figures where they exist, before setup fees, add-ons and usage. Vendors that sell only by quote are shown that way.": [
   "app/data/dialer-pricing/page.tsx"
@@ -9643,6 +9744,9 @@
  "ERLANG C CALCULATOR": [
   "app/tools/average-handle-time-calculator/page.tsx"
  ],
+ "Erlang C calculator:": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
  "Erlang C Calculator: Call Center Staffing": [
   "app/tools/erlang-c-calculator/page.tsx"
  ],
@@ -9732,6 +9836,9 @@
  "Every call, conversion, close, and minute of talk time, tracked the second each call ends. Nothing to log and nothing to maintain. You always know what is working and where your closes come from.": [
   "components/onboarding/PreviewOnboarding.tsx"
  ],
+ "every call, no spreadsheet.": [
+  "app/tools/cold-calling-tracker/page.tsx"
+ ],
  "Every call, with its AMD result, abandon flag and disposition, for any date range.": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
  ],
@@ -9779,6 +9886,9 @@
  ],
  "Every dialer mode, one flat price": [
   "app/vs/view.tsx"
+ ],
+ "Every dialer mode, unlimited numbers and calling in the seat. Billed weekly, cancel any week.": [
+  "app/faq/cheapest-power-dialer/page.tsx#prop"
  ],
  "Every dialer says “no contracts.” Fewer explain what actually happens the moment you click cancel, what a failed card does to your account, or how billing works when you add a seat mid-week. Here's the real mechanics, not just the marketing line.": [
   "app/faq/billing/view.tsx"
@@ -10039,6 +10149,9 @@
  "EXPLAINER · COMPLIANCE": [
   "app/faq/why-is-compliance-important/page.tsx"
  ],
+ "EXPLAINER · DIALER PRICING": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "EXPLAINER · NUMBER POOLS": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
@@ -10224,6 +10337,7 @@
   "app/faq/billing/page.tsx",
   "app/faq/calling-hours/page.tsx",
   "app/faq/campaigns/page.tsx",
+  "app/faq/cheapest-power-dialer/page.tsx",
   "app/faq/compliance-export/page.tsx",
   "app/faq/data-and-recordings/page.tsx",
   "app/faq/dialer-modes/page.tsx",
@@ -10439,7 +10553,7 @@
  "Fix invalid color values before saving.": [
   "app/onboarding/whitelabel/page.tsx"
  ],
- "Fix your lead sheet": [
+ "fix your sheet before you upload it.": [
   "app/tools/lead-list-cleaner/page.tsx"
  ],
  "Fla. Stat. 501.616(6)(a)": [
@@ -10494,6 +10608,9 @@
  ],
  "For $75/week, instead of the standard $35, you get the entire platform white-labeled. Your logo, your colors, your custom domain. Your agents log in and see your brand. They never see DialerSeat anywhere. It's the same product underneath, but to them it's yours.": [
   "app/faq/managers/view.tsx"
+ ],
+ "For a short job, DialerSeat at $35 for one week. Nothing on this page lets you spend less to start, and that week includes predictive dialing. Over months of steady dialing on one line, plans such as CloudTalk Starter with its Power Dialer add-on ($49) or smrtPhone ($79 plus minutes) can cost less.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "For agency owners and lead vendors. Resell seats at your price. Keep your margins. One view across every agent.": [
   "app/faq/managers/page.tsx"
@@ -11002,9 +11119,6 @@
  "Germany": [
   "lib/countryNames.ts"
  ],
- "get a call back.": [
-  "app/tools/sales-voicemail-script-generator/page.tsx"
- ],
  "get auto-detected regardless of exact capitalization, and the only hard requirement is a column with something that has at least 10 digits in it once you strip out formatting.": [
   "app/faq/view.tsx"
  ],
@@ -11187,6 +11301,9 @@
  "green": [
   "app/faq/manager-plus/view.tsx"
  ],
+ "Growth": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "Guides": [
   "app/resources/page.tsx"
  ],
@@ -11365,6 +11482,7 @@
   "app/faq/billing/page.tsx",
   "app/faq/calling-hours/page.tsx",
   "app/faq/campaigns/page.tsx",
+  "app/faq/cheapest-power-dialer/page.tsx",
   "app/faq/compliance-export/page.tsx",
   "app/faq/data-and-recordings/page.tsx",
   "app/faq/dialer-for-call-centers/page.tsx",
@@ -11710,18 +11828,17 @@
  "How long should a sales voicemail be?": [
   "app/tools/sales-voicemail-script-generator/page.tsx"
  ],
- "How many agents": [
-  "app/tools/erlang-c-calculator/page.tsx"
+ "How long you dial decides it.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "How many agents a queue needs to hit its service level, with occupancy and wait time.": [
   "lib/tools/registry.ts"
  ],
- "How many agents does your queue need? Enter calls, handle time and a service level target to get agents, scheduled staff, occupancy and speed of answer.": [
+ "how many agents does your queue need?": [
   "app/tools/erlang-c-calculator/page.tsx"
  ],
- "How many calls": [
-  "app/tools/calls-per-hour-calculator/page.tsx",
-  "app/tools/cold-calls-per-day-calculator/page.tsx"
+ "How many agents does your queue need? Enter calls, handle time and a service level target to get agents, scheduled staff, occupancy and speed of answer.": [
+  "app/tools/erlang-c-calculator/page.tsx"
  ],
  "How many calls a predictive dialer places at once for each free agent, often written 1x, 2x or 3x. More lines mean less waiting and more abandoned calls.": [
   "app/faq/dialer-glossary/page.tsx"
@@ -11733,6 +11850,7 @@
   "app/tools/calls-per-hour-calculator/page.tsx"
  ],
  "How many cold calls per day": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx",
   "lib/tools/registry.ts"
  ],
  "How many cold calls per day do you need?": [
@@ -11783,6 +11901,12 @@
  ],
  "How many you need": [
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "how many, really?": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
+ ],
+ "How much does a power dialer cost?": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "How much does a predictive dialer cost?": [
   "app/data/dialer-pricing/page.tsx"
@@ -12173,6 +12297,9 @@
  "If you buy shared or aged leads, the person you are calling has heard from other agents already, and an unfamiliar out-of-state number is the easiest one to ignore.": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
  ],
+ "If you dial every week, a low monthly plan can cost less.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "If you don't agree to these Terms, don't use the service.": [
   "app/terms/page.tsx"
  ],
@@ -12190,6 +12317,9 @@
  ],
  "If you want to talk through how to structure pricing for your specific situation, or you're a lead vendor and want to think out loud about how to bundle your leads with the dialer, email me directly. I read every one.": [
   "app/faq/managers/view.tsx"
+ ],
+ "If you will dial every week for months and one line is enough, a low monthly plan costs less than weekly billing. The": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "If you're buying leads under a contract that requires demonstrating TCPA-compliant handling, this is the receipt.": [
   "app/faq/compliance-export/view.tsx"
@@ -12275,9 +12405,6 @@
  "In DialerSeat, dispositions and notes stay on the lead across sessions and seats. $35 a week per seat.": [
   "app/tools/average-handle-time-calculator/page.tsx"
  ],
- "in one paste.": [
-  "app/tools/phone-number-formatter/page.tsx"
- ],
  "in predictive mode.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
@@ -12286,9 +12413,6 @@
  ],
  "in seats on DialerSeat, plus $75 for the Manager+ owner. The same ten seats on a platform charging $250 per user per month is roughly": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
- ],
- "in that area code?": [
-  "app/tools/area-code-lookup/page.tsx"
  ],
  "in the top-right corner.": [
   "app/faq/mobile/view.tsx"
@@ -12403,9 +12527,6 @@
  ],
  "Inside the {limit}% limit. You could abandon {headroom} more call{value} before crossing it.": [
   "components/tools/AbandonRateCalculator.tsx"
- ],
- "inside the 3% rule?": [
-  "app/tools/abandon-rate-calculator/page.tsx"
  ],
  "Inside the federal telemarketing window (8 a.m. to 9 p.m. local time).": [
   "components/tools/AreaCodeLookup.tsx"
@@ -12594,8 +12715,7 @@
  "Is this legal advice?": [
   "app/tools/tcpa-compliance-checklist/page.tsx"
  ],
- "Is your campaign": [
-  "app/tools/abandon-rate-calculator/page.tsx",
+ "is your campaign compliant?": [
   "app/tools/tcpa-compliance-checklist/page.tsx"
  ],
  "Is your predictive campaign inside the US, UK or Canadian abandoned-call limit?": [
@@ -12879,6 +12999,9 @@
  "Kixie is well-reviewed but tiers dialing by plan and publishes no price: multi-line dialing needs its top plan, by quote. DialerSeat includes predictive, power, progressive, and preview dialing at $35/seat/week, billed weekly, no tier to climb.": [
   "app/vs/kixie/page.tsx"
  ],
+ "Kixie, CallTools, Ytel, Five9 and Convoso sell by quote, so there is no price to put here.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "La Moncloa: 400 prefix for commercial calls": [
   "lib/countryRules.ts"
  ],
@@ -13066,6 +13189,9 @@
  ],
  "Lead list cleaner, phone number formatter, area code lookup, calling hours by state, Erlang C, script generators and more. No signup.": [
   "app/resources/page.tsx"
+ ],
+ "Lead list cleaner:": [
+  "app/tools/lead-list-cleaner/page.tsx"
  ],
  "Lead list cleaner: any sheet, ready to dial": [
   "app/tools/lead-list-cleaner/page.tsx"
@@ -13856,6 +13982,9 @@
  "MEMORY OF MARKED LEADS": [
   "app/page.tsx"
  ],
+ "messages that get a call back.": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
  "Method": [
   "app/data/connect-rates/page.tsx"
  ],
@@ -13956,6 +14085,7 @@
   "app/vs/everyone/view.tsx"
  ],
  "Mojo Dialer": [
+  "app/faq/cheapest-power-dialer/page.tsx",
   "app/vs/everyone/page.tsx"
  ],
  "MOJO DIALER": [
@@ -14003,6 +14133,7 @@
  ],
  "Monthly": [
   "app/dashboard/reports/page.tsx",
+  "app/faq/cheapest-power-dialer/page.tsx",
   "app/pricing/page.tsx"
  ],
  "Monthly billing available on every plan": [
@@ -15586,6 +15717,9 @@
  "On the floor": [
   "app/faq/dialer-glossary/page.tsx"
  ],
+ "On the monthly plans above, from $49 to $239 for the smallest purchase for one seat, before any usage charges. DialerSeat is $35 a week.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "on top of that, completely outside our platform.": [
   "app/faq/managers/view.tsx"
  ],
@@ -15820,6 +15954,7 @@
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
  "One week costs $35.": [
+  "app/faq/cheapest-power-dialer/page.tsx#prop",
   "app/pricing/page.tsx"
  ],
  "One week. $35.": [
@@ -16151,9 +16286,6 @@
  ],
  "Our total cumulative liability for any claim arising out of or related to these Terms or the service is limited to the amount you paid us in the 12 months preceding the claim": [
   "app/terms/page.tsx"
- ],
- "out of any text.": [
-  "app/tools/phone-number-extractor/page.tsx"
  ],
  "Outbound calling has its own vocabulary, and a lot of it is used loosely by the people selling it. Where a term has a legal definition, that is the one used here. Where it describes something DialerSeat does, it says what we actually do.": [
   "app/faq/dialer-glossary/page.tsx"
@@ -16695,6 +16827,9 @@
  "PHONE NUMBER EXTRACTOR": [
   "app/tools/phone-number-formatter/page.tsx"
  ],
+ "Phone number extractor:": [
+  "app/tools/phone-number-extractor/page.tsx"
+ ],
  "Phone Number Extractor: Pull Numbers From Any Text": [
   "app/tools/phone-number-extractor/page.tsx"
  ],
@@ -16706,6 +16841,9 @@
   "app/tools/phone-number-extractor/page.tsx"
  ],
  "Phone number formatter and cleaner": [
+  "app/tools/phone-number-formatter/page.tsx"
+ ],
+ "Phone number formatter:": [
   "app/tools/phone-number-formatter/page.tsx"
  ],
  "Phone Number Formatter: E.164, Clean & Dedupe a List": [
@@ -16864,6 +17002,9 @@
  ],
  "Plain definitions of the terms outbound calling runs on.": [
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "Plan": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "PLAN": [
   "app/billing/page.tsx",
@@ -17530,6 +17671,7 @@
   "app/privacy/page.tsx"
  ],
  "Pro": [
+  "app/faq/cheapest-power-dialer/page.tsx",
   "app/faq/why-we-charge/page.tsx"
  ],
  "PRO": [
@@ -17555,6 +17697,9 @@
  ],
  "Pro tier ($69/mo, or $49 billed annually) and up": [
   "lib/competitorFeatures.ts"
+ ],
+ "Pro, with all four dialing modes": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "Pro: $35 per seat per week.": [
   "lib/canonicalFacts.ts"
@@ -17750,7 +17895,7 @@
  "Pull a record for any campaign, any date range, whenever you actually need one.": [
   "app/faq/compliance-export/view.tsx"
  ],
- "Pull every number": [
+ "pull every number out of any text.": [
   "app/tools/phone-number-extractor/page.tsx"
  ],
  "Pull every US and Canadian phone number out of pasted text, emails or a web page.": [
@@ -17916,6 +18061,9 @@
  "Read what it promises carefully, because it is unusually honest: registration does not guarantee that your calls will never be blocked or labelled. What it does is establish the number as belonging to a legitimate business rather than a bad actor, which is a data point each provider feeds into its own analysis. It is the right first step and it is not the fix.": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
+ "Read what the low price leaves out. CloudTalk’s and smrtPhone’s dialers are add-ons, smrtPhone meters call time, and Close bills calling on top of the seat. On DialerSeat, all four dialing modes, unlimited numbers and calling are in the seat.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "Read your call recordings unless you specifically ask us to for support": [
   "app/privacy/page.tsx"
  ],
@@ -18028,9 +18176,6 @@
  ],
  "Real-feature releases on a continuous cadence. We don't batch fixes into \"maintenance windows\" we ship what's ready when it's ready.": [
   "app/faq/why-dialerseat/view.tsx"
- ],
- "really cost you?": [
-  "app/tools/cost-per-lead-calculator/page.tsx"
  ],
  "Rearrange": [
   "components/teams/TeamsSidebar.tsx"
@@ -18820,6 +18965,9 @@
   "lib/competitors.ts"
  ],
  "Sales voicemail script generator": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
+ "Sales voicemail script generator:": [
   "app/tools/sales-voicemail-script-generator/page.tsx"
  ],
  "Sales Voicemail Script Generator: 3 Under 30 Seconds": [
@@ -19705,6 +19853,9 @@
  "shows a rate only where at least 250 dials rang. Below that, ordinary chance would move the figure by several points, and we would be publishing noise.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
+ "shows the exact figures for your weeks and agents.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "Shrinkage (%)": [
   "components/tools/MathTools.tsx#prop"
  ],
@@ -19775,11 +19926,17 @@
  "Since August 11, 2026, a commercial call to a consumer needs their prior, express consent (opt-in), and the caller must be able to prove it. Bloctel, the old opt-out list, has ended.": [
   "lib/countryRules.ts"
  ],
+ "Single Line": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "Single Line $99 and Multi Line $149 per seat per month billed monthly, or about $69.30 and $104.30 billed annually. The Multi Line plan is required for predictive, plus $1/month per number.": [
   "lib/competitors.ts"
  ],
  "Single Line Dialer, $89-99/mo + $10/mo Agent Access": [
   "lib/competitorFeatures.ts"
+ ],
+ "Single Line plus Agent Access": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "Single script": [
   "lib/competitorFeatures.ts"
@@ -19889,6 +20046,9 @@
  ],
  "smallest purchase": [
   "app/data/dialer-pricing/page.tsx"
+ ],
+ "Smallest purchase": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "SMALLEST PURCHASE": [
   "app/data/dialer-pricing/page.tsx"
@@ -20100,8 +20260,14 @@
  "Staffing volume swings with clients’ demand. A DialerSeat seat is $35 a week and can be paused when a desk goes quiet, so a recruiter hired for one surge does not cost a year.": [
   "lib/verticals.ts"
  ],
+ "Standard": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "Standard $29 and Unlimited $99 per seat per month billed monthly, or $24 and $83 billed yearly. smrtDialer is an add-on on top: $50 single-line, $90 multi-line or $150 Business per seat per month billed monthly. Call time on the first two is deducted from account credit at $0.03/minute.": [
   "lib/competitors.ts"
+ ],
+ "Standard plus smrtDialer Single Line": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "Standard pricing, the kind anybody gets without emailing anybody, is on the pricing page and stays exactly what it says there.": [
   "app/partners/page.tsx"
@@ -20147,6 +20313,9 @@
  "Start your subscription": [
   "app/billing/page.tsx"
  ],
+ "Starter": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "Starter $239 and iQ $299 per license per month billed monthly, or $199 and $249 billed annually. Custom pricing from 20 licenses.": [
   "lib/competitors.ts"
  ],
@@ -20158,6 +20327,9 @@
  ],
  "Starter at $97 a month": [
   "lib/competitors.ts"
+ ],
+ "Starter plus the Power Dialer add-on, whose $15 is listed as billed annually": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "state": [
   "app/faq/local-presence-dialing/page.tsx"
@@ -20190,6 +20362,9 @@
   "lib/tools/registry.ts"
  ],
  "State do not call lists, checked on each state's own site": [
+  "app/tools/state-do-not-call-lists/page.tsx"
+ ],
+ "State Do Not Call lists:": [
   "app/tools/state-do-not-call-lists/page.tsx"
  ],
  "State Do Not Call Lists: Who Runs Them, What They Cost": [
@@ -20623,6 +20798,9 @@
  "TCPA Compliance Checklist for Outbound Calling": [
   "app/tools/tcpa-compliance-checklist/page.tsx"
  ],
+ "TCPA compliance checklist:": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
+ ],
  "TCPA enforced server-side": [
   "app/vs/everyone/view.tsx"
  ],
@@ -20862,6 +21040,9 @@
  "Telemarketing calling hours by US state": [
   "app/resources/page.tsx"
  ],
+ "Telemarketing calling hours:": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
+ ],
  "Telemarketing calls are allowed from {start} to {end} local time": [
   "components/tools/CallingHoursChecker.tsx"
  ],
@@ -21044,9 +21225,6 @@
  "That principle is the whole point. If you'd like the broader context: why these rules exist, who wrote them, and why so many incumbents treat the fines as a cost of doing business, read": [
   "app/faq/how-we-keep-compliance/page.tsx"
  ],
- "that state right now?": [
-  "app/tools/telemarketing-calling-hours/page.tsx"
- ],
  "that team": [
   "app/billing/page.tsx"
  ],
@@ -21134,6 +21312,9 @@
  "The address contains a long secret that DialerSeat generates. It is never one you choose, because a secret somebody picks is usually a weak one.": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
+ "The advertised price is often the annual rate, paid up front, and the dialer is often a higher tier or an add-on. ReadyMode’s $199 needs a 12-month term paid upfront, for example, and its monthly price is $239.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "The agent doesn't hear it yet.": [
   "app/dialing-modes/progressive/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
@@ -21212,6 +21393,12 @@
  ],
  "The catch: two people answer at once": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
+ ],
+ "The cheapest power dialer depends on how long you dial. See the smallest amount you can spend on each one, read from their own pricing pages.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
+ "The cheapest power dialer depends on how long you need it. DialerSeat bills by the week, so a week costs $35. Dialers that bill by the month charge the whole month even if you dial for one week. Plans with annual terms charge a year up front. Compare the smallest amount you can actually spend.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "The cheapest seat that carries voice at all is $105 a month, before the dialer": [
   "lib/competitors.ts"
@@ -22041,6 +22228,9 @@
  "The six failures the whole category shares: start here": [
   "app/vs/view.tsx"
  ],
+ "The smallest amount you can spend on each dialer, read from their own pricing pages.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "The smallest purchase is a month": [
   "lib/competitors.ts"
  ],
@@ -22242,9 +22432,6 @@
  ],
  "Their lead is on screen as the call connects.": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
- ],
- "their own list?": [
-  "app/tools/state-do-not-call-lists/page.tsx"
  ],
  "Theirs. A call from California at 6 p.m. reaches New York at 9 p.m., already outside the window.": [
   "app/tools/telemarketing-calling-hours/page.tsx"
@@ -22834,9 +23021,6 @@
  ],
  "TRACK AND CLOSE": [
   "app/page.tsx"
- ],
- "Track every call": [
-  "app/tools/cold-calling-tracker/page.tsx"
  ],
  "Traffic (Erlangs)": [
   "components/tools/MathTools.tsx#prop"
@@ -23567,9 +23751,6 @@
  "voicemail, redialing": [
   "app/dashboard/dialer/page.tsx"
  ],
- "Voicemails that": [
-  "app/tools/sales-voicemail-script-generator/page.tsx"
- ],
  "voicemails. Voicemail drops": [
   "app/faq/how-does-amd-work/page.tsx"
  ],
@@ -23790,6 +23971,9 @@
  "Watch analytics roll in. Pull QA on recordings. Kick non-performers or rule-breakers instantly.": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
+ "WAVV": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "WAVV Alternative: Every Dialer Mode, One Flat Price | DialerSeat": [
   "app/vs/wavv/page.tsx"
  ],
@@ -24001,6 +24185,7 @@
   "lib/countryRules.ts"
  ],
  "Weekly": [
+  "app/faq/cheapest-power-dialer/page.tsx",
   "app/pricing/page.tsx"
  ],
  "Weekly billing": [
@@ -24183,7 +24368,7 @@
  "What does a five-agent team cost?": [
   "app/pricing/page.tsx"
  ],
- "What does a lead": [
+ "what does a lead really cost?": [
   "app/tools/cost-per-lead-calculator/page.tsx"
  ],
  "What does a ten-agent floor cost?": [
@@ -24206,6 +24391,9 @@
  ],
  "What each dialer bills for the weeks and agents you need, with seat minimums and annual terms applied. Embeddable.": [
   "app/resources/page.tsx"
+ ],
+ "What each one makes you spend first.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "What eight dialers would bill for your team and the weeks you need.": [
   "lib/tools/registry.ts"
@@ -24348,6 +24536,9 @@
  "What is the best dialer for solar appointment setting?": [
   "lib/verticals.ts"
  ],
+ "What is the cheapest power dialer?": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "What is the difference between a parallel dialer and a power dialer?": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
@@ -24369,7 +24560,7 @@
  "WHAT IS THIS?": [
   "components/SuggestionModal.tsx"
  ],
- "What is your": [
+ "what is yours?": [
   "app/tools/average-handle-time-calculator/page.tsx"
  ],
  "What It Admits To": [
@@ -24510,7 +24701,7 @@
  "What time can telemarketers call? 8 a.m. to 9 p.m. in the person’s local time. See every state’s local time and whether it’s inside the window right now.": [
   "app/tools/telemarketing-calling-hours/page.tsx"
  ],
- "What time is it": [
+ "what time is it there?": [
   "app/tools/area-code-lookup/page.tsx"
  ],
  "What to look for in an auto dialer": [
@@ -24544,10 +24735,10 @@
  "What we tried first": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
  ],
- "What will a dialer": [
+ "what will it actually cost you?": [
   "app/tools/dialer-cost-calculator/page.tsx"
  ],
- "What will the registry": [
+ "what will it cost you?": [
   "app/tools/dnc-registry-cost-calculator/page.tsx"
  ],
  "What worked instead": [
@@ -24836,7 +25027,7 @@
  "Which rules apply to recruiting calls": [
   "lib/verticals.ts"
  ],
- "Which states run": [
+ "which states run their own?": [
   "app/tools/state-do-not-call-lists/page.tsx"
  ],
  "Whichever script sits first in the order is what agents see by default on that campaign, drag to reorder any time.": [
@@ -25082,6 +25273,9 @@
  "Why divide by dials that rang?": [
   "app/tools/contact-rate-calculator/page.tsx"
  ],
+ "Why do cheap dialers cost more than they look?": [
+  "app/faq/cheapest-power-dialer/page.tsx"
+ ],
  "Why Do My Calls Show “Spam Likely”?": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
@@ -25305,9 +25499,6 @@
  ],
  "Without a business name and a callback number there is no lawful message to play, so DialerSeat does not let predictive run at all: the mode can’t be saved on a campaign, and the dialer refuses to start. Settings shows it as LOCKED or UNLOCKED. It is one field each, set once for the account, and every campaign you own uses them.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
- ],
- "without a spreadsheet.": [
-  "app/tools/cold-calling-tracker/page.tsx"
  ],
  "Without burning one out.": [
   "app/faq/local-presence-dialing/page.tsx"
@@ -25688,6 +25879,9 @@
  ],
  "YOU DECIDE WHO PAYS": [
   "app/faq/manager-plus/view.tsx"
+ ],
+ "You dial for": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "You dial this campaign": [
   "components/teams/CampaignDetail.tsx"

@@ -32,7 +32,7 @@ export default function Page() {
       route={ROUTE}
       name={msg("How many cold calls per day do you need?")}
       eyebrow={msg("▸ FREE TOOL · COLD CALLS PER DAY")}
-      h1={msg("How many calls")}
+      h1={msg("How many cold calls per day")}
       h1Second={msg("to hit your number?")}
       answer={msg("Start from the sales you want this month and work backwards: sales divided by your close rate gives appointments, appointments divided by your booking rate gives conversations, and conversations divided by your contact rate gives dials. Spread over your calling days, that is how many cold calls you need each day.")}
       tool={<ColdCallsPerDayCalculator />}

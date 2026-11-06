@@ -41,6 +41,7 @@ const SEGMENT: Record<Competitor['segment'], RelatedLink[]> = {
     { href: '/faq/local-presence-dialing', label: msg("Local presence dialing") },
     { href: '/faq/how-to-remove-spam-likely', label: msg("How to remove Spam Likely") },
     { href: '/tools/lead-list-cleaner', label: msg("Lead list cleaner") },
+    { href: '/faq/cheapest-power-dialer', label: msg("Cheapest power dialer") },
     { href: '/faq/why-we-charge', label: msg("Power dialer pricing") },
   ],
   sales_crm: [
@@ -48,6 +49,7 @@ const SEGMENT: Record<Competitor['segment'], RelatedLink[]> = {
     { href: '/faq/what-is-a-parallel-dialer', label: msg("Parallel dialer vs power dialer") },
     { href: '/faq/send-leads-from-your-crm', label: msg("Send leads from your CRM") },
     { href: '/faq/dialer-for-b2b-sales', label: msg("Dialer for B2B sales") },
+    { href: '/faq/cheapest-power-dialer', label: msg("Cheapest power dialer") },
     { href: '/faq/why-we-charge', label: msg("Power dialer pricing") },
   ],
   phone_system: [
@@ -89,6 +91,13 @@ const PRICING_INDEX: RelatedLink = { href: '/data/dialer-pricing', label: msg("D
 
 /** Links for an FAQ or explainer page, keyed by its route. */
 export const RELATED_BY_ROUTE: Record<string, RelatedLink[]> = {
+  '/faq/cheapest-power-dialer': [
+    { href: '/data/dialer-pricing', label: msg("Dialer pricing index") },
+    { href: '/pricing', label: msg("DialerSeat pricing") },
+    { href: '/vs/phoneburner', label: ALT, vars: { name: "PhoneBurner" } },
+    { href: '/vs/mojo', label: ALT, vars: { name: "Mojo Dialer" } },
+    { href: '/vs/cloudtalk', label: ALT, vars: { name: "CloudTalk" } },
+  ],
   '/dialing-modes/power': [
     { href: '/vs/phoneburner', label: ALT, vars: { name: "PhoneBurner" } },
     { href: '/vs/kixie', label: ALT, vars: { name: "Kixie" } },

@@ -32,7 +32,7 @@ export default function Page() {
       route={ROUTE}
       name={msg("Cold call script generator")}
       eyebrow={msg("▸ FREE TOOL · COLD CALL SCRIPT GENERATOR")}
-      h1={msg("A cold call script")}
+      h1={msg("Cold call script generator")}
       h1Second={msg("for your industry.")}
       answer={msg("Pick your industry and fill in your name, company and market to get a full cold call script: an opener, the reason for the call, three questions, an appointment close and rebuttals for the objections that actually come up in your industry. It also covers what to say when someone asks how you got their number, or asks not to be called.")}
       tool={<ColdCallScriptGenerator />}

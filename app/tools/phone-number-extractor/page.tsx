@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Extract phone numbers from text")}
       eyebrow={msg("▸ FREE TOOL · PHONE NUMBER EXTRACTOR")}
-      h1={msg("Pull every number")}
-      h1Second={msg("out of any text.")}
+      h1={msg("Phone number extractor:")}
+      h1Second={msg("pull every number out of any text.")}
       answer={msg("Paste any block of text, an email thread, meeting notes, a copied web page, and this pulls out every US and Canadian phone number in it, whatever the formatting. Duplicates are merged, each number is checked, and you can copy the list or download a CSV. Nothing you paste leaves your browser.")}
       tool={<PhoneNumberExtractor />}
       toolIcon="phone"

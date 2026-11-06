@@ -102,7 +102,7 @@ Repeat this loop for every new page:
 ## Waiting on your approval
 
 40. **[Joshua]** Review [copy-review-2026-11-04.md](copy-review-2026-11-04.md): 22 titles, 98 descriptions and the country openers.
-40a. **[Joshua]** Review [page-drafts-2026-11-06.md](page-drafts-2026-11-06.md): 19 tool headlines, two new pages and a new headline for the pricing index.
+40a. **[Joshua]** Review [page-drafts-2026-11-06.md](page-drafts-2026-11-06.md): the call screening page and a new headline for the pricing index. The tool headlines and cheapest power dialer page have shipped.
 41. **[Joshua]** Pick one wording for /faq/numbers: "A-Level, on every number, by default" or "where supported". Every other page says the second.
 
 ## Never

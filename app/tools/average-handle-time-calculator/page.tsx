@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Average handle time calculator")}
       eyebrow={msg("▸ FREE TOOL · AVERAGE HANDLE TIME")}
-      h1={msg("What is your")}
-      h1Second={msg("average handle time?")}
+      h1={msg("Average handle time calculator:")}
+      h1Second={msg("what is yours?")}
       answer={msg("Average handle time is talk time plus hold time plus after-call work, divided by the calls handled. Enter your totals to get AHT in minutes and seconds, the share each part takes, how many calls an agent can handle an hour, and what each call costs in agent time.")}
       tool={<AhtCalculator />}
       toolIcon="scale"

@@ -1,6 +1,6 @@
 # Page drafts for your approval, 6 Nov 2026
 
-Nothing here is live. Reply with the numbers you want changed or dropped. Once approved, I translate each one into the 11 other languages and ship one or two a week, as the book says. DialerSeat's price is only ever stated in weeks.
+**Shipped 6 Nov 2026 on your approval:** sections 1 and 3. **Still drafts:** sections 2 and 4. Reply with what you want changed or dropped. I ship one or two a week, as the book says. DialerSeat's price is only ever stated in weeks.
 
 ## 1. Tool headlines (book chapter 7: the headline carries the search phrase)
 

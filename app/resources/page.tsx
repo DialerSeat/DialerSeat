@@ -107,6 +107,7 @@ const GUIDES = [
   { href: '/faq/why-calls-show-spam-likely', label: msg("Why calls show “Spam Likely”") },
   { href: '/faq/local-presence-dialing', label: msg("Local presence dialing") },
   { href: '/faq/how-many-numbers-do-i-need', label: msg("How many phone numbers a dialer needs") },
+  { href: '/faq/cheapest-power-dialer', label: msg("Cheapest power dialer") },
   { href: '/faq/10dlc-and-outbound-calling', label: msg("Do you need 10DLC to make outbound calls?") },
   { href: '/faq/dialer-glossary', label: msg("Dialer glossary") },
   { href: '/dialing-modes', label: msg("Preview, power, progressive and predictive dialing") },

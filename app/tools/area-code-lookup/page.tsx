@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Area code lookup with time zone")}
       eyebrow={msg("▸ FREE TOOL · AREA CODE LOOKUP")}
-      h1={msg("What time is it")}
-      h1Second={msg("in that area code?")}
+      h1={msg("Area code lookup:")}
+      h1Second={msg("what time is it there?")}
       answer={msg("Type an area code or a full phone number to see the state it belongs to, its time zone, the local time there right now, and whether it is inside the federal telemarketing window of 8 a.m. to 9 p.m. Below it, every US area code is listed by state with the current local time.")}
       tool={<AreaCodeLookup />}
       toolIcon="phone"

@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Cost per lead calculator")}
       eyebrow={msg("▸ FREE TOOL · COST PER LEAD")}
-      h1={msg("What does a lead")}
-      h1Second={msg("really cost you?")}
+      h1={msg("Cost per lead calculator:")}
+      h1Second={msg("what does a lead really cost?")}
       answer={msg("Cost per lead is total spend divided by the leads it bought. Add appointments and sales to see cost per appointment and cost per sale, and revenue per sale to see the return on what you spent. Count whatever spend matters to you: the leads, the dialer, ads or time.")}
       tool={<CostPerLeadCalculator />}
       toolIcon="price"

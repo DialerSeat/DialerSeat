@@ -33,8 +33,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Lead list cleaner")}
       eyebrow={msg("▸ FREE TOOL · LEAD LIST CLEANER")}
-      h1={msg("Fix your lead sheet")}
-      h1Second={msg("before you upload it.")}
+      h1={msg("Lead list cleaner:")}
+      h1Second={msg("fix your sheet before you upload it.")}
       answer={msg("Open your lead sheet (CSV or Excel) and this cleaner checks what every column actually holds, not just what its header says. It reformats phone numbers to 10 digits, turns states into 2-letter codes, splits full names, fixes ALL CAPS, removes duplicates and lists rows that cannot be dialed. Download a clean CSV. The file never leaves your browser.")}
       tool={<LeadListCleaner />}
       toolIcon="list"

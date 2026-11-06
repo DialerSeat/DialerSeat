@@ -106,7 +106,7 @@ export default async function AbandonRateCalculatorPage() {
           <div className="guts-hero">
             <div className="guts-eyebrow">{t("▸ TOOL · ABANDON RATE CALCULATOR")}</div>
             <h1>
-              {t("Is your campaign")}<span className="second">{t("inside the 3% rule?")}</span>
+              {t("Abandon rate calculator:")}<span className="second">{t("are you inside the 3% rule?")}</span>
             </h1>
             <p>
               {t("Enter answered and abandoned calls and pick the rule you dial under. You get the rate, whether it is inside the limit, and how many more calls you could abandon before crossing it.")}</p>

@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("TCPA compliance checklist")}
       eyebrow={msg("▸ FREE TOOL · TCPA COMPLIANCE CHECKLIST")}
-      h1={msg("Is your campaign")}
-      h1Second={msg("actually compliant?")}
+      h1={msg("TCPA compliance checklist:")}
+      h1Second={msg("is your campaign compliant?")}
       answer={msg("Tick off what your outbound campaign already does: Do Not Call scrubbing, consent for autodialed calls to mobiles, calling hours in the lead’s time zone, the 3% abandoned-call limit, caller ID and the disclosures at the start of each call. Each item names the regulation it comes from. What stays unticked is your to-do list.")}
       tool={<TcpaChecklist />}
       toolIcon="shield"

@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Telemarketing calling hours by state")}
       eyebrow={msg("▸ FREE TOOL · TELEMARKETING CALLING HOURS")}
-      h1={msg("Can you call")}
-      h1Second={msg("that state right now?")}
+      h1={msg("Telemarketing calling hours:")}
+      h1Second={msg("can you call that state now?")}
       answer={msg("Telemarketers may call between 8 a.m. and 9 p.m. in the called person’s local time under federal rules, and some states are stricter: Florida ends at 8 p.m. Pick a state or type a number to see the local time there and whether a call is allowed now, then check every state at a glance.")}
       tool={<CallingHoursChecker />}
       toolIcon="calendar"

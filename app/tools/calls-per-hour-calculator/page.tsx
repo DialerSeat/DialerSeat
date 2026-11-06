@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Calls per hour calculator")}
       eyebrow={msg("▸ FREE TOOL · CALLS PER HOUR")}
-      h1={msg("How many calls")}
-      h1Second={msg("an hour, really?")}
+      h1={msg("Calls per hour calculator:")}
+      h1Second={msg("how many, really?")}
       answer={msg("Calls per hour is dials divided by hours spent dialing. Enter yours, then your answer rate, talk time and ring time to estimate dials and conversations per hour on one, two or three lines, and see how much of your hour goes to waiting on phones that never pick up.")}
       tool={<CallsPerHourCalculator />}
       toolIcon="phone"

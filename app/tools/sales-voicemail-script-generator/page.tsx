@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Sales voicemail script generator")}
       eyebrow={msg("▸ FREE TOOL · SALES VOICEMAIL SCRIPTS")}
-      h1={msg("Voicemails that")}
-      h1Second={msg("get a call back.")}
+      h1={msg("Sales voicemail script generator:")}
+      h1Second={msg("messages that get a call back.")}
       answer={msg("Pick your industry and enter your name, company and callback number to get three sales voicemails, each under 30 seconds: a first touch, a follow-up and a final message. Each shows its word count and speaking time, says your number twice, and stays short enough that people listen to the end.")}
       tool={<VoicemailScriptGenerator />}
       toolIcon="chat"

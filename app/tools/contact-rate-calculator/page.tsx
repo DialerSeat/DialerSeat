@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Answer, connect and contact rate calculator")}
       eyebrow={msg("▸ FREE TOOL · CONTACT RATE CALCULATOR")}
-      h1={msg("Answer, connect,")}
-      h1Second={msg("contact: the right way.")}
+      h1={msg("Contact rate calculator:")}
+      h1Second={msg("answer, connect, contact.")}
       answer={msg("Enter your dials, the dials that rang, answers, live connects and calls with a real outcome to get answer rate, connect rate and contact rate. Each is divided by dials that actually rang, not every dial, so a technical failure is never counted against your list, while failed dials still show in your totals.")}
       tool={<ContactRateCalculator />}
       toolIcon="scale"

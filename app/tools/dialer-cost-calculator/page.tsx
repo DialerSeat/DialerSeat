@@ -105,7 +105,7 @@ export default async function DialerCostCalculatorPage() {
           <div className="guts-hero">
             <div className="guts-eyebrow">{t("▸ TOOL · DIALER COST CALCULATOR")}</div>
             <h1>
-              {t("What will a dialer")}<span className="second">{t("actually cost you?")}</span>
+              {t("Dialer cost calculator:")}<span className="second">{t("what will it actually cost you?")}</span>
             </h1>
             <p>
               {t("Set the weeks you need and the agents you have. Monthly and annual billing, seat minimums and the vendors’ own published prices are applied, so the number is what you would be billed.")}</p>

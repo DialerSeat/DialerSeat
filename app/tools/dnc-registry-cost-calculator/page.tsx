@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Do Not Call registry cost calculator")}
       eyebrow={msg("▸ FREE TOOL · DO NOT CALL REGISTRY COST")}
-      h1={msg("What will the registry")}
-      h1Second={msg("cost you?")}
+      h1={msg("Do Not Call registry cost:")}
+      h1Second={msg("what will it cost you?")}
       answer={msg("Enter how many area codes you call, or paste your numbers and the area codes are counted for you. The National Do Not Call Registry gives the first five area codes free; from 1 October 2026 each one after that costs $85, and access to every area code is capped at $23,425.")}
       tool={<DncCostCalculator />}
       toolIcon="price"

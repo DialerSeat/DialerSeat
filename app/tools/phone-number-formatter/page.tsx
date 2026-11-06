@@ -32,8 +32,8 @@ export default function Page() {
       route={ROUTE}
       name={msg("Phone number formatter and cleaner")}
       eyebrow={msg("▸ FREE TOOL · PHONE NUMBER FORMATTER")}
-      h1={msg("Clean a phone list")}
-      h1Second={msg("in one paste.")}
+      h1={msg("Phone number formatter:")}
+      h1Second={msg("clean a list in one paste.")}
       answer={msg("Paste a column of phone numbers or open a CSV, pick a format, and get a clean list back: E.164 (+14155550132), (415) 555-0132, dashes or plain digits. Duplicates are removed, and numbers that cannot be dialed are listed with the reason, using the same checks a dialer runs. It all happens in your browser.")}
       tool={<PhoneNumberFormatter />}
       toolIcon="phone"
