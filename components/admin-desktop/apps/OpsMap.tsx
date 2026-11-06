@@ -335,6 +335,7 @@ type Persisted = {
   pulseTab?: 'calls' | 'visitors' | 'income'
   compWindow?: '7d' | 'month' | 'all'
   showTargets?: boolean; feedView?: 'calls' | 'people' | 'logs'; focusLive?: boolean
+  likelyReal?: boolean
   feedSize?: number
   callFilter?: 'all' | 'live' | 'answered' | 'missed' | 'machine' | 'human' | 'closed'
   peopleFilter?: 'all' | 'online' | 'paying' | 'seat' | 'dialed' | 'unplaced'
@@ -538,6 +539,7 @@ export default function OpsMap() {
   // a subset, it is an order — so it lives beside the filter, not inside it.
   const [peopleSort, setPeopleSort] = useState<'recent' | 'first'>(saved.peopleSort ?? 'recent')
   const [showTargets, setShowTargets] = useState(saved.showTargets ?? true)
+  const [likelyReal, setLikelyReal] = useState(saved.likelyReal ?? false)
 
   // What the wide panel is showing. CALLS is a ticker of events; PEOPLE is a
   // roster of accounts. They answer different questions and neither belongs
@@ -653,6 +655,7 @@ export default function OpsMap() {
       const res = await fetch(
         `/api/admin/ops-map?mode=${mode}&range=${range}&feed=${feedSize}` +
         (callFilter === 'closed' ? '&closed=1' : '') +
+        (likelyReal ? '&real=1' : '') +
         (scope === 'fast' ? '&scope=fast' : '')
       )
       const json = await res.json()
@@ -668,7 +671,7 @@ export default function OpsMap() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load')
     }
-  }, [mode, range, feedSize, callFilter])
+  }, [mode, range, feedSize, callFilter, likelyReal])
 
   // No setState for "have we loaded yet" — that is `data === null`, and
   // deriving it removes a state that could disagree with the data it
@@ -762,14 +765,14 @@ export default function OpsMap() {
     const originKey = selected && !selected.startsWith('T-') ? selected : null
     if (!originKey) return
     let cancelled = false
-    fetch(`/api/admin/ops-map?place=${encodeURIComponent(originKey)}&range=${range}`)
+    fetch(`/api/admin/ops-map?place=${encodeURIComponent(originKey)}&range=${range}${likelyReal ? '&real=1' : ''}`)
       .then(r => r.json())
       .then((j: { success?: boolean; detail?: PlaceDetail }) => {
         if (!cancelled && j?.success && j.detail) setDetailFor({ key: originKey, data: j.detail })
       })
       .catch(() => { /* the next beat tries again */ })
     return () => { cancelled = true }
-  }, [selected, range, beat])
+  }, [selected, range, beat, likelyReal])
 
   // One person's calls, fetched when their card opens. Not on the 5s beat:
   // the panel is opened deliberately and a log that reshuffles under the
@@ -819,7 +822,7 @@ export default function OpsMap() {
   useEffect(() => {
     try {
       window.localStorage.setItem(STORE, JSON.stringify({
-        mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView, feedSize,
+        mode, range, feedOpen, ranksOpen, showTargets, likelyReal, pulseOpen, feedView, feedSize,
         notisOpen, compOpen, notisTab, pulseTab, compWindow, theme, focusLive,
         logsSeenAt,
         callFilter, peopleFilter, peopleSort,
@@ -835,7 +838,7 @@ export default function OpsMap() {
         },
       }))
     } catch { /* nothing here is worth failing a render for */ }
-  }, [mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView, feedSize,
+  }, [mode, range, feedOpen, ranksOpen, showTargets, likelyReal, pulseOpen, feedView, feedSize,
       notisOpen, compOpen, notisTab, pulseTab, compWindow, theme, focusLive, logsSeenAt,
       callFilter, peopleFilter, peopleSort,
       selected, view])
@@ -1935,6 +1938,12 @@ export default function OpsMap() {
                   onClick={() => setShowTargets(v => !v)}>
             <span className="om-track"><span className="om-knob" /></span>
             CALLS MADE
+          </button>
+          <button className="om-chip om-switch" data-on={likelyReal}
+                  title="Visitor counts leave out direct one-page visits under 5 seconds, which is what crawlers look like. Some real people bounce that way too. Nothing is deleted."
+                  onClick={() => setLikelyReal(v => !v)}>
+            <span className="om-track"><span className="om-knob" /></span>
+            LIKELY REAL
           </button>
           <button className="om-chip" onClick={() => zoomAbout(1.6)} title="Zoom in">+</button>
           <button className="om-chip" onClick={() => zoomAbout(1 / 1.6)} title="Zoom out">−</button>

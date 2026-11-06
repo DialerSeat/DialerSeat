@@ -173,6 +173,7 @@ export async function GET(req: NextRequest) {
         p_region: region,
         p_since: sinceQ,
         p_online_seconds: ONLINE_SECONDS,
+        p_likely_real: req.nextUrl.searchParams.get('real') === '1',
       })
       if (error) throw error
       const { emails: pausedEmails } = await pausedAccounts()
@@ -225,6 +226,11 @@ export async function GET(req: NextRequest) {
       })
       return NextResponse.json({ success: true, person: personId, calls })
     }
+
+    // LIKELY REAL: leaves out direct one-page visits under 5 seconds, which is
+    // what crawlers running a normal browser look like. The rule is
+    // page_view_likely_real in db/migrations/2026-11-06-likely-real-visitors.sql.
+    const likelyReal = req.nextUrl.searchParams.get('real') === '1'
 
     const rawMode = req.nextUrl.searchParams.get('mode') || 'visitors'
     const mode: Mode = (MODES as readonly string[]).includes(rawMode) ? (rawMode as Mode) : 'visitors'
@@ -296,7 +302,7 @@ export async function GET(req: NextRequest) {
 
     const [originsRes, extraVisitorsRes, targetsRes, feedRes, balanceRes, concurrencyRes, dayCallsRes, breakdownRes, pulseRes, peopleRes, notisRes, compRes, logsRes, visitorsRes, vPulseRes, incomeRes] = await Promise.all([
       mode === 'visitors'
-        ? supabase.rpc('ops_map_visitors', { p_since: since })
+        ? supabase.rpc('ops_map_visitors', { p_since: since, p_likely_real: likelyReal })
         : supabase.rpc('ops_map', {
             // EVERYTHING draws accounts and strangers on one map, so the
             // account half is the widest one there is.
@@ -305,7 +311,7 @@ export async function GET(req: NextRequest) {
           }),
       // Only fetched for EVERYTHING; every other mode already has its answer.
       mode === 'everything'
-        ? supabase.rpc('ops_map_visitors', { p_since: since })
+        ? supabase.rpc('ops_map_visitors', { p_since: since, p_likely_real: likelyReal })
         : Promise.resolve({ data: [], error: null }),
       fast ? EMPTY : supabase.rpc('ops_map_targets', { p_since: since }),
       supabase.rpc('ops_map_feed', { p_limit: feedLimit }),
@@ -385,9 +391,9 @@ export async function GET(req: NextRequest) {
       // browser's anonymous reading and the account it later became are one
       // person. Reused rather than re-derived so the two screens cannot
       // disagree about who visited.
-      fast ? EMPTY : supabase.rpc('pv_individuals', { p_since: since, p_until: null, p_limit: 60 }),
+      fast ? EMPTY : supabase.rpc('pv_individuals', { p_since: since, p_until: null, p_limit: 60, p_likely_real: likelyReal }),
       // New arrivals over time, bucketed to line up with the call pulse.
-      fast ? EMPTY : supabase.rpc('ops_map_visitor_pulse', { p_since: since, p_buckets: buckets }),
+      fast ? EMPTY : supabase.rpc('ops_map_visitor_pulse', { p_since: since, p_buckets: buckets, p_likely_real: likelyReal }),
       fast ? EMPTY : supabase.rpc('ops_map_income_pulse', { p_since: since, p_buckets: buckets }),
     ])
     if (originsRes.error) throw originsRes.error
