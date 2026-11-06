@@ -4,7 +4,7 @@
 //   node scripts/gen-page-dates.mjs
 
 export const PAGE_DATES: Record<string, string> = {
-  "/": "2026-10-30",
+  "/": "2026-11-06",
   "/about": "2026-10-30",
   "/data/calling-rules-by-country": "2026-11-04",
   "/data/connect-rates": "2026-10-06",
@@ -14,7 +14,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/dialing-modes/predictive": "2026-11-05",
   "/dialing-modes/preview": "2026-11-05",
   "/dialing-modes/progressive": "2026-11-05",
-  "/faq": "2026-11-05",
+  "/faq": "2026-11-06",
   "/faq/10dlc-and-outbound-calling": "2026-11-05",
   "/faq/billing": "2026-10-30",
   "/faq/calling-hours": "2026-11-05",
@@ -31,23 +31,23 @@ export const PAGE_DATES: Record<string, string> = {
   "/faq/dialer-for-real-estate": "2026-11-05",
   "/faq/dialer-for-recruiters": "2026-11-05",
   "/faq/dialer-for-solar": "2026-11-05",
-  "/faq/dialer-glossary": "2026-11-05",
+  "/faq/dialer-glossary": "2026-11-06",
   "/faq/dialer-modes": "2026-10-06",
   "/faq/dialerseat-teams": "2026-11-05",
   "/faq/how-does-amd-work": "2026-10-06",
-  "/faq/how-many-numbers-do-i-need": "2026-11-05",
+  "/faq/how-many-numbers-do-i-need": "2026-11-06",
   "/faq/how-to-remove-spam-likely": "2026-11-05",
   "/faq/how-to-scrub-the-do-not-call-registry": "2026-11-05",
   "/faq/how-we-keep-compliance": "2026-11-05",
   "/faq/how-we-keep-numbers-clean": "2026-11-05",
   "/faq/how-we-measure-answer-rate": "2026-11-05",
   "/faq/is-a-predictive-dialer-legal": "2026-11-05",
-  "/faq/languages": "2026-11-04",
+  "/faq/languages": "2026-11-06",
   "/faq/leads": "2026-11-05",
   "/faq/local-presence-dialing": "2026-11-05",
-  "/faq/manager-plus": "2026-11-05",
+  "/faq/manager-plus": "2026-11-06",
   "/faq/managers": "2026-10-06",
-  "/faq/mobile": "2026-11-05",
+  "/faq/mobile": "2026-11-06",
   "/faq/numbers": "2026-11-04",
   "/faq/scripts": "2026-11-05",
   "/faq/send-leads-from-your-crm": "2026-11-05",
@@ -59,7 +59,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/faq/what-is-a-progressive-dialer": "2026-10-09",
   "/faq/what-is-an-auto-dialer": "2026-11-05",
   "/faq/white-label": "2026-11-04",
-  "/faq/white-label-mobile": "2026-10-06",
+  "/faq/white-label-mobile": "2026-11-06",
   "/faq/why-calls-show-spam-likely": "2026-11-05",
   "/faq/why-dialerseat": "2026-11-05",
   "/faq/why-is-compliance-important": "2026-11-05",
@@ -67,9 +67,9 @@ export const PAGE_DATES: Record<string, string> = {
   "/faq/why-we-dont-rest-flagged-numbers": "2026-11-04",
   "/features": "2026-11-05",
   "/partners": "2026-11-04",
-  "/pricing": "2026-11-04",
+  "/pricing": "2026-11-06",
   "/privacy": "2026-10-06",
-  "/resources": "2026-11-05",
+  "/resources": "2026-11-06",
   "/screenshots": "2026-11-05",
   "/status": "2026-10-06",
   "/terms": "2026-10-06",
@@ -83,7 +83,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/tools/cold-calls-per-day-calculator": "2026-11-05",
   "/tools/contact-rate-calculator": "2026-11-05",
   "/tools/cost-per-lead-calculator": "2026-11-05",
-  "/tools/dialer-cost-calculator": "2026-11-05",
+  "/tools/dialer-cost-calculator": "2026-11-06",
   "/tools/dnc-registry-cost-calculator": "2026-11-05",
   "/tools/erlang-c-calculator": "2026-11-05",
   "/tools/lead-list-cleaner": "2026-11-05",
@@ -93,7 +93,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/tools/state-do-not-call-lists": "2026-11-05",
   "/tools/tcpa-compliance-checklist": "2026-11-05",
   "/tools/telemarketing-calling-hours": "2026-11-05",
-  "/vs": "2026-10-06",
+  "/vs": "2026-11-06",
   "/vs/[matchup]": "2026-11-04",
   "/vs/3cx": "2026-11-05",
   "/vs/aircall": "2026-11-05",
@@ -123,14 +123,14 @@ export const PAGE_DATES: Record<string, string> = {
   "/vs/ringover": "2026-11-05",
   "/vs/smrtphone": "2026-11-05",
   "/vs/talkdesk": "2026-11-05",
-  "/vs/teams": "2026-11-05",
+  "/vs/teams": "2026-11-06",
   "/vs/vicidial": "2026-11-05",
   "/vs/wavv": "2026-11-05",
   "/vs/ytel": "2026-11-05"
 }
 
 /** Latest date across every page: the fallback for a route missing above. */
-export const SITE_UPDATED = '2026-11-05'
+export const SITE_UPDATED = '2026-11-06'
 
 /** The date a route last changed, as YYYY-MM-DD. */
 export function pageDate(path: string): string {

@@ -3658,6 +3658,9 @@
  "Add a Dialpad Sell licence, separate from the phone system": [
   "lib/competitors.ts"
  ],
+ "Add a few at a time as you grow. Numbers are included in the weekly seat price, with no per-number fee.": [
+  "app/faq/how-many-numbers-do-i-need/page.tsx"
+ ],
  "Add a licence on Professional to keep the Power Dialer": [
   "lib/competitors.ts"
  ],
@@ -3747,6 +3750,9 @@
  ],
  "Add total talk time, hold time and after-call work, then divide by the number of calls handled. 600 minutes over 120 calls is an AHT of 5 minutes.": [
   "app/tools/average-handle-time-calculator/page.tsx"
+ ],
+ "Add what your volume needs, rotate automatically, retire what degrades. No per-number fee. $35/week per seat.": [
+  "app/faq/how-many-numbers-do-i-need/page.tsx#prop"
  ],
  "Add your business name and callback number to use predictive.": [
   "app/api/campaigns/create/route.ts",
@@ -5560,14 +5566,8 @@
  "Buttons clicked and features used in the application": [
   "app/privacy/page.tsx"
  ],
- "Buy in small batches and add as you grow. A number costs about a dollar a month; an agent whose calls stop connecting costs considerably more than that in an afternoon.": [
-  "app/faq/how-many-numbers-do-i-need/page.tsx"
- ],
  "Buy seats for your whole crew. Each agent gets their own login, campaigns, and call data, all under one roof.": [
   "app/page.tsx"
- ],
- "Buy what your volume needs, rotate automatically, retire what degrades. No per-number fee. $35/week per seat.": [
-  "app/faq/how-many-numbers-do-i-need/page.tsx#prop"
  ],
  "Buyers create their own DialerSeat accounts (or use existing ones), redeem the code, start dialing.": [
   "app/faq/dialerseat-teams/view.tsx"
@@ -10575,9 +10575,6 @@
  "for more.": [
   "app/faq/how-does-amd-work/page.tsx"
  ],
- "For one seat over a full month, a dialer published at under $140 a month costs less than four weeks of DialerSeat. Weekly billing wins for short projects, seasonal hires, trial runs and floors whose headcount changes week to week.": [
-  "app/tools/dialer-cost-calculator/page.tsx"
- ],
  "For outbound telemarketing: scrubbing Do Not Call lists, consent for autodialed or prerecorded calls to mobiles, calling only between 8 a.m. and 9 p.m. local time, and honoring opt-outs. The FTC’s Telemarketing Sales Rule adds the abandoned-call and caller ID rules.": [
   "app/tools/tcpa-compliance-checklist/page.tsx"
  ],
@@ -10728,6 +10725,9 @@
  ],
  "Four ways to handle the per-seat cost.": [
   "app/faq/dialerseat-teams/view.tsx"
+ ],
+ "Four weeks of DialerSeat cost $140 for one seat. A dialer billed by the month at a lower published price costs less over those four weeks, as long as you dial all of them. Weekly billing wins for short projects, seasonal hires, trial runs and floors whose headcount changes week to week.": [
+  "app/tools/dialer-cost-calculator/page.tsx"
  ],
  "France": [
   "lib/countryNames.ts"
@@ -14946,7 +14946,7 @@
  "No, 10DLC is for text messaging. The voice equivalents are STIR/SHAKEN and CNAM, and STIR/SHAKEN is handled for you.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
- "No, and chasing that is how a pool becomes expensive. DialerSeat prefers a caller ID matching the lead’s area code when one is available, falls back to the same state, then to any healthy number. A pool covering the regions your list actually concentrates in gets most of the benefit. Buying a number for every area code in the country gets very little more for a great deal more cost.": [
+ "No, and chasing that gains very little. DialerSeat prefers a caller ID matching the lead’s area code when one is available, falls back to the same state, then to any healthy number. A pool covering the regions your list actually concentrates in gets most of the benefit. A number in every area code in the country adds very little on top of that.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
  "No, and the registry says so itself: registration does not guarantee that your calls will never be blocked or labelled. What it does is establish the number as belonging to a real business rather than a bad actor, and it reaches all three call-protection providers in one free submission that covers over 400 million US wireless subscribers. It is worth doing first and it is not a fix on its own.": [
@@ -22150,7 +22150,7 @@
  "The Telephone Consumer Protection Act, the federal law behind the FCC’s calling rules, including calling hours and restrictions on automated calls to mobiles.": [
   "app/faq/dialer-glossary/page.tsx"
  ],
- "The temptation is to buy a number for every area code your list touches. Resist it. Most lists concentrate heavily in a handful of regions, and covering those captures nearly all of the benefit. The long tail of one-lead area codes costs the same per number and returns almost nothing.": [
+ "The temptation is to hold a number for every area code your list touches. Resist it. Most lists concentrate heavily in a handful of regions, and covering those captures nearly all of the benefit. The long tail of one-lead area codes returns almost nothing.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
  "The term \"power dialer\" came from the marketing departments of vendors trying to differentiate this faster mode from manual without claiming it was predictive. Mojo Dialer (founded 2001, with VoIP from around 2008) and PhoneBurner (2008) brought it down-market to solo agents and small teams in the 2010s. By then, predictive had become a big-shop tool and power had become the default for everyone else.": [
@@ -22476,7 +22476,7 @@
  "This is a team script. Only the team owner can edit it.": [
   "app/dashboard/campaigns/page.tsx"
  ],
- "This is also why buying numbers is cheap insurance. A number costs about a dollar a month. An agent whose calls stop connecting costs considerably more than that in an afternoon.": [
+ "This is also why spare numbers are good insurance: they carry no per-number fee on DialerSeat, and an agent whose calls stop connecting loses the afternoon.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
  "This is exactly what your dashboard will look like with the colors and logo you've picked. Body text auto-picks white or near-black so it's always readable on your chosen background.": [
@@ -23252,7 +23252,7 @@
  "Up to €50,000 for failing to document or keep consent.": [
   "lib/countryRules.ts"
  ],
- "Up to a point, and then no. Enough numbers to keep each one under its cap protects your answer rate. Far more numbers than you need does not improve it further, and each one still costs money every month. The goal is coverage with headroom, not accumulation.": [
+ "Up to a point, and then no. Enough numbers to keep each one under its cap protects your answer rate. Far more numbers than you need does not improve it further. The goal is coverage with headroom, not accumulation.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
  "Up to triple-line power dialing.": [

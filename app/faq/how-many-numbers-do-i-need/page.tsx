@@ -56,12 +56,12 @@ const FAQS = [
   {
     question: msg("Do more numbers mean better answer rates?"),
     answer:
-      msg("Up to a point, and then no. Enough numbers to keep each one under its cap protects your answer rate. Far more numbers than you need does not improve it further, and each one still costs money every month. The goal is coverage with headroom, not accumulation."),
+      msg("Up to a point, and then no. Enough numbers to keep each one under its cap protects your answer rate. Far more numbers than you need does not improve it further. The goal is coverage with headroom, not accumulation."),
   },
   {
     question: msg("What about local presence, do I need a number in every area code?"),
     answer:
-      msg("No, and chasing that is how a pool becomes expensive. DialerSeat prefers a caller ID matching the lead’s area code when one is available, falls back to the same state, then to any healthy number. A pool covering the regions your list actually concentrates in gets most of the benefit. Buying a number for every area code in the country gets very little more for a great deal more cost."),
+      msg("No, and chasing that gains very little. DialerSeat prefers a caller ID matching the lead’s area code when one is available, falls back to the same state, then to any healthy number. A pool covering the regions your list actually concentrates in gets most of the benefit. A number in every area code in the country adds very little on top of that."),
   },
   {
     question: msg("What happens when a number goes bad?"),
@@ -102,7 +102,7 @@ export default async function Page() {
           <p>
             {t("DialerSeat applies a per-number daily cap and rotates across the pool automatically. You do not set it, and you do not need to calculate against it. What you watch instead is whether the pool is running hot: when numbers are regularly hitting their cap or answer rates start slipping, that is the pool telling you to add a few. It is a feedback loop rather than a formula.")}</p>
           <p>
-            {t("Buy in small batches and add as you grow. A number costs about a dollar a month; an agent whose calls stop connecting costs considerably more than that in an afternoon.")}</p>
+            {t("Add a few at a time as you grow. Numbers are included in the weekly seat price, with no per-number fee.")}</p>
         </section>
 
         <section className="exp-section">
@@ -113,7 +113,7 @@ export default async function Page() {
           <p>
             {t("Once a number picks up a Spam Likely label it is effectively finished and if it was carrying your entire operation, your answer rate goes with it. Spreading the same volume across a pool keeps every number below the threshold where that pattern forms.")}</p>
           <p>
-            {t("This is also why buying numbers is cheap insurance. A number costs about a dollar a month. An agent whose calls stop connecting costs considerably more than that in an afternoon.")}</p>
+            {t("This is also why spare numbers are good insurance: they carry no per-number fee on DialerSeat, and an agent whose calls stop connecting loses the afternoon.")}</p>
         </section>
 
         <section className="exp-section">
@@ -122,7 +122,7 @@ export default async function Page() {
           <p>
             {t("DialerSeat picks a caller ID by locality: an exact area-code match first, then the same state, then any healthy number in the pool. A lead in Charlotte sees a Charlotte number if one is free.")}</p>
           <p>
-            {t("The temptation is to buy a number for every area code your list touches. Resist it. Most lists concentrate heavily in a handful of regions, and covering those captures nearly all of the benefit. The long tail of one-lead area codes costs the same per number and returns almost nothing.")}</p>
+            {t("The temptation is to hold a number for every area code your list touches. Resist it. Most lists concentrate heavily in a handful of regions, and covering those captures nearly all of the benefit. The long tail of one-lead area codes returns almost nothing.")}</p>
         </section>
 
         <section className="exp-section">
@@ -148,7 +148,7 @@ export default async function Page() {
 
         <DialingModeCTA
           headline="Numbers are included, not metered."
-          description="Buy what your volume needs, rotate automatically, retire what degrades. No per-number fee. $35/week per seat."
+          description="Add what your volume needs, rotate automatically, retire what degrades. No per-number fee. $35/week per seat."
         />
         <ToolLinks slugs={['cold-calls-per-day-calculator']} />
 

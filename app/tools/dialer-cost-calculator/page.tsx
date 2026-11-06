@@ -68,7 +68,7 @@ const FAQS = [
   {
     question: msg("When is a monthly dialer cheaper?"),
     answer:
-      msg("For one seat over a full month, a dialer published at under $140 a month costs less than four weeks of DialerSeat. Weekly billing wins for short projects, seasonal hires, trial runs and floors whose headcount changes week to week."),
+      msg("Four weeks of DialerSeat cost $140 for one seat. A dialer billed by the month at a lower published price costs less over those four weeks, as long as you dial all of them. Weekly billing wins for short projects, seasonal hires, trial runs and floors whose headcount changes week to week."),
   },
 ]
 
