@@ -2436,6 +2436,9 @@
  "1fr 2fr": [
   "app/dashboard/dialer/page.tsx"
  ],
+ "1x calls a lead once and moves on. On 2x or 3x, if nobody picks up, it calls straight back up to that many times in a row, which can get through to a phone on Do Not Disturb.": [
+  "components/onboarding/PreviewOnboarding.tsx"
+ ],
  "2 · CHECK WHAT EACH COLUMN HOLDS": [
   "components/tools/LeadListCleaner.tsx"
  ],
@@ -5321,9 +5324,6 @@
  "Billing you can stop.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
- "billing, configured per seat code": [
-  "app/faq/manager-plus/view.tsx"
- ],
  "BLANK TEMPLATE": [
   "components/tools/TrackerAndChecklist.tsx"
  ],
@@ -6466,6 +6466,9 @@
  ],
  "Check the state Do Not Call lists for the states you call.": [
   "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "Check your analytics": [
+  "components/onboarding/PreviewOnboarding.tsx"
  ],
  "CHECKED {checkedAt}": [
   "app/status/page.tsx"
@@ -8298,12 +8301,6 @@
  "DialerSeat costs $35 per seat per week with every dialer mode included. Billed weekly, so one week costs $35. A week of ReadyMode costs $199 and a week of Mojo Dialer $149, because they bill by the month.": [
   "app/pricing/page.tsx"
  ],
- "DialerSeat desktop app showing Teams and Analytics windows open side by side": [
-  "app/faq/manager-plus/view.tsx"
- ],
- "DialerSeat dialer terminal in power mode, white-labeled, showing manual dial pad and today’s metrics sidebar": [
-  "app/faq/manager-plus/view.tsx"
- ],
  "DialerSeat divides by dials that rang in the same way, and its contact rate counts calls the agent marked closed, appointment, not interested or do not call.": [
   "app/tools/contact-rate-calculator/page.tsx"
  ],
@@ -9751,6 +9748,9 @@
  "Every item is checked. Re-check whenever you add a state, a list or a dialing mode.": [
   "components/tools/TrackerAndChecklist.tsx"
  ],
+ "Every lead from every campaign, in one place. Every disposition, callback, and note remembers itself, so your work is never lost and no lead slips through the cracks.": [
+  "components/onboarding/PreviewOnboarding.tsx"
+ ],
  "Every lead here has been dialed. Adding a fresh list starts the queue again without touching call history.": [
   "components/teams/CampaignDetail.tsx"
  ],
@@ -10278,6 +10278,9 @@
  ],
  "Finds US and Canadian numbers written as (312) 555-0147, 312.555.0147, 312-555-0147, +1 312 555 0147 or ten digits in a row. Digits inside a longer run, like an order or card number, are left alone.": [
   "components/tools/PhoneNumberExtractor.tsx"
+ ],
+ "FINISH": [
+  "components/onboarding/PreviewOnboarding.tsx"
  ],
  "FIRST CHARGE TODAY · CANCEL ANYTIME": [
   "app/page.tsx"
@@ -12271,9 +12274,6 @@
  ],
  "Indiana": [
   "components/tools/StateDncTable.tsx"
- ],
- "Individual agent seats inside the team are still $35/week each, billed separately": [
-  "app/faq/manager-plus/view.tsx"
  ],
  "Industry": [
   "components/tools/ScriptTools.tsx"
@@ -15819,6 +15819,15 @@
  "Open account menu": [
   "components/site-header.tsx"
  ],
+ "OPEN ANALYTICS →": [
+  "components/onboarding/PreviewOnboarding.tsx"
+ ],
+ "Open any agent on your team and play back their recorded calls, so you can coach from what was actually said.": [
+  "app/faq/manager-plus/view.tsx"
+ ],
+ "OPEN CAMPAIGNS →": [
+  "components/onboarding/PreviewOnboarding.tsx"
+ ],
  "OPEN CSV OR TXT": [
   "components/tools/PhoneNumberFormatter.tsx"
  ],
@@ -15940,9 +15949,6 @@
  ],
  "Or paste your numbers": [
   "components/tools/MathTools.tsx"
- ],
- "OR READ THE FULL TEAMS BREAKDOWN →": [
-  "app/faq/manager-plus/view.tsx"
  ],
  "Organisations that need a PBX and will run outbound some other way.": [
   "lib/competitors.ts"
@@ -16692,6 +16698,9 @@
  ],
  "Pick your question.": [
   "app/faq/view.tsx#prop"
+ ],
+ "Pick your subdomain, upload your logo, and set your brand colors.": [
+  "app/faq/manager-plus/view.tsx"
  ],
  "Picked up, by a person or a voicemail.": [
   "components/tools/MathTools.tsx#prop"
@@ -19518,6 +19527,9 @@
  ],
  "Should I say my number twice?": [
   "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
+ "SHOW": [
+  "components/onboarding/PreviewOnboarding.tsx"
  ],
  "Show {hidden} more": [
   "app/dashboard/teams/page.tsx"
@@ -22605,9 +22617,6 @@
  ],
  "Total calls, hours dialed, conversions, closed and talk time, with the call-volume chart underneath, on a 375-point screen. Note the BEST CAMPAIGN tile: it reads as a dash and says it needs five calls first, rather than crowning a winner out of two.": [
   "lib/screenshots.ts"
- ],
- "Total DialerSeat cost": [
-  "app/faq/manager-plus/view.tsx"
  ],
  "Total hold time (minutes)": [
   "components/tools/MathTools.tsx#prop"
