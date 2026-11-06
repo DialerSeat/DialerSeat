@@ -46,7 +46,7 @@ Where DialerSeat stands on the book's own clock: most SEO pages shipped 25–26 
 ### 1. Say one checkable sentence, everywhere, forever (ch 5, 13, 24, 26)
 The book's single strongest finding: every earned link cited a claim a stranger could verify in one step, never the feature list. DialerSeat already has its structural claim, the thing incumbents' business model forbids:
 
-> **A week of DialerSeat costs $35. A week of ReadyMode costs $199 and Mojo $149, because they bill by the month.**
+> **A week of DialerSeat costs $35. A week of ReadyMode costs $239 and Mojo $149, because they bill by the month.**
 
 Contract and demo-led dialers forecast revenue on monthly and annual commitments; weekly billing breaks their model, so they won't copy it. It's checkable at checkout in one step, and /pricing already says it.
 - Make it the one sentence in `FACTS.oneLine` (`lib/canonicalFacts.ts`), the homepage, every pitch, every launch post and every community answer, word for word. A model learns a category↔phrase association only from a phrase that never varies (ch 13).

@@ -42,20 +42,20 @@ export const BILLED_DIALERS: BilledDialer[] = [
   {
     slug: 'readymode',
     name: 'ReadyMode',
-    perSeatMonth: 199,
+    perSeatMonth: 239,
     from: true,
     commitment: 'month',
     minimumSeats: 1,
-    basis: '$199 or more per seat per month, typically on an annual contract, often with a setup fee',
+    basis: '$239 per license per month billed monthly on Starter; $199 needs a 12-month term paid upfront',
   },
   {
     slug: 'phoneburner',
     name: 'PhoneBurner',
-    perSeatMonth: 140,
+    perSeatMonth: 165,
     from: true,
     commitment: 'month',
     minimumSeats: 1,
-    basis: '$140 per seat per month on the Professional tier',
+    basis: '$165 per user per month billed monthly on Standard; $140 needs annual billing',
   },
   {
     slug: 'mojo',
@@ -73,7 +73,7 @@ export const BILLED_DIALERS: BilledDialer[] = [
     from: true,
     commitment: 'month',
     minimumSeats: 1,
-    basis: '$149 per month for the Multi Line plan predictive needs, plus $1 per number',
+    basis: '$149 per seat per month billed monthly for the Multi Line plan predictive needs, plus $1 per number',
   },
   {
     slug: 'batchdialer',

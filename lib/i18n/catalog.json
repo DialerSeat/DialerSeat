@@ -1995,6 +1995,9 @@
  "$1,100 per year": [
   "components/tools/StateDncTable.tsx"
  ],
+ "$1,195 a month on Starter billed monthly, or $1,495 on iQ": [
+  "lib/competitors.ts"
+ ],
  "$1/mo per number": [
   "lib/competitorFeatures.ts"
  ],
@@ -2013,17 +2016,11 @@
  "$139 per month for Triple Line plus the $10 Agent Access licence, before data add-ons": [
   "lib/weeklyBilling.ts"
  ],
- "$140 per seat per month on the Professional tier": [
-  "lib/weeklyBilling.ts"
- ],
- "$149 per month for the Multi Line plan predictive needs, plus $1 per number": [
+ "$149 per seat per month billed monthly for the Multi Line plan predictive needs, plus $1 per number": [
   "lib/weeklyBilling.ts"
  ],
  "$149/mo + add-ons": [
   "app/vs/everyone/view.tsx"
- ],
- "$149/month Multi Line for predictive, plus per-number charges": [
-  "lib/competitors.ts"
  ],
  "$15 to $75 a month on the business plans, or from $75 an agent on contact center": [
   "lib/competitors.ts"
@@ -2036,6 +2033,9 @@
  ],
  "$150+/mo": [
   "app/page.tsx"
+ ],
+ "$165 per user per month billed monthly on Standard; $140 needs annual billing": [
+  "lib/weeklyBilling.ts"
  ],
  "$165+/mo, contract for less": [
   "lib/competitorFeatures.ts"
@@ -2052,15 +2052,6 @@
  "$19-$89/mo by tier": [
   "lib/competitorFeatures.ts"
  ],
- "$199 or more per seat per month, typically on an annual contract, often with a setup fee": [
-  "lib/weeklyBilling.ts"
- ],
- "$199+/mo": [
-  "app/page.tsx"
- ],
- "$199+/mo, contract": [
-  "lib/competitorFeatures.ts"
- ],
  "$2,000+/mo ongoing": [
   "app/faq/white-label/view.tsx"
  ],
@@ -2069,6 +2060,13 @@
  ],
  "$210 / week": [
   "app/faq/manager-plus/view.tsx"
+ ],
+ "$239 per license per month billed monthly on Starter; $199 needs a 12-month term paid upfront": [
+  "lib/weeklyBilling.ts"
+ ],
+ "$239+/mo": [
+  "app/page.tsx",
+  "lib/competitorFeatures.ts"
  ],
  "$245+/month on the tier that includes dialing": [
   "lib/competitors.ts"
@@ -2229,6 +2227,9 @@
  ],
  "$575 / week": [
   "app/faq/managers/view.tsx"
+ ],
+ "$745 a month on Multi Line for predictive, billed monthly, plus per-number charges": [
+  "lib/competitors.ts"
  ],
  "$75 / week": [
   "app/faq/manager-plus/view.tsx"
@@ -3041,7 +3042,7 @@
  "A long-established business phone system with published plan pricing": [
   "lib/competitors.ts"
  ],
- "A long-established predictive dialer for call centers, sold with an onboarding process and a setup fee.": [
+ "A long-established predictive dialer for call centers, sold by the license per month or per year.": [
   "lib/competitors.ts"
  ],
  "A lot of dialer companies bury the real terms in a 12-page MSA. Ours fit on a page. Here they are.": [
@@ -3665,6 +3666,9 @@
   "lib/competitors.ts"
  ],
  "Add a licence; the dialer tier is a different product line from the phone plan": [
+  "lib/competitors.ts"
+ ],
+ "Add a license; on an annual plan it is prorated to the renewal date": [
   "lib/competitors.ts"
  ],
  "Add a new lead": [
@@ -4476,12 +4480,6 @@
  "Annual billing with a three-seat minimum": [
   "lib/competitors.ts"
  ],
- "Annual commitment": [
-  "lib/competitors.ts"
- ],
- "Annual contract is typical.": [
-  "lib/competitors.ts"
- ],
  "ANNUAL CONTRACT LOCK-IN": [
   "app/vs/everyone/view.tsx"
  ],
@@ -5187,7 +5185,7 @@
  "Because the label is a behaviour score, not a record. Getting a number re-evaluated resets the verdict, not the cause. If the same volume per number, the same unanswered calls and the same short calls continue, the score returns to where it was. The pattern is what has to change: fewer calls per number per day, lists people expect calls from, and an opening they stay on the line for.": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
- "Because they bill by the month or the year. The shortest term you can buy from ReadyMode, PhoneBurner, Mojo Dialer, WAVV, BatchDialer or Kixie is one month, $95 to $199 or more per seat depending on the vendor, so a one-week project, a seasonal hire or a trial run still pays for the month. DialerSeat bills by the week, so one week costs $35 and four weeks cost $140.": [
+ "Because they bill by the month or the year. The shortest term you can buy from ReadyMode, PhoneBurner, Mojo Dialer, WAVV, BatchDialer or Kixie is one month, $95 to $239 or more per seat depending on the vendor, so a one-week project, a seasonal hire or a trial run still pays for the month. DialerSeat bills by the week, so one week costs $35 and four weeks cost $140.": [
   "app/pricing/page.tsx"
  ],
  "Because volume on a single caller ID is the fastest way to get it labelled. Carrier analytics watch call volume, call duration, and how often people decline or report a number. A number placing several hundred short unanswered calls a day looks exactly like a robocall to that scoring, because statistically it is behaving like one. Once the label attaches, the number is finished: and if it is your only number, so is your answer rate.": [
@@ -5572,9 +5570,6 @@
  "Buyers create their own DialerSeat accounts (or use existing ones), redeem the code, start dialing.": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
- "Buyers prepared for a sales-led onboarding and a setup fee before the first call.": [
-  "lib/competitors.ts"
- ],
  "Buyers prepared for a sales-led onboarding into a full contact-centre platform.": [
   "lib/competitors.ts"
  ],
@@ -5794,6 +5789,9 @@
  ],
  "call_id": [
   "app/faq/compliance-export/view.tsx"
+ ],
+ "Call-center floors that want a long-established predictive dialer and dial every month.": [
+  "lib/competitors.ts"
  ],
  "Call-protection providers don’t judge a number on a single moment. Hiya, whose spam labelling it says is used by major mobile networks around the world, publishes a report card that grades a number from A to D on four factors.": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
@@ -7191,9 +7189,6 @@
  "Contact the vendor to add a licence": [
   "lib/competitors.ts"
  ],
- "Contact the vendor; setup fee applies before the first call": [
-  "lib/competitors.ts"
- ],
  "Contact us": [
   "app/privacy/page.tsx",
   "app/terms/page.tsx"
@@ -8381,7 +8376,7 @@
  "DialerSeat costs": [
   "app/terms/page.tsx"
  ],
- "DialerSeat costs $35 per seat per week with every dialer mode included. Billed weekly, so one week costs $35. A week of ReadyMode costs $199 and a week of Mojo Dialer $149, because they bill by the month.": [
+ "DialerSeat costs $35 per seat per week with every dialer mode included. Billed weekly, so one week costs $35. A week of ReadyMode costs $239 and a week of Mojo Dialer $149, because they bill by the month.": [
   "app/pricing/page.tsx"
  ],
  "DialerSeat divides by dials that rang in the same way, and its contact rate counts calls the agent marked closed, appointment, not interested or do not call.": [
@@ -8456,7 +8451,7 @@
  "DialerSeat is $35 a week per seat: preview, power, and multi-line predictive dialing all included, no tier to unlock. WAVV starts at $59/month and requires its $149/month Multi Line plan for predictive dialing, plus $1/month per phone number.": [
   "app/vs/wavv/page.tsx"
  ],
- "DialerSeat is $35 per seat per week with every dialer mode included, billed weekly with no contract. The multi-line dialers we compare against bill by the month or the year, so a week with them costs a full month: $199 or more for ReadyMode, $149 for Mojo Dialer.": [
+ "DialerSeat is $35 per seat per week with every dialer mode included, billed weekly with no contract. The multi-line dialers we compare against bill by the month or the year, so a week with them costs a full month: $239 or more for ReadyMode, $149 for Mojo Dialer.": [
   "app/pricing/page.tsx"
  ],
  "DialerSeat is $35 per seat per week, multiplied by weeks and seats. A monthly-billed dialer is charged for every month the weeks touch, so five weeks is two months. An annually billed dialer is charged at least twelve months. Seat minimums are applied, so two agents on a three-seat minimum are billed as three.": [
@@ -8492,7 +8487,7 @@
  "DialerSeat is the modern alternative to PhoneBurner. Multi-line predictive included (PhoneBurner is single-line only), everything in one tier (no Premium upgrades), flexible list sizes, weekly billing: flat $35/week per seat, no annual contract.": [
   "app/vs/phoneburner/page.tsx"
  ],
- "DialerSeat is the modern alternative to ReadyMode. Multi-line predictive dialing, per-campaign mode, multiple scripts per campaign, server-side TCPA, at flat $35/week per seat. No $500-$2,000 setup fee, no annual contract, works on every device.": [
+ "DialerSeat is the modern alternative to ReadyMode. Multi-line predictive dialing, per-campaign mode, multiple scripts per campaign, server-side TCPA, at flat $35/week per seat. Billed weekly, no setup fee, works on every device.": [
   "app/vs/readymode/page.tsx"
  ],
  "DialerSeat is the transparent, self-serve alternative to Orum. Orum starts around $250/user/month billed annually with a 3-seat minimum and no public pricing. DialerSeat is $35 per seat per week, cancel anytime, one seat minimum, sign up in minutes.": [
@@ -10446,7 +10441,7 @@
  "Five9 is a market leader in enterprise contact-center-as-a-service. They serve large call centers with hundreds or thousands of seats, complex IVR routing, multi-channel engagement, and deep workforce management. That's a real product for a real audience. But for solo agents and small-to-mid sales teams that just need outbound dialing, it's overbuilt, and overpriced. DialerSeat™ is the outbound dialer without the enterprise tax.": [
   "lib/competitorFeatures.ts"
  ],
- "Five9, Convoso, ReadyMode, and most enterprise dialers hide their real pricing behind a sales call. You spend a week scheduling and sitting through demos before anyone gives you a number. We publish $35/week on the homepage.": [
+ "Five9, Convoso, and most enterprise dialers hide their real pricing behind a sales call. You spend a week scheduling and sitting through demos before anyone gives you a number. We publish $35/week on the homepage.": [
   "app/vs/everyone/view.tsx"
  ],
  "Fix a lead sheet in your browser: wrong headers, p:+1 phones, states typed every way, full names, ALL CAPS, duplicates. Download a clean CSV. Free.": [
@@ -10862,9 +10857,6 @@
   "lib/competitors.ts"
  ],
  "From $375 a month on contact center Essential, which does not include predictive dialing": [
-  "lib/competitors.ts"
- ],
- "From $59/month; the Multi Line plan required for predictive is $149/month, plus $1/month per number.": [
   "lib/competitors.ts"
  ],
  "FROM 1 OCTOBER 2026": [
@@ -14081,6 +14073,9 @@
  "Monthly, 30 days to remove numbers": [
   "components/tools/StateDncTable.tsx"
  ],
+ "Monthly, or annual paid upfront for a 12-month term that renews automatically.": [
+  "lib/competitors.ts"
+ ],
  "Monthly, with a two-seat minimum on standard plans.": [
   "lib/competitors.ts"
  ],
@@ -15695,6 +15690,9 @@
  "one level deep are read as if they were flat, which is how HubSpot’s": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
+ "One license": [
+  "lib/competitors.ts"
+ ],
  "One line at 2.5%.": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
@@ -16645,9 +16643,6 @@
  "Per-seat pricing plus a platform fee versus per-seat pricing.": [
   "app/vs/ytel/page.tsx"
  ],
- "Per-seat pricing quoted on contact, commonly with a $500-$2,000 setup fee.": [
-  "lib/competitors.ts"
- ],
  "Per-seat pricing, no capacity planning": [
   "lib/competitorFeatures.ts"
  ],
@@ -17248,7 +17243,7 @@
  "predictive pool active, surplus calls route to any ready agent": [
   "components/teams/CampaignsAccessPanel.tsx"
  ],
- "Predictive requires the $149/month Multi Line plan.": [
+ "Predictive requires the $149 per seat per month Multi Line plan.": [
   "lib/competitors.ts"
  ],
  "Predictive sits behind the top plan": [
@@ -17865,9 +17860,6 @@
  "Quoted per deployment": [
   "lib/competitors.ts"
  ],
- "Quoted, plus a $500-$2,000 setup fee": [
-  "lib/competitors.ts"
- ],
  "Raising it would trade answer rate for capacity, which is backwards: numbers are the cheap input, and the conversation is the expensive output.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
  ],
@@ -17980,10 +17972,10 @@
   "app/page.tsx",
   "app/vs/everyone/view.tsx"
  ],
- "ReadyMode Alternative: Pricing Without the $2K Setup Fee | DialerSeat": [
+ "ReadyMode Alternative: $35 a Week, Not $239 a Month | DialerSeat": [
   "app/vs/readymode/page.tsx"
  ],
- "ReadyMode has been a fixture of the outbound dialer category for years. Their core dialer works well. Where they fall down is delivery model: opaque pricing, multi-month contracts, setup fees, legacy UI that takes hours to learn. DialerSeat™ keeps the dialer quality and strips the friction.": [
+ "ReadyMode has been a fixture of the outbound dialer category for years. Their core dialer works well. Where they fall down is billing and delivery: the smallest purchase is a month, the lower prices need a 12-month term paid upfront, and the legacy UI takes hours to learn. DialerSeat™ keeps the dialer quality and strips the friction.": [
   "lib/competitorFeatures.ts"
  ],
  "ReadyMode reviewers describe the UI as \"Windows 8\" or \"dated.\" Mojo, PhoneBurner, and most enterprise tools accumulated UI debt over a decade. Rep retention suffers when the software feels old. DialerSeat ships with a modern design system: clean, fast, and built for the way teams actually work.": [
@@ -18912,10 +18904,10 @@
  "Same high-volume outbound dialing for insurance, solar, and lead-heavy verticals. One flat weekly price, no seat minimum.": [
   "app/vs/everyone/view.tsx"
  ],
- "Same multi-line predictive at $35/week instead of $165-$249/month. No $2K setup fee. Modern UI built this year. Works on phones and tablets.": [
+ "Same multi-line predictive at $35/week instead of $239-$299/month. Modern UI built this year. Works on phones and tablets.": [
   "app/vs/readymode/page.tsx"
  ],
- "Same multi-line predictive at $35/week, cancel anytime, instead of $199-$249/month locked into a contract. No $500-$2,000 setup fee.": [
+ "Same multi-line predictive at $35/week, cancel anytime, instead of $239-$299/month.": [
   "app/vs/everyone/view.tsx"
  ],
  "Same multi-line predictive, no setup fee, no contract": [
@@ -19600,9 +19592,6 @@
  "Setup Fee": [
   "app/page.tsx"
  ],
- "Setup fee before the first call": [
-  "lib/competitors.ts"
- ],
  "SETUP FEES": [
   "app/page.tsx"
  ],
@@ -19808,6 +19797,9 @@
  ],
  "Since August 11, 2026, a commercial call to a consumer needs their prior, express consent (opt-in), and the caller must be able to prove it. Bloctel, the old opt-out list, has ended.": [
   "lib/countryRules.ts"
+ ],
+ "Single Line $99 and Multi Line $149 per seat per month billed monthly, or about $69.30 and $104.30 billed annually. The Multi Line plan is required for predictive, plus $1/month per number.": [
+  "lib/competitors.ts"
  ],
  "Single Line Dialer, $89-99/mo + $10/mo Agent Access": [
   "lib/competitorFeatures.ts"
@@ -20177,6 +20169,9 @@
  ],
  "Start your subscription": [
   "app/billing/page.tsx"
+ ],
+ "Starter $239 and iQ $299 per license per month billed monthly, or $199 and $249 billed annually. Custom pricing from 20 licenses.": [
+  "lib/competitors.ts"
  ],
  "Starter $97 a month, Unlimited $297, Agency Pro $497. Calling runs through its LC Phone system, billed per minute from a prepaid wallet: US outbound calls about $0.018 a minute, local numbers $1.15 a month.": [
   "lib/competitors.ts"
@@ -21611,6 +21606,9 @@
  "The legal meaning of “autodialer”.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
+ "The lower prices need a 12-month term paid upfront": [
+  "lib/competitors.ts"
+ ],
  "THE MANAGER MATH": [
   "app/partners/page.tsx"
  ],
@@ -22059,6 +22057,9 @@
  ],
  "The six failures the whole category shares: start here": [
   "app/vs/view.tsx"
+ ],
+ "The smallest purchase is a month": [
+  "lib/competitors.ts"
  ],
  "The software is free under the AGPL. Official VICIhost managed hosting is about $400/month per server after a $1,000 setup, roughly $16 per user at 25 agents. Third-party hosts charge $100-$149 per agent per month.": [
   "lib/competitors.ts"

@@ -30,8 +30,8 @@ describe('weekly against monthly billing', () => {
 
   it('one week of a monthly dialer costs its full month', () => {
     expect(billedCost(bySlug('mojo'), 1, 1)).toBe(149)
-    expect(billedCost(bySlug('readymode'), 1, 1)).toBe(199)
-    expect(billedCost(bySlug('readymode'), 4, 1)).toBe(199)
+    expect(billedCost(bySlug('readymode'), 1, 1)).toBe(239)
+    expect(billedCost(bySlug('readymode'), 4, 1)).toBe(239)
   })
 
   it('applies seat minimums and annual terms', () => {

@@ -29,7 +29,7 @@ Everything worth keeping from the RankHonestly book and the November 2026 work o
 
 ## Stage 3: Say one sentence, forever
 
-12. Use one checkable sentence, word for word, in every pitch, launch post and community answer: **"A week of DialerSeat costs $35. A week of ReadyMode costs $199 and Mojo $149, because they bill by the month."**
+12. Use one checkable sentence, word for word, in every pitch, launch post and community answer: **"A week of DialerSeat costs $35. A week of ReadyMode costs $239 and Mojo $149, because they bill by the month."**
 13. Test any replacement three ways: repeatable after one reading, checkable in one step, surprising to someone who knows dialers.
 14. Lead with the moat: weekly billing is what contract-based competitors' business model forbids, and none of the 29 dialers in the pricing index bills weekly.
 

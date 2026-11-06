@@ -41,7 +41,7 @@ const UPDATED = pageDate(ROUTE)
 const baseMetadata: Metadata = {
   title: 'Dialer Pricing: $35 a Week per Seat, No Contract | DialerSeat',
   description:
-    'DialerSeat costs $35 per seat per week with every dialer mode included. Billed weekly, so one week costs $35. A week of ReadyMode costs $199 and a week of Mojo Dialer $149, because they bill by the month.',
+    'DialerSeat costs $35 per seat per week with every dialer mode included. Billed weekly, so one week costs $35. A week of ReadyMode costs $239 and a week of Mojo Dialer $149, because they bill by the month.',
   keywords: [
     'dialer pricing', 'predictive dialer pricing', 'auto dialer cost', 'power dialer pricing',
     'cheap predictive dialer', 'no contract dialer', 'weekly dialer', 'dialer cost per seat',
@@ -78,7 +78,7 @@ const FAQS: { question: string; answer: string; parts?: string[] }[] = [
   {
     question: msg("Why does one week of another dialer cost a full month?"),
     answer:
-      msg("Because they bill by the month or the year. The shortest term you can buy from ReadyMode, PhoneBurner, Mojo Dialer, WAVV, BatchDialer or Kixie is one month, $95 to $199 or more per seat depending on the vendor, so a one-week project, a seasonal hire or a trial run still pays for the month. DialerSeat bills by the week, so one week costs $35 and four weeks cost $140."),
+      msg("Because they bill by the month or the year. The shortest term you can buy from ReadyMode, PhoneBurner, Mojo Dialer, WAVV, BatchDialer or Kixie is one month, $95 to $239 or more per seat depending on the vendor, so a one-week project, a seasonal hire or a trial run still pays for the month. DialerSeat bills by the week, so one week costs $35 and four weeks cost $140."),
   },
   {
     question: msg("Is calling included, or is there a per-minute charge?"),
@@ -132,7 +132,7 @@ export default async function PricingPage() {
               {t("One week costs $35.")}<span className="second">{t("Not a month.")}</span>
             </h1>
             <p>
-              {t("DialerSeat is $35 per seat per week with every dialer mode included, billed weekly with no contract. The multi-line dialers we compare against bill by the month or the year, so a week with them costs a full month: $199 or more for ReadyMode, $149 for Mojo Dialer.")}</p>
+              {t("DialerSeat is $35 per seat per week with every dialer mode included, billed weekly with no contract. The multi-line dialers we compare against bill by the month or the year, so a week with them costs a full month: $239 or more for ReadyMode, $149 for Mojo Dialer.")}</p>
             <div className="guts-btns">
               <Link href="/sign-up" className="guts-btn primary">{t("GET STARTED →")}</Link>
               <Link href="/tools/dialer-cost-calculator" className="guts-btn secondary">{t("COST CALCULATOR")}</Link>

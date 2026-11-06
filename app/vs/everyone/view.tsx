@@ -61,12 +61,12 @@ interface FeatureRow {
 }
 
 const features: FeatureRow[] = [
-  { feature: msg("Per-seat price"), ds: '$35/wk, cancel anytime', rm: '$199-$249/mo', mo: '$149/mo + add-ons', pb: '$165-$215/mo', f9: '$175+/mo', cv: '$90+/mo, custom quote' },
+  { feature: msg("Per-seat price"), ds: '$35/wk, cancel anytime', rm: '$239-$299/mo', mo: '$149/mo + add-ons', pb: '$165-$215/mo', f9: '$175+/mo', cv: '$90+/mo, custom quote' },
   { feature: msg("Weekly billing option"), ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
-  { feature: msg("Annual contract required"), ds: false, rm: 'Typical', mo: false, pb: 'For best price', f9: 'Typical', cv: 'Typical' },
+  { feature: msg("Annual contract required"), ds: false, rm: 'For best price', mo: false, pb: 'For best price', f9: 'Typical', cv: 'Typical' },
   { feature: msg("Public pricing on website"), ds: true, rm: false, mo: true, pb: true, f9: false, cv: false },
   { feature: msg("Self-serve signup (no demo)"), ds: true, rm: false, mo: true, pb: true, f9: false, cv: false },
-  { feature: msg("Setup fee"), ds: '$0', rm: '$500-$2K', mo: '$0', pb: '$0', f9: 'Variable', cv: 'Variable' },
+  { feature: msg("Setup fee"), ds: '$0', rm: '$0', mo: '$0', pb: '$0', f9: 'Variable', cv: 'Variable' },
   { feature: msg("Power dialer"), ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
   { feature: msg("Preview dialer"), ds: true, rm: true, mo: true, pb: false, f9: true, cv: true },
   { feature: msg("Progressive dialer"), ds: true, rm: true, mo: 'Partial', pb: false, f9: true, cv: true },
@@ -89,7 +89,7 @@ const INDUSTRY_FAILURES = [
   {
     num: '01',
     title: msg("OPAQUE PRICING"),
-    body: msg("Five9, Convoso, ReadyMode, and most enterprise dialers hide their real pricing behind a sales call. You spend a week scheduling and sitting through demos before anyone gives you a number. We publish $35/week on the homepage."),
+    body: msg("Five9, Convoso, and most enterprise dialers hide their real pricing behind a sales call. You spend a week scheduling and sitting through demos before anyone gives you a number. We publish $35/week on the homepage."),
   },
   {
     num: '02',
@@ -119,7 +119,7 @@ const INDUSTRY_FAILURES = [
 ]
 
 const SWITCHING_FROM = [
-  { name: 'READYMODE', href: '/vs/readymode', summary: msg("Same multi-line predictive at $35/week, cancel anytime, instead of $199-$249/month locked into a contract. No $500-$2,000 setup fee.") },
+  { name: 'READYMODE', href: '/vs/readymode', summary: msg("Same multi-line predictive at $35/week, cancel anytime, instead of $239-$299/month.") },
   { name: 'BATCHDIALER', href: '/vs/batchdialer', summary: msg("Their $95/seat headline is the annual prepay rate, month to month it's $119-$249. Automatic number replacement on every DialerSeat plan, not gated behind Pro.") },
   { name: 'MOJO DIALER', href: '/vs/mojo', summary: msg("Same triple-line speed across every industry, not just real estate. No mandatory $10/mo Agent Access fee stacked on top.") },
   { name: 'PHONEBURNER', href: '/vs/phoneburner', summary: msg("Multi-line predictive included (PhoneBurner is single-line only). Weekly billing, no annual contract.") },

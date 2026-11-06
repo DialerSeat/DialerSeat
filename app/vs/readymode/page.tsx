@@ -16,23 +16,23 @@ const SLUG = 'readymode'
 
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
-  title: 'ReadyMode Alternative: Pricing Without the $2K Setup Fee | DialerSeat',
+  title: 'ReadyMode Alternative: $35 a Week, Not $239 a Month | DialerSeat',
   description:
-    'DialerSeat is the modern alternative to ReadyMode. Multi-line predictive dialing, per-campaign mode, multiple scripts per campaign, server-side TCPA, at flat $35/week per seat. No $500-$2,000 setup fee, no annual contract, works on every device.',
+    'DialerSeat is the modern alternative to ReadyMode. Multi-line predictive dialing, per-campaign mode, multiple scripts per campaign, server-side TCPA, at flat $35/week per seat. Billed weekly, no setup fee, works on every device.',
   alternates: {
     canonical: 'https://dialerseat.com/vs/readymode',
   },
   openGraph: {
     title: 'DialerSeat vs ReadyMode',
     description:
-      'Same multi-line predictive at $35/week instead of $165-$249/month. No $2K setup fee. Modern UI built this year. Works on phones and tablets.',
+      'Same multi-line predictive at $35/week instead of $239-$299/month. Modern UI built this year. Works on phones and tablets.',
     url: 'https://dialerseat.com/vs/readymode',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DialerSeat vs ReadyMode',
-    description: 'Same multi-line predictive at $35/week instead of $165-$249/month. No $2K setup fee. Modern UI built this year. Works on phones and tablets.',
+    description: 'Same multi-line predictive at $35/week instead of $239-$299/month. Modern UI built this year. Works on phones and tablets.',
   },
 }
 

@@ -844,8 +844,8 @@ export default async function Home({ searchParams }: PageProps) {
           </div>
 
           {[
-            { feature: msg("Weekly Cost"), us: '$35', them1: msg("$199+/mo"), them2: msg("$150+/mo") },
-            { feature: msg("No Contract"), us: '✓', them1: '✗', them2: '✗' },
+            { feature: msg("Weekly Cost"), us: '$35', them1: msg("$239+/mo"), them2: msg("$150+/mo") },
+            { feature: msg("No Contract"), us: '✓', them1: '✓', them2: '✗' },
             { feature: msg("Setup Fee"), us: '$0', them1: '$0', them2: '$200+' },
             { feature: msg("Plug & Play"), us: '✓', them1: '✗', them2: '✗' },
             { feature: msg("Predictive Dialing"), us: '✓', them1: '✓', them2: msg("Limited") },
