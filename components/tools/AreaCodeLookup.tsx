@@ -76,7 +76,7 @@ export default function AreaCodeLookup() {
           <div className={`tk-result ${open ? 'ok' : 'over'}`} aria-live="polite">
             <div className="tk-big">{code} · {t(info.name)}</div>
             <p>
-              {info.tz ? <>{t("Time zone")}: <b>{t(ZONE_LABEL[info.tz] ?? info.tz)}</b> ({info.tz}). {t("Local time there now")}: <b>{localTime(info.tz, now)}</b>.</> : t("No time zone on file for this state.")}
+              {info.tz ? <>{t("Time zone")}: <b>{t(ZONE_LABEL[info.tz] ?? info.tz)}</b> ({info.tz}). {t("Local time there now")}: <b>{localTime(info.tz, now, locale)}</b>.</> : t("No time zone on file for this state.")}
             </p>
             <p>
               {open

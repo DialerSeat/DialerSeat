@@ -96,7 +96,7 @@ const NEVER_ALONE = new Set(['DialerSeat', 'DIALERSEAT', 'Dialerseat'])
 // words that starts like a sentence is a sentence.
 // Short labels in the data files are text too, even when they are one hyphenated
 // word: a table cell ("Desktop-focused"), a card heading ("HOMEOWNER LISTS").
-const DATA_LABEL_KEY = /^(role|competitor|dialerseat|minimum|wins|loses)$/
+const DATA_LABEL_KEY = /^(role|feature|competitor|dialerseat|minimum|wins|loses)$/
 const dataLabel = (n, sf) => {
   if (ts.isPropertyAssignment(n)) return DATA_LABEL_KEY.test(n.name.getText(sf))
   return ts.isArrayLiteralExpression(n.parent) && ts.isPropertyAssignment(n.parent.parent) && DATA_LABEL_KEY.test(n.parent.parent.name.getText(sf))

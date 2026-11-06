@@ -4116,6 +4116,7 @@
  "Indiana": "Indiana",
  "Individual agent seats inside the team are still $35/week each, billed separately": "टीम के अंदर हर एजेंट सीट अब भी $35/हफ़्ता है, अलग से बिल होती है",
  "Industry": "उद्योग",
+ "Industry-agnostic": "किसी भी उद्योग के लिए",
  "Industry-specific clouds for healthcare, financial services and retail": "हेल्थकेयर, वित्तीय सेवाओं और रिटेल के लिए उद्योग-विशेष क्लाउड",
  "Ineligible.": "अपात्र।",
  "Infrastructure removes the carrier-level causes of flagging. It doesn't remove the behavioral ones, those come from how a campaign is actually run, and no dialer can fix them for you:": "ढाँचा निशान लगने के कैरियर-स्तर के कारण हटाता है। यह व्यवहार वाले कारण नहीं हटाता, वे इस बात से आते हैं कि कैंपेन असल में कैसे चलाया जाता है, और कोई डायलर उन्हें आपके लिए ठीक नहीं कर सकता:",

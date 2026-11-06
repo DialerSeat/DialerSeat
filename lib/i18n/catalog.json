@@ -12401,6 +12401,9 @@
  "Industry": [
   "components/tools/ScriptTools.tsx"
  ],
+ "Industry-agnostic": [
+  "lib/competitorFeatures.ts"
+ ],
  "Industry-specific clouds for healthcare, financial services and retail": [
   "lib/competitors.ts"
  ],
