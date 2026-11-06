@@ -8710,5 +8710,12 @@
  "Zero": "शून्य",
  "Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.": "डिज़ाइन से ही कॉल छूटने का कोई जोखिम नहीं, हर एजेंट के लिए एक लाइन। आप बिना सोचे FTC और TCPA नियमों के 100% भीतर रहते हैं।",
  "ZIP code": "ZIP कोड",
- "ZONE": "ज़ोन"
+ "ZONE": "ज़ोन",
+ "REDIRECTING NOW": "अभी रीडायरेक्ट हो रहा है",
+ "BUILDING YOUR SUBDOMAIN": "आपका सबडोमेन बन रहा है",
+ "Your subdomain is ready.": "आपका सबडोमेन तैयार है।",
+ "This is taking longer than usual. Your subdomain is saved, and it can take a few minutes to come online.": "इसमें सामान्य से ज़्यादा समय लग रहा है। आपका सबडोमेन सहेजा जा चुका है, और इसे ऑनलाइन आने में कुछ मिनट लग सकते हैं।",
+ "This usually takes about 30 seconds. Keep this page open and we will take you there automatically.": "इसमें आमतौर पर लगभग 30 सेकंड लगते हैं। यह पेज खुला रखें, हम आपको अपने आप वहाँ ले जाएँगे।",
+ "Almost there. We will take you there as soon as it answers.": "बस होने ही वाला है। जवाब मिलते ही हम आपको वहाँ ले जाएँगे।",
+ "TRY MY SUBDOMAIN": "मेरा सबडोमेन आज़माएँ"
 }

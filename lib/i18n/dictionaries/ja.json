@@ -8714,5 +8714,12 @@
  "Zero": "ゼロ",
  "Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.": "エージェント1人につき1回線なので、設計上、放棄のリスクはゼロ。何も考えなくても FTC と TCPA のルールを100%守れます。",
  "ZIP code": "郵便番号",
- "ZONE": "タイムゾーン"
+ "ZONE": "タイムゾーン",
+ "REDIRECTING NOW": "リダイレクトしています",
+ "BUILDING YOUR SUBDOMAIN": "サブドメインを作成中",
+ "Your subdomain is ready.": "サブドメインの準備ができました。",
+ "This is taking longer than usual. Your subdomain is saved, and it can take a few minutes to come online.": "通常より時間がかかっています。サブドメインは保存済みで、利用可能になるまで数分かかることがあります。",
+ "This usually takes about 30 seconds. Keep this page open and we will take you there automatically.": "通常は30秒ほどかかります。このページを開いたままにしていただければ、自動的に移動します。",
+ "Almost there. We will take you there as soon as it answers.": "もう少しです。応答があり次第移動します。",
+ "TRY MY SUBDOMAIN": "サブドメインを試す"
 }

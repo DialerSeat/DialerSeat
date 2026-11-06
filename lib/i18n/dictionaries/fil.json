@@ -8710,5 +8710,12 @@
  "Zero": "Zero",
  "Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.": "Walang panganib ng abandonment ayon sa disenyo, isang linya bawat agent. Nananatili ka nang 100% sa loob ng mga patakaran ng FTC at TCPA nang hindi iniisip.",
  "ZIP code": "ZIP code",
- "ZONE": "ZONE"
+ "ZONE": "ZONE",
+ "REDIRECTING NOW": "NAGRE-REDIRECT NA",
+ "BUILDING YOUR SUBDOMAIN": "GINAGAWA ANG SUBDOMAIN MO",
+ "Your subdomain is ready.": "Handa na ang subdomain mo.",
+ "This is taking longer than usual. Your subdomain is saved, and it can take a few minutes to come online.": "Mas matagal ito kaysa karaniwan. Naka-save na ang subdomain mo, at puwedeng umabot ng ilang minuto bago ito mag-online.",
+ "This usually takes about 30 seconds. Keep this page open and we will take you there automatically.": "Karaniwang mga 30 segundo ito. Iwanang bukas ang page na ito at awtomatiko ka naming dadalhin doon.",
+ "Almost there. We will take you there as soon as it answers.": "Malapit na. Dadalhin ka namin doon pagkasagot nito.",
+ "TRY MY SUBDOMAIN": "SUBUKAN ANG SUBDOMAIN KO"
 }

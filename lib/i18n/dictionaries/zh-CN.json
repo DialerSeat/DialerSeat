@@ -8714,5 +8714,12 @@
  "Zero": "零",
  "Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.": "按设计零放弃风险，每个坐席一条线路。无需操心，你就 100% 符合 FTC 和 TCPA 规则。",
  "ZIP code": "ZIP 邮编",
- "ZONE": "时区"
+ "ZONE": "时区",
+ "REDIRECTING NOW": "正在跳转",
+ "BUILDING YOUR SUBDOMAIN": "正在创建你的子域名",
+ "Your subdomain is ready.": "你的子域名已就绪。",
+ "This is taking longer than usual. Your subdomain is saved, and it can take a few minutes to come online.": "这比平时要久一些。你的子域名已保存，上线可能需要几分钟。",
+ "This usually takes about 30 seconds. Keep this page open and we will take you there automatically.": "通常需要大约 30 秒。请保持此页面打开，我们会自动带你过去。",
+ "Almost there. We will take you there as soon as it answers.": "快好了。一有响应就带你过去。",
+ "TRY MY SUBDOMAIN": "试试我的子域名"
 }

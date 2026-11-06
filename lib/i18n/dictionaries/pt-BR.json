@@ -8789,5 +8789,12 @@
  "Zero": "Zero",
  "Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.": "Risco zero de abandono por design, uma linha por agente. Você fica 100% dentro das regras da FTC e da TCPA sem precisar pensar nisso.",
  "ZIP code": "CEP (ZIP code)",
- "ZONE": "FUSO"
+ "ZONE": "FUSO",
+ "REDIRECTING NOW": "REDIRECIONANDO AGORA",
+ "BUILDING YOUR SUBDOMAIN": "CRIANDO SEU SUBDOMÍNIO",
+ "Your subdomain is ready.": "Seu subdomínio está pronto.",
+ "This is taking longer than usual. Your subdomain is saved, and it can take a few minutes to come online.": "Está demorando mais que o normal. Seu subdomínio está salvo e pode levar alguns minutos para ficar no ar.",
+ "This usually takes about 30 seconds. Keep this page open and we will take you there automatically.": "Isso costuma levar cerca de 30 segundos. Mantenha esta página aberta e levaremos você automaticamente.",
+ "Almost there. We will take you there as soon as it answers.": "Quase lá. Levaremos você assim que ele responder.",
+ "TRY MY SUBDOMAIN": "TESTAR MEU SUBDOMÍNIO"
 }

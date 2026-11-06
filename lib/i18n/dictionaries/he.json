@@ -8714,5 +8714,12 @@
  "Zero": "אפס",
  "Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.": "אפס סיכון נטישה מעצם התכנון, קו אחד לנציג. אתה נשאר 100% בתוך כללי FTC ו-TCPA בלי לחשוב על זה.",
  "ZIP code": "מיקוד (ZIP)",
- "ZONE": "אזור"
+ "ZONE": "אזור",
+ "REDIRECTING NOW": "מעביר עכשיו",
+ "BUILDING YOUR SUBDOMAIN": "בונים את תת-הדומיין שלך",
+ "Your subdomain is ready.": "תת-הדומיין שלך מוכן.",
+ "This is taking longer than usual. Your subdomain is saved, and it can take a few minutes to come online.": "זה לוקח יותר זמן מהרגיל. תת-הדומיין שלך נשמר, ועשויות לעבור כמה דקות עד שיעלה לאוויר.",
+ "This usually takes about 30 seconds. Keep this page open and we will take you there automatically.": "זה לוקח בדרך כלל כ-30 שניות. השאר את העמוד פתוח ונעביר אותך לשם אוטומטית.",
+ "Almost there. We will take you there as soon as it answers.": "כמעט שם. נעביר אותך ברגע שהוא יענה.",
+ "TRY MY SUBDOMAIN": "נסה את תת-הדומיין שלי"
 }

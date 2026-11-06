@@ -8745,5 +8745,12 @@
  "Zero": "صفر",
  "Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.": "لا خطر للتخلي عن المكالمات بحكم التصميم، خط واحد لكل وكيل. تبقى ضمن قواعد FTC وTCPA بنسبة 100% دون أن تفكر في ذلك.",
  "ZIP code": "الرمز البريدي",
- "ZONE": "المنطقة"
+ "ZONE": "المنطقة",
+ "REDIRECTING NOW": "جارٍ التحويل الآن",
+ "BUILDING YOUR SUBDOMAIN": "جارٍ إنشاء نطاقك الفرعي",
+ "Your subdomain is ready.": "نطاقك الفرعي جاهز.",
+ "This is taking longer than usual. Your subdomain is saved, and it can take a few minutes to come online.": "يستغرق هذا وقتًا أطول من المعتاد. تم حفظ نطاقك الفرعي، وقد يستغرق بضع دقائق ليصبح متاحًا.",
+ "This usually takes about 30 seconds. Keep this page open and we will take you there automatically.": "يستغرق هذا عادةً نحو 30 ثانية. أبقِ هذه الصفحة مفتوحة وسننقلك إليه تلقائيًا.",
+ "Almost there. We will take you there as soon as it answers.": "أوشكنا على الانتهاء. سننقلك إليه فور استجابته.",
+ "TRY MY SUBDOMAIN": "تجربة نطاقي الفرعي"
 }

@@ -8745,5 +8745,12 @@
  "Zero": "Zero",
  "Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.": "Nessun rischio di abbandono per costruzione, una linea per operatore. Resti al 100% nelle regole FTC e TCPA senza pensarci.",
  "ZIP code": "Codice ZIP",
- "ZONE": "FUSO"
+ "ZONE": "FUSO",
+ "REDIRECTING NOW": "REINDIRIZZAMENTO IN CORSO",
+ "BUILDING YOUR SUBDOMAIN": "CREAZIONE DEL TUO SOTTODOMINIO",
+ "Your subdomain is ready.": "Il tuo sottodominio è pronto.",
+ "This is taking longer than usual. Your subdomain is saved, and it can take a few minutes to come online.": "Ci vuole più del solito. Il tuo sottodominio è salvato e può richiedere qualche minuto per andare online.",
+ "This usually takes about 30 seconds. Keep this page open and we will take you there automatically.": "Di solito servono circa 30 secondi. Tieni aperta questa pagina e ti porteremo lì automaticamente.",
+ "Almost there. We will take you there as soon as it answers.": "Ci siamo quasi. Ti portiamo lì appena risponde.",
+ "TRY MY SUBDOMAIN": "PROVA IL MIO SOTTODOMINIO"
 }

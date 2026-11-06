@@ -4140,6 +4140,9 @@
  "Almost nobody else in this category does this, and they are not quiet about it. ReadyMode's published requirements rule out Wi-Fi, cellular and Bluetooth headsets. PhoneBurner's support centre says there is no mobile app and that phone use is not recommended. Five9's requirements page asks for a computer and a USB headset. Those are their words, on their own pages.": [
   "app/features/page.tsx"
  ],
+ "Almost there. We will take you there as soon as it answers.": [
+  "app/onboarding/whitelabel/building/page.tsx"
+ ],
  "Aloware Alternative: Pricing, Pros & Cons | DialerSeat": [
   "app/vs/aloware/page.tsx"
  ],
@@ -5425,6 +5428,9 @@
  ],
  "Building statement…": [
   "app/dashboard/reports/ReportView.tsx"
+ ],
+ "BUILDING YOUR SUBDOMAIN": [
+  "app/onboarding/whitelabel/building/page.tsx"
  ],
  "Built around CRM workflows rather than high-volume list dialing": [
   "lib/competitors.ts"
@@ -18075,6 +18081,9 @@
  "REDIAL: how many times in a row a lead is dialed before the queue moves on.": [
   "app/dashboard/dialer/page.tsx"
  ],
+ "REDIRECTING NOW": [
+  "app/onboarding/whitelabel/building/page.tsx"
+ ],
  "Redirecting to {value} in {countdown}…": [
   "app/billing/success/page.tsx"
  ],
@@ -22289,6 +22298,9 @@
  "This is one account’s calls over a few weeks in September, not a controlled trial, and the samples are small. We’d be overselling it to call it proven. But two responses to the same problem pointing in opposite directions, with a mechanism that explains why, was enough to change what the dialer does.": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
  ],
+ "This is taking longer than usual. Your subdomain is saved, and it can take a few minutes to come online.": [
+  "app/onboarding/whitelabel/building/page.tsx"
+ ],
  "This is the complete list, nothing hidden behind a “advanced” tab you have to go find:": [
   "app/faq/campaigns/view.tsx"
  ],
@@ -22393,6 +22405,9 @@
  ],
  "THIS TEAM IS SCOPED TO": [
   "components/teams/WhitelabelTieIn.tsx"
+ ],
+ "This usually takes about 30 seconds. Keep this page open and we will take you there automatically.": [
+  "app/onboarding/whitelabel/building/page.tsx"
  ],
  "This week": [
   "app/dashboard/analytics/page.tsx"
@@ -22704,6 +22719,9 @@
  "Try it on a real list.": [
   "app/dialing-modes/preview/page.tsx#prop",
   "app/faq/what-is-a-preview-dialer/page.tsx#prop"
+ ],
+ "TRY MY SUBDOMAIN": [
+  "app/onboarding/whitelabel/building/page.tsx"
  ],
  "Try progressive on a voicemail-heavy list.": [
   "app/dialing-modes/progressive/page.tsx#prop",
@@ -26015,6 +26033,9 @@
  ],
  "Your sheet is read in this browser tab and never uploaded. The example above is made up, in the shape real broken sheets arrive in.": [
   "components/tools/LeadListCleaner.tsx"
+ ],
+ "Your subdomain is ready.": [
+  "app/onboarding/whitelabel/building/page.tsx"
  ],
  "Your subscription has been resumed.": [
   "app/dashboard/settings/page.tsx"
