@@ -418,6 +418,16 @@ async function lookupUserBrandAccess(clerkId: string): Promise<UserBrandAccess> 
   return access
 }
 
+// ── LOOK AROUND BEFORE PAYING ─────────────────────────────────────────────
+// A brand-new account (tier 'new': never subscribed) used to be sent to
+// /welcome on every page until it paid. With this on, it gets into the
+// dashboard read-only instead, on the same terms as a preserved account:
+// everything can be looked at, nothing that dials or writes goes through.
+// The pages show demo data until the first payment; see lib/demo.
+const PREVIEW_BEFORE_PAYMENT = process.env.NEXT_PUBLIC_PREVIEW_ONBOARDING !== '0'
+// The reads the demo answers instead of the database.
+const DEMO_READS = /^\/api\/(analytics\/(summary|timeseries|dispositions|campaigns)|campaigns\/list|campaigns\/script-links\/list|scripts\/list|leads\/list|recordings\/list|teams\/.+)$/
+
 export default clerkMiddleware(async (auth, request) => {
   const hostname = request.headers.get('host') || ''
   const tenantSlug = extractTenantSlug(hostname)
@@ -560,6 +570,27 @@ export default clerkMiddleware(async (auth, request) => {
     }
   }
 
+  // ── /WELCOME AND /BILLING LEAD INTO THE NEW FLOW ───────────────────────
+  // A never-paid account belongs in the demo dashboard, with billing as a popup
+  // over it. Anyone arriving on an invite keeps the old path, because /billing
+  // is where a team code gets redeemed, and an owner-paid seat owes nothing.
+  // /billing/success is left alone: the payment has only just gone through.
+  // A white-label brand's own signups keep their path too: the demo is ours.
+  const inPreview = PREVIEW_BEFORE_PAYMENT && tier === 'new' && !isAdmin && !hasPendingOwnerFundedSeat && !tenantSlug &&
+    !request.cookies.get('ds_join_code')?.value && !request.nextUrl.searchParams.has('promo') && !request.nextUrl.searchParams.has('teamMemberId')
+  if (inPreview) {
+    const path = request.nextUrl.pathname.replace(/\/$/, '')
+    const params = request.nextUrl.searchParams
+    if (path === '/welcome' || path === '/billing') {
+      const to = new URL('/dashboard/analytics', request.url)
+      if (path === '/billing') {
+        to.searchParams.set('activate', '1')
+        if (params.get('plan') === 'wl') to.searchParams.set('plan', 'wl')
+      }
+      return withTenantHeader(NextResponse.redirect(to, 307))
+    }
+  }
+
   if (isBillingOrOnboardingRoute(request)) {
     return withTenantHeader(NextResponse.next())
   }
@@ -660,6 +691,34 @@ export default clerkMiddleware(async (auth, request) => {
     res.headers.set('x-access-tier', tier)
     res.headers.set('x-read-only', '1')
     res.headers.set('x-awaiting-approval', '1')
+    return withTenantHeader(res)
+  }
+
+  if (inPreview) {
+    const method = request.method.toUpperCase()
+    if (method === 'GET' && DEMO_READS.test(url.pathname)) {
+      const to = new URL(`/api/demo${url.pathname.slice(4)}${url.search}`, request.url)
+      return withTenantHeader(NextResponse.rewrite(to))
+    }
+    const isMutating = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
+    const isApi = url.pathname.startsWith('/api/')
+    const previewAllowed =
+      url.pathname.startsWith('/api/stripe/') ||
+      url.pathname.startsWith('/api/auth/') ||
+      url.pathname.startsWith('/api/users/me') ||
+      url.pathname.startsWith('/api/onboarding') ||
+      url.pathname.startsWith('/api/analytics/pageview') ||
+      url.pathname.startsWith('/api/presence')
+    if (isApi && isMutating && !previewAllowed) {
+      return NextResponse.json(
+        { error: 'Activate your seat to make changes.', tier, readOnly: true, preview: true },
+        { status: 403 }
+      )
+    }
+    const res = NextResponse.next()
+    res.headers.set('x-access-tier', tier)
+    res.headers.set('x-read-only', '1')
+    res.headers.set('x-preview', '1')
     return withTenantHeader(res)
   }
 
@@ -855,7 +914,9 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       userRow?.wl_onboarding_status !== 'complete'
 
     let tier: AccessTier = 'new'
-    if (subs && subs.length > 0) {
+    // Reaching the checkout writes an 'incomplete' row before any money moves,
+    // so that row alone is someone who has never paid, not a lapsed customer.
+    if (subs && subs.some(s => s.status !== 'incomplete' && s.status !== 'incomplete_expired')) {
       tier = 'lapsed'
       for (const sub of subs) {
         // ── PAUSED ────────────────────────────────────────────────────────
@@ -917,7 +978,7 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
     // answer, which is what produced the /dashboard <-> /welcome bounce.
     // Skipping the cache here means each request re-checks Supabase, so the
     // very next request after the webhook lands sees the real, active state.
-    if (tier === 'active' || isAdmin) {
+    if ((tier === 'active' || isAdmin) && !wlOnboardingPending) {
       ACCESS_STATE_CACHE.set(clerkId, { state, expires: Date.now() + CACHE_TTL_MS })
     } else {
       ACCESS_STATE_CACHE.delete(clerkId)

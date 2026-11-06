@@ -8,6 +8,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 import { t } from '@/lib/i18n/client'
+import { PREVIEW_BEFORE_PAYMENT, isPreviewTier } from '@/lib/preview'
 import { msg } from '@/lib/i18n/msg'
 
 
@@ -52,9 +53,13 @@ type Range = 'today' | 'week' | 'month' | 'all' | 'custom'
 // Namespaced so it can't collide with other pages' saved settings.
 const ANALYTICS_RANGE_STORAGE_KEY = 'dialerseat:analytics:range'
 
-function getRangeBounds(range: Range, customStart?: string, customEnd?: string): { start: string | null; end: string | null } {
+function getRangeBounds(range: Range, customStart?: string, customEnd?: string, rolling = false): { start: string | null; end: string | null } {
   if (range === 'all') return { start: null, end: null }
   const now = new Date()
+  // The demo always shows three different views, even on a Monday or the 1st.
+  if (rolling && (range === 'week' || range === 'month')) {
+    return { start: new Date(now.getTime() - (range === 'week' ? 7 : 30) * 86400000).toISOString(), end: now.toISOString() }
+  }
 
   if (range === 'today') {
     const start = new Date(now); start.setHours(0, 0, 0, 0)
@@ -255,7 +260,12 @@ export default function AnalyticsPage({
   // redirect decision came back. An admin now just sees analytics; the
   // platform-wide view lives in the admin desktop.
 
-  const bounds = useMemo(() => getRangeBounds(range, customStart, customEnd), [range, customStart, customEnd])
+  const [demoAccount, setDemoAccount] = useState(false)
+  useEffect(() => {
+    if (!PREVIEW_BEFORE_PAYMENT) return
+    fetch('/api/stripe/status').then(r => r.json()).then(d => { if (isPreviewTier(d?.tier)) setDemoAccount(true) }).catch(() => {})
+  }, [])
+  const bounds = useMemo(() => getRangeBounds(range, customStart, customEnd, demoAccount), [range, customStart, customEnd, demoAccount])
 
   
   
@@ -673,7 +683,7 @@ export default function AnalyticsPage({
                     <XAxis dataKey="label" stroke={T.muted} fontSize={10} />
                     <YAxis stroke={T.muted} fontSize={10} allowDecimals={false} domain={[0, 'auto']} />
                     <Tooltip contentStyle={{ background: 'var(--brand-sidebar-bg)', border: '1px solid var(--brand-card-border)', color: 'var(--brand-on-sidebar)', fontSize: 11 }} />
-                    <Line type="monotone" dataKey="calls" stroke={T.blue} strokeWidth={2} dot={{ fill: T.blue, r: 3 }} />
+                    <Line type="linear" dataKey="calls" stroke={T.blue} strokeWidth={2} dot={{ fill: T.blue, r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -691,12 +701,12 @@ export default function AnalyticsPage({
                   <LineChart data={seriesToRender}>
                     <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
                     <XAxis dataKey="label" stroke={T.muted} fontSize={10} />
-                    <YAxis stroke={T.muted} fontSize={10} unit="%" domain={[0, 100]} />
+                    <YAxis stroke={T.muted} fontSize={10} unit="%" domain={[0, 'auto']} />
                     <Tooltip
                       contentStyle={{ background: 'var(--brand-sidebar-bg)', border: '1px solid var(--brand-card-border)', color: 'var(--brand-on-sidebar)', fontSize: 11 }}
                       formatter={(v: any) => `${v}%`}
                     />
-                    <Line type="monotone" dataKey="conversionRate" stroke={T.green} strokeWidth={2} dot={{ fill: T.green, r: 3 }} />
+                    <Line type="linear" dataKey="conversionRate" stroke={T.green} strokeWidth={2} dot={{ fill: T.green, r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

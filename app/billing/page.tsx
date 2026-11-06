@@ -12,6 +12,7 @@ import {
 import { t, useLocale } from '@/lib/i18n/client'
 import { stripeLocale } from '@/lib/i18n/locales'
 import { msg } from '@/lib/i18n/msg'
+import { useBillingOverlay } from '@/lib/billingOverlay'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
@@ -210,7 +211,12 @@ export default function BillingPage() {
   const [abandoning, setAbandoning] = useState(false)
   const [switchingPlan, setSwitchingPlan] = useState(false)
 
+  // Shown as a popup over the dashboard (an unpaid account looking around),
+  // Cancel just closes it: they are not leaving, only not paying yet.
+  const overlay = useBillingOverlay()
+
   async function abandonAndSignOut() {
+    if (overlay) { overlay.close(); return }
     if (abandoning) return
     setAbandoning(true)
     try {
@@ -703,25 +709,23 @@ export default function BillingPage() {
             <div style={planDescStyle} className="billing-plan-desc">{t(planInfo.description)}</div>
 
             {plan === 'standard' ? (
-              <button
-                type="button"
-                onClick={() => switchTo('wl')}
-                disabled={switchingPlan}
-                style={switchLinkStyle}
-                className="billing-switch-link"
-              >
-                ↗ {t(PLAN_INFO.standard.switchLabel)}
-              </button>
+              <div style={mplusBoxStyle}>
+                <div style={mplusTitleStyle}>{t("MANAGER+")} <span style={mplusPriceStyle}>{t("$75/week")}</span></div>
+                <div style={mplusTextStyle}>{t("Your own white-label dialer: your subdomain, your branding, full team control.")}</div>
+                <div style={mplusRowStyle}>
+                  <button type="button" onClick={() => switchTo('wl')} disabled={switchingPlan} style={mplusJoinStyle}>{t("MANAGER+")}</button>
+                  <a href="/faq/manager-plus" target="_blank" rel="noopener noreferrer" style={mplusLookStyle}>{t("LEARN MORE")}</a>
+                </div>
+              </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => switchTo('standard')}
-                disabled={switchingPlan}
-                style={switchLinkStyle}
-                className="billing-switch-link"
-              >
-                ↘ {t(PLAN_INFO.wl.switchLabel)}
-              </button>
+              <div style={mplusBoxStyle}>
+                <div style={mplusTitleStyle}>{t("PRO")} <span style={mplusPriceStyle}>{t("$35/week")}</span></div>
+                <div style={mplusTextStyle}>{t("One agent seat, all features, billed weekly.")}</div>
+                <div style={mplusRowStyle}>
+                  <button type="button" onClick={() => switchTo('standard')} disabled={switchingPlan} style={mplusJoinStyle}>{t("PRO+")}</button>
+                  <a href="/faq/manager-plus" target="_blank" rel="noopener noreferrer" style={mplusLookStyle}>{t("LEARN MORE")}</a>
+                </div>
+              </div>
             )}
 
             <div style={dividerStyle} className="billing-divider" />
@@ -1286,6 +1290,23 @@ const planDescStyle: React.CSSProperties = {
   lineHeight: 1.6,
   color: '#c0c2ca',
   marginBottom: 22,
+}
+
+const mplusBoxStyle: React.CSSProperties = {
+  border: '1px solid #2a2c34', borderTop: '3px solid #4a9eff', borderRadius: 6,
+  background: '#1a1c24', padding: '14px 16px', marginBottom: 24, fontFamily: FUTURA,
+}
+const mplusTitleStyle: React.CSSProperties = { fontSize: 13, fontWeight: 800, letterSpacing: 2, color: '#e0e2ea', marginBottom: 6 }
+const mplusPriceStyle: React.CSSProperties = { fontSize: 11, fontWeight: 700, letterSpacing: 1, color: '#4a9eff', marginInlineStart: 6 }
+const mplusTextStyle: React.CSSProperties = { fontSize: 12, lineHeight: 1.5, color: '#a8acb8', marginBottom: 12 }
+const mplusRowStyle: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }
+const mplusJoinStyle: React.CSSProperties = {
+  padding: '9px 11px', borderRadius: 5, border: 'none', background: '#4a9eff', color: '#0d0e14',
+  fontSize: 10.5, fontWeight: 800, letterSpacing: 1, cursor: 'pointer', fontFamily: FUTURA,
+}
+const mplusLookStyle: React.CSSProperties = {
+  padding: '8px 11px', borderRadius: 5, border: '1px solid #4a4c54', color: '#e0e2ea',
+  fontSize: 10.5, fontWeight: 700, letterSpacing: 1, textDecoration: 'none', fontFamily: FUTURA,
 }
 
 const switchLinkStyle: React.CSSProperties = {

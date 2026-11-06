@@ -36,7 +36,9 @@ async function checkSelfSubActive(clerkId: string): Promise<{ active: boolean; h
     return { active: true, hasHistory: true }
   }
 
-  if (!subs || subs.length === 0) {
+  // Reaching the checkout writes an 'incomplete' row before any money moves, so
+  // that row alone is someone who has never paid, not a lapsed customer.
+  if (!subs || subs.every(s => s.status === 'incomplete' || s.status === 'incomplete_expired')) {
     return { active: false, hasHistory: false }
   }
 

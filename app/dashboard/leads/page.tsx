@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { canonical, labelFor } from '@/lib/dispositions'
 import { t as tr } from '@/lib/i18n/client'
 import { msg } from '@/lib/i18n/msg'
+import { isPreviewTier, openPaywall } from '@/lib/preview'
 
 
 
@@ -206,7 +207,12 @@ export default function LeadsPage() {
   // Same lock, different sentence. And no sentence at all for somebody
   // waiting on a team owner: their seat is being bought by somebody else,
   // so there is nothing for them to buy and buying would not unblock them.
-  const isLapsed = tier === 'lapsed' || tier === 'new'
+  // Unpaid and looking around: the page works as normal and every change
+  // opens the paywall instead of the read-only banner.
+  const isPreviewAccount = isPreviewTier(tier)
+  const isLapsed = (tier === 'lapsed' || tier === 'new') && !isPreviewAccount
+  const previewPaywall = () => openPaywall({ eyebrow: msg('CHANGES NEED AN ACTIVE SEAT'), line: msg('Activate your seat to add, edit and dial your own leads.'), source: 'Leads' })
+  const markLapsed = () => { if (isPreviewAccount) previewPaywall(); else setTier('lapsed') }
   const hasLapsedPlan = tier === 'lapsed'
   const awaitingSeat = awaitingTeams.length > 0
 
@@ -361,7 +367,7 @@ export default function LeadsPage() {
         ))
         setExpandedId(null)
       } else if (res.status === 403) {
-        setTier('lapsed')
+        markLapsed()
       }
     } finally {
       setSaving(false)
@@ -380,6 +386,7 @@ export default function LeadsPage() {
   }
 
   const openAddModal = () => {
+    if (isPreviewAccount) { previewPaywall(); return }
     if (isLapsed || campaigns.length === 0) return
     setNewLead({
       ...EMPTY_NEW_LEAD,
@@ -424,7 +431,7 @@ export default function LeadsPage() {
       const data = await res.json()
       if (!data.success) {
         if (res.status === 403) {
-          setTier('lapsed')
+          markLapsed()
           setAddError(tr("Subscription required to add leads."))
         } else {
           setAddError(data.error || tr("Failed to add lead."))
@@ -468,7 +475,7 @@ export default function LeadsPage() {
       const data = await res.json()
       if (!data.success) {
         if (res.status === 403) {
-          setTier('lapsed')
+          markLapsed()
           setDeleteError(tr("Subscription required to delete leads."))
         } else {
           setDeleteError(data.error || tr("Failed to delete lead."))

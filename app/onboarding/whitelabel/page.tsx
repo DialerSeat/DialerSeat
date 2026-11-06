@@ -643,7 +643,7 @@ export default function WhitelabelOnboardingPage() {
         return
       }
 
-      router.push('/dashboard')
+      router.push(editMode ? '/dashboard' : '/dashboard/teams')
     } catch (err: any) {
       setError(err.message || msg("Something went wrong."))
       setSubmitting(false)

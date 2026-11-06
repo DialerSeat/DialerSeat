@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
 import DashboardBanners from '@/components/DashboardBanners'
+import PreviewOnboarding from '@/components/onboarding/PreviewOnboarding'
 import LanguageDropdown from '@/components/LanguageDropdown'
 import { t as tr } from '@/lib/i18n/client'
 import { msg } from '@/lib/i18n/msg'
@@ -694,6 +695,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <DashboardBanners />
+        <PreviewOnboarding />
 
         {/* ── YOU ARE NOW PAYING FOR A SEAT YOU DID NOT AGREE TO ───────────
             An agent who was funding their own seat cancelled, so the seat was

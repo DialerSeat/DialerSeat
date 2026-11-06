@@ -1,4 +1,5 @@
 'use client'
+import { msg } from '@/lib/i18n/msg'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import useTouchReorder from '@/lib/useTouchReorder'
 import { useUser } from '@clerk/nextjs'
@@ -9,6 +10,7 @@ import { uploadLeadsInChunks, type UploadProgress } from '@/lib/uploadLeadsInChu
 import { usePredictiveGate } from '@/components/SellerIdentityDialog'
 import { t as tr } from '@/lib/i18n/client'
 import { msg as msgText } from '@/lib/i18n/msg'
+import { isPreviewTier, openPaywall } from '@/lib/preview'
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -503,7 +505,12 @@ export default function CampaignsPage() {
   // Same lock, different sentence. And no sentence at all for somebody
   // waiting on a team owner: their seat is being bought by somebody else,
   // so there is nothing for them to buy and buying would not unblock them.
-  const isLapsed = tier === 'lapsed' || tier === 'new'
+  // Unpaid and looking around: the page works as normal and every change
+  // opens the paywall instead of the read-only banner.
+  const isPreviewAccount = isPreviewTier(tier)
+  const isLapsed = (tier === 'lapsed' || tier === 'new') && !isPreviewAccount
+  const previewPaywall = () => openPaywall({ eyebrow: msg('UPLOADING NEEDS AN ACTIVE SEAT'), line: msg('Activate your seat to upload your own leads and start dialing them.'), source: 'Campaigns' })
+  const markLapsed = () => { if (isPreviewAccount) previewPaywall(); else setTier('lapsed') }
   const hasLapsedPlan = tier === 'lapsed'
   const awaitingSeat = awaitingTeams.length > 0
 
@@ -723,6 +730,7 @@ export default function CampaignsPage() {
   
   
   const openCreate = () => {
+    if (isPreviewAccount) { previewPaywall(); return }
     resetCreateForm()
     setShowCreate(true)
     loadLibrary() // for the toggle-script picker (same model as edit)
@@ -764,7 +772,7 @@ export default function CampaignsPage() {
       })
       const data = await res.json()
       if (!data.success) {
-        if (res.status === 403) setTier('lapsed')
+        if (res.status === 403) markLapsed()
         throw new Error(data.error)
       }
       const newId = data.campaign.id
@@ -832,7 +840,7 @@ export default function CampaignsPage() {
       })
       const data = await res.json()
       if (!data.success) {
-        if (res.status === 403) setTier('lapsed')
+        if (res.status === 403) markLapsed()
         throw new Error(data.error)
       }
       const newId = data.campaign.id
@@ -864,7 +872,7 @@ export default function CampaignsPage() {
           })
           setUploadProgress(null)
           if (up.lapsed) {
-            setTier('lapsed')
+            markLapsed()
           } else {
             const uploadData: any = {
               success: up.ok,
@@ -1038,7 +1046,7 @@ export default function CampaignsPage() {
       })
       setUploadProgress(null)
       if (up.lapsed) {
-        setTier('lapsed')
+        markLapsed()
         isLapsedError = true
       }
       const data: any = {
@@ -2114,8 +2122,10 @@ export default function CampaignsPage() {
         .settings-name-input::placeholder {
           color: var(--brand-on-sidebar-muted); letter-spacing: 2px;
         }
+        .settings-name-input { cursor: text; transition: background 0.12s ease, border-color 0.12s ease; }
         .settings-name-input:hover {
-          background: color-mix(in srgb, var(--brand-on-sidebar) 5%, transparent);
+          background: color-mix(in srgb, var(--brand-on-sidebar) 10%, transparent);
+          border-color: color-mix(in srgb, var(--brand-on-sidebar) 45%, transparent);
         }
         .settings-name-input:focus {
           background: color-mix(in srgb, var(--brand-on-sidebar) 8%, transparent);

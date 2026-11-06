@@ -42,7 +42,7 @@ function billingPath(joinCode: string | null): string {
     : '/billing?from=welcome'
 }
 
-const C = {
+export const C = {
   primary: 'var(--brand-primary, #4a9eff)',
   onPrimary: 'var(--brand-on-primary, #ffffff)',
   sidebar: 'var(--brand-sidebar-bg, #111118)',
@@ -69,7 +69,7 @@ interface Scene {
   headline2?: string
 }
 
-const SCENES: Scene[] = [
+export const SCENES: Scene[] = [
   {
     key: 'dialer',
     eyebrow: msg("A SUPERIOR DIALER"),
@@ -258,7 +258,7 @@ power bill with solar, so I wanted to
 get you a quick free estimate…"`) },
 ]
 
-function DialerScene() {
+export function DialerScene() {
   const [secs, setSecs] = useState(0)
   const [closed, setClosed] = useState(false)
   const [scriptIdx, setScriptIdx] = useState(0)
@@ -356,12 +356,22 @@ function DialerScene() {
 }
 
 
-function AnalyticsScene() {
+// Illustrative figures for the showcase, one set per tab.
+const ANALYTICS_RANGES = {
+  today: { label: msg("TODAY"), calls: 196, conv: 27, talk: 3, closed: 12, up: ['↑ 21%', '↑ 34%', '↑ 11%', '↑ 18%'], pts: [4, 72, 6, 9, 70, 3, 74, 5, 66, 4, 8, 71], ticks: ['9', '10', '11', '12', '1', '2', '3', '4'], vs: "↑ 21% vs yesterday" },
+  week: { label: msg("WEEK"), calls: 1284, conv: 159, talk: 14, closed: 86, up: ['↑ 12%', '↑ 15%', '↑ 6%', '↑ 9%'], pts: [6, 74, 3, 5, 68, 4, 72, 7, 3, 70, 5, 66], ticks: ['M', 'T', 'W', 'T', 'F', 'S', 'S'], vs: "↑ 18% vs last week" },
+  month: { label: msg("MONTH"), calls: 5310, conv: 668, talk: 58, closed: 352, up: ['↑ 9%', '↑ 13%', '↑ 7%', '↑ 11%'], pts: [70, 4, 7, 74, 3, 66, 5, 8, 72, 3, 68, 6], ticks: ['W1', 'W2', 'W3', 'W4'], vs: "↑ 9% vs last month" },
+}
+type AnalyticsRange = keyof typeof ANALYTICS_RANGES
+
+export function AnalyticsScene() {
+  const [range, setRange] = useState<AnalyticsRange>('week')
+  const data = ANALYTICS_RANGES[range]
   const tiles: [string, number, string, string, string, boolean][] = [
-    [msg("TOTAL CALLS"), 1284, C.primary, '', '↑ 12%', true],
-    [msg("CONVERSIONS"), 159, GREEN, '', '↑ 15%', false],
-    [msg("TALK TIME"), 14, '#4a9eff', 'h', '↑ 6%', false],
-    [msg("CLOSED"), 86, GREEN, '', '↑ 9%', false],
+    [msg("TOTAL CALLS"), data.calls, C.primary, '', data.up[0], true],
+    [msg("CONVERSIONS"), data.conv, GREEN, '', data.up[1], false],
+    [msg("TALK TIME"), data.talk, '#4a9eff', 'h', data.up[2], false],
+    [msg("CLOSED"), data.closed, GREEN, '', data.up[3], false],
   ]
   const [vals, setVals] = useState(tiles.map(() => 0))
   const [showCharts, setShowCharts] = useState(false)
@@ -376,14 +386,14 @@ function AnalyticsScene() {
     const c = setTimeout(() => setShowCharts(true), 420)
     return () => { clearInterval(id); clearTimeout(c) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [range])
 
-  const pts = [10, 26, 18, 34, 28, 44, 36, 52, 46, 60, 54, 70]
-  const W = 280, H = 74, maxV = 76
+  const pts = data.pts
+  const W = 500, H = 74, maxV = 76
   const coords = pts.map((v, i) => [(i / (pts.length - 1)) * W, H - (v / maxV) * H])
   const linePath = 'M' + coords.map(c => `${c[0].toFixed(1)},${c[1].toFixed(1)}`).join(' L')
   const areaPath = `${linePath} L${W},${H} L0,${H} Z`
-  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+  const days = data.ticks
 
   const pie = [
     { label: msg("Closed"), val: 42, color: GREEN },
@@ -408,7 +418,11 @@ function AnalyticsScene() {
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: GREEN_BRIGHT, animation: 'sw-pulse 1.2s infinite' }} />
           <span style={{ fontSize: 12, letterSpacing: 3, color: C.primary, fontWeight: 800 }}>{tr("ANALYTICS OVERVIEW")}</span>
         </span>
-        <span style={{ fontSize: 8.5, letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)', fontWeight: 700, border: '1px solid rgba(255,255,255,0.18)', borderRadius: 4, padding: '3px 8px' }}>{tr("LAST 7 DAYS")}</span>
+        <span style={{ display: 'flex', gap: 4 }}>
+          {(Object.keys(ANALYTICS_RANGES) as AnalyticsRange[]).map(k => (
+            <button key={k} onClick={() => setRange(k)} style={{ fontSize: 8.5, letterSpacing: 1.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', borderRadius: 4, padding: '3px 8px', border: `1px solid ${range === k ? C.primary : 'rgba(255,255,255,0.18)'}`, background: range === k ? C.primary : 'transparent', color: range === k ? C.onPrimary : 'rgba(255,255,255,0.6)' }}>{tr(ANALYTICS_RANGES[k].label)}</button>
+          ))}
+        </span>
       </div>
       <div style={{ padding: 16 }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: C.onPage, marginBottom: 12, letterSpacing: 0.5 }}>{tr("WELCOME BACK, (YOUR NAME GOES HERE).")}</div>
@@ -429,14 +443,14 @@ function AnalyticsScene() {
           <div style={{ flex: 1, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontSize: 8, letterSpacing: 1.5, color: C.muted, fontWeight: 700 }}>{tr("CALL VOLUME OVER TIME")}</span>
-              <span style={{ fontSize: 8, fontWeight: 800, color: GREEN_BRIGHT }}>{tr("↑ 18% vs last week")}</span>
+              <span style={{ fontSize: 8, fontWeight: 800, color: GREEN_BRIGHT }}>{tr(data.vs)}</span>
             </div>
             <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 74, display: 'block' }}>
               <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.primary} stopOpacity="0.32" /><stop offset="100%" stopColor={C.primary} stopOpacity="0" /></linearGradient></defs>
               {[0.25, 0.5, 0.75].map(g => <line key={g} x1="0" y1={H * g} x2={W} y2={H * g} stroke={C.cardBorder} strokeWidth="1" strokeDasharray="3 3" />)}
               <path d={areaPath} fill="url(#cv)" style={{ opacity: showCharts ? 1 : 0, transition: 'opacity 0.5s ease 0.2s' }} />
-              <path d={linePath} fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                style={{ strokeDasharray: 760, strokeDashoffset: showCharts ? 0 : 760, transition: 'stroke-dashoffset 0.7s ease-out' }} />
+              <path d={linePath} fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="miter"
+                style={{ strokeDasharray: 1200, strokeDashoffset: showCharts ? 0 : 1200, transition: 'stroke-dashoffset 0.7s ease-out' }} />
               {coords.map((c, i) => <circle key={i} cx={c[0]} cy={c[1]} r="2.3" fill={C.primary} style={{ opacity: showCharts ? 1 : 0, transition: `opacity 0.3s ease ${0.3 + i * 0.03}s` }} />)}
             </svg>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
@@ -468,7 +482,7 @@ function AnalyticsScene() {
 }
 
 
-function SuperiorScene() {
+export function SuperiorScene() {
   const features: { icon: string; title: string; body: string }[] = [
     { icon: '⊘', title: msg("No contracts"), body: msg("Cancel anytime, absolutely no strings attached. Stay for the right reasons, not because you have to.") },
     { icon: '🔒', title: msg("Secured & protected"), body: msg("Your data is protected and secured at every level, your numbers and leads PERMANENTLY yours.") },

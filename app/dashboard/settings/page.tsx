@@ -1495,7 +1495,6 @@ const resubscribeButtonStyle: React.CSSProperties = {
   color: 'var(--brand-on-primary)',
   fontSize: 12, fontWeight: 700, letterSpacing: 4, cursor: 'pointer',
   fontFamily: FUTURA,
-  boxShadow: '0 0 15px color-mix(in srgb, var(--brand-primary) 25%, transparent)',
 }
 
 function seatRowStyle(borderColor: string): React.CSSProperties {

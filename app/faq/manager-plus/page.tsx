@@ -28,14 +28,14 @@ const baseMetadata: Metadata = {
   openGraph: {
     title: 'Manager+: The Tier Above Pro',
     description:
-      '$75/week. Team ownership, full white-labeling, advanced analytics, and priority support. See it running on desktop and as a mobile PWA.',
+      '$75/week. Your own brand on the dialer, teams you own, recordings and analytics for every agent, and priority support.',
     url: 'https://dialerseat.com/faq/manager-plus',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Manager+: The Tier Above Pro',
-    description: '$75/week. Team ownership, full white-labeling, advanced analytics, and priority support. See it running on desktop and as a mobile PWA.',
+    description: '$75/week. Your own brand on the dialer, teams you own, recordings and analytics for every agent, and priority support.',
   },
 }
 

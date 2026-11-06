@@ -1,4 +1,5 @@
 'use client'
+import { msg } from '@/lib/i18n/msg'
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
@@ -15,6 +16,7 @@ import { recordAgentLegOutcome, needsReregister, type AgentLegHistory } from '@/
 import { reachedAHuman as didReachAHuman, shouldRedial, shouldResetAttemptCount, agentLegFailed } from '@/lib/redialDecision'
 import { PREDICTIVE_MIN_LINES, PREDICTIVE_MAX_LINES } from '@/lib/predictive/pacing'
 import SellerIdentityDialog from '@/components/SellerIdentityDialog'
+import { isPreviewTier, openPaywall } from '@/lib/preview'
 import { t as tr } from '@/lib/i18n/client'
 import { msg as msgText } from '@/lib/i18n/msg'
 
@@ -1324,6 +1326,11 @@ function DialerPageInner() {
   }, [user])
 
   const isActive = tier === 'active'
+  // Unpaid and looking around: the dialer shows, START opens the paywall.
+  const isPreviewAccount = isPreviewTier(tier)
+  // What a preview account may load: campaigns, leads, scripts, the clock.
+  // Not the softphone, a dial session or heartbeats, which stay isActive.
+  const canLook = isActive || isPreviewAccount
 
   const isAllActive = selectedCampaign === ALL_ACTIVE
   const isSpecificCampaign = !!selectedCampaign && !isAllActive
@@ -1465,6 +1472,8 @@ function DialerPageInner() {
 
   useEffect(() => {
     if (!user || !sessionStatsLoaded) return
+    // Demo numbers are never saved: they must not outlive the first payment.
+    if (isPreviewAccount) return
     try {
       localStorage.setItem(
         `${LS_SESSION_STATS}:${user.id}`,
@@ -1522,14 +1531,14 @@ function DialerPageInner() {
   const [scopeRefreshKey, setScopeRefreshKey] = useState(0)
 
   useEffect(() => {
-    if (!user || !isActive) return
+    if (!user || !canLook) return
     const onFocus = () => setScopeRefreshKey(k => k + 1)
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
-  }, [user, isActive])
+  }, [user, canLook])
 
   useEffect(() => {
-    if (!user || !isActive) return
+    if (!user || !canLook) return
     let cancelled = false
     fetch('/api/teams/list?detail=owned')
       .then(r => r.json())
@@ -1575,7 +1584,7 @@ function DialerPageInner() {
         if (!cancelled) setScopesLoaded(true)
       })
     return () => { cancelled = true }
-  }, [user, isActive, scopeRefreshKey])
+  }, [user, canLook, scopeRefreshKey])
 
   useEffect(() => {
     if (!user || !campaignsLoaded || !scopesLoaded || lsRestoredRef.current) return
@@ -1666,8 +1675,83 @@ function DialerPageInner() {
   }, [user, searchParams, status])
 
   useEffect(() => {
-    if (user && isActive) fetchCampaigns()
-  }, [user, isActive])
+    if (user && canLook) fetchCampaigns()
+  }, [user, canLook])
+
+  // ── THE DEMO DIALER: what a live call looks like ─────────────────────────
+  // An unpaid account looking around sees the dialer running on a demo campaign:
+  // the lead queue, the dial button pressed, 4 seconds ringing the top lead, then
+  // 10 seconds on the call with the script and disposition buttons up, then the
+  // next lead. Display only. Nothing is dialed, and pressing anything that would
+  // dial opens the paywall.
+  const demoShownRef = useRef(false)
+  const demoCycleRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [demoPressed, setDemoPressed] = useState(false)
+  const demoQueueRef = useRef<QueuedLead[]>([])
+  const demoDoneRef = useRef<Set<string>>(new Set())
+  useEffect(() => { demoQueueRef.current = visibleQueuedLeads })
+  useEffect(() => () => { if (demoCycleRef.current) clearTimeout(demoCycleRef.current) }, [])
+  useEffect(() => {
+    if (!isPreviewAccount || !user || demoShownRef.current || campaigns.length === 0) return
+    demoShownRef.current = true
+    const first = campaigns.find(c => c.name === 'Lead Batch 1') || campaigns[0]
+    setSelectedCampaign(first.id)
+    fetch(`/api/leads/list?user_id=${encodeURIComponent(user.id)}&campaign_id=${first.id}&disposition=all&search=&sort=created_desc&cursor=0&limit=8`)
+      .then(r => r.json())
+      .then(d => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rows: any[] = d?.leads || []
+        if (rows.length === 0) return
+        setAvailable(true)
+        setStatus('idle')
+        let next = 0
+        const after = (ms: number, fn: () => void) => { demoCycleRef.current = setTimeout(fn, ms) }
+        const cycle = () => after(4000, () => {
+          setDemoPressed(true)
+          after(500, () => {
+            setDemoPressed(false)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const row: any = demoQueueRef.current[0] || rows[next++ % rows.length]
+            setCurrentLead({
+              id: row.id, first_name: row.first_name || '', last_name: row.last_name || '', phone: row.phone,
+              city: row.city || '', state: row.state || '', campaign_id: row.campaign_id, dial_attempts: row.dial_attempts || 0,
+              extra_data: row.extra_data || {},
+            })
+            setSeconds(0)
+            setStatus('calling')
+            after(4000, () => {
+              setStatus('connected')
+              setSessionStats(s => ({ ...s, calls: s.calls + 1, connected: s.connected + 1 }))
+              after(10000, () => {
+                setStatus('idle')
+                setCurrentLead(null)
+                setSeconds(0)
+                demoDoneRef.current.add(row.id)
+                setQueuedLeads(prev => prev.filter(l => l.id !== row.id))
+                cycle()
+              })
+            })
+          })
+        })
+        cycle()
+      })
+      .catch(() => {})
+    // TODAY'S METRICS and CONNECTED TODAY, from the demo calls made today.
+    const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0)
+    fetch(`/api/analytics/summary?user_id=${encodeURIComponent(user.id)}&start=${encodeURIComponent(dayStart.toISOString())}&end=${encodeURIComponent(new Date().toISOString())}`)
+      .then(r => r.json())
+      .then(d => {
+        const t = d?.summary
+        if (!t) return
+        setSessionStats({
+          ...ZERO_STATS,
+          calls: t.totalCalls || 0, connected: t.contactsReached || 0, appointments: t.appointments || 0,
+          closed: t.closed || 0, dnc: t.dnc || 0, notInterested: t.notInterested || 0,
+          talkSeconds: t.totalDuration || 0, dialSeconds: Math.round((t.totalDuration || 0) * 1.35),
+        })
+      })
+      .catch(() => {})
+  }, [isPreviewAccount, user, campaigns])
 
   useEffect(() => {
     if (!lsRestoredRef.current) return
@@ -1698,10 +1782,10 @@ function DialerPageInner() {
   }, [selectedCampaign])
 
   useEffect(() => {
-    if (!isActive) return
+    if (!canLook) return
     const interval = setInterval(() => setClockTick(t => t + 1), 1000)
     return () => clearInterval(interval)
-  }, [isActive])
+  }, [canLook])
 
   useEffect(() => {
     if (!isActive) return
@@ -3153,6 +3237,11 @@ function DialerPageInner() {
    * microphone — is also the one that makes a placed call silently unanswerable.
    */
   const handleSetAvailable = async (): Promise<boolean> => {
+    // Unpaid and looking around: going available is where paying starts.
+    if (isPreviewAccount) {
+      openPaywall({ eyebrow: msg('DIALING NEEDS AN ACTIVE SEAT'), line: msg('Activate your seat and the dialer starts calling your list right away.'), source: 'Set available' })
+      return false
+    }
     // ── GOING AVAILABLE IS NOT ARMING ──────────────────────────────────────
     // Now that predictive_armed lives in the database it survives everything —
     // a reload, a closed tab, a session that ended badly. So a flag left set
@@ -3924,7 +4013,7 @@ function DialerPageInner() {
           const bt = b.created_at ? new Date(b.created_at).getTime() : 0
           return queueSortDesc ? bt - at : at - bt
         })
-        setQueuedLeads(sorted)
+        setQueuedLeads(sorted.filter(l => !demoDoneRef.current.has(l.id)))
       })
       .finally(() => {
         if (myGeneration === queueFetchGenerationRef.current) setQueuedLeadsLoading(false)
@@ -3943,7 +4032,7 @@ function DialerPageInner() {
   // literal switch-tabs-and-back case, matching the reported "have to
   // refresh the page" symptom.
   useEffect(() => {
-    if (!user || !isActive) return
+    if (!user || !canLook) return
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         fetchCampaigns()
@@ -3952,7 +4041,7 @@ function DialerPageInner() {
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [user, isActive, fetchQueuedLeads])
+  }, [user, canLook, fetchQueuedLeads])
 
   // Internal refresh trigger — no longer exposed as a button (removed per
   // instruction), but still needed: it's what actually re-syncs the
@@ -5380,6 +5469,7 @@ function DialerPageInner() {
    * `available` alone so the UI lands back on INITIATE DIAL SEQUENCE.
    */
   const abortDialing = async () => {
+    if (isPreviewAccount) return // the demo's call is not a call
     // Latch first, so anything already mid-flight bails rather than racing us.
     abortDialingRef.current = true
     cancelAllPendingDials()
@@ -5454,6 +5544,10 @@ function DialerPageInner() {
    * human asked to dial.
    */
   const startDialSequence = async () => {
+    if (isPreviewAccount) {
+      openPaywall({ eyebrow: msg('DIALING NEEDS AN ACTIVE SEAT'), line: msg('Activate your seat and the dialer starts calling your own leads.'), source: 'Start dialing' })
+      return
+    }
     // ── COUNTERS, BECAUSE INFERENCE HAS RUN OUT ─────────────────────────────
     // predictive_armed has stayed false across two fixes. Everything upstream
     // of the arming line has been read and looks correct, which means reading
@@ -5472,6 +5566,10 @@ function DialerPageInner() {
   }
 
   const terminateCall = async () => {
+    if (isPreviewAccount) {
+      openPaywall({ eyebrow: msg('DIALING NEEDS AN ACTIVE SEAT'), line: msg('Activate your seat and the dialer starts calling your own leads.'), source: 'Demo call' })
+      return
+    }
     const sid = activeCallSidRef.current || activeCallSid
     const agentWasOnTheCall = !!callStartRef.current
 
@@ -5532,6 +5630,10 @@ function DialerPageInner() {
   // it. SKIP remains the single, unambiguous "give up on this one, next".
 
   const handleSkip = async () => {
+    if (isPreviewAccount) {
+      openPaywall({ eyebrow: msg('DIALING NEEDS AN ACTIVE SEAT'), line: msg('Activate your seat and the dialer starts calling your own leads.'), source: 'Demo call' })
+      return
+    }
     if (activePollRef.current) clearInterval(activePollRef.current)
     // 'skip' lets the server hold the lead's line to clear the short-duration
     // threshold. The agent does not wait for it — see hangupCall.
@@ -5558,6 +5660,10 @@ function DialerPageInner() {
   }
 
   const handleDisposition = async (disp: string) => {
+    if (isPreviewAccount) {
+      openPaywall({ eyebrow: msg('DIALING NEEDS AN ACTIVE SEAT'), line: msg('Activate your seat and the dialer starts calling your own leads.'), source: 'Demo call' })
+      return
+    }
     if (disp === 'SKIP') { handleSkip(); return }
     setDisposition(disp)
     setSessionStats(s => ({
@@ -5595,6 +5701,10 @@ function DialerPageInner() {
   }
 
   const handleManualDial = async () => {
+    if (isPreviewAccount) {
+      openPaywall({ eyebrow: msg('DIALING NEEDS AN ACTIVE SEAT'), line: msg('Activate your seat to place calls from the keypad.'), source: 'Manual dial' })
+      return
+    }
     if (!manualNumber) return
 
     // See manualDialBusyRef. Both halves of the one-call-per-click guard.
@@ -5999,6 +6109,7 @@ function DialerPageInner() {
   // modes for the same campaign.
   const handleDialRepeatChange = async (n: 1 | 2 | 3) => {
     setDialRepeatCount(n) // update immediately — don't block the UI on the round trip
+    if (isPreviewAccount) return // the demo moves the selector and saves nothing
     // ── ALL ACTIVE WRITES TO ALL OF THEM ──────────────────────────────────
     // This used to `return` here when there was no single campaign, so on ALL
     // ACTIVE the selector moved and nothing else did. Predictive resolves
@@ -6184,7 +6295,7 @@ function DialerPageInner() {
     ? ((sessionStats.connected / sessionStats.calls) * 100).toFixed(0) + '%'
     : '-'
 
-  if (tierLoaded && !isActive) {
+  if (tierLoaded && !isActive && !isPreviewAccount) {
     return (
       <div style={{
         flex: 1, background: terminalBg,
@@ -6235,7 +6346,7 @@ function DialerPageInner() {
                 background: 'linear-gradient(135deg, var(--brand-primary), color-mix(in srgb, var(--brand-primary) 75%, black))',
                 border: 'none', borderRadius: 4, color: 'var(--brand-on-primary)',
                 fontSize: 13, fontWeight: 700, letterSpacing: 4,
-                textDecoration: 'none', boxShadow: '0 0 20px color-mix(in srgb, var(--brand-primary) 30%, transparent)',
+                textDecoration: 'none',
                 marginBottom: 16, fontFamily: FUTURA,
               }}>{tr("{value}, $35/WEEK", { value: tier === 'lapsed' ? tr("RESUBSCRIBE") : tr("SUBSCRIBE") })}</Link>
               <div style={{ fontSize: 9, letterSpacing: 3, color: 'var(--brand-on-sidebar-muted)', marginBottom: 24 }}>
@@ -7182,7 +7293,7 @@ function DialerPageInner() {
         onClose={() => setPredictiveGate(null)}
       />
       <style>{`
-        .dialer-root { height: 100vh; height: 100dvh; }
+        .dialer-root { height: calc(100vh - var(--obx-banner-h, 0px)); height: calc(100dvh - var(--obx-banner-h, 0px)); }
         .dialer-status-bar { display: flex; align-items: center; justify-content: space-between; }
         .dialer-status-bar-left { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
         .dialer-status-bar-right { display: flex; align-items: center; gap: 18px; }
@@ -7260,7 +7371,7 @@ function DialerPageInner() {
         }
 
         @media (max-width: 768px) {
-          .dialer-root { height: calc(100vh - 64px); height: calc(100dvh - 64px); }
+          .dialer-root { height: calc(100vh - 64px - var(--obx-banner-h, 0px)); height: calc(100dvh - 64px - var(--obx-banner-h, 0px)); }
           .dialer-status-bar { padding: 6px 12px !important; }
 
           /* Show the full-screen toggle on mobile only. */
@@ -7679,7 +7790,7 @@ function DialerPageInner() {
             <div className="dialer-queue-card" style={{
               flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
               borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column',
-              minHeight: 280, maxHeight: 'calc(100vh - 220px)',
+              minHeight: 280, maxHeight: 'calc(100vh - 220px - var(--obx-banner-h, 0px))',
             }}>
               {LeadQueuePanel()}
             </div>
@@ -8049,7 +8160,7 @@ function DialerPageInner() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <button onClick={startDialSequence} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
-                    background: terminalDark, color: 'var(--brand-primary)',
+                    transform: demoPressed ? 'scale(0.97)' : undefined, background: terminalDark, color: 'var(--brand-primary)',
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                     cursor: 'pointer', fontFamily: FUTURA,
                     borderTop: `3px solid var(--brand-primary)`, transition: 'all 0.15s',
@@ -8129,7 +8240,7 @@ function DialerPageInner() {
                 && !dialSequenceActive && (
                 <button onClick={startDialSequence} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
-                  background: terminalDark, color: 'var(--brand-primary)',
+                  transform: demoPressed ? 'scale(0.97)' : undefined, background: terminalDark, color: 'var(--brand-primary)',
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                   cursor: 'pointer', fontFamily: FUTURA,
                   borderTop: `3px solid var(--brand-primary)`, transition: 'all 0.15s',
@@ -8191,7 +8302,7 @@ function DialerPageInner() {
               {status === 'ended' && !showDisposition && (
                 <button onClick={startDialSequence} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
-                  background: terminalDark, color: 'var(--brand-primary)',
+                  transform: demoPressed ? 'scale(0.97)' : undefined, background: terminalDark, color: 'var(--brand-primary)',
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                   cursor: 'pointer', fontFamily: FUTURA,
                   borderTop: `3px solid var(--brand-primary)`,
