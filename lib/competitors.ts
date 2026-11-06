@@ -851,7 +851,7 @@ export const COMPETITORS: Competitor[] = [
     summary:
       'A cloud phone system with a power dialer on its Business plan, sold with a three-user minimum and a twelve-month commitment.',
     pricing:
-      'Talk is $15 to $24 per user per month and Business, which includes the power dialer, is $47 to $57, depending on billing. Both plans require at least three users.',
+      'Talk is $19 to $29 per user per month and Business, which includes the power dialer, is $49 to $69, depending on billing. Both plans require at least three users.',
     contract: 'A twelve-month commitment and a three-user minimum on both published plans.',
     dialing:
       'A power dialer on the Business plan. Whether it dials more than one line, and whether predictive dialing is offered, is not stated.',
@@ -870,8 +870,8 @@ export const COMPETITORS: Competitor[] = [
       'Teams of three or more who want a business phone system first, with power dialing included, and are comfortable committing for a year.',
     team: {
       minimum: 'Three users, twelve months',
-      addingASeat: 'Add a user at $47 to $57 a month on Business, inside the twelve-month commitment',
-      fiveSeats: 'About $235 to $285 a month on Business, committed for a year',
+      addingASeat: 'Add a user at $49 to $69 a month on Business, inside the twelve-month commitment',
+      fiveSeats: 'About $245 to $345 a month on Business, committed for a year',
     },
     crossShopped: false,
     segment: 'phone_system',

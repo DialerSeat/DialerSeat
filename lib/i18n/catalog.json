@@ -3445,7 +3445,7 @@
  "ABOUT": [
   "components/site-footer.tsx"
  ],
- "About $235 to $285 a month on Business, committed for a year": [
+ "About $245 to $345 a month on Business, committed for a year": [
   "lib/competitors.ts"
  ],
  "About $500 a month on Professional billed monthly, plus the one-time $1,500 onboarding fee": [
@@ -3692,7 +3692,7 @@
  "Add a smrtDialer seat to the subscription, then fund credits for their call time": [
   "lib/competitors.ts"
  ],
- "Add a user at $47 to $57 a month on Business, inside the twelve-month commitment": [
+ "Add a user at $49 to $69 a month on Business, inside the twelve-month commitment": [
   "lib/competitors.ts"
  ],
  "Add a user at the plan price, from $109 a month on the first plan with a dialer": [
@@ -20567,7 +20567,7 @@
   "components/teams/AgentCard.tsx",
   "components/teams/TeamFloor.tsx"
  ],
- "Talk is $15 to $24 per user per month and Business, which includes the power dialer, is $47 to $57, depending on billing. Both plans require at least three users.": [
+ "Talk is $19 to $29 per user per month and Business, which includes the power dialer, is $49 to $69, depending on billing. Both plans require at least three users.": [
   "lib/competitors.ts"
  ],
  "Talk time": [
