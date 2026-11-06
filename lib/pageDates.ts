@@ -74,25 +74,25 @@ export const PAGE_DATES: Record<string, string> = {
   "/status": "2026-10-06",
   "/terms": "2026-10-06",
   "/tools": "2026-11-05",
-  "/tools/abandon-rate-calculator": "2026-11-05",
-  "/tools/area-code-lookup": "2026-11-05",
-  "/tools/average-handle-time-calculator": "2026-11-05",
-  "/tools/calls-per-hour-calculator": "2026-11-05",
-  "/tools/cold-call-script-generator": "2026-11-05",
-  "/tools/cold-calling-tracker": "2026-11-05",
-  "/tools/cold-calls-per-day-calculator": "2026-11-05",
-  "/tools/contact-rate-calculator": "2026-11-05",
-  "/tools/cost-per-lead-calculator": "2026-11-05",
-  "/tools/dialer-cost-calculator": "2026-11-05",
-  "/tools/dnc-registry-cost-calculator": "2026-11-05",
-  "/tools/erlang-c-calculator": "2026-11-05",
-  "/tools/lead-list-cleaner": "2026-11-05",
-  "/tools/phone-number-extractor": "2026-11-05",
-  "/tools/phone-number-formatter": "2026-11-05",
-  "/tools/sales-voicemail-script-generator": "2026-11-05",
-  "/tools/state-do-not-call-lists": "2026-11-05",
-  "/tools/tcpa-compliance-checklist": "2026-11-05",
-  "/tools/telemarketing-calling-hours": "2026-11-05",
+  "/tools/abandon-rate-calculator": "2026-11-06",
+  "/tools/area-code-lookup": "2026-11-06",
+  "/tools/average-handle-time-calculator": "2026-11-06",
+  "/tools/calls-per-hour-calculator": "2026-11-06",
+  "/tools/cold-call-script-generator": "2026-11-06",
+  "/tools/cold-calling-tracker": "2026-11-06",
+  "/tools/cold-calls-per-day-calculator": "2026-11-06",
+  "/tools/contact-rate-calculator": "2026-11-06",
+  "/tools/cost-per-lead-calculator": "2026-11-06",
+  "/tools/dialer-cost-calculator": "2026-11-06",
+  "/tools/dnc-registry-cost-calculator": "2026-11-06",
+  "/tools/erlang-c-calculator": "2026-11-06",
+  "/tools/lead-list-cleaner": "2026-11-06",
+  "/tools/phone-number-extractor": "2026-11-06",
+  "/tools/phone-number-formatter": "2026-11-06",
+  "/tools/sales-voicemail-script-generator": "2026-11-06",
+  "/tools/state-do-not-call-lists": "2026-11-06",
+  "/tools/tcpa-compliance-checklist": "2026-11-06",
+  "/tools/telemarketing-calling-hours": "2026-11-06",
   "/vs": "2026-10-06",
   "/vs/[matchup]": "2026-11-04",
   "/vs/3cx": "2026-11-05",
@@ -130,7 +130,7 @@ export const PAGE_DATES: Record<string, string> = {
 }
 
 /** Latest date across every page: the fallback for a route missing above. */
-export const SITE_UPDATED = '2026-11-05'
+export const SITE_UPDATED = '2026-11-06'
 
 /** The date a route last changed, as YYYY-MM-DD. */
 export function pageDate(path: string): string {

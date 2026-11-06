@@ -17689,6 +17689,9 @@
  "Questions about this Privacy Policy, or want to exercise a data right? Email us at": [
   "app/privacy/page.tsx"
  ],
+ "Questions people ask": [
+  "components/tools/ToolPage.tsx"
+ ],
  "Questions people ask about this": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
@@ -20074,6 +20077,9 @@
  ],
  "STATES & TERRITORIES": [
   "app/faq/calling-hours/page.tsx"
+ ],
+ "States fixed": [
+  "components/tools/LeadListCleaner.tsx"
  ],
  "states the other tool's published price and cites its sources.": [
   "app/faq/view.tsx"

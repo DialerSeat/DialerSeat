@@ -151,7 +151,7 @@ export function TcpaChecklist() {
           {g.items.map((i) => (
             <label key={i.text} className="tk-check">
               <input type="checkbox" checked={!!done[i.text]} onChange={(e) => setDone({ ...done, [i.text]: e.target.checked })} />
-              <span>{t(i.text)}<small>{i.cite}</small></span>
+              <span>{t(i.text)}<small>{t(i.cite)}</small></span>
             </label>
           ))}
         </div>

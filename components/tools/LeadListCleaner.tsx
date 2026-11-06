@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { t } from '@/lib/i18n/client'
+import { msg } from '@/lib/i18n/msg'
 import {
   parseDelimited, looksLikeHeader, guessColumns, cleanLeads, toImportCsv, TEMPLATE_CSV,
   FIELD_LABELS, type ColumnGuess, type FieldType,
@@ -162,7 +163,7 @@ export default function LeadListCleaner() {
           <div className="tk-stats">
             <Stat value={fmt(r.rowsIn)} label="Rows in your sheet" />
             <Stat value={fmt(r.fixes.phones)} label="Phones reformatted" />
-            <Stat value={fmt(r.fixes.states + r.fixes.statesFromAreaCode)} label="States fixed" />
+            <Stat value={fmt(r.fixes.states + r.fixes.statesFromAreaCode)} label={msg("States fixed")} />
             <Stat value={fmt(r.fixes.namesSplit)} label="Full names split" />
             <Stat value={fmt(r.fixes.namesRecased)} label="Names re-cased" />
             <Stat value={fmt(r.duplicates)} label="Duplicates removed" />

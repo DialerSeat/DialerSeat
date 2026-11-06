@@ -115,7 +115,7 @@ export default async function ToolPage(p: {
 
         {p.children}
 
-        <GutsSection icon="chat" title={t(p.faqTitle ?? "Questions people ask")}>
+        <GutsSection icon="chat" title={t(p.faqTitle ?? msg("Questions people ask"))}>
           <div style={{ textAlign: 'start', maxWidth: 660, margin: '0 auto' }}>
             {p.faqs.map((f) => (
               <div key={f.question} style={{ marginBottom: 22 }}>
