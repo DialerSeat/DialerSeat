@@ -138,7 +138,7 @@ const METRICS: Term[] = [
     def: 'Time spent actually speaking to somebody, measured from when they answered. Not the same as time spent dialing, which includes every ring and every wrap-up.',
   },
   {
-    term: 'Wrap-up',
+    term: msg("Wrap-up"),
     def: 'The seconds after a call while the agent records what happened. Long wrap-ups are usually the biggest hidden cost on a dialing floor.',
   },
   {
@@ -200,7 +200,7 @@ const NUMBERS: Term[] = [
     def: 'The system US carriers use to sign calls so the receiving carrier can tell the caller ID was not spoofed.',
   },
   {
-    term: 'A-attestation',
+    term: msg("A-attestation"),
     def: 'The strongest STIR/SHAKEN signature: the carrier is confirming both who is calling and that they are entitled to use that number. Lower grades make a call more likely to be flagged.',
   },
   {

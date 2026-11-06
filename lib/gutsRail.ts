@@ -184,7 +184,7 @@ const RAIL_ANSWERS: { href: string; label: string }[] = [
   { href: '/faq/why-dialerseat', label: msg("Why DialerSeat?") },
   { href: '/faq/why-we-charge', label: msg("Why we charge what we charge") },
   { href: '/faq/billing', label: msg("Billing & cancellation") },
-  { href: '/faq/dialer-modes', label: 'Dialer modes (TL;DR)' },
+  { href: '/faq/dialer-modes', label: msg("Dialer modes (TL;DR)") },
   { href: '/faq/how-we-keep-compliance', label: msg("How we keep compliance") },
   { href: '/faq/numbers', label: msg("Phone numbers & caller ID") },
   { href: '/faq/leads', label: msg("Uploading & managing leads") },

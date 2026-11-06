@@ -916,6 +916,15 @@
  "← TEAMS": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
  ],
+ "↑ 18% vs last week": [
+  "app/welcome/Showcase.tsx"
+ ],
+ "↑ 21% vs yesterday": [
+  "app/welcome/Showcase.tsx"
+ ],
+ "↑ 9% vs last month": [
+  "app/welcome/Showcase.tsx"
+ ],
  "↑ UPLOAD MORE LEADS": [
   "app/dashboard/campaigns/page.tsx"
  ],
@@ -2025,6 +2034,9 @@
  "$150 per quarter or $600 per year": [
   "components/tools/StateDncTable.tsx"
  ],
+ "$150+/mo": [
+  "app/page.tsx"
+ ],
  "$165+/mo, contract for less": [
   "lib/competitorFeatures.ts"
  ],
@@ -2042,6 +2054,9 @@
  ],
  "$199 or more per seat per month, typically on an annual contract, often with a setup fee": [
   "lib/weeklyBilling.ts"
+ ],
+ "$199+/mo": [
+  "app/page.tsx"
  ],
  "$199+/mo, contract": [
   "lib/competitorFeatures.ts"
@@ -3356,6 +3371,9 @@
  "A wrong address and a revoked one get exactly the same response, so nobody can probe for a URL that used to work.": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
+ "A-attestation": [
+  "app/faq/dialer-glossary/page.tsx"
+ ],
  "A-attestation comes with every number in the pool, at no extra cost and with no forms to file. $35/week per seat.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx#prop"
  ],
@@ -3734,6 +3752,9 @@
   "app/api/campaigns/create/route.ts",
   "app/api/campaigns/update/route.ts"
  ],
+ "Add-on": [
+  "app/page.tsx"
+ ],
  "Add-on modules per dialing type.": [
   "lib/competitors.ts"
  ],
@@ -3826,6 +3847,9 @@
  ],
  "Aged and shared leads need a local number": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
+ ],
+ "AGED INTERNET LEADS": [
+  "lib/verticals.ts"
  ],
  "Aged leads, refis, and the 2026 trigger-lead rules": [
   "app/faq/view.tsx"
@@ -4382,6 +4406,7 @@
   "app/faq/billing/view.tsx",
   "app/faq/campaigns/view.tsx",
   "app/faq/dialerseat-teams/view.tsx",
+  "app/faq/languages/page.tsx",
   "app/faq/managers/view.tsx",
   "app/faq/teams-how-it-works/page.tsx",
   "app/resources/page.tsx",
@@ -4565,6 +4590,9 @@
  "Answering-machine detection that routes machines away from the agent.": [
   "lib/canonicalFacts.ts"
  ],
+ "answers": [
+  "app/faq/view.tsx"
+ ],
  "Answers to the questions buyers actually ask about DialerSeat: pricing, contracts, dialing modes, TCPA compliance, team setup, white-label, data hosting, and more.": [
   "app/faq/page.tsx"
  ],
@@ -4651,6 +4679,9 @@
  ],
  "Apple’s description of the setting is in its": [
   "app/faq/local-presence-dialing/page.tsx"
+ ],
+ "APPLICANTS FROM A JOB POST": [
+  "lib/verticals.ts"
  ],
  "Application": [
   "app/status/page.tsx"
@@ -5327,11 +5358,17 @@
  "Billing you can stop.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
+ "black": [
+  "app/faq/manager-plus/view.tsx"
+ ],
  "BLANK TEMPLATE": [
   "components/tools/TrackerAndChecklist.tsx"
  ],
  "Blended inbound/outbound teams that want one vendor for both directions.": [
   "lib/competitors.ts"
+ ],
+ "blue": [
+  "app/faq/manager-plus/view.tsx"
  ],
  "Body must be valid JSON. Set Content-Type: application/json.": [
   "app/api/ingest/leads/[token]/route.ts"
@@ -5407,6 +5444,9 @@
  ],
  "Broad integration catalogue": [
   "lib/competitors.ts"
+ ],
+ "brown": [
+  "app/faq/manager-plus/view.tsx"
  ],
  "Browse all answers": [
   "app/faq/view.tsx#prop"
@@ -5586,6 +5626,9 @@
  ],
  "Calculate cost per lead from spend and leads, plus cost per appointment, cost per sale and return on spend.": [
   "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
+ "CALCULATOR": [
+  "app/resources/page.tsx"
  ],
  "Calculators": [
   "app/resources/page.tsx"
@@ -6719,6 +6762,9 @@
   "app/tools/cold-calling-tracker/page.tsx",
   "app/tools/cost-per-lead-calculator/page.tsx"
  ],
+ "COLD LISTS": [
+  "lib/verticals.ts"
+ ],
  "Collapse": [
   "components/teams/TeamsSidebar.tsx"
  ],
@@ -6736,6 +6782,9 @@
  ],
  "COLUMN": [
   "app/faq/compliance-export/view.tsx"
+ ],
+ "Column {n}": [
+  "components/tools/LeadListCleaner.tsx"
  ],
  "Column auto-detection, consent fields, retry logic, and what happens to leads that fail to import, the real mechanics of getting a list into a campaign.": [
   "app/faq/leads/page.tsx"
@@ -6793,6 +6842,9 @@
  ],
  "comparison": [
   "app/faq/view.tsx"
+ ],
+ "comparisons": [
+  "app/vs/view.tsx"
  ],
  "Comparisons": [
   "app/vs/3cx/page.tsx",
@@ -7711,6 +7763,9 @@
   "app/data/connect-rates/page.tsx",
   "app/resources/page.tsx"
  ],
+ "DATA": [
+  "app/resources/page.tsx"
+ ],
  "Data and tools for": [
   "app/resources/page.tsx"
  ],
@@ -7773,6 +7828,9 @@
   "app/dialing-modes/preview/page.tsx",
   "app/faq/what-is-a-preview-dialer/page.tsx",
   "lib/verticals.ts"
+ ],
+ "Debt Collection Dialer": [
+  "app/resources/page.tsx"
  ],
  "Debt Collection Dialer: Regulation F, the 7-in-7 Rule & Calling Hours": [
   "lib/verticals.ts"
@@ -7925,6 +7983,9 @@
  "Desktop app prefs": [
   "app/faq/data-and-recordings/view.tsx"
  ],
+ "Desktop-focused": [
+  "lib/competitorFeatures.ts"
+ ],
  "DESKTOP-ONLY SOFTWARE": [
   "app/vs/everyone/view.tsx"
  ],
@@ -8062,6 +8123,9 @@
  "Dialer for B2B sales & SDRs": [
   "app/faq/view.tsx"
  ],
+ "Dialer for B2B Sales Teams & SDRs": [
+  "app/resources/page.tsx"
+ ],
  "Dialer for B2B Sales Teams & SDRs: Cold Calling Without the Contract": [
   "lib/verticals.ts"
  ],
@@ -8091,11 +8155,17 @@
  "Dialer for mortgage loan officers": [
   "app/faq/view.tsx"
  ],
+ "Dialer for Mortgage Loan Officers": [
+  "app/resources/page.tsx"
+ ],
  "Dialer for Mortgage Loan Officers: Refi, Purchase & Aged Leads": [
   "lib/verticals.ts"
  ],
  "Dialer for nonprofits & fundraising": [
   "app/faq/view.tsx"
+ ],
+ "Dialer for Nonprofits & Telefundraising": [
+  "app/resources/page.tsx"
  ],
  "Dialer for Nonprofits & Telefundraising: Donor Calling Rules": [
   "lib/verticals.ts"
@@ -8124,6 +8194,9 @@
  ],
  "Dialer for recruiters": [
   "app/faq/view.tsx"
+ ],
+ "Dialer for Recruiters & Staffing Agencies": [
+  "app/resources/page.tsx"
  ],
  "Dialer for Recruiters & Staffing Agencies: Call More Candidates": [
   "lib/verticals.ts"
@@ -8174,6 +8247,10 @@
  ],
  "DIALER MODES · TL;DR": [
   "app/faq/dialer-modes/page.tsx"
+ ],
+ "Dialer modes (TL;DR)": [
+  "app/faq/view.tsx",
+  "lib/gutsRail.ts"
  ],
  "Dialer Modes (TL;DR): Preview, Power, Progressive, Predictive | DialerSeat": [
   "app/faq/dialer-modes/page.tsx"
@@ -8373,6 +8450,9 @@
  "DialerSeat holds every predictive campaign under the US limit automatically and drops to one line per agent before it is reached.": [
   "app/tools/abandon-rate-calculator/page.tsx"
  ],
+ "DialerSeat in {count} languages": [
+  "app/faq/languages/page.tsx"
+ ],
  "DialerSeat is $35 a week per seat: preview, power, and multi-line predictive dialing all included, no tier to unlock. WAVV starts at $59/month and requires its $149/month Multi Line plan for predictive dialing, plus $1/month per phone number.": [
   "app/vs/wavv/page.tsx"
  ],
@@ -8423,6 +8503,9 @@
  ],
  "DIALERSEAT MANAGER+": [
   "app/page.tsx"
+ ],
+ "DialerSeat Manager+ analytics dashboard white-labeled in a {theme} theme, with a placeholder logo": [
+  "app/faq/manager-plus/view.tsx"
  ],
  "DialerSeat marketing landing page on mobile, before signing in": [
   "app/faq/mobile/view.tsx"
@@ -8712,6 +8795,9 @@
  "DialerSeat’s answering machine detection routes machines away from your agents, so their time goes to people. $35 a week per seat.": [
   "app/tools/sales-voicemail-script-generator/page.tsx"
  ],
+ "DialerSeat's interface is available in {count} languages: {names}. The whole product is translated, not just the marketing pages, and the language never changes on its own. What is translated, what is not, and how to switch.": [
+  "app/faq/languages/page.tsx"
+ ],
  "DialerSeat's mobile experience is a": [
   "app/faq/white-label-mobile/view.tsx"
  ],
@@ -8942,6 +9028,9 @@
  "Disputes between you and the people you call": [
   "app/terms/page.tsx"
  ],
+ "DISPUTES, PAYMENT PLANS": [
+  "lib/verticals.ts"
+ ],
  "Distributed support or sales teams whose main need is telephony, not volume dialing.": [
   "lib/competitors.ts"
  ],
@@ -9039,6 +9128,9 @@
  ],
  "DO NOT CALL LIST": [
   "app/data/calling-rules-by-country/page.tsx"
+ ],
+ "Do Not Call lists, calling hours, consent and dialer rules for {count} countries, with sources.": [
+  "app/resources/page.tsx"
  ],
  "Do Not Call lists, calling hours, consent and dialer rules for {n} countries, with sources.": [
   "app/data/calling-rules-by-country/page.tsx"
@@ -9292,6 +9384,9 @@
  "Each agent dials from the shared number pool with per-number daily caps and answer-rate tracking, so a floor cannot burn one caller ID.": [
   "lib/canonicalFacts.ts"
  ],
+ "Each agent gets their own login, dialer and call data.": [
+  "app/pricing/page.tsx"
+ ],
  "Each agent gets their own login, their own dialer, and their own call data.": [
   "lib/canonicalFacts.ts"
  ],
@@ -9355,6 +9450,9 @@
  ],
  "Each vendor’s own published pricing where it exists, and the terms stated on each comparison page where it does not. Where a vendor sells only by quote, the index says so rather than estimating.": [
   "app/data/dialer-pricing/page.tsx"
+ ],
+ "EARLY-STAGE ACCOUNTS": [
+  "lib/verticals.ts"
  ],
  "earns 5% off your weekly seat cost, twenty-five earns 10%, counted across every team you own, not per team.": [
   "app/dashboard/teams/page.tsx"
@@ -9556,6 +9654,12 @@
   "lib/competitors.ts"
  ],
  "Enterprise contact-center software sold through a sales cycle, aimed at large floors.": [
+  "lib/competitors.ts"
+ ],
+ "Enterprise-focused": [
+  "lib/competitorFeatures.ts"
+ ],
+ "Enterprise-scale": [
   "lib/competitors.ts"
  ],
  "ERLANG C CALCULATOR": [
@@ -10700,6 +10804,9 @@
   "components/tools/ToolPage.tsx",
   "lib/gutsRail.ts"
  ],
+ "FREE TOOLS": [
+  "app/resources/page.tsx"
+ ],
  "Free tools for outbound calling": [
   "app/tools/page.tsx"
  ],
@@ -10728,6 +10835,9 @@
  "Frequently Asked Questions: DialerSeat": [
   "app/faq/page.tsx"
  ],
+ "FRESH APPLICATIONS": [
+  "lib/verticals.ts"
+ ],
  "Fresh in the queue, never dialed. This is every lead's starting status right after upload.": [
   "app/faq/leads/view.tsx"
  ],
@@ -10742,6 +10852,7 @@
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
  ],
  "from {price}": [
+  "app/pricing/page.tsx",
   "components/tools/DialerCostCalculator.tsx"
  ],
  "from {teamName}? Their call history stays; their access does not.": [
@@ -11101,6 +11212,9 @@
  "Grateful for the present. Excited about the next year.": [
   "app/faq/why-dialerseat/view.tsx"
  ],
+ "green": [
+  "app/faq/manager-plus/view.tsx"
+ ],
  "Guides": [
   "app/resources/page.tsx"
  ],
@@ -11384,6 +11498,9 @@
   "app/faq/mobile/view.tsx"
  ],
  "Homebuyers Privacy Protection Act, H.R.2808 (Congress.gov)": [
+  "lib/verticals.ts"
+ ],
+ "HOMEOWNER LISTS": [
   "lib/verticals.ts"
  ],
  "Honest side-by-side comparisons of DialerSeat against every major outbound dialer and business phone system. Pricing, features, what each tool wins at, who should switch.": [
@@ -12800,12 +12917,21 @@
   "app/faq/languages/page.tsx",
   "app/faq/view.tsx"
  ],
+ "LAPSED DONORS": [
+  "lib/verticals.ts"
+ ],
  "Lapsed-user data preservation": [
   "app/vs/everyone/view.tsx",
   "lib/competitorFeatures.ts"
  ],
+ "LARGE APPEALS": [
+  "lib/verticals.ts"
+ ],
  "Large integration marketplace": [
   "lib/competitors.ts"
+ ],
+ "LARGE PORTFOLIOS": [
+  "lib/verticals.ts"
  ],
  "last {ago}": [
   "components/teams/AgentDetail.tsx"
@@ -12888,6 +13014,9 @@
  ],
  "Launch your campaign and DialerSeat starts working immediately. Live connections come through the second someone picks up.": [
   "app/page.tsx"
+ ],
+ "lavender": [
+  "app/faq/manager-plus/view.tsx"
  ],
  "LEAD": [
   "app/dashboard/campaigns/page.tsx"
@@ -13255,6 +13384,9 @@
  "Live connect rates measured on real outbound calls.": [
   "app/tools/page.tsx"
  ],
+ "LIVE DATA": [
+  "app/resources/page.tsx"
+ ],
  "LIVE DEMO · THE QUEUE WORKS ITSELF TOP-DOWN": [
   "app/page.tsx"
  ],
@@ -13528,6 +13660,9 @@
  ],
  "Maintenance, bug fixes, compliance": [
   "app/faq/white-label/view.tsx"
+ ],
+ "MAJOR DONORS": [
+  "lib/verticals.ts"
  ],
  "makes it worse.": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
@@ -14267,6 +14402,9 @@
  "Native Salesforce/HubSpot/Outreach sync": [
   "lib/competitorFeatures.ts"
  ],
+ "navy": [
+  "app/faq/manager-plus/view.tsx"
+ ],
  "need {count}+ calls": [
   "app/dashboard/teams/page.tsx"
  ],
@@ -14972,7 +15110,8 @@
  ],
  "NOT A TIER": [
   "app/faq/dialer-for-insurance-agents/page.tsx",
-  "app/faq/dialer-for-real-estate/page.tsx"
+  "app/faq/dialer-for-real-estate/page.tsx",
+  "lib/verticals.ts"
  ],
  "Not a US area code. Canada and other countries have their own rules.": [
   "components/tools/CallingHoursChecker.tsx"
@@ -16275,6 +16414,9 @@
  ],
  "Pass-through seat.": [
   "app/faq/dialerseat-teams/view.tsx"
+ ],
+ "PAST CLIENTS, REFI ALERTS": [
+  "lib/verticals.ts"
  ],
  "past due": [
   "app/faq/billing/view.tsx"
@@ -17609,6 +17751,9 @@
  "Published pricing on every plan, and a 14-day trial with no card": [
   "lib/competitors.ts"
  ],
+ "Published pricing, contract terms and seat minimums for {count} dialers, side by side.": [
+  "app/resources/page.tsx"
+ ],
  "Published pricing, contract terms and seat minimums for {n} outbound dialers, including ReadyMode, Mojo, PhoneBurner, BatchDialer, Five9, Convoso, Kixie, Orum and VICIdial. Dated and free to cite.": [
   "app/data/dialer-pricing/page.tsx"
  ],
@@ -18354,6 +18499,9 @@
  "Requires review.": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
+ "RESCHEDULES, NO-SHOWS": [
+  "lib/verticals.ts"
+ ],
  "Research first, then call. For the accounts that matter.": [
   "lib/verticals.ts"
  ],
@@ -18989,14 +19137,17 @@
  "Search": [
   "components/DirectoryHub.tsx"
  ],
+ "Search {noun}": [
+  "components/DirectoryHub.tsx"
+ ],
  "Search answers...": [
-  "app/faq/view.tsx#prop"
+  "app/faq/view.tsx"
  ],
  "Search by name or email…": [
   "app/dashboard/teams/page.tsx"
  ],
  "Search competitors...": [
-  "app/vs/view.tsx#prop"
+  "app/vs/view.tsx"
  ],
  "SEARCH NAME / PHONE": [
   "app/dashboard/dialer/page.tsx"
@@ -19207,6 +19358,9 @@
  "self-funded": [
   "app/dashboard/teams/page.tsx"
  ],
+ "Self-hostable": [
+  "lib/competitors.ts"
+ ],
  "Self-serve signup": [
   "lib/competitorFeatures.ts"
  ],
@@ -19310,6 +19464,9 @@
  ],
  "Separately, the FCC limits telephone solicitation to between 8 a.m. and 9 p.m. in the called person’s local time. That applies to every dialing mode, not just predictive.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
+ ],
+ "SEQUENCES": [
+  "lib/verticals.ts"
  ],
  "server shows no active call": [
   "app/dashboard/dialer/page.tsx"
@@ -19537,6 +19694,9 @@
  "Short calls and hang-ups.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
+ "SHORTLISTED CANDIDATES": [
+  "lib/verticals.ts"
+ ],
  "Should I say my number twice?": [
   "app/tools/sales-voicemail-script-generator/page.tsx"
  ],
@@ -19722,6 +19882,9 @@
  "SKIP TUTORIAL": [
   "components/onboarding/PreviewOnboarding.tsx"
  ],
+ "SKIP-TRACED NUMBERS": [
+  "lib/verticals.ts"
+ ],
  "SKIPPED": [
   "app/dashboard/dialer/page.tsx",
   "app/dashboard/leads/page.tsx",
@@ -19814,6 +19977,9 @@
  "Solar sales": [
   "lib/canonicalFacts.ts"
  ],
+ "Solar Sales Dialer": [
+  "app/resources/page.tsx"
+ ],
  "Solar Sales Dialer: Appointment Setting, Lead Gen & Compliance": [
   "lib/verticals.ts"
  ],
@@ -19903,6 +20069,9 @@
  ],
  "SORT": [
   "app/dashboard/leads/page.tsx"
+ ],
+ "SOURCED CANDIDATE LISTS": [
+  "lib/verticals.ts"
  ],
  "Sources": [
   "app/data/calling-rules-by-country/[code]/page.tsx"
@@ -20092,6 +20261,9 @@
  ],
  "states the other tool's published price and cites its sources.": [
   "app/faq/view.tsx"
+ ],
+ "Statistics as you dial.": [
+  "app/welcome/Showcase.tsx"
  ],
  "Status": [
   "app/dashboard/reports/ReportView.tsx",
@@ -20424,6 +20596,9 @@
  "Talkdesk Alternative: Dialer Pricing, Pros & Cons | DialerSeat": [
   "app/vs/talkdesk/page.tsx"
  ],
+ "tan": [
+  "app/faq/manager-plus/view.tsx"
+ ],
  "Tap": [
   "app/faq/mobile/view.tsx"
  ],
@@ -20435,6 +20610,9 @@
  ],
  "Tap the image to see it full size": [
   "components/ShotSlideshow.tsx"
+ ],
+ "TARGET ACCOUNTS": [
+  "lib/verticals.ts"
  ],
  "Taxes": [
   "app/terms/page.tsx"
@@ -20500,6 +20678,9 @@
  ],
  "TCPA, 47 U.S.C. 227; 47 CFR 64.1200": [
   "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "teal": [
+  "app/faq/manager-plus/view.tsx"
  ],
  "Team": [
   "app/billing/page.tsx",
@@ -20831,6 +21012,9 @@
  ],
  "That did not go through.": [
   "components/teams/AgentDetail.tsx"
+ ],
+ "That file could not be read. Save it as CSV from your spreadsheet and open that instead.": [
+  "components/tools/LeadListCleaner.tsx"
  ],
  "That gap is not a discount. It is the difference between a staffing model that works and one that does not get attempted.": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
@@ -22031,6 +22215,9 @@
  ],
  "THE WHOLE FLOOR IN ONE VIEW": [
   "app/faq/manager-plus/view.tsx"
+ ],
+ "The whole interface, not just the marketing pages: {names}.": [
+  "app/faq/languages/page.tsx"
  ],
  "THE WHOLE SYSTEM": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
@@ -23402,6 +23589,9 @@
  "Volume concentrated on a single caller ID looks like a robocall operation, and it burns through goodwill fast.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
+ "VOLUME HIRING": [
+  "lib/verticals.ts"
+ ],
  "Volume on a single caller ID is what gets it labelled.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
@@ -23800,6 +23990,9 @@
   "app/tools/abandon-rate-calculator/page.tsx",
   "app/tools/dialer-cost-calculator/page.tsx",
   "components/tools/ToolPage.tsx"
+ ],
+ "WEB FORM LEADS": [
+  "lib/verticals.ts"
  ],
  "Web, iOS, Android": [
   "app/components/StructuredData.tsx"
@@ -24219,6 +24412,9 @@
  ],
  "WHAT IT SHOWS": [
   "app/faq/compliance-export/view.tsx"
+ ],
+ "What Languages Does DialerSeat Support? {count} Interface Languages | DialerSeat": [
+  "app/faq/languages/page.tsx"
  ],
  "What makes a good cold call opener?": [
   "app/tools/cold-call-script-generator/page.tsx"
@@ -24658,6 +24854,9 @@
  ],
  "Whichever script sits first in the order is what agents see by default on that campaign, drag to reorder any time.": [
   "app/faq/scripts/view.tsx"
+ ],
+ "white": [
+  "app/faq/manager-plus/view.tsx"
  ],
  "WHITE LABEL": [
   "app/partners/page.tsx"
@@ -25194,6 +25393,9 @@
  "Worth knowing,": [
   "app/faq/data-and-recordings/view.tsx"
  ],
+ "Wrap-up": [
+  "app/faq/dialer-glossary/page.tsx"
+ ],
  "Wrap-up per answered call (s)": [
   "components/tools/MathTools.tsx#prop"
  ],
@@ -25229,6 +25431,9 @@
  ],
  "Wyoming": [
   "components/tools/StateDncTable.tsx"
+ ],
+ "YEAR-END DRIVES": [
+  "lib/verticals.ts"
  ],
  "Year-one total": [
   "app/faq/white-label/view.tsx"

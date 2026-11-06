@@ -94,6 +94,13 @@ const NEVER_ALONE = new Set(['DialerSeat', 'DIALERSEAT', 'Dialerseat'])
 // isProse was written to mark code, so it rejects anything with a semicolon or
 // a CSS word ("auto-dials", "fixed fee"). In data, a sentence of four or more
 // words that starts like a sentence is a sentence.
+// Short labels in the data files are text too, even when they are one hyphenated
+// word: a table cell ("Desktop-focused"), a card heading ("HOMEOWNER LISTS").
+const DATA_LABEL_KEY = /^(role|competitor|dialerseat|minimum|wins|loses)$/
+const dataLabel = (n, sf) => {
+  if (ts.isPropertyAssignment(n)) return DATA_LABEL_KEY.test(n.name.getText(sf))
+  return ts.isArrayLiteralExpression(n.parent) && ts.isPropertyAssignment(n.parent.parent) && DATA_LABEL_KEY.test(n.parent.parent.name.getText(sf))
+}
 const looksProse = (s) => isProse(s) || (
   s.split(/\s+/).length >= 4 && /^[A-Z0-9$~+"(‘“]/.test(s) &&
   !/[{}<>`\\]|=>|\$\{/.test(s) && !/\b\d+(px|em|rem|vh|vw|ms|deg)\b|rgba?\(|var\(--/.test(s))
@@ -141,12 +148,13 @@ for (const file of [...publicScope, ...DATA_FILES].sort()) {
       if (init) text = literalText(init)
       // Passed into a component: that component may render in the browser.
       prop = /^[A-Z]/.test(n.parent.parent.tagName.getText(sf))
-    } else if (ts.isPropertyAssignment(n) && !NOT_TEXT_KEY.test(n.name.getText(sf).replace(/['"]/g, ''))) {
+    } else if (ts.isPropertyAssignment(n) && (DATA_FILES.includes(file) && dataLabel(n, sf) || !NOT_TEXT_KEY.test(n.name.getText(sf).replace(/['"]/g, '')))) {
       text = literalText(n.initializer)
     } else if (n.parent && ts.isArrayLiteralExpression(n.parent) && (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n) || ts.isBinaryExpression(n))) {
       text = literalText(n)
     }
-    if (text != null && looksProse(text.trim()) && !NEVER_ALONE.has(text.trim())) add(text, prop ? file + '#prop' : file)
+    if (text != null && DATA_FILES.includes(file) && dataLabel(n, sf) && /[A-Za-z]{2}/.test(text) && !NEVER_ALONE.has(text.trim())) add(text, file)
+    else if (text != null && looksProse(text.trim()) && !NEVER_ALONE.has(text.trim())) add(text, prop ? file + '#prop' : file)
     ts.forEachChild(n, visit)
   }
   visit(sf)

@@ -10,7 +10,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import { LOCALES, ENABLED_LOCALES } from '@/lib/i18n/locales'
 import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
-import { primeLocale, t } from '@/lib/i18n/server'
+import { getT, primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 
 // =============================================================================
@@ -38,36 +38,42 @@ const SITE_URL = 'https://dialerseat.com'
 const LIVE = LOCALES.filter((l) => ENABLED_LOCALES.includes(l.code))
 const COUNT = LIVE.length
 const NAMES = LIVE.map((l) => l.label).join(', ')
-const RTL = LIVE.filter((l) => l.dir === 'rtl').map((l) => l.label).join(' and ')
+const RTL = LIVE.filter((l) => l.dir === 'rtl').map((l) => l.label)
 
-const baseMetadata: Metadata = {
-  title: `What Languages Does DialerSeat Support? ${COUNT} Interface Languages | DialerSeat`,
-  description:
-    `DialerSeat's interface is available in ${COUNT} languages: ${NAMES}. The whole product is translated, not just the marketing pages, and the language never changes on its own. What is translated, what is not, and how to switch.`,
-  keywords: [
-    'DialerSeat languages',
-    'dialer in Spanish',
-    'Spanish dialer software',
-    'multilingual dialer',
-    'dialer for offshore agents language',
-    'call center software languages',
-  ],
-  alternates: { canonical: `${SITE_URL}${ROUTE}` },
-  openGraph: {
-    title: `DialerSeat in ${COUNT} languages`,
-    description: `The whole interface, not just the marketing pages: ${NAMES}.`,
-    url: `${SITE_URL}${ROUTE}`,
-    type: 'article',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: `DialerSeat in ${COUNT} languages`,
-    description: `The whole interface, not just the marketing pages: ${NAMES}.`,
-  },
-}
+const TITLE = msg("What Languages Does DialerSeat Support? {count} Interface Languages | DialerSeat")
+const DESCRIPTION = msg("DialerSeat's interface is available in {count} languages: {names}. The whole product is translated, not just the marketing pages, and the language never changes on its own. What is translated, what is not, and how to switch.")
+const SHARE_TITLE = msg("DialerSeat in {count} languages")
+const SHARE_DESCRIPTION = msg("The whole interface, not just the marketing pages: {names}.")
 
 export async function generateMetadata(): Promise<Metadata> {
-  return localizeMetadata(baseMetadata)
+  const tm = await getT()
+  const vars = { count: COUNT, names: NAMES }
+  const shareTitle = tm(SHARE_TITLE, vars)
+  const shareDescription = tm(SHARE_DESCRIPTION, vars)
+  return localizeMetadata({
+    title: tm(TITLE, vars),
+    description: tm(DESCRIPTION, vars),
+    keywords: [
+      'DialerSeat languages',
+      'dialer in Spanish',
+      'Spanish dialer software',
+      'multilingual dialer',
+      'dialer for offshore agents language',
+      'call center software languages',
+    ],
+    alternates: { canonical: `${SITE_URL}${ROUTE}` },
+    openGraph: {
+      title: shareTitle,
+      description: shareDescription,
+      url: `${SITE_URL}${ROUTE}`,
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: shareTitle,
+      description: shareDescription,
+    },
+  })
 }
 
 export default async function LanguagesPage() {
@@ -170,7 +176,7 @@ export default async function LanguagesPage() {
               {t("The interface is translated; an email to support is read and answered in English.")}
             </li>
             <li>
-              <strong>{t("{rtl} are translated, but the layout is not mirrored.", { rtl: RTL })}</strong>{' '}
+              <strong>{t("{rtl} are translated, but the layout is not mirrored.", { rtl: RTL.join(` ${t("and")} `) })}</strong>{' '}
               {t("The text is in the language. The page still runs left to right rather than right to left, which is a real difference and not one we are going to pretend about.")}
             </li>
             <li>

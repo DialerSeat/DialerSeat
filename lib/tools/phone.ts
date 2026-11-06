@@ -105,8 +105,8 @@ export function extractNanp(text: string): string[] {
 }
 
 /** Local time in a time zone, e.g. "2:14 PM Tue". */
-export function localTime(tz: string, now = new Date()): string {
-  return new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', weekday: 'short' }).format(now)
+export function localTime(tz: string, now = new Date(), locale = 'en-US'): string {
+  return new Intl.DateTimeFormat(locale, { timeZone: tz, hour: 'numeric', minute: '2-digit', weekday: 'short' }).format(now)
 }
 
 /** Hour of day (0-23) in a time zone. */

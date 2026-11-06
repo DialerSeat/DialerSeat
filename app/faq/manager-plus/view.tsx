@@ -14,12 +14,13 @@ import { t } from '@/lib/i18n/client'
 import { msg } from '@/lib/i18n/msg'
 
 
-type Slide = { src: string; alt: string; caption: string }
+type Slide = { src: string; alt: string; theme: string; caption: string }
 
-const THEMES = ["brown","navy","tan","black","teal","lavender","green","white","blue"]
-const DESKTOP_SLIDES: Slide[] = THEMES.map(name => ({
+const THEMES = [["brown", msg("brown")],["navy", msg("navy")],["tan", msg("tan")],["black", msg("black")],["teal", msg("teal")],["lavender", msg("lavender")],["green", msg("green")],["white", msg("white")],["blue", msg("blue")]]
+const DESKTOP_SLIDES: Slide[] = THEMES.map(([name, theme]) => ({
   src: `/faq-images/manager-plus/theme-${name}.png`,
-  alt: `DialerSeat Manager+ analytics dashboard white-labeled in a ${name} theme, with a placeholder logo`,
+  alt: msg("DialerSeat Manager+ analytics dashboard white-labeled in a {theme} theme, with a placeholder logo"),
+  theme,
   caption: msg("The same dashboard under your logo and your colors."),
 }))
 
@@ -62,7 +63,7 @@ function Slideshow({ start, onClose }: { start: number; onClose: () => void }) {
     >
       <button className="mp-show-close" onClick={onClose} aria-label={t("Close")}><X size={20} aria-hidden="true" /></button>
       <div className="mp-show-stage">
-        <Image key={slide.src} src={slide.src} alt={slide.alt} width={1919} height={991} sizes="100vw" priority className="mp-show-img" />
+        <Image key={slide.src} src={slide.src} alt={t(slide.alt, { theme: t(slide.theme) })} width={1919} height={991} sizes="100vw" priority className="mp-show-img" />
       </div>
       <div className="mp-show-bar">
         <button className="mp-show-arrow" onClick={() => go(-1)} aria-label={t("Previous screenshot")}>‹</button>
@@ -104,7 +105,7 @@ function DesktopCarousel() {
           <Image
             key={slide.src}
             src={slide.src}
-            alt={slide.alt}
+            alt={t(slide.alt, { theme: t(slide.theme) })}
             fill
             sizes="(max-width: 768px) 100vw, 1200px"
             style={{ objectFit: 'contain' }}

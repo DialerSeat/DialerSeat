@@ -80,7 +80,7 @@ export default function LeadListCleaner() {
         setText(await f.text())
       }
     } catch {
-      setError('That file could not be read. Save it as CSV from your spreadsheet and open that instead.')
+      setError(msg("That file could not be read. Save it as CSV from your spreadsheet and open that instead."))
     }
   }
 
@@ -114,7 +114,7 @@ export default function LeadListCleaner() {
               <tbody>
                 {cols.map((c) => (
                   <tr key={c.index}>
-                    <td><b>{c.header || `Column ${c.index + 1}`}</b></td>
+                    <td><b>{c.header || t("Column {n}", { n: c.index + 1 })}</b></td>
                     <td style={{ color: '#5a6072' }}>
                       {c.sample.join(' · ') || '—'}
                       {c.warning && <div className="tk-pill warn" style={{ marginTop: 6, whiteSpace: 'normal' }}>{t(c.warning, c.warningVars)}</div>}

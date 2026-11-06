@@ -80,7 +80,7 @@ export const SCENES: Scene[] = [
     key: 'analytics',
     eyebrow: msg("YOUR NUMBERS, LIVE"),
     headline: msg("DialerSeat Analytics"),
-    headline2: 'Statistics as you dial.',
+    headline2: msg("Statistics as you dial."),
     sub: msg("Calls, conversions, talk time, and where your closes come from: all tracked on the backend for you, the second each call ends. Nothing to log, and nothing to maintain. Upload infinite campaigns and toggle each one on or off for the smoothest possible workflow."),
   },
   {
@@ -150,7 +150,7 @@ export default function ShowcaseWizard({ joinCode = null }: { joinCode?: string 
             {current.headline2 ? (
               <>
                 <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 6, whiteSpace: 'pre-line' }}>{tr(current.headline)}</div>
-                <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 12, whiteSpace: 'pre-line' }}>{current.headline2}</div>
+                <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 12, whiteSpace: 'pre-line' }}>{tr(current.headline2)}</div>
               </>
             ) : (
               <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 12, whiteSpace: 'pre-line' }}>{tr(current.headline)}</div>
@@ -358,9 +358,9 @@ export function DialerScene() {
 
 // Illustrative figures for the showcase, one set per tab.
 const ANALYTICS_RANGES = {
-  today: { label: msg("TODAY"), calls: 196, conv: 27, talk: 3, closed: 12, up: ['↑ 21%', '↑ 34%', '↑ 11%', '↑ 18%'], pts: [4, 72, 6, 9, 70, 3, 74, 5, 66, 4, 8, 71], ticks: ['9', '10', '11', '12', '1', '2', '3', '4'], vs: "↑ 21% vs yesterday" },
-  week: { label: msg("WEEK"), calls: 1284, conv: 159, talk: 14, closed: 86, up: ['↑ 12%', '↑ 15%', '↑ 6%', '↑ 9%'], pts: [6, 74, 3, 5, 68, 4, 72, 7, 3, 70, 5, 66], ticks: ['M', 'T', 'W', 'T', 'F', 'S', 'S'], vs: "↑ 18% vs last week" },
-  month: { label: msg("MONTH"), calls: 5310, conv: 668, talk: 58, closed: 352, up: ['↑ 9%', '↑ 13%', '↑ 7%', '↑ 11%'], pts: [70, 4, 7, 74, 3, 66, 5, 8, 72, 3, 68, 6], ticks: ['W1', 'W2', 'W3', 'W4'], vs: "↑ 9% vs last month" },
+  today: { label: msg("TODAY"), calls: 196, conv: 27, talk: 3, closed: 12, up: ['↑ 21%', '↑ 34%', '↑ 11%', '↑ 18%'], pts: [4, 72, 6, 9, 70, 3, 74, 5, 66, 4, 8, 71], ticks: ['9', '10', '11', '12', '1', '2', '3', '4'], vs: msg("↑ 21% vs yesterday") },
+  week: { label: msg("WEEK"), calls: 1284, conv: 159, talk: 14, closed: 86, up: ['↑ 12%', '↑ 15%', '↑ 6%', '↑ 9%'], pts: [6, 74, 3, 5, 68, 4, 72, 7, 3, 70, 5, 66], ticks: ['M', 'T', 'W', 'T', 'F', 'S', 'S'], vs: msg("↑ 18% vs last week") },
+  month: { label: msg("MONTH"), calls: 5310, conv: 668, talk: 58, closed: 352, up: ['↑ 9%', '↑ 13%', '↑ 7%', '↑ 11%'], pts: [70, 4, 7, 74, 3, 66, 5, 8, 72, 3, 68, 6], ticks: ['W1', 'W2', 'W3', 'W4'], vs: msg("↑ 9% vs last month") },
 }
 type AnalyticsRange = keyof typeof ANALYTICS_RANGES
 

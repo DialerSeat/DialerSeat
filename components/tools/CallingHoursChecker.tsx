@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { t } from '@/lib/i18n/client'
+import { t, useLocale } from '@/lib/i18n/client'
 import { classifyAreaCode } from '@/lib/areaCode'
 import { STATE_TIMEZONES } from '@/lib/timezones'
 import { STATE_NAMES, SPLIT_ZONE_STATES, localTime, localHour } from '@/lib/tools/phone'
@@ -26,6 +26,7 @@ const FEDERAL = { start: 8, end: 21, source: '47 CFR 64.1200(c)(1); 16 CFR 310.4
 const hourLabel = (h: number) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'a.m.' : 'p.m.'}`
 
 export default function CallingHoursChecker() {
+  const { locale } = useLocale()
   const [state, setState] = useState('TX')
   const [code, setCode] = useState('')
   const [now, setNow] = useState(() => new Date())
@@ -57,7 +58,7 @@ export default function CallingHoursChecker() {
         <div className={`tk-result ${open ? 'ok' : 'over'}`} aria-live="polite">
           <div className="tk-big">{open ? t("You can call now") : t("Don't call now")}</div>
           <p>
-            {t("It is {time} in {state}.", { time: localTime(tz, now), state: t(STATE_NAMES[active] ?? active) })}{' '}
+            {t("It is {time} in {state}.", { time: localTime(tz, now, locale), state: t(STATE_NAMES[active] ?? active) })}{' '}
             {t("Telemarketing calls are allowed from {start} to {end} local time", { start: hourLabel(rule.start), end: hourLabel(rule.end) })}
             {' '}({rule.source}).
             {SPLIT_ZONE_STATES.has(active) && ' ' + t("This state spans two time zones; check the lead's own zone near the edges of the window.")}
@@ -78,7 +79,7 @@ export default function CallingHoursChecker() {
               return (
                 <tr key={s}>
                   <td><b>{t(STATE_NAMES[s] ?? s)}</b></td>
-                  <td>{localTime(z, now)}</td>
+                  <td>{localTime(z, now, locale)}</td>
                   <td>{hourLabel(r.start)}–{hourLabel(r.end)}{RULES[s] ? ' *' : ''}</td>
                   <td><span className={`tk-pill ${ok ? 'ok' : 'no'}`}>{ok ? t("Open") : t("Closed")}</span></td>
                 </tr>

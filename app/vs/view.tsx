@@ -412,8 +412,8 @@ export default function VsHubView() {
           leadLabel="Start with the industry-wide breakdown"
           picksLabel="TOP PICKS"
           picks={TOP_PICKS}
-          searchPlaceholder="Search competitors..."
-          searchNoun="comparisons"
+          searchPlaceholder={msg("Search competitors...")}
+          searchNoun={msg("comparisons")}
           requestTitle="Can't find yours?"
           requestLabel="Submit a request"
           requestPrompt="Tell us which dialer to compare next, or ask anything about how DialerSeat stacks up. A real person reads these."

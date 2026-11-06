@@ -844,7 +844,7 @@ export default async function Home({ searchParams }: PageProps) {
           </div>
 
           {[
-            { feature: msg("Weekly Cost"), us: '$35', them1: '$199+/mo', them2: '$150+/mo' },
+            { feature: msg("Weekly Cost"), us: '$35', them1: msg("$199+/mo"), them2: msg("$150+/mo") },
             { feature: msg("No Contract"), us: '✓', them1: '✗', them2: '✗' },
             { feature: msg("Setup Fee"), us: '$0', them1: '$0', them2: '$200+' },
             { feature: msg("Plug & Play"), us: '✓', them1: '✗', them2: '✗' },
@@ -855,7 +855,7 @@ export default async function Home({ searchParams }: PageProps) {
             { feature: msg("Unlimited Leads"), us: '✓', them1: '✓', them2: msg("Limited") },
             { feature: msg("Memory of Marked Leads"), us: '✓', them1: msg("Limited"), them2: '✗' },
             { feature: msg("Data Saved Always"), us: '✓', them1: '✗', them2: '✗' },
-            { feature: msg("Team Workflow"), us: '✓', them1: '✓', them2: 'Add-on' },
+            { feature: msg("Team Workflow"), us: '✓', them1: '✓', them2: msg("Add-on") },
             { feature: msg("Works on Mobile"), us: '✓', them1: '✗', them2: '✗' },
             { feature: msg("Works Globally"), us: '✓', them1: 'US/CA', them2: msg("Limited") },
             { feature: msg("Satisfaction Priority"), us: '✓', them1: '✗', them2: '✗' },

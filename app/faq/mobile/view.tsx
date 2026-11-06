@@ -58,7 +58,7 @@ function MobileCarousel() {
             <Image
               key={slide.src}
               src={slide.src}
-              alt={slide.alt}
+              alt={t(slide.alt)}
               fill
               sizes="(max-width: 768px) 70vw, 280px"
               style={{ objectFit: 'cover', objectPosition: 'top' }}

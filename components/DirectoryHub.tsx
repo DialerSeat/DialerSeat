@@ -589,7 +589,7 @@ export default function DirectoryHub(props: DirectoryHubProps) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t(props.searchPlaceholder)}
-              aria-label={`Search ${props.searchNoun}`}
+              aria-label={t("Search {noun}", { noun: t(props.searchNoun) })}
             />
             <button type="submit">{t("Search")}</button>
           </form>

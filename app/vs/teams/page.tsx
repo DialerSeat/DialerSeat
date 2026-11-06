@@ -210,7 +210,7 @@ export default async function TeamsComparisonPage() {
                   borderTop: `3px solid ${ACCENT}`, borderRadius: 8, padding: 24,
                 }}>
                   <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: ACCENT }}>
-                    {title as string}
+                    {tr(title as string)}
                   </div>
                   <ul style={{ margin: '12px 0 0', paddingInlineStart: 17, fontSize: 13.5, lineHeight: 1.75 }}>
                     {(items as readonly string[]).map(t => <li key={t} style={{ marginBottom: 8 }}>{tr(t)}</li>)}

@@ -67,7 +67,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
-const FAQS = [
+const FIVE_SEATS_TAIL = msg("Each agent gets their own login, dialer and call data.")
+
+const FAQS: { question: string; answer: string; parts?: string[] }[] = [
   {
     question: msg("How much does DialerSeat cost?"),
     answer:
@@ -90,7 +92,8 @@ const FAQS = [
   },
   {
     question: msg("What does a five-agent team cost?"),
-    answer: `${DIALERSEAT.team.fiveSeats} Each agent gets their own login, dialer and call data.`,
+    answer: `${DIALERSEAT.team.fiveSeats} ${FIVE_SEATS_TAIL}`,
+    parts: [DIALERSEAT.team.fiveSeats, FIVE_SEATS_TAIL],
   },
 ]
 
@@ -186,7 +189,7 @@ export default async function PricingPage() {
                   const billed =
                     d.commitment === 'year' ? msg("Annually") : d.commitment === 'quote' ? msg("By quote") : msg("Monthly")
                   const fmt = (n: number | null) =>
-                    n === null ? msg("Quote") : `${d.from ? 'from ' : ''}${money(n)}`
+                    n === null ? t("Quote") : d.from ? t("from {price}", { price: money(n) }) : money(n)
                   return (
                     <tr key={d.slug}>
                       <td>
@@ -242,7 +245,7 @@ export default async function PricingPage() {
             {FAQS.map((f) => (
               <div key={f.question} style={{ marginBottom: 22 }}>
                 <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>{t(f.question)}</h3>
-                <p style={{ margin: 0 }}>{t(f.answer)}</p>
+                <p style={{ margin: 0 }}>{f.parts ? f.parts.map((p) => t(p)).join(' ') : t(f.answer)}</p>
               </div>
             ))}
           </div>

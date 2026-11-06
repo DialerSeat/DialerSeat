@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { t } from '@/lib/i18n/client'
+import { t, useLocale } from '@/lib/i18n/client'
 import { classifyAreaCode } from '@/lib/areaCode'
 import { STATE_TIMEZONES } from '@/lib/timezones'
 import { STATE_NAMES, SPLIT_ZONE_STATES, localTime, localHour } from '@/lib/tools/phone'
@@ -50,6 +50,7 @@ function describe(code: string) {
 }
 
 export default function AreaCodeLookup() {
+  const { locale } = useLocale()
   const [q, setQ] = useState('512')
   const [now, setNow] = useState(() => new Date())
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 30_000); return () => clearInterval(id) }, [])
@@ -106,7 +107,7 @@ export default function AreaCodeLookup() {
                   <td><b>{t(STATE_NAMES[s] ?? s)}</b></td>
                   <td>{byState[s].join(', ')}</td>
                   <td>{tz ? t(ZONE_LABEL[tz] ?? tz) : '—'}</td>
-                  <td>{tz ? localTime(tz, now) : '—'}</td>
+                  <td>{tz ? localTime(tz, now, locale) : '—'}</td>
                 </tr>
               )
             })}

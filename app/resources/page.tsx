@@ -50,22 +50,29 @@ export async function generateMetadata(): Promise<Metadata> {
   return localizeMetadata(baseMetadata)
 }
 
+// The industry links show the part of each page title before the colon. Listed
+// here so those short forms reach the translation catalog.
+msg("Dialer for Mortgage Loan Officers"); msg("Solar Sales Dialer"); msg("Debt Collection Dialer")
+msg("Dialer for Recruiters & Staffing Agencies"); msg("Dialer for B2B Sales Teams & SDRs"); msg("Dialer for Nonprofits & Telefundraising")
+
 const DATA = [
   {
     href: '/data/dialer-pricing',
-    role: 'DATA',
+    role: msg("DATA"),
     title: msg("Dialer pricing index"),
-    body: `Published pricing, contract terms and seat minimums for ${COMPETITORS.length + 1} dialers, side by side.`,
+    body: msg("Published pricing, contract terms and seat minimums for {count} dialers, side by side."),
+    count: COMPETITORS.length + 1,
   },
   {
     href: '/data/calling-rules-by-country',
-    role: 'DATA',
+    role: msg("DATA"),
     title: msg("Calling rules by country"),
-    body: `Do Not Call lists, calling hours, consent and dialer rules for ${COUNTRY_RULES.length} countries, with sources.`,
+    body: msg("Do Not Call lists, calling hours, consent and dialer rules for {count} countries, with sources."),
+    count: COUNTRY_RULES.length,
   },
   {
     href: '/data/connect-rates',
-    role: 'LIVE DATA',
+    role: msg("LIVE DATA"),
     title: msg("Connect rates by state and hour"),
     body: msg("Measured on the platform over the last 90 days, with sample sizes shown and nothing published below the threshold."),
   },
@@ -74,19 +81,19 @@ const DATA = [
 const TOOLS = [
   {
     href: '/tools/dialer-cost-calculator',
-    role: 'CALCULATOR',
+    role: msg("CALCULATOR"),
     title: msg("Dialer cost calculator"),
     body: msg("What each dialer bills for the weeks and agents you need, with seat minimums and annual terms applied. Embeddable."),
   },
   {
     href: '/tools/abandon-rate-calculator',
-    role: 'CALCULATOR',
+    role: msg("CALCULATOR"),
     title: msg("Abandon rate calculator"),
     body: msg("Check a predictive campaign against the US, UK and Canadian abandoned-call limits. Embeddable."),
   },
   {
     href: '/tools',
-    role: 'FREE TOOLS',
+    role: msg("FREE TOOLS"),
     title: msg("Every free tool"),
     body: msg("Lead list cleaner, phone number formatter, area code lookup, calling hours by state, Erlang C, script generators and more. No signup."),
   },
@@ -105,14 +112,14 @@ const GUIDES = [
   { href: '/dialing-modes', label: msg("Preview, power, progressive and predictive dialing") },
 ]
 
-function Cards({ items }: { items: { href: string; role: string; title: string; body: string }[] }) {
+function Cards({ items }: { items: { href: string; role: string; title: string; body: string; count?: number }[] }) {
   return (
     <div className="guts-grid-2">
       {items.map((i) => (
         <Link key={i.href} href={i.href} className="guts-panel">
           <div className="role">{t(i.role)}</div>
           <h3>{t(i.title)}</h3>
-          <p>{t(i.body)}</p>
+          <p>{t(i.body, { count: i.count })}</p>
         </Link>
       ))}
     </div>
@@ -180,7 +187,7 @@ export default async function ResourcesPage() {
             {COUNTRY_RULES.map((c, i) => (
               <span key={c.code}>
                 {i > 0 && ' · '}
-                <Link href={`/data/calling-rules-by-country/${c.code.toLowerCase()}`}>{c.name}</Link>
+                <Link href={`/data/calling-rules-by-country/${c.code.toLowerCase()}`}>{t(c.name)}</Link>
               </span>
             ))}
           </p>

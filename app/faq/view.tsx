@@ -56,7 +56,7 @@ const ANSWERS: HubItem[] = [
   },
   {
     href: '/faq/dialer-modes',
-    label: 'Dialer modes (TL;DR)',
+    label: msg("Dialer modes (TL;DR)"),
     note: msg("Preview, power, progressive, predictive: in one page"),
     added: '2026-06-25',
     keywords: 'modes comparison summary',
@@ -571,8 +571,8 @@ export default function FaqView() {
           leadLabel="Start with why we built this"
           picksLabel="TOP PICKS"
           picks={TOP_PICKS}
-          searchPlaceholder="Search answers..."
-          searchNoun="answers"
+          searchPlaceholder={msg("Search answers...")}
+          searchNoun={msg("answers")}
           requestTitle="Can't find yours?"
           requestLabel="Ask us directly"
           requestPrompt="Ask anything we have not answered here, or tell us what a page got wrong. A real person reads these."
