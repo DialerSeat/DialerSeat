@@ -2814,9 +2814,6 @@
  "A $165 monthly plan": [
   "app/faq/cheapest-power-dialer/page.tsx"
  ],
- "A $49 monthly plan": [
-  "app/faq/cheapest-power-dialer/page.tsx"
- ],
  "A $99 monthly plan": [
   "app/faq/cheapest-power-dialer/page.tsx"
  ],
@@ -3897,6 +3894,9 @@
  ],
  "After that: one week. $35.": [
   "app/faq/billing/view.tsx"
+ ],
+ "Against a $49 plan, it costs less only for the first week.": [
+  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "Against a $99 plan, DialerSeat costs less for up to two weeks and more from the third. Against a $165 plan, it costs less for all four.": [
   "app/faq/cheapest-power-dialer/page.tsx"
@@ -5337,9 +5337,6 @@
  ],
  "Bill you:": [
   "app/privacy/page.tsx"
- ],
- "Billed": [
-  "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "BILLED": [
   "app/pricing/page.tsx"
@@ -14133,7 +14130,6 @@
  ],
  "Monthly": [
   "app/dashboard/reports/page.tsx",
-  "app/faq/cheapest-power-dialer/page.tsx",
   "app/pricing/page.tsx"
  ],
  "Monthly billing available on every plan": [
@@ -24185,7 +24181,6 @@
   "lib/countryRules.ts"
  ],
  "Weekly": [
-  "app/faq/cheapest-power-dialer/page.tsx",
   "app/pricing/page.tsx"
  ],
  "Weekly billing": [

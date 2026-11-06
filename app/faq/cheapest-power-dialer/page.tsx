@@ -43,17 +43,17 @@ export async function generateMetadata(): Promise<Metadata> {
 // shortest term the vendor sells, read from the vendor's own pricing page on
 // 6 Nov 2026. A vendor that sells only by quote has no row. DialerSeat's price
 // is only ever stated in weeks.
-const ROWS: { dialer: string; plan: string; billed: string; first: string; weekly?: boolean }[] = [
-  { dialer: 'DialerSeat', plan: msg("Pro, with all four dialing modes"), billed: msg("Weekly"), first: msg("$35, one week"), weekly: true },
-  { dialer: 'CloudTalk', plan: msg("Starter plus the Power Dialer add-on, whose $15 is listed as billed annually"), billed: msg("Monthly"), first: msg("$49, one month") },
-  { dialer: 'smrtPhone', plan: msg("Standard plus smrtDialer Single Line"), billed: msg("Monthly"), first: msg("$79, one month, plus $0.03 a minute") },
-  { dialer: 'Mojo Dialer', plan: msg("Single Line plus Agent Access"), billed: msg("Monthly"), first: msg("$99, one month") },
-  { dialer: 'WAVV', plan: 'Single Line', billed: msg("Monthly"), first: msg("$99, one month") },
-  { dialer: 'Close', plan: 'Growth', billed: msg("Monthly"), first: msg("$109, one month, plus calling") },
-  { dialer: 'BatchDialer', plan: msg("3 lines per agent"), billed: msg("Monthly"), first: msg("$119, one month") },
-  { dialer: 'JustCall', plan: 'Pro', billed: msg("Monthly"), first: msg("$138, one month, for the two-seat minimum") },
-  { dialer: 'PhoneBurner', plan: 'Standard', billed: msg("Monthly"), first: msg("$165, one month") },
-  { dialer: 'ReadyMode', plan: 'Starter', billed: msg("Monthly"), first: msg("$239, one month") },
+const ROWS: { dialer: string; plan: string; first: string; weekly?: boolean }[] = [
+  { dialer: 'DialerSeat', plan: msg("Pro, with all four dialing modes"), first: msg("$35, one week"), weekly: true },
+  { dialer: 'CloudTalk', plan: msg("Starter plus the Power Dialer add-on, whose $15 is listed as billed annually"), first: msg("$49, one month") },
+  { dialer: 'smrtPhone', plan: msg("Standard plus smrtDialer Single Line"), first: msg("$79, one month, plus $0.03 a minute") },
+  { dialer: 'Mojo Dialer', plan: msg("Single Line plus Agent Access"), first: msg("$99, one month") },
+  { dialer: 'WAVV', plan: 'Single Line', first: msg("$99, one month") },
+  { dialer: 'Close', plan: 'Growth', first: msg("$109, one month, plus calling") },
+  { dialer: 'BatchDialer', plan: msg("3 lines per agent"), first: msg("$119, one month") },
+  { dialer: 'JustCall', plan: 'Pro', first: msg("$138, one month, for the two-seat minimum") },
+  { dialer: 'PhoneBurner', plan: 'Standard', first: msg("$165, one month") },
+  { dialer: 'ReadyMode', plan: 'Starter', first: msg("$239, one month") },
 ]
 
 const WEEKS: { label: string; ds: string }[] = [
@@ -78,7 +78,7 @@ const FAQS = [
   },
 ]
 
-const cell = { padding: '10px 12px', borderBottom: '1px solid #e2e4ea', textAlign: 'left' as const, fontSize: 14, lineHeight: 1.45, verticalAlign: 'top' as const }
+const cell = { padding: '10px 8px', borderBottom: '1px solid #e2e4ea', textAlign: 'left' as const, fontSize: 13, lineHeight: 1.4, verticalAlign: 'top' as const }
 const head = { ...cell, fontSize: 12, fontWeight: 700, color: '#1a1c24' }
 
 export default async function Page() {
@@ -115,18 +115,16 @@ export default async function Page() {
               <thead>
                 <tr>
                   <th scope="col" style={head}>{t("Dialer")}</th>
-                  <th scope="col" style={head}>{t("Plan")}</th>
-                  <th scope="col" style={head}>{t("Billed")}</th>
                   <th scope="col" style={head}>{t("Smallest purchase")}</th>
+                  <th scope="col" style={head}>{t("Plan")}</th>
                 </tr>
               </thead>
               <tbody>
                 {ROWS.map(r => (
                   <tr key={r.dialer} style={r.weekly ? { background: '#e8eef8', fontWeight: 700 } : undefined}>
                     <td style={cell}>{r.dialer}</td>
-                    <td style={cell}>{t(r.plan)}</td>
-                    <td style={cell}>{t(r.billed)}</td>
                     <td style={cell}>{t(r.first)}</td>
+                    <td style={cell}>{t(r.plan)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -147,7 +145,6 @@ export default async function Page() {
                 <tr>
                   <th scope="col" style={head}>{t("You dial for")}</th>
                   <th scope="col" style={head}>DialerSeat</th>
-                  <th scope="col" style={head}>{t("A $49 monthly plan")}</th>
                   <th scope="col" style={head}>{t("A $99 monthly plan")}</th>
                   <th scope="col" style={head}>{t("A $165 monthly plan")}</th>
                 </tr>
@@ -157,7 +154,6 @@ export default async function Page() {
                   <tr key={w.label}>
                     <th scope="row" style={{ ...cell, fontWeight: 600 }}>{t(w.label)}</th>
                     <td style={{ ...cell, fontWeight: 700 }}>{w.ds}</td>
-                    <td style={cell}>$49</td>
                     <td style={cell}>$99</td>
                     <td style={cell}>$165</td>
                   </tr>
@@ -166,7 +162,8 @@ export default async function Page() {
             </table>
           </div>
           <p style={{ marginTop: 18 }}>
-            {t("Against a $99 plan, DialerSeat costs less for up to two weeks and more from the third. Against a $165 plan, it costs less for all four.")}</p>
+            {t("Against a $99 plan, DialerSeat costs less for up to two weeks and more from the third. Against a $165 plan, it costs less for all four.")}{' '}
+            {t("Against a $49 plan, it costs less only for the first week.")}</p>
         </section>
 
         <section className="exp-section">
