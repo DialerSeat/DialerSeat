@@ -78,7 +78,7 @@ const FAQS: { question: string; answer: string; parts?: string[] }[] = [
   {
     question: msg("Why does one week of another dialer cost a full month?"),
     answer:
-      msg("Because they bill by the month or the year. The shortest term you can buy from ReadyMode, PhoneBurner, Mojo Dialer, WAVV, BatchDialer or Kixie is one month, $95 to $239 or more per seat depending on the vendor, so a one-week project, a seasonal hire or a trial run still pays for the month. DialerSeat bills by the week, so one week costs $35 and four weeks cost $140."),
+      msg("Because they bill by the month or the year. The shortest term you can buy from ReadyMode, PhoneBurner, Mojo Dialer, WAVV or BatchDialer is one month, $119 to $239 or more per seat depending on the vendor, so a one-week project, a seasonal hire or a trial run still pays for the month. DialerSeat bills by the week, so one week costs $35 and four weeks cost $140."),
   },
   {
     question: msg("Is calling included, or is there a per-minute charge?"),

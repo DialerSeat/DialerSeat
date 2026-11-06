@@ -6,6 +6,8 @@ Limits: titles 60 characters (the " | DialerSeat" suffix is already gone site-wi
 
 Reply with the numbers you want changed or dropped; everything else ships as written.
 
+**Note, 6 Nov 2026:** competitor prices were corrected after these drafts were written. Before anything here ships, I re-write the lines for ReadyMode, PhoneBurner, WAVV, Ringover, smrtPhone, JustCall, CloudTalk, Kixie, Ytel, CallTools and DialedIn from the current data, so an old figure can't come back.
+
 ## Titles (22 still over 60 characters)
 
 | # | Page | Now | Draft |

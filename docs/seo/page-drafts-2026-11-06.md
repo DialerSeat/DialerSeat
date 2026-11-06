@@ -88,7 +88,7 @@ The cheapest power dialer depends on how long you need it. DialerSeat bills by t
 
 ## 4. A new headline for the pricing index (book chapter 24: "go and measure something")
 
-Proposed for the top of /data/dialer-pricing, after the index re-check is finished (see [link-kit.md](link-kit.md)):
+Proposed for the top of /data/dialer-pricing (price status is in [link-kit.md](link-kit.md)):
 
 > Of 30 dialers, one bills by the week. The rest sell a month or more at a time, and a few won't sell you a single seat.
 
@@ -97,4 +97,4 @@ Proposed for the top of /data/dialer-pricing, after the index re-check is finish
 - **Won't sell one seat, per the index:** Orum (three), Ringover (three, confirmed on its page), Aircall (three), JustCall (two, confirmed on its page).
 - **Commit you longer than a month, per the index:** Orum (a year), Ringover (twelve months, confirmed on its page), 3CX (annual, confirmed on its page), Dialer.io (three months), Five9 (multi-year is typical).
 
-I'd only publish counts once every row behind them is confirmed. That's why this version names no totals for those two groups.
+Orum, Aircall, Dialer.io and Five9 aren't confirmed on their own pages, which is why this version names no totals for those two groups.

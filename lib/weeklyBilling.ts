@@ -87,11 +87,11 @@ export const BILLED_DIALERS: BilledDialer[] = [
   {
     slug: 'kixie',
     name: 'Kixie',
-    perSeatMonth: 95,
-    from: true,
-    commitment: 'month',
+    perSeatMonth: null,
+    from: false,
+    commitment: 'quote',
     minimumSeats: 1,
-    basis: '$95 or more per seat per month for multi-line dialing',
+    basis: 'Not published; its plan page asks for a quote',
   },
   {
     slug: 'orum',

@@ -18,21 +18,21 @@ const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'Kixie Alternative: Every Dialer Mode at One Price | DialerSeat',
   description:
-    'Kixie PowerCall is well-reviewed but tiers dialing power by price, multi-line dialing runs $95+/seat/month. DialerSeat includes predictive, power, progressive, and preview dialing at $35/seat/week, billed weekly, no tier to climb.',
+    'Kixie is well-reviewed but tiers dialing by plan and publishes no price: multi-line dialing needs its top plan, by quote. DialerSeat includes predictive, power, progressive, and preview dialing at $35/seat/week, billed weekly, no tier to climb.',
   alternates: {
     canonical: 'https://dialerseat.com/vs/kixie',
   },
   openGraph: {
     title: 'DialerSeat vs Kixie',
     description:
-      'Predictive, power, progressive, and preview dialing at one flat $35/week per seat, not gated behind a $95+/month multi-line tier.',
+      'Predictive, power, progressive, and preview dialing at one flat $35/week per seat, not gated behind a quoted multi-line plan.',
     url: 'https://dialerseat.com/vs/kixie',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DialerSeat vs Kixie',
-    description: 'Predictive, power, progressive, and preview dialing at one flat $35/week per seat, not gated behind a $95+/month multi-line tier.',
+    description: 'Predictive, power, progressive, and preview dialing at one flat $35/week per seat, not gated behind a quoted multi-line plan.',
   },
 }
 

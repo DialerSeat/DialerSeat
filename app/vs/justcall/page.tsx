@@ -18,7 +18,7 @@ const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'JustCall Alternative: Dialer Pricing Without the Pro-Tier Upsell | DialerSeat',
   description:
-    'JustCall advertises $29/user/month, but the power and predictive dialer sit behind the $49+/month Pro tier, with a 2-seat minimum on every standard plan. DialerSeat includes every dialer mode at $35/seat/week, billed weekly, one seat minimum.',
+    'JustCall advertises $29/user/month, but the power dialer sits behind the Pro tier ($69/month, or $49 billed annually) and predictive behind SalesPro, by quote, with a 2-seat minimum. DialerSeat includes every dialer mode at $35/seat/week, billed weekly, one seat minimum.',
   alternates: {
     canonical: 'https://dialerseat.com/vs/justcall',
   },

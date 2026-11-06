@@ -116,4 +116,4 @@ Repeat this loop for every new page:
 - Judging traffic before late January, or daily.
 - Touching the dialer for any of this.
 - Stating DialerSeat's price as a monthly figure. It is $35 a week. Competitors' monthly prices are quoted as they publish them.
-- Pitching a competitor's price without opening their pricing page first. On 6 Nov 2026 ReadyMode, PhoneBurner, WAVV, Ringover and smrtPhone had all moved.
+- Pitching a competitor's price without opening their pricing page first. On 6 Nov 2026 ten of the 29 competitors had moved or stopped publishing a price.

@@ -11,7 +11,7 @@ Built 6 Nov 2026 from the RankHonestly book (chapters 24 to 28). Nothing here ha
 1. **Compliance sites** (Template A). The state list page is the strongest thing you have to pitch.
 2. **University sales programs** (Template B). The book says these are rarely pitched, and they link to free tools.
 3. **Call centre sites** (Template C).
-4. **Dialer comparison lists** (Template D). Hold these until the pricing index re-check is finished; see the end of this file. A writer who checks one wrong price stops reading.
+4. **Dialer comparison lists** (Template D). A writer who checks one wrong price stops reading, so quote only the figures in the one sentence.
 
 ## The one sentence
 
@@ -160,11 +160,13 @@ The hard part was predictive: pacing several lines at once and getting an answer
 
 **On the day:** block the whole day, answer every comment properly, and concede anything fair. Use the four screenshots from /screenshots.
 
-## What's still open before the comparison pitches
+## Competitor prices: where each one stands
 
-I checked competitors' own pricing pages on 6 Nov 2026 and corrected ReadyMode, PhoneBurner, WAVV and Ringover.
+Every price was re-read on 6 Nov 2026 from the vendor's own page wherever one exists. Open the page again before quoting a figure in an email.
 
-- **Out of date, not yet fixed:** smrtPhone. Its plans are now Standard $29 and Unlimited $99 per seat per month billed monthly ($24 and $83 billed yearly), and its pricing page no longer lists the dialer add-on we describe. The whole /vs/smrtphone page needs rewriting from its current terms.
-- **Couldn't confirm from their pricing page:** Kixie's $95 (its page shows no prices), Dialpad, CloudTalk, JustCall's dollar figures, CallTools, DialedIn, Ytel, Close and HubSpot. These pages either load prices in a way my check couldn't read, or failed to load.
-- **Matched on the check, or close enough:** Mojo, BatchDialer, Aloware, RingCentral, Talkdesk, REDX, GoHighLevel, Nextiva, 3CX.
-- **Sold by quote or annual, so no monthly price to check:** Five9, Convoso, Orum.
+- **Corrected:** ReadyMode, PhoneBurner, WAVV, Ringover, smrtPhone, JustCall, CloudTalk.
+- **Now shown as quote only, because they no longer publish a price:** Kixie, Ytel, CallTools.
+- **No vendor page found:** DialedIn. The figure is marked as reported by third-party listings, and those listings disagree, so don't quote it.
+- **Matched:** Mojo, BatchDialer, Aloware, RingCentral, Talkdesk, REDX, GoHighLevel, Nextiva, 3CX, Close, HubSpot, Dialpad.
+- **Sold by quote, so no price to check:** Five9, Convoso, Orum.
+- **Not re-read:** VICIdial's hosting prices and Dialer.io (its pricing address no longer exists).

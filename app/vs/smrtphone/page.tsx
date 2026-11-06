@@ -17,7 +17,7 @@ const SLUG = 'smrtphone'
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'smrtPhone Alternative: Flat Weekly Pricing, No Credits | DialerSeat',
-  description: "smrtPhone stacks three charges: a $62-$104/month subscription, a $42-$75/seat/month dialer add-on, then per-minute credits. DialerSeat is $35 per seat per week with call time included.",
+  description: "smrtPhone stacks three charges: a $29-$99/month subscription, a $50-$90/seat/month dialer add-on, then per-minute credits. DialerSeat is $35 per seat per week with call time included.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/smrtphone',
   },

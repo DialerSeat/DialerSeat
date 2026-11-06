@@ -1019,9 +1019,6 @@
  "+$30-$50/seat per tier": [
   "app/vs/everyone/view.tsx"
  ],
- "+$30/mo add-on": [
-  "lib/competitorFeatures.ts"
- ],
  "+$39/seat/mo add-on": [
   "lib/competitorFeatures.ts"
  ],
@@ -2040,17 +2037,14 @@
  "$165+/mo, contract for less": [
   "lib/competitorFeatures.ts"
  ],
+ "$170 in seats plus $75-$195 in dialer add-ons": [
+  "lib/competitors.ts"
+ ],
  "$175-$325/mo, contract": [
   "lib/competitorFeatures.ts"
  ],
  "$175/week in seats plus $75/week for the Manager+ owner: all four dialer modes included, no contract. Seats bill from the day they open.": [
   "lib/competitors.ts"
- ],
- "$19-$49/mo by tier": [
-  "lib/competitorFeatures.ts"
- ],
- "$19-$89/mo by tier": [
-  "lib/competitorFeatures.ts"
  ],
  "$2,000+/mo ongoing": [
   "app/faq/white-label/view.tsx"
@@ -2068,9 +2062,6 @@
   "app/page.tsx",
   "lib/competitorFeatures.ts"
  ],
- "$245+/month on the tier that includes dialing": [
-  "lib/competitors.ts"
- ],
  "$250/month on Professional": [
   "lib/competitors.ts"
  ],
@@ -2084,6 +2075,12 @@
   "lib/competitorFeatures.ts"
  ],
  "$30/seat Essentials excludes the Power Dialer; Professional at $50/seat includes it.": [
+  "lib/competitors.ts"
+ ],
+ "$34-$69/mo by tier": [
+  "lib/competitorFeatures.ts"
+ ],
+ "$345 a month on Pro billed monthly": [
   "lib/competitors.ts"
  ],
  "$35 a week per seat for Pro. $75/week for Manager+ with white-label and teams. The best way to see if it's worth it is to use it for a week.": [
@@ -2135,9 +2132,6 @@
  ],
  "$35 per week per seat. That's the whole price.": [
   "app/faq/why-dialerseat/view.tsx"
- ],
- "$35-$95+/mo by tier": [
-  "lib/competitorFeatures.ts"
  ],
  "$35. No contract. Cancel any time. The dialer is the one we use ourselves: if you don't like it, leave, and your data stays yours.": [
   "app/faq/why-dialerseat/view.tsx"
@@ -2198,8 +2192,8 @@
  "$350 per week": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
- "$475+/month at the multi-line tier": [
-  "lib/competitors.ts"
+ "$39-$109/mo by tier": [
+  "lib/competitorFeatures.ts"
  ],
  "$49-$119/mo add-on packages": [
   "lib/competitorFeatures.ts"
@@ -2280,12 +2274,6 @@
  "$90+/mo, custom quote": [
   "app/vs/everyone/view.tsx",
   "lib/competitorFeatures.ts"
- ],
- "$95 in seats plus $75-$195 in dialer add-ons": [
-  "lib/competitors.ts"
- ],
- "$95 or more per seat per month for multi-line dialing": [
-  "lib/weeklyBilling.ts"
  ],
  "$99-$149/mo + mandatory fee": [
   "lib/competitorFeatures.ts"
@@ -2855,7 +2843,7 @@
  "A comparison where the competitor loses at everything is marketing, and it reads like marketing. These are real advantages, and real drawbacks.": [
   "components/vs-competitor-view.tsx"
  ],
- "A contact-centre and communications-API platform, priced per seat on top of a platform fee.": [
+ "A contact-centre and communications-API platform, sold through a demo.": [
   "lib/competitors.ts"
  ],
  "A continuous call with the screen on is about the most demanding thing a phone does. For an hour between appointments it is nothing; for a full day of dialing, plug it in.": [
@@ -3677,9 +3665,6 @@
  "Add a paid user at the standard per-seat monthly rate": [
   "lib/competitors.ts"
  ],
- "Add a seat at roughly $99/month on top of the platform fee": [
-  "lib/competitors.ts"
- ],
  "Add a seat at the plan price": [
   "lib/competitors.ts"
  ],
@@ -3698,7 +3683,7 @@
  "Add a user at the plan price, from $109 a month on the first plan with a dialer": [
   "lib/competitors.ts"
  ],
- "Add a user at the tier your dialing needs, which for multi-line is $95+": [
+ "Add a user at the plan your dialing needs, at the quoted rate": [
   "lib/competitors.ts"
  ],
  "Add a user at your tier": [
@@ -3827,9 +3812,6 @@
   "lib/canonicalFacts.ts"
  ],
  "Advertised around $95/seat on annual prepay; month to month is roughly $119-$249.": [
-  "lib/competitors.ts"
- ],
- "Advertised from $29/user/month; power and predictive dialing sit on the $49+ Pro tier.": [
   "lib/competitors.ts"
  ],
  "Advertised price excludes the dialer": [
@@ -5185,7 +5167,7 @@
  "Because the label is a behaviour score, not a record. Getting a number re-evaluated resets the verdict, not the cause. If the same volume per number, the same unanswered calls and the same short calls continue, the score returns to where it was. The pattern is what has to change: fewer calls per number per day, lists people expect calls from, and an opening they stay on the line for.": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
- "Because they bill by the month or the year. The shortest term you can buy from ReadyMode, PhoneBurner, Mojo Dialer, WAVV, BatchDialer or Kixie is one month, $95 to $239 or more per seat depending on the vendor, so a one-week project, a seasonal hire or a trial run still pays for the month. DialerSeat bills by the week, so one week costs $35 and four weeks cost $140.": [
+ "Because they bill by the month or the year. The shortest term you can buy from ReadyMode, PhoneBurner, Mojo Dialer, WAVV or BatchDialer is one month, $119 to $239 or more per seat depending on the vendor, so a one-week project, a seasonal hire or a trial run still pays for the month. DialerSeat bills by the week, so one week costs $35 and four weeks cost $140.": [
   "app/pricing/page.tsx"
  ],
  "Because volume on a single caller ID is the fastest way to get it labelled. Carrier analytics watch call volume, call duration, and how often people decline or report a number. A number placing several hundred short unanswered calls a day looks exactly like a robocall to that scoring, because statistically it is behaving like one. Once the label attaches, the number is finished: and if it is your only number, so is your answer rate.": [
@@ -5604,7 +5586,8 @@
   "lib/gutsRail.ts"
  ],
  "By quote": [
-  "app/pricing/page.tsx"
+  "app/pricing/page.tsx",
+  "lib/competitors.ts"
  ],
  "By state": [
   "app/data/connect-rates/page.tsx"
@@ -6082,7 +6065,7 @@
  "CallTools Alternative: Pricing With No Setup Fee | DialerSeat": [
   "app/vs/calltools/page.tsx"
  ],
- "CallTools runs about $119.99 per user per month with setup fees commonly $500-$1,500 and integration quoted separately. DialerSeat is $35 per seat per week, self-serve, every dialer mode included.": [
+ "CallTools doesn't publish a price: you get it from a specialist, and setup fees have been reported at $500-$1,500. DialerSeat is $35 per seat per week, self-serve, every dialer mode included.": [
   "app/vs/calltools/page.tsx"
  ],
  "Calm. Predictive is by design an over-dialing system. It's firing more calls than it has agents to answer, and trusting that probability and AMD will sort it out. The system feels busy. When the math tips even slightly wrong, a busy spell of high-pickup minutes, a slow disposition cycle on a hard call you can hear it in the abandon-rate counter ticking up.": [
@@ -6691,7 +6674,7 @@
  "CloudTalk shows up at the top of nearly every \"best cold calling dialer\" roundup for 2026, and it's a genuinely solid, broad cloud communications platform with strong CRM integrations. The catch, confirmed directly from CloudTalk's own published add-on menu: the seat price gets you a phone system, not a dialer. Power Dialer is a further $15/user/month, Parallel Dialer (multi-line) is a further $39/user/month, both stacked on top of the base seat. DialerSeat™ includes every dialer mode in the one price.": [
   "lib/competitorFeatures.ts"
  ],
- "CloudTalk’s $19/seat headline doesn’t include a dialer: Power Dialer is +$15/seat/month, Parallel Dialer is +$39/seat/month. DialerSeat includes every dialer mode at $35/seat/week, billed weekly, no add-on required.": [
+ "CloudTalk’s $34/seat headline doesn’t include a dialer: Power Dialer is +$15/seat/month, Parallel Dialer is +$39/seat/month. DialerSeat includes every dialer mode at $35/seat/week, billed weekly, no add-on required.": [
   "app/vs/cloudtalk/page.tsx"
  ],
  "CMS": [
@@ -7167,9 +7150,6 @@
  "Contact center tiers exist for teams that grow into them": [
   "lib/competitors.ts"
  ],
- "Contact Centre Seat around $99/month, Engagement Platform around $399/month, Trust Center around $499/month. Seats are priced per agent on top of a platform fee.": [
-  "lib/competitors.ts"
- ],
  "Contact names, phone numbers, email addresses, mailing addresses": [
   "app/privacy/page.tsx"
  ],
@@ -7187,6 +7167,9 @@
   "app/faq/view.tsx"
  ],
  "Contact the vendor to add a licence": [
+  "lib/competitors.ts"
+ ],
+ "Contact the vendor to add a seat": [
   "lib/competitors.ts"
  ],
  "Contact us": [
@@ -7364,9 +7347,6 @@
  ],
  "Cost per sale": [
   "components/tools/MathTools.tsx#prop"
- ],
- "Cost per seat climbs steeply with capability": [
-  "lib/competitors.ts"
  ],
  "Cost to reseller": [
   "app/faq/white-label-mobile/view.tsx"
@@ -8081,7 +8061,7 @@
  "DialedIn (ChaseData) Alternative: Pricing, Pros & Cons | DialerSeat": [
   "app/vs/dialedin/page.tsx"
  ],
- "DialedIn, formerly ChaseData, starts around $89 per user per month with outbound features arriving further up the tiers. DialerSeat includes predictive, power, progressive and preview at $35 per seat per week.": [
+ "DialedIn, formerly ChaseData, is reported to start around $89 per user per month with outbound features arriving further up the tiers. DialerSeat includes predictive, power, progressive and preview at $35 per seat per week.": [
   "app/vs/dialedin/page.tsx"
  ],
  "DIALER": [
@@ -10853,9 +10833,6 @@
  "from {teamName}? Their call history stays; their access does not.": [
   "components/teams/TeamModals.tsx"
  ],
- "From $19/seat; Power Dialer is +$15/seat/month and Parallel Dialer is +$39/seat/month.": [
-  "lib/competitors.ts"
- ],
  "From $375 a month on contact center Essential, which does not include predictive dialing": [
   "lib/competitors.ts"
  ],
@@ -10877,7 +10854,7 @@
  "From roughly $325/month on RingCX at the published starting rate, before usage": [
   "lib/competitors.ts"
  ],
- "From roughly $445/month at the published entry rate": [
+ "From roughly $445/month at the reported entry rate": [
   "lib/competitors.ts"
  ],
  "From that point on, every agent you onboard via a team code or signup link lands in": [
@@ -12820,13 +12797,13 @@
   "components/teams/AgentDetail.tsx",
   "components/teams/FloorView.tsx"
  ],
- "JustCall advertises $29/user/month, but the power and predictive dialer sit behind the $49+/month Pro tier, with a 2-seat minimum on every standard plan. DialerSeat includes every dialer mode at $35/seat/week, billed weekly, one seat minimum.": [
+ "JustCall advertises $29/user/month, but the power dialer sits behind the Pro tier ($69/month, or $49 billed annually) and predictive behind SalesPro, by quote, with a 2-seat minimum. DialerSeat includes every dialer mode at $35/seat/week, billed weekly, one seat minimum.": [
   "app/vs/justcall/page.tsx"
  ],
  "JustCall Alternative: Dialer Pricing Without the Pro-Tier Upsell | DialerSeat": [
   "app/vs/justcall/page.tsx"
  ],
- "JustCall's $29/user/month Team plan is real and gets you unlimited calling, SMS, and 100+ CRM integrations, but power and predictive dialing aren't included at that price; you need the Pro tier ($49/user/month) or higher. JustCall also runs the sales dialer as a genuinely separate mobile app from its general calling app, their own help center flags the two aren't interchangeable. DialerSeat™ is one app, one price, dialer modes included from the first seat.": [
+ "JustCall's $29/user/month Team plan is real and gets you unlimited calling, SMS, and 100+ CRM integrations, but power and predictive dialing aren't included at that price; power needs the Pro tier ($49/user/month billed annually, $69 billed monthly) and predictive needs SalesPro, by quote. JustCall also runs the sales dialer as a genuinely separate mobile app from its general calling app, their own help center flags the two aren't interchangeable. DialerSeat™ is one app, one price, dialer modes included from the first seat.": [
   "lib/competitorFeatures.ts"
  ],
  "Keep abandoned calls at or below 3% of calls answered by a person, per campaign, over each 30 days.": [
@@ -12893,10 +12870,10 @@
  "Kixie Alternative: Every Dialer Mode at One Price | DialerSeat": [
   "app/vs/kixie/page.tsx"
  ],
- "Kixie holds a strong 4.8/5 on G2 across 800+ reviews, and its local presence and CRM-embedded workflow are real strengths for HubSpot- and Salesforce-native teams. Worth knowing going in: Kixie doesn't offer predictive dialing by design: their own content frames Multi-line PowerCall as an alternative that avoids predictive dialing's abandoned-call risk, a legitimate compliance-minded choice, not a gap. What is a gap is price structure: multi-line dialing, AI voice detection, and full minute allotments each add cost on top of the entry tier. DialerSeat™ includes predictive, power, progressive, and preview dialing in one flat price.": [
+ "Kixie holds a strong 4.8/5 on G2 across 800+ reviews, and its local presence and CRM-embedded workflow are real strengths for HubSpot- and Salesforce-native teams. Worth knowing going in: Kixie doesn't offer predictive dialing by design: their own content frames Multi-line PowerCall as an alternative that avoids predictive dialing's abandoned-call risk, a legitimate compliance-minded choice, not a gap. What is a gap is price structure: multi-line dialing and AI voice detection each add cost, and the price itself takes a quote. DialerSeat™ includes predictive, power, progressive, and preview dialing in one flat price.": [
   "lib/competitorFeatures.ts"
  ],
- "Kixie PowerCall is well-reviewed but tiers dialing power by price, multi-line dialing runs $95+/seat/month. DialerSeat includes predictive, power, progressive, and preview dialing at $35/seat/week, billed weekly, no tier to climb.": [
+ "Kixie is well-reviewed but tiers dialing by plan and publishes no price: multi-line dialing needs its top plan, by quote. DialerSeat includes predictive, power, progressive, and preview dialing at $35/seat/week, billed weekly, no tier to climb.": [
   "app/vs/kixie/page.tsx"
  ],
  "La Moncloa: 400 prefix for commercial calls": [
@@ -14018,14 +13995,8 @@
  "Month to month.": [
   "lib/competitors.ts"
  ],
- "Month-to-month available; annual pricing is materially cheaper.": [
-  "lib/competitors.ts"
- ],
  "Month-to-month exists, but priced above annual": [
   "lib/competitorFeatures.ts"
- ],
- "Month-to-month is genuinely available, not just annual": [
-  "lib/competitors.ts"
  ],
  "Monthly": [
   "app/dashboard/reports/page.tsx",
@@ -14052,6 +14023,9 @@
  "Monthly or annual, with a three-licence minimum.": [
   "lib/competitors.ts"
  ],
+ "Monthly or annual, with a two-seat minimum.": [
+  "lib/competitors.ts"
+ ],
  "Monthly or annual, with annual cheaper. A 14-day free trial with no card, and a 30-day money-back guarantee.": [
   "lib/competitors.ts"
  ],
@@ -14074,9 +14048,6 @@
   "components/tools/StateDncTable.tsx"
  ],
  "Monthly, or annual paid upfront for a 12-month term that renews automatically.": [
-  "lib/competitors.ts"
- ],
- "Monthly, with a two-seat minimum on standard plans.": [
   "lib/competitors.ts"
  ],
  "Monthly, with annual discounting.": [
@@ -14195,9 +14166,6 @@
   "lib/competitorFeatures.ts"
  ],
  "Multi-line dialing requires a high tier": [
-  "lib/competitors.ts"
- ],
- "Multi-line dialing runs $95+ per seat per month.": [
   "lib/competitors.ts"
  ],
  "Multi-line dialing with list management built in": [
@@ -14832,6 +14800,12 @@
  "No public pricing; a demo cycle of one to four weeks before a number": [
   "lib/competitors.ts"
  ],
+ "No published price, so the real number takes a demo": [
+  "lib/competitors.ts"
+ ],
+ "No published price, so the real number takes a quote": [
+  "lib/competitors.ts"
+ ],
  "NO RECORDINGS IN THIS RANGE": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
  ],
@@ -15213,6 +15187,9 @@
  "Not published": [
   "lib/competitorFeatures.ts"
  ],
+ "Not published; its plan page asks for a quote": [
+  "lib/weeklyBilling.ts"
+ ],
  "Not published; quotes commonly land at $175+ per seat per month": [
   "lib/competitors.ts"
  ],
@@ -15223,6 +15200,15 @@
   "lib/competitors.ts"
  ],
  "Not published. Dialer.io quotes case by case after a call about your team size and dialing volume, so the rate is whatever you are quoted, and the first three months of it are committed before you know whether the tool works for you.": [
+  "lib/competitors.ts"
+ ],
+ "Not published. Its plan page asks for a quote and offers a 7-day free trial.": [
+  "lib/competitors.ts"
+ ],
+ "Not published. Its pricing links lead to booking a demo.": [
+  "lib/competitors.ts"
+ ],
+ "Not published. Its pricing page takes your team size and call volume, then a specialist gives you a quote.": [
   "lib/competitors.ts"
  ],
  "Not published. Quotes commonly land at $175+ per seat per month.": [
@@ -15242,6 +15228,9 @@
   "lib/competitors.ts"
  ],
  "Not stated on the pricing page. Talkdesk Express, for businesses under 50 employees, is described as having no commitment.": [
+  "lib/competitors.ts"
+ ],
+ "Not stated publicly; terms come with the quote.": [
   "lib/competitors.ts"
  ],
  "Not stated, except Talkdesk Express for businesses under 50 employees": [
@@ -15790,7 +15779,7 @@
  "One server, however many agents it holds": [
   "lib/competitors.ts"
  ],
- "One subscription plus one dialer seat": [
+ "One subscription seat plus one dialer seat": [
   "lib/competitors.ts"
  ],
  "One that fits your lists. Expireds and FSBOs are worked fast and in volume, so multi-line or predictive dialing and a local caller ID matter most. Referral and sphere calls need preview dialing and good notes. DialerSeat includes all four modes at $35 per seat per week, so you choose per campaign instead of per plan.": [
@@ -16646,9 +16635,6 @@
  "Per-seat pricing, no capacity planning": [
   "lib/competitorFeatures.ts"
  ],
- "Per-seat subscription with a platform fee.": [
-  "lib/competitors.ts"
- ],
  "per-seat-access. Most lead vendors I know don't even charge for the dialer access separately, they just bundle it into the lead price and let the agent feel like they're getting a free dialer. That's fine. The margin's still there.": [
   "app/faq/managers/view.tsx"
  ],
@@ -16892,12 +16878,6 @@
  "Platform data is not available in this environment. ": [
   "app/data/connect-rates/page.tsx"
  ],
- "Platform fee plus at least one seat": [
-  "lib/competitors.ts"
- ],
- "Platform fee sits on top of per-seat pricing, so small teams pay a disproportionate share": [
-  "lib/competitors.ts"
- ],
  "PLATFORM SUB IS ALWAYS REQUIRED": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
@@ -16966,9 +16946,6 @@
   "app/faq/what-is-a-preview-dialer/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx",
   "components/ExplainerCrossLinks.tsx"
- ],
- "Power and predictive on Pro and above.": [
-  "lib/competitors.ts"
  ],
  "Power dialer": [
   "app/faq/dialer-glossary/page.tsx",
@@ -17050,6 +17027,9 @@
  "Power on DialerSeat": [
   "app/dialing-modes/power/page.tsx",
   "app/faq/what-is-a-power-dialer/page.tsx"
+ ],
+ "Power on Pro and above; predictive on SalesPro.": [
+  "lib/competitors.ts"
  ],
  "Power or progressive": [
   "app/faq/dialer-for-insurance-agents/page.tsx",
@@ -17264,7 +17244,7 @@
  "Predictive, power, progressive and preview dialing in one browser dialer for $35 per seat per week. Billed weekly, so a week costs $35, not a month. No contract, no setup fee.": [
   "app/page.tsx"
  ],
- "Predictive, power, progressive, and preview dialing at one flat $35/week per seat, not gated behind a $95+/month multi-line tier.": [
+ "Predictive, power, progressive, and preview dialing at one flat $35/week per seat, not gated behind a quoted multi-line plan.": [
   "app/vs/kixie/page.tsx"
  ],
  "Predictive, progressive and preview dialing across its tiers.": [
@@ -17275,6 +17255,9 @@
  ],
  "premierleads.com/dialer": [
   "app/faq/white-label/view.tsx"
+ ],
+ "Premium add-on": [
+  "lib/competitorFeatures.ts"
  ],
  "PREMIUM LEAD VENDOR": [
   "app/faq/dialerseat-teams/view.tsx"
@@ -17570,7 +17553,7 @@
  "PRO PLAN": [
   "app/dashboard/layout.tsx"
  ],
- "Pro tier ($49+/mo) and up": [
+ "Pro tier ($69/mo, or $49 billed annually) and up": [
   "lib/competitorFeatures.ts"
  ],
  "Pro: $35 per seat per week.": [
@@ -17764,12 +17747,6 @@
  "Published seat prices, which most enterprise platforms do not give": [
   "lib/competitors.ts"
  ],
- "Published starting price around $89 per user per month.": [
-  "lib/competitors.ts"
- ],
- "Publishes a starting price rather than hiding everything behind a demo": [
-  "lib/competitors.ts"
- ],
  "Pull a record for any campaign, any date range, whenever you actually need one.": [
   "app/faq/compliance-export/view.tsx"
  ],
@@ -17859,6 +17836,9 @@
  ],
  "Quoted per deployment": [
   "lib/competitors.ts"
+ ],
+ "Quoted, no published price": [
+  "lib/competitorFeatures.ts"
  ],
  "Raising it would trade answer rate for capacity, which is backwards: numbers are the cheap input, and the conversation is the expensive output.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
@@ -18445,6 +18425,9 @@
  "Reported $1,000-$5,000+": [
   "lib/competitorFeatures.ts"
  ],
+ "Reported by third-party listings at around $89 per user per month. Confirm it with DialedIn.": [
+  "lib/competitors.ts"
+ ],
  "Reputation is behavioural. Hiya publishes the four factors it grades a number on, each from A to D, and they are a useful map of what every provider is watching.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
@@ -18485,14 +18468,14 @@
  "Requires 50-seat Optimum quote": [
   "app/vs/everyone/view.tsx"
  ],
- "Requires PowerDialer tier, $95+/mo": [
-  "lib/competitorFeatures.ts"
- ],
  "Requires Professional tier": [
   "app/vs/everyone/view.tsx"
  ],
  "Requires review.": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
+ "Requires the Multi-Line PowerDialer plan": [
+  "lib/competitorFeatures.ts"
  ],
  "RESCHEDULES, NO-SHOWS": [
   "lib/verticals.ts"
@@ -18692,15 +18675,6 @@
  "Roughly $10/month per Agent Access licence plus a dialer plan, with lead-data add-ons commonly $25-$49/month.": [
   "lib/competitors.ts"
  ],
- "Roughly $119.99 per user per month month-to-month, or about $101.99 annually. Quote-based, so the published figure is a starting point.": [
-  "lib/competitors.ts"
- ],
- "Roughly $495/month in seats plus the platform fee": [
-  "lib/competitors.ts"
- ],
- "Roughly $510-$600/month in seats at published rates, before setup and integration fees": [
-  "lib/competitors.ts"
- ],
  "Rounded by a spreadsheet: the digits are gone, use the original file": [
   "lib/tools/phone.ts"
  ],
@@ -18861,6 +18835,9 @@
   "app/screenshots/page.tsx"
  ],
  "Salesforce integration requires tier upgrade": [
+  "lib/competitorFeatures.ts"
+ ],
+ "SalesPro plan, by quote": [
   "lib/competitorFeatures.ts"
  ],
  "Same $35/week seat wherever the agent sits. Calling windows follow the lead, not the agent.": [
@@ -19595,7 +19572,7 @@
  "SETUP FEES": [
   "app/page.tsx"
  ],
- "Setup fees are commonly $500-$1,500 before the first call": [
+ "Setup fees have been reported at $500-$1,500": [
   "lib/competitors.ts"
  ],
  "Setup fees, contract terms and trial terms are not published": [
@@ -19813,13 +19790,13 @@
  "Single-line and multi-line power dialing, up to four lines.": [
   "lib/competitors.ts"
  ],
- "Single-line at lower tiers; multi-line at $95+/seat/month.": [
-  "lib/competitors.ts"
- ],
  "Single-line dialer": [
   "lib/competitorFeatures.ts"
  ],
  "Single-line only, which caps dials per hour": [
+  "lib/competitors.ts"
+ ],
+ "Single-line or up to four lines, by plan.": [
   "lib/competitors.ts"
  ],
  "Single-line philosophy": [
@@ -19922,7 +19899,7 @@
  "smrtPhone Alternative: Flat Weekly Pricing, No Credits | DialerSeat": [
   "app/vs/smrtphone/page.tsx"
  ],
- "smrtPhone stacks three charges: a $62-$104/month subscription, a $42-$75/seat/month dialer add-on, then per-minute credits. DialerSeat is $35 per seat per week with call time included.": [
+ "smrtPhone stacks three charges: a $29-$99/month subscription, a $50-$90/seat/month dialer add-on, then per-minute credits. DialerSeat is $35 per seat per week with call time included.": [
   "app/vs/smrtphone/page.tsx"
  ],
  "SMS is billed separately per message": [
@@ -20123,7 +20100,7 @@
  "Staffing volume swings with clients’ demand. A DialerSeat seat is $35 a week and can be paused when a desk goes quiet, so a recruiter hired for one surge does not cost a year.": [
   "lib/verticals.ts"
  ],
- "Standard $62/month and Pro $104/month billed monthly. smrtDialer is an add-on on top: about $42/seat/month single-line or $75/seat/month multi-line. Call time is then deducted from pre-paid credits, from around $0.02/minute.": [
+ "Standard $29 and Unlimited $99 per seat per month billed monthly, or $24 and $83 billed yearly. smrtDialer is an add-on on top: $50 single-line, $90 multi-line or $150 Business per seat per month billed monthly. Call time on the first two is deducted from account credit at $0.03/minute.": [
   "lib/competitors.ts"
  ],
  "Standard pricing, the kind anybody gets without emailing anybody, is on the pricing page and stays exactly what it says there.": [
@@ -20171,6 +20148,9 @@
   "app/billing/page.tsx"
  ],
  "Starter $239 and iQ $299 per license per month billed monthly, or $199 and $249 billed annually. Custom pricing from 20 licenses.": [
+  "lib/competitors.ts"
+ ],
+ "Starter $34, Essential $39 and Expert $69 per seat per month billed monthly, or $25, $29 and $49 billed annually. Power Dialer is +$15/seat/month and Parallel Dialer +$39/seat/month, billed annually.": [
   "lib/competitors.ts"
  ],
  "Starter $97 a month, Unlimited $297, Agency Pro $497. Calling runs through its LC Phone system, billed per minute from a prepaid wallet: US outbound calls about $0.018 a minute, local numbers $1.15 a month.": [
@@ -20456,9 +20436,6 @@
  "SUBSCRIPTION PAUSED": [
   "app/dashboard/settings/page.tsx"
  ],
- "Subscription plus roughly $210-$375/month in dialer seats, before per-minute credits": [
-  "lib/competitors.ts"
- ],
  "Subscription required": [
   "app/dashboard/leads/page.tsx"
  ],
@@ -20470,6 +20447,9 @@
  ],
  "Subscription required to delete leads.": [
   "app/dashboard/leads/page.tsx"
+ ],
+ "Subscription seats plus $250-$450 a month in dialer seats billed monthly, before per-minute credits": [
+  "lib/competitors.ts"
  ],
  "Subscription, billing, and cancellation": [
   "app/terms/page.tsx"
@@ -20692,6 +20672,9 @@
  "TEAM": [
   "app/dashboard/campaigns/page.tsx",
   "app/dashboard/dialer/page.tsx"
+ ],
+ "Team $39, Pro $69 and Pro Plus $109 per user per month billed monthly, or $29, $49 and $89 billed annually. Power dialing starts on Pro; predictive is on SalesPro, by quote.": [
+  "lib/competitors.ts"
  ],
  "TEAM CAMPAIGN": [
   "app/dashboard/campaigns/page.tsx"
@@ -26306,7 +26289,7 @@
  "Ytel Alternative: No Platform Fee on Top of Seats | DialerSeat": [
   "app/vs/ytel/page.tsx"
  ],
- "Ytel prices seats around $99 per month on top of a platform fee, which small teams absorb disproportionately. DialerSeat is $35 per seat per week with no platform charge.": [
+ "Ytel no longer publishes prices, so the number takes a demo. DialerSeat is $35 per seat per week, published on the homepage.": [
   "app/vs/ytel/page.tsx"
  ],
  "Zapier or Make": [

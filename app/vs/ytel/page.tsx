@@ -17,7 +17,7 @@ const SLUG = 'ytel'
 const baseMetadata: Metadata = {
   keywords: prosConsKeywords(SLUG),
   title: 'Ytel Alternative: No Platform Fee on Top of Seats | DialerSeat',
-  description: "Ytel prices seats around $99 per month on top of a platform fee, which small teams absorb disproportionately. DialerSeat is $35 per seat per week with no platform charge.",
+  description: "Ytel no longer publishes prices, so the number takes a demo. DialerSeat is $35 per seat per week, published on the homepage.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/ytel',
   },

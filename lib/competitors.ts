@@ -302,9 +302,9 @@ export const COMPETITORS: Competitor[] = [
     slug: 'kixie',
     name: 'Kixie',
     summary: 'A well-reviewed sales phone system with dialing power tiered by price.',
-    pricing: 'Multi-line dialing runs $95+ per seat per month.',
-    contract: 'Monthly, with annual discounting.',
-    dialing: 'Single-line at lower tiers; multi-line at $95+/seat/month.',
+    pricing: 'Not published. Its plan page asks for a quote and offers a 7-day free trial.',
+    contract: 'Not stated publicly; terms come with the quote.',
+    dialing: 'Single-line or up to four lines, by plan.',
     wins: [
       'Excellent CRM integrations, especially HubSpot',
       'Strong review scores and responsive support',
@@ -312,13 +312,13 @@ export const COMPETITORS: Competitor[] = [
     ],
     friction: [
       'Multi-line dialing requires a high tier',
-      'Cost per seat climbs steeply with capability',
+      'No published price, so the real number takes a quote',
     ],
     bestFor: 'HubSpot-centric sales teams that want tight CRM coupling.',
     team: {
       minimum: 'One user',
-      addingASeat: 'Add a user at the tier your dialing needs, which for multi-line is $95+',
-      fiveSeats: '$475+/month at the multi-line tier',
+      addingASeat: 'Add a user at the plan your dialing needs, at the quoted rate',
+      fiveSeats: 'By quote',
     },
     crossShopped: true,
     segment: 'sales_crm',
@@ -353,16 +353,16 @@ export const COMPETITORS: Competitor[] = [
     slug: 'justcall',
     name: 'JustCall',
     summary: 'A business phone system with dialing available on its higher tiers.',
-    pricing: 'Advertised from $29/user/month; power and predictive dialing sit on the $49+ Pro tier.',
-    contract: 'Monthly, with a two-seat minimum on standard plans.',
-    dialing: 'Power and predictive on Pro and above.',
+    pricing: 'Team $39, Pro $69 and Pro Plus $109 per user per month billed monthly, or $29, $49 and $89 billed annually. Power dialing starts on Pro; predictive is on SalesPro, by quote.',
+    contract: 'Monthly or annual, with a two-seat minimum.',
+    dialing: 'Power on Pro and above; predictive on SalesPro.',
     wins: ['Broad integration catalogue', 'Solid SMS and shared-inbox features', 'Good international coverage'],
     friction: ['Dialer is behind a higher tier', 'Two-seat minimum', 'Advertised price excludes the dialer'],
     bestFor: 'Teams that want one vendor for calls, SMS, and light dialing.',
     team: {
       minimum: 'Two seats',
       addingASeat: 'Add a user on the Pro tier or above',
-      fiveSeats: '$245+/month on the tier that includes dialing',
+      fiveSeats: '$345 a month on Pro billed monthly',
     },
     crossShopped: true,
     segment: 'sales_crm',
@@ -371,7 +371,7 @@ export const COMPETITORS: Competitor[] = [
     slug: 'cloudtalk',
     name: 'CloudTalk',
     summary: 'A call-center phone system where dialing is a paid add-on.',
-    pricing: 'From $19/seat; Power Dialer is +$15/seat/month and Parallel Dialer is +$39/seat/month.',
+    pricing: 'Starter $34, Essential $39 and Expert $69 per seat per month billed monthly, or $25, $29 and $49 billed annually. Power Dialer is +$15/seat/month and Parallel Dialer +$39/seat/month, billed annually.',
     contract: 'Monthly, with annual discounting.',
     dialing: 'Add-on modules per dialing type.',
     wins: ['Strong international numbers', 'Clean analytics', 'Low entry price for basic telephony'],
@@ -380,7 +380,7 @@ export const COMPETITORS: Competitor[] = [
     team: {
       minimum: 'One seat',
       addingASeat: 'Add a seat, plus the dialer add-on per seat',
-      fiveSeats: '$95 in seats plus $75-$195 in dialer add-ons',
+      fiveSeats: '$170 in seats plus $75-$195 in dialer add-ons',
     },
     crossShopped: true,
     segment: 'phone_system',
@@ -464,16 +464,15 @@ export const COMPETITORS: Competitor[] = [
     summary:
       'A predictive-dialing contact-centre platform sold through sales, with setup and integration fees on top of the seat price.',
     pricing:
-      'Roughly $119.99 per user per month month-to-month, or about $101.99 annually. Quote-based, so the published figure is a starting point.',
-    contract: 'Month-to-month available; annual pricing is materially cheaper.',
+      'Not published. Its pricing page takes your team size and call volume, then a specialist gives you a quote.',
+    contract: 'Not stated publicly; terms come with the quote.',
     dialing: 'Predictive and preview dialing are core to the product.',
     wins: [
       'Mature predictive engine with real contact-centre reporting',
       'Built-in CRM and list management',
-      'Month-to-month is genuinely available, not just annual',
     ],
     friction: [
-      'Setup fees are commonly $500-$1,500 before the first call',
+      'Setup fees have been reported at $500-$1,500',
       'Complex CRM integrations are quoted separately, reportedly $2,000-$5,000',
       'Pricing is quote-based, so the real number requires a sales conversation',
       'SMS is billed separately per message',
@@ -482,7 +481,7 @@ export const COMPETITORS: Competitor[] = [
     team: {
       minimum: 'Quoted per deployment',
       addingASeat: 'Contact the vendor to add a licence',
-      fiveSeats: 'Roughly $510-$600/month in seats at published rates, before setup and integration fees',
+      fiveSeats: 'By quote',
     },
     crossShopped: true,
     segment: 'call_center',
@@ -492,11 +491,10 @@ export const COMPETITORS: Competitor[] = [
     name: 'DialedIn',
     summary:
       'Formerly ChaseData. A long-running cloud contact-centre product covering inbound and outbound in one system.',
-    pricing: 'Published starting price around $89 per user per month.',
+    pricing: 'Reported by third-party listings at around $89 per user per month. Confirm it with DialedIn.',
     contract: 'Per-user subscription; terms vary by plan.',
     dialing: 'Predictive, progressive and preview dialing across its tiers.',
     wins: [
-      'Publishes a starting price rather than hiding everything behind a demo',
       'Handles inbound and outbound in one platform',
       'Long operating history under the ChaseData name',
     ],
@@ -509,7 +507,7 @@ export const COMPETITORS: Competitor[] = [
     team: {
       minimum: 'One user',
       addingASeat: 'Add a user licence at the tier you are on',
-      fiveSeats: 'From roughly $445/month at the published entry rate',
+      fiveSeats: 'From roughly $445/month at the reported entry rate',
     },
     crossShopped: true,
     segment: 'call_center',
@@ -551,7 +549,7 @@ export const COMPETITORS: Competitor[] = [
     summary:
       'A phone system built for real-estate investors, tightly integrated with Podio and REI CRMs. The dialer is a paid add-on to the subscription.',
     pricing:
-      'Standard $62/month and Pro $104/month billed monthly. smrtDialer is an add-on on top: about $42/seat/month single-line or $75/seat/month multi-line. Call time is then deducted from pre-paid credits, from around $0.02/minute.',
+      'Standard $29 and Unlimited $99 per seat per month billed monthly, or $24 and $83 billed yearly. smrtDialer is an add-on on top: $50 single-line, $90 multi-line or $150 Business per seat per month billed monthly. Call time on the first two is deducted from account credit at $0.03/minute.',
     contract: 'Monthly or annual. Usage runs on a pre-paid credit balance.',
     dialing: 'Single-line and multi-line power dialing, up to four lines.',
     wins: [
@@ -567,9 +565,9 @@ export const COMPETITORS: Competitor[] = [
     ],
     bestFor: 'Real-estate investors already running Podio or an REI CRM who want calling wired into it.',
     team: {
-      minimum: 'One subscription plus one dialer seat',
+      minimum: 'One subscription seat plus one dialer seat',
       addingASeat: 'Add a smrtDialer seat to the subscription, then fund credits for their call time',
-      fiveSeats: 'Subscription plus roughly $210-$375/month in dialer seats, before per-minute credits',
+      fiveSeats: 'Subscription seats plus $250-$450 a month in dialer seats billed monthly, before per-minute credits',
     },
     crossShopped: true,
     segment: 'real_estate',
@@ -606,10 +604,10 @@ export const COMPETITORS: Competitor[] = [
     slug: 'ytel',
     name: 'Ytel',
     summary:
-      'A contact-centre and communications-API platform, priced per seat on top of a platform fee.',
+      'A contact-centre and communications-API platform, sold through a demo.',
     pricing:
-      'Contact Centre Seat around $99/month, Engagement Platform around $399/month, Trust Center around $499/month. Seats are priced per agent on top of a platform fee.',
-    contract: 'Per-seat subscription with a platform fee.',
+      'Not published. Its pricing links lead to booking a demo.',
+    contract: 'Not stated publicly; terms come with the quote.',
     dialing: 'Predictive and preview dialing in the contact-centre product.',
     wins: [
       'Communications APIs alongside the dialer, useful if you are building on top',
@@ -617,15 +615,15 @@ export const COMPETITORS: Competitor[] = [
       'Handles voice and SMS at scale',
     ],
     friction: [
-      'Platform fee sits on top of per-seat pricing, so small teams pay a disproportionate share',
+      'No published price, so the real number takes a demo',
       'Positioned for larger operations: the economics do not favour a handful of agents',
       'More platform than a team that just wants to dial a list needs',
     ],
     bestFor: 'Buyers who want a dialer and communications APIs from the same vendor.',
     team: {
-      minimum: 'Platform fee plus at least one seat',
-      addingASeat: 'Add a seat at roughly $99/month on top of the platform fee',
-      fiveSeats: 'Roughly $495/month in seats plus the platform fee',
+      minimum: 'By quote',
+      addingASeat: 'Contact the vendor to add a seat',
+      fiveSeats: 'By quote',
     },
     crossShopped: false,
     segment: 'call_center',
