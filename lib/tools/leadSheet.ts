@@ -156,7 +156,13 @@ export interface ColumnGuess {
   sample: string[]
 }
 
-const isPhoneish = (v: string) => { const d = v.replace(/\D/g, ''); return d.length === 10 || (d.length === 11 && d.startsWith('1')) }
+const isPhoneish = (v: string) => {
+  // A number a spreadsheet rounded (3.18E+09) still belongs in the phone column:
+  // checkPhone then rejects the row and says the digits are gone.
+  if (/^\d(\.\d+)?e\+?\d{1,2}$/i.test(v.trim())) return true
+  const d = v.replace(/\D/g, '')
+  return d.length === 10 || (d.length === 11 && d.startsWith('1'))
+}
 // (the "p:" label Facebook exports is fine here: only digits are counted)
 const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 const isZip = (v: string) => /^\d{5}(-\d{4})?$/.test(v)

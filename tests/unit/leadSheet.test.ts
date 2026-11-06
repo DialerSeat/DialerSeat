@@ -113,6 +113,13 @@ describe('phone helpers', () => {
 })
 
 describe('numbers a spreadsheet has been at', () => {
+  it('still treats a column rounded by a spreadsheet as phones, and says why the rows cannot be used', () => {
+    const { out, report } = run('Name,Phone\nJane Doe,3.18E+09\nSam Roe,3.17E+09\nLee Poe,2145550144')
+    expect(out.length).toBeGreaterThan(0)
+    expect(report.removed).toHaveLength(2)
+    expect(report.removed[0].reason).toContain('Rounded')
+  })
+
   it('reads the full number from an Excel cell displayed as 3.18E+09, and leaves dates alone', () => {
     const ws = XLSX.utils.aoa_to_sheet([
       ['First Name', 'Phone Number', 'State', 'Signed'],
