@@ -1706,7 +1706,7 @@ function DialerPageInner() {
         setStatus('idle')
         let next = 0
         const after = (ms: number, fn: () => void) => { demoCycleRef.current = setTimeout(fn, ms) }
-        const cycle = () => after(4000, () => {
+        const cycle = () => after(2000, () => {
           setDemoPressed(true)
           after(500, () => {
             setDemoPressed(false)

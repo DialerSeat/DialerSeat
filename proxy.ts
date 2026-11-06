@@ -178,6 +178,7 @@ const isOnboardingAllowedRoute = createRouteMatcher([
   '/api/whitelabel/onboarding(.*)',
   '/api/whitelabel/upload-logo(.*)',
   '/api/whitelabel/check-subdomain(.*)',
+  '/api/whitelabel/domain-ready(.*)',
   '/billing(.*)',
   '/api/stripe/(.*)',
 ])
@@ -698,7 +699,10 @@ export default clerkMiddleware(async (auth, request) => {
     const method = request.method.toUpperCase()
     if (method === 'GET' && DEMO_READS.test(url.pathname)) {
       const to = new URL(`/api/demo${url.pathname.slice(4)}${url.search}`, request.url)
-      return withTenantHeader(NextResponse.rewrite(to))
+      // The proxy knows who this is; a query added to a rewrite does not reach the route.
+      const demoHeaders = new Headers(request.headers)
+      demoHeaders.set('x-demo-owner', userId)
+      return withTenantHeader(NextResponse.rewrite(to, { request: { headers: demoHeaders } }))
     }
     const isMutating = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
     const isApi = url.pathname.startsWith('/api/')

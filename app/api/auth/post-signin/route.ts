@@ -4,6 +4,7 @@ import { headers, cookies } from 'next/headers'
 import { JOIN_CODE_COOKIE } from '@/app/api/join/start/route'
 import { createClient } from '@supabase/supabase-js'
 import { shouldSeeWelcome } from '@/lib/subscription'
+import { PREVIEW_BEFORE_PAYMENT } from '@/lib/preview'
 
 
 
@@ -400,6 +401,11 @@ export async function GET(req: NextRequest) {
       }
 
       if (sees) {
+        const onOurOwnHost = isDevHost(host) || host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}`
+        if (PREVIEW_BEFORE_PAYMENT && onOurOwnHost) {
+          console.log('[post-signin][DIAG] -> straight to the demo dashboard')
+          return NextResponse.redirect(`${protocol}://${host}${TARGET_PATH}`, 302)
+        }
         console.log('[post-signin][DIAG] -> redirecting to /welcome')
         return redirectToWelcome(host)
       }

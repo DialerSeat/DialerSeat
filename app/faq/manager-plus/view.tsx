@@ -44,7 +44,7 @@ function Slideshow({ start, onClose }: { start: number; onClose: () => void }) {
   }, [go, onClose])
   useEffect(() => {
     if (!playing) return
-    const id = setInterval(() => setIdx(i => (i + 1) % count), 4000)
+    const id = setInterval(() => setIdx(i => (i + 1) % count), 2000)
     return () => clearInterval(id)
   }, [playing, count])
   const slide = DESKTOP_SLIDES[idx]
@@ -76,10 +76,19 @@ function Slideshow({ start, onClose }: { start: number; onClose: () => void }) {
 function DesktopCarousel() {
   const [idx, setIdx] = useState(0)
   const [full, setFull] = useState(false)
+  const [playing, setPlaying] = useState(true)
   const close = useCallback(() => setFull(false), [])
   const slide = DESKTOP_SLIDES[idx]
-  const go = (d: number) =>
+  // Plays by itself until the person picks a slide.
+  const go = (d: number) => {
+    setPlaying(false)
     setIdx((i) => (i + d + DESKTOP_SLIDES.length) % DESKTOP_SLIDES.length)
+  }
+  useEffect(() => {
+    if (!playing || full) return
+    const id = setInterval(() => setIdx(i => (i + 1) % DESKTOP_SLIDES.length), 2000)
+    return () => clearInterval(id)
+  }, [playing, full])
 
   return (
     <div className="mp-carousel">
@@ -119,7 +128,7 @@ function DesktopCarousel() {
           <button
             key={s.src}
             className={`mp-dot ${i === idx ? 'active' : ''}`}
-            onClick={() => setIdx(i)}
+            onClick={() => { setPlaying(false); setIdx(i) }}
             aria-label={t("Go to screenshot {i}", { i: i + 1 })}
           />
         ))}

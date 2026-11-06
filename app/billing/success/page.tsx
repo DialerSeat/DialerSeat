@@ -1,6 +1,6 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { useBranding } from '@/components/ThemeProvider'
 import { t } from '@/lib/i18n/client'
@@ -23,7 +23,6 @@ const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
 
 export default function BillingSuccessPage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const branding = useBranding()
 
@@ -61,23 +60,42 @@ export default function BillingSuccessPage() {
   // Fire-and-forget on purpose. If it fails the webhook still arrives and the
   // countdown still runs — this only ever makes access appear sooner, so
   // there is nothing here worth blocking the redirect on.
+  //
+  // And the countdown waits for the answer. Arriving before the account reads as
+  // active shows the demo and the billing popup all over again, to someone who has
+  // just paid. Gives up after 20 seconds rather than strand anyone here.
+  const accessReady = useRef(false)
   useEffect(() => {
-    fetch('/api/stripe/sync', { method: 'POST' }).catch(() => {})
+    let stopped = false
+    const started = Date.now()
+    ;(async () => {
+      await fetch('/api/stripe/sync', { method: 'POST' }).catch(() => {})
+      while (!stopped && Date.now() - started < 20000) {
+        const status = await fetch('/api/stripe/status').then(r => r.json()).catch(() => null)
+        if (status?.tier === 'active' || status?.isActive) break
+        await new Promise(r => setTimeout(r, 1500))
+        await fetch('/api/stripe/sync', { method: 'POST' }).catch(() => {})
+      }
+      accessReady.current = true
+    })()
+    return () => { stopped = true }
   }, [])
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCountdown((c) => {
         if (c <= 1) {
+          if (!accessReady.current) return 1
           clearInterval(interval)
-          router.push(destination)
+          // A full load, so every page reads the account as it now stands.
+          window.location.assign(destination)
           return 0
         }
         return c - 1
       })
     }, 1000)
     return () => clearInterval(interval)
-  }, [router, destination])
+  }, [destination])
 
   const brandName = branding?.brand_name?.toUpperCase() || null
   const logoUrl = branding?.logo_url || null
@@ -127,7 +145,7 @@ export default function BillingSuccessPage() {
           {t("Redirecting to {value} in {countdown}…", { value: teamMemberId ? t("the dialer") : isWl ? t("tenant setup") : t("dashboard"), countdown })}</div>
 
         <button
-          onClick={() => router.push(destination)}
+          onClick={() => window.location.assign(destination)}
           style={buttonStyle}
         >
           ▶ {isWl ? t("CONTINUE TO SETUP") : t("GO TO DASHBOARD")}

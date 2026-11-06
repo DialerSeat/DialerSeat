@@ -643,7 +643,9 @@ export default function WhitelabelOnboardingPage() {
         return
       }
 
-      router.push(editMode ? '/dashboard' : '/dashboard/teams')
+      // A new subdomain is a dead link until its certificate arrives, so wait for it.
+      if (editMode) router.push('/dashboard')
+      else window.location.assign(`/onboarding/whitelabel/building?slug=${encodeURIComponent(slug.trim())}`)
     } catch (err: any) {
       setError(err.message || msg("Something went wrong."))
       setSubmitting(false)

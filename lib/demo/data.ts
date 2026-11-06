@@ -35,6 +35,20 @@ const CAMPAIGNS = [
   { name: 'Lead Batch 10/02', leads: 70, mode: 'progressive' },
   { name: 'Lead Gen 18', leads: 90, mode: 'power' },
   { name: 'Lead Batch 10/16', leads: 75, mode: 'progressive' },
+  { name: 'Lead Gen 19', leads: 60, mode: 'progressive' },
+  { name: 'Lead Batch 6', leads: 85, mode: 'power' },
+  { name: 'Lead Batch 10/23', leads: 70, mode: 'progressive' },
+  { name: 'Lead Gen 20', leads: 95, mode: 'progressive' },
+  { name: 'Lead Batch 7', leads: 55, mode: 'preview' },
+  { name: 'Lead Batch 10/30', leads: 80, mode: 'progressive' },
+  { name: 'Lead Gen 21', leads: 65, mode: 'power' },
+  { name: 'Lead Batch 8', leads: 90, mode: 'progressive' },
+]
+// Placeholder people, covered by the DEMO DATA banner on every page.
+const TEAMS = [
+  { name: 'Alpha Floor', campaigns: 4, agents: ['Ava Stone', 'Marcus Reed', 'Dana Ellis', 'Tyler Brooks', 'Nina Patel'] },
+  { name: 'Bravo Floor', campaigns: 3, agents: ['Chris Vega', 'Jade Carter', 'Owen Marsh', 'Priya Shah'] },
+  { name: 'Closers', campaigns: 3, agents: ['Sam Rivera', 'Kayla Moore', 'Devin Hart'] },
 ]
 const TOTAL_LEADS = CAMPAIGNS.reduce((n, c) => n + c.leads, 0)
 // Calls across every campaign on an ordinary day, before that day's multiplier.
@@ -55,7 +69,7 @@ const SCRIPTS = [
 
 export type DemoData = {
   campaigns: any[]; leads: any[]; calls: any[]; scripts: any[]; links: any[]
-  team: any; teamCampaigns: any[]; agents: any[]; members: any[]
+  teams: any[]; teamCampaigns: any[]; agents: any[]; members: any[]
 }
 
 /** Same seed, same demo. `now` only moves it in time, so TODAY is always today. */
@@ -94,7 +108,7 @@ export function generateDemo(now: number, ownerId: string): DemoData {
   })
 
   const scripts = SCRIPTS.map((s, i) => ({ id: id('d1'), user_id: ownerId, name: s.name, body: s.body, sort_order: i }))
-  const out: DemoData = { campaigns: [], leads: [], calls: [], scripts, links: [], team: null, teamCampaigns: [], agents: [], members: [] }
+  const out: DemoData = { campaigns: [], leads: [], calls: [], scripts, links: [], teams: [], teamCampaigns: [], agents: [], members: [] }
 
   for (const [ci, c] of CAMPAIGNS.entries()) {
     const campaignId = id('d2')
@@ -169,28 +183,35 @@ export function generateDemo(now: number, ownerId: string): DemoData {
     scripts.forEach((s, i) => out.links.push({ id: id('d5'), campaign_id: campaignId, script_id: s.id, sort_order: i }))
   }
 
-  // A demo team with two placeholder agents, so the Teams page is not empty.
-  const teamId = id('d6')
-  const first = out.campaigns[0]
-  out.team = { id: teamId, owner_id: ownerId, name: 'Demo Team', created_at: new Date(now - 30 * DAY).toISOString() }
-  out.teamCampaigns.push({ id: id('d7'), team_id: teamId, campaign_id: first.id })
-  for (const k of ['1', '2']) {
-    const agentId = `demo_agent_${k}`
-    out.agents.push({ clerk_id: agentId, first_name: 'Demo', last_name: `Agent ${k}`, email: null, username: `demo_agent_${k}` })
-    out.members.push({ id: id('d8'), team_id: teamId, user_id: agentId, status: 'active', accepted_at: new Date(now - 30 * DAY).toISOString() })
-    // Their own dials on the team's campaign, so the team numbers are not just the owner's.
-    const pool = out.leads.filter(l => l.campaign_id === first.id)
-    for (let i = 0; i < 140; i++) {
-      const lead = pool[Math.floor(r() * pool.length)]
-      const t = now - Math.floor(r() * 4 * DAY)
-      const x = r()
-      const disposition = x < 0.36 ? 'NO_ANSWER' : x < 0.72 ? 'VOICEMAIL' : x < 0.83 ? 'NOT INTERESTED' : x < 0.91 ? 'APPOINTMENT' : x < 0.98 ? 'CLOSED' : 'DO NOT CALL'
-      const duration = disposition === 'NO_ANSWER' ? 0 : disposition === 'VOICEMAIL' ? 3 + Math.floor(r() * 6) : 60 + Math.floor(r() * 500)
-      out.calls.push({
-        id: id('d4'), user_id: agentId, team_id: teamId, campaign_id: first.id, lead_id: lead.id, phone_number: lead.phone,
-        duration, disposition, created_at: new Date(t).toISOString(), answered_at: disposition === 'NO_ANSWER' ? null : new Date(t + 8000).toISOString(),
-        recording_status: 'skipped',
-      })
+  // Demo teams with placeholder agents, so the Teams page is not empty.
+  let nextCampaign = 0, agentNo = 0
+  for (const [ti, t] of TEAMS.entries()) {
+    const teamId = id('d6')
+    out.teams.push({ id: teamId, owner_id: ownerId, name: t.name, created_at: new Date(now - (40 - ti * 5) * DAY).toISOString() })
+    const camps = out.campaigns.slice(nextCampaign, nextCampaign + t.campaigns)
+    nextCampaign += t.campaigns
+    for (const c of camps) out.teamCampaigns.push({ id: id('d7'), team_id: teamId, campaign_id: c.id })
+    for (const full of t.agents) {
+      const agentId = `demo_agent_${++agentNo}`
+      const [first_name, last_name] = full.split(' ')
+      out.agents.push({ clerk_id: agentId, first_name, last_name, email: null, username: agentId })
+      out.members.push({ id: id('d8'), team_id: teamId, user_id: agentId, status: 'active', accepted_at: new Date(now - (25 + agentNo) * DAY).toISOString() })
+      // Their own dials on the team's campaigns, so the team numbers are not just the owner's.
+      const dials = 40 + Math.floor(r() * 110)
+      for (let i = 0; i < dials; i++) {
+        const camp = camps[Math.floor(r() * camps.length)]
+        const pool = out.leads.filter(l => l.campaign_id === camp.id)
+        const lead = pool[Math.floor(r() * pool.length)]
+        const t2 = now - 60000 - Math.floor(r() * r() * 30 * DAY)
+        const x = r()
+        const disposition = x < 0.36 ? 'NO_ANSWER' : x < 0.72 ? 'VOICEMAIL' : x < 0.83 ? 'NOT INTERESTED' : x < 0.91 ? 'APPOINTMENT' : x < 0.98 ? 'CLOSED' : 'DO NOT CALL'
+        const duration = disposition === 'NO_ANSWER' ? 0 : disposition === 'VOICEMAIL' ? 3 + Math.floor(r() * 6) : 60 + Math.floor(r() * 500)
+        out.calls.push({
+          id: id('d4'), user_id: agentId, team_id: teamId, campaign_id: camp.id, lead_id: lead.id, phone_number: lead.phone,
+          duration, disposition, created_at: new Date(t2).toISOString(), answered_at: disposition === 'NO_ANSWER' ? null : new Date(t2 + 8000).toISOString(),
+          recording_status: 'skipped',
+        })
+      }
     }
   }
   return out

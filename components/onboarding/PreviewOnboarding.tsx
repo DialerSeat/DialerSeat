@@ -83,15 +83,32 @@ export default function PreviewOnboarding() {
   // /billing sends a never-paid account here with ?activate=1: open the popup.
   useEffect(() => {
     if (!loaded || !isPreviewTier(tier)) return
-    if (new URLSearchParams(window.location.search).get('activate') === '1') {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('activate') === '1') {
       setFlags(f => ({ ...f, popupDone: true }))
       void saveFlags({ popupDone: true })
       setPaywall(ACTIVATE)
+      // Once only: coming back to this address must not open it again.
+      params.delete('activate')
+      const rest = params.toString()
+      window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''))
     }
+  }, [loaded, tier])
+
+  // Paid in another tab, or the payment finished while this page was open: every
+  // page on screen is showing the demo, so start clean.
+  useEffect(() => {
+    if (!loaded || !isPreviewTier(tier)) return
+    const id = setInterval(() => {
+      if (document.hidden) return
+      fetch('/api/stripe/status').then(r => r.json()).then(s => {
+        if (s?.tier && !isPreviewTier(s.tier)) window.location.reload()
+      }).catch(() => {})
+    }, 10000)
+    return () => clearInterval(id)
   }, [loaded, tier])
   const closePaywall = useCallback(() => {
     setPaywall(null)
-    if (window.location.search.includes('activate=1')) window.history.replaceState(null, '', window.location.pathname)
   }, [])
 
   const bannerRef = useCallback((el: HTMLDivElement | null) => {
@@ -377,7 +394,7 @@ const CSS = `
 .obx-white{padding:13px 28px;border-radius:10px;cursor:pointer;background:#fff;color:#1a1c24;border:1px solid #c4c8d0;border-top:3px solid #1a1c24;font-family:${FUTURA};font-size:13px;letter-spacing:2px;font-weight:800}
 .obx-next{padding:13px 28px;border-radius:10px;border:none;cursor:pointer;background:var(--brand-primary);color:var(--brand-on-primary);font-family:${FUTURA};font-size:13px;letter-spacing:2px;font-weight:800}
 
-.obx-card{position:fixed;left:278px;bottom:18px;z-index:800;width:340px;max-width:calc(100vw - 296px);background:var(--brand-sidebar-bg,#111118);color:var(--brand-on-sidebar,#fff);border:1px solid rgba(255,255,255,.12);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.2);overflow:hidden;font-family:${FUTURA};animation:sw-pop .25s ease}
+.obx-card{position:fixed;left:278px;bottom:18px;z-index:800;width:340px;max-width:calc(100vw - 296px);background:var(--brand-sidebar-bg,#111118);color:var(--brand-on-sidebar,#fff);border:1px solid rgba(255,255,255,.12);border-radius:8px;overflow:hidden;font-family:${FUTURA};animation:sw-pop .25s ease}
 .obx-bar{height:3px;background:rgba(255,255,255,.08)}
 .obx-bar i{display:block;height:100%;background:var(--brand-primary);transition:width .3s}
 .obx-in{padding:16px}
@@ -395,7 +412,8 @@ const CSS = `
 .obx-chips b{font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.7)}
 .obx-chips b.on{background:var(--brand-primary);border-color:var(--brand-primary);color:var(--brand-on-primary)}
 .obx-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.obx-row button,.obx-ctrl button,.obx-banner button{box-shadow:none;filter:none;-webkit-tap-highlight-color:transparent}
+.obx-row button,.obx-ctrl button,.obx-banner button{box-shadow:none!important;text-shadow:none!important;filter:none!important;-webkit-tap-highlight-color:transparent}
+.obx-row button:focus:not(:focus-visible),.obx-ctrl button:focus:not(:focus-visible),.obx-banner button:focus:not(:focus-visible){outline:none}
 .obx-row button{padding:9px 14px;border-radius:6px;font-size:10px;letter-spacing:2px;font-weight:800;cursor:pointer;font-family:${FUTURA}}
 .obx-nx{background:var(--brand-primary);border:none;color:var(--brand-on-primary)}
 .obx-nx.go{background:#1a6a1a;color:#fff}
