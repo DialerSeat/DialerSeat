@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import CallingHoursChecker from '@/components/tools/CallingHoursChecker'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/telemarketing-calling-hours: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/telemarketing-calling-hours'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "Telemarketing Calling Hours by State: Can I Call Now?",
-  description: "What time can telemarketers call? 8 a.m. to 9 p.m. in the person’s local time. See every state’s local time and whether it’s inside the window right now.",
-  social: "Telemarketing calling hours by state",
+  title: msg("Telemarketing Calling Hours by State: Can I Call Now?"),
+  description: msg("What time can telemarketers call? 8 a.m. to 9 p.m. in the person’s local time. See every state’s local time and whether it’s inside the window right now."),
+  social: msg("Telemarketing calling hours by state"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("What time can telemarketers call?"), answer: msg("Between 8 a.m. and 9 p.m. in the time zone of the person being called (47 CFR 64.1200(c)(1) and 16 CFR 310.4(c)). Some states set narrower hours; Florida’s ends at 8 p.m.") },

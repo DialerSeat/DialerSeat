@@ -472,6 +472,9 @@
  "(2021) that an automatic telephone dialing system must use a random or sequential number generator. A dialer that calls a list of leads you supplied is generally outside that definition. Some states define it more broadly.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
+ "(312) 555-0147, 312.555.0147, 312-555-0147, +1 312 555 0147 and ten digits in a row. Extensions after the number are ignored.": [
+  "app/tools/phone-number-extractor/page.tsx"
+ ],
  "(AMD thinks a human is a voicemail and drops the call you wanted) and": [
   "app/faq/how-does-amd-work/page.tsx"
  ],
@@ -581,6 +584,9 @@
   "app/sign-in/[[...sign-in]]/page.tsx",
   "app/sign-up/[[...sign-up]]/page.tsx"
  ],
+ "{c} per lead": [
+  "components/tools/MathTools.tsx"
+ ],
  "{called_leads} / {total_leads} called · {memberCount} member{value} with access": [
   "components/teams/CampaignsAccessPanel.tsx"
  ],
@@ -613,6 +619,9 @@
  ],
  "{count} waiting to be let in": [
   "components/teams/TeamOverview.tsx"
+ ],
+ "{d} dials this month → {c} conversations → {a} appointments → {s} sales. One sale takes about {per} dials.": [
+  "components/tools/MathTools.tsx"
  ],
  "{days}d ago": [
   "components/teams/AgentDetail.tsx",
@@ -666,6 +675,24 @@
   "app/dashboard/teams/[id]/analytics/page.tsx",
   "components/teams/AgentDetail.tsx",
   "components/teams/FloorView.tsx"
+ ],
+ "{n} agents on the phones": [
+  "components/tools/MathTools.tsx"
+ ],
+ "{n} area code{s}: the first {f} are free, then ${e} each, capped at {cap} for every area code.": [
+  "components/tools/MathTools.tsx"
+ ],
+ "{n} dials a day": [
+  "components/tools/MathTools.tsx"
+ ],
+ "{n} dials an hour": [
+  "components/tools/MathTools.tsx"
+ ],
+ "{n} leads ready to import": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
+ "{n} of {m} in place": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "{n} OF {total}": [
   "components/ShotSlideshow.tsx"
@@ -746,6 +773,12 @@
  "{rtl} are translated, but the layout is not mirrored.": [
   "app/faq/languages/page.tsx"
  ],
+ "{s} scheduled once {sh}% shrinkage is allowed for. That answers {sl} of calls within {sec} seconds.": [
+  "components/tools/MathTools.tsx"
+ ],
+ "{s} seconds per call: {a} talking, {b} on hold, {c} wrapping up. At ${r} an hour that is {cost} of agent time per call.": [
+  "components/tools/MathTools.tsx"
+ ],
  "{seatsAway} more {value} you pay for reaches": [
   "components/teams/TeamDetail.tsx"
  ],
@@ -754,6 +787,9 @@
  ],
  "{slug}.dialerseat.com ↗": [
   "components/teams/WhitelabelTieIn.tsx"
+ ],
+ "{state} spans more than one time zone; this is the zone most of it uses.": [
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "{tcpaBlockedReason}, queue shown for review.": [
   "app/dashboard/dialer/page.tsx"
@@ -813,8 +849,14 @@
  "{value}Nothing is published below {mIN_SAMPLE} calls in a bucket, because a rate computed from a smaller sample moves several points on ordinary variance. The tables below will fill in on their own as volume accumulates: no number here is ever estimated, smoothed, or carried over from a previous period.": [
   "app/data/connect-rates/page.tsx"
  ],
+ "{w} words, about {s} seconds": [
+  "components/tools/ScriptTools.tsx"
+ ],
  "{weeks} week{value} on a monthly plan bills {months} month{value2}; annual plans bill at least 12 months; seat minimums are applied. Competitor figures are the lowest published price that includes multi-line or predictive dialing, before add-ons, setup fees and usage. Figures as published September 2026.": [
   "components/tools/DialerCostCalculator.tsx"
+ ],
+ "* Florida's statute ends telemarketing at 8 p.m. Every other row shows the federal window, which is the floor everywhere: some states set narrower hours, weekend or holiday limits, so check your state's own law before relying on the federal window. The time zone comes from the state's main zone. Not legal advice.": [
+  "components/tools/CallingHoursChecker.tsx"
  ],
  "* This amount is DialerSeat's recorded charge and could not be re-confirmed against the payment processor at the time this statement was generated. Your card or bank statement is the authoritative record.": [
   "app/dashboard/reports/ReportView.tsx"
@@ -1229,6 +1271,60 @@
  ],
  "▸ FREE campaign, no per-seat charge to you or the agent. Agent still needs their own $35/wk DialerSeat sub to dial.": [
   "components/teams/TeamsManager.tsx"
+ ],
+ "▸ FREE REFERENCE · STATE DO NOT CALL LISTS": [
+  "app/tools/state-do-not-call-lists/page.tsx"
+ ],
+ "▸ FREE TOOL · AREA CODE LOOKUP": [
+  "app/tools/area-code-lookup/page.tsx"
+ ],
+ "▸ FREE TOOL · AVERAGE HANDLE TIME": [
+  "app/tools/average-handle-time-calculator/page.tsx"
+ ],
+ "▸ FREE TOOL · CALLS PER HOUR": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
+ ],
+ "▸ FREE TOOL · COLD CALL SCRIPT GENERATOR": [
+  "app/tools/cold-call-script-generator/page.tsx"
+ ],
+ "▸ FREE TOOL · COLD CALLING TRACKER": [
+  "app/tools/cold-calling-tracker/page.tsx"
+ ],
+ "▸ FREE TOOL · COLD CALLS PER DAY": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
+ ],
+ "▸ FREE TOOL · CONTACT RATE CALCULATOR": [
+  "app/tools/contact-rate-calculator/page.tsx"
+ ],
+ "▸ FREE TOOL · COST PER LEAD": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
+ "▸ FREE TOOL · DO NOT CALL REGISTRY COST": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
+ ],
+ "▸ FREE TOOL · ERLANG C STAFFING CALCULATOR": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
+ "▸ FREE TOOL · LEAD LIST CLEANER": [
+  "app/tools/lead-list-cleaner/page.tsx"
+ ],
+ "▸ FREE TOOL · PHONE NUMBER EXTRACTOR": [
+  "app/tools/phone-number-extractor/page.tsx"
+ ],
+ "▸ FREE TOOL · PHONE NUMBER FORMATTER": [
+  "app/tools/phone-number-formatter/page.tsx"
+ ],
+ "▸ FREE TOOL · SALES VOICEMAIL SCRIPTS": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
+ "▸ FREE TOOL · TCPA COMPLIANCE CHECKLIST": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
+ ],
+ "▸ FREE TOOL · TELEMARKETING CALLING HOURS": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
+ ],
+ "▸ FREE TOOLS": [
+  "app/tools/page.tsx"
  ],
  "▸ FULL SIDE-BY-SIDES": [
   "app/faq/why-dialerseat/view.tsx"
@@ -1887,6 +1983,9 @@
  "$1,000-$5,000 upfront": [
   "app/faq/white-label/view.tsx"
  ],
+ "$1,100 per year": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "$1/mo per number": [
   "lib/competitorFeatures.ts"
  ],
@@ -1922,6 +2021,9 @@
  ],
  "$15-$35/mo by tier": [
   "lib/competitorFeatures.ts"
+ ],
+ "$150 per quarter or $600 per year": [
+  "components/tools/StateDncTable.tsx"
  ],
  "$165+/mo, contract for less": [
   "lib/competitorFeatures.ts"
@@ -1961,6 +2063,9 @@
  ],
  "$285 / week": [
   "app/faq/manager-plus/view.tsx"
+ ],
+ "$30 per area code or $100 statewide per quarter; $120 or $400 per year (undated state order form, check at checkout)": [
+  "components/tools/StateDncTable.tsx"
  ],
  "$30-$50/seat/mo by tier": [
   "lib/competitorFeatures.ts"
@@ -2086,6 +2191,9 @@
  "$49-$119/mo add-on packages": [
   "lib/competitorFeatures.ts"
  ],
+ "$50 per area code per quarter; all six for $300 a quarter or $1,200 a year": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "$50-$150/seat/mo": [
   "app/faq/white-label/view.tsx"
  ],
@@ -2094,6 +2202,9 @@
  ],
  "$500 / week": [
   "app/faq/managers/view.tsx"
+ ],
+ "$500 per year, due 1 May for 1 July to 30 June; $1,000 plus $50 per solicitor for a group": [
+  "components/tools/StateDncTable.tsx"
  ],
  "$500-$2,000/mo": [
   "app/faq/white-label/view.tsx"
@@ -2112,6 +2223,9 @@
  ],
  "$75 CHARGED TODAY · CANCEL ANYTIME": [
   "app/page.tsx"
+ ],
+ "$75 per quarter": [
+  "components/tools/StateDncTable.tsx"
  ],
  "$75 per week": [
   "app/faq/dialer-for-insurance-agents/page.tsx",
@@ -2137,6 +2251,9 @@
  ],
  "$750 / week": [
   "app/faq/managers/view.tsx"
+ ],
+ "$750 per year, four lists included": [
+  "components/tools/StateDncTable.tsx"
  ],
  "$85 per area code": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
@@ -2165,6 +2282,15 @@
  ],
  "0303 made optional, August 2025.": [
   "lib/countryRules.ts"
+ ],
+ "1 · OPEN YOUR LEAD SHEET (CSV, TSV, TXT OR EXCEL), OR PASTE IT": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
+ "1 line: conversations / hour": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "1 line: dials / hour": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "1 WEEK": [
   "app/pricing/page.tsx"
@@ -2271,6 +2397,30 @@
  "15. Changes to these terms": [
   "app/terms/page.tsx"
  ],
+ "16 CFR 310.4(a)(8)": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "16 CFR 310.4(b)(1)(iii)(A)": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "16 CFR 310.4(b)(1)(iii)(B)": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "16 CFR 310.4(b)(3)(iv)": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "16 CFR 310.4(b)(4)(i)": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "16 CFR 310.4(b)(4)(ii)": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "16 CFR 310.4(b)(4)(iii)": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "16 CFR 310.4(d)": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
  "16. Contact us": [
   "app/terms/page.tsx"
  ],
@@ -2286,8 +2436,11 @@
  "1fr 2fr": [
   "app/dashboard/dialer/page.tsx"
  ],
- "1x calls a lead once and moves on. On 2x or 3x, if nobody picks up, it calls straight back up to that many times in a row, which can get through to a phone on Do Not Disturb.": [
-  "components/onboarding/PreviewOnboarding.tsx"
+ "2 · CHECK WHAT EACH COLUMN HOLDS": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
+ "2 lines: dials / hour": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "2 or 3 lines per agent": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
@@ -2345,8 +2498,17 @@
  "2x - dial, and if nobody picks up, dial that same lead once more, then move on.": [
   "app/dashboard/dialer/page.tsx"
  ],
+ "3 · DOWNLOAD THE FIXED SHEET": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
  "3 (~$9,000/yr floor)": [
   "lib/competitorFeatures.ts"
+ ],
+ "3 lines: conversations / hour": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "3 lines: dials / hour": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "3 on Starter, 5 on Pro/Enterprise": [
   "lib/competitorFeatures.ts"
@@ -2478,6 +2640,10 @@
  "400 prefix mandatory from October 17, 2026.": [
   "lib/countryRules.ts"
  ],
+ "47 CFR 64.1200(c)(1); 16 CFR 310.4(c)": [
+  "components/tools/CallingHoursChecker.tsx",
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
  "5-10 lines (AI parallel dialing)": [
   "lib/competitorFeatures.ts"
  ],
@@ -2501,6 +2667,9 @@
  ],
  "500 leads per request": [
   "app/faq/send-leads-from-your-crm/page.tsx"
+ ],
+ "512 or (512) 555-0100": [
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "6 agent seats × $35/week": [
   "app/faq/manager-plus/view.tsx"
@@ -2553,8 +2722,14 @@
  "8. Your rights": [
   "app/privacy/page.tsx"
  ],
+ "80% of calls answered within 20 seconds is the common target for inbound queues, but the right number is whatever your callers will tolerate before hanging up.": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
  "800 dials rang, 320 answered. This is how the list actually performed.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
+ ],
+ "800, 833, 844, 855, 866, 877 and 888. They are not tied to a place and usually reach a business, not a person.": [
+  "app/tools/area-code-lookup/page.tsx"
  ],
  "9:00am to 9:00pm, per lead, server-side.": [
   "app/faq/calling-hours/page.tsx"
@@ -2628,6 +2803,9 @@
  "A campaign, joins the team and that campaign at once": [
   "components/teams/TeamModals.tsx"
  ],
+ "A Caribbean or other North American Numbering Plan country outside the US and Canada.": [
+  "components/tools/AreaCodeLookup.tsx"
+ ],
  "A Chilean address for every number type.": [
   "lib/countryRules.ts"
  ],
@@ -2645,6 +2823,9 @@
  ],
  "A code that brings forty agents who are gone by the second week is not the same thing as a code that brings ten who are still dialing months later. A program that treats those two the same teaches people to chase the first one, and we would rather not pay for churn.": [
   "app/partners/page.tsx"
+ ],
+ "A cold call script": [
+  "app/tools/cold-call-script-generator/page.tsx"
  ],
  "A Colombian address in the prefix area. Toll-free numbers accept an address anywhere.": [
   "lib/countryRules.ts"
@@ -2688,6 +2869,9 @@
  ],
  "A dial like that is left out of the rate, because no one had the chance to answer it. It stays in your dial count and your costs, because it really was attempted and billed. Hiding it from those would make your costs look lower than they are.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
+ ],
+ "A dial that fails before it reaches a phone gave nobody a chance to answer. Leaving it out of the rate stops a carrier or technical problem looking like a bad list.": [
+  "app/tools/contact-rate-calculator/page.tsx"
  ],
  "A dial that never rang": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
@@ -2734,6 +2918,9 @@
  "A dialer for solar setters and lead-gen floors: predictive for homeowner lists, calling windows per lead state, the 3% cap enforced, and $35 per seat per week you can pause between seasons.": [
   "lib/verticals.ts"
  ],
+ "A dialer logs all of this for you as you call. DialerSeat does it at $35 a week per seat.": [
+  "app/tools/cold-calling-tracker/page.tsx"
+ ],
  "A dialer that embeds inside an existing CRM rather than replacing it.": [
   "lib/competitors.ts"
  ],
@@ -2751,6 +2938,9 @@
  ],
  "A floor with agents in more than one time zone, or offshore, cannot solve this with a shift schedule. It has to be enforced against each individual lead.": [
   "app/faq/calling-hours/page.tsx"
+ ],
+ "A formula that predicts how long callers wait for a given number of agents, from call volume and handle time. Call centers use it to find the fewest agents that still hit a service level.": [
+  "app/tools/erlang-c-calculator/page.tsx"
  ],
  "A free plan for up to two users, and published pricing on the rest": [
   "lib/competitors.ts"
@@ -3022,6 +3212,9 @@
  "A separate connector for every CRM is a separate thing that breaks every time that CRM changes something. A web address that accepts JSON works with every tool that can send a web request, which is nearly all of them.": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
+ "A service or non-geographic code (N11, 900, 710, 5XX), not a place.": [
+  "components/tools/AreaCodeLookup.tsx"
+ ],
  "A short Apps Script.": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
@@ -3060,6 +3253,9 @@
  ],
  "A struggling number is slowed down, not pulled": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
+ ],
+ "A subscription ends on 31 December whenever it began. Applies to out-of-state callers too.": [
+  "components/tools/StateDncTable.tsx"
  ],
  "A suggestion": [
   "components/SuggestionModal.tsx"
@@ -3175,11 +3371,13 @@
  "Abandon rate calculator": [
   "app/resources/page.tsx",
   "app/tools/abandon-rate-calculator/page.tsx",
-  "lib/gutsRail.ts"
+  "lib/gutsRail.ts",
+  "lib/tools/registry.ts"
  ],
  "ABANDON RATE CALCULATOR": [
   "app/data/calling-rules-by-country/page.tsx",
   "app/features/page.tsx",
+  "app/tools/tcpa-compliance-checklist/page.tsx",
   "components/site-footer.tsx"
  ],
  "Abandon Rate Calculator: The 3% Rule for Predictive Dialers | DialerSeat": [
@@ -3340,6 +3538,9 @@
  "Account sync issue, please try again.": [
   "app/api/stripe/create-subscription/route.ts"
  ],
+ "Acknowledge it, then ask one honest question about why: cost, timing, or already covered. The answer tells you whether to call back.": [
+  "app/tools/cold-call-script-generator/page.tsx"
+ ],
  "ACMA penalties up to A$250,000.": [
   "lib/countryRules.ts"
  ],
@@ -3413,6 +3614,9 @@
  ],
  "Active, billed weekly": [
   "components/teams/AgentDetail.tsx"
+ ],
+ "actually compliant?": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
  ],
  "actually cost you?": [
   "app/tools/dialer-cost-calculator/page.tsx"
@@ -3520,6 +3724,9 @@
  "Add to team…": [
   "app/dashboard/teams/page.tsx"
  ],
+ "Add total talk time, hold time and after-call work, then divide by the number of calls handled. 600 minutes over 120 calls is an AHT of 5 minutes.": [
+  "app/tools/average-handle-time-calculator/page.tsx"
+ ],
  "Add your business name and callback number to use predictive.": [
   "app/api/campaigns/create/route.ts",
   "app/api/campaigns/update/route.ts"
@@ -3560,6 +3767,9 @@
  ],
  "ADDING…": [
   "components/teams/TeamOverview.tsx"
+ ],
+ "Address": [
+  "lib/tools/leadSheet.ts"
  ],
  "ADMIN": [
   "app/dashboard/layout.tsx"
@@ -3667,6 +3877,9 @@
  "Agent chooses their own mode": [
   "components/teams/TeamModals.tsx"
  ],
+ "Agent cost per hour ($)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "AGENT PAID": [
   "app/dashboard/settings/page.tsx"
  ],
@@ -3737,6 +3950,18 @@
  "Aggregate, anonymized usage data informs what we build next. We do not analyze individual user behavior for marketing purposes.": [
   "app/privacy/page.tsx"
  ],
+ "Agree, end the call politely, and add them to your do-not-call list before the next dial. The law requires honoring it.": [
+  "app/tools/cold-call-script-generator/page.tsx"
+ ],
+ "AHT {m}": [
+  "components/tools/MathTools.tsx"
+ ],
+ "AHT = (talk time + hold time + after-call work) ÷ calls handled. Hold and wrap-up are the parts a process change shortens without rushing a conversation.": [
+  "components/tools/MathTools.tsx"
+ ],
+ "AHT CALCULATOR": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
  "AI call coaching / review": [
   "lib/competitorFeatures.ts"
  ],
@@ -3759,7 +3984,8 @@
   "app/faq/calling-hours/page.tsx"
  ],
  "Alaska": [
-  "app/faq/calling-hours/page.tsx"
+  "app/faq/calling-hours/page.tsx",
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "Alias Agency": [
   "components/teams/TeamModals.tsx"
@@ -3837,6 +4063,9 @@
  ],
  "All four: preview, power, progressive, and predictive. Each is available on every account at every tier, we don't gate dialing modes behind upgrades. Full breakdown on the": [
   "app/faq/view.tsx"
+ ],
+ "ALL FREE TOOLS": [
+  "components/tools/ToolPage.tsx"
  ],
  "All inbound webhooks (Stripe, Telnyx) are signature-verified to prevent forgery.": [
   "app/privacy/page.tsx"
@@ -4039,6 +4268,9 @@
  "An answer rate is only as honest as what it’s divided by. We count every dial you paid for, and we calculate your rates only over the dials that actually reached a phone.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
+ "An area code tells you where a number was issued, not where the person is today: mobile numbers keep their area code when people move. States that span two time zones are shown in the zone most of the state uses.": [
+  "components/tools/AreaCodeLookup.tsx"
+ ],
  "An attorney asks for records of every call placed to a specific phone number over the last 12 months. You export the campaign's calls from the Compliance tab to CSV, filter it to that number, and see every dial timestamp, AMD result, agent who took the call, disposition, and whether it was abandoned. Hand it over. You did the right things, you have the proof.": [
   "app/faq/how-we-keep-compliance/page.tsx"
  ],
@@ -4063,11 +4295,17 @@
  "An established business relationship.": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
+ "An estimate, not a promise: one line spends every unanswered call's ring time waiting; with more lines, unanswered rings overlap and the agent's hour goes to conversations. Real numbers depend on how fast answers are routed and the abandon limit (3% of answered calls in the US), which caps how far lines can be pushed.": [
+  "components/tools/MathTools.tsx"
+ ],
  "An honest caveat.": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
  ],
  "An honest side-by-side of {a} and {b}: what each costs, which dialing modes you actually get, the pros and cons of each, and which buyer each suits.": [
   "app/vs/[matchup]/page.tsx"
+ ],
+ "an hour, really?": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
  ],
  "An initial three-month commitment, then month to month.": [
   "lib/competitors.ts"
@@ -4089,6 +4327,9 @@
  ],
  "An invented campaign, to show the arithmetic. Not our data.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
+ ],
+ "An opener, questions, a close and objection rebuttals for your industry.": [
+  "lib/tools/registry.ts"
  ],
  "An outbound calling platform for solo agents through mid-size floors: {audience}. All four dialing modes, answering-machine detection and compliance tooling are included in one weekly seat price.": [
   "app/about/page.tsx"
@@ -4214,6 +4455,9 @@
  "Annual contracts and seat minimums are where the cost hides.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
+ "Annual fee paid to the agent: amount not confirmed, ask the agent": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "Annual licensing.": [
   "lib/competitors.ts"
  ],
@@ -4227,16 +4471,39 @@
   "components/teams/AgentDetail.tsx"
  ],
  "Answer rate": [
-  "app/faq/dialer-glossary/page.tsx"
+  "app/faq/dialer-glossary/page.tsx",
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Answer rate (%)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Answer rate = answered ÷ dials that rang. Connect rate = answered by a person ÷ dials that rang. Contact rate = calls with a real outcome ÷ dials that rang. Dividing by dials that rang, not every dial, keeps a technical failure from being blamed on your list. Dials that never rang still count in your dial totals and costs.": [
+  "components/tools/MathTools.tsx"
  ],
  "Answer rate and how long people stay on the line are both graded. A list nobody recognises scores you down twice.": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
+ "Answer rate counts any pickup. Connect rate means different things at different vendors, often the same as answer rate, so here it counts pickups by a person. Contact rate counts calls that produced a real outcome with the person, rather than just being answered.": [
+  "app/tools/contact-rate-calculator/page.tsx"
+ ],
  "Answer rate is": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
+ "Answer, Connect & Contact Rate Calculator": [
+  "app/tools/contact-rate-calculator/page.tsx"
+ ],
+ "Answer, connect and contact rate": [
+  "lib/tools/registry.ts"
+ ],
+ "Answer, connect and contact rate calculator": [
+  "app/tools/contact-rate-calculator/page.tsx"
+ ],
+ "Answer, connect,": [
+  "app/tools/contact-rate-calculator/page.tsx"
+ ],
  "Answered": [
-  "components/teams/TeamFloor.tsx"
+  "components/teams/TeamFloor.tsx",
+  "components/tools/MathTools.tsx#prop"
  ],
  "ANSWERED": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
@@ -4244,15 +4511,22 @@
  "answered ÷ dials that rang": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
+ "Answered by a person": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Answered calls that end in seconds read as unwanted.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
+ ],
+ "Answered within (seconds)": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "Answering machine detection": [
   "components/teams/CampaignDetail.tsx",
   "lib/relatedLinks.ts"
  ],
  "ANSWERING MACHINE DETECTION": [
-  "app/dashboard/campaigns/page.tsx"
+  "app/dashboard/campaigns/page.tsx",
+  "app/tools/sales-voicemail-script-generator/page.tsx"
  ],
  "Answering machine detection is not mentioned anywhere in their published material": [
   "lib/competitors.ts"
@@ -4293,6 +4567,9 @@
  ],
  "Any active subscriber can access without a code.": [
   "components/teams/TeamsManager.tsx"
+ ],
+ "Any area code or number: the state, the time zone, the local time there now.": [
+  "lib/tools/registry.ts"
  ],
  "Any area code. Rotate them automatically. Burn one if it gets flagged and spin up a fresh one: no charge, no quota.": [
   "app/faq/why-we-charge/page.tsx"
@@ -4387,8 +4664,14 @@
  "Apply": [
   "app/billing/page.tsx"
  ],
+ "Apply stricter state hours where they exist (Florida ends at 8 p.m.).": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
  "appointment": [
   "app/faq/compliance-export/view.tsx"
+ ],
+ "Appointment": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "APPOINTMENT": [
   "app/dashboard/dialer/page.tsx",
@@ -4401,8 +4684,17 @@
  "Appointment setting, consent, seasonal seats": [
   "app/faq/view.tsx"
  ],
+ "Appointments": [
+  "components/tools/TrackerAndChecklist.tsx#prop"
+ ],
  "APPOINTMENTS": [
   "app/welcome/Showcase.tsx"
+ ],
+ "Appointments (optional)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Appointments that close (%)": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "Approve": [
   "app/dashboard/teams/page.tsx"
@@ -4446,11 +4738,38 @@
  "Are you sure you want to delete": [
   "components/teams/TeamsManager.tsx"
  ],
+ "Area code lookup": [
+  "lib/tools/registry.ts"
+ ],
+ "AREA CODE LOOKUP": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
+ ],
+ "Area code lookup with time zone": [
+  "app/tools/area-code-lookup/page.tsx"
+ ],
+ "Area Code Lookup: State, Time Zone & Local Time": [
+  "app/tools/area-code-lookup/page.tsx"
+ ],
+ "Area code not in our table yet: check it before dialing": [
+  "lib/tools/phone.ts"
+ ],
+ "AREA CODE OR FULL PHONE NUMBER": [
+  "components/tools/AreaCodeLookup.tsx"
+ ],
  "Area code, state, region": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
  "Area code, then state, then region, spread across the pool so no single number burns out.": [
   "app/faq/local-presence-dialing/page.tsx"
+ ],
+ "Area codes": [
+  "components/tools/AreaCodeLookup.tsx"
+ ],
+ "Area codes you call": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Area or market": [
+  "components/tools/ScriptTools.tsx"
  ],
  "Around $250 per user per month billed annually, with a three-seat minimum": [
   "lib/weeklyBilling.ts"
@@ -4526,8 +4845,17 @@
  "At least 15 seconds or 4 rings": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
+ "At least the outcome, a note on what was said, and when to follow up. Those three are what turn a day of dialing into next week’s appointments.": [
+  "app/tools/cold-calling-tracker/page.tsx"
+ ],
+ "At least what you paid for the leads. Adding the dialer and agent time shows the full cost of working them.": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
  "at the FTC’s": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
+ ],
+ "Atlantic": [
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "Atlantic (no DST)": [
   "app/faq/calling-hours/page.tsx"
@@ -4573,6 +4901,12 @@
  ],
  "Attestation, local presence, and avoiding Spam Likely": [
   "app/faq/view.tsx"
+ ],
+ "Attorney General": [
+  "components/tools/StateDncTable.tsx"
+ ],
+ "Attorney General, with the list kept by a contracted nonprofit": [
+  "components/tools/StateDncTable.tsx"
  ],
  "AUDIO": [
   "app/dashboard/dialer/page.tsx"
@@ -4678,6 +5012,25 @@
  "automatically thereafter": [
   "app/billing/page.tsx"
  ],
+ "Average handle time (seconds)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Average handle time calculator": [
+  "app/tools/average-handle-time-calculator/page.tsx",
+  "lib/tools/registry.ts"
+ ],
+ "Average Handle Time Calculator (AHT)": [
+  "app/tools/average-handle-time-calculator/page.tsx"
+ ],
+ "Average handle time is talk time plus hold time plus after-call work, divided by the calls handled. Enter your totals to get AHT in minutes and seconds, the share each part takes, how many calls an agent can handle an hour, and what each call costs in agent time.": [
+  "app/tools/average-handle-time-calculator/page.tsx"
+ ],
+ "average handle time?": [
+  "app/tools/average-handle-time-calculator/page.tsx"
+ ],
+ "Average speed of answer": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "avg {duration}/call": [
   "app/dashboard/analytics/page.tsx"
  ],
@@ -4703,6 +5056,9 @@
  ],
  "Awaiting Your Decision": [
   "app/dashboard/teams/page.tsx"
+ ],
+ "B2B / SDR": [
+  "lib/tools/scriptPacks.ts"
  ],
  "B2B calls came under the telemarketing rule in 2024": [
   "lib/verticals.ts"
@@ -4815,6 +5171,9 @@
  "before you upload it to DialerSeat, unless one of the exceptions below applies to that person.": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
+ "before you upload it.": [
+  "app/tools/lead-list-cleaner/page.tsx"
+ ],
  "Before your call ever rings, something has already decided what the person on the other end will see. Here is what that something is, what it looks at, and which parts of it you can actually change.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
@@ -4861,6 +5220,9 @@
  "Best rate without a year commitment": [
   "lib/competitorFeatures.ts"
  ],
+ "Best time to call, by state and hour": [
+  "app/tools/page.tsx"
+ ],
  "Best when you want power-style volume without wasting time on machines.": [
   "app/faq/dialer-modes/page.tsx"
  ],
@@ -4869,6 +5231,9 @@
  ],
  "Between 8 a.m. and 9 p.m. in the consumer’s local time, unless the collector knows another time is convenient for them. DialerSeat enforces the window per account, against the account holder’s state.": [
   "lib/verticals.ts"
+ ],
+ "Between 8 a.m. and 9 p.m. in the time zone of the person being called (47 CFR 64.1200(c)(1) and 16 CFR 310.4(c)). Some states set narrower hours; Florida’s ends at 8 p.m.": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
  ],
  "Beyond individual recordings, there's a single export that pulls literally everything tied to your account into one JSON file, not a marketing “contact us for your data” process, an actual button that returns a file immediately.": [
   "app/faq/data-and-recordings/view.tsx"
@@ -4956,6 +5321,12 @@
  "Billing you can stop.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
+ "billing, configured per seat code": [
+  "app/faq/manager-plus/view.tsx"
+ ],
+ "BLANK TEMPLATE": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
  "Blended inbound/outbound teams that want one vendor for both directions.": [
   "lib/competitors.ts"
  ],
@@ -4971,6 +5342,9 @@
  "BOE: Circular 1/2023 on article 66.1.b": [
   "lib/countryRules.ts"
  ],
+ "Booked per conversation": [
+  "components/tools/TrackerAndChecklist.tsx#prop"
+ ],
  "Both are real options and each is the right answer for someone. Below is what each one costs, which dialing modes you actually get for that money, and the buyer each genuinely suits: followed by a note on where our own product fits, clearly marked as ours.": [
   "app/vs/[matchup]/page.tsx"
  ],
@@ -4982,6 +5356,9 @@
  ],
  "Both live in your account settings, ready whenever you need them.": [
   "app/faq/data-and-recordings/view.tsx"
+ ],
+ "Bought online by card, then downloaded. Section 501.059, Florida Statutes.": [
+  "components/tools/StateDncTable.tsx"
  ],
  "Brand": [
   "app/billing/success/page.tsx",
@@ -5015,6 +5392,9 @@
  ],
  "Break them, and the penalties are not small. TCPA: $500-$1,500": [
   "app/faq/why-is-compliance-important/page.tsx"
+ ],
+ "Breaks, training, absence: time paid but not on calls.": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "Bring your own leads.": [
   "app/pricing/page.tsx"
@@ -5051,6 +5431,9 @@
  ],
  "Built around investor and agent workflows, often with lead data.": [
   "app/data/dialer-pricing/page.tsx"
+ ],
+ "Built by DialerSeat, a browser dialer at $35 a seat a week. None of these tools need it.": [
+  "app/tools/page.tsx"
  ],
  "BUILT BY OPERATORS": [
   "app/faq/why-dialerseat/view.tsx"
@@ -5093,6 +5476,9 @@
  ],
  "Bundled lead data (FSBO, expired, neighbourhood search) in one place": [
   "lib/competitors.ts"
+ ],
+ "Burden of proof sits with the caller": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "Burning through fresh numbers to dodge labels works against the maturity factor instead of for it.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
@@ -5186,6 +5572,15 @@
   "app/dialing-modes/progressive/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
  ],
+ "Calculate answer rate, connect rate and contact rate the right way: over dials that actually rang, so failed dials aren’t blamed on your list.": [
+  "app/tools/contact-rate-calculator/page.tsx"
+ ],
+ "Calculate average handle time from talk, hold and after-call work, see what share each takes, and what a call costs in agent time.": [
+  "app/tools/average-handle-time-calculator/page.tsx"
+ ],
+ "Calculate cost per lead from spend and leads, plus cost per appointment, cost per sale and return on spend.": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
  "Calculators": [
   "app/resources/page.tsx"
  ],
@@ -5205,6 +5600,9 @@
  "CALL ATTEMPTS": [
   "app/dashboard/leads/page.tsx"
  ],
+ "Call back": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
  "Call Back": [
   "lib/dispositions.ts"
  ],
@@ -5223,8 +5621,14 @@
  "Call center and predictive dialers": [
   "app/data/dialer-pricing/page.tsx"
  ],
+ "Call center math": [
+  "lib/tools/registry.ts"
+ ],
  "Call center questions": [
   "app/faq/dialer-for-call-centers/page.tsx"
+ ],
+ "Call center staffing calculator": [
+  "lib/relatedLinks.ts"
  ],
  "Call centers": [
   "lib/gutsRail.ts"
@@ -5252,6 +5656,9 @@
  ],
  "CALL NOTES": [
   "app/dashboard/recordings/page.tsx"
+ ],
+ "Call only between 8 a.m. and 9 p.m. in the person's local time, not yours.": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "call over (hangup poll)": [
   "app/dashboard/dialer/page.tsx"
@@ -5294,6 +5701,9 @@
  ],
  "Call records are kept, and you can export them per campaign. See": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
+ ],
+ "Call registered numbers only with express written agreement or an established business relationship.": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "CALL SCRIPT": [
   "app/dashboard/dialer/page.tsx",
@@ -5345,6 +5755,9 @@
  "Callback": [
   "app/welcome/Showcase.tsx"
  ],
+ "Callback number": [
+  "components/tools/ScriptTools.tsx"
+ ],
  "CALLBACK NUMBER": [
   "app/dashboard/settings/page.tsx",
   "components/SellerIdentityDialog.tsx"
@@ -5390,6 +5803,9 @@
   "app/dialing-modes/power/page.tsx",
   "app/faq/what-is-a-power-dialer/page.tsx"
  ],
+ "Calling days this month": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Calling from a number in the prospect’s own area. DialerSeat matches area code, then state, then region, on every call.": [
   "app/faq/dialer-glossary/page.tsx"
  ],
@@ -5397,7 +5813,8 @@
   "lib/competitors.ts"
  ],
  "Calling hours": [
-  "app/data/calling-rules-by-country/[code]/page.tsx"
+  "app/data/calling-rules-by-country/[code]/page.tsx",
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "CALLING HOURS": [
   "app/data/calling-rules-by-country/page.tsx",
@@ -5415,10 +5832,14 @@
   "lib/verticals.ts"
  ],
  "CALLING HOURS BY STATE": [
-  "app/faq/dialer-for-insurance-agents/page.tsx"
+  "app/faq/dialer-for-insurance-agents/page.tsx",
+  "app/tools/area-code-lookup/page.tsx"
  ],
  "Calling hours by state (DialerSeat)": [
   "lib/countryRules.ts"
+ ],
+ "CALLING HOURS EXPLAINED": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
  ],
  "Calling hours you don’t have to check": [
   "app/vs/manual-dialing/page.tsx"
@@ -5456,11 +5877,15 @@
  "Calling people who expect to hear from you": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
+ "Calling rules and compliance": [
+  "lib/tools/registry.ts"
+ ],
  "Calling rules by country": [
   "app/data/calling-rules-by-country/[code]/page.tsx",
   "app/data/calling-rules-by-country/page.tsx",
   "app/faq/what-is-an-auto-dialer/page.tsx",
   "app/resources/page.tsx",
+  "app/tools/page.tsx",
   "lib/gutsRail.ts"
  ],
  "CALLING RULES BY COUNTRY": [
@@ -5549,8 +5974,39 @@
  "Calls before 8 a.m. or after 9 p.m. in the consumer’s local time are presumed inconvenient. DialerSeat enforces the calling window on the server against each account’s own state, so a collector in another time zone cannot dial outside it.": [
   "lib/verticals.ts"
  ],
+ "Calls handled": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Calls in the interval": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Calls logged": [
+  "components/tools/TrackerAndChecklist.tsx#prop"
+ ],
  "Calls on this campaign are recorded.": [
   "components/teams/CampaignDetail.tsx"
+ ],
+ "Calls per agent hour": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "CALLS PER HOUR": [
+  "app/tools/average-handle-time-calculator/page.tsx",
+  "app/tools/cold-calls-per-day-calculator/page.tsx",
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
+ "Calls per hour = dials ÷ hours spent dialing.": [
+  "components/tools/MathTools.tsx"
+ ],
+ "Calls per hour calculator": [
+  "app/tools/calls-per-hour-calculator/page.tsx",
+  "lib/relatedLinks.ts",
+  "lib/tools/registry.ts"
+ ],
+ "Calls Per Hour Calculator: Dials per Hour, 1 to 3 Lines": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
+ ],
+ "Calls per hour is dials divided by hours spent dialing. Enter yours, then your answer rate, talk time and ring time to estimate dials and conversations per hour on one, two or three lines, and see how much of your hour goes to waiting on phones that never pick up.": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
  ],
  "Calls route from a number matching your lead's area code by default. Local numbers get answered at meaningfully higher rates than out-of-area numbers, and they read as less suspicious to both the person receiving the call and the carrier's filtering model.": [
   "app/faq/numbers/view.tsx"
@@ -5558,11 +6014,17 @@
  "Calls still ringing don’t count yet.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
+ "Calls that wait": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Calls today": [
   "components/teams/TeamFloor.tsx"
  ],
  "CALLS TODAY": [
   "components/teams/TeamFloor.tsx"
+ ],
+ "Calls with a real outcome": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "Calls, contact rate, conversions, talk time and active seats across the team, for one agent or everybody at once. The figures are a test account's own history, not a performance claim.": [
   "app/faq/teams-how-it-works/page.tsx#prop"
@@ -5727,6 +6189,9 @@
  "Can each offshore agent have their own login and data?": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
+ "Can I call numbers on the registry?": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
+ ],
  "Can I cancel any time?": [
   "app/pricing/page.tsx"
  ],
@@ -5761,6 +6226,9 @@
  "Can I use DialerSeat with agents in the Philippines or elsewhere overseas?": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
+ "Can I use it in Excel or Google Sheets?": [
+  "app/tools/cold-calling-tracker/page.tsx"
+ ],
  "Can I use my PropStream, BatchLeads or DealMachine lists?": [
   "app/faq/dialer-for-real-estate/page.tsx"
  ],
@@ -5779,21 +6247,40 @@
  "Can team members export the lead CSV?": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
+ "Can telemarketers call on Sundays or holidays?": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
+ ],
  "Can two agents call the same lead?": [
   "app/faq/dialer-for-call-centers/page.tsx"
  ],
  "Can two agents on the same campaign call the same lead?": [
   "app/vs/teams/page.tsx"
  ],
+ "Can you call": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
+ ],
+ "Can you call this state right now? The federal window in every lead's local time.": [
+  "lib/tools/registry.ts"
+ ],
+ "Can't be dialed": [
+  "components/tools/PhoneNumberFormatter.tsx#prop"
+ ],
  "Can't find yours?": [
   "app/faq/view.tsx#prop",
   "app/vs/view.tsx#prop"
  ],
  "Canada": [
-  "lib/countryNames.ts"
+  "lib/countryNames.ts",
+  "lib/tools/phone.ts"
  ],
  "Canada (CRTC)": [
   "components/tools/AbandonRateCalculator.tsx"
+ ],
+ "Canada. Same dialing plan as the US, but Canadian telemarketing rules apply (CRTC).": [
+  "components/tools/AreaCodeLookup.tsx"
+ ],
+ "Canadian number: Canadian calling rules apply": [
+  "lib/tools/phone.ts"
  ],
  "cancel": [
   "app/dashboard/settings/page.tsx"
@@ -5895,6 +6382,9 @@
  "Capping how much any single number dials": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
+ "Caribbean / other NANP": [
+  "lib/tools/phone.ts"
+ ],
  "Carrier (voice)": [
   "app/status/page.tsx"
  ],
@@ -5908,10 +6398,14 @@
   "app/faq/why-is-compliance-important/page.tsx"
  ],
  "Central": [
-  "app/faq/calling-hours/page.tsx"
+  "app/faq/calling-hours/page.tsx",
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "CFPB debt collection rule FAQs": [
   "lib/verticals.ts"
+ ],
+ "Chamorro": [
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "Changed recently": [
   "app/data/calling-rules-by-country/page.tsx"
@@ -5949,6 +6443,9 @@
  "Charges": [
   "app/dashboard/reports/ReportView.tsx"
  ],
+ "Cheap leads that never answer cost more per sale than expensive ones that do. Cost per appointment and per sale show which source actually pays.": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
  "CHEAPER THAN OTHERS": [
   "app/page.tsx"
  ],
@@ -5967,8 +6464,8 @@
  "Check any campaign against the limit with the": [
   "app/faq/dialer-for-call-centers/page.tsx"
  ],
- "Check your analytics": [
-  "components/onboarding/PreviewOnboarding.tsx"
+ "Check the state Do Not Call lists for the states you call.": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "CHECKED {checkedAt}": [
   "app/status/page.tsx"
@@ -6024,9 +6521,21 @@
  "Cite this page as: DialerSeat, \"Outbound Connect Rates by State and Hour,\" dialerseat.com/data/connect-rates, accessed {generated}.": [
   "app/data/connect-rates/page.tsx"
  ],
+ "City": [
+  "lib/tools/leadSheet.ts"
+ ],
  "CITY": [
   "app/dashboard/campaigns/page.tsx",
   "app/dashboard/leads/page.tsx"
+ ],
+ "Clean a lead list, format phone numbers, check what time it is in an area code, stay inside calling hours, staff a queue or write tomorrow's script. Every tool is free, needs no account, and runs in your browser: the ones that read your lists never upload them.": [
+  "app/tools/page.tsx"
+ ],
+ "Clean a list into E.164 or (555) 555-0100, drop duplicates, flag numbers that can't be dialed.": [
+  "lib/tools/registry.ts"
+ ],
+ "Clean a phone list": [
+  "app/tools/phone-number-formatter/page.tsx"
  ],
  "Clean analytics": [
   "lib/competitors.ts"
@@ -6045,7 +6554,9 @@
  ],
  "CLEAR": [
   "app/dashboard/leads/page.tsx",
-  "app/dashboard/recordings/page.tsx"
+  "app/dashboard/recordings/page.tsx",
+  "components/tools/PhoneNumberFormatter.tsx",
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "Clear all": [
   "components/teams/CampaignDetail.tsx"
@@ -6058,6 +6569,9 @@
  ],
  "Clerk-managed sessions with industry-standard security.": [
   "app/privacy/page.tsx"
+ ],
+ "CLICK AGAIN TO DELETE ALL": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "Click any mode for the full deep dive →": [
   "app/dialing-modes/view.tsx"
@@ -6108,6 +6622,7 @@
  "Closed": [
   "app/welcome/Showcase.tsx",
   "components/teams/CampaignDetail.tsx",
+  "components/tools/CallingHoursChecker.tsx",
   "lib/dispositions.ts"
  ],
  "CLOSED": [
@@ -6116,6 +6631,9 @@
   "app/dashboard/leads/page.tsx",
   "app/dashboard/recordings/page.tsx",
   "app/welcome/Showcase.tsx"
+ ],
+ "Closed, appointment, not interested, do not call.": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "CloudTalk Alternative: Dialer Pricing Without the Add-Ons | DialerSeat": [
   "app/vs/cloudtalk/page.tsx"
@@ -6163,8 +6681,34 @@
  "code: {code}": [
   "app/join/[code]/DeadInvite.tsx"
  ],
+ "Cold call script generator": [
+  "app/tools/cold-call-script-generator/page.tsx",
+  "lib/tools/registry.ts"
+ ],
+ "Cold Call Script Generator: Openers & Rebuttals": [
+  "app/tools/cold-call-script-generator/page.tsx"
+ ],
+ "COLD CALL SCRIPTS": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
+ "Cold calling and sales": [
+  "lib/tools/registry.ts"
+ ],
  "Cold calling businesses after the 2024 rule change": [
   "app/faq/view.tsx"
+ ],
+ "Cold calling tracker": [
+  "lib/tools/registry.ts"
+ ],
+ "COLD CALLING TRACKER": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
+ ],
+ "Cold Calling Tracker: Free, No Signup, Export to CSV": [
+  "app/tools/cold-calling-tracker/page.tsx"
+ ],
+ "COLD CALLS PER DAY": [
+  "app/tools/cold-calling-tracker/page.tsx",
+  "app/tools/cost-per-lead-calculator/page.tsx"
  ],
  "Collapse": [
   "components/teams/TeamsSidebar.tsx"
@@ -6178,11 +6722,17 @@
  "Color and logo changes propagate site-wide within 60 seconds. Your own browser updates instantly on save. Other users (your team, your customers) will see the new look after their next page load, up to a minute later.": [
   "app/onboarding/whitelabel/page.tsx"
  ],
+ "Colorado": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "COLUMN": [
   "app/faq/compliance-export/view.tsx"
  ],
  "Column auto-detection, consent fields, retry logic, and what happens to leads that fail to import, the real mechanics of getting a list into a campaign.": [
   "app/faq/leads/page.tsx"
+ ],
+ "Column name": [
+  "components/tools/LeadListCleaner.tsx"
  ],
  "Combined calling and texting in one place": [
   "lib/competitors.ts"
@@ -6219,6 +6769,9 @@
  ],
  "Companies that need a full business phone system first and outbound dialing second.": [
   "lib/competitors.ts"
+ ],
+ "Company": [
+  "components/tools/ScriptTools.tsx"
  ],
  "COMPARE": [
   "app/page.tsx"
@@ -6410,8 +6963,12 @@
   "components/teams/AgentCard.tsx",
   "components/teams/TeamFloor.tsx"
  ],
+ "Connect a live agent within 2 seconds of the greeting, or play a recorded message with the seller's name and number.": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
  "Connect rate": [
-  "app/faq/dialer-glossary/page.tsx"
+  "app/faq/dialer-glossary/page.tsx",
+  "components/tools/MathTools.tsx#prop"
  ],
  "CONNECT RATE": [
   "app/dashboard/teams/[id]/analytics/page.tsx",
@@ -6435,6 +6992,9 @@
  ],
  "Connect rates by state & hour": [
   "lib/gutsRail.ts"
+ ],
+ "CONNECT RATES BY STATE & HOUR": [
+  "app/tools/contact-rate-calculator/page.tsx"
  ],
  "Connect rates by state and hour": [
   "app/resources/page.tsx"
@@ -6481,13 +7041,15 @@
   "components/vs-competitor-view.tsx"
  ],
  "Consent": [
-  "app/data/calling-rules-by-country/[code]/page.tsx"
+  "app/data/calling-rules-by-country/[code]/page.tsx",
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "CONSENT": [
   "app/data/calling-rules-by-country/page.tsx"
  ],
  "Consent date": [
-  "app/faq/leads/view.tsx"
+  "app/faq/leads/view.tsx",
+  "lib/tools/leadSheet.ts"
  ],
  "Consent for every lead you buy. Aged internet leads are only as callable as the consent they were collected with.": [
   "lib/verticals.ts"
@@ -6523,10 +7085,12 @@
   "app/faq/dialer-for-insurance-agents/page.tsx"
  ],
  "Consent source": [
-  "app/faq/leads/view.tsx"
+  "app/faq/leads/view.tsx",
+  "lib/tools/leadSheet.ts"
  ],
  "Consent text": [
-  "app/faq/leads/view.tsx"
+  "app/faq/leads/view.tsx",
+  "lib/tools/leadSheet.ts"
  ],
  "Consent.": [
   "app/dialing-modes/view.tsx",
@@ -6551,10 +7115,14 @@
   "app/privacy/page.tsx"
  ],
  "Contact rate": [
-  "app/faq/dialer-glossary/page.tsx"
+  "app/faq/dialer-glossary/page.tsx",
+  "components/tools/MathTools.tsx#prop"
  ],
  "Contact Rate": [
   "app/dashboard/teams/page.tsx"
+ ],
+ "CONTACT RATE CALCULATOR": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
  ],
  "contact sales@dialerseat.com": [
   "app/faq/view.tsx"
@@ -6571,6 +7139,12 @@
  ],
  "Contact whoever runs this team, only they can resume it.": [
   "components/teams/TeamDetail.tsx"
+ ],
+ "contact: the right way.": [
+  "app/tools/contact-rate-calculator/page.tsx"
+ ],
+ "Contains letters": [
+  "lib/tools/phone.ts"
  ],
  "Contents": [
   "app/privacy/page.tsx",
@@ -6597,6 +7171,9 @@
  ],
  "CONV RATE": [
   "app/dashboard/dialer/page.tsx"
+ ],
+ "Conversations that book (%)": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "Conversion rate": [
   "app/faq/dialer-glossary/page.tsx"
@@ -6641,11 +7218,20 @@
   "components/teams/CampaignDetail.tsx",
   "components/teams/TeamDetail.tsx"
  ],
+ "COPIED": [
+  "components/tools/kit.tsx"
+ ],
  "COPIED ✓": [
   "components/teams/SeatLinksPanel.tsx"
  ],
  "Copy": [
   "components/CiteThis.tsx"
+ ],
+ "COPY ALL THREE": [
+  "components/tools/ScriptTools.tsx"
+ ],
+ "COPY CLEAN LIST": [
+  "components/tools/PhoneNumberFormatter.tsx#prop"
  ],
  "Copy Code": [
   "components/teams/TeamDetail.tsx"
@@ -6655,6 +7241,12 @@
  ],
  "COPY LINK": [
   "components/teams/SeatLinksPanel.tsx"
+ ],
+ "COPY NUMBERS": [
+  "components/tools/PhoneNumberExtractor.tsx#prop"
+ ],
+ "COPY SCRIPT": [
+  "components/tools/ScriptTools.tsx"
  ],
  "Copy URL": [
   "components/teams/CampaignDetail.tsx"
@@ -6692,8 +7284,30 @@
  "Cost is the easy question. What actually goes wrong on a shared floor is mechanical, and it is worth knowing exactly how a tool handles each of these before five people depend on it.": [
   "app/vs/teams/page.tsx"
  ],
+ "Cost per appointment": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "COST PER CONVERSION": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
+ ],
+ "Cost per lead = spend ÷ leads.": [
+  "components/tools/MathTools.tsx"
+ ],
+ "Cost per lead calculator": [
+  "app/tools/cost-per-lead-calculator/page.tsx",
+  "lib/tools/registry.ts"
+ ],
+ "Cost Per Lead Calculator: Per Lead, Appointment & Sale": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
+ "Cost per lead is total spend divided by the leads it bought. Add appointments and sales to see cost per appointment and cost per sale, and revenue per sale to see the return on what you spent. Count whatever spend matters to you: the leads, the dialer, ads or time.": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
+ "Cost per lead, per appointment and per sale, from one spend figure.": [
+  "lib/tools/registry.ts"
+ ],
+ "Cost per sale": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "Cost per seat climbs steeply with capability": [
   "lib/competitors.ts"
@@ -6703,6 +7317,9 @@
  ],
  "Cost to you:": [
   "app/join/[code]/JoinRedeemClient.tsx"
+ ],
+ "cost you?": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
  ],
  "Cost:": [
   "app/join/[code]/JoinRedeemClient.tsx"
@@ -6852,6 +7469,9 @@
  "Couldn't load this team's numbers. Everything below still works.": [
   "components/teams/TeamOverview.tsx"
  ],
+ "Counted in your browser; nothing is uploaded.": [
+  "components/tools/MathTools.tsx"
+ ],
  "Country": [
   "app/data/calling-rules-by-country/[code]/page.tsx"
  ],
@@ -6864,6 +7484,9 @@
  ],
  "covers rotation, caps and health monitoring in detail.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
+ ],
+ "Covers text messages since 2023. Fines up to $2,000 per incident.": [
+  "components/tools/StateDncTable.tsx"
  ],
  "covers the case where the agent's own clock is the furthest thing from the lead's.": [
   "app/faq/calling-hours/page.tsx"
@@ -6987,6 +7610,9 @@
  "CRTC Unsolicited Telecommunications Rules": [
   "lib/countryRules.ts"
  ],
+ "CSV": [
+  "components/tools/PhoneNumberExtractor.tsx"
+ ],
  "CSV · TSV · TXT · XLSX · XLS": [
   "app/dashboard/campaigns/page.tsx"
  ],
@@ -6995,6 +7621,9 @@
  ],
  "CSV lead import with column auto-detection and a 3-attempt retry cycle.": [
   "lib/canonicalFacts.ts"
+ ],
+ "Current fee not confirmed. A 2006 order set $400 for the list and $400 or $800 to register, and allows revision": [
+  "components/tools/StateDncTable.tsx"
  ],
  "currently apply these state-specific variations automatically, and this page is a starting point rather than legal advice: state statutes change, and the summaries above are drawn from secondary sources. If your list is concentrated in a stricter state, confirm the current rule with counsel and schedule around it. We would rather tell you that plainly than let you assume a protection the product does not provide.": [
   "app/faq/calling-hours/page.tsx"
@@ -7091,6 +7720,9 @@
  "Data Saved Always": [
   "app/page.tsx"
  ],
+ "Data you can cite": [
+  "app/tools/page.tsx"
+ ],
  "Database": [
   "app/status/page.tsx"
  ],
@@ -7099,7 +7731,8 @@
   "app/data/dialer-pricing/page.tsx"
  ],
  "Date": [
-  "app/dashboard/reports/ReportView.tsx"
+  "app/dashboard/reports/ReportView.tsx",
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "DATED INTERFACES": [
   "app/vs/everyone/view.tsx"
@@ -7219,6 +7852,9 @@
  "DELETE REQUIRES TYPING “DELETE”": [
   "app/faq/data-and-recordings/view.tsx"
  ],
+ "Delete row": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
  "DELETE SCRIPT": [
   "app/dashboard/campaigns/page.tsx"
  ],
@@ -7255,6 +7891,9 @@
  ],
  "Dense tables stay dense.": [
   "app/faq/mobile/view.tsx"
+ ],
+ "Department of Agriculture and Consumer Services": [
+  "components/tools/StateDncTable.tsx"
  ],
  "Depending on where you live, you may have the following rights regarding your data:": [
   "app/privacy/page.tsx"
@@ -7358,6 +7997,9 @@
  "Dial US based leads from any country in the world. No increased price jumps for dialing while abroad.": [
   "app/page.tsx"
  ],
+ "Dialable": [
+  "components/tools/PhoneNumberExtractor.tsx#prop"
+ ],
  "Dialed": [
   "components/teams/CampaignDetail.tsx",
   "components/teams/TeamDetail.tsx"
@@ -7390,7 +8032,11 @@
   "app/resources/page.tsx",
   "app/tools/dialer-cost-calculator/page.tsx",
   "lib/gutsRail.ts",
-  "lib/relatedLinks.ts"
+  "lib/relatedLinks.ts",
+  "lib/tools/registry.ts"
+ ],
+ "DIALER COST CALCULATOR": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
  ],
  "Dialer Cost Calculator: Weekly vs Monthly Billing, Any Team Size | DialerSeat": [
   "app/tools/dialer-cost-calculator/page.tsx"
@@ -7514,6 +8160,9 @@
  "Dialer modes": [
   "lib/competitorFeatures.ts"
  ],
+ "DIALER MODES": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
+ ],
  "DIALER MODES · TL;DR": [
   "app/faq/dialer-modes/page.tsx"
  ],
@@ -7554,6 +8203,7 @@
  "Dialer pricing index": [
   "app/data/dialer-pricing/page.tsx",
   "app/resources/page.tsx",
+  "app/tools/page.tsx",
   "lib/gutsRail.ts",
   "lib/relatedLinks.ts"
  ],
@@ -7615,6 +8265,9 @@
  "DialerSeat applies a per-number daily cap and rotates across the pool automatically. You do not set it, and you do not need to calculate against it. What you watch instead is whether the pool is running hot: when numbers are regularly hitting their cap or answer rates start slipping, that is the pool telling you to add a few. It is a feedback loop rather than a formula.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
+ "DialerSeat bills $35 a week per seat, so a week of dialing a lead batch costs a week, not a month.": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
  "DialerSeat bills by the week, so one week of use costs $35 and four weeks cost $140. A tool billed by the month costs a full month even when you only need it for a week.": [
   "components/vs-competitor-view.tsx"
  ],
@@ -7645,6 +8298,15 @@
  "DialerSeat costs $35 per seat per week with every dialer mode included. Billed weekly, so one week costs $35. A week of ReadyMode costs $199 and a week of Mojo Dialer $149, because they bill by the month.": [
   "app/pricing/page.tsx"
  ],
+ "DialerSeat desktop app showing Teams and Analytics windows open side by side": [
+  "app/faq/manager-plus/view.tsx"
+ ],
+ "DialerSeat dialer terminal in power mode, white-labeled, showing manual dial pad and today’s metrics sidebar": [
+  "app/faq/manager-plus/view.tsx"
+ ],
+ "DialerSeat divides by dials that rang in the same way, and its contact rate counts calls the agent marked closed, appointment, not interested or do not call.": [
+  "app/tools/contact-rate-calculator/page.tsx"
+ ],
  "DialerSeat does everything in the left column automatically, on every plan. How each piece works, with the actual numbers, is on": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
@@ -7660,6 +8322,9 @@
  "DialerSeat enforces 9:00am to 9:00pm in each lead’s own local time. The 9am start is deliberately one hour stricter than the federal 8am, because answer rates before 9am are poor and the compliance risk is not worth the marginal contact. Enforcement is server-side and per lead, so it applies no matter which agent is dialing or where they are.": [
   "app/faq/calling-hours/page.tsx"
  ],
+ "DialerSeat enforces a narrower window than the law, 9 a.m. to 9 p.m. (8 p.m. in Florida) in each lead’s own time zone, on every call.": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
+ ],
  "DialerSeat enforces calling windows on every call, based on the lead’s location, so a call outside the window is never placed. The full breakdown is on": [
   "app/vs/manual-dialing/page.tsx"
  ],
@@ -7668,6 +8333,9 @@
  ],
  "DialerSeat enforces the 9am-9pm baseline. It does": [
   "app/faq/calling-hours/page.tsx"
+ ],
+ "DialerSeat enforces the calling window and the 3% limit in software on every call. Scrubbing and consent stay with you, and we say so.": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
  ],
  "DialerSeat enforces the window on the server against each lead’s own state. An agent working late in one time zone cannot dial into a state where it is already too late, and states stricter than the federal 8 a.m. to 9 p.m. window are held to their own rule.": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
@@ -7833,6 +8501,9 @@
  "DialerSeat runs as a full Progressive Web App on your phone: the same terminal, analytics, and teams tools as desktop, installed to your home screen in under a minute. Step-by-step install instructions for iPhone and Android, what the rest of the category publishes about mobile in its own requirements, and what is honestly worse on a handset.": [
   "app/faq/mobile/page.tsx"
  ],
+ "DialerSeat runs power, progressive and multi-line predictive at $35 a week per seat, holding predictive under the 3% limit for you.": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
+ ],
  "DialerSeat Screenshots": [
   "app/screenshots/page.tsx"
  ],
@@ -7879,6 +8550,9 @@
  ],
  "DialerSeat tracks answer rate per number over a rolling window. A number whose answer rate has degraded relative to the rest of the pool is flagged and can be retired rather than dialed until it is worthless. That is the reason to hold headroom: retiring a number should not reduce your capacity below what the day needs.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
+ ],
+ "DialerSeat uses this same table to call each lead in their own time zone, and dials with local presence by default. $35 a week per seat.": [
+  "app/tools/area-code-lookup/page.tsx"
  ],
  "DIALERSEAT VS {name}": [
   "app/vs/[matchup]/page.tsx"
@@ -8032,6 +8706,9 @@
  "DialerSeat's agent leg is a SIP registration over a WebSocket, with the audio carried by WebRTC inside the browser itself. There is no softphone to install and no bridge number to call, which is what collapses the requirement down to a browser and a microphone, and a phone has both. What is left is the work of making a browser behave on a phone, and that part is real:": [
   "app/faq/mobile/view.tsx"
  ],
+ "DialerSeat’s answering machine detection routes machines away from your agents, so their time goes to people. $35 a week per seat.": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
  "DialerSeat's mobile experience is a": [
   "app/faq/white-label-mobile/view.tsx"
  ],
@@ -8119,6 +8796,9 @@
  "Dialpad shows up frequently in \"best dialer\" roundups, largely on the strength of its AI transcription and coaching tools. Worth knowing before you sign up: those roundups are usually describing Dialpad's AI features, not its dialer. The core Dialpad Connect phone plans (Standard $15, Pro $25, Enterprise $35 per user/month) don't include a power dialer at any tier: multiple independent pricing breakdowns confirm it, listing \"Power Dialer\" as available only inside the separate Dialpad Sell product line, itself starting around $39/user/month. DialerSeat™ is one product with the dialer already in it.": [
   "lib/competitorFeatures.ts"
  ],
+ "Dials": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "DIALS": [
   "app/data/connect-rates/page.tsx",
   "app/faq/how-we-measure-answer-rate/page.tsx",
@@ -8136,6 +8816,9 @@
  "Dials automatically with the agent already on the line, so there is no connect delay when somebody answers.": [
   "app/faq/dialer-glossary/page.tsx"
  ],
+ "Dials made": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Dials several lines at once and routes the first human answer to the agent. Highest conversations per hour.": [
   "lib/canonicalFacts.ts"
  ],
@@ -8148,8 +8831,17 @@
  "Dials several numbers at once per available agent and passes the first person who answers to an agent. The most conversations per hour, and the only mode the abandon rules apply to.": [
   "app/faq/dialer-glossary/page.tsx"
  ],
+ "Dials that never rang": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Dials that rang": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "DIALS THAT RANG": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
+ ],
+ "Dials that reach the person (%)": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "Dials that reached the other end. Only these gave anyone the chance to answer.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
@@ -8253,6 +8945,12 @@
  "Divide abandoned calls by calls answered by a person, then multiply by 100. Use answered calls, not dials: dividing by dials makes the rate look lower than the regulator will measure it.": [
   "app/tools/abandon-rate-calculator/page.tsx"
  ],
+ "Divide the dials made by the hours spent dialing. 240 dials in 4 hours is 60 calls per hour.": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
+ ],
+ "Divide total spend by the number of leads. $1,500 for 300 leads is $5 a lead.": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
  "DIVIDED BY DIALS THAT RANG": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
@@ -8321,7 +9019,11 @@
   "app/dashboard/reports/ReportView.tsx"
  ],
  "Do not call": [
+  "components/tools/TrackerAndChecklist.tsx",
   "lib/dispositions.ts"
+ ],
+ "Do Not Call": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "DO NOT CALL": [
   "app/dashboard/dialer/page.tsx",
@@ -8347,11 +9049,23 @@
  "Do Not Call lists, calling hours, consent, abandoned-call limits and caller ID rules for {length} countries, each with its source. Anything we could not verify is left out rather than guessed.": [
   "app/data/calling-rules-by-country/page.tsx"
  ],
+ "Do Not Call lists, hours and consent for 15 countries.": [
+  "app/tools/page.tsx"
+ ],
  "Do Not Call Register industry standards": [
   "lib/countryRules.ts"
  ],
  "Do Not Call Register. Calls to a newly listed number must stop within 30 days, and listing is permanent.": [
   "lib/countryRules.ts"
+ ],
+ "Do Not Call registry cost": [
+  "lib/tools/registry.ts"
+ ],
+ "Do Not Call registry cost calculator": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
+ ],
+ "Do Not Call Registry Cost Calculator": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
  ],
  "Do Not Call Registry scrubbing, and any state registry or calling-hour rule stricter than the federal one.": [
   "lib/verticals.ts"
@@ -8375,6 +9089,9 @@
  ],
  "Do some states have stricter calling hours than the federal rule?": [
   "app/faq/calling-hours/page.tsx"
+ ],
+ "Do states have their own Do Not Call lists?": [
+  "app/tools/state-do-not-call-lists/page.tsx"
  ],
  "Do the people it calls choose to answer?": [
   "app/faq/why-calls-show-spam-likely/page.tsx",
@@ -8403,6 +9120,9 @@
   "app/faq/how-we-keep-compliance/page.tsx",
   "app/faq/why-is-compliance-important/page.tsx"
  ],
+ "Does an area code show where someone lives?": [
+  "app/tools/area-code-lookup/page.tsx"
+ ],
  "Does an offshore agent cost more per seat?": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
@@ -8417,6 +9137,12 @@
  ],
  "Does DialerSeat have call monitoring, whisper, or barge?": [
   "app/faq/teams-how-it-works/page.tsx"
+ ],
+ "Does DialerSeat scrub state lists?": [
+  "app/tools/state-do-not-call-lists/page.tsx"
+ ],
+ "Does it work for international numbers?": [
+  "app/tools/phone-number-extractor/page.tsx"
  ],
  "Does it work for offshore agents calling US leads?": [
   "app/faq/dialer-for-call-centers/page.tsx"
@@ -8442,11 +9168,17 @@
  "Does using offshore agents change my compliance obligations?": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
+ "does your queue need?": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
  "Doesn't the \"hello? ... hello?\" delay annoy people?": [
   "app/faq/how-does-amd-work/page.tsx"
  ],
  "don't": [
   "app/faq/why-is-compliance-important/page.tsx"
+ ],
+ "Don't call now": [
+  "components/tools/CallingHoursChecker.tsx"
  ],
  "Don't just tell an auditor you're compliant.": [
   "app/faq/compliance-export/view.tsx"
@@ -8463,11 +9195,20 @@
  "DOWN": [
   "app/status/page.tsx"
  ],
+ "DOWNLOAD A BLANK TEMPLATE": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
+ "DOWNLOAD CSV": [
+  "components/tools/PhoneNumberFormatter.tsx"
+ ],
  "DOWNLOAD CSV ↓": [
   "app/dashboard/campaigns/page.tsx"
  ],
  "Download every lead in this campaign as a CSV": [
   "app/dashboard/campaigns/page.tsx"
+ ],
+ "DOWNLOAD FIXED CSV": [
+  "components/tools/LeadListCleaner.tsx"
  ],
  "Download PDF": [
   "app/dashboard/reports/ReportView.tsx"
@@ -8513,8 +9254,15 @@
  "Duplicate phone numbers aren't rejected at upload": [
   "app/faq/leads/view.tsx"
  ],
+ "DUPLICATES": [
+  "components/tools/PhoneNumberFormatter.tsx#prop"
+ ],
  "Duplicates matter more than they look. CRM automations fire twice and sheets re-sync, and without the check the same person would be called twice. Every request is also logged, so you can read it back from the campaign later.": [
   "app/faq/send-leads-from-your-crm/page.tsx"
+ ],
+ "Duplicates removed": [
+  "components/tools/LeadListCleaner.tsx#prop",
+  "components/tools/PhoneNumberFormatter.tsx#prop"
  ],
  "DURATION": [
   "app/dashboard/dialer/page.tsx",
@@ -8612,7 +9360,8 @@
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
  "Eastern": [
-  "app/faq/calling-hours/page.tsx"
+  "app/faq/calling-hours/page.tsx",
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "Edit": [
   "components/teams/CampaignDetail.tsx"
@@ -8642,6 +9391,12 @@
  "Either answer is remembered, and it never asks again.": [
   "app/faq/languages/page.tsx"
  ],
+ "Eleven states with their own do not call rules, checked on each state's site: who runs the list, what telemarketers pay and how often it changes.": [
+  "app/tools/state-do-not-call-lists/page.tsx"
+ ],
+ "Eleven states' own rules, read from each state's site: who runs the list, what it costs, how often it changes.": [
+  "lib/tools/registry.ts"
+ ],
  "Eleventh Circuit vacates the one-to-one consent rule (Wiley)": [
   "lib/verticals.ts"
  ],
@@ -8651,7 +9406,8 @@
  ],
  "Email": [
   "app/faq/leads/view.tsx",
-  "components/teams/TeamFloor.tsx"
+  "components/teams/TeamFloor.tsx",
+  "lib/tools/leadSheet.ts"
  ],
  "EMAIL": [
   "app/dashboard/campaigns/page.tsx",
@@ -8685,7 +9441,8 @@
   "lib/competitors.ts"
  ],
  "Empty": [
-  "components/teams/CampaignDetail.tsx"
+  "components/teams/CampaignDetail.tsx",
+  "lib/tools/phone.ts"
  ],
  "Enable": [
   "app/dashboard/campaigns/page.tsx"
@@ -8753,6 +9510,9 @@
  "Enough that no single number carries a whole day of calls. The arithmetic is simple; the reason behind it is what most teams learn the expensive way.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
+ "Enough to hit your goal at your own rates, which is what this works out. There is no universal number, because a change in contact rate or booking rate moves the answer a long way.": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
+ ],
  "Enough to run a floor: who is working, on what, and how it is going.": [
   "app/faq/teams-how-it-works/page.tsx#prop"
  ],
@@ -8765,6 +9525,9 @@
  "Enter code": [
   "app/billing/page.tsx"
  ],
+ "Enter how many area codes you call, or paste your numbers and the area codes are counted for you. The National Do Not Call Registry gives the first five area codes free; from 1 October 2026 each one after that costs $85, and access to every area code is capped at $23,425.": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
+ ],
  "Enter how many weeks you need a dialer and how many agents. See what DialerSeat, ReadyMode, PhoneBurner, Mojo, BatchDialer, WAVV, Kixie and Orum would bill, with seat minimums and annual terms applied.": [
   "app/tools/dialer-cost-calculator/page.tsx"
  ],
@@ -8774,8 +9537,14 @@
  "Enter Team Code Here": [
   "components/teams/TeamsSidebar.tsx"
  ],
+ "Enter the calls you expect in an interval, the average handle time and your service level target, such as 80% answered within 20 seconds. The Erlang C formula gives the agents needed on the phones, the staff to schedule once shrinkage is counted, plus occupancy and average speed of answer.": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
  "Enter them once. They apply to all your campaigns, and you can change them in Settings.": [
   "components/SellerIdentityDialog.tsx"
+ ],
+ "Enter your dials, the dials that rang, answers, live connects and calls with a real outcome to get answer rate, connect rate and contact rate. Each is divided by dials that actually rang, not every dial, so a technical failure is never counted against your list, while failed dials still show in your totals.": [
+  "app/tools/contact-rate-calculator/page.tsx"
  ],
  "Enterprise compliance, self-serve setup": [
   "app/vs/view.tsx"
@@ -8785,6 +9554,21 @@
  ],
  "Enterprise contact-center software sold through a sales cycle, aimed at large floors.": [
   "lib/competitors.ts"
+ ],
+ "ERLANG C CALCULATOR": [
+  "app/tools/average-handle-time-calculator/page.tsx"
+ ],
+ "Erlang C Calculator: Call Center Staffing": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
+ "Erlang C call center staffing calculator": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
+ "Erlang C staffing calculator": [
+  "lib/tools/registry.ts"
+ ],
+ "Erlang C: traffic = calls × handle time ÷ interval length. The probability a call waits comes from the Erlang C formula; service level = 1 − P(wait) × e^(−(agents − traffic) × target seconds ÷ handle time). It assumes callers don't hang up while waiting, so it slightly overstates the agents a queue with abandons needs. Very high occupancy for long stretches burns agents out, so treat the result as the floor rather than the plan.": [
+  "components/tools/MathTools.tsx"
  ],
  "Error logs and security logs:": [
   "app/privacy/page.tsx"
@@ -8829,6 +9613,9 @@
  ],
  "Every attempt is timestamped and logged against the lead, so a manager reviewing a campaign can see exactly how many times a given number was tried and what happened each time, not just the final outcome.": [
   "app/faq/leads/view.tsx"
+ ],
+ "Every attempt, whatever happened.": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "Every call is a warm callback to someone expecting to hear from you": [
   "app/vs/manual-dialing/page.tsx"
@@ -8946,6 +9733,9 @@
  "Every extra line is a chance that two people answer at once, and only one of them can reach the agent. So a second line has to be earned. A new campaign dials one line per agent, which can't abandon anyone, and adds lines only when its own 30-day record can absorb a surplus answer and still be projected under 2%. The more people a campaign has already reached, the more lines it can carry.": [
   "app/faq/how-we-keep-compliance/page.tsx"
  ],
+ "Every extra line raises the chance two people answer at once. In the US no more than 3% of answered calls may be abandoned, which caps how far lines can go.": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
+ ],
  "Every feature shipped on DialerSeat goes through the hands of someone who has done outbound for real money. We don't ship UI that demos well on a slide and breaks during a Tuesday-afternoon shift. We ship things we'd be willing to use ourselves at the top of an hour with a dialing list in front of us, because that's exactly where this product gets used.": [
   "app/faq/why-dialerseat/view.tsx"
  ],
@@ -8958,8 +9748,8 @@
  "Every indicator below is checked live when this page loads. Nothing here is published from a static file, so it can report a problem before we have noticed one.": [
   "app/status/page.tsx"
  ],
- "Every lead from every campaign, in one place. Every disposition, callback, and note remembers itself, so your work is never lost and no lead slips through the cracks.": [
-  "components/onboarding/PreviewOnboarding.tsx"
+ "Every item is checked. Re-check whenever you add a state, a list or a dialing mode.": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "Every lead here has been dialed. Adding a fresh list starts the queue again without touching call history.": [
   "components/teams/CampaignDetail.tsx"
@@ -9040,6 +9830,9 @@
  "every setting on this page is editable after the fact, including dialer mode. Switching a live campaign from power to predictive mid-run doesn't require pausing it or re-uploading leads, the leads already in the queue just start getting dialed under the new mode's pacing rules.": [
   "app/faq/campaigns/view.tsx"
  ],
+ "Every state, right now": [
+  "components/tools/CallingHoursChecker.tsx"
+ ],
  "Every team member, owner and agents both, needs an active personal DialerSeat subscription to actually dial:": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
@@ -9051,6 +9844,12 @@
  ],
  "Every upload is scoped to one campaign.": [
   "app/faq/leads/view.tsx"
+ ],
+ "Every US area code belongs to a state, and the state gives the time zone. A few states span two zones, so near the edges of a calling window check the person’s own city.": [
+  "app/tools/area-code-lookup/page.tsx"
+ ],
+ "Every US area code, by state": [
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "Every vendor publishes a per-seat rate. Almost none publish the seat minimum, the contract term, or what it takes to add the sixth agent, which is the part that decides whether a growing floor is an afternoon decision or a procurement event.": [
   "app/vs/teams/page.tsx"
@@ -9161,8 +9960,14 @@
  "EXPLAINER · REGISTRATION": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
+ "EXPORT": [
+  "components/tools/PhoneNumberExtractor.tsx"
+ ],
  "Export anytime. Editing disabled{value}": [
   "app/dashboard/leads/page.tsx"
+ ],
+ "EXPORT CSV": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "Export everything, or delete everything. No ticket required.": [
   "app/faq/data-and-recordings/view.tsx"
@@ -9175,6 +9980,9 @@
  ],
  "Export, deletion, and retention windows": [
   "app/faq/view.tsx"
+ ],
+ "Extract phone numbers from text": [
+  "app/tools/phone-number-extractor/page.tsx"
  ],
  "Facebook v. Duguid": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
@@ -9426,11 +10234,17 @@
  "Features: everything in a seat": [
   "lib/gutsRail.ts"
  ],
+ "Federal rules do not ban Sunday or holiday calls, as long as they fall inside the hours. Some states restrict them, so check the law in the states you call before dialing on those days.": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
+ ],
  "Federal rules limit telemarketing calls to between 8 AM and 9 PM in the time zone of the person being called, and some states are stricter. Dialing by hand, checking each lead’s local time is on you, lead by lead, all day.": [
   "app/vs/manual-dialing/page.tsx"
  ],
  "Feedback isn't a roadmap item. It's the roadmap.": [
   "app/faq/why-dialerseat/view.tsx"
+ ],
+ "Fees from telemarketing.donotcall.gov for access from 1 October 2026. The Telemarketing Sales Rule's safe harbor needs a copy of the registry no more than 31 days old when you call, so scrub again at least monthly.": [
+  "components/tools/MathTools.tsx"
  ],
  "Fewer calls per number per day.": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
@@ -9453,14 +10267,17 @@
  "Filing again and again.": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
+ "Fill an unreadable state from the area code": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
  "Find the next number and type it in": [
   "app/vs/manual-dialing/page.tsx"
  ],
  "Find us": [
   "app/about/page.tsx"
  ],
- "FINISH": [
-  "components/onboarding/PreviewOnboarding.tsx"
+ "Finds US and Canadian numbers written as (312) 555-0147, 312.555.0147, 312-555-0147, +1 312 555 0147 or ten digits in a row. Digits inside a longer run, like an order or card number, are left alone.": [
+  "components/tools/PhoneNumberExtractor.tsx"
  ],
  "FIRST CHARGE TODAY · CANCEL ANYTIME": [
   "app/page.tsx"
@@ -9475,11 +10292,15 @@
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
  "First name": [
-  "app/faq/leads/view.tsx"
+  "app/faq/leads/view.tsx",
+  "lib/tools/leadSheet.ts"
  ],
  "FIRST NAME": [
   "app/dashboard/campaigns/page.tsx",
   "app/dashboard/leads/page.tsx"
+ ],
+ "FIRST TOUCH": [
+  "lib/tools/scriptPacks.ts"
  ],
  "First, find out what you are actually dealing with": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
@@ -9515,8 +10336,24 @@
  "Five9, Convoso, ReadyMode, and most enterprise dialers hide their real pricing behind a sales call. You spend a week scheduling and sitting through demos before anyone gives you a number. We publish $35/week on the homepage.": [
   "app/vs/everyone/view.tsx"
  ],
+ "Fix a lead sheet in your browser: wrong headers, p:+1 phones, states typed every way, full names, ALL CAPS, duplicates. Download a clean CSV. Free.": [
+  "app/tools/lead-list-cleaner/page.tsx"
+ ],
+ "Fix ALL CAPS and lowercase names": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
+ "Fix any lead sheet so it imports cleanly: headers, phones, states, names, duplicates.": [
+  "lib/tools/registry.ts"
+ ],
  "Fix invalid color values before saving.": [
   "app/onboarding/whitelabel/page.tsx"
+ ],
+ "Fix your lead sheet": [
+  "app/tools/lead-list-cleaner/page.tsx"
+ ],
+ "Fla. Stat. 501.616(6)(a)": [
+  "components/tools/CallingHoursChecker.tsx",
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "Flagged numbers, pulled from the pool, then brought back.": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
@@ -9540,10 +10377,23 @@
   "lib/competitors.ts"
  ],
  "Florida": [
-  "app/faq/calling-hours/page.tsx"
+  "app/faq/calling-hours/page.tsx",
+  "components/tools/StateDncTable.tsx"
  ],
  "Florida is stricter, and we hold Florida leads to Florida law: calls end at 8 PM their time, and no number gets more than three calls in 24 hours (Fla. Stat. 501.616(6)). A Florida lead that has had its three waits until the 24 hours are up.": [
   "app/faq/how-we-keep-compliance/page.tsx"
+ ],
+ "Follow up": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "Follow up on": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "FOLLOW-UP": [
+  "lib/tools/scriptPacks.ts"
+ ],
+ "Follow-ups due": [
+  "components/tools/TrackerAndChecklist.tsx#prop"
  ],
  "for {displayName}": [
   "components/teams/TeamsManager.tsx"
@@ -9614,6 +10464,12 @@
  ],
  "For one seat over a full month, a dialer published at under $140 a month costs less than four weeks of DialerSeat. Weekly billing wins for short projects, seasonal hires, trial runs and floors whose headcount changes week to week.": [
   "app/tools/dialer-cost-calculator/page.tsx"
+ ],
+ "For outbound telemarketing: scrubbing Do Not Call lists, consent for autodialed or prerecorded calls to mobiles, calling only between 8 a.m. and 9 p.m. local time, and honoring opt-outs. The FTC’s Telemarketing Sales Rule adds the abandoned-call and caller ID rules.": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
+ ],
+ "for people who call.": [
+  "app/tools/page.tsx"
  ],
  "For predictive campaigns, the abandon rate is the number that matters. The FTC TSR caps abandoned calls at 3% of answered calls, measured on a rolling 30-day window. Cross that line and the safe harbor evaporates.": [
   "app/faq/how-we-keep-compliance/page.tsx"
@@ -9712,6 +10568,9 @@
  "for what's still on you: list quality, consent and DNC scrubbing.": [
   "app/faq/view.tsx"
  ],
+ "for your industry.": [
+  "app/tools/cold-call-script-generator/page.tsx"
+ ],
  "Force Power, continuous single line": [
   "components/teams/TeamModals.tsx"
  ],
@@ -9726,6 +10585,9 @@
  ],
  "forever": [
   "app/faq/white-label/view.tsx"
+ ],
+ "Format a list of US and Canadian phone numbers to E.164 or (555) 555-0100, remove duplicates and flag numbers that can’t be dialed. Free, in your browser.": [
+  "app/tools/phone-number-formatter/page.tsx"
  ],
  "Formerly ChaseData, still tiered": [
   "app/vs/view.tsx"
@@ -9761,7 +10623,8 @@
   "app/dashboard/teams/page.tsx"
  ],
  "Free": [
-  "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
+  "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx",
+  "components/tools/MathTools.tsx"
  ],
  "FREE": [
   "app/faq/dialerseat-teams/view.tsx",
@@ -9786,6 +10649,12 @@
  ],
  "FREE CALLER REGISTRY REGISTRATION": [
   "app/faq/numbers/view.tsx"
+ ],
+ "Free cold calling tracker": [
+  "app/tools/cold-calling-tracker/page.tsx"
+ ],
+ "Free Dialer & Cold Calling Tools: No Signup": [
+  "app/tools/page.tsx"
  ],
  "Free for up to two users; paid plans are per seat": [
   "lib/competitors.ts"
@@ -9818,13 +10687,24 @@
   "components/teams/TeamModals.tsx"
  ],
  "Free tools": [
+  "app/tools/page.tsx",
+  "components/tools/ToolPage.tsx",
   "lib/gutsRail.ts"
+ ],
+ "Free tools for outbound calling": [
+  "app/tools/page.tsx"
+ ],
+ "Free tools for outbound calling: clean a lead list, format phone numbers, look up area codes, check calling hours, staff a queue, write a script.": [
+  "app/tools/page.tsx"
  ],
  "Free trial": [
   "lib/competitorFeatures.ts"
  ],
  "Free trial exists; full pricing requires sales": [
   "lib/competitorFeatures.ts"
+ ],
+ "Free, no account · Updated {uPDATED}": [
+  "components/tools/ToolPage.tsx"
  ],
  "Frequently a paid add-on, or left to the customer to handle themselves": [
   "app/faq/numbers/view.tsx"
@@ -9869,6 +10749,9 @@
  ],
  "FROM 1 OCTOBER 2026": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
+ ],
+ "From last month: appointments that closed, conversations that booked, and dials that reached the person. The defaults are placeholders, not benchmarks.": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
  ],
  "From October 17, 2026, commercial calls must come from numbers in the 400 range. Carriers block commercial calls from any other numbering.": [
   "lib/countryRules.ts"
@@ -9949,6 +10832,12 @@
  "Full mobile branding via installable PWA: home-screen icon, theme, and login screen all carry your brand. See": [
   "app/faq/white-label/view.tsx"
  ],
+ "Full name (split it)": [
+  "lib/tools/leadSheet.ts"
+ ],
+ "Full names split": [
+  "components/tools/LeadListCleaner.tsx#prop"
+ ],
  "Full predictive and blended contact-center dialing.": [
   "lib/competitors.ts"
  ],
@@ -9985,8 +10874,14 @@
  "General office PBX (extensions, ring groups)": [
   "lib/competitorFeatures.ts"
  ],
+ "General sales": [
+  "lib/tools/scriptPacks.ts"
+ ],
  "Generally not for calls about a job, because they do not sell goods or services. The TCPA’s rules on prerecorded messages and texts still apply, and a candidate who asks not to be called should be suppressed.": [
   "lib/verticals.ts"
+ ],
+ "Generate a cold calling script for real estate, insurance, mortgage, solar, B2B or recruiting: opener, questions, a close and objection rebuttals.": [
+  "app/tools/cold-call-script-generator/page.tsx"
  ],
  "Generate a team code. Send to your buyer agents.": [
   "app/faq/dialerseat-teams/view.tsx"
@@ -10015,11 +10910,17 @@
  "Germany": [
   "lib/countryNames.ts"
  ],
+ "get a call back.": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
  "get auto-detected regardless of exact capitalization, and the only hard requirement is a column with something that has at least 10 digits in it once you strip out formatting.": [
   "app/faq/view.tsx"
  ],
  "GET MANAGER+": [
   "app/page.tsx"
+ ],
+ "Get prior express written consent before autodialed or prerecorded marketing calls to mobile numbers.": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "GET STARTED": [
   "app/page.tsx"
@@ -10173,6 +11074,9 @@
  "Google Sheets": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
+ "Got a list? DialerSeat dials it at $35 a week per seat, with every dialing mode included.": [
+  "app/tools/phone-number-extractor/page.tsx"
+ ],
  "Got it": [
   "app/dashboard/layout.tsx"
  ],
@@ -10227,6 +11131,9 @@
  "Have a Code? Join a Team:": [
   "components/teams/TeamsSidebar.tsx"
  ],
+ "Hawaii": [
+  "components/tools/AreaCodeLookup.tsx"
+ ],
  "Hawaii (no DST)": [
   "app/faq/calling-hours/page.tsx"
  ],
@@ -10244,6 +11151,9 @@
  ],
  "Header color must be a #RRGGBB hex value.": [
   "app/onboarding/whitelabel/page.tsx"
+ ],
+ "Headers DialerSeat recognises, 10-digit phones, 2-letter states, and no commas or quotes inside cells, which would shift columns on import.": [
+  "components/tools/LeadListCleaner.tsx"
  ],
  "Heading": [
   "components/LoginLinkSection.tsx"
@@ -10412,6 +11322,7 @@
   "app/terms/page.tsx",
   "app/tools/abandon-rate-calculator/page.tsx",
   "app/tools/dialer-cost-calculator/page.tsx",
+  "app/tools/page.tsx",
   "app/vs/3cx/page.tsx",
   "app/vs/[matchup]/page.tsx",
   "app/vs/aircall/page.tsx",
@@ -10449,6 +11360,7 @@
   "app/vs/wavv/page.tsx",
   "app/vs/ytel/page.tsx",
   "components/VerticalView.tsx",
+  "components/tools/ToolPage.tsx",
   "lib/gutsRail.ts"
  ],
  "HOME": [
@@ -10490,6 +11402,9 @@
  "HOURS DIALED": [
   "app/dashboard/analytics/page.tsx",
   "app/dashboard/teams/[id]/analytics/page.tsx"
+ ],
+ "Hours on the phone": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "HOUSTON, TX · {mm}:{ss}": [
   "app/welcome/Showcase.tsx",
@@ -10554,6 +11469,9 @@
  "How DialerSeat dials, and how we stay compliant doing it. Plain-English explanation of preview, power, progressive, and predictive dialing modes, the TCPA and FTC TSR safe harbor, and what our software enforces in code.": [
   "app/dialing-modes/page.tsx"
  ],
+ "HOW DIALERSEAT ENFORCES IT": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
+ ],
  "How DialerSeat handles outbound numbers: STIR/SHAKEN A-attestation, Free Caller Registry registration, local presence dialing, and pool rotation, the real mechanics behind not getting flagged Spam Likely or Scam Likely.": [
   "app/faq/numbers/page.tsx"
  ],
@@ -10590,6 +11508,15 @@
  "How do calling hours work when the agent is in a different timezone?": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
+ "How do I find the time zone of an area code?": [
+  "app/tools/area-code-lookup/page.tsx"
+ ],
+ "How do I handle \"I’m not interested\"?": [
+  "app/tools/cold-call-script-generator/page.tsx"
+ ],
+ "How do I remove duplicate phone numbers?": [
+  "app/tools/phone-number-formatter/page.tsx"
+ ],
  "How do I remove the Spam Likely label from my phone number?": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
@@ -10598,6 +11525,15 @@
  ],
  "How do I upload leads?": [
   "app/faq/view.tsx"
+ ],
+ "How do you calculate average handle time?": [
+  "app/tools/average-handle-time-calculator/page.tsx"
+ ],
+ "How do you calculate calls per hour?": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
+ ],
+ "How do you calculate cost per lead?": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
  ],
  "How do you calculate the abandon rate?": [
   "app/tools/abandon-rate-calculator/page.tsx"
@@ -10664,14 +11600,51 @@
  "How large a discount is, who qualifies for one and how deep it goes are not published here or anywhere else. What it depends on is:": [
   "app/partners/page.tsx"
  ],
+ "HOW LEAD UPLOAD WORKS": [
+  "app/tools/lead-list-cleaner/page.tsx"
+ ],
  "How lead vendors monetize their premium campaigns through seat-based access, agency owners run producer floors with full attribution, and shared pools dial the same list without stepping on each other. Plus all four billing modes including FREE.": [
   "app/faq/dialerseat-teams/page.tsx"
  ],
  "How long does it take to get a spam label removed?": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
+ "How long should a sales voicemail be?": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
+ "How many agents": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
+ "How many agents a queue needs to hit its service level, with occupancy and wait time.": [
+  "lib/tools/registry.ts"
+ ],
+ "How many agents does your queue need? Enter calls, handle time and a service level target to get agents, scheduled staff, occupancy and speed of answer.": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
+ "How many calls": [
+  "app/tools/calls-per-hour-calculator/page.tsx",
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
+ ],
  "How many calls a predictive dialer places at once for each free agent, often written 1x, 2x or 3x. More lines mean less waiting and more abandoned calls.": [
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "How many calls does it take to make a sale?": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
+ ],
+ "How many calls per hour is good for cold calling?": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
+ ],
+ "How many cold calls per day": [
+  "lib/tools/registry.ts"
+ ],
+ "How many cold calls per day do you need?": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
+ ],
+ "How Many Cold Calls per Day? Calculator": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
+ ],
+ "How many cold calls should I make per day?": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
  ],
  "how many leads were": [
   "app/faq/send-leads-from-your-crm/page.tsx"
@@ -10704,6 +11677,9 @@
  "How Many Phone Numbers Does an Outbound Dialer Need? | DialerSeat": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
+ "How many voicemails should I leave?": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
  "how many were": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
@@ -10720,6 +11696,9 @@
   "app/faq/view.tsx",
   "app/pricing/page.tsx"
  ],
+ "How much does the Do Not Call Registry cost?": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
+ ],
  "How much is a team seat?": [
   "app/faq/teams-how-it-works/page.tsx"
  ],
@@ -10728,6 +11707,9 @@
  ],
  "How often a call produced a real outcome with the person, rather than just being answered. On DialerSeat that means the agent marked the call closed, an appointment, not interested, or do not call.": [
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "How often do I have to scrub against it?": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
  ],
  "How often somebody picks up, as a share of the dials that actually rang. Dials that failed before reaching a phone are left out of the rate and kept in the dial count.": [
   "app/faq/dialer-glossary/page.tsx"
@@ -10849,6 +11831,10 @@
  "HOW TO SCRUB DNC": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
+ "HOW TO SCRUB THE REGISTRY": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx",
+  "app/tools/state-do-not-call-lists/page.tsx"
+ ],
  "How to scrub your list": [
   "app/faq/dialer-for-insurance-agents/page.tsx",
   "app/faq/dialer-for-real-estate/page.tsx",
@@ -10936,6 +11922,9 @@
  ],
  "How we measure it": [
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "HOW WE MEASURE IT": [
+  "app/tools/contact-rate-calculator/page.tsx"
  ],
  "How we measure ours": [
   "app/faq/dialer-glossary/page.tsx"
@@ -11182,6 +12171,15 @@
  "in": [
   "app/faq/mobile/view.tsx"
  ],
+ "In DialerSeat you can attach several scripts to a campaign and switch between them mid-call. $35 a week per seat.": [
+  "app/tools/cold-call-script-generator/page.tsx"
+ ],
+ "In DialerSeat, dispositions and notes stay on the lead across sessions and seats. $35 a week per seat.": [
+  "app/tools/average-handle-time-calculator/page.tsx"
+ ],
+ "in one paste.": [
+  "app/tools/phone-number-formatter/page.tsx"
+ ],
  "in predictive mode.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
@@ -11191,6 +12189,9 @@
  "in seats on DialerSeat, plus $75 for the Manager+ owner. The same ten seats on a platform charging $250 per user per month is roughly": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
+ "in that area code?": [
+  "app/tools/area-code-lookup/page.tsx"
+ ],
  "in the top-right corner.": [
   "app/faq/mobile/view.tsx"
  ],
@@ -11199,6 +12200,9 @@
  ],
  "In the US, no more than 3% of calls answered by a person, per campaign, over each 30-day period (FTC Telemarketing Sales Rule). In the UK, no more than 3% of live calls per campaign per 24 hours (Ofcom). In Canada, no more than 5% per calendar month (CRTC).": [
   "app/tools/abandon-rate-calculator/page.tsx"
+ ],
+ "In your browser on this device, nowhere else. Nothing is uploaded, so clearing your browser’s site data deletes it. Export a CSV to keep a copy.": [
+  "app/tools/cold-calling-tracker/page.tsx"
  ],
  "inactive": [
   "components/teams/TeamDetail.tsx"
@@ -11265,6 +12269,15 @@
  "India": [
   "lib/countryNames.ts"
  ],
+ "Indiana": [
+  "components/tools/StateDncTable.tsx"
+ ],
+ "Individual agent seats inside the team are still $35/week each, billed separately": [
+  "app/faq/manager-plus/view.tsx"
+ ],
+ "Industry": [
+  "components/tools/ScriptTools.tsx"
+ ],
  "Industry-specific clouds for healthcare, financial services and retail": [
   "lib/competitors.ts"
  ],
@@ -11296,6 +12309,9 @@
  "inside the 3% rule?": [
   "app/tools/abandon-rate-calculator/page.tsx"
  ],
+ "Inside the federal telemarketing window (8 a.m. to 9 p.m. local time).": [
+  "components/tools/AreaCodeLookup.tsx"
+ ],
  "Installing the PWA on iPhone and Android": [
   "app/faq/view.tsx"
  ],
@@ -11312,7 +12328,8 @@
   "app/faq/leads/view.tsx"
  ],
  "Insurance": [
-  "lib/gutsRail.ts"
+  "lib/gutsRail.ts",
+  "lib/tools/scriptPacks.ts"
  ],
  "Insurance agents": [
   "lib/canonicalFacts.ts"
@@ -11342,6 +12359,9 @@
  ],
  "International users": [
   "app/privacy/page.tsx"
+ ],
+ "Interval (minutes)": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "Invalid code": [
   "app/billing/page.tsx"
@@ -11395,6 +12415,9 @@
  "Is a dialer worth it over a phone and a spreadsheet?": [
   "app/vs/view.tsx"
  ],
+ "Is a predictive campaign inside the US, UK or Canadian abandoned-call limit?": [
+  "lib/tools/registry.ts"
+ ],
  "Is a predictive dialer legal?": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx",
   "app/faq/view.tsx",
@@ -11415,6 +12438,9 @@
  ],
  "is a signature travelling with the call. The originating carrier attests to how confident it is that the caller is entitled to the number they are displaying. A-attestation is the strongest level: the carrier knows the customer and knows the number is theirs. Terminating carriers weigh that signature when deciding whether to label a call.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
+ ],
+ "Is AHT the same as talk time?": [
+  "app/tools/average-handle-time-calculator/page.tsx"
  ],
  "Is AMD compliant with TCPA / TSR?": [
   "app/faq/how-does-amd-work/page.tsx"
@@ -11437,6 +12463,9 @@
  "Is DialerSeat an Orum or Nooks alternative?": [
   "lib/verticals.ts"
  ],
+ "Is my lead list uploaded anywhere?": [
+  "app/tools/lead-list-cleaner/page.tsx"
+ ],
  "is no longer paying for your seat.": [
   "app/dashboard/layout.tsx"
  ],
@@ -11445,6 +12474,9 @@
  ],
  "is paused until it clears. Nothing you need to do.": [
   "app/dashboard/dialer/page.tsx"
+ ],
+ "Is scrubbing the national registry enough?": [
+  "app/tools/state-do-not-call-lists/page.tsx"
  ],
  "is the caller-name database, what appears under the number on the handset. It is a separate system with its own registration, and it is why one number shows a business name and another shows nothing at all.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
@@ -11461,8 +12493,12 @@
  "Is there live call monitoring?": [
   "app/faq/dialer-for-call-centers/page.tsx"
  ],
+ "Is this legal advice?": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
+ ],
  "Is your campaign": [
-  "app/tools/abandon-rate-calculator/page.tsx"
+  "app/tools/abandon-rate-calculator/page.tsx",
+  "app/tools/tcpa-compliance-checklist/page.tsx"
  ],
  "Is your predictive campaign inside the US, UK or Canadian abandoned-call limit?": [
   "app/tools/abandon-rate-calculator/page.tsx"
@@ -11491,17 +12527,29 @@
  "It connects.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
+ "It depends on the call. Shorter is not better if it means rushed conversations; hold time and wrap-up are the parts worth shrinking first.": [
+  "app/tools/average-handle-time-calculator/page.tsx"
+ ],
  "It dials.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
  "It didn’t.": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
  ],
+ "It finds North American numbers only (US, Canada and the Caribbean). International formats vary too much to extract reliably from free text.": [
+  "app/tools/phone-number-extractor/page.tsx"
+ ],
  "It has": [
   "app/dashboard/campaigns/page.tsx"
  ],
+ "It is {time} in {state}.": [
+  "components/tools/CallingHoursChecker.tsx"
+ ],
  "It is not a separate product. It does not replace your account. It does not bypass platform billing. It is a structured way to rent dialing access to premium campaigns you own, with the audit trail, attribution, and analytics your business actually needs.": [
   "app/faq/dialerseat-teams/view.tsx"
+ ],
+ "It is removed. Facebook lead ads export phones as p:+15555550100; the cleaner keeps the 10 digits and drops the label and country code, so the number reads the same everywhere.": [
+  "app/tools/lead-list-cleaner/page.tsx"
  ],
  "It isn’t seen calling, so it can’t build maturity, and it isn’t being answered, so it can’t improve its connection or engagement. The complaints that flagged it are still on file. Time off removes the input that reputation is built from and leaves the damage where it is.": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
@@ -11533,8 +12581,14 @@
  "It proves your number is not spoofed. It says nothing about whether anyone wants the call. A perfectly signed call from a number people keep rejecting can still be labelled. That is what the rest of this page is about.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
  ],
+ "It reads full names, abbreviations, typos like m0 for MO, and states buried in an address, and turns each into a 2-letter code. When nothing readable is there, it can fill the state from the phone’s area code and tells you which rows it did that for.": [
+  "app/tools/lead-list-cleaner/page.tsx"
+ ],
  "It remembers.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
+ ],
+ "It shows where the number was issued. Mobile numbers keep their area code when people move, so treat it as a strong hint, not an address.": [
+  "app/tools/area-code-lookup/page.tsx"
  ],
  "It stays in the queue and becomes dialable when its local window opens. Nothing is deleted and no attempt is recorded. The dialer tells you how many leads are waiting on the clock versus how many are blocked for a reason that waiting will not fix, so you can tell a quiet morning from a broken list.": [
   "app/faq/calling-hours/page.tsx"
@@ -11544,6 +12598,9 @@
  ],
  "It takes 40 calls in the window to judge a number as struggling, but only 15 to judge it recovered. That asymmetry is on purpose. A number capped at 15 a day can barely reach 40 calls over three days, so holding recovery to the same bar would quietly make the penalty permanent. If a number is restored too early, the next daily check simply slows it again.": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
+ ],
+ "It varies by list and industry, so measure your own and compare month to month rather than against someone else’s average.": [
+  "app/tools/contact-rate-calculator/page.tsx"
  ],
  "It would be easy to print a bigger number, or to quietly include pending charges, or to round in your favour. We do not, because a statement that overstates an expense is not a favour, it is a problem handed to you with our logo on it, and it would arrive years later when it is expensive to fix.": [
   "app/dashboard/reports/page.tsx"
@@ -11654,8 +12711,17 @@
  "JustCall's $29/user/month Team plan is real and gets you unlimited calling, SMS, and 100+ CRM integrations, but power and predictive dialing aren't included at that price; you need the Pro tier ($49/user/month) or higher. JustCall also runs the sales dialer as a genuinely separate mobile app from its general calling app, their own help center flags the two aren't interchangeable. DialerSeat™ is one app, one price, dialer modes included from the first seat.": [
   "lib/competitorFeatures.ts"
  ],
+ "Keep abandoned calls at or below 3% of calls answered by a person, per campaign, over each 30 days.": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
  "KEEP ACCESS": [
   "app/dashboard/settings/page.tsx"
+ ],
+ "Keep as its own column": [
+  "lib/tools/leadSheet.ts"
+ ],
+ "Keep duplicates": [
+  "components/tools/PhoneNumberFormatter.tsx"
  ],
  "Keep it on a charger.": [
   "app/faq/mobile/view.tsx"
@@ -11675,6 +12741,9 @@
  "KEEP SUBSCRIPTION": [
   "app/dashboard/settings/page.tsx"
  ],
+ "Keep the consent record: when, where, and the exact wording the person agreed to.": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
  "Keep the proof": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
@@ -11683,6 +12752,9 @@
  ],
  "Keep your login credentials secure": [
   "app/terms/page.tsx"
+ ],
+ "Keep your own do-not-call list and honor every \"don't call me again\" immediately.": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "Keeping lists fresh rather than recycled": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
@@ -11757,11 +12829,15 @@
   "app/dashboard/leads/page.tsx"
  ],
  "Last name": [
-  "app/faq/leads/view.tsx"
+  "app/faq/leads/view.tsx",
+  "lib/tools/leadSheet.ts"
  ],
  "LAST NAME": [
   "app/dashboard/campaigns/page.tsx",
   "app/dashboard/leads/page.tsx"
+ ],
+ "LAST ONE": [
+  "lib/tools/scriptPacks.ts"
  ],
  "LAST UPDATED · {lAST_UPDATED}": [
   "app/privacy/page.tsx",
@@ -11869,8 +12945,23 @@
  "Lead is not on this campaign": [
   "app/api/calls/outbound/route.ts"
  ],
+ "Lead list cleaner": [
+  "app/tools/lead-list-cleaner/page.tsx",
+  "lib/relatedLinks.ts",
+  "lib/tools/registry.ts"
+ ],
+ "LEAD LIST CLEANER": [
+  "app/tools/phone-number-extractor/page.tsx",
+  "app/tools/phone-number-formatter/page.tsx"
+ ],
  "Lead list cleaner, phone number formatter, area code lookup, calling hours by state, Erlang C, script generators and more. No signup.": [
   "app/resources/page.tsx"
+ ],
+ "Lead list cleaner: any sheet, ready to dial": [
+  "app/tools/lead-list-cleaner/page.tsx"
+ ],
+ "Lead List Cleaner: Fix Any Lead Sheet for Your Dialer": [
+  "app/tools/lead-list-cleaner/page.tsx"
  ],
  "LEAD LISTS · DIALING CAMPAIGNS": [
   "app/dashboard/campaigns/page.tsx"
@@ -11908,6 +12999,12 @@
  "lead record": [
   "app/faq/scripts/view.tsx"
  ],
+ "Lead sheet contents": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
+ "Lead to sale": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Lead vendors": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
@@ -11928,7 +13025,8 @@
  "Leads": [
   "app/faq/data-and-recordings/view.tsx",
   "app/faq/view.tsx",
-  "components/teams/CampaignDetail.tsx"
+  "components/teams/CampaignDetail.tsx",
+  "components/tools/MathTools.tsx#prop"
  ],
  "LEADS": [
   "app/dashboard/campaigns/page.tsx",
@@ -11967,6 +13065,9 @@
  "Leads you uploaded, recordings you made, campaigns you configured, all of it remains accessible. Cancellation doesn't mean we lock the door behind you.": [
   "app/faq/why-dialerseat/view.tsx"
  ],
+ "Leads, dialer, ads: whatever you want to count.": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Leads, notes, scripts, campaign names and recordings are never translated or altered.": [
   "app/faq/languages/page.tsx"
  ],
@@ -11988,8 +13089,14 @@
  "LEAVE": [
   "components/teams/TeamsSidebar.tsx"
  ],
+ "Leave \"Remove duplicates\" on. Numbers are compared after formatting, so (415) 555-0132 and 415.555.0132 count as the same number.": [
+  "app/tools/phone-number-formatter/page.tsx"
+ ],
  "Leave {length} team{value}?": [
   "components/teams/TeamsSidebar.tsx"
+ ],
+ "Leave out": [
+  "lib/tools/leadSheet.ts"
  ],
  "Leave out EINs and SSNs: DialerSeat does not store tax identifiers, and your statement does not need one to be valid.": [
   "app/api/reports/identity/route.ts"
@@ -12017,6 +13124,9 @@
  ],
  "Let them straight in": [
   "components/teams/TeamModals.tsx"
+ ],
+ "Let unanswered calls ring at least 15 seconds or four rings before hanging up.": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "lets someone join the team; a": [
   "components/teams/TeamDetail.tsx"
@@ -12135,6 +13245,9 @@
  ],
  "live calls": [
   "components/tools/AbandonRateCalculator.tsx"
+ ],
+ "Live connect rates measured on real outbound calls.": [
+  "app/tools/page.tsx"
  ],
  "LIVE DEMO · THE QUEUE WORKS ITSELF TOP-DOWN": [
   "app/page.tsx"
@@ -12265,7 +13378,8 @@
   "lib/relatedLinks.ts"
  ],
  "LOCAL PRESENCE DIALING": [
-  "app/faq/numbers/view.tsx"
+  "app/faq/numbers/view.tsx",
+  "app/tools/area-code-lookup/page.tsx"
  ],
  "Local presence dialing means calling each prospect from a number in their own area. DialerSeat does it on every call, in every dialing mode, with no add-on. Here is exactly how it picks the number.": [
   "app/faq/local-presence-dialing/page.tsx"
@@ -12288,6 +13402,13 @@
  "Local presence works the same way.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
  ],
+ "Local time": [
+  "components/tools/AreaCodeLookup.tsx",
+  "components/tools/CallingHoursChecker.tsx"
+ ],
+ "Local time there now": [
+  "components/tools/AreaCodeLookup.tsx"
+ ],
  "local to the called party": [
   "app/faq/calling-hours/page.tsx"
  ],
@@ -12300,11 +13421,27 @@
  "Local-presence dialing by default, with per-number daily caps and answer-rate health tracking.": [
   "lib/canonicalFacts.ts"
  ],
+ "Location": [
+  "components/tools/PhoneNumberExtractor.tsx",
+  "components/tools/PhoneNumberFormatter.tsx"
+ ],
  "Location is only the fallback, for the common case of an agent abroad whose phone was left in English.": [
   "app/faq/languages/page.tsx"
  ],
  "LOCKED": [
   "app/dashboard/settings/page.tsx"
+ ],
+ "LOG CALL": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "Log calls and outcomes in your browser and export the sheet. Nothing is uploaded.": [
+  "lib/tools/registry.ts"
+ ],
+ "Log cold calls, outcomes, notes and follow-ups in your browser, see your connect and booking rates, and export a CSV or a blank tracker template.": [
+  "app/tools/cold-calling-tracker/page.tsx"
+ ],
+ "Log each call with the person’s name, number, outcome, notes and a follow-up date, and the tracker keeps score: calls made, how many reached a person, appointments booked and follow-ups due today. Everything is saved in this browser only. Export to CSV whenever you like, or download a blank template for Excel or Google Sheets.": [
+  "app/tools/cold-calling-tracker/page.tsx"
  ],
  "LOG IN": [
   "components/site-header.tsx"
@@ -12327,6 +13464,9 @@
  "Long operating history under the ChaseData name": [
   "lib/competitors.ts"
  ],
+ "Look up any US area code or phone number: the state, the time zone, the local time there now and whether it’s inside calling hours. Every area code listed.": [
+  "app/tools/area-code-lookup/page.tsx"
+ ],
  "Looked at, and left flagged.": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
@@ -12343,7 +13483,8 @@
   "app/faq/what-is-a-progressive-dialer/page.tsx"
  ],
  "Louisiana": [
-  "app/faq/calling-hours/page.tsx"
+  "app/faq/calling-hours/page.tsx",
+  "components/tools/StateDncTable.tsx"
  ],
  "Low answer rates and short call durations compounding over time, which every major carrier model treats as a spam signal.": [
   "app/faq/numbers/view.tsx"
@@ -12527,6 +13668,9 @@
  "Maryland": [
   "app/faq/calling-hours/page.tsx"
  ],
+ "Massachusetts": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "Match the region, not every area code.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
@@ -12637,6 +13781,9 @@
  ],
  "Missing stripe-signature header": [
   "app/api/stripe/webhook/route.ts"
+ ],
+ "Missouri": [
+  "components/tools/StateDncTable.tsx"
  ],
  "Mobile branding": [
   "app/faq/white-label-mobile/view.tsx"
@@ -12787,6 +13934,9 @@
  "Monthly per-user subscription.": [
   "lib/competitors.ts"
  ],
+ "Monthly, 30 days to remove numbers": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "Monthly, with a two-seat minimum on standard plans.": [
   "lib/competitors.ts"
  ],
@@ -12812,6 +13962,9 @@
  "More dialer for less money than the competition, enterprise-grade quality without the enterprise-level pricing.": [
   "app/welcome/Showcase.tsx"
  ],
+ "More dials in the same day is what a dialer is for. DialerSeat is $35 a week per seat.": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
+ ],
  "More lines when the list is cold, one line when it is warm": [
   "app/faq/dialer-for-real-estate/page.tsx"
  ],
@@ -12819,7 +13972,8 @@
   "lib/competitors.ts"
  ],
  "Mortgage": [
-  "lib/gutsRail.ts"
+  "lib/gutsRail.ts",
+  "lib/tools/scriptPacks.ts"
  ],
  "MORTGAGE": [
   "lib/verticals.ts"
@@ -12877,7 +14031,11 @@
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
  "Mountain": [
-  "app/faq/calling-hours/page.tsx"
+  "app/faq/calling-hours/page.tsx",
+  "components/tools/AreaCodeLookup.tsx"
+ ],
+ "Mountain (Arizona, no DST)": [
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "Mountain (no DST)": [
   "app/faq/calling-hours/page.tsx"
@@ -13004,12 +14162,19 @@
  "MY LINES": [
   "app/dashboard/dialer/page.tsx"
  ],
+ "My state column is a mess. What does it do?": [
+  "app/tools/lead-list-cleaner/page.tsx"
+ ],
+ "My state isn’t in the table. Am I in the clear?": [
+  "app/tools/state-do-not-call-lists/page.tsx"
+ ],
  "My Teams": [
   "components/teams/TeamsSidebar.tsx"
  ],
  "Name": [
   "app/dashboard/teams/page.tsx",
-  "app/faq/campaigns/view.tsx"
+  "app/faq/campaigns/view.tsx",
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "NAME": [
   "app/dashboard/campaigns/page.tsx"
@@ -13040,6 +14205,9 @@
  ],
  "Names": [
   "app/faq/send-leads-from-your-crm/page.tsx"
+ ],
+ "Names re-cased": [
+  "components/tools/LeadListCleaner.tsx#prop"
  ],
  "Não Me Perturbe, the national opt-out list for telemarketing.": [
   "lib/countryRules.ts"
@@ -13077,6 +14245,9 @@
  ],
  "National Do Not Call Registry plus state lists. Your copy of the registry must be no more than 31 days old.": [
   "lib/countryRules.ts"
+ ],
+ "NATIONAL REGISTRY COST": [
+  "app/tools/state-do-not-call-lists/page.tsx"
  ],
  "Native app, 2.05/5 on Android": [
   "lib/competitorFeatures.ts"
@@ -13235,6 +14406,7 @@
   "components/teams/AgentDetail.tsx"
  ],
  "No answer": [
+  "components/tools/TrackerAndChecklist.tsx",
   "lib/dispositions.ts"
  ],
  "NO ANSWER": [
@@ -13319,6 +14491,9 @@
  ],
  "No codes yet. A": [
   "components/teams/TeamDetail.tsx"
+ ],
+ "No column is set as the phone number. Pick the column that holds phones in step 2.": [
+  "components/tools/LeadListCleaner.tsx"
  ],
  "No Contract": [
   "app/page.tsx"
@@ -13446,6 +14621,9 @@
   "app/dialing-modes/predictive/page.tsx",
   "app/faq/what-is-a-predictive-dialer/page.tsx"
  ],
+ "No more than 3% of calls answered by a person may be abandoned, per campaign, over each 30-day period. A call is abandoned when nobody is connected within 2 seconds of the greeting.": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
+ ],
  "no more than 31 days old": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
@@ -13567,6 +14745,9 @@
   "app/api/calls/check/route.ts",
   "app/api/calls/hangup/route.ts"
  ],
+ "No state-run list: the law points at a private list, the DMA’s, enforced by the Attorney General": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "No statutory calling hours.": [
   "lib/countryRules.ts"
  ],
@@ -13593,6 +14774,9 @@
  ],
  "No tiered support, no enterprise channel, no eighteen-touch ticket system. You email us, we answer. That's the whole support model and it's the one we plan to keep.": [
   "app/faq/why-dialerseat/view.tsx"
+ ],
+ "No time zone on file for this state.": [
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "No token returned": [
   "app/api/calls/token/route.ts"
@@ -13648,6 +14832,15 @@
  "No. Collection calls are not telemarketing, so the National Do Not Call Registry does not apply. The FDCPA and Regulation F do, as do the TCPA’s rules on prerecorded messages and autodialed calls.": [
   "lib/verticals.ts"
  ],
+ "No. DialerSeat does not scrub against the national registry or any state list. You buy the lists and scrub before you upload.": [
+  "app/tools/state-do-not-call-lists/page.tsx"
+ ],
+ "No. Digits that sit inside a longer run of digits are left alone, so an order number that happens to contain ten digits is not mistaken for a phone number.": [
+  "app/tools/phone-number-extractor/page.tsx"
+ ],
+ "No. It is a checklist of federal rules with their citations. States add their own, and a lawyer who handles TCPA work should review anything a campaign depends on.": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
+ ],
  "No. Leads are claimed in the database before they are dialed, so a shared campaign never hands the same lead to two agents. A claim is released automatically if an agent’s browser closes mid-call.": [
   "app/faq/dialer-for-call-centers/page.tsx"
  ],
@@ -13657,11 +14850,17 @@
  "No. Members see leads one at a time in the dialer UI and in their own call history. Your master file is never exposed.": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
+ "No. Talk time is only the conversation. AHT adds hold time and the work after the call, so it is always the larger number.": [
+  "app/tools/average-handle-time-calculator/page.tsx"
+ ],
  "No. TCPA and DNC duties attach to the business placing the calls, not to where the person dialling sits. DialerSeat enforces calling windows per lead state and gives every campaign owner a per-call compliance export, but national DNC scrubbing and consent records remain your responsibility wherever your agents are.": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
  "No. The Eleventh Circuit vacated it on January 24, 2025, in Insurance Marketing Coalition v. FCC. Prior express written consent is still required for prerecorded marketing calls and for autodialed marketing calls to mobile phones, and the Do Not Call Registry still applies.": [
   "lib/verticals.ts"
+ ],
+ "No. The file is read and fixed inside your browser tab. Open your browser’s network tab while you use it and you will see no requests carrying your data.": [
+  "app/tools/lead-list-cleaner/page.tsx"
  ],
  "No. There's no contract and no minimum term. You pay for the current week of service and cancel whenever you want. We don't lock anyone into anything.": [
   "app/faq/view.tsx"
@@ -13696,6 +14895,9 @@
  "Nobody yet. Select people under All Users and use Add to campaign, it costs nothing extra, their seats are already paid for.": [
   "components/teams/CampaignDetail.tsx"
  ],
+ "Non-exempt telemarketers must also register, pay a fee and post a bond under the Commercial Telephone Solicitation Act.": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "None for the software itself. Hosting and SIP trunking are separate contracts with separate vendors.": [
   "lib/competitors.ts"
  ],
@@ -13726,6 +14928,12 @@
  "Nonprofits calling their own supporters, and telefundraising firms calling on a charity’s behalf. Charity calls have their own place in the telemarketing rules; here is what applies and what a dialer does about it.": [
   "lib/verticals.ts"
  ],
+ "Normally applies above 225 unsolicited sales calls a year. Each solicitor must also file a notice with the Attorney General.": [
+  "components/tools/StateDncTable.tsx"
+ ],
+ "North American area codes and exchanges never start with 0 or 1, and N11 codes like 411 are service numbers. A number breaking those rules cannot ring a phone, whatever it looks like.": [
+  "app/tools/phone-number-formatter/page.tsx"
+ ],
  "not": [
   "app/faq/calling-hours/page.tsx",
   "app/faq/how-does-amd-work/page.tsx",
@@ -13747,6 +14955,9 @@
  "Not a month.": [
   "app/pricing/page.tsx"
  ],
+ "Not a number the North American plan can route": [
+  "lib/tools/phone.ts"
+ ],
  "Not a PBX replacement: it is a sales dialer, not a company phone system.": [
   "lib/canonicalFacts.ts"
  ],
@@ -13756,6 +14967,15 @@
  "NOT A TIER": [
   "app/faq/dialer-for-insurance-agents/page.tsx",
   "app/faq/dialer-for-real-estate/page.tsx"
+ ],
+ "Not a US area code. Canada and other countries have their own rules.": [
+  "components/tools/CallingHoursChecker.tsx"
+ ],
+ "Not a US or Canadian number": [
+  "lib/tools/phone.ts"
+ ],
+ "Not an area code we can place. It may be newly assigned, or not in use.": [
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "Not an outbound sales dialer: no lead lists, dispositions, or AMD.": [
   "lib/competitors.ts"
@@ -13775,6 +14995,9 @@
  ],
  "Not configured in this environment": [
   "app/status/page.tsx"
+ ],
+ "Not confirmed": [
+  "components/tools/StateDncTable.tsx"
  ],
  "NOT CONNECTED TO THE CALL SERVER, reconnecting. No leads will be dialled until this clears.": [
   "app/dashboard/dialer/page.tsx"
@@ -13805,6 +15028,7 @@
  ],
  "Not interested": [
   "components/teams/CampaignDetail.tsx",
+  "components/tools/TrackerAndChecklist.tsx",
   "lib/dispositions.ts"
  ],
  "NOT INTERESTED": [
@@ -13824,6 +15048,9 @@
  ],
  "Not listed?": [
   "app/faq/view.tsx"
+ ],
+ "Not necessarily. We checked these eleven, not all fifty, so a missing state means we have not confirmed anything about it. Ask that state’s attorney general.": [
+  "app/tools/state-do-not-call-lists/page.tsx"
  ],
  "Not now": [
   "app/join/[code]/JoinRedeemClient.tsx"
@@ -13868,6 +15095,7 @@
   "lib/competitorFeatures.ts"
  ],
  "Not stated": [
+  "components/tools/StateDncTable.tsx",
   "lib/competitors.ts"
  ],
  "Not stated on the pricing page. Talkdesk Express, for businesses under 50 employees, is described as having no commitment.": [
@@ -13875,6 +15103,9 @@
  ],
  "Not stated, except Talkdesk Express for businesses under 50 employees": [
   "lib/competitors.ts"
+ ],
+ "Not stated. Joining or subscribing to the DMA list is not required, but you may not call numbers on it": [
+  "components/tools/StateDncTable.tsx"
  ],
  "Not stated. The lowest advertised price on every plan requires annual billing.": [
   "lib/competitors.ts"
@@ -13900,6 +15131,9 @@
  "Not what you expected? Email": [
   "app/faq/billing/view.tsx"
  ],
+ "Not where a state keeps its own list, because that list is a separate obligation with its own fee and its own schedule. Check the state’s page for each state you call, including when you are calling from somewhere else.": [
+  "app/tools/state-do-not-call-lists/page.tsx"
+ ],
  "Not yet. Listen, whisper and barge are not built, and neither are call scoring or workforce management. The owner sees which agents are live, what campaign each is on, and per-agent calls, connects and dispositions for any date range.": [
   "app/faq/dialer-for-call-centers/page.tsx"
  ],
@@ -13916,8 +15150,15 @@
   "app/api/teams/analytics/route.ts",
   "app/api/teams/members/list/route.ts"
  ],
+ "Note": [
+  "components/tools/PhoneNumberFormatter.tsx"
+ ],
  "Note not found": [
   "app/api/manager/notes/[id]/route.ts"
+ ],
+ "Notes": [
+  "components/tools/TrackerAndChecklist.tsx",
+  "lib/tools/leadSheet.ts"
  ],
  "NOTES": [
   "app/dashboard/campaigns/page.tsx",
@@ -13979,8 +15220,15 @@
  "Notify us promptly of any unauthorized access to your account": [
   "app/terms/page.tsx"
  ],
+ "Now": [
+  "components/tools/CallingHoursChecker.tsx"
+ ],
  "NOW DIALING": [
   "app/dashboard/dialer/page.tsx"
+ ],
+ "Number": [
+  "components/tools/PhoneNumberExtractor.tsx",
+  "components/tools/PhoneNumberFormatter.tsx"
  ],
  "Number pool": [
   "app/faq/dialer-glossary/page.tsx"
@@ -14019,6 +15267,9 @@
  "Numbers are registered so your business identity: not just a raw number: reaches the reputation databases used by Hiya, First Orion, and TNS. An unregistered number calling at volume is the single most common reason a legitimate business gets treated like a scam operation.": [
   "app/faq/numbers/view.tsx"
  ],
+ "Numbers found": [
+  "components/tools/PhoneNumberExtractor.tsx#prop"
+ ],
  "Numbers in the DialerSeat pool carry A-attestation under STIR/SHAKEN. There is no form for you to submit and no separate charge.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
@@ -14045,6 +15296,9 @@
  ],
  "Obtaining proper consent for the calls you place": [
   "app/terms/page.tsx"
+ ],
+ "Occupancy": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "occur, meaning a human answered and no agent was available within 2 seconds, the TSR safe harbor requires a brief recorded notice with the seller's name and phone number, per § 310.4(b)(4)(iii), and the FCC adds that it must say the call is telemarketing and offer an automated opt-out. Ours names your business, says it's a telemarketing call, gives your callback number, and offers press 9 to be added to your do-not-call list. Pressing 9 adds the number and ends the call. The notice is built from the business name and callback number in your Settings (the team owner's, on a team campaign), with no generic fallback.": [
   "app/faq/how-we-keep-compliance/page.tsx"
@@ -14089,7 +15343,11 @@
  "Offer": [
   "app/components/StructuredData.tsx",
   "app/tools/abandon-rate-calculator/page.tsx",
-  "app/tools/dialer-cost-calculator/page.tsx"
+  "app/tools/dialer-cost-calculator/page.tsx",
+  "components/tools/ToolPage.tsx"
+ ],
+ "Office of Consumer Affairs and Business Regulation, through a vendor": [
+  "components/tools/StateDncTable.tsx"
  ],
  "OFFLINE": [
   "app/dashboard/dialer/page.tsx",
@@ -14122,6 +15380,9 @@
  "OK": [
   "app/dashboard/campaigns/page.tsx",
   "components/SellerIdentityDialog.tsx"
+ ],
+ "Oklahoma": [
+  "components/tools/StateDncTable.tsx"
  ],
  "OLDEST FIRST": [
   "app/dashboard/leads/page.tsx"
@@ -14180,6 +15441,9 @@
  ],
  "on team": [
   "app/dashboard/settings/page.tsx"
+ ],
+ "On the call": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "on the day of the call.": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
@@ -14525,6 +15789,9 @@
  "only what actually settled": [
   "app/dashboard/reports/page.tsx"
  ],
+ "Only with the person’s express written agreement to be called by you, or an established business relationship with them.": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
+ ],
  "Only you (and team members you authorize) can access your account data.": [
   "app/privacy/page.tsx"
  ],
@@ -14537,7 +15804,8 @@
  "Open": [
   "app/faq/mobile/view.tsx",
   "components/teams/TeamDetail.tsx",
-  "components/teams/TeamsSidebar.tsx"
+  "components/teams/TeamsSidebar.tsx",
+  "components/tools/CallingHoursChecker.tsx"
  ],
  "OPEN ›": [
   "components/teams/TeamsManager.tsx"
@@ -14551,18 +15819,15 @@
  "Open account menu": [
   "components/site-header.tsx"
  ],
- "OPEN ANALYTICS →": [
-  "components/onboarding/PreviewOnboarding.tsx"
- ],
- "Open any agent on your team and play back their recorded calls, so you can coach from what was actually said.": [
-  "app/faq/manager-plus/view.tsx"
- ],
- "OPEN CAMPAIGNS →": [
-  "components/onboarding/PreviewOnboarding.tsx"
+ "OPEN CSV OR TXT": [
+  "components/tools/PhoneNumberFormatter.tsx"
  ],
  "OPEN DIALER →": [
   "app/faq/why-dialerseat/view.tsx",
   "components/DialingModeCTA.tsx"
+ ],
+ "OPEN FILE": [
+  "components/tools/LeadListCleaner.tsx"
  ],
  "Open fullscreen dialer": [
   "app/dashboard/dialer/page.tsx"
@@ -14600,6 +15865,9 @@
  ],
  "OPEN WHITELABEL EDITOR": [
   "app/dashboard/settings/page.tsx"
+ ],
+ "Open your lead sheet (CSV or Excel) and this cleaner checks what every column actually holds, not just what its header says. It reformats phone numbers to 10 digits, turns states into 2-letter codes, splits full names, fixes ALL CAPS, removes duplicates and lists rows that cannot be dialed. Download a clean CSV. The file never leaves your browser.": [
+  "app/tools/lead-list-cleaner/page.tsx"
  ],
  "Opening in a way people stay on the line for": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
@@ -14652,6 +15920,9 @@
   "app/faq/mobile/view.tsx",
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
+ "OR AN AREA CODE / PHONE NUMBER": [
+  "components/tools/CallingHoursChecker.tsx"
+ ],
  "Or by address: every public page also exists at its own language address, so dialerseat.com/es/pricing is the pricing page in Spanish.": [
   "app/faq/languages/page.tsx"
  ],
@@ -14667,6 +15938,12 @@
  "OR EMAIL ME FIRST →": [
   "app/faq/white-label/view.tsx"
  ],
+ "Or paste your numbers": [
+  "components/tools/MathTools.tsx"
+ ],
+ "OR READ THE FULL TEAMS BREAKDOWN →": [
+  "app/faq/manager-plus/view.tsx"
+ ],
  "Organisations that need a PBX and will run outbound some other way.": [
   "lib/competitors.ts"
  ],
@@ -14681,6 +15958,9 @@
  ],
  "Other {name} alternatives": [
   "components/vs-competitor-view.tsx"
+ ],
+ "Other area codes in {state}": [
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "OTHER COMPARISONS": [
   "app/vs/[matchup]/page.tsx"
@@ -14727,6 +16007,9 @@
  ],
  "Our total cumulative liability for any claim arising out of or related to these Terms or the service is limited to the amount you paid us in the 12 months preceding the claim": [
   "app/terms/page.tsx"
+ ],
+ "out of any text.": [
+  "app/tools/phone-number-extractor/page.tsx"
  ],
  "Outbound calling has its own vocabulary, and a lot of it is used loosely by the people selling it. Where a term has a legal definition, that is the one used here. Where it describes something DialerSeat does, it says what we actually do.": [
   "app/faq/dialer-glossary/page.tsx"
@@ -14777,11 +16060,21 @@
  "Outbound dialing is a weekly rhythm. Most operators dial Monday through Friday, evaluate Friday afternoon, plan the next week. A weekly bill matches that rhythm. If a week is slow, you're traveling, you took on a different project, a campaign dried up, you pause for that week. You don't owe us 30 days' notice.": [
   "app/faq/why-we-charge/page.tsx"
  ],
+ "Outbound floor instead of a queue? DialerSeat seats are $35 a week each, added or paused any week.": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
  "Outbound phone number provisioning (where applicable)": [
   "app/terms/page.tsx"
  ],
  "Outbound traffic is provisioned through a carrier providing STIR/SHAKEN A-attestation where supported.": [
   "lib/canonicalFacts.ts"
+ ],
+ "Outcome": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "OUTPUT FORMAT": [
+  "components/tools/PhoneNumberExtractor.tsx#prop",
+  "components/tools/PhoneNumberFormatter.tsx#prop"
  ],
  "Outside calling hours": [
   "lib/dispositions.ts"
@@ -14791,6 +16084,12 @@
  ],
  "Outside the calling window: queue shown for review, dialing will resume automatically once the window opens.": [
   "app/dashboard/dialer/page.tsx"
+ ],
+ "Outside the federal telemarketing window (8 a.m. to 9 p.m. local time). Some states are stricter: see the calling hours tool.": [
+  "components/tools/AreaCodeLookup.tsx"
+ ],
+ "Outside the US and Canada: international rules and rates": [
+  "lib/tools/phone.ts"
  ],
  "Outside the US the rules change country by country; France became opt-in on August 11, 2026.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
@@ -14848,7 +16147,8 @@
   "lib/competitorFeatures.ts"
  ],
  "Pacific": [
-  "app/faq/calling-hours/page.tsx"
+  "app/faq/calling-hours/page.tsx",
+  "components/tools/AreaCodeLookup.tsx"
  ],
  "Pacing": [
   "app/faq/dialer-glossary/page.tsx"
@@ -14877,6 +16177,9 @@
  ],
  "paid by each agent": [
   "app/faq/manager-plus/view.tsx"
+ ],
+ "Paid time an agent is not available for calls: breaks, training, meetings, absence. The 30% filled in here is a placeholder; use your own figure if you track it.": [
+  "app/tools/erlang-c-calculator/page.tsx"
  ],
  "paper. Between them, these are the two names historians of the category point to. The mechanism itself predates both patents: mid-1980s call centers at large banks, retailers, and collection agencies were already running early predictive systems built on minicomputers and custom hardware.": [
   "app/faq/what-is-a-predictive-dialer/page.tsx"
@@ -14963,6 +16266,21 @@
  ],
  "past due": [
   "app/faq/billing/view.tsx"
+ ],
+ "Paste a column of phone numbers or open a CSV, pick a format, and get a clean list back: E.164 (+14155550132), (415) 555-0132, dashes or plain digits. Duplicates are removed, and numbers that cannot be dialed are listed with the reason, using the same checks a dialer runs. It all happens in your browser.": [
+  "app/tools/phone-number-formatter/page.tsx"
+ ],
+ "Paste any block of text, an email thread, meeting notes, a copied web page, and this pulls out every US and Canadian phone number in it, whatever the formatting. Duplicates are merged, each number is checked, and you can copy the list or download a CSV. Nothing you paste leaves your browser.": [
+  "app/tools/phone-number-extractor/page.tsx"
+ ],
+ "PASTE ANY TEXT: EMAILS, NOTES, A WEB PAGE": [
+  "components/tools/PhoneNumberExtractor.tsx"
+ ],
+ "Paste emails, notes or a web page and extract every US and Canadian phone number, formatted, de-duplicated and checked. Free, runs in your browser.": [
+  "app/tools/phone-number-extractor/page.tsx"
+ ],
+ "PASTE NUMBERS, ONE PER LINE, OR OPEN A CSV": [
+  "components/tools/PhoneNumberFormatter.tsx"
  ],
  "Patient calls where compliance and tone matter. One line per agent is structurally safer; AMD avoids accidental message-on-machine TCPA issues.": [
   "app/dialing-modes/progressive/page.tsx",
@@ -15054,6 +16372,9 @@
  ],
  "PENDING APPROVAL": [
   "app/join/[code]/JoinRedeemClient.tsx"
+ ],
+ "Pennsylvania": [
+  "components/tools/StateDncTable.tsx"
  ],
  "PEOPLE": [
   "components/teams/TeamsSidebar.tsx"
@@ -15220,13 +16541,37 @@
  ],
  "Phone": [
   "app/faq/leads/view.tsx",
-  "app/faq/send-leads-from-your-crm/page.tsx"
+  "app/faq/send-leads-from-your-crm/page.tsx",
+  "components/tools/TrackerAndChecklist.tsx",
+  "lib/tools/leadSheet.ts"
  ],
  "PHONE": [
   "app/dashboard/campaigns/page.tsx"
  ],
  "PHONE *": [
   "app/dashboard/leads/page.tsx"
+ ],
+ "Phone number extractor": [
+  "lib/tools/registry.ts"
+ ],
+ "PHONE NUMBER EXTRACTOR": [
+  "app/tools/phone-number-formatter/page.tsx"
+ ],
+ "Phone Number Extractor: Pull Numbers From Any Text": [
+  "app/tools/phone-number-extractor/page.tsx"
+ ],
+ "Phone number formatter": [
+  "lib/tools/registry.ts"
+ ],
+ "PHONE NUMBER FORMATTER": [
+  "app/tools/lead-list-cleaner/page.tsx",
+  "app/tools/phone-number-extractor/page.tsx"
+ ],
+ "Phone number formatter and cleaner": [
+  "app/tools/phone-number-formatter/page.tsx"
+ ],
+ "Phone Number Formatter: E.164, Clean & Dedupe a List": [
+  "app/tools/phone-number-formatter/page.tsx"
  ],
  "Phone number is required.": [
   "app/dashboard/leads/page.tsx"
@@ -15251,6 +16596,9 @@
  ],
  "Phone numbers and caller ID": [
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "Phone numbers and lead lists": [
+  "lib/tools/registry.ts"
  ],
  "PHONE REDACTION ON BY DEFAULT": [
   "app/faq/compliance-export/view.tsx"
@@ -15284,6 +16632,9 @@
  ],
  "PhoneBurner is deliberately single-line: agents dial through a list one at a time with voicemail drop and click-to-dial. That's a feature for solo agents who want maximum control. It's a limitation for teams that want predictive multi-line dialing on high-volume cold lists. DialerSeat™ gives you all four modes, Preview, Power, Progressive, Predictive, configurable per campaign.": [
   "lib/competitorFeatures.ts"
+ ],
+ "Phones reformatted": [
+  "components/tools/LeadListCleaner.tsx#prop"
  ],
  "Pick a campaign and a date range, and DialerSeat generates a CSV: nine columns, one row per call. Here's a real excerpt of the format:": [
   "app/faq/compliance-export/view.tsx"
@@ -15330,14 +16681,20 @@
  "Pick your competitor.": [
   "app/vs/view.tsx#prop"
  ],
+ "Pick your industry and enter your name, company and callback number to get three sales voicemails, each under 30 seconds: a first touch, a follow-up and a final message. Each shows its word count and speaking time, says your number twice, and stays short enough that people listen to the end.": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
+ "Pick your industry and fill in your name, company and market to get a full cold call script: an opener, the reason for the call, three questions, an appointment close and rebuttals for the objections that actually come up in your industry. It also covers what to say when someone asks how you got their number, or asks not to be called.": [
+  "app/tools/cold-call-script-generator/page.tsx"
+ ],
  "Pick your own sidebar, header, primary, and page background colors below.": [
   "app/onboarding/whitelabel/page.tsx"
  ],
  "Pick your question.": [
   "app/faq/view.tsx#prop"
  ],
- "Pick your subdomain, upload your logo, and set your brand colors.": [
-  "app/faq/manager-plus/view.tsx"
+ "Picked up, by a person or a voicemail.": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "Pickup rates are higher on fresh data. Predictive captures the contact-rate spike before the list cools off.": [
   "app/dialing-modes/predictive/page.tsx",
@@ -15585,6 +16942,9 @@
   "app/dialing-modes/predictive/page.tsx",
   "app/faq/what-is-a-predictive-dialer/page.tsx"
  ],
+ "Predictive and multi-line dialing": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
  "Predictive and multi-line dialing are not claimed": [
   "lib/competitors.ts"
  ],
@@ -15812,6 +17172,7 @@
  "Preview": [
   "app/faq/dialer-for-insurance-agents/page.tsx",
   "app/faq/dialer-for-real-estate/page.tsx",
+  "components/tools/LeadListCleaner.tsx",
   "lib/canonicalFacts.ts"
  ],
  "PREVIEW": [
@@ -15920,6 +17281,9 @@
  "Price change as team grows": [
   "app/vs/everyone/view.tsx"
  ],
+ "Price not confirmed, ask the list administrator": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "PRICE OVERRIDE (OPTIONAL)": [
   "components/teams/SeatLinksPanel.tsx"
  ],
@@ -15990,6 +17354,9 @@
  ],
  "Primary color must be a #RRGGBB hex value.": [
   "app/onboarding/whitelabel/page.tsx"
+ ],
+ "PRINT": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "PRIOR EXPRESS WRITTEN CONSENT": [
   "app/faq/why-is-compliance-important/page.tsx"
@@ -16194,6 +17561,18 @@
  "Public pricing on website": [
   "app/vs/everyone/view.tsx"
  ],
+ "Public Service Commission": [
+  "components/tools/StateDncTable.tsx"
+ ],
+ "Public Utilities Commission, through a designated agent": [
+  "components/tools/StateDncTable.tsx"
+ ],
+ "Public Utility Commission": [
+  "components/tools/StateDncTable.tsx"
+ ],
+ "Public Utility Commission, at texasnocall.com": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "Public: anyone in the team, seat still required": [
   "components/teams/TeamModals.tsx"
  ],
@@ -16236,6 +17615,12 @@
  "Pull a record for any campaign, any date range, whenever you actually need one.": [
   "app/faq/compliance-export/view.tsx"
  ],
+ "Pull every number": [
+  "app/tools/phone-number-extractor/page.tsx"
+ ],
+ "Pull every US and Canadian phone number out of pasted text, emails or a web page.": [
+  "lib/tools/registry.ts"
+ ],
  "Pull the last 30 days on a predictive campaign and check the abandon-rate column directly instead of trusting the dashboard summary alone.": [
   "app/faq/compliance-export/view.tsx"
  ],
@@ -16267,7 +17652,20 @@
   "lib/competitorFeatures.ts"
  ],
  "Quarterly": [
-  "app/dashboard/reports/page.tsx"
+  "app/dashboard/reports/page.tsx",
+  "components/tools/StateDncTable.tsx"
+ ],
+ "Quarterly, 30 days to remove numbers": [
+  "components/tools/StateDncTable.tsx"
+ ],
+ "Quarterly: 1 Jan, 1 Apr, 1 Jul, 1 Oct": [
+  "components/tools/StateDncTable.tsx"
+ ],
+ "Quarterly: 1 Jan, 1 Apr, 1 Jul, 1 Oct, 60 days to update": [
+  "components/tools/StateDncTable.tsx"
+ ],
+ "Quarterly: 1 Mar, 1 Jun, 1 Sep, 1 Dec": [
+  "components/tools/StateDncTable.tsx"
  ],
  "Questions": [
   "app/data/dialer-pricing/page.tsx",
@@ -16323,14 +17721,26 @@
  "reached a person": [
   "app/dashboard/teams/page.tsx"
  ],
+ "Reached a person": [
+  "components/tools/TrackerAndChecklist.tsx#prop"
+ ],
+ "Reached a phone. Failed-to-connect dials are left out.": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "REACHED VOICEMAIL": [
   "app/dashboard/leads/page.tsx"
  ],
  "READ ABOUT WHITE-LABEL →": [
   "app/faq/managers/view.tsx"
  ],
+ "Read from each state’s own site on 5 November 2026. Fees and rules change, so confirm with the state before you pay or dial. This is not legal advice.": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "Read full methodology →": [
   "app/dashboard/compliance/page.tsx"
+ ],
+ "Read it out loud before the first call and change anything that doesn't sound like you. Put your own words in the brackets, and say only what is true of the person you're calling: if the reason for the call doesn't fit your list, change it.": [
+  "components/tools/ScriptTools.tsx"
  ],
  "Read the account first; these calls are the ones that get reviewed.": [
   "lib/verticals.ts"
@@ -16390,7 +17800,8 @@
   "components/teams/AgentCard.tsx"
  ],
  "Ready to dial": [
-  "components/teams/TeamDetail.tsx"
+  "components/teams/TeamDetail.tsx",
+  "components/tools/PhoneNumberFormatter.tsx#prop"
  ],
  "Ready to dial?": [
   "components/onboarding/PreviewOnboarding.tsx"
@@ -16419,7 +17830,8 @@
   "app/data/connect-rates/page.tsx"
  ],
  "Real estate": [
-  "lib/gutsRail.ts"
+  "lib/gutsRail.ts",
+  "lib/tools/scriptPacks.ts"
  ],
  "Real Estate": [
   "app/welcome/Showcase.tsx",
@@ -16478,6 +17890,9 @@
  ],
  "Real-feature releases on a continuous cadence. We don't batch fixes into \"maintenance windows\" we ship what's ready when it's ready.": [
   "app/faq/why-dialerseat/view.tsx"
+ ],
+ "really cost you?": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
  ],
  "Rearrange": [
   "components/teams/TeamsSidebar.tsx"
@@ -16617,7 +18032,8 @@
   "lib/canonicalFacts.ts"
  ],
  "Recruiting": [
-  "lib/gutsRail.ts"
+  "lib/gutsRail.ts",
+  "lib/tools/scriptPacks.ts"
  ],
  "RECRUITING": [
   "lib/verticals.ts"
@@ -16661,6 +18077,9 @@
  ],
  "Refinance waves, purchase season, aged internet leads and a pipeline of past clients. What a loan officer needs from a dialer, what changed for trigger leads in 2026, and what DialerSeat does about each part.": [
   "lib/verticals.ts"
+ ],
+ "Refreshed": [
+  "components/tools/StateDncTable.tsx"
  ],
  "Refunds": [
   "app/terms/page.tsx"
@@ -16760,6 +18179,12 @@
  "Remove {length} {value} from {value2}?": [
   "components/teams/TeamsSidebar.tsx"
  ],
+ "Remove duplicate phone numbers": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
+ "Remove duplicates": [
+  "components/tools/PhoneNumberFormatter.tsx"
+ ],
  "Remove every match from your list": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
@@ -16778,6 +18203,9 @@
  ],
  "Remove this team script from your campaigns?": [
   "app/dashboard/campaigns/page.tsx"
+ ],
+ "Removed": [
+  "components/tools/LeadListCleaner.tsx"
  ],
  "Removing…": [
   "components/teams/TeamModals.tsx",
@@ -17023,6 +18451,9 @@
  "Retries and the frequency count": [
   "lib/verticals.ts"
  ],
+ "Return on spend": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Return to billing": [
   "app/billing/page.tsx"
  ],
@@ -17041,6 +18472,9 @@
  "Reusable. Send it to anyone, they land on a join page and they're in.": [
   "components/teams/TeamOverview.tsx"
  ],
+ "Revenue per sale ($, optional)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Reverse-engineer, scrape, or attempt to extract DialerSeat's source code or proprietary algorithms": [
   "app/terms/page.tsx"
  ],
@@ -17052,6 +18486,9 @@
  ],
  "REVOKE CAMPAIGN ACCESS": [
   "components/teams/TeamsManager.tsx"
+ ],
+ "Ring time before giving up (s)": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "Ring time.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
@@ -17100,8 +18537,29 @@
  "Roughly $510-$600/month in seats at published rates, before setup and integration fees": [
   "lib/competitors.ts"
  ],
+ "Rounded by a spreadsheet: the digits are gone, use the original file": [
+  "lib/tools/phone.ts"
+ ],
+ "Row {n}": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
  "Row numbers match your spreadsheet. If this looks wrong, send the file to support@dialerseat.com.": [
   "app/dashboard/campaigns/page.tsx"
+ ],
+ "Rows in your sheet": [
+  "components/tools/LeadListCleaner.tsx#prop"
+ ],
+ "Rows read": [
+  "components/tools/PhoneNumberFormatter.tsx#prop"
+ ],
+ "Rows that can't be dialed": [
+  "components/tools/LeadListCleaner.tsx#prop"
+ ],
+ "Rows that can't be dialed, and why": [
+  "components/tools/PhoneNumberFormatter.tsx"
+ ],
+ "Rows to look at": [
+  "components/tools/LeadListCleaner.tsx"
  ],
  "rtcp-mux for WebRTC endpoints, it cannot be worked around from the browser.": [
   "app/dashboard/dialer/page.tsx"
@@ -17178,6 +18636,9 @@
  "Running more than one seat, or managing dialing for other people's teams? Manager+ is a flat $75/week upgrade that puts your brand on the platform, same rate whether you're managing 2 seats or 200. None of the dialers on this page offer true whitelabel; the closest most get is a referral or reseller program that keeps their name on the product.": [
   "app/vs/view.tsx"
  ],
+ "Runs in this browser tab. Nothing you paste is uploaded or stored.": [
+  "components/tools/PhoneNumberExtractor.tsx"
+ ],
  "Safari": [
   "app/faq/mobile/view.tsx"
  ],
@@ -17187,6 +18648,12 @@
  "Safe harbor": [
   "app/faq/dialer-glossary/page.tsx"
  ],
+ "Sale": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
+ "Sales (optional)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Sales and CRM dialers": [
   "app/data/dialer-pricing/page.tsx"
  ],
@@ -17195,6 +18662,9 @@
  ],
  "Sales dialer vs business phone system": [
   "app/vs/view.tsx"
+ ],
+ "Sales goal back through close rate, booking rate and contact rate. The result here shows dials per sale for your numbers.": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
  ],
  "Sales Hub per seat per month: Starter $20 ($7 billed annually), Professional $100 ($90 annually), Enterprise $150. Professional adds a one-time $1,500 onboarding fee and Enterprise $3,500. Free for up to two users.": [
   "lib/competitors.ts"
@@ -17210,6 +18680,18 @@
  ],
  "Sales teams that want their CRM and their dialer to be the same product, and are comfortable paying CRM prices for it.": [
   "lib/competitors.ts"
+ ],
+ "Sales voicemail script generator": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
+ "Sales Voicemail Script Generator: 3 Under 30 Seconds": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
+ "Sales voicemail scripts": [
+  "lib/tools/registry.ts"
+ ],
+ "Sales you want this month": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "SALES@DIALERSEAT.COM": [
   "app/screenshots/page.tsx"
@@ -17285,6 +18767,12 @@
  "Same triple-line speed across every industry, not just real estate. No mandatory $10/mo Agent Access fee stacked on top.": [
   "app/vs/everyone/view.tsx"
  ],
+ "Samoa": [
+  "components/tools/AreaCodeLookup.tsx"
+ ],
+ "Sample values": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
  "Satisfaction Priority": [
   "app/page.tsx"
  ],
@@ -17318,6 +18806,9 @@
  "SAVED": [
   "app/dashboard/campaigns/page.tsx"
  ],
+ "Saved in this browser only, on this device. Nothing is uploaded, so clearing your browser's site data deletes it: export the CSV to keep a copy. Mark anyone who asks not to be called as \"Do not call\" and keep them off every list from then on.": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
  "Saved.": [
   "app/dashboard/settings/page.tsx"
  ],
@@ -17339,6 +18830,9 @@
   "app/dashboard/campaigns/page.tsx",
   "app/dashboard/settings/page.tsx",
   "components/SellerIdentityDialog.tsx"
+ ],
+ "Say promptly who you are, which company you represent, and that the call is about selling something.": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "Say who you are": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
@@ -17366,6 +18860,9 @@
  ],
  "Screenshots: what it looks like": [
   "lib/gutsRail.ts"
+ ],
+ "SCRIPT GENERATOR": [
+  "app/tools/cold-calling-tracker/page.tsx"
  ],
  "Script is too long": [
   "app/api/scripts/personal/route.ts"
@@ -17404,6 +18901,9 @@
  "Scripts here are shared across all your campaigns. Toggle them on per campaign in each campaign’s settings. Drag to reorder your library.": [
   "app/dashboard/campaigns/page.tsx"
  ],
+ "SCRIPTS IN DIALERSEAT": [
+  "app/tools/cold-call-script-generator/page.tsx"
+ ],
  "SCRIPTS LIBRARY": [
   "app/dashboard/campaigns/page.tsx"
  ],
@@ -17426,11 +18926,18 @@
  "Scrub against the National Do Not Call Registry. That stays the seller’s responsibility, covered on": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
  ],
+ "Scrub every list against the National Do Not Call Registry, using a copy no more than 31 days old.": [
+  "components/tools/TrackerAndChecklist.tsx"
+ ],
  "Scrub expireds and FSBOs.": [
   "app/faq/dialer-for-real-estate/page.tsx"
  ],
  "Scrub your lists against the National Do Not Call Registry before upload.": [
   "app/dialing-modes/view.tsx"
+ ],
+ "Scrubbed list ready? DialerSeat dials it at $35 a week per seat, in each lead’s calling window.": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx",
+  "app/tools/state-do-not-call-lists/page.tsx"
  ],
  "Scrubbing against the Do Not Call Registry": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
@@ -17774,6 +19281,9 @@
  "Separate companion app": [
   "lib/competitorFeatures.ts"
  ],
+ "Separate from registering as a commercial telephone seller with the Attorney General ($200 first filing, $100 renewal). Doing one does not cover the other.": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "Separate product, Dialpad Sell, $39+/mo": [
   "lib/competitorFeatures.ts"
  ],
@@ -17792,6 +19302,15 @@
  ],
  "Service availability": [
   "app/terms/page.tsx"
+ ],
+ "Service level": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Service level target (%)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Service or non-geographic code, not a person": [
+  "lib/tools/phone.ts"
  ],
  "Service period": [
   "app/dashboard/reports/ReportView.tsx"
@@ -17967,6 +19486,15 @@
  "Share": [
   "app/faq/mobile/view.tsx"
  ],
+ "Share on hold": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Share talking": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Share wrapping up": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Share your data with advertisers": [
   "app/privacy/page.tsx"
  ],
@@ -17988,8 +19516,8 @@
  "Short calls and hang-ups.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
- "SHOW": [
-  "components/onboarding/PreviewOnboarding.tsx"
+ "Should I say my number twice?": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
  ],
  "Show {hidden} more": [
   "app/dashboard/teams/page.tsx"
@@ -18023,6 +19551,9 @@
  ],
  "shows a rate only where at least 250 dials rang. Below that, ordinary chance would move the figure by several points, and we would be publishing noise.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
+ ],
+ "Shrinkage (%)": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "Side-by-side breakdowns vs ReadyMode, Mojo Dialer, PhoneBurner, Five9, WAVV, 3CX, and the wider industry. $35/week, weekly billing, modern UI.": [
   "app/vs/page.tsx"
@@ -18242,7 +19773,8 @@
  "Solar": [
   "app/welcome/Showcase.tsx",
   "components/DialerShowcase.tsx",
-  "lib/gutsRail.ts"
+  "lib/gutsRail.ts",
+  "lib/tools/scriptPacks.ts"
  ],
  "SOLAR": [
   "app/faq/scripts/view.tsx",
@@ -18266,6 +19798,9 @@
  ],
  "Soliciting a listing is a marketing call, and many of these numbers are on the National Do Not Call Registry.": [
   "app/faq/dialer-for-real-estate/page.tsx"
+ ],
+ "Solicitors register with the Commission to get the list.": [
+  "components/tools/StateDncTable.tsx"
  ],
  "Solid SMS and shared-inbox features": [
   "lib/competitors.ts"
@@ -18291,6 +19826,9 @@
  ],
  "Solves a different problem: it is a phone system, not a dialer": [
   "lib/competitors.ts"
+ ],
+ "Some do. The table covers the eleven that compliance vendors usually name. Ten have a list of their own and Wyoming’s law points at a private one. The National Do Not Call Registry applies in every state whatever the state does.": [
+  "app/tools/state-do-not-call-lists/page.tsx"
  ],
  "Some jurisdictions don't allow the exclusion of certain warranties or limitation of liability for incidental or consequential damages. In those jurisdictions, our liability is limited to the greatest extent permitted by law.": [
   "app/terms/page.tsx"
@@ -18421,6 +19959,9 @@
  "START DIALING →": [
   "components/DialingModeCTA.tsx"
  ],
+ "Start from the sales you want this month and work backwards: sales divided by your close rate gives appointments, appointments divided by your booking rate gives conversations, and conversations divided by your contact rate gives dials. Spread over your calling days, that is how many cold calls you need each day.": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
+ ],
  "START MANAGER+ →": [
   "app/faq/manager-plus/view.tsx",
   "app/faq/white-label-mobile/view.tsx"
@@ -18451,22 +19992,46 @@
   "app/faq/local-presence-dialing/page.tsx"
  ],
  "State": [
-  "app/faq/leads/view.tsx"
+  "app/faq/leads/view.tsx",
+  "components/tools/AreaCodeLookup.tsx",
+  "components/tools/CallingHoursChecker.tsx",
+  "components/tools/StateDncTable.tsx",
+  "lib/tools/leadSheet.ts"
  ],
  "STATE": [
   "app/dashboard/campaigns/page.tsx",
   "app/dashboard/dialer/page.tsx",
   "app/dashboard/leads/page.tsx",
-  "app/data/connect-rates/page.tsx"
+  "app/data/connect-rates/page.tsx",
+  "components/tools/CallingHoursChecker.tsx#prop"
+ ],
+ "State \"{value}\" not readable: used the area code's state ({code})": [
+  "lib/tools/leadSheet.ts"
  ],
  "State charitable-solicitation registration and disclosure rules.": [
   "lib/verticals.ts"
+ ],
+ "State do not call lists": [
+  "lib/relatedLinks.ts"
+ ],
+ "State Do Not Call lists": [
+  "app/tools/state-do-not-call-lists/page.tsx",
+  "lib/tools/registry.ts"
+ ],
+ "State do not call lists, checked on each state's own site": [
+  "app/tools/state-do-not-call-lists/page.tsx"
+ ],
+ "State Do Not Call Lists: Who Runs Them, What They Cost": [
+  "app/tools/state-do-not-call-lists/page.tsx"
  ],
  "State inferred from the destination area code. Mobile numbers keep their original area code after a move, so this measures the number's origin, not necessarily where the person is now.": [
   "app/data/connect-rates/page.tsx"
  ],
  "State is derived from the destination area code.": [
   "app/data/connect-rates/page.tsx"
+ ],
+ "State law; see calling rules by country": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "state rather than canceling immediately. Stripe automatically retries the charge on its standard retry schedule.": [
   "app/faq/billing/view.tsx"
@@ -18479,6 +20044,9 @@
  ],
  "STATE-SPECIFIC RULES": [
   "app/faq/how-we-keep-compliance/page.tsx"
+ ],
+ "State’s page": [
+  "components/tools/StateDncTable.tsx"
  ],
  "Stated here so nobody finds out after paying for a floor.": [
   "app/faq/languages/page.tsx"
@@ -18501,7 +20069,8 @@
  "Status": [
   "app/dashboard/reports/ReportView.tsx",
   "app/faq/campaigns/view.tsx",
-  "app/status/page.tsx"
+  "app/status/page.tsx",
+  "components/tools/PhoneNumberExtractor.tsx"
  ],
  "STATUS": [
   "app/dashboard/dialer/page.tsx",
@@ -18819,6 +20388,12 @@
   "app/welcome/Showcase.tsx",
   "components/teams/TeamFloor.tsx"
  ],
+ "Talk time per answered call (s)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Talk, hold and wrap-up time into AHT, and what each part costs you.": [
+  "lib/tools/registry.ts"
+ ],
  "Talkdesk Alternative: Dialer Pricing, Pros & Cons | DialerSeat": [
   "app/vs/talkdesk/page.tsx"
  ],
@@ -18855,6 +20430,16 @@
  "TCPA calling windows are enforced server-side, per lead, against the lead’s own state, not the agent’s.": [
   "lib/canonicalFacts.ts"
  ],
+ "TCPA CHECKLIST": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
+ ],
+ "TCPA compliance checklist": [
+  "app/tools/tcpa-compliance-checklist/page.tsx",
+  "lib/tools/registry.ts"
+ ],
+ "TCPA Compliance Checklist for Outbound Calling": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
+ ],
  "TCPA enforced server-side": [
   "app/vs/everyone/view.tsx"
  ],
@@ -18885,6 +20470,9 @@
  ],
  "TCPA windows enforced server-side": [
   "lib/competitorFeatures.ts"
+ ],
+ "TCPA, 47 U.S.C. 227; 47 CFR 64.1200": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "Team": [
   "app/billing/page.tsx",
@@ -19051,26 +20639,42 @@
  "telemarketer registry site": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
+ "Telemarketers may call between 8 a.m. and 9 p.m. in the called person’s local time under federal rules, and some states are stricter: Florida ends at 8 p.m. Pick a state or type a number to see the local time there and whether a call is allowed now, then check every state at a glance.": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
+ ],
+ "Telemarketers must also register with the Attorney General and post a $50,000 bond or deposit.": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "Telemarketing & Cold Calling Rules by Country (2026) | DialerSeat": [
   "app/data/calling-rules-by-country/page.tsx"
  ],
  "telemarketing and cold calling rules.": [
   "app/data/calling-rules-by-country/[code]/page.tsx"
  ],
+ "Telemarketing calling hours": [
+  "lib/tools/registry.ts"
+ ],
  "telemarketing calling hours by state": [
   "app/vs/manual-dialing/page.tsx"
  ],
  "Telemarketing calling hours by state": [
-  "app/faq/view.tsx"
+  "app/faq/view.tsx",
+  "app/tools/telemarketing-calling-hours/page.tsx"
  ],
  "Telemarketing Calling Hours by State": [
   "app/faq/calling-hours/page.tsx"
+ ],
+ "Telemarketing Calling Hours by State: Can I Call Now?": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
  ],
  "Telemarketing Calling Hours by State: What DialerSeat Enforces | DialerSeat": [
   "app/faq/calling-hours/page.tsx"
  ],
  "Telemarketing calling hours by US state": [
   "app/resources/page.tsx"
+ ],
+ "Telemarketing calls are allowed from {start} to {end} local time": [
+  "components/tools/CallingHoursChecker.tsx"
  ],
  "Telemarketing compliance isn't a nice-to-have. The FTC can write checks north of $53,000 per violation. Here's why it matters, and why most dialers treat it as someone else's problem.": [
   "app/faq/why-is-compliance-important/page.tsx"
@@ -19090,6 +20694,9 @@
  ],
  "Telephone Preference Service (TPS) for individuals and Corporate TPS (CTPS) for companies. A number listed for 28 days or more cannot be called for marketing without consent.": [
   "lib/countryRules.ts"
+ ],
+ "Telephone solicitors must also register before doing business in Indiana. The Attorney General lists exemptions including licensed insurance agents soliciting an application, and licensed realtors under conditions.": [
+  "components/tools/StateDncTable.tsx"
  ],
  "tell us and we will fix it": [
   "components/vs-competitor-view.tsx"
@@ -19143,6 +20750,9 @@
  "tenant setup": [
   "app/billing/success/page.tsx"
  ],
+ "Tennessee": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "Terms": [
   "app/faq/view.tsx",
   "app/vs/view.tsx"
@@ -19165,7 +20775,8 @@
   "app/partners/page.tsx"
  ],
  "Texas": [
-  "app/faq/calling-hours/page.tsx"
+  "app/faq/calling-hours/page.tsx",
+  "components/tools/StateDncTable.tsx"
  ],
  "text messages": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
@@ -19240,6 +20851,9 @@
  ],
  "That principle is the whole point. If you'd like the broader context: why these rules exist, who wrote them, and why so many incumbents treat the fines as a cost of doing business, read": [
   "app/faq/how-we-keep-compliance/page.tsx"
+ ],
+ "that state right now?": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
  ],
  "that team": [
   "app/billing/page.tsx"
@@ -19623,6 +21237,9 @@
  "The first figure would send you to change your list, your calling hours or your caller ID, when none of them was the problem. The second tells you how people actually responded.": [
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
+ "The first five area codes are free. From 1 October 2026, each additional area code is $85, and the total is capped at $23,425 for every area code in the country.": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
+ ],
  "The first line where AMD says": [
   "app/dialing-modes/predictive/page.tsx",
   "app/faq/what-is-a-predictive-dialer/page.tsx"
@@ -19686,6 +21303,9 @@
  "The globe in the header, on every page of the site.": [
   "app/faq/languages/page.tsx"
  ],
+ "The header says \"{header}\", but the values look different ({sample}). Mapped by what the column actually holds.": [
+  "lib/tools/leadSheet.ts"
+ ],
  "The headline $149-$199 advertised price becomes $200-$300 effective once you add data feeds (Mojo $25-$49 per dataset), tier upgrades for basic features, or industry-specific add-ons. Our $35/week, cancel anytime, is the bill: nothing stacks on top, and it never becomes a monthly premium.": [
   "app/vs/everyone/view.tsx"
  ],
@@ -19739,6 +21359,9 @@
  ],
  "The interface is translated; an email to support is read and answered in English.": [
   "app/faq/languages/page.tsx"
+ ],
+ "The international standard for phone numbers: a plus sign, the country code and the number, with no spaces or punctuation. A US number in E.164 is +1 followed by its 10 digits, like +14155550132.": [
+  "app/tools/phone-number-formatter/page.tsx"
  ],
  "The IRS period of limitations for most returns is three years from filing, and longer in some circumstances, six years where more than 25% of gross income was omitted, and no limit where no return was filed. Retention is measured from the date the return was filed, not from the date of this document.": [
   "app/dashboard/reports/ReportView.tsx"
@@ -19839,6 +21462,9 @@
  "The National Do Not Call Registry.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
+ "The national registry is not the only list. These eleven states are the ones compliance vendors usually name, and each row was read from the state’s own site: who runs the list, what a telemarketer pays and how often it changes. Where the state did not publish a current price, the row says that rather than quoting an old one.": [
+  "app/tools/state-do-not-call-lists/page.tsx"
+ ],
  "The national registry is only half of it. When someone tells you directly not to call them again, the rule says you must not call them again on behalf of that seller, whether or not they are on the registry. Keep a record of every one of those requests and remove those numbers before any future upload.": [
   "app/faq/how-to-scrub-the-do-not-call-registry/page.tsx"
  ],
@@ -19938,6 +21564,9 @@
  ],
  "The outcome is logged to the lead as you set it": [
   "app/vs/manual-dialing/page.tsx"
+ ],
+ "The output is the format DialerSeat imports, column for column. $35 a week per seat, every dialing mode included.": [
+  "app/tools/lead-list-cleaner/page.tsx"
  ],
  "The owner decides per join code. A code can bill the seat to the owner, or require the agent to pay for their own. Both kinds can exist on the same team, which is how partner and in-house agents sit side by side.": [
   "app/faq/teams-how-it-works/page.tsx"
@@ -20132,6 +21761,9 @@
  "The right way to read this: if your dialer's default settings let you abandon 5% of calls, that's not because the law is gray. That's because someone made a choice. We think it's the wrong choice.": [
   "app/faq/why-is-compliance-important/page.tsx"
  ],
+ "The rules an outbound campaign has to meet, with the regulation behind each one.": [
+  "lib/tools/registry.ts"
+ ],
  "The rules behind it": [
   "app/tools/abandon-rate-calculator/page.tsx"
  ],
@@ -20170,6 +21802,9 @@
  ],
  "The screens that are not ours are translated too. The sign-in, sign-up and account screens come in your language, and so does the checkout. A confirmation box that asks you to type a word to confirm asks for the word in the language the instruction was written in, which sounds obvious until you meet software where it is not.": [
   "app/faq/languages/page.tsx"
+ ],
+ "The script itself stays in English, because you read it to the person you are calling in the US.": [
+  "components/tools/ScriptTools.tsx"
  ],
  "The seconds after a call while the agent records what happened. Long wrap-ups are usually the biggest hidden cost on a dialing floor.": [
   "app/faq/dialer-glossary/page.tsx"
@@ -20254,6 +21889,9 @@
  "The system US carriers use to sign calls so the receiving carrier can tell the caller ID was not spoofed.": [
   "app/faq/dialer-glossary/page.tsx"
  ],
+ "The TCPA and Telemarketing Sales Rule requirements an outbound campaign has to meet, each with its regulation: DNC, consent, hours, 3% abandons, caller ID.": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
+ ],
  "The TCPA enforcement features will catch every edge case (you are still responsible for compliance)": [
   "app/terms/page.tsx"
  ],
@@ -20323,6 +21961,9 @@
  ],
  "The three providers jointly run the": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
+ "The three rates a dialer reports, each over the right denominator.": [
+  "lib/tools/registry.ts"
  ],
  "The time zone comes from the lead's state column when it has one, and from the area code when it does not. When neither resolves, the check": [
   "app/faq/calling-hours/page.tsx"
@@ -20401,6 +22042,12 @@
  "Their lead is on screen as the call connects.": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
+ "their own list?": [
+  "app/tools/state-do-not-call-lists/page.tsx"
+ ],
+ "Theirs. A call from California at 6 p.m. reaches New York at 9 p.m., already outside the window.": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
+ ],
  "them": [
   "app/dashboard/teams/page.tsx",
   "app/faq/why-is-compliance-important/page.tsx"
@@ -20450,6 +22097,9 @@
  "There is no single label and no single list. Three companies score numbers for the US carriers, each carrier uses one of them, and the call-screening apps people install run their own on top. So the same number can be clean on one network and labelled on another, and a fix on one provider does not clear the others.": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
+ "There is no single right number: it depends on your list, your talk time and how many lines you run. On one line, every unanswered call’s ring time comes out of your hour. With more lines that waiting overlaps, so dials rise while conversations stay the agent’s limit.": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
+ ],
  "There is no universal correct figure, and anyone who quotes you one with confidence is guessing, carrier scoring is opaque and it changes. DialerSeat sets and enforces the cap for you, tuned against live answer-rate data rather than a number picked once and forgotten. What matters on your side is that the volume is spread across a pool instead of concentrated on one caller ID.": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
@@ -20470,6 +22120,9 @@
  ],
  "thereafter unless I cancel.": [
   "app/billing/page.tsx"
+ ],
+ "These are the checks DialerSeat runs before it dials. $35 a week per seat.": [
+  "app/tools/phone-number-formatter/page.tsx"
  ],
  "These guardrails do not constitute legal compliance certification.": [
   "app/terms/page.tsx"
@@ -20702,6 +22355,9 @@
  "This script is empty, add content from Manage Scripts.": [
   "app/dashboard/dialer/page.tsx"
  ],
+ "This state spans two time zones; check the lead's own zone near the edges of the window.": [
+  "components/tools/CallingHoursChecker.tsx"
+ ],
  "This subdomain is being redirected from a recent change.": [
   "app/api/whitelabel/onboarding/route.ts"
  ],
@@ -20732,6 +22388,9 @@
  "Those language addresses are real pages rather than a redirect with a cookie attached, each one listing the others, which is what lets somebody searching in their own language find the page in it.": [
   "app/faq/languages/page.tsx"
  ],
+ "Three is plenty: a first touch, a follow-up a few days later, and a last message. More starts to feel like pressure.": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
  "Three licences": [
   "lib/competitors.ts"
  ],
@@ -20744,6 +22403,9 @@
  "Three real use cases.": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
+ "Three sales voicemail scripts under 30 seconds each: the first touch, a follow-up and the last message, written for your industry.": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
  "Three scenarios.": [
   "app/faq/how-we-keep-compliance/page.tsx"
  ],
@@ -20755,6 +22417,9 @@
  ],
  "Three users, twelve months": [
   "lib/competitors.ts"
+ ],
+ "Three voicemails under 30 seconds: first touch, follow-up and the last one.": [
+  "lib/tools/registry.ts"
  ],
  "three-dot menu": [
   "app/faq/mobile/view.tsx"
@@ -20770,11 +22435,17 @@
   "app/dialing-modes/preview/page.tsx",
   "app/faq/what-is-a-preview-dialer/page.tsx"
  ],
+ "Tick off what your outbound campaign already does: Do Not Call scrubbing, consent for autodialed calls to mobiles, calling hours in the lead’s time zone, the 3% abandoned-call limit, caller ID and the disclosures at the start of each call. Each item names the regulation it comes from. What stays unticked is your to-do list.": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
+ ],
  "Tick teams, campaigns or agents": [
   "components/teams/TeamsSidebar.tsx"
  ],
  "Tick what you want to change": [
   "components/teams/TeamsSidebar.tsx"
+ ],
+ "Tick what your campaign already does. What's left unticked is your to-do list.": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "tier,": [
   "app/dashboard/reports/ReportView.tsx"
@@ -20793,6 +22464,10 @@
  ],
  "Time spent actually speaking to somebody, measured from when they answered. Not the same as time spent dialing, which includes every ring and every wrap-up.": [
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "Time zone": [
+  "components/tools/AreaCodeLookup.tsx",
+  "components/tools/PhoneNumberFormatter.tsx"
  ],
  "Time-sensitive offers, B2C audience, heavy TCPA scrutiny. Progressive is the legacy industry default for exactly these reasons.": [
   "app/dialing-modes/progressive/page.tsx",
@@ -20824,6 +22499,9 @@
  ],
  "To exercise any of these rights, email us at": [
   "app/privacy/page.tsx"
+ ],
+ "to hit your number?": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
  ],
  "to own a team. The access mode only controls the optional per-campaign seat fee that sits on top of the platform sub. FREE mode means no per-seat fee, it does NOT mean free platform access.": [
   "app/faq/dialerseat-teams/view.tsx"
@@ -20883,6 +22561,15 @@
  "Token request failed": [
   "app/api/calls/token/route.ts"
  ],
+ "Toll-free": [
+  "lib/tools/phone.ts"
+ ],
+ "Toll-free (800, 833, 844, 855, 866, 877, 888). Not tied to a place, and usually a business line.": [
+  "components/tools/AreaCodeLookup.tsx"
+ ],
+ "Toll-free: a business line, not a person": [
+  "lib/tools/phone.ts"
+ ],
  "Too long": [
   "app/api/reports/identity/route.ts"
  ],
@@ -20905,6 +22592,9 @@
  "Total": [
   "app/dashboard/reports/ReportView.tsx"
  ],
+ "Total after-call work (minutes)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Total Calls": [
   "app/dashboard/teams/page.tsx"
  ],
@@ -20916,6 +22606,12 @@
  "Total calls, hours dialed, conversions, closed and talk time, with the call-volume chart underneath, on a 375-point screen. Note the BEST CAMPAIGN tile: it reads as a dash and says it needs five calls first, rather than crowning a winner out of two.": [
   "lib/screenshots.ts"
  ],
+ "Total DialerSeat cost": [
+  "app/faq/manager-plus/view.tsx"
+ ],
+ "Total hold time (minutes)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Total Leads": [
   "components/teams/CampaignDetail.tsx",
   "components/teams/TeamDetail.tsx"
@@ -20923,11 +22619,23 @@
  "TOTAL SEAT SPEND": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
  ],
+ "Total spend ($)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
+ "Total talk time (minutes)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "Total:": [
   "app/faq/why-we-charge/page.tsx"
  ],
  "TRACK AND CLOSE": [
   "app/page.tsx"
+ ],
+ "Track every call": [
+  "app/tools/cold-calling-tracker/page.tsx"
+ ],
+ "Traffic (Erlangs)": [
+  "components/tools/MathTools.tsx#prop"
  ],
  "TRAI 2025 amendment (Securiti)": [
   "lib/countryRules.ts"
@@ -20941,6 +22649,9 @@
  "TRAINING": [
   "app/dialing-modes/preview/page.tsx",
   "app/faq/what-is-a-preview-dialer/page.tsx"
+ ],
+ "Transmit caller ID on every telemarketing call.": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "Treat this URL as a password, anyone holding it can add leads to this campaign.": [
   "components/teams/CampaignDetail.tsx"
@@ -21117,6 +22828,9 @@
  "Type \"remove\" to confirm revocation": [
   "app/api/teams/access/revoke/route.ts"
  ],
+ "Type an area code or a full phone number to see the state it belongs to, its time zone, the local time there right now, and whether it is inside the federal telemarketing window of 8 a.m. to 9 p.m. Below it, every US area code is listed by state with the current local time.": [
+  "app/tools/area-code-lookup/page.tsx"
+ ],
  "Typical": [
   "app/vs/everyone/view.tsx"
  ],
@@ -21139,6 +22853,12 @@
  "Under 26 U.S.C. § 7206, willfully making or using a document known to be false as to any material matter, in connection with a matter arising under the internal revenue laws, is a federal criminal offense. If a figure here is wrong, ask us to correct it at": [
   "app/dashboard/reports/ReportView.tsx"
  ],
+ "Under 30 seconds each at a normal speaking pace (about 150 words a minute). Say the number twice, slowly. Three messages is enough: after that, a voicemail stops being a reminder and starts being a reason to block you.": [
+  "components/tools/ScriptTools.tsx"
+ ],
+ "Under 30 seconds, about 75 words at a normal pace. Long enough for who you are, why you called and your number, twice.": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
+ ],
  "Under 40 calls today": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
@@ -21156,6 +22876,9 @@
  ],
  "Unedited screenshots of the DialerSeat outbound dialer: the dialer terminal, campaigns, call recordings, the Teams dashboard, and white-label themes.": [
   "app/screenshots/page.tsx"
+ ],
+ "Unique": [
+  "components/tools/PhoneNumberExtractor.tsx#prop"
  ],
  "United Kingdom": [
   "lib/countryNames.ts"
@@ -21246,6 +22969,9 @@
  "Unnamed Lead": [
   "app/dashboard/recordings/page.tsx"
  ],
+ "Unrecognised area code": [
+  "lib/tools/phone.ts"
+ ],
  "Unregistered numbers dialing at volume: no STIR/SHAKEN attestation, no CNAM, nothing telling the carrier this is a real, verified business.": [
   "app/faq/numbers/view.tsx"
  ],
@@ -21296,6 +23022,9 @@
  ],
  "Up to": [
   "app/faq/send-leads-from-your-crm/page.tsx"
+ ],
+ "Up to $5,000 for each knowing violation. The copy may not be passed on.": [
+  "components/tools/StateDncTable.tsx"
  ],
  "Up to €50,000 for failing to document or keep consent.": [
   "lib/countryRules.ts"
@@ -21414,8 +23143,14 @@
  "Uploads are additive, not a replace.": [
   "app/faq/leads/view.tsx"
  ],
+ "US and Canadian numbers (the North American Numbering Plan). The checks are the ones DialerSeat runs before dialing: 10 digits, an area code and exchange that can't start with 0 or 1, no N11 service codes, no letters. Location comes from the area code, which shows where a number was issued; mobile numbers keep their area code when people move.": [
+  "components/tools/PhoneNumberFormatter.tsx"
+ ],
  "US CALLING HOURS BY STATE": [
   "app/data/calling-rules-by-country/page.tsx"
+ ],
+ "US federal rules for outbound telemarketing, with the regulation behind each. States add their own rules on top. A checklist, not legal advice: for anything that decides whether a campaign runs, ask a lawyer who handles TCPA work.": [
+  "components/tools/TrackerAndChecklist.tsx"
  ],
  "US RULES": [
   "app/data/calling-rules-by-country/[code]/page.tsx"
@@ -21432,11 +23167,17 @@
  "Usage-based billing makes a heavy dialing day cost more than a light one": [
   "lib/competitors.ts"
  ],
+ "Use a copy no more than 31 days old on the day you call. That is the Telemarketing Sales Rule’s safe harbor, so a list you keep dialing needs re-scrubbing at least monthly.": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
+ ],
  "Use any of this with a link to the page you used. For a quote, a figure we have not published, or a correction, email": [
   "app/resources/page.tsx"
  ],
  "use Google Analytics, Meta Pixel, or other ad-network trackers on our marketing pages. Internal product analytics are server-side only.": [
   "app/privacy/page.tsx"
+ ],
+ "Use it as": [
+  "components/tools/LeadListCleaner.tsx"
  ],
  "Use only lowercase letters, numbers, and hyphens (2-30 chars, no leading/trailing dash).": [
   "app/onboarding/whitelabel/page.tsx"
@@ -21485,6 +23226,9 @@
  ],
  "Usually drops to the vendor's own name and logo, or isn't offered at all": [
   "app/faq/white-label-mobile/view.tsx"
+ ],
+ "Usually the headers. An importer matches column names exactly, so \"FIRST NAME\" or \"Last name\" can be ignored even though the data is there. This cleaner renames columns to first_name, last_name, phone, email and state, which every import reads.": [
+  "app/tools/lead-list-cleaner/page.tsx"
  ],
  "Usually, but test it before you staff. Audio crosses the same distance regardless of platform, and the variable is the agent’s own connection, a wired office line behaves very differently from residential wifi. Run one agent on real calls for a day before hiring five.": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
@@ -21560,6 +23304,7 @@
   "app/faq/compliance-export/view.tsx"
  ],
  "Voicemail": [
+  "components/tools/TrackerAndChecklist.tsx",
   "lib/dispositions.ts"
  ],
  "VOICEMAIL": [
@@ -21603,6 +23348,9 @@
  "Voicemail greetings sound different. They're longer, usually 4-15 seconds, run as a continuous monologue, and end with a beep. AMD looks at the duration of the initial speech, the pauses, the frequency profile, and (in modern systems) machine-learned signatures of common voicemail-greeting patterns. When the math says \"machine,\" the call drops before you ever pick up.": [
   "app/faq/how-does-amd-work/page.tsx"
  ],
+ "VOICEMAIL SCRIPTS": [
+  "app/tools/cold-call-script-generator/page.tsx"
+ ],
  "VOICEMAIL SUB": [
   "app/dashboard/campaigns/page.tsx"
  ],
@@ -21611,6 +23359,9 @@
  ],
  "voicemail, redialing": [
   "app/dashboard/dialer/page.tsx"
+ ],
+ "Voicemails that": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
  ],
  "voicemails. Voicemail drops": [
   "app/faq/how-does-amd-work/page.tsx"
@@ -22014,7 +23765,8 @@
  ],
  "Web": [
   "app/tools/abandon-rate-calculator/page.tsx",
-  "app/tools/dialer-cost-calculator/page.tsx"
+  "app/tools/dialer-cost-calculator/page.tsx",
+  "components/tools/ToolPage.tsx"
  ],
  "Web, iOS, Android": [
   "app/components/StructuredData.tsx"
@@ -22115,6 +23867,9 @@
  "What 10DLC covers, and what it does not": [
   "app/faq/view.tsx"
  ],
+ "What 30 dialers charge, their contracts and seat minimums.": [
+  "app/tools/page.tsx"
+ ],
  "WHAT 5 AGENTS COST ELSEWHERE": [
   "app/faq/dialer-for-offshore-agents/page.tsx",
   "app/faq/teams-how-it-works/page.tsx"
@@ -22179,6 +23934,9 @@
  "What are the legal calling hours for telemarketing?": [
   "app/faq/calling-hours/page.tsx"
  ],
+ "What are toll-free area codes?": [
+  "app/tools/area-code-lookup/page.tsx"
+ ],
  "What attestation does not do.": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
  ],
@@ -22212,6 +23970,9 @@
  "What does a five-agent team cost?": [
   "app/pricing/page.tsx"
  ],
+ "What does a lead": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
  "What does a ten-agent floor cost?": [
   "app/faq/dialer-for-call-centers/page.tsx"
  ],
@@ -22220,6 +23981,9 @@
  ],
  "What does not work": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
+ "What does TCPA compliance require?": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
  ],
  "WHAT DOES THIS LINK DO?": [
   "components/teams/SeatLinksPanel.tsx"
@@ -22230,11 +23994,17 @@
  "What each dialer bills for the weeks and agents you need, with seat minimums and annual terms applied. Embeddable.": [
   "app/resources/page.tsx"
  ],
+ "What eight dialers would bill for your team and the weeks you need.": [
+  "lib/tools/registry.ts"
+ ],
  "What every seat includes": [
   "app/features/page.tsx"
  ],
  "What five agents actually cost, across every tool": [
   "app/vs/view.tsx"
+ ],
+ "What formats does it find?": [
+  "app/tools/phone-number-extractor/page.tsx"
  ],
  "What goes in the denominator, and what does not": [
   "app/faq/view.tsx"
@@ -22257,6 +24027,9 @@
  "What happens to calls that AMD drops?": [
   "app/faq/how-does-amd-work/page.tsx"
  ],
+ "What happens to the p:+1 in front of my phone numbers?": [
+  "app/tools/lead-list-cleaner/page.tsx"
+ ],
  "What happens when a number goes bad?": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
  ],
@@ -22274,6 +24047,18 @@
  ],
  "What hours does DialerSeat enforce?": [
   "app/faq/calling-hours/page.tsx"
+ ],
+ "What if they ask not to be called again?": [
+  "app/tools/cold-call-script-generator/page.tsx"
+ ],
+ "What is a good AHT?": [
+  "app/tools/average-handle-time-calculator/page.tsx"
+ ],
+ "What is a good contact rate for cold calling?": [
+  "app/tools/contact-rate-calculator/page.tsx"
+ ],
+ "What is a good service level?": [
+  "app/tools/erlang-c-calculator/page.tsx"
  ],
  "What is a parallel dialer?": [
   "app/dialing-modes/predictive/page.tsx",
@@ -22317,11 +24102,23 @@
  "What Is an Auto Dialer? How It Works, Types, and Is It Legal | DialerSeat": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
+ "What is E.164 format?": [
+  "app/tools/phone-number-formatter/page.tsx"
+ ],
+ "What is Erlang C?": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
  "What is not translated": [
   "app/faq/languages/page.tsx"
  ],
+ "What is shrinkage?": [
+  "app/tools/erlang-c-calculator/page.tsx"
+ ],
  "What is supported is using a cell phone as the handset while the software runs on a computer. That is a phone in the call, not a dialer on the phone, and it still leaves a laptop open in front of you.": [
   "app/faq/mobile/view.tsx"
+ ],
+ "What is the 3% abandon rule?": [
+  "app/tools/tcpa-compliance-checklist/page.tsx"
  ],
  "What is the 7-in-7 rule in debt collection?": [
   "lib/verticals.ts"
@@ -22344,6 +24141,9 @@
  "What is the difference between an auto dialer and a predictive dialer?": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
+ "What is the difference between answer, connect and contact rate?": [
+  "app/tools/contact-rate-calculator/page.tsx"
+ ],
  "What is the legal abandon rate for a predictive dialer?": [
   "app/tools/abandon-rate-calculator/page.tsx"
  ],
@@ -22355,6 +24155,9 @@
  ],
  "WHAT IS THIS?": [
   "components/SuggestionModal.tsx"
+ ],
+ "What is your": [
+  "app/tools/average-handle-time-calculator/page.tsx"
  ],
  "What It Admits To": [
   "components/teams/TeamModals.tsx"
@@ -22372,6 +24175,9 @@
  "WHAT IT COSTS": [
   "app/screenshots/page.tsx"
  ],
+ "What it fixes: headers DialerSeat doesn't recognise, columns whose header doesn't match what's in them, phone numbers with prefixes or punctuation (p:+1, (555), dots, dashes, extensions), states typed as names, abbreviations or inside an address, full names in one column, ALL CAPS names, duplicate numbers, and commas or quotes inside cells. Anything else in your sheet is kept as its own column and shows on the lead.": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
  "WHAT IT IS": [
   "app/faq/managers/view.tsx"
  ],
@@ -22380,6 +24186,9 @@
  ],
  "WHAT IT SHOWS": [
   "app/faq/compliance-export/view.tsx"
+ ],
+ "What makes a good cold call opener?": [
+  "app/tools/cold-call-script-generator/page.tsx"
  ],
  "What makes it actually useful for you isn't the feature list. It's the economics. Beyond your own $75/week platform cost, you decide, per code, who pays the $35/week seat fee for each agent: you, or the agent. And you decide what the agent pays": [
   "app/faq/managers/view.tsx"
@@ -22408,6 +24217,9 @@
   "app/faq/white-label-mobile/view.tsx",
   "app/faq/white-label/view.tsx"
  ],
+ "What more lines would do": [
+  "components/tools/MathTools.tsx"
+ ],
  "WHAT ONE WEEK COSTS": [
   "app/data/dialer-pricing/page.tsx"
  ],
@@ -22420,12 +24232,21 @@
  "What sales teams call a predictive dialer: several numbers dialed at once for one agent, the first person who answers connected. Anyone else who answers in the same round is an abandoned call.": [
   "app/faq/dialer-glossary/page.tsx"
  ],
+ "What should I include in spend?": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
+ "What should I track on a cold call?": [
+  "app/tools/cold-calling-tracker/page.tsx"
+ ],
  "What smaller shops": [
   "app/dialing-modes/power/page.tsx",
   "app/faq/what-is-a-power-dialer/page.tsx"
  ],
  "What STIR/SHAKEN proves, and what it doesn’t": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
+ ],
+ "What telemarketers pay": [
+  "components/tools/StateDncTable.tsx"
  ],
  "What that covers": [
   "app/faq/dialer-glossary/page.tsx"
@@ -22438,6 +24259,12 @@
  ],
  "What the dialer can’t do for you": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
+ ],
+ "What the National Do Not Call Registry costs for the area codes you call: first five free, then $85 each from October 2026, capped at $23,425.": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
+ ],
+ "What the National Do Not Call Registry will charge for the area codes you call.": [
+  "lib/tools/registry.ts"
  ],
  "What the owner sees": [
   "app/faq/dialer-for-call-centers/page.tsx",
@@ -22460,6 +24287,15 @@
  ],
  "What this team works": [
   "components/teams/TeamModals.tsx"
+ ],
+ "What time can telemarketers call?": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
+ ],
+ "What time can telemarketers call? 8 a.m. to 9 p.m. in the person’s local time. See every state’s local time and whether it’s inside the window right now.": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
+ ],
+ "What time is it": [
+  "app/tools/area-code-lookup/page.tsx"
  ],
  "What to look for in an auto dialer": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
@@ -22495,6 +24331,9 @@
  "What will a dialer": [
   "app/tools/dialer-cost-calculator/page.tsx"
  ],
+ "What will the registry": [
+  "app/tools/dnc-registry-cost-calculator/page.tsx"
+ ],
  "What worked instead": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
  ],
@@ -22520,11 +24359,17 @@
   "app/faq/what-is-a-preview-dialer/page.tsx",
   "app/faq/what-is-a-progressive-dialer/page.tsx"
  ],
+ "What you help with": [
+  "components/tools/ScriptTools.tsx"
+ ],
  "What you would be putting them in": [
   "app/partners/page.tsx"
  ],
  "What you're actually signing up for.": [
   "app/faq/why-dialerseat/view.tsx"
+ ],
+ "What you're doing now": [
+  "components/tools/MathTools.tsx"
  ],
  "What's included in $35 / week (Pro)?": [
   "app/faq/why-we-charge/page.tsx"
@@ -22663,6 +24508,9 @@
  "Where DialerSeat is not the right choice": [
   "app/about/page.tsx"
  ],
+ "Where do I get my rates?": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
+ ],
  "Where do these prices come from?": [
   "app/data/dialer-pricing/page.tsx"
  ],
@@ -22671,6 +24519,9 @@
  ],
  "Where is my data hosted?": [
   "app/faq/view.tsx"
+ ],
+ "Where is my data saved?": [
+  "app/tools/cold-calling-tracker/page.tsx"
  ],
  "Where it came from": [
   "app/dialing-modes/power/page.tsx",
@@ -22768,6 +24619,9 @@
  ],
  "Which rules apply to recruiting calls": [
   "lib/verticals.ts"
+ ],
+ "Which states run": [
+  "app/tools/state-do-not-call-lists/page.tsx"
  ],
  "Whichever script sits first in the order is what agents see by default on that campaign, drag to reorder any time.": [
   "app/faq/scripts/view.tsx"
@@ -22910,6 +24764,9 @@
  "Who puts the label there": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
+ "Who runs it": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "Who should pick {name}": [
   "components/vs-competitor-view.tsx"
  ],
@@ -22928,11 +24785,17 @@
  "WHO WORKS LEADS.": [
   "app/page.tsx"
  ],
+ "Who you are, why you are calling them specifically, and a quick ask for permission to continue, in under fifteen seconds.": [
+  "app/tools/cold-call-script-generator/page.tsx"
+ ],
  "Whoever opens this link will be asked to confirm before joining, nothing happens until they accept.": [
   "components/teams/SeatLinksPanel.tsx"
  ],
  "Whole team has access": [
   "components/teams/TeamsSidebar.tsx"
+ ],
+ "Whose time zone counts, mine or theirs?": [
+  "app/tools/telemarketing-calling-hours/page.tsx"
  ],
  "WHY “SPAM LIKELY” HAPPENS": [
   "app/faq/how-we-keep-numbers-clean/page.tsx"
@@ -22991,8 +24854,14 @@
  "Why DialerSeat? The Thesis, The Team, The Comparison | DialerSeat": [
   "app/faq/why-dialerseat/page.tsx"
  ],
+ "Why did my leads import without names?": [
+  "app/tools/lead-list-cleaner/page.tsx"
+ ],
  "Why did my number get flagged again after it was cleared?": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
+ ],
+ "Why divide by dials that rang?": [
+  "app/tools/contact-rate-calculator/page.tsx"
  ],
  "Why Do My Calls Show “Spam Likely”?": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
@@ -23010,6 +24879,9 @@
  ],
  "Why is “multiple numbers” such a big deal?": [
   "app/faq/why-we-charge/page.tsx"
+ ],
+ "Why is a number marked as impossible?": [
+  "app/tools/phone-number-formatter/page.tsx"
  ],
  "why is compliance important?": [
   "app/faq/how-we-keep-compliance/page.tsx"
@@ -23043,8 +24915,14 @@
  "Why local matters": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
+ "Why look past cost per lead?": [
+  "app/tools/cost-per-lead-calculator/page.tsx"
+ ],
  "Why most legacy dialers don't really care.": [
   "app/faq/why-is-compliance-important/page.tsx"
+ ],
+ "Why not just add more lines?": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
  ],
  "Why not just use one number for everything?": [
   "app/faq/how-many-numbers-do-i-need/page.tsx"
@@ -23134,6 +25012,9 @@
  "Will call quality be acceptable from overseas?": [
   "app/faq/dialer-for-offshore-agents/page.tsx"
  ],
+ "Will it pick up order or card numbers?": [
+  "app/tools/phone-number-extractor/page.tsx"
+ ],
  "Will registering for 10DLC stop my calls being flagged as spam?": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
  ],
@@ -23142,6 +25023,9 @@
  ],
  "Will the prices ever change?": [
   "app/faq/why-we-charge/page.tsx"
+ ],
+ "Window": [
+  "components/tools/CallingHoursChecker.tsx"
  ],
  "WINDOW": [
   "app/faq/calling-hours/page.tsx"
@@ -23203,6 +25087,9 @@
  "Without a business name and a callback number there is no lawful message to play, so DialerSeat does not let predictive run at all: the mode can’t be saved on a campaign, and the dialer refuses to start. Settings shows it as LOCKED or UNLOCKED. It is one field each, set once for the account, and every campaign you own uses them.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
  ],
+ "without a spreadsheet.": [
+  "app/tools/cold-calling-tracker/page.tsx"
+ ],
  "Without burning one out.": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
@@ -23218,6 +25105,15 @@
  "work as a higher-throughput alternative to power, without triggering the FTC's 3% abandon cap. See the": [
   "app/faq/how-does-amd-work/page.tsx"
  ],
+ "Work back from a sales goal to the dials you need each day.": [
+  "lib/tools/registry.ts"
+ ],
+ "Work back from your sales goal to the cold calls you need each day, using your own close, booking and contact rates. How many calls make a sale?": [
+  "app/tools/cold-calls-per-day-calculator/page.tsx"
+ ],
+ "Work out calls per hour from dials and hours, then see what two or three lines would do to dials and conversations per hour.": [
+  "app/tools/calls-per-hour-calculator/page.tsx"
+ ],
  "Work out the cost for your season": [
   "lib/verticals.ts"
  ],
@@ -23226,6 +25122,9 @@
  ],
  "Work out your own number": [
   "app/pricing/page.tsx"
+ ],
+ "Worked backwards: sales ÷ close rate = appointments; appointments ÷ booking rate = conversations; conversations ÷ contact rate = dials. Use your own rates from the last month if you have them; the defaults are placeholders, not benchmarks.": [
+  "components/tools/MathTools.tsx"
  ],
  "working rate-sheet days.": [
   "lib/verticals.ts"
@@ -23262,6 +25161,9 @@
  "Worth knowing,": [
   "app/faq/data-and-recordings/view.tsx"
  ],
+ "Wrap-up per answered call (s)": [
+  "components/tools/MathTools.tsx#prop"
+ ],
  "WRAPPING": [
   "components/teams/AgentCard.tsx"
  ],
@@ -23289,6 +25191,12 @@
  "WRITTEN BY ENGINEERS": [
   "app/faq/why-dialerseat/view.tsx"
  ],
+ "Wrong number of digits": [
+  "lib/tools/phone.ts"
+ ],
+ "Wyoming": [
+  "components/tools/StateDncTable.tsx"
+ ],
  "Year-one total": [
   "app/faq/white-label/view.tsx"
  ],
@@ -23306,6 +25214,9 @@
  ],
  "Yes, predictive dialers are legal in the US under conditions set by the FTC and FCC: a 3% abandon limit per campaign, a 15-second minimum ring, a recorded message and an opt-out. What each rule says, and what DialerSeat enforces for you.": [
   "app/faq/is-a-predictive-dialer-legal/page.tsx"
+ ],
+ "Yes, slowly, once in the middle and once at the end. Most people listening are not holding a pen.": [
+  "app/tools/sales-voicemail-script-generator/page.tsx"
  ],
  "Yes, sometimes. There's a noticeable beat between when the human says \"hello\" and when the agent comes on the line, that's AMD doing its work. On lower-quality carrier paths it can be 2+ seconds, which is enough to make people hang up.": [
   "app/faq/how-does-amd-work/page.tsx"
@@ -23378,6 +25289,9 @@
  ],
  "Yes. Export the list as a CSV and upload it; the columns are detected automatically. If your CRM or data tool can send a webhook, lead drip on Manager+ sends new leads straight into a running campaign. DialerSeat does not sell lead data, so you keep your own source.": [
   "app/faq/dialer-for-real-estate/page.tsx"
+ ],
+ "Yes. Export your calls as a CSV, or download the blank template and track there instead.": [
+  "app/tools/cold-calling-tracker/page.tsx"
  ],
  "Yes. Florida and Maryland are commonly cited at 8am-8pm, Louisiana and Alabama restrict Sunday solicitation, Wisconsin bans Sunday telemarketing under its no-call statute, and Texas applies a narrower Sunday window. Several states have passed “mini-TCPA” laws since 2021 with their own hours, holiday and consent rules. DialerSeat does not currently enforce these state-specific variations automatically, it enforces the 9am-9pm baseline. Meeting stricter state law is your responsibility.": [
   "app/faq/calling-hours/page.tsx"
@@ -23488,6 +25402,9 @@
  ],
  "You bundle dialer access at / week": [
   "app/faq/managers/view.tsx"
+ ],
+ "You can call now": [
+  "components/tools/CallingHoursChecker.tsx"
  ],
  "You can cancel at any time from your billing dashboard. Cancellation takes effect at the end of your current billing period, you keep access until then. No refund is issued for the unused portion of the current week.": [
   "app/terms/page.tsx"
@@ -23925,6 +25842,12 @@
  "Your field names, not ours": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
+ "Your first name": [
+  "components/tools/ScriptTools.tsx"
+ ],
+ "Your header": [
+  "components/tools/LeadListCleaner.tsx"
+ ],
  "Your IP address and browser user-agent (for session security)": [
   "app/privacy/page.tsx"
  ],
@@ -23951,6 +25874,9 @@
  ],
  "Your list contains 5,000 leads across all four U.S. time zones. When dialing starts, the system filters in real-time: leads currently in their local 9 AM-9 PM window are eligible, leads outside it are skipped with": [
   "app/faq/how-we-keep-compliance/page.tsx"
+ ],
+ "Your list stays in this browser tab. Nothing is uploaded: open your browser's network tab while you use it and you will see no requests.": [
+  "components/tools/PhoneNumberFormatter.tsx"
  ],
  "Your list, from whatever tool you use": [
   "app/faq/dialer-for-real-estate/page.tsx"
@@ -24036,6 +25962,9 @@
  "Your producers, your floor, your numbers.": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
+ "Your real dials per hour, and what more lines would do to it.": [
+  "lib/tools/registry.ts"
+ ],
  "YOUR RECENT CALLS": [
   "components/teams/CampaignDetail.tsx"
  ],
@@ -24068,6 +25997,9 @@
  ],
  "Your session expired. Sign in again to apply this code.": [
   "app/billing/page.tsx"
+ ],
+ "Your sheet is read in this browser tab and never uploaded. The example above is made up, in the shape real broken sheets arrive in.": [
+  "components/tools/LeadListCleaner.tsx"
  ],
  "Your subscription has been resumed.": [
   "app/dashboard/settings/page.tsx"
@@ -24144,6 +26076,9 @@
  "Zero abandonment risk by design, one line per agent. You stay 100% within FTC and TCPA rules without thinking about it.": [
   "app/dialing-modes/power/page.tsx",
   "app/faq/what-is-a-power-dialer/page.tsx"
+ ],
+ "ZIP code": [
+  "lib/tools/leadSheet.ts"
  ],
  "ZONE": [
   "app/faq/calling-hours/page.tsx"

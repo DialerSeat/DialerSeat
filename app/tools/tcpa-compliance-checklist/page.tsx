@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import { TcpaChecklist } from '@/components/tools/TrackerAndChecklist'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/tcpa-compliance-checklist: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/tcpa-compliance-checklist'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "TCPA Compliance Checklist for Outbound Calling",
-  description: "The TCPA and Telemarketing Sales Rule requirements an outbound campaign has to meet, each with its regulation: DNC, consent, hours, 3% abandons, caller ID.",
-  social: "TCPA compliance checklist",
+  title: msg("TCPA Compliance Checklist for Outbound Calling"),
+  description: msg("The TCPA and Telemarketing Sales Rule requirements an outbound campaign has to meet, each with its regulation: DNC, consent, hours, 3% abandons, caller ID."),
+  social: msg("TCPA compliance checklist"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("What does TCPA compliance require?"), answer: msg("For outbound telemarketing: scrubbing Do Not Call lists, consent for autodialed or prerecorded calls to mobiles, calling only between 8 a.m. and 9 p.m. local time, and honoring opt-outs. The FTC’s Telemarketing Sales Rule adds the abandoned-call and caller ID rules.") },

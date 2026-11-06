@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import { VoicemailScriptGenerator } from '@/components/tools/ScriptTools'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/sales-voicemail-script-generator: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/sales-voicemail-script-generator'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "Sales Voicemail Script Generator: 3 Under 30 Seconds",
-  description: "Three sales voicemail scripts under 30 seconds each: the first touch, a follow-up and the last message, written for your industry.",
-  social: "Sales voicemail script generator",
+  title: msg("Sales Voicemail Script Generator: 3 Under 30 Seconds"),
+  description: msg("Three sales voicemail scripts under 30 seconds each: the first touch, a follow-up and the last message, written for your industry."),
+  social: msg("Sales voicemail script generator"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("How long should a sales voicemail be?"), answer: msg("Under 30 seconds, about 75 words at a normal pace. Long enough for who you are, why you called and your number, twice.") },

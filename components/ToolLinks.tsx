@@ -1,5 +1,5 @@
 import Link from '@/components/LocaleLink'
-import { getLocale, getT } from '@/lib/i18n/server'
+import { getT } from '@/lib/i18n/server'
 import { TOOLS, toolPath, type ToolEntry } from '@/lib/tools/registry'
 
 // =============================================================================
@@ -8,18 +8,15 @@ import { TOOLS, toolPath, type ToolEntry } from '@/lib/tools/registry'
 // A tool page earns nothing if no page links to it, and the reader of the
 // calling-hours explainer is the person the calling-hours checker is for.
 //
-// An untranslated tool is left out of a translated page rather than sending a
-// Spanish reader to English: `englishOnly` in lib/tools/registry.ts decides, so
-// these links appear in every language by themselves once a tool is translated.
 // Name and blurb come from the registry so a renamed tool can't leave a stale
 // link behind.
 // =============================================================================
 
 export default async function ToolLinks({ slugs }: { slugs: string[] }) {
-  const [locale, t] = await Promise.all([getLocale(), getT()])
+  const t = await getT()
   const tools = slugs
     .map((slug) => TOOLS.find((tool) => tool.slug === slug))
-    .filter((tool): tool is ToolEntry => !!tool && (locale === 'en' || !tool.englishOnly))
+    .filter((tool): tool is ToolEntry => !!tool)
   if (tools.length === 0) return null
 
   return (

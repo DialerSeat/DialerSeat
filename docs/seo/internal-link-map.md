@@ -1,6 +1,6 @@
 # FAQ and vs links, with the terms to use
 
-Built on 5 Nov 2026 in `lib/relatedLinks.ts`, which is the source of truth; the tables below are the plan it came from, and the live labels drop "best" and "cheapest". Shown in all 12 languages; on a translated page, links to tools still in English are left out. These are links between your own pages. They spread what authority the site has and show Google which pages belong together, but they aren't backlinks from other sites, which are what move rankings (see [PLAYBOOK.md](PLAYBOOK.md), stage 6).
+Built on 5 Nov 2026 in `lib/relatedLinks.ts`, which is the source of truth; the tables below are the plan it came from, and the live labels drop "best" and "cheapest". Shown in all 12 languages. These are links between your own pages. They spread what authority the site has and show Google which pages belong together, but they aren't backlinks from other sites, which are what move rankings (see [PLAYBOOK.md](PLAYBOOK.md), stage 6).
 
 ## What the 5 Nov crawl found
 

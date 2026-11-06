@@ -16,10 +16,7 @@ import { msg } from '@/lib/i18n/msg'
 //     /faq/what-is-a-predictive-dialer declare /dialing-modes/* as canonical, so
 //     links go there. tests/unit/relatedLinks.test.ts checks every target exists.
 //   - Translated in all 12 languages, using each dictionary's existing words for
-//     the same terms. A link to a tool still in English only (lib/tools/registry)
-//     keeps a plain label: components/RelatedLinks hides it on translated pages
-//     rather than sending a reader to English. Wrap the label in msg() when the
-//     tool is translated.
+//     the same terms.
 // =============================================================================
 
 export interface RelatedLink {
@@ -35,7 +32,7 @@ const SEGMENT: Record<Competitor['segment'], RelatedLink[]> = {
     { href: '/faq/is-a-predictive-dialer-legal', label: msg("Is a predictive dialer legal?") },
     { href: '/faq/how-does-amd-work', label: msg("Answering machine detection") },
     { href: '/tools/abandon-rate-calculator', label: msg("Abandon rate formula") },
-    { href: '/tools/erlang-c-calculator', label: 'Call center staffing calculator' },
+    { href: '/tools/erlang-c-calculator', label: msg("Call center staffing calculator") },
     { href: '/faq/dialer-for-call-centers', label: msg("Dialer for call centers") },
     { href: '/faq/why-we-charge', label: msg("Predictive dialer pricing") },
   ],
@@ -43,7 +40,7 @@ const SEGMENT: Record<Competitor['segment'], RelatedLink[]> = {
     { href: '/faq/dialer-for-real-estate', label: msg("Power dialer for real estate") },
     { href: '/faq/local-presence-dialing', label: msg("Local presence dialing") },
     { href: '/faq/how-to-remove-spam-likely', label: msg("How to remove Spam Likely") },
-    { href: '/tools/lead-list-cleaner', label: 'Lead list cleaner' },
+    { href: '/tools/lead-list-cleaner', label: msg("Lead list cleaner") },
     { href: '/faq/why-we-charge', label: msg("Power dialer pricing") },
   ],
   sales_crm: [
@@ -166,13 +163,13 @@ export const RELATED_BY_ROUTE: Record<string, RelatedLink[]> = {
     { href: '/faq/how-to-remove-spam-likely', label: msg("Free Caller Registry and Spam Likely") },
   ],
   '/faq/how-we-keep-compliance': [
-    { href: '/tools/state-do-not-call-lists', label: 'State do not call lists' },
+    { href: '/tools/state-do-not-call-lists', label: msg("State do not call lists") },
   ],
   '/faq/calling-hours': [
-    { href: '/tools/state-do-not-call-lists', label: 'State do not call lists' },
+    { href: '/tools/state-do-not-call-lists', label: msg("State do not call lists") },
   ],
   '/vs/manual-dialing': [
-    { href: '/tools/calls-per-hour-calculator', label: 'Calls per hour calculator' },
+    { href: '/tools/calls-per-hour-calculator', label: msg("Calls per hour calculator") },
     { href: '/faq/what-is-an-auto-dialer', label: msg("What is an auto dialer?") },
     { href: '/dialing-modes/power', label: msg("Power dialer vs predictive dialer") },
   ],

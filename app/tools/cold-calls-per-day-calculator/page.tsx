@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import { ColdCallsPerDayCalculator } from '@/components/tools/MathTools'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/cold-calls-per-day-calculator: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/cold-calls-per-day-calculator'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "How Many Cold Calls per Day? Calculator",
-  description: "Work back from your sales goal to the cold calls you need each day, using your own close, booking and contact rates. How many calls make a sale?",
-  social: "How many cold calls per day do you need?",
+  title: msg("How Many Cold Calls per Day? Calculator"),
+  description: msg("Work back from your sales goal to the cold calls you need each day, using your own close, booking and contact rates. How many calls make a sale?"),
+  social: msg("How many cold calls per day do you need?"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("How many cold calls should I make per day?"), answer: msg("Enough to hit your goal at your own rates, which is what this works out. There is no universal number, because a change in contact rate or booking rate moves the answer a long way.") },

@@ -10,6 +10,7 @@ import { toolMetadata } from '@/components/tools/ToolPage'
 import { TOOLS, TOOL_GROUPS, toolPath } from '@/lib/tools/registry'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // =============================================================================
 // /tools — every free tool on one page
@@ -22,12 +23,16 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/tools'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: 'Free Dialer & Cold Calling Tools: No Signup',
-  description: 'Free tools for outbound calling: clean a lead list, format phone numbers, look up area codes, check calling hours, staff a queue, write a script.',
-  social: 'Free tools for outbound calling',
+  title: msg('Free Dialer & Cold Calling Tools: No Signup'),
+  description: msg('Free tools for outbound calling: clean a lead list, format phone numbers, look up area codes, check calling hours, staff a queue, write a script.'),
+  social: msg('Free tools for outbound calling'),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 export default async function ToolsHub() {
   await primeLocale()

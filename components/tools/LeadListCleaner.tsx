@@ -116,7 +116,7 @@ export default function LeadListCleaner() {
                     <td><b>{c.header || `Column ${c.index + 1}`}</b></td>
                     <td style={{ color: '#5a6072' }}>
                       {c.sample.join(' · ') || '—'}
-                      {c.warning && <div className="tk-pill warn" style={{ marginTop: 6, whiteSpace: 'normal' }}>{t(c.warning)}</div>}
+                      {c.warning && <div className="tk-pill warn" style={{ marginTop: 6, whiteSpace: 'normal' }}>{t(c.warning, c.warningVars)}</div>}
                     </td>
                     <td style={{ minWidth: 200 }}>
                       <select value={c.type} onChange={(e) => setCol(c.index, { type: e.target.value as FieldType })}
@@ -191,7 +191,7 @@ export default function LeadListCleaner() {
                       <tr key={`r${i}`}><td>{t("Row {n}", { n: x.row })}</td><td>{x.value}</td><td><span className="tk-pill no">{t("Removed")}: {t(x.reason)}</span></td></tr>
                     ))}
                     {r.notes.map((x, i) => (
-                      <tr key={`n${i}`}><td>{t("Row {n}", { n: x.row })}</td><td>{x.phone}</td><td><span className="tk-pill warn">{t(x.note)}</span></td></tr>
+                      <tr key={`n${i}`}><td>{t("Row {n}", { n: x.row })}</td><td>{x.phone}</td><td><span className="tk-pill warn">{t(x.note, x.vars)}</span></td></tr>
                     ))}
                   </tbody>
                 </table>

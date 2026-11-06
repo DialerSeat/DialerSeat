@@ -6,7 +6,7 @@ import { ALL_SHOTS } from '@/lib/screenshots'
 import { VERTICALS } from '@/lib/verticals'
 import { COUNTRY_RULES } from '@/lib/countryRules'
 import { ENABLED_LOCALES, isLocalizablePath, localizedPath } from '@/lib/i18n/locales'
-import { TOOLS, toolPath, ENGLISH_ONLY_PATHS } from '@/lib/tools/registry'
+import { TOOLS, toolPath } from '@/lib/tools/registry'
 
 
 
@@ -237,9 +237,7 @@ function withLanguages(entries: MetadataRoute.Sitemap): MetadataRoute.Sitemap {
   for (const entry of entries) {
     const path = entry.url.startsWith(APEX) ? entry.url.slice(APEX.length) || '/' : null
     if (!path) { out.push(entry); continue }
-    // English-only tools (not yet translated) list no language versions, so no
-    // crawler is sent to a Spanish address that shows English.
-    if (!isLocalizablePath(path) || ENGLISH_ONLY_PATHS.has(path)) { out.push(entry); continue }
+    if (!isLocalizablePath(path)) { out.push(entry); continue }
     const languages: Record<string, string> = {}
     for (const l of ENABLED_LOCALES) languages[l] = `${APEX}${localizedPath(l, path)}`
     // The pages' own hreflang tags name English as x-default; the sitemap says

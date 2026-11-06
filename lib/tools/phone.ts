@@ -1,3 +1,4 @@
+import { msg } from '@/lib/i18n/msg'
 import { normalizeToE164 } from '@/lib/phoneNormalize'
 import { isImpossibleUsNumber } from '@/lib/callingWindow'
 import { classifyAreaCode } from '@/lib/areaCode'
@@ -59,7 +60,7 @@ export function checkPhone(raw: string): PhoneVerdict {
   // export "p:+15555550100", other tools "tel:", "cell:", "Phone:". The dialer's
   // importer strips non-digits and accepts these, so they are accepted here.
   let value = raw.trim().replace(/^(?:p|ph|phone|tel|cell|mobile|m|c|h|w|home|work)\s*[:#]\s*/i, '')
-  if (!value) return { ok: false, reason: 'Empty' }
+  if (!value) return { ok: false, reason: msg("Empty") }
   // What a spreadsheet does to a number column. 3175550100.0 still has every
   // digit, and so does 3.175550142E+9 once expanded, because the mantissa carries them
   // all. 3.18E+09 does not: the rest of the number no longer exists anywhere
@@ -67,15 +68,15 @@ export function checkPhone(raw: string): PhoneVerdict {
   if (/^\d{10,11}\.0+$/.test(value)) value = value.replace(/\.0+$/, '')
   const sci = value.match(/^(\d)\.?(\d*)e\+?(\d{1,2})$/i)
   if (sci) {
-    if (sci[2].length < Number(sci[3])) return { ok: false, reason: 'Rounded by a spreadsheet: the digits are gone, use the original file' }
+    if (sci[2].length < Number(sci[3])) return { ok: false, reason: msg("Rounded by a spreadsheet: the digits are gone, use the original file") }
     value = sci[1] + sci[2]
   }
-  if (/[a-zA-Z]/.test(value.replace(/\b(ext|x)\.?\s*\d+$/i, ''))) return { ok: false, reason: 'Contains letters' }
+  if (/[a-zA-Z]/.test(value.replace(/\b(ext|x)\.?\s*\d+$/i, ''))) return { ok: false, reason: msg("Contains letters") }
   const e164 = normalizeToE164(value.replace(/\s*(ext|x)\.?\s*\d+$/i, ''))
-  if (!e164) return { ok: false, reason: 'Wrong number of digits' }
-  if (!e164.startsWith('+1') || e164.length !== 12) return { ok: false, reason: 'Not a US or Canadian number' }
+  if (!e164) return { ok: false, reason: msg("Wrong number of digits") }
+  if (!e164.startsWith('+1') || e164.length !== 12) return { ok: false, reason: msg("Not a US or Canadian number") }
   const ten = e164.slice(2)
-  if (isImpossibleUsNumber(ten)) return { ok: false, reason: 'Not a number the North American plan can route' }
+  if (isImpossibleUsNumber(ten)) return { ok: false, reason: msg("Not a number the North American plan can route") }
   const areaCode = ten.slice(0, 3)
   const cls = classifyAreaCode(areaCode)
   switch (cls.kind) {
@@ -83,11 +84,11 @@ export function checkPhone(raw: string): PhoneVerdict {
       const tz = STATE_TIMEZONES[cls.state] ?? null
       return { ok: true, e164, areaCode, place: STATE_NAMES[cls.state] ?? cls.state, tz, note: null }
     }
-    case 'canada': return { ok: true, e164, areaCode, place: 'Canada', tz: null, note: 'Canadian number: Canadian calling rules apply' }
-    case 'toll_free': return { ok: true, e164, areaCode, place: 'Toll-free', tz: null, note: 'Toll-free: a business line, not a person' }
-    case 'non_geographic': return { ok: false, reason: 'Service or non-geographic code, not a person' }
-    case 'other_nanp': return { ok: true, e164, areaCode, place: 'Caribbean / other NANP', tz: null, note: 'Outside the US and Canada: international rules and rates' }
-    default: return { ok: true, e164, areaCode, place: 'Unrecognised area code', tz: null, note: 'Area code not in our table yet: check it before dialing' }
+    case 'canada': return { ok: true, e164, areaCode, place: msg("Canada"), tz: null, note: msg("Canadian number: Canadian calling rules apply") }
+    case 'toll_free': return { ok: true, e164, areaCode, place: msg("Toll-free"), tz: null, note: msg("Toll-free: a business line, not a person") }
+    case 'non_geographic': return { ok: false, reason: msg("Service or non-geographic code, not a person") }
+    case 'other_nanp': return { ok: true, e164, areaCode, place: msg("Caribbean / other NANP"), tz: null, note: msg("Outside the US and Canada: international rules and rates") }
+    default: return { ok: true, e164, areaCode, place: msg("Unrecognised area code"), tz: null, note: msg("Area code not in our table yet: check it before dialing") }
   }
 }
 

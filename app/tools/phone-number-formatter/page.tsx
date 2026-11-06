@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import PhoneNumberFormatter from '@/components/tools/PhoneNumberFormatter'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/phone-number-formatter: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/phone-number-formatter'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "Phone Number Formatter: E.164, Clean & Dedupe a List",
-  description: "Format a list of US and Canadian phone numbers to E.164 or (555) 555-0100, remove duplicates and flag numbers that can’t be dialed. Free, in your browser.",
-  social: "Phone number formatter and cleaner",
+  title: msg("Phone Number Formatter: E.164, Clean & Dedupe a List"),
+  description: msg("Format a list of US and Canadian phone numbers to E.164 or (555) 555-0100, remove duplicates and flag numbers that can’t be dialed. Free, in your browser."),
+  social: msg("Phone number formatter and cleaner"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("What is E.164 format?"), answer: msg("The international standard for phone numbers: a plus sign, the country code and the number, with no spaces or punctuation. A US number in E.164 is +1 followed by its 10 digits, like +14155550132.") },

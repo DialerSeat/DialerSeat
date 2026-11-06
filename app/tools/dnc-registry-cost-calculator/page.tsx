@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import { DncCostCalculator } from '@/components/tools/MathTools'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/dnc-registry-cost-calculator: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/dnc-registry-cost-calculator'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "Do Not Call Registry Cost Calculator",
-  description: "What the National Do Not Call Registry costs for the area codes you call: first five free, then $85 each from October 2026, capped at $23,425.",
-  social: "Do Not Call registry cost calculator",
+  title: msg("Do Not Call Registry Cost Calculator"),
+  description: msg("What the National Do Not Call Registry costs for the area codes you call: first five free, then $85 each from October 2026, capped at $23,425."),
+  social: msg("Do Not Call registry cost calculator"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("How much does the Do Not Call Registry cost?"), answer: msg("The first five area codes are free. From 1 October 2026, each additional area code is $85, and the total is capped at $23,425 for every area code in the country.") },

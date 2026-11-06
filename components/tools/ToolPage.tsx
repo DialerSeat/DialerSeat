@@ -10,7 +10,6 @@ import CiteThis from '@/components/CiteThis'
 import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import { pageDate } from '@/lib/pageDates'
-import { withShareImage } from '@/lib/i18n/metadata'
 import { primeLocale, t } from '@/lib/i18n/server'
 import { msg } from '@/lib/i18n/msg'
 import ToolLinks from '@/components/ToolLinks'
@@ -34,16 +33,13 @@ export interface ToolFaq { question: string; answer: string }
 
 export function toolMetadata(o: { route: string; title: string; description: string; social: string }): Metadata {
   const url = `https://dialerseat.com${o.route}`
-  // English only until translated (lib/tools/registry `englishOnly`): no
-  // hreflang alternates, so no language version is advertised that would
-  // show English text.
-  return withShareImage({
+  return {
     title: o.title,
     description: o.description,
     alternates: { canonical: url },
     openGraph: { title: o.social, description: o.description, url, type: 'website' },
     twitter: { card: 'summary_large_image', title: o.social, description: o.description },
-  })
+  }
 }
 
 /**

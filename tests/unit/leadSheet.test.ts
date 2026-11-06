@@ -37,7 +37,7 @@ describe('lead list cleaner', () => {
     const { cols } = run(BROKEN)
     expect(cols[0].type).toBe('full_name')
     expect(cols[1].type).toBe('custom')
-    expect(cols[1].warning).toContain('Last name')
+    expect(cols[1].warningVars?.header).toBe('Last name')
     expect(cols[2].type).toBe('custom')
     expect(cols[2].customName).toBe('age')
     expect(cols[3].type).toBe('phone')
@@ -89,7 +89,7 @@ describe('lead list cleaner', () => {
     expect(readState('Yes')).toBeNull()
     const { out, report } = run(BROKEN)
     expect(out.slice(1).find((r) => r[2] === '8085550106')?.[4]).toBe('HI')
-    expect(report.notes.some((n) => n.note.includes('Yes'))).toBe(true)
+    expect(report.notes.some((n) => n.vars?.value === 'Yes')).toBe(true)
   })
 
   it('handles a sheet with no header row', () => {

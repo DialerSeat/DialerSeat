@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import { ErlangCCalculator } from '@/components/tools/MathTools'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/erlang-c-calculator: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/erlang-c-calculator'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "Erlang C Calculator: Call Center Staffing",
-  description: "How many agents does your queue need? Enter calls, handle time and a service level target to get agents, scheduled staff, occupancy and speed of answer.",
-  social: "Erlang C call center staffing calculator",
+  title: msg("Erlang C Calculator: Call Center Staffing"),
+  description: msg("How many agents does your queue need? Enter calls, handle time and a service level target to get agents, scheduled staff, occupancy and speed of answer."),
+  social: msg("Erlang C call center staffing calculator"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("What is Erlang C?"), answer: msg("A formula that predicts how long callers wait for a given number of agents, from call volume and handle time. Call centers use it to find the fewest agents that still hit a service level.") },

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import StateDncTable from '@/components/tools/StateDncTable'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/state-do-not-call-lists: autocomplete on 2026-11-05 finishes "state do
 // not call list" with "texas", "florida", "indiana", "pa" and more, and the
@@ -10,12 +11,16 @@ import { msg } from '@/lib/i18n/msg'
 
 const ROUTE = '/tools/state-do-not-call-lists'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "State Do Not Call Lists: Who Runs Them, What They Cost",
-  description: "Eleven states with their own do not call rules, checked on each state's site: who runs the list, what telemarketers pay and how often it changes.",
-  social: "State do not call lists, checked on each state's own site",
+  title: msg("State Do Not Call Lists: Who Runs Them, What They Cost"),
+  description: msg("Eleven states with their own do not call rules, checked on each state's site: who runs the list, what telemarketers pay and how often it changes."),
+  social: msg("State do not call lists, checked on each state's own site"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("Do states have their own Do Not Call lists?"), answer: msg("Some do. The table covers the eleven that compliance vendors usually name. Ten have a list of their own and Wyoming’s law points at a private one. The National Do Not Call Registry applies in every state whatever the state does.") },

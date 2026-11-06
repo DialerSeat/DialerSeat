@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import { CallsPerHourCalculator } from '@/components/tools/MathTools'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/calls-per-hour-calculator: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/calls-per-hour-calculator'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "Calls Per Hour Calculator: Dials per Hour, 1 to 3 Lines",
-  description: "Work out calls per hour from dials and hours, then see what two or three lines would do to dials and conversations per hour.",
-  social: "Calls per hour calculator",
+  title: msg("Calls Per Hour Calculator: Dials per Hour, 1 to 3 Lines"),
+  description: msg("Work out calls per hour from dials and hours, then see what two or three lines would do to dials and conversations per hour."),
+  social: msg("Calls per hour calculator"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("How do you calculate calls per hour?"), answer: msg("Divide the dials made by the hours spent dialing. 240 dials in 4 hours is 60 calls per hour.") },

@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import { ColdCallScriptGenerator } from '@/components/tools/ScriptTools'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/cold-call-script-generator: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/cold-call-script-generator'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "Cold Call Script Generator: Openers & Rebuttals",
-  description: "Generate a cold calling script for real estate, insurance, mortgage, solar, B2B or recruiting: opener, questions, a close and objection rebuttals.",
-  social: "Cold call script generator",
+  title: msg("Cold Call Script Generator: Openers & Rebuttals"),
+  description: msg("Generate a cold calling script for real estate, insurance, mortgage, solar, B2B or recruiting: opener, questions, a close and objection rebuttals."),
+  social: msg("Cold call script generator"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("What makes a good cold call opener?"), answer: msg("Who you are, why you are calling them specifically, and a quick ask for permission to continue, in under fifteen seconds.") },

@@ -1,3 +1,4 @@
+import { msg } from '@/lib/i18n/msg'
 import { normalizeState } from '@/lib/normalizeState'
 import { classifyAreaCode } from '@/lib/areaCode'
 import { checkPhone, STATE_NAMES } from '@/lib/tools/phone'
@@ -35,10 +36,10 @@ export type FieldType =
   | 'custom' | 'skip'
 
 export const FIELD_LABELS: Record<FieldType, string> = {
-  first_name: 'First name', last_name: 'Last name', full_name: 'Full name (split it)', phone: 'Phone',
-  email: 'Email', state: 'State', city: 'City', zip: 'ZIP code', address: 'Address', notes: 'Notes',
-  consent_date: 'Consent date', consent_source: 'Consent source', consent_description: 'Consent text',
-  custom: 'Keep as its own column', skip: 'Leave out',
+  first_name: msg("First name"), last_name: msg("Last name"), full_name: msg("Full name (split it)"), phone: msg("Phone"),
+  email: msg("Email"), state: msg("State"), city: msg("City"), zip: msg("ZIP code"), address: msg("Address"), notes: msg("Notes"),
+  consent_date: msg("Consent date"), consent_source: msg("Consent source"), consent_description: msg("Consent text"),
+  custom: msg("Keep as its own column"), skip: msg("Leave out"),
 }
 
 const ALIASES: Partial<Record<FieldType, string[]>> = {
@@ -151,6 +152,7 @@ export interface ColumnGuess {
   customName: string
   /** Why the header was overruled, shown to the user. */
   warning: string | null
+  warningVars?: Record<string, string>
   sample: string[]
 }
 
@@ -187,6 +189,7 @@ export function guessColumns(header: string[] | null, rows: string[][]): ColumnG
     }
     let type: FieldType
     let warning: string | null = null
+    let warningVars: Record<string, string> | undefined
     if (byHeader && (agrees[byHeader] ?? true)) type = byHeader
     else {
       if (s.phone >= 0.6) type = 'phone'
@@ -196,14 +199,15 @@ export function guessColumns(header: string[] | null, rows: string[][]): ColumnG
       else type = 'custom'
       if (byHeader && type !== byHeader) {
         const eg = values.slice(0, 3).join(', ')
-        warning = `The header says "${h}", but the values look different (${eg}). Mapped by what the column actually holds.`
+        warning = msg("The header says \"{header}\", but the values look different ({sample}). Mapped by what the column actually holds.")
+        warningVars = { header: h, sample: eg }
       }
     }
     let customName = h ? slug(h) : ''
     if (type === 'custom') {
       if (!h || (byHeader && warning)) customName = s.age >= 0.6 ? 'age' : `field_${i + 1}`
     }
-    guesses.push({ index: i, header: h, type, customName: customName || `field_${i + 1}`, warning, sample: values.slice(0, 3) })
+    guesses.push({ index: i, header: h, type, customName: customName || `field_${i + 1}`, warning, warningVars, sample: values.slice(0, 3) })
   }
   // One name column holding "First Last" for most rows, and no last-name
   // column: that is a full name and should be split.
@@ -232,7 +236,7 @@ export interface CleanReport {
   removed: { row: number; value: string; reason: string }[]
   duplicates: number
   fixes: { phones: number; states: number; statesFromAreaCode: number; namesSplit: number; namesRecased: number; cellsCleaned: number }
-  notes: { row: number; phone: string; note: string }[]
+  notes: { row: number; phone: string; note: string; vars?: Record<string, string> }[]
 }
 
 /** Strip what the importer would misread: commas, quotes, tabs, line breaks. */
@@ -308,7 +312,7 @@ export function cleanLeads(rows: string[][], cols: ColumnGuess[], o: CleanOption
       const c = classifyAreaCode(ten.slice(0, 3))
       if (c.kind === 'us') {
         state = c.state; fixes.statesFromAreaCode++
-        if (rawState) notes.push({ row: rowNo, phone: ten, note: `State "${rawState}" not readable: used the area code's state (${c.state})` })
+        if (rawState) notes.push({ row: rowNo, phone: ten, note: msg("State \"{value}\" not readable: used the area code's state ({code})"), vars: { value: rawState, code: c.state } })
       }
     } else if (rawState) state = rawState
 

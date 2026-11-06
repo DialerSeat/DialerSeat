@@ -4,7 +4,6 @@ import { join } from 'node:path'
 import { COMPETITORS } from '@/lib/competitors'
 import { RELATED_BY_ROUTE, relatedForCompetitor, type RelatedLink } from '@/lib/relatedLinks'
 import { ENABLED_LOCALES } from '@/lib/i18n/locales'
-import { ENGLISH_ONLY_PATHS } from '@/lib/tools/registry'
 
 const pageExists = (route: string) =>
   existsSync(join(process.cwd(), 'app', route, 'page.tsx'))
@@ -49,7 +48,7 @@ describe('related links in every language', () => {
   const shownAbroad = [
     ...Object.values(RELATED_BY_ROUTE).flat(),
     ...COMPETITORS.flatMap((c) => relatedForCompetitor(c)),
-  ].filter((l) => !ENGLISH_ONLY_PATHS.has(l.href))
+  ]
   const labels = new Set(['Related', ...shownAbroad.map((l) => l.label)])
 
   for (const locale of ENABLED_LOCALES.filter((l) => l !== 'en')) {
@@ -58,10 +57,4 @@ describe('related links in every language', () => {
       expect([...labels].filter((k) => !dict[k]?.trim())).toEqual([])
     })
   }
-
-  it('every competitor page still has links on a translated page', () => {
-    for (const c of COMPETITORS) {
-      expect(relatedForCompetitor(c).filter((l) => !ENGLISH_ONLY_PATHS.has(l.href)).length, c.slug).toBeGreaterThan(2)
-    }
-  })
 })

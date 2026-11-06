@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import { ContactRateCalculator } from '@/components/tools/MathTools'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/contact-rate-calculator: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/contact-rate-calculator'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "Answer, Connect & Contact Rate Calculator",
-  description: "Calculate answer rate, connect rate and contact rate the right way: over dials that actually rang, so failed dials aren’t blamed on your list.",
-  social: "Answer, connect and contact rate calculator",
+  title: msg("Answer, Connect & Contact Rate Calculator"),
+  description: msg("Calculate answer rate, connect rate and contact rate the right way: over dials that actually rang, so failed dials aren’t blamed on your list."),
+  social: msg("Answer, connect and contact rate calculator"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("What is the difference between answer, connect and contact rate?"), answer: msg("Answer rate counts any pickup. Connect rate means different things at different vendors, often the same as answer rate, so here it counts pickups by a person. Contact rate counts calls that produced a real outcome with the person, rather than just being answered.") },

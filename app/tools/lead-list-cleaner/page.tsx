@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import LeadListCleaner from '@/components/tools/LeadListCleaner'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/lead-list-cleaner: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/lead-list-cleaner'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "Lead List Cleaner: Fix Any Lead Sheet for Your Dialer",
-  description: "Fix a lead sheet in your browser: wrong headers, p:+1 phones, states typed every way, full names, ALL CAPS, duplicates. Download a clean CSV. Free.",
-  social: "Lead list cleaner: any sheet, ready to dial",
+  title: msg("Lead List Cleaner: Fix Any Lead Sheet for Your Dialer"),
+  description: msg("Fix a lead sheet in your browser: wrong headers, p:+1 phones, states typed every way, full names, ALL CAPS, duplicates. Download a clean CSV. Free."),
+  social: msg("Lead list cleaner: any sheet, ready to dial"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("Why did my leads import without names?"), answer: msg("Usually the headers. An importer matches column names exactly, so \"FIRST NAME\" or \"Last name\" can be ignored even though the data is there. This cleaner renames columns to first_name, last_name, phone, email and state, which every import reads.") },

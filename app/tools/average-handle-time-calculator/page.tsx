@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import { AhtCalculator } from '@/components/tools/MathTools'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/average-handle-time-calculator: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/average-handle-time-calculator'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "Average Handle Time Calculator (AHT)",
-  description: "Calculate average handle time from talk, hold and after-call work, see what share each takes, and what a call costs in agent time.",
-  social: "Average handle time calculator",
+  title: msg("Average Handle Time Calculator (AHT)"),
+  description: msg("Calculate average handle time from talk, hold and after-call work, see what share each takes, and what a call costs in agent time."),
+  social: msg("Average handle time calculator"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("How do you calculate average handle time?"), answer: msg("Add total talk time, hold time and after-call work, then divide by the number of calls handled. 600 minutes over 120 calls is an AHT of 5 minutes.") },

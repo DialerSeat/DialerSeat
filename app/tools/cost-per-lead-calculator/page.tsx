@@ -2,18 +2,23 @@ import type { Metadata } from 'next'
 import ToolPage, { toolMetadata } from '@/components/tools/ToolPage'
 import { CostPerLeadCalculator } from '@/components/tools/MathTools'
 import { msg } from '@/lib/i18n/msg'
+import { localizeMetadata } from '@/lib/i18n/metadata'
 
 // /tools/cost-per-lead-calculator: built from the spec in docs/seo (book ch 6, 7); demand
 // checked in Google autocomplete on 2026-11-04. Layout: components/tools/ToolPage.
 
 const ROUTE = '/tools/cost-per-lead-calculator'
 
-export const metadata: Metadata = toolMetadata({
+const baseMetadata: Metadata = toolMetadata({
   route: ROUTE,
-  title: "Cost Per Lead Calculator: Per Lead, Appointment & Sale",
-  description: "Calculate cost per lead from spend and leads, plus cost per appointment, cost per sale and return on spend.",
-  social: "Cost per lead calculator",
+  title: msg("Cost Per Lead Calculator: Per Lead, Appointment & Sale"),
+  description: msg("Calculate cost per lead from spend and leads, plus cost per appointment, cost per sale and return on spend."),
+  social: msg("Cost per lead calculator"),
 })
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(baseMetadata)
+}
 
 const FAQS = [
   { question: msg("How do you calculate cost per lead?"), answer: msg("Divide total spend by the number of leads. $1,500 for 300 leads is $5 a lead.") },
