@@ -142,8 +142,11 @@ export default function PreviewOnboarding() {
       {preview && !flags.popupDone && (
         <WelcomePopup
           onTour={startTour}
-          onActivate={() => { update({ popupDone: true }); openPaywall(ACTIVATE) }}
-          onClose={() => update({ popupDone: true })}
+          // Every way out of the welcome starts the tour, so nobody is left on one
+          // screen: a 10 Nov signup closed it and never saw the dialer. Activate
+          // starts it too, under the paywall, for when they close that unpaid.
+          onActivate={() => { update({ popupDone: true, tourOn: true, minimised: false }); openPaywall(ACTIVATE) }}
+          onClose={startTour}
         />
       )}
 
@@ -153,8 +156,11 @@ export default function PreviewOnboarding() {
           minimised={flags.minimised}
           onMinimise={() => update({ minimised: !flags.minimised })}
           onGo={href => router.push(href)}
+          // KEEP LOOKING on the last step is the only thing that ends the tour.
+          // Activate leaves it up: if they close the paywall unpaid it is still
+          // there, and paying reloads the page without it.
           onEnd={() => update({ tourOn: false, tourDone: true })}
-          onActivate={() => { update({ tourOn: false, tourDone: true }); openPaywall(ACTIVATE) }}
+          onActivate={() => openPaywall(ACTIVATE)}
         />
       )}
 
@@ -261,18 +267,19 @@ function TourCard({ pathname, minimised, onMinimise, onGo, onEnd, onActivate }: 
   const onEndPage = pathname === TOUR_END.href
   // Leaving Analytics by the sidebar puts them back on the ordinary stops.
   useEffect(() => { if (!onEndPage) setEnd(false) }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
-  if (end && onEndPage) {
+  const i = TOUR.findIndex(s => pathname === s.href || pathname.startsWith(s.href + '/'))
+  // A page outside the tour shows the last step rather than nothing, so the
+  // card never vanishes until they choose KEEP LOOKING.
+  if ((end && onEndPage) || i < 0) {
     return (
       <Card label={TOUR_END.label} n={steps} of={steps} h={TOUR_END.h} p={TOUR_END.p} minimised={minimised} onMinimise={onMinimise}>
         <button className="obx-bk obx-wide" onClick={() => { setEnd(false); onEnd() }}>{tr('KEEP LOOKING')}</button>
         <button className="obx-bk" onClick={() => { setEnd(false); onGo(TOUR[TOUR.length - 1].href) }}>{tr('← BACK')}</button>
         <span className="obx-sp" />
-        <button className="obx-nx" onClick={() => { setEnd(false); onActivate() }}>{tr('ACTIVATE · $35/WEEK')}</button>
+        <button className="obx-nx" onClick={onActivate}>{tr('ACTIVATE · $35/WEEK')}</button>
       </Card>
     )
   }
-  const i = TOUR.findIndex(s => pathname === s.href || pathname.startsWith(s.href + '/'))
-  if (i < 0) return null
   const s = TOUR[i], last = i === TOUR.length - 1
   return (
     <>
@@ -280,7 +287,8 @@ function TourCard({ pathname, minimised, onMinimise, onGo, onEnd, onActivate }: 
       <style>{`.ds-nav-link[href="${s.href}"]{box-shadow:inset 3px 0 0 var(--brand-primary);animation:obx-nav 1.6s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.ds-nav-link[href="${s.href}"]{animation:none}}`}</style>
       <Card label={s.label} n={i + 1} of={steps} h={s.h} p={s.p} extra={s.extra} minimised={minimised} onMinimise={onMinimise}>
         {i > 0 && <button className="obx-bk" onClick={() => onGo(TOUR[i - 1].href)}>{tr('← BACK')}</button>}
-        <button className="obx-sk" onClick={onEnd}>{tr('SKIP TOUR')}</button>
+        {/* Skipping goes to the last step, the one that asks them to activate. */}
+        <button className="obx-sk" onClick={() => { setEnd(true); onGo(TOUR_END.href) }}>{tr('SKIP TOUR')}</button>
         <span className="obx-sp" />
         <button className="obx-nx" onClick={() => { if (last) { setEnd(true); onGo(TOUR_END.href) } else onGo(TOUR[i + 1].href) }}>{tr('NEXT →')}</button>
       </Card>
