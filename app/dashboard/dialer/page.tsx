@@ -7372,6 +7372,13 @@ function DialerPageInner() {
 
         @media (max-width: 768px) {
           .dialer-root { height: calc(100vh - 64px - var(--obx-banner-h, 0px)); height: calc(100dvh - 64px - var(--obx-banner-h, 0px)); }
+          /* On a phone the dashboard wrapper is a column with no set height,
+             and the root's inline flex: 1 (basis 0%) makes the browser ignore
+             the height above and size the root to its contents. The whole page
+             then grew with the lead queue and scrolled, taking the dial button
+             below the fold. flex: none lets the height hold, so the column
+             inside scrolls instead of the page. */
+          .dialer-root { flex: none !important; }
           .dialer-status-bar { padding: 6px 12px !important; }
 
           /* Show the full-screen toggle on mobile only. */
@@ -7450,6 +7457,30 @@ function DialerPageInner() {
           .dialer-status-bar-right { gap: 10px; }
           .dialer-status-bar-right .dialer-time-block { display: none !important; }
           .dialer-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+          /* The lead queue is a window into the list, not the list at full
+             height. On a phone it takes whatever room is left between the
+             campaign select and the dial button and scrolls inside itself,
+             so INITIATE DIAL SEQUENCE sits in the same place on every screen
+             instead of below the fold. The desktop 280px floor pushed the
+             button off a phone screen; 120px still shows a few rows. */
+          .dialer-queue-card {
+            flex: 1 1 0 !important;
+            min-height: 120px !important;
+            max-height: none !important;
+          }
+          /* Belt and braces for the shortest phones: if the column still
+             overflows, the dial controls stick to the bottom of the screen
+             rather than scrolling away with it. */
+          .dialer-action-row {
+            position: sticky;
+            bottom: -16px;
+            z-index: 3;
+            margin-bottom: -16px;
+            padding-bottom: 16px;
+            background: ${terminalBg};
+            box-shadow: 0 -10px 0 ${terminalBg};
+          }
           .dialer-right-sidebar {
             position: fixed; right: 0; top: 0; bottom: 0; z-index: 60;
             width: 280px; max-width: 85vw;
@@ -8135,7 +8166,7 @@ function DialerPageInner() {
                   the only real requirement is having something to dial, which
                   is the same condition the non-predictive flows already use. */}
               {predictiveView === 'offline' && (isSpecificCampaign || activeScopeCampaigns.length > 0) && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
+                <div className="dialer-action-row" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <button onClick={handleSetAvailable} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: terminalSurface, color: terminalMuted,
@@ -8147,7 +8178,7 @@ function DialerPageInner() {
               )}
 
               {predictiveView === 'offline' && !isSpecificCampaign && activeScopeCampaigns.length === 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
+                <div className="dialer-action-row" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <div style={{
                     padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
@@ -8157,7 +8188,7 @@ function DialerPageInner() {
               )}
 
               {predictiveView === 'available' && !predictiveEngineStarted && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
+                <div className="dialer-action-row" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <button onClick={startDialSequence} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     transform: demoPressed ? 'scale(0.97)' : undefined, background: terminalDark, color: 'var(--brand-primary)',
@@ -8169,7 +8200,7 @@ function DialerPageInner() {
               )}
 
               {predictiveView === 'available' && predictiveEngineStarted && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
+                <div className="dialer-action-row" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <button onClick={() => {
                     // STOP must also INSTANTLY terminate any calls already in
                     // process (ringing/connecting fanout), not just prevent new
@@ -8200,7 +8231,7 @@ function DialerPageInner() {
                   line is parked in the background until it clears the
                   threshold. Neither makes the agent wait. */}
               {status === 'connected' && (
-                <div style={{ display: 'grid', gridTemplateColumns: msgText("1fr 1fr"), gap: 8, flexShrink: 0 }}>
+                <div className="dialer-action-row" style={{ display: 'grid', gridTemplateColumns: msgText("1fr 1fr"), gap: 8, flexShrink: 0 }}>
                   <button onClick={handleSkip} style={{
                     padding: '14px', borderRadius: '4px',
                     background: '#f8f4e8', border: `1px solid #8a6a1a`,
@@ -8219,7 +8250,7 @@ function DialerPageInner() {
               )}
             </>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? msgText("1fr 1fr") : status === 'preview_ready' ? msgText("1fr 1fr") : '1fr', gap: '8px', flexShrink: 0 }}>
+            <div className="dialer-action-row" style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? msgText("1fr 1fr") : status === 'preview_ready' ? msgText("1fr 1fr") : '1fr', gap: '8px', flexShrink: 0 }}>
               {status === 'idle' && !available && (
                 <button onClick={handleSetAvailable} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
