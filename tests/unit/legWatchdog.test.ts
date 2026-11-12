@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { classifyLeg, seatLegs, summariseSweep, type WatchdogThresholds } from '@/lib/legWatchdog'
+import { classifyLeg, seatLegs, sessionLinks, summariseSweep, type WatchdogThresholds } from '@/lib/legWatchdog'
 
 // =============================================================================
 // THE COST OF A WRONG ANSWER HERE IS A CALL CUT OFF MID-SENTENCE
@@ -315,5 +315,91 @@ describe('seatLegs', () => {
       T, NOW,
     )
     expect(v.action).toBe('leave')
+  })
+})
+
+// =============================================================================
+// THE AGENT'S BROWSER LEG ON A PROGRESSIVE OR MANUAL CALL
+// =============================================================================
+// 10-11 Nov 2026: every one of 13 "untracked" kills was this leg, ended 95-149s
+// after the lead answered. The agent's audio died and the lead sat in silence.
+describe('sessionLinks — the browser leg belongs to its call', () => {
+  const rows = new Map([['lead-1', openRow(150)], ['agent-1', openRow(150)]])
+  const legs = [
+    { callControlId: 'lead-1', callSessionId: 's-lead' },
+    { callControlId: 'agent-1', callSessionId: 's-agent' },
+    { callControlId: 'browser-1', callSessionId: 's-agent' },
+    { callControlId: 'stray', callSessionId: 's-stray' },
+    { callControlId: 'no-session', callSessionId: null },
+  ]
+  const links = sessionLinks(legs, rows)
+
+  it('gives the browser leg its call row', () => {
+    expect(links.inherited.get('browser-1')).toBe(rows.get('agent-1'))
+  })
+
+  it('never overwrites a leg that has its own row', () => {
+    expect(links.inherited.has('agent-1')).toBe(false)
+    expect(links.inherited.has('lead-1')).toBe(false)
+  })
+
+  it('marks both halves of a session as partnered, and nothing alone', () => {
+    expect(links.partnered.has('browser-1')).toBe(true)
+    expect(links.partnered.has('agent-1')).toBe(true)
+    expect(links.partnered.has('stray')).toBe(false)
+    expect(links.partnered.has('no-session')).toBe(false)
+    expect(links.partnered.has('lead-1')).toBe(false)
+  })
+
+  it('leaves the browser leg of a live call alone, at the age the old rule cut it', () => {
+    const v = classifyLeg({
+      callControlId: 'browser-1',
+      row: links.inherited.get('browser-1') ?? null,
+      sighting: { firstSeenAt: ago(125), timesSeen: 3 },
+      sessionPartnerLive: true,
+    }, { ...T, untrackedSeconds: 120 }, NOW)
+    expect(v.action).toBe('leave')
+  })
+
+  it('leaves an untracked leg with a live partner even with no row to inherit', () => {
+    const v = classifyLeg({
+      callControlId: 'browser-x',
+      row: null,
+      sighting: { firstSeenAt: ago(900), timesSeen: 15 },
+      sessionPartnerLive: true,
+    }, { ...T, untrackedSeconds: 120 }, NOW)
+    expect(v.action).toBe('leave')
+  })
+
+  it('still ends a lone untracked leg nobody is on', () => {
+    const v = classifyLeg({
+      callControlId: 'stray',
+      row: null,
+      sighting: { firstSeenAt: ago(125), timesSeen: 3 },
+      sessionPartnerLive: false,
+    }, { ...T, untrackedSeconds: 120 }, NOW)
+    expect(v.action).toBe('end')
+    expect(v.rule).toBe('untracked')
+  })
+
+  it('cleans up the browser leg once its call is over', () => {
+    const v = classifyLeg({
+      callControlId: 'browser-1',
+      row: { createdAt: ago(400), duration: 200, disposition: null },
+      sighting: { firstSeenAt: ago(390), timesSeen: 7 },
+      sessionPartnerLive: true,
+    }, T, NOW)
+    expect(v.action).toBe('end')
+    expect(v.rule).toBe('row_finished')
+  })
+
+  it('still lets runaway end a partnered leg past the ceiling', () => {
+    const v = classifyLeg({
+      callControlId: 'browser-x',
+      row: null,
+      sighting: { firstSeenAt: ago(6000), timesSeen: 100 },
+      sessionPartnerLive: true,
+    }, T, NOW)
+    expect(v.rule).toBe('runaway')
   })
 })

@@ -4,7 +4,7 @@ import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
 import { listLiveLegs, killLegs } from '@/lib/liveLegs'
 import { getPlatformConfig } from '@/lib/platformConfig'
-import { classifyLeg, seatLegs, summariseSweep, type WatchdogThresholds, type WatchdogVerdict } from '@/lib/legWatchdog'
+import { classifyLeg, seatLegs, sessionLinks, summariseSweep, type WatchdogThresholds, type WatchdogVerdict } from '@/lib/legWatchdog'
 import { readAll } from '@/lib/balanceAccounting'
 
 /**
@@ -232,6 +232,11 @@ export async function GET(req: Request) {
       (priorSightings || []).map(s => [s.call_control_id, s])
     )
 
+    // Every leg of one call shares a Telnyx call session. The agent's browser
+    // holds a leg of its own with no calls row; through the session it takes
+    // its call's row, and any leg with a live partner is never "untracked".
+    const links = sessionLinks(legs, rows)
+
     // ── RECORD BEFORE DECIDING ────────────────────────────────────────────
     // The sighting write happens first so that a crash anywhere below still
     // advances the clock on every leg. A watchdog that only records when it
@@ -244,9 +249,10 @@ export async function GET(req: Request) {
         .upsert(
           legs.map(l => {
             const prior = sightingById.get(l.callControlId)
-            const row = rows.get(l.callControlId)
+            const row = rows.get(l.callControlId) ?? links.inherited.get(l.callControlId)
             return {
               call_control_id: l.callControlId,
+              call_session_id: l.callSessionId,
               // Preserved explicitly: upsert would otherwise reset it to the
               // column default on every pass and no leg would ever age.
               first_seen_at: prior?.first_seen_at ?? nowIso,
@@ -254,7 +260,7 @@ export async function GET(req: Request) {
               times_seen: (prior?.times_seen ?? 0) + 1,
               user_id: l.userId ?? row?.userId ?? null,
               phone: l.phone ?? row?.phone ?? null,
-              had_row: !!row,
+              had_row: rows.has(l.callControlId),
             }
           }),
           { onConflict: 'call_control_id' }
@@ -271,11 +277,12 @@ export async function GET(req: Request) {
     // Verdicts are computed against the sighting as it stood BEFORE this pass
     // incremented it, plus this pass — which is what times_seen now holds.
     const verdicts: WatchdogVerdict[] = legs.map(l => {
-      const row = rows.get(l.callControlId)
+      const row = rows.get(l.callControlId) ?? links.inherited.get(l.callControlId)
       const prior = sightingById.get(l.callControlId)
       return classifyLeg({
         callControlId: l.callControlId,
         seat: seats.has(l.callControlId) ? { heartbeatAgeSeconds: seats.get(l.callControlId) ?? null } : null,
+        sessionPartnerLive: links.partnered.has(l.callControlId),
         row: row
           ? { createdAt: row.createdAt, duration: row.duration, disposition: row.disposition }
           : null,

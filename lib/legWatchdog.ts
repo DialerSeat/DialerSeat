@@ -107,6 +107,9 @@ export interface WatchdogInput {
   /** Set when this leg is a predictive seat: how long since its agent's last
    *  heartbeat, in seconds (null when the session has none). */
   seat?: { heartbeatAgeSeconds: number | null } | null
+  /** True when another leg in the same Telnyx call session is live right now.
+   *  A leg with a live partner is half of a call in progress, never a stray. */
+  sessionPartnerLive?: boolean
 }
 
 export interface WatchdogVerdict {
@@ -238,6 +241,17 @@ export function classifyLeg(
   // No row in the correlation window. The two-sighting requirement was already
   // enforced at rule 0, so a leg reaching here has been observed at least
   // twice: it is not one racing its own INSERT.
+  // ── A LEG WITH A LIVE PARTNER IS PART OF A CALL ────────────────────────
+  // The agent's browser holds its own leg of every call, with its own
+  // call_control_id and no calls row. This rule used to end it at 120s, which
+  // cut 13 of 13 progressive and manual conversations it touched on 10-11 Nov
+  // 2026, 95-149s after the lead answered, and left the lead in dead air.
+  // Untracked is for a leg nobody is on; a leg whose call is still up is not
+  // that, whatever our table says. Runaway above still applies.
+  if (input.sessionPartnerLive) {
+    return leave('untracked, but another leg of the same call is live — part of a call in progress')
+  }
+
   const times = sighting?.timesSeen ?? 0
   if (ageSeconds < thresholds.untrackedSeconds) {
     return leave(
@@ -248,6 +262,40 @@ export function classifyLeg(
     'untracked',
     `no calls row in the correlation window, observed for ${ageSeconds}s across ${times} passes`
   )
+}
+
+/**
+ * What every live leg knows through its call session.
+ *
+ * `inherited`: a leg with no calls row of its own, sharing a session with a leg
+ * that has one, takes that row. That is the agent's browser-side leg on a
+ * progressive or manual call: it is judged exactly as its call is, so it lives
+ * while the call is open and is cleaned up by row_finished once it is over.
+ *
+ * `partnered`: every leg whose session has at least one other live leg.
+ */
+export function sessionLinks<R>(
+  legs: Array<{ callControlId: string; callSessionId: string | null }>,
+  rowById: Map<string, R>,
+): { inherited: Map<string, R>; partnered: Set<string> } {
+  const legsBySession = new Map<string, string[]>()
+  for (const l of legs) {
+    if (!l.callSessionId) continue
+    const ids = legsBySession.get(l.callSessionId) ?? []
+    ids.push(l.callControlId)
+    legsBySession.set(l.callSessionId, ids)
+  }
+  const inherited = new Map<string, R>()
+  const partnered = new Set<string>()
+  for (const ids of legsBySession.values()) {
+    if (ids.length < 2) continue
+    for (const id of ids) partnered.add(id)
+    const owner = ids.find(id => rowById.has(id))
+    if (owner === undefined) continue
+    const row = rowById.get(owner) as R
+    for (const id of ids) if (!rowById.has(id)) inherited.set(id, row)
+  }
+  return { inherited, partnered }
 }
 
 /**

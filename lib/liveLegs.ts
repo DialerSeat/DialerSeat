@@ -123,6 +123,24 @@ export async function listLiveLegs(
         }
       })
 
+    // ── THE BROWSER'S OWN LEG IS NOT AN ORPHAN ────────────────────────────
+    // The agent's browser holds a leg of every call with its own
+    // call_control_id and no calls row. It shares the call's session, so it
+    // takes the call's details here rather than being listed as "orphaned",
+    // the one label on this screen that invites ending it by hand.
+    const tracked = new Map<string, LiveLeg>()
+    for (const l of legs) if (!l.orphaned && l.callSessionId) tracked.set(l.callSessionId, l)
+    for (const l of legs) {
+      const partner = l.orphaned && l.callSessionId ? tracked.get(l.callSessionId) : undefined
+      if (!partner) continue
+      l.orphaned = false
+      l.startedAt = partner.startedAt
+      l.ageSeconds = partner.ageSeconds
+      l.phone = partner.phone
+      l.userId = l.userId ?? partner.userId
+      l.leg = 'agent'
+    }
+
     // Oldest first. The reason anybody opens this list is to find the leg that
     // has been up longest, and an unknown age sorts last rather than first:
     // it is unmeasured, not new.
