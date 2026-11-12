@@ -5,6 +5,7 @@ import { pageDate } from '@/lib/pageDates'
 import { ALL_SHOTS } from '@/lib/screenshots'
 import { VERTICALS } from '@/lib/verticals'
 import { COUNTRY_RULES } from '@/lib/countryRules'
+import { STATE_RULES } from '@/lib/stateRules'
 import { ENABLED_LOCALES, isLocalizablePath, localizedPath } from '@/lib/i18n/locales'
 import { TOOLS, toolPath } from '@/lib/tools/registry'
 
@@ -87,6 +88,8 @@ function apexSitemap(): MetadataRoute.Sitemap {
     e('/data/dialer-pricing', 0.9, 'monthly'),
     e('/data/calling-rules-by-country', 0.9, 'monthly'),
     ...COUNTRY_RULES.map(c => e(`/data/calling-rules-by-country/${c.code.toLowerCase()}`, 0.75, 'monthly')),
+    e('/data/calling-rules-by-state', 0.85, 'monthly'),
+    ...STATE_RULES.map(s => e(`/data/calling-rules-by-state/${s.code.toLowerCase()}`, 0.7, 'monthly')),
     e('/about', 0.6, 'monthly'),
     e('/partners', 0.6, 'monthly'),
     // Every free tool and the hub that lists them (lib/tools/registry).

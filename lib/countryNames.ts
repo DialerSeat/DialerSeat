@@ -9,6 +9,7 @@ const COUNTRY_NAMES = new Set<string>([
   msg('United States'), msg('Canada'), msg('United Kingdom'), msg('Australia'), msg('South Africa'),
   msg('Mexico'), msg('Colombia'), msg('Chile'), msg('Brazil'), msg('Spain'), msg('France'),
   msg('Germany'), msg('Italy'), msg('Philippines'), msg('India'),
+  msg('Ireland'), msg('Netherlands'), msg('Argentina'), msg('Singapore'), msg('United Arab Emirates'),
 ])
 
 /** The country's name through a translator (t() in render, getT() in metadata). */

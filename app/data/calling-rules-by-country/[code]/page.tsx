@@ -113,7 +113,7 @@ export default async function CountryRulesPage({ params }: { params: Promise<{ c
             </h1>
             <p>
               {t("What a caller has to do before dialing people in {name}, from each rule’s source. Anything we could not verify is left out rather than guessed.", { name })}</p>
-            <PageStamp>{t("Rules checked {rULES_CHECKED} · page updated {updated}", { rULES_CHECKED: RULES_CHECKED, updated })}</PageStamp>
+            <PageStamp>{t("Rules checked {rULES_CHECKED} · page updated {updated}", { rULES_CHECKED: c.checked ?? RULES_CHECKED, updated })}</PageStamp>
           </div>
         </GutsSection>
 
@@ -140,6 +140,16 @@ export default async function CountryRulesPage({ params }: { params: Promise<{ c
           <p className="guts-note">
             {t("A summary of what each rule asks of a caller, not legal advice. Local-number requirements are the ones Twilio publishes; other carriers publish their own. Confirm with local counsel before dialing a new country.")}</p>
         </GutsSection>
+
+        {c.code === 'US' && (
+          <GutsSection icon="list" title={t("State rules")}>
+            <p>
+              {t("Several states add their own Do Not Call list, calling hours, call limits or consent rules on top of the federal ones.")}</p>
+            <div className="guts-btns">
+              <Link href="/data/calling-rules-by-state" className="guts-btn secondary">{t("CALLING RULES BY STATE")}</Link>
+            </div>
+          </GutsSection>
+        )}
 
         {c.code !== 'US' && (
           <GutsSection icon="phone" title={t("Agents in {name} calling US leads", { name })}>

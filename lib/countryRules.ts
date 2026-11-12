@@ -37,6 +37,8 @@ export interface CountryRule {
   /** What a carrier asks for before issuing a local number (Twilio's published rules). */
   localNumber?: string
   penalties?: string
+  /** When this row was last checked against its sources, if later than RULES_CHECKED. */
+  checked?: string
   /** The most recent material change, with its date. */
   changed?: string
   sources: { label: string; url: string }[]
@@ -65,15 +67,20 @@ export const COUNTRY_RULES: CountryRule[] = [
   {
     code: 'CA',
     name: 'Canada',
-    dnc: 'National Do Not Call List (DNCL). The version used must have been downloaded no more than 31 days before the call.',
+    dnc: 'National Do Not Call List (DNCL). The version used must have been downloaded no more than 31 days before the call. A request to be put on a telemarketer’s own do not call list must be acted on within 14 days.',
     hours: 'Weekdays 9:00 a.m. to 9:30 p.m.; weekends 10:00 a.m. to 6:00 p.m., recipient’s local time.',
+    consent:
+      'A number on the list may still be called with express consent (a written, electronic or online form, or verbal permission that is recorded or verified by an independent third party) or an existing business relationship: a purchase, lease or rental in the last 18 months, a contract in force or ended in the last 18 months, or an inquiry in the last 6 months. Calls to businesses are outside the list, as are calls by registered charities, political parties, surveys and newspapers selling subscriptions.',
     dialer:
       'Predictive dialers may abandon no more than 5% of calls in a calendar month. A call is abandoned if no live agent is on the line within 2 seconds of the answer.',
     localNumber: 'No regulatory requirements published for Canadian local numbers.',
     sources: [
       { label: 'CRTC Unsolicited Telecommunications Rules', url: 'https://crtc.gc.ca/eng/phone/telemarketing/tobligations/rules-regles.htm' },
       { label: 'CRTC telemarketing rules text', url: 'https://www.crtc.gc.ca/eng/trules-reglest.htm' },
+      { label: 'National DNCL: who can still call you', url: 'https://lnnte-dncl.gc.ca/en/Consumer/Who-Can-Still-Call-You' },
+      { label: 'CRTC: 14 days to honour internal list requests (2014)', url: 'https://www.canada.ca/en/news/archive/2014/03/crtc-continuing-protect-canadians-against-nuisance-telemarketing-calls.html' },
     ],
+    checked: '2026-11-12',
   },
   {
     code: 'GB',
@@ -238,5 +245,80 @@ export const COUNTRY_RULES: CountryRule[] = [
       { label: 'TRAI 2025 amendment (Securiti)', url: 'https://securiti.ai/india-spam-rules-trai-latest-amendment/' },
       { label: 'Twilio India number requirements', url: 'https://www.twilio.com/en-us/guidelines/in/regulatory' },
     ],
+  },
+  {
+    code: 'IE',
+    name: 'Ireland',
+    dnc:
+      'The National Directory Database (NDD) opt-out register. A landline recorded on it may not be called for marketing; the rule applies from 28 days after the number is recorded. Ex-directory numbers are on it automatically.',
+    consent:
+      'A marketing call to a mobile needs the person’s consent, given to you or recorded in the NDD. An automated marketing call to an individual needs their consent on any line. Anyone who has told you they do not want marketing calls may not be called (S.I. 336 of 2011, regulation 13).',
+    dialer:
+      'Every marketing call must give the caller’s name and, when calling for someone else, theirs. An automated call must also give an address and a phone number (regulation 13(10)).',
+    localNumber: 'An address with an Eircode in the area the number’s prefix covers. No PO Box.',
+    sources: [
+      { label: 'S.I. 336 of 2011, regulation 13 (Irish Statute Book)', url: 'https://www.irishstatutebook.ie/eli/2011/si/336/made/en/print' },
+      { label: 'Data Protection Commission: NDD FAQs', url: 'https://www.dataprotection.ie/en/organisations/rules-electronic-and-direct-marketing/ndd-faqs' },
+      { label: 'Twilio Ireland number requirements', url: 'https://www.twilio.com/en-us/guidelines/ie/regulatory' },
+    ],
+    checked: '2026-11-12',
+  },
+  {
+    code: 'NL',
+    name: 'Netherlands',
+    consent:
+      'Consumers and other individuals, including sole traders and partnerships, may only be called with their consent, unless you had a customer relationship with them in the last 3 years and call about the same kind of product of your own. Charities, lotteries that give to charity and newspaper and magazine publishers may call without consent. You need proof, per person, that you were allowed to call. Tell them on every call that they can object, and remove their number at once when they do.',
+    callerId: 'Call from your real number: visible, and reachable for free or at normal call rates. No anonymous numbers.',
+    localNumber: 'An address in the area the number’s prefix covers. No PO Box.',
+    sources: [
+      { label: 'ACM: selling by telemarketing', url: 'https://www.acm.nl/nl/verkoop-aan-consumenten/reclame-en-verleiden/verkoop-telemarketing' },
+      { label: 'Twilio Netherlands number requirements', url: 'https://www.twilio.com/en-us/guidelines/nl/regulatory' },
+    ],
+    checked: '2026-11-12',
+  },
+  {
+    code: 'AR',
+    name: 'Argentina',
+    dnc:
+      'Registro Nacional “No Llame”, run by the AAIP. Nobody registered may be called, and callers must check the register every 30 days; a newly registered number must stop being called within 30 days (Ley 26.951, article 7). Exceptions include public-service campaigns, emergencies, election campaigns and calls about an existing contract made at a reasonable time (article 8).',
+    penalties: 'The sanctions of the personal data law, Ley 25.326 (article 11).',
+    localNumber: 'An address in the area the number’s prefix covers. No PO Box.',
+    sources: [
+      { label: 'Ley 26.951 (Argentina.gob.ar)', url: 'https://www.argentina.gob.ar/normativa/nacional/norma-233066/texto' },
+      { label: 'Registro Nacional No Llame, plain-language guide', url: 'https://www.argentina.gob.ar/justicia/derechofacil/leysimple/registro-no-llame' },
+      { label: 'Twilio Argentina number requirements', url: 'https://www.twilio.com/en-us/guidelines/ar/regulatory' },
+    ],
+    checked: '2026-11-12',
+  },
+  {
+    code: 'SG',
+    name: 'Singapore',
+    dnc:
+      'The Do Not Call Registry, run by the PDPC, has a No Voice Call Register. Check it before a marketing call to a Singapore number (PDPA section 43). Every number checked is charged, and a result is only valid for a limited period, after which you check again.',
+    callerId: 'The calling line identity must not be concealed or withheld (PDPA section 45).',
+    localNumber: 'Identity documents (NRIC, FIN or passport) or business registration. The address can be anywhere in the world.',
+    sources: [
+      { label: 'DNC Registry business rules (PDPC)', url: 'https://www.dnc.gov.sg/org_more.html' },
+      { label: 'Personal Data Protection Act 2012, Part 9', url: 'https://sso.agc.gov.sg/Act/PDPA2012' },
+      { label: 'Twilio Singapore number requirements', url: 'https://www.twilio.com/en-us/guidelines/sg/regulatory' },
+    ],
+    checked: '2026-11-12',
+  },
+  {
+    code: 'AE',
+    name: 'United Arab Emirates',
+    dnc: 'The Do Not Call Register (DNCR), run by the TDRA. Numbers registered on it may not be called for marketing.',
+    hours: '9 a.m. to 6 p.m.',
+    dialer:
+      'If the consumer turns the offer down on the first call, do not call again. If they do not answer or end the call, call back at most once a day and twice a week. Marketing calls must be recorded, with the consumer told at the start.',
+    callerId: 'Call from local numbers issued by licensed UAE telecom companies and registered to the licensed company, and state the company’s identity.',
+    penalties: '18 kinds of violation, with fines from AED 10,000 to AED 150,000.',
+    localNumber: 'Twilio offers only toll-free UAE numbers, while the rules above require local numbers from a licensed UAE carrier.',
+    changed: 'Cabinet Resolutions 56 and 57 of 2024 set these rules.',
+    sources: [
+      { label: 'UAE Ministry of Economy: telemarketing regulations', url: 'https://www.moet.gov.ae/en/-/ministry-of-economy-and-telecommunications-and-digital-government-regulatory-authority-review-regulatory-legislations-in-organizing-operational-mechanisms-for-telemarketing-companies-in-the-uae-and-enhancing-consumer-protection-in-line-with-best-practices' },
+      { label: 'Twilio UAE number requirements', url: 'https://www.twilio.com/en-us/guidelines/ae/regulatory' },
+    ],
+    checked: '2026-11-12',
   },
 ]

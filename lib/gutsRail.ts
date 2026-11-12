@@ -46,6 +46,7 @@ const RESOURCES: RailGroup = {
     { href: '/screenshots', label: msg("Screenshots: what it looks like") },
     { href: '/data/dialer-pricing', label: msg("Dialer pricing index") },
     { href: '/data/calling-rules-by-country', label: msg("Calling rules by country") },
+    { href: '/data/calling-rules-by-state', label: msg("Calling rules by state") },
     { href: '/data/connect-rates', label: msg("Connect rates by state & hour") },
     { href: '/tools/dialer-cost-calculator', label: msg("Dialer cost calculator") },
     { href: '/tools/abandon-rate-calculator', label: msg("Abandon rate calculator") },

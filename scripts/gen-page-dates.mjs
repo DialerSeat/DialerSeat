@@ -37,6 +37,7 @@ const SHARED = {
   '/data/dialer-pricing': ['lib/competitors.ts'],
   '/pricing': ['lib/competitors.ts', 'lib/weeklyBilling.ts'],
   '/data/calling-rules-by-country': ['lib/countryRules.ts'],
+  '/data/calling-rules-by-state': ['lib/stateRules.ts', 'components/tools/StateDncTable.tsx'],
 }
 
 const today = new Date().toISOString().slice(0, 10)

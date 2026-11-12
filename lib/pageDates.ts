@@ -6,7 +6,8 @@
 export const PAGE_DATES: Record<string, string> = {
   "/": "2026-11-06",
   "/about": "2026-10-30",
-  "/data/calling-rules-by-country": "2026-11-04",
+  "/data/calling-rules-by-country": "2026-11-12",
+  "/data/calling-rules-by-state": "2026-11-12",
   "/data/connect-rates": "2026-10-06",
   "/data/dialer-pricing": "2026-11-06",
   "/dialing-modes": "2026-11-04",
@@ -70,7 +71,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/partners": "2026-11-04",
   "/pricing": "2026-11-06",
   "/privacy": "2026-10-06",
-  "/resources": "2026-11-06",
+  "/resources": "2026-11-12",
   "/screenshots": "2026-11-05",
   "/status": "2026-10-06",
   "/terms": "2026-10-06",

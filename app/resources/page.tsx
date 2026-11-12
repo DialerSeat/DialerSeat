@@ -9,6 +9,7 @@ import { resourcesRail } from '@/lib/gutsRail'
 import { breadcrumbSchema } from '@/lib/schema'
 import { COMPETITORS } from '@/lib/competitors'
 import { COUNTRY_RULES } from '@/lib/countryRules'
+import { STATE_RULES } from '@/lib/stateRules'
 import { VERTICALS } from '@/lib/verticals'
 import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -31,7 +32,7 @@ const UPDATED = pageDate(ROUTE)
 const baseMetadata: Metadata = {
   title: 'Outbound Calling Resources: Data, Calculators & Guides | DialerSeat',
   description:
-    'Free outbound calling resources: a pricing index of every major dialer, telemarketing rules for 15 countries, live connect-rate data, a dialer cost calculator and an abandon-rate calculator. Free to cite and embed.',
+    'Free outbound calling resources: a pricing index of every major dialer, telemarketing rules for 20 countries, live connect-rate data, a dialer cost calculator and an abandon-rate calculator. Free to cite and embed.',
   alternates: { canonical: `https://dialerseat.com${ROUTE}` },
   openGraph: {
     title: 'Outbound calling resources',
@@ -69,6 +70,13 @@ const DATA = [
     title: msg("Calling rules by country"),
     body: msg("Do Not Call lists, calling hours, consent and dialer rules for {count} countries, with sources."),
     count: COUNTRY_RULES.length,
+  },
+  {
+    href: '/data/calling-rules-by-state',
+    role: msg("DATA"),
+    title: msg("Calling rules by state"),
+    body: msg("State Do Not Call lists, calling hours, call limits and consent rules for {count} US states, with sources."),
+    count: STATE_RULES.length,
   },
   {
     href: '/data/connect-rates',
