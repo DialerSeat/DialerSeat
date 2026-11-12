@@ -73,7 +73,8 @@ export default async function StateRulesPage({ params }: { params: Promise<{ cod
   if (!s) notFound()
 
   const ROUTE = `/data/calling-rules-by-state/${s.code.toLowerCase()}`
-  const updated = pageDate(ROUTE)
+  // Every page here is rendered from the index's data file, so it shares the index's date.
+  const updated = pageDate('/data/calling-rules-by-state')
   const name = s.name
   const list = s.list ? STATE_LISTS.find((l) => l.state === s.name) : undefined
   const others = STATE_RULES.filter((o) => o.code !== s.code)

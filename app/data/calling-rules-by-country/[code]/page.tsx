@@ -75,7 +75,8 @@ export default async function CountryRulesPage({ params }: { params: Promise<{ c
   if (!c) notFound()
 
   const ROUTE = `/data/calling-rules-by-country/${c.code.toLowerCase()}`
-  const updated = pageDate(ROUTE)
+  // Every page here is rendered from the index's data file, so it shares the index's date.
+  const updated = pageDate('/data/calling-rules-by-country')
   const name = countryName(t, c)
   const others = COUNTRY_RULES.filter((o) => o.code !== c.code)
 
