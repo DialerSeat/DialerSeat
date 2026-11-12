@@ -10,7 +10,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/data/calling-rules-by-state": "2026-11-12",
   "/data/connect-rates": "2026-10-06",
   "/data/dialer-pricing": "2026-11-06",
-  "/dialing-modes": "2026-11-04",
+  "/dialing-modes": "2026-11-12",
   "/dialing-modes/power": "2026-11-05",
   "/dialing-modes/predictive": "2026-11-05",
   "/dialing-modes/preview": "2026-11-05",
@@ -18,7 +18,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/faq": "2026-11-06",
   "/faq/10dlc-and-outbound-calling": "2026-11-05",
   "/faq/billing": "2026-10-30",
-  "/faq/calling-hours": "2026-11-05",
+  "/faq/calling-hours": "2026-11-12",
   "/faq/campaigns": "2026-10-06",
   "/faq/cheapest-power-dialer": "2026-11-06",
   "/faq/compliance-export": "2026-10-06",
@@ -96,7 +96,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/tools/tcpa-compliance-checklist": "2026-11-06",
   "/tools/telemarketing-calling-hours": "2026-11-06",
   "/vs": "2026-11-06",
-  "/vs/[matchup]": "2026-11-06",
+  "/vs/[matchup]": "2026-11-12",
   "/vs/3cx": "2026-11-06",
   "/vs/aircall": "2026-11-06",
   "/vs/aloware": "2026-11-06",
@@ -125,14 +125,14 @@ export const PAGE_DATES: Record<string, string> = {
   "/vs/ringover": "2026-11-06",
   "/vs/smrtphone": "2026-11-06",
   "/vs/talkdesk": "2026-11-06",
-  "/vs/teams": "2026-11-06",
+  "/vs/teams": "2026-11-12",
   "/vs/vicidial": "2026-11-06",
   "/vs/wavv": "2026-11-06",
   "/vs/ytel": "2026-11-06"
 }
 
 /** Latest date across every page: the fallback for a route missing above. */
-export const SITE_UPDATED = '2026-11-06'
+export const SITE_UPDATED = '2026-11-12'
 
 /** The date a route last changed, as YYYY-MM-DD. */
 export function pageDate(path: string): string {
