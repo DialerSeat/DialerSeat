@@ -162,21 +162,21 @@ export default async function Page() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'start', padding: '10px 12px', borderBottom: '2px solid #2a4a8a', color: '#8888aa', fontSize: 11, letterSpacing: 2 }}>{t("ZONE")}</th>
-                  <th style={{ textAlign: 'start', padding: '10px 12px', borderBottom: '2px solid #2a4a8a', color: '#8888aa', fontSize: 11, letterSpacing: 2 }}>{t("STATES & TERRITORIES")}</th>
-                  <th style={{ textAlign: 'start', padding: '10px 12px', borderBottom: '2px solid #2a4a8a', color: '#8888aa', fontSize: 11, letterSpacing: 2 }}>{t("WINDOW")}</th>
+                  <th style={{ textAlign: 'start', padding: '10px 12px', borderBottom: '2px solid #2a4a8a', color: '#5a5e6a', fontSize: 11, letterSpacing: 2 }}>{t("ZONE")}</th>
+                  <th style={{ textAlign: 'start', padding: '10px 12px', borderBottom: '2px solid #2a4a8a', color: '#5a5e6a', fontSize: 11, letterSpacing: 2 }}>{t("STATES & TERRITORIES")}</th>
+                  <th style={{ textAlign: 'start', padding: '10px 12px', borderBottom: '2px solid #2a4a8a', color: '#5a5e6a', fontSize: 11, letterSpacing: 2 }}>{t("WINDOW")}</th>
                 </tr>
               </thead>
               <tbody>
                 {zones.map(([zone, states]) => (
                   <tr key={zone}>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #e2e4ea', whiteSpace: 'nowrap' }}>
                       {t(ZONE_LABELS[zone]) ?? zone}
                     </td>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', color: '#c4c8d8' }}>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #e2e4ea', color: '#3d414e' }}>
                       {states.sort().join(', ')}
                     </td>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', whiteSpace: 'nowrap', color: '#4ade80' }}>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #e2e4ea', whiteSpace: 'nowrap', color: '#1a6a1a' }}>
                       {t("9am-9pm local")}</td>
                   </tr>
                 ))}
@@ -195,10 +195,10 @@ export default async function Page() {
               <tbody>
                 {STRICTER.map(r => (
                   <tr key={r.state}>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', whiteSpace: 'nowrap', fontWeight: 'bold' }}>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #e2e4ea', whiteSpace: 'nowrap', fontWeight: 'bold' }}>
                       {t(r.state)}
                     </td>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', color: '#c4c8d8' }}>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #e2e4ea', color: '#3d414e' }}>
                       {t(r.rule)}
                     </td>
                   </tr>
@@ -209,7 +209,7 @@ export default async function Page() {
           <p style={{
             borderInlineStart: '2px solid #fbbf24',
             paddingInlineStart: 16,
-            color: '#c4c8d8',
+            color: '#3d414e',
           }}>
             <strong>{t("Read this part carefully.")}</strong> {t("DialerSeat enforces the 9am-9pm baseline. It does")}{" "}<em>{t("not")}</em> {t("currently apply these state-specific variations automatically, and this page is a starting point rather than legal advice: state statutes change, and the summaries above are drawn from secondary sources. If your list is concentrated in a stricter state, confirm the current rule with counsel and schedule around it. We would rather tell you that plainly than let you assume a protection the product does not provide.")}</p>
         </section>

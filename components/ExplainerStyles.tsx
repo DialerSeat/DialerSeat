@@ -200,6 +200,51 @@ export default function ExplainerStyles({ accent, accentBg }: Props) {
         .exp-section, .exp-section.alt { padding: 32px 22px; }
         .exp-section h2 { font-size: 22px; }
       }
+
+      /* =====================================================================
+         THE SECOND LOOK (12 Nov 2026)
+         =====================================================================
+         The look approved in components/GutsShellV2, painted onto this
+         vocabulary: blue wash on the hero, numbered section tabs, darker
+         prose. Same markup, same wording.
+         ===================================================================== */
+      .exp-root { counter-reset: expsec; }
+      .exp-hero {
+        padding: 60px 48px 48px;
+        border-top: 3px solid ${ROYAL};
+        background:
+          radial-gradient(900px 340px at 50% -80px, rgba(42,110,255,0.13), rgba(42,110,255,0) 70%),
+          linear-gradient(180deg, #f6f9ff 0%, #ffffff 78%);
+      }
+      .exp-hero h1 { font-size: 48px; letter-spacing: -1.8px; line-height: 1.06; margin-bottom: 20px; text-wrap: balance; }
+      .exp-hero .exp-lead { max-width: 680px; font-size: 17.5px; line-height: 1.7; color: #2c303b; }
+      .exp-eyebrow { border-radius: 999px; color: ${SITE.deep}; font-size: 10px; letter-spacing: 2.6px; }
+      .exp-section, .exp-section.alt { padding: 56px 48px; scroll-margin-top: 78px; }
+      .exp-section h2 { font-size: 29px; letter-spacing: -0.8px; line-height: 1.18; text-wrap: balance; }
+      .exp-section h2::before {
+        counter-increment: expsec;
+        content: counter(expsec, decimal-leading-zero);
+        display: grid; place-items: center;
+        width: 46px; height: 38px;
+        margin: 0 auto 20px;
+        border-radius: 10px;
+        background: #0d1830; color: ${SITE.blue};
+        font-family: 'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-size: 13px; font-weight: bold; letter-spacing: 1px; line-height: 1;
+        box-shadow: 0 8px 18px -10px rgba(13,24,48,0.55);
+      }
+      .exp-section p, .exp-pullquote, .exp-qa .answer { color: #3d414e; }
+      .exp-card p, .exp-deepdive p { color: ${SITE.muted}; }
+      .exp-card, .exp-deepdive, .exp-pullquote { border-radius: 4px 12px 12px 4px; }
+      .exp-qa details { border-radius: 12px; }
+
+      @media (max-width: 700px) {
+        .exp-hero { padding: 38px 20px 32px; }
+        .exp-hero h1 { font-size: 31px; letter-spacing: -1px; }
+        .exp-hero .exp-lead { font-size: 16px; }
+        .exp-section, .exp-section.alt { padding: 38px 20px; }
+        .exp-section h2 { font-size: 23px; letter-spacing: -0.5px; }
+      }
     `}</style>
   )
 }

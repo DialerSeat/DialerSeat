@@ -140,17 +140,22 @@ export default async function TeamsComparisonPage() {
 
       <GutsShell rail={vsRail()} activeHref="/vs/teams">
         <div className="guts-sec">
+          <div className="guts-hero">
           <nav style={{ fontSize: 11, letterSpacing: 1.5, color: MUTED, marginBottom: 22 }}>
             <Link href="/" style={{ color: MUTED }}>{tr("HOME")}</Link>{' · '}
             <Link href="/vs" style={{ color: MUTED }}>{tr("COMPARISONS")}</Link>
           </nav>
 
-          <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: ACCENT, marginBottom: 14 }}>
+          <div className="guts-eyebrow">
             {tr("▸ Dialers for teams")}</div>
-          <h1 style={{ fontSize: 44, fontWeight: 'bold', letterSpacing: -1, lineHeight: 1.12, margin: 0, maxWidth: 820 }}>
+          <h1>
             {tr("What a five-agent floor actually costs.")}</h1>
-          <p style={{ fontSize: 16, lineHeight: 1.8, color: MUTED, maxWidth: 760, marginTop: 18 }}>
+          <p>
             {tr("Every vendor publishes a per-seat rate. Almost none publish the seat minimum, the contract term, or what it takes to add the sixth agent, which is the part that decides whether a growing floor is an afternoon decision or a procurement event.")}</p>
+          </div>
+        </div>
+
+        <div className="guts-sec">
 
           {/* ── THE TABLE ─────────────────────────────────────────────────── */}
           <div style={{ overflowX: 'auto', marginTop: 36 }}>

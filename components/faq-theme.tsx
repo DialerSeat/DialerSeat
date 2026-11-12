@@ -440,6 +440,144 @@ export default function FaqTheme() {
         .faq-section > h2, .faq-section > .faq-h2 { font-size: 22px; }
         .faq-root > .faq-cta, .faq-root > .faq-related { padding: 32px 22px; }
       }
+
+      /* =====================================================================
+         THE SECOND LOOK (12 Nov 2026)
+         =====================================================================
+         components/GutsShellV2 is the look the owner approved from a demo:
+         a blue wash on the hero, numbered section tabs, darker prose, one dark
+         closing band. The pages on this vocabulary keep their own markup and
+         their own wording, so the same look is reached here by repainting the
+         vocabulary rather than by rewriting fourteen pages.
+
+         Two things these pages do not get: the icon half of the section tab
+         (they have no icon to show) and the ON THIS PAGE index (the shell
+         builds it from section props these pages do not pass).
+         ===================================================================== */
+      .guts-card > .faq-root.faq-root {
+        counter-reset: faqsec;
+        border-top: 3px solid ${ROYAL};
+        background:
+          radial-gradient(900px 340px at 50% -80px, rgba(42,110,255,0.13), rgba(42,110,255,0) 70%) no-repeat,
+          linear-gradient(180deg, #f6f9ff 0px, #ffffff 380px) no-repeat;
+      }
+
+      .faq-root > .faq-eyebrow {
+        width: fit-content; max-width: calc(100% - 44px);
+        margin: 56px auto 20px;
+        padding: 7px 14px;
+        border-radius: 999px;
+        background: rgba(42,110,255,0.07);
+        border: 1px solid rgba(42,110,255,0.18);
+        letter-spacing: 2.6px;
+      }
+      .faq-root > .faq-h1 {
+        font-size: 48px; letter-spacing: -1.8px; line-height: 1.06;
+        margin-bottom: 20px;
+        text-wrap: balance;
+      }
+      .faq-root > .faq-deck {
+        max-width: 776px;
+        padding-bottom: 48px;
+        font-size: 17.5px; line-height: 1.7;
+        color: #2c303b;
+      }
+
+      .faq-section { padding: 56px 48px; scroll-margin-top: 78px; }
+      .faq-section > h2, .faq-section > .faq-h2, .faq-section > .inner > h2 {
+        font-size: 29px; letter-spacing: -0.8px; line-height: 1.18;
+        margin-bottom: 18px;
+        text-wrap: balance;
+      }
+      /* The numbered tab, drawn off a counter so no page has to number itself. */
+      .faq-section > h2::before, .faq-section > .faq-h2::before, .faq-section > .inner > h2::before {
+        counter-increment: faqsec;
+        content: counter(faqsec, decimal-leading-zero);
+        display: grid; place-items: center;
+        width: 46px; height: 38px;
+        margin: 0 auto 20px;
+        border-radius: 10px;
+        background: #0d1830; color: ${T.blue};
+        font-family: 'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-size: 13px; font-weight: bold; letter-spacing: 1px; line-height: 1;
+        box-shadow: 0 8px 18px -10px rgba(13,24,48,0.55);
+      }
+      .faq-section p, .faq-section li, .faq-list li, .faq-flow-body, .faq-flow-body p, .faq-callout {
+        color: #3d414e;
+      }
+      .faq-section > p, .faq-section > .faq-p { font-size: 16px; margin-bottom: 16px; }
+      .faq-root p.muted, .faq-section p.muted, .faq-root .muted { color: ${T.muted}; }
+      .faq-section a { text-decoration: underline; text-decoration-color: rgba(42,110,255,0.35); text-underline-offset: 3px; }
+      .faq-section a:hover { text-decoration-color: ${ROYAL}; }
+
+      .faq-card { border-radius: 12px; border-color: ${T.borderSoft}; border-top-color: ${T.deep}; background: #f9fafc; }
+      .faq-callout {
+        border: none; border-inline-start: 3px solid ${ROYAL};
+        border-radius: 0 12px 12px 0;
+        background: rgba(42,110,255,0.045);
+      }
+      .faq-callout.warn { background: #fdf8ea; }
+      .faq-callout.good { background: rgba(26,106,26,0.05); }
+      .faq-callout.bad { background: rgba(138,26,26,0.045); }
+      /* A callout that sits between sections rather than inside one. */
+      .faq-root > .faq-callout { max-width: 660px; margin: 44px auto; }
+      .faq-table, .faq-fieldtable { border-radius: 12px; }
+      .faq-table th, .faq-fieldrow.head { background: #0d1830; }
+      .faq-flow-step::before {
+        border: none; border-radius: 8px;
+        background: #0d1830; color: ${T.blue};
+        font-family: 'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      }
+      .faq-badge { border-radius: 999px; border-color: rgba(42,110,255,0.35); }
+
+      /* Related: chips on a quiet band, the same as components/RelatedLinks. */
+      .faq-root > .faq-related {
+        padding: 34px 48px 38px;
+        background: #f9fafc;
+        text-align: center;
+      }
+      .faq-related-title, .faq-related-label { font-size: 10px; letter-spacing: 2.6px; }
+      .faq-related-links { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 10px; }
+      .faq-related a {
+        padding: 9px 14px;
+        background: #fff; border: 1px solid #d8dce4; border-radius: 8px;
+        color: ${T.text}; font-size: 13.5px; font-weight: 500;
+      }
+      .faq-related a:hover { border-color: ${ROYAL}; color: ${ROYAL}; text-decoration: none; }
+
+      /* The closing band. Each page keeps its own line; the shell's generic
+         band is hidden on pages that have this one (see GutsShellV2). */
+      .faq-root > .faq-cta {
+        padding: 54px 48px 56px;
+        text-align: center;
+        border-top: none;
+        background:
+          radial-gradient(700px 260px at 50% 0%, rgba(42,110,255,0.34), rgba(42,110,255,0) 72%),
+          #0d1830;
+      }
+      .faq-cta-eyebrow { font-size: 10.5px; color: ${T.blue}; margin-bottom: 16px; }
+      .faq-cta-h { font-size: 34px; letter-spacing: -1.2px; line-height: 1.15; margin-bottom: 18px; text-wrap: balance; }
+      .faq-cta-btn {
+        padding: 15px 28px; border-radius: 10px;
+        background: ${ROYAL}; color: #fff;
+        border: none;
+        font-size: 12px; letter-spacing: 2.6px;
+        box-shadow: 0 10px 22px -10px rgba(42,110,255,0.75);
+        transition: transform 0.12s ease, background 0.12s ease;
+      }
+      .faq-cta-btn:hover { background: #3f7dff; transform: translateY(-1px); }
+
+      @media (max-width: 700px) {
+        .faq-root > .faq-eyebrow { margin: 38px auto 16px; padding: 7px 14px; }
+        .faq-root > .faq-h1 { font-size: 31px; letter-spacing: -1px; }
+        .faq-root > .faq-deck { padding-bottom: 34px; font-size: 16px; }
+        .faq-section { padding: 38px 20px; }
+        .faq-section > h2, .faq-section > .faq-h2, .faq-section > .inner > h2 { font-size: 23px; letter-spacing: -0.5px; }
+        .faq-root > .faq-callout { margin: 30px 20px; }
+        .faq-root > .faq-related { padding: 28px 20px 30px; }
+        .faq-root > .faq-cta { padding: 40px 20px 42px; }
+        .faq-cta-h { font-size: 26px; letter-spacing: -0.8px; }
+      }
     `}</style>
   )
 }

@@ -36,36 +36,20 @@ export default function DialingModesView() {
     }}>
       <SiteHeader />
 
-      <GutsShell rail={faqRail('/dialing-modes')} activeHref="/dialing-modes">
+      <GutsShell rail={faqRail('/dialing-modes')} activeHref="/dialing-modes" cta={false}>
         <div className="guts-sec">
 
-        <div style={{ marginBottom: 48 }}>
-          <div style={{
-            fontSize: 11,
-            letterSpacing: 4,
-            color: T.muted,
-            fontWeight: 'bold',
-            marginBottom: 16,
-          }}>
+        <div className="guts-hero">
+          <div className="guts-eyebrow">
             {t("▸ DIALING MODES")}</div>
-          <h1 style={{
-            fontSize: 38,
-            fontWeight: 'bold',
-            letterSpacing: -0.5,
-            lineHeight: 1.15,
-            margin: '0 0 16px 0',
-            color: T.text,
-          }}>
+          <h1>
             {t("Four dialing modes. Pick by team size and risk tolerance.")}</h1>
-          <p style={{
-            fontSize: 16,
-            lineHeight: 1.65,
-            color: T.muted,
-            margin: 0,
-            maxWidth: 680,
-          }}>
+          <p>
             {t("Preview, power, progressive, and predictive. Each trades speed against regulatory exposure. Here's what each one does, in plain terms, and what DialerSeat enforces to keep you compliant.")}</p>
         </div>
+        </div>
+
+        <div className="guts-sec">
 
         <section style={{ marginBottom: 48 }}>
           <div style={{
