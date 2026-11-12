@@ -155,7 +155,8 @@ describe('classifyLeg', () => {
 
   it('separates a number that cannot be reached from one nobody picked up', () => {
     expect(classifyLeg({ answered_at: null, amd_result: null, hangup_cause: 'timeout' })).toBe('no_answer')
-    expect(classifyLeg({ answered_at: null, amd_result: null, hangup_cause: 'user_busy' })).toBe('no_answer')
+    // Busy is not redialed: 338 busy leads, none ever reached a person.
+    expect(classifyLeg({ answered_at: null, amd_result: null, hangup_cause: 'user_busy' })).toBe('unreachable')
     expect(classifyLeg({ answered_at: null, amd_result: null, hangup_cause: 'not_found' })).toBe('unreachable')
   })
 })

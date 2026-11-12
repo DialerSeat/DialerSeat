@@ -52,6 +52,32 @@ export function reachedAHuman(
 }
 
 /**
+ * Carrier hang-up causes on the LEAD's leg after which an immediate redial
+ * cannot reach anyone.
+ *
+ *   not_found and friends   the number does not exist (SIP 404 family).
+ *   user_busy               the line refused the call: on another call, or
+ *                           the person declined it.
+ *
+ * Measured over every dial from 1 Sept to 12 Nov 2026: 95 leads ever came back
+ * not_found and 338 ever came back user_busy, and not one of them reached a
+ * person on any attempt. The 92 quick redials after either reached nobody;
+ * a busy line was still busy 13 seconds later 97% of the time. Each of those
+ * redials was an attempt with no answer on the caller ID, which is the
+ * pattern the spam engines score against.
+ *
+ * Only the 2x/3x quick redial is stopped. The lead is not marked dead and
+ * comes round again on a later pass like any other.
+ */
+const NO_QUICK_REDIAL_CAUSES = new Set([
+  'not_found', 'invalid_number_format', 'unallocated_number', 'user_busy',
+])
+
+export function redialCannotConnect(hangupCause: string | null | undefined): boolean {
+  return !!hangupCause && NO_QUICK_REDIAL_CAUSES.has(hangupCause)
+}
+
+/**
  * Should this lead be dialled again rather than rotated away?
  *
  * `alreadyQueued` is the interlock that stops two ending paths both queueing
@@ -62,8 +88,11 @@ export function shouldRedial(params: {
   alreadyQueued: boolean
   attemptsSoFar: number
   maxAttempts: number
+  /** The lead leg's carrier hang-up cause, when known. */
+  hangupCause?: string | null
 }): boolean {
   if (params.reachedAHuman) return false
+  if (redialCannotConnect(params.hangupCause)) return false
   if (params.alreadyQueued) return false
   return params.attemptsSoFar < params.maxAttempts
 }

@@ -51,7 +51,7 @@ export async function GET(req: Request) {
 
     const { data: callRow } = await supabase
       .from('calls')
-      .select('user_id, handled_by, duration, amd_result, disposition, answered_at')
+      .select('user_id, handled_by, duration, amd_result, disposition, answered_at, hangup_cause')
       .eq('call_control_id', sid)
       .maybeSingle()
 
@@ -110,6 +110,9 @@ export async function GET(req: Request) {
       // it is not a pickup, and without this the client had no way to tell
       // that apart from a real conversation.
       disposition: callRow.disposition || null,
+      // The lead leg's carrier cause. The dialer skips the 2x/3x quick redial
+      // on a dead or busy number (lib/redialDecision.redialCannotConnect).
+      hangup_cause: callRow.hangup_cause || null,
     })
   } catch (error: any) {
     return apiError(error, { route: 'calls/check' })

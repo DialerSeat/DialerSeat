@@ -4944,6 +4944,9 @@ function DialerPageInner() {
               alreadyQueued: redialQueuedRef.current,
               attemptsSoFar,
               maxAttempts: effectiveMax,
+              // A dead or busy number is not redialed: none ever reached a
+              // person (lib/redialDecision.redialCannotConnect).
+              hangupCause: statusData.hangup_cause,
             })) {
               // Still have retries left for this same lead — redial it
               // directly instead of dispositioning + fetching a new one.

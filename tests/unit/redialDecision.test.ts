@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { reachedAHuman, shouldRedial, shouldResetAttemptCount } from '@/lib/redialDecision'
+import { reachedAHuman, shouldRedial, shouldResetAttemptCount, redialCannotConnect } from '@/lib/redialDecision'
 
 describe('reachedAHuman', () => {
   it('is false for a voicemail even though the call connected', () => {
@@ -240,5 +240,27 @@ describe('an agent-leg failure is not a pickup', () => {
       attemptsSoFar: 1,
       maxAttempts: 1,
     })).toBe(false)
+  })
+})
+
+describe('no quick redial on a dead or busy number', () => {
+  const base = { reachedAHuman: false, alreadyQueued: false, attemptsSoFar: 1, maxAttempts: 3 }
+
+  it('skips the redial after not found or busy', () => {
+    for (const cause of ['not_found', 'invalid_number_format', 'unallocated_number', 'user_busy']) {
+      expect(redialCannotConnect(cause)).toBe(true)
+      expect(shouldRedial({ ...base, hangupCause: cause })).toBe(false)
+    }
+  })
+
+  it('still redials a number that rang out or went to voicemail', () => {
+    for (const cause of ['timeout', 'normal_clearing', 'no_answer', null, undefined]) {
+      expect(redialCannotConnect(cause)).toBe(false)
+      expect(shouldRedial({ ...base, hangupCause: cause })).toBe(true)
+    }
+  })
+
+  it('changes nothing when the cause is not passed', () => {
+    expect(shouldRedial(base)).toBe(true)
   })
 })

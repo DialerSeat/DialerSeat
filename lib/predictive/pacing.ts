@@ -10,7 +10,7 @@
 // 30 days. See docs/PREDICTIVE.md for the derivation.
 // =============================================================================
 
-import { shouldRedial } from '@/lib/redialDecision'
+import { shouldRedial, redialCannotConnect } from '@/lib/redialDecision'
 
 /** Where the projection is held. The law says 3%; the margin is deliberate. */
 export const PREDICTIVE_TARGET_ABANDON_PCT = 2.0
@@ -240,6 +240,9 @@ export function classifyLeg(leg: {
   if (leg.answered_at) {
     return leg.amd_result && ROBOT_RESULTS.has(leg.amd_result) ? 'voicemail' : 'person'
   }
-  if (leg.hangup_cause && UNREACHABLE_CAUSES.has(leg.hangup_cause)) return 'unreachable'
+  // Busy is here too (lib/redialDecision.redialCannotConnect): 338 leads came
+  // back busy from 1 Sept to 12 Nov 2026 and none ever reached a person, and
+  // a redial 13 seconds later was still busy 97% of the time.
+  if (leg.hangup_cause && (UNREACHABLE_CAUSES.has(leg.hangup_cause) || redialCannotConnect(leg.hangup_cause))) return 'unreachable'
   return 'no_answer'
 }
