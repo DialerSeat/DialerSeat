@@ -323,7 +323,9 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   // margin over the six-second short-duration threshold, which is the only
   // number in here that costs money if it is crossed.
   amd_hold_seconds_after_machine: 8,
-  lead_leg_time_limit_secs: 7200,
+  // Telnyx's maximum. lib/placeOutboundCall always sends 14400 unless this is
+  // 0, so no value here can cap a call: there is never a capped call time.
+  lead_leg_time_limit_secs: 14400,
   // A floor, not the final value: handleAmdResult raises this to at least
   // total_analysis_time + 3s so a verdict is never thrown away for arriving
   // exactly when the detector was told to produce it.
@@ -367,9 +369,8 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   // config read HERE would mean something starts hanging up phone calls with
   // nobody having asked it to. Fail toward doing nothing.
   leg_watchdog_enabled: false,
-  // 90 minutes. The longest genuinely real call on this account is 63 minutes,
-  // carrier-confirmed, so this clears reality by half an hour. It is a
-  // backstop for runaways, not a policy on call length.
+  // 90 minutes, and it never applies to a leg that is part of a live call
+  // (lib/legWatchdog): a backstop for stray legs, never a limit on talk time.
   leg_watchdog_runaway_seconds: 5400,
   // 10 minutes with no calls row anywhere in a 12-hour window. Nothing on our
   // side can disposition it, no agent screen is pointed at it.

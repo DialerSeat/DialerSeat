@@ -1007,11 +1007,16 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // leg lives on the SIP credential connection, which is also why Call Control
   // answers 404 when asked to hang one up.
   //
-  // Configurable, and 0 omits it entirely. A change that has broken dialing
-  // once must be reversible without a deploy.
-  const timeLimit = dialCfg.lead_leg_time_limit_secs
-  if (typeof timeLimit === 'number' && timeLimit >= 30 && timeLimit <= 14400) {
-    dialBody.time_limit_secs = timeLimit
+  // ── NEVER A CAP ON CALL LENGTH ─────────────────────────────────────────
+  // This was 7200: Telnyx hung up every call at two hours. Joshua, 12 Nov
+  // 2026: there is never a capped call time. The value sent is always
+  // Telnyx's own maximum, 14400 (four hours, their default and the longest
+  // any leg can run), whatever the config says, so no setting can shorten a
+  // call. Config 0 still omits the parameter, the escape hatch for a change
+  // that once broke dialing; omitted, Telnyx applies the same four hours.
+  const TELNYX_MAX_LEG_SECONDS = 14400
+  if (dialCfg.lead_leg_time_limit_secs !== 0) {
+    dialBody.time_limit_secs = TELNYX_MAX_LEG_SECONDS
   }
 
   // ── RECORDING TOGGLE ──────────────────────────────────────────────────

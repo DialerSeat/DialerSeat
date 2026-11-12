@@ -141,17 +141,28 @@ describe('untracked — live on the carrier, unknown to us', () => {
   })
 })
 
-describe('runaway — the backstop that outranks everything', () => {
-  it('ends a leg past the ceiling even though its row looks healthy', () => {
+describe('runaway — never a cap on call length', () => {
+  it('never ends a live call by age, however long it runs', () => {
+    // There is never a capped call time. Three hours in, still talking.
     const v = classifyLeg(
       {
         callControlId: 'a',
-        row: openRow(6000),
+        row: openRow(10800),
+        sighting: { firstSeenAt: ago(10800), timesSeen: 180 },
+      }, T, NOW,
+    )
+    expect(v.action).toBe('leave')
+  })
+
+  it('still ends a finished call whose leg stayed up', () => {
+    const v = classifyLeg(
+      {
+        callControlId: 'a',
+        row: { createdAt: ago(6000), duration: 300, disposition: null },
         sighting: { firstSeenAt: ago(6000), timesSeen: 50 },
       }, T, NOW,
     )
     expect(v.action).toBe('end')
-    expect(v.rule).toBe('runaway')
   })
 
   it('ends an untracked leg past the ceiling without waiting on rule 3', () => {
@@ -393,13 +404,13 @@ describe('sessionLinks — the browser leg belongs to its call', () => {
     expect(v.rule).toBe('row_finished')
   })
 
-  it('still lets runaway end a partnered leg past the ceiling', () => {
+  it('never ends a partnered leg by age', () => {
     const v = classifyLeg({
       callControlId: 'browser-x',
       row: null,
-      sighting: { firstSeenAt: ago(6000), timesSeen: 100 },
+      sighting: { firstSeenAt: ago(10800), timesSeen: 180 },
       sessionPartnerLive: true,
     }, T, NOW)
-    expect(v.rule).toBe('runaway')
+    expect(v.action).toBe('leave')
   })
 })

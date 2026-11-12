@@ -43,10 +43,9 @@
 //                 separate sightings, so a leg racing its own insert is never
 //                 caught by it.
 //
-//   runaway       Past an absolute ceiling, whatever else is true. A pure
-//                 backstop for the case both rules above miss. The default is
-//                 deliberately far above the longest real conversation this
-//                 account has ever recorded (63 minutes, carrier-confirmed).
+//   runaway       Past an absolute ceiling, and ONLY for a leg that is not part
+//                 of a live call. A backstop for the case both rules above
+//                 miss, never a limit on how long anyone may talk.
 //
 // Everything else is left alone. The default verdict is always 'leave'.
 
@@ -212,10 +211,15 @@ export function classifyLeg(
   }
 
   // ── 1. RUNAWAY ─────────────────────────────────────────────────────────
-  // Checked first so it applies even to a leg whose row looks perfectly
-  // healthy. If a call has been up this long, something is wrong with it
-  // whatever the row says.
-  if (ageSeconds >= thresholds.runawaySeconds) {
+  // NEVER A CAP ON CALL LENGTH. This used to end any leg past the ceiling
+  // "whatever the row says", which is a time limit on every conversation.
+  // Joshua, 12 Nov 2026: there is never a capped call time. A leg that is part
+  // of a live call (its row is open, or another leg of its call is live) is
+  // never ended by age. The only ceiling left is Telnyx's own four hours per
+  // leg, which no setting can lift.
+  const rowOpen = !!row && !((row.duration ?? 0) > 0 || row.disposition !== null)
+  const partOfLiveCall = rowOpen || !!input.sessionPartnerLive
+  if (!partOfLiveCall && ageSeconds >= thresholds.runawaySeconds) {
     return end('runaway', `up ${ageSeconds}s, past the ${thresholds.runawaySeconds}s ceiling`)
   }
 
