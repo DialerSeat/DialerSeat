@@ -237,6 +237,20 @@ export async function GET(req: Request) {
     // its call's row, and any leg with a live partner is never "untracked".
     const links = sessionLinks(legs, rows)
 
+    // A failed read throws rather than returning an empty map: with no seats
+    // known, every live seat would read as untracked and be ended.
+    // The seat legs, and each one's browser-side twin through the shared
+    // call session (lib/legWatchdog seatLegs). Read here so the sighting below
+    // can record a seat as tracked; a failure is rethrown after that write, so
+    // the evidence is still recorded first.
+    let seats: Map<string, number | null> = new Map()
+    let seatReadError: unknown = null
+    try {
+      seats = seatLegs(legs, await seatHeartbeats(db, now))
+    } catch (err) {
+      seatReadError = err
+    }
+
     // ── RECORD BEFORE DECIDING ────────────────────────────────────────────
     // The sighting write happens first so that a crash anywhere below still
     // advances the clock on every leg. A watchdog that only records when it
@@ -260,7 +274,15 @@ export async function GET(req: Request) {
               times_seen: (prior?.times_seen ?? 0) + 1,
               user_id: l.userId ?? row?.userId ?? null,
               phone: l.phone ?? row?.phone ?? null,
-              had_row: rows.has(l.callControlId),
+              // "Belongs to something we know about": its own calls row, its
+              // call's row through the session (the agent's browser leg), or a
+              // live predictive seat. ops-health pages on had_row false past
+              // 15 minutes, and with only the leg's own row counted here every
+              // call over 15 minutes paged as a stuck leg (13 Nov 2026, a
+              // 51-minute call; 11 Nov, a predictive seat).
+              had_row: rows.has(l.callControlId)
+                || links.inherited.has(l.callControlId)
+                || seats.has(l.callControlId),
             }
           }),
           { onConflict: 'call_control_id' }
@@ -268,11 +290,7 @@ export async function GET(req: Request) {
       if (upsertErr) console.error('[leg-watchdog] sighting upsert failed:', upsertErr.message)
     }
 
-    // A failed read throws rather than returning an empty map: with no seats
-    // known, every live seat would read as untracked and be ended.
-    // The seat legs, and each one's browser-side twin through the shared
-    // call session (lib/legWatchdog seatLegs).
-    const seats = seatLegs(legs, await seatHeartbeats(db, now))
+    if (seatReadError) throw seatReadError
 
     // Verdicts are computed against the sighting as it stood BEFORE this pass
     // incremented it, plus this pass — which is what times_seen now holds.

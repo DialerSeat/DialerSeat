@@ -393,7 +393,9 @@ async function checkStuckLegs(): Promise<AlertResult> {
 
     // Never killed, no row, and older than every rule meant to catch it.
     // had_row is deliberately part of this: a long LIVE call with a real row
-    // is a conversation, not a fault, and must never page anybody.
+    // is a conversation, not a fault, and must never page anybody. The
+    // watchdog sets it for any leg that belongs to a known call or seat,
+    // including the agent's browser leg, which has no row of its own.
     const age = now - new Date(rawRow.first_seen_at).getTime()
     if (!rawRow.had_row && age > STUCK_LEG_OUTLIVED_MINUTES * 60_000) outlived.push(rawRow)
   }
