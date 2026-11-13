@@ -50,7 +50,7 @@ export default async function Overview() {
     <>
       <PageHead title="Overview" sub={<>Where <strong style={{ color: 'var(--dv-text)' }}>{platform.name}</strong> stands, and the next step to take.</>} />
 
-      <div className="dv-grid-3" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+      <div className="dv-grid-3 dv-stats" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
         {stat('Seats', seats.filter(s => s.status !== 'disabled').length, `${seats.filter(s => s.env === 'live').length} live · ${seats.filter(s => s.env === 'test').length} test`)}
         {stat('API requests, 7 days', recent.length, recent.length ? `${recent.filter(r => r.status >= 400).length} returned an error` : 'None yet')}
         {stat('Webhook endpoints', hooks.filter(h => !h.disabled_at).length, hooks.length ? `${hooks.filter(h => h.disabled_at).length} paused` : 'None yet')}
@@ -100,11 +100,11 @@ export default async function Overview() {
       <div className="dv-card" style={{ marginTop: 16 }}>
         <div className="dv-card-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 className="dv-card-title">Recent API requests</h2>
-          <DevLink href="/console/usage" className="dv-link" style={{ fontSize: 13 }}>All requests</DevLink>
+          <DevLink href="/console/usage" className="dv-link" style={{ fontSize: 13, padding: '8px 0' }}>All requests</DevLink>
         </div>
         <div className="dv-card-body"><RequestTable rows={requests.slice(0, 8)} /></div>
       </div>
-      <style>{`.dv-step:hover { background: var(--dv-panel-2) !important; } @media (max-width: 1000px) { .dv-console-main .dv-grid-3, .dv-console-main .dv-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } } @media (max-width: 640px) { .dv-console-main .dv-grid-3, .dv-console-main .dv-grid-2 { grid-template-columns: minmax(0, 1fr) !important; } }`}</style>
+      <style>{`.dv-step:hover { background: var(--dv-panel-2) !important; } @media (max-width: 1000px) { .dv-console-main .dv-grid-3, .dv-console-main .dv-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } } @media (max-width: 640px) { .dv-console-main .dv-grid-3, .dv-console-main .dv-grid-2 { grid-template-columns: minmax(0, 1fr) !important; } .dv-console-main .dv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; } .dv-stats > .dv-card { padding: 14px !important; } } @media (max-width: 330px) { .dv-console-main .dv-stats { grid-template-columns: minmax(0, 1fr) !important; } }`}</style>
     </>
   )
 }

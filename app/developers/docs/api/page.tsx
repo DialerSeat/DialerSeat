@@ -40,7 +40,7 @@ export default function ApiReference() {
         REST over HTTPS with JSON bodies. Authenticate with a secret key as a bearer token (<DevLink href="/docs/authentication" className="dv-link">authentication</DevLink>). Test keys see only test data and never dial. Errors follow one shape (<DevLink href="/docs/errors" className="dv-link">errors and limits</DevLink>).
       </p>
       <div className="dv-inset" style={{ padding: '12px 14px', display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 13, marginBottom: 32 }}>
-        <span className="dv-dim">Base URL</span><code>{API_BASE}</code>
+        <span className="dv-dim">Base URL</span><code style={{ overflowWrap: 'anywhere' }}>{API_BASE}</code>
       </div>
 
       {GROUP_ORDER.map(g => {
@@ -49,13 +49,13 @@ export default function ApiReference() {
         return (
           <section key={g} style={{ marginBottom: 40 }}>
             <h2 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 14px' }}>{g}</h2>
-            <div style={{ display: 'grid', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14 }}>
               {items.map(e => (
                 <div key={e.method + e.path} id={endpointAnchor(e.method, e.path)} className="dv-card" style={{ scrollMarginTop: 110 }}>
                   <div className="dv-card-head">
                     <div className="dv-row" style={{ flexWrap: 'wrap' }}>
                       <MethodPill method={e.method} />
-                      <code style={{ fontSize: 14 }}>{e.path}</code>
+                      <code style={{ fontSize: 14, overflowWrap: 'anywhere', minWidth: 0 }}>{e.path}</code>
                     </div>
                     <h3 style={{ fontSize: 16, fontWeight: 600, margin: '12px 0 4px' }}>{e.title}</h3>
                     <p className="dv-card-desc">{e.summary}</p>

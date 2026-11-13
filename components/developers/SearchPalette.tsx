@@ -63,7 +63,7 @@ export function SearchPalette({ open, onClose }: { open: boolean; onClose: () =>
     return kinds.map(k => ({ kind: k, items: results.filter(r => r.entry.kind === k) }))
   }, [results])
   const flat = useMemo(() => grouped.flatMap(g => g.items), [grouped])
-  const queryTerms = useMemo(() => new Set(tokenize(q).map(stem)), [q])
+  const queryTerms = useMemo(() => new Set(tokenize(q).filter(t => t.length >= 3).map(stem)), [q])
 
   useEffect(() => {
     listRef.current?.querySelector(`[data-idx="${active}"]`)?.scrollIntoView({ block: 'nearest' })
@@ -90,7 +90,7 @@ export function SearchPalette({ open, onClose }: { open: boolean; onClose: () =>
   const host = document.querySelector('.dv') || document.body
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label="Search" onMouseDown={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(3,3,8,.72)', backdropFilter: 'blur(6px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '10vh 16px 16px' }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(3,3,8,.72)', backdropFilter: 'blur(6px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: 'max(12px, min(10vh, 80px)) 12px 12px' }}>
       <div onMouseDown={e => e.stopPropagation()} onKeyDown={onKey}
         style={{ width: '100%', maxWidth: 680, background: 'var(--dv-panel)', border: '1px solid var(--dv-border)', borderRadius: 16, boxShadow: '0 30px 80px rgba(0,0,0,.6)', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', borderBottom: '1px solid var(--dv-border-soft)' }}>
@@ -148,11 +148,12 @@ export function SearchPalette({ open, onClose }: { open: boolean; onClose: () =>
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: 16, padding: '9px 14px', borderTop: '1px solid var(--dv-border-soft)', fontSize: 11.5, color: 'var(--dv-dim)' }}>
+        <div className="dv-palette-foot" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', padding: '9px 14px', borderTop: '1px solid var(--dv-border-soft)', fontSize: 11.5, color: 'var(--dv-dim)' }}>
           <span><kbd className="dv-inline-code">↑</kbd> <kbd className="dv-inline-code">↓</kbd> move</span>
           <span><kbd className="dv-inline-code">Enter</kbd> open</span>
           <span><kbd className="dv-inline-code">Esc</kbd> close</span>
-          <span style={{ marginLeft: 'auto' }}>Typos and other words for the same thing are understood</span>
+          <span className="dv-palette-hint" style={{ marginLeft: 'auto' }}>Typos and other words for the same thing are understood</span>
+          <style>{`@media (max-width: 560px), (pointer: coarse) { .dv-palette-foot { display: none !important; } }`}</style>
         </div>
       </div>
     </div>,
@@ -161,11 +162,14 @@ export function SearchPalette({ open, onClose }: { open: boolean; onClose: () =>
 }
 
 /** The "Find…  CTRL K" bar from the screenshots. Opens the palette; Ctrl/⌘ K and "/" work anywhere. */
-export function SearchTrigger({ compact = false }: { compact?: boolean }) {
+export function SearchTrigger({ compact = false, shortcuts = !compact }: { compact?: boolean; shortcuts?: boolean }) {
   const [open, setOpen] = useState(false)
   // Read from the browser without an effect; the server renders CTRL.
   const mac = useSyncExternalStore(() => () => {}, () => /Mac|iPhone|iPad/.test(navigator.platform), () => false)
   useEffect(() => {
+    // Only one search per page owns the keyboard shortcuts, so one Ctrl+K
+    // never opens two palettes; the phone-layout copies pass shortcuts={false}.
+    if (!shortcuts) return
     const onKey = (e: KeyboardEvent) => {
       const typing = e.target instanceof HTMLElement && (e.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName))
       if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setOpen(o => !o) }
@@ -173,20 +177,21 @@ export function SearchTrigger({ compact = false }: { compact?: boolean }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [shortcuts])
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} aria-label="Search"
-        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', height: 38, padding: '0 8px 0 12px', borderRadius: 9, border: '1px solid var(--dv-border)', background: 'var(--dv-bg-2)', color: 'var(--dv-dim)', cursor: 'text', font: '14px var(--dv-sans)' }}>
+        style={{ display: 'flex', alignItems: 'center', justifyContent: compact ? 'center' : undefined, gap: 10, width: '100%', height: compact ? 40 : 38, padding: compact ? 0 : '0 8px 0 12px', borderRadius: 9, border: '1px solid var(--dv-border)', background: 'var(--dv-bg-2)', color: 'var(--dv-dim)', cursor: 'text', font: '14px var(--dv-sans)' }}>
         <Search size={15} />
         {!compact && <span style={{ flex: 1, textAlign: 'left' }}>Find…</span>}
         {!compact && (
-          <span style={{ display: 'flex', gap: 4 }}>
+          <span className="dv-kbd-hint" style={{ display: 'flex', gap: 4 }}>
             <kbd className="dv-inline-code" style={{ fontSize: 10.5 }}>{mac ? '⌘' : 'CTRL'}</kbd>
             <kbd className="dv-inline-code" style={{ fontSize: 10.5 }}>K</kbd>
           </span>
         )}
       </button>
+      <style>{`@media (pointer: coarse), (max-width: 640px) { .dv-kbd-hint { display: none !important; } }`}</style>
       {/* Mounted only while open, so every opening starts with an empty query. */}
       {open && <SearchPalette open onClose={() => setOpen(false)} />}
     </>

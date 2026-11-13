@@ -91,7 +91,7 @@ export function DispositionsManager({ rows }: { rows: Row[] }) {
         </div>
       </div>
       {toastNode}
-      <style>{`@media (max-width: 900px) { .dv-disp-form { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }`}</style>
+      <style>{`@media (max-width: 900px) { .dv-disp-form { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } } @media (max-width: 560px) { .dv-disp-form { grid-template-columns: minmax(0, 1fr) !important; } }`}</style>
     </div>
   )
 }

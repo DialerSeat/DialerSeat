@@ -194,7 +194,19 @@ export default function DevelopersHome() {
         {/* ── compare ── */}
         <section style={{ maxWidth: 1200, margin: '0 auto', padding: '64px 20px 40px' }}>
           <SectionHead eyebrow="Build, partner or embed" title="Three ways to put a dialer in your CRM." sub="Building on a raw voice API means building the dialer. Per-seat embedded dialers mean their plans and their data model. DialerSeat is the dialer, on your terms." />
-          <div className="dv-card dv-table-wrap" style={{ marginTop: 32 }}>
+          <div className="dv-compare-cards" style={{ marginTop: 28, display: 'none', gap: 10 }}>
+            {COMPARE.map(r => (
+              <div key={r.row} className="dv-card" style={{ padding: 16 }}>
+                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 10 }}>{r.row}</div>
+                <div style={{ display: 'grid', gap: 6, fontSize: 13.5 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><span style={{ color: 'var(--dv-accent)' }}>DialerSeat</span><strong style={{ textAlign: 'right' }}>{r.us}</strong></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }} className="dv-muted"><span>Build on a voice API</span><span style={{ textAlign: 'right' }}>{r.build}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }} className="dv-muted"><span>Per-seat dialers</span><span style={{ textAlign: 'right' }}>{r.seat}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="dv-card dv-table-wrap dv-compare-table" style={{ marginTop: 32 }}>
             <table className="dv-table" style={{ minWidth: 640 }}>
               <thead><tr><th></th><th style={{ color: 'var(--dv-accent)' }}>DialerSeat for Developers</th><th>Build on a voice API</th><th>Per-seat embedded dialers</th></tr></thead>
               <tbody>
@@ -246,6 +258,8 @@ export default function DevelopersHome() {
         }
         @media (max-width: 640px) {
           .dv-steps, .dv-tiers { grid-template-columns: minmax(0, 1fr) !important; }
+          .dv-compare-table { display: none; }
+          .dv-compare-cards { display: grid !important; }
           section .dv-card[style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
         }
       `}</style>

@@ -179,7 +179,7 @@ export function KeysManager({ keys, liveActive }: { keys: KeyView[]; liveActive:
           <div className="dv-dim" style={{ fontSize: 12, marginBottom: 6 }}>API version</div>
           <code style={{ fontSize: 12.5 }}>v1</code>
         </div>
-        <DevLink href="/docs/authentication" className="dv-muted" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}><Info size={14} /> Learn about API keys</DevLink>
+        <DevLink href="/docs/authentication" className="dv-muted" style={{ display: 'inline-flex', gap: 8, alignItems: 'center', padding: '8px 0' }}><Info size={14} /> Learn about API keys</DevLink>
       </aside>
 
       {creating && (

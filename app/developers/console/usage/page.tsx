@@ -33,7 +33,7 @@ export default async function UsagePage() {
   return (
     <>
       <PageHead title="Usage" sub="What your platform has used, counted from records. Live dials and seat-weeks appear once live dialing produces them. What you are billed for is under Billing." />
-      <div className="dv-grid-3" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+      <div className="dv-grid-3 dv-stats" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
         {box('Live seats', live.filter(s => s.status === 'active').length, `${live.length} created · ${live.filter(s => s.status === 'pending').length} waiting for payment`)}
         {box('Live dials this week', '—', 'Counted once live dialing is active')}
         {box('Seat-weeks this week', '—', 'Counted once live dialing is active')}
@@ -60,7 +60,7 @@ export default async function UsagePage() {
           </div>
         </div>
       </div>
-      <style>{`@media (max-width: 1000px) { .dv-console-main .dv-grid-3, .dv-console-main .dv-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } } @media (max-width: 640px) { .dv-console-main .dv-grid-3, .dv-console-main .dv-grid-2 { grid-template-columns: minmax(0, 1fr) !important; } }`}</style>
+      <style>{`@media (max-width: 1000px) { .dv-console-main .dv-grid-3, .dv-console-main .dv-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } } @media (max-width: 640px) { .dv-console-main .dv-grid-3, .dv-console-main .dv-grid-2 { grid-template-columns: minmax(0, 1fr) !important; } .dv-console-main .dv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; } .dv-stats > .dv-card { padding: 14px !important; } } @media (max-width: 330px) { .dv-console-main .dv-stats { grid-template-columns: minmax(0, 1fr) !important; } }`}</style>
     </>
   )
 }

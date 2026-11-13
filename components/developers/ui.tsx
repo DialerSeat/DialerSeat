@@ -22,7 +22,7 @@ export function DevLogo({ size = 28 }: { size?: number }) {
       </span>
       <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: 4, color: 'var(--dv-text)' }}>DIALERSEAT</span>
-        <span style={{ fontSize: 12, letterSpacing: 1.5, color: 'var(--dv-accent)', fontWeight: 500 }}>developers</span>
+        <span className="dv-logo-suffix" style={{ fontSize: 12, letterSpacing: 1.5, color: 'var(--dv-accent)', fontWeight: 500 }}>developers</span>
       </span>
     </span>
   )

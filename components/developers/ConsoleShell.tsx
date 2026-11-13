@@ -25,7 +25,7 @@ const LIVE_BADGE: Record<string, { cls: string; text: string }> = {
   paused: { cls: 'dv-badge dv-badge-amber', text: 'Live dialing paused' },
 }
 
-export function Sidebar({ items, onNavigate, title }: { items: NavItem[]; onNavigate?: () => void; title?: string }) {
+export function Sidebar({ items, onNavigate, title, inDrawer = false }: { items: NavItem[]; onNavigate?: () => void; title?: string; inDrawer?: boolean }) {
   const pathname = usePathname()
   const base = useDevBase()
   const main = useMainSiteUrl()
@@ -37,7 +37,7 @@ export function Sidebar({ items, onNavigate, title }: { items: NavItem[]; onNavi
   return (
     <aside style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '16px 12px' }}>
       <DevLink href="/" style={{ padding: '4px 8px 18px', display: 'block' }} onClick={onNavigate}><DevLogo size={26} /></DevLink>
-      <div style={{ padding: '0 4px 14px' }}><SearchTrigger /></div>
+      <div style={{ padding: '0 4px 14px' }}><SearchTrigger shortcuts={!inDrawer} /></div>
       <nav style={{ flex: 1, overflowY: 'auto' }} aria-label={title || 'Console'}>
         {GROUPS.map(g => {
           const groupItems = items.filter(i => i.group === g)
@@ -88,14 +88,15 @@ export function ConsoleShell({ platform, children }: { platform: ShellPlatform; 
 
       {drawer && (
         <div onClick={() => setDrawer(false)} style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(0,0,0,.6)' }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: 280, height: '100%', background: 'var(--dv-bg-2)', borderRight: '1px solid var(--dv-border)' }}>
-            <Sidebar items={CONSOLE_NAV} onNavigate={() => setDrawer(false)} />
+          <div onClick={e => e.stopPropagation()} role="dialog" aria-label="Menu" className="dv-drawer" style={{ position: 'relative', width: 'min(300px, 86vw)', height: '100%', background: 'var(--dv-bg-2)', borderRight: '1px solid var(--dv-border)' }}>
+            <button type="button" className="dv-btn dv-btn-ghost" aria-label="Close menu" onClick={() => setDrawer(false)} style={{ position: 'absolute', top: 10, right: 8, zIndex: 1, width: 40, padding: 0 }}><X size={18} /></button>
+            <Sidebar items={CONSOLE_NAV} onNavigate={() => setDrawer(false)} inDrawer />
           </div>
         </div>
       )}
 
       <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <header style={{ position: 'sticky', top: 0, zIndex: 40, height: 56, display: 'flex', alignItems: 'center', gap: 12, padding: '0 24px', borderBottom: '1px solid var(--dv-border-soft)', background: 'rgba(7,7,13,.85)', backdropFilter: 'blur(14px)' }}>
+        <header className="dv-console-top" style={{ position: 'sticky', top: 0, zIndex: 40, height: 56, display: 'flex', alignItems: 'center', gap: 12, padding: '0 24px', borderBottom: '1px solid var(--dv-border-soft)', background: 'rgba(7,7,13,.85)', backdropFilter: 'blur(14px)' }}>
           <button type="button" className="dv-btn dv-btn-ghost dv-btn-sm dv-console-burger" aria-label="Open menu" onClick={() => setDrawer(true)}>{drawer ? <X size={18} /> : <Menu size={18} />}</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, minWidth: 0 }}>
             <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{platform.name}</span>
@@ -103,6 +104,8 @@ export function ConsoleShell({ platform, children }: { platform: ShellPlatform; 
             {current && <><ChevronRight size={14} color="var(--dv-dim)" /><span className="dv-muted dv-crumb">{current.label}</span></>}
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* On phones the sidebar (and its Find…) lives in the drawer; search stays one tap away here. */}
+            <div className="dv-mobile-search" style={{ width: 40 }}><SearchTrigger compact /></div>
             <DevLink href="/console/billing#live" className={badge.cls + ' dv-live-badge'}><span className="dv-dot" />{badge.text}</DevLink>
             <UserButton appearance={{ elements: { avatarBox: { width: 30, height: 30 } } }} />
           </div>
@@ -112,11 +115,15 @@ export function ConsoleShell({ platform, children }: { platform: ShellPlatform; 
 
       <style>{`
         .dv-console-burger { display: none !important; }
+        .dv-mobile-search { display: none; }
+        @media (max-width: 360px) { .dv-drawer .dv-logo-suffix { display: none; } }
         @media (max-width: 960px) {
           .dv-console { grid-template-columns: minmax(0, 1fr) !important; }
           .dv-console-side { display: none; }
           .dv-console-burger { display: inline-flex !important; }
+          .dv-mobile-search { display: block; }
           .dv-console-main { padding: 22px 16px 48px !important; }
+          .dv-console-top { padding: 0 10px 0 6px !important; gap: 8px !important; }
           .dv-crumb { display: none; }
         }
         @media (max-width: 560px) { .dv-live-badge { display: none !important; } }

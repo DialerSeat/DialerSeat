@@ -101,14 +101,14 @@ export function WebhooksManager({ endpoints, deliveries }: { endpoints: WebhookE
               </div>
               <div style={{ marginTop: 12 }}>
                 <div className="dv-label">Signing secret</div>
-                <div className="dv-row" style={{ gap: 6 }}>
-                  <code className="dv-inline-code" style={{ fontSize: 12.5 }}>{shown[ep.id] ? ep.signing_secret : 'whsec_' + '•'.repeat(18)}</code>
+                <div className="dv-row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                  <code className="dv-inline-code" style={{ fontSize: 12.5, overflowWrap: 'anywhere', minWidth: 0 }}>{shown[ep.id] ? ep.signing_secret : 'whsec_' + '•'.repeat(18)}</code>
                   <button type="button" className="dv-btn dv-btn-ghost dv-btn-sm" onClick={() => setShown(s => ({ ...s, [ep.id]: !s[ep.id] }))} aria-label={shown[ep.id] ? 'Hide secret' : 'Reveal secret'}>{shown[ep.id] ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                   <CopyButton text={ep.signing_secret} />
                 </div>
               </div>
               <div className="dv-row" style={{ marginTop: 14, flexWrap: 'wrap', gap: 8 }}>
-                <select className="dv-select" style={{ width: 220, height: 30, fontSize: 13 }} value={testType[ep.id] || 'call.dispositioned'} onChange={e => setTestType(t => ({ ...t, [ep.id]: e.target.value }))} aria-label="Event to send">
+                <select className="dv-select" style={{ width: '100%', maxWidth: 240, flex: '1 1 180px', height: 34, fontSize: 13 }} value={testType[ep.id] || 'call.dispositioned'} onChange={e => setTestType(t => ({ ...t, [ep.id]: e.target.value }))} aria-label="Event to send">
                   {WEBHOOK_EVENTS.map(ev => <option key={ev.type} value={ev.type}>{ev.type}</option>)}
                 </select>
                 <button type="button" className="dv-btn dv-btn-sm" onClick={() => sendTest(ep)} disabled={busy === 'test:' + ep.id || !!ep.disabled_at}><Send size={13} /> {busy === 'test:' + ep.id ? 'Sending…' : 'Send test event'}</button>

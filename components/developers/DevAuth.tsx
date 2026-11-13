@@ -28,6 +28,9 @@ const appearance = {
     fontFamily: "'Futura PT', Futura, 'Trebuchet MS', sans-serif",
   },
   elements: {
+    // Fill a phone's width instead of Clerk's fixed card width.
+    rootBox: { width: '100%', maxWidth: '400px' },
+    cardBox: { width: '100%', maxWidth: '400px' },
     card: { background: '#0f0f1a', border: '1px solid #23233b', boxShadow: '0 30px 80px rgba(0,0,0,.45)' },
     socialButtonsBlockButton: { background: '#141424', border: '1px solid #23233b', color: '#e9e9f3' },
     footer: { background: 'transparent' },
@@ -46,13 +49,14 @@ function useReturnTo(): string {
 function Frame({ children, mode }: { children: React.ReactNode; mode: 'in' | 'up' }) {
   const main = useMainSiteUrl()
   return (
-    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px 64px', background: 'radial-gradient(800px 360px at 50% -10%, rgba(74,158,255,.14), transparent 70%), var(--dv-bg)' }}>
-      <div style={{ width: '100%', maxWidth: 1100, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 48 }}>
-        <DevLink href="/"><DevLogo /></DevLink>
-        <a href={main} className="dv-btn dv-btn-ghost dv-btn-sm"><ArrowLeft size={14} /> dialerseat.com</a>
+    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 16px 64px', background: 'radial-gradient(800px 360px at 50% -10%, rgba(74,158,255,.14), transparent 70%), var(--dv-bg)' }}>
+      <div style={{ width: '100%', maxWidth: 1100, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 'clamp(24px, 6vw, 48px)' }}>
+        <DevLink href="/" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, minWidth: 0 }}><DevLogo /></DevLink>
+        <a href={main} className="dv-btn dv-btn-ghost dv-btn-sm" style={{ flexShrink: 0 }} aria-label="Back to dialerseat.com"><ArrowLeft size={14} /><span className="dv-auth-back"> dialerseat.com</span></a>
+        <style>{`@media (max-width: 420px) { .dv-auth-back { display: none; } }`}</style>
       </div>
       <div style={{ textAlign: 'center', marginBottom: 22, maxWidth: 440 }}>
-        <h1 style={{ fontSize: 24, margin: 0, fontWeight: 600 }}>{mode === 'in' ? 'Sign in to DialerSeat for Developers' : 'Create your developer account'}</h1>
+        <h1 style={{ fontSize: 'clamp(20px, 5.5vw, 24px)', margin: 0, fontWeight: 600 }}>{mode === 'in' ? 'Sign in to DialerSeat for Developers' : 'Create your developer account'}</h1>
         <p className="dv-muted" style={{ fontSize: 14, margin: '10px 0 0', lineHeight: 1.6 }}>
           {mode === 'in'
             ? 'Use your DialerSeat login. Your developer account and your dialerseat.com account stay separate.'

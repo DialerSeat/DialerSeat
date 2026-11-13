@@ -98,6 +98,7 @@ export const DEV_CSS = `
 
 /* ── switches and segmented controls ── */
 .dv-switch { position: relative; width: 36px; height: 20px; border-radius: 999px; background: var(--dv-border); border: none; cursor: pointer; transition: background .15s; flex-shrink: 0; }
+.dv-switch::before { content: ''; position: absolute; inset: -10px -6px; }
 .dv-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
 .dv-switch[aria-checked="true"] { background: var(--dv-accent); }
 .dv-switch[aria-checked="true"]::after { transform: translateX(16px); }
@@ -126,4 +127,31 @@ export const DEV_CSS = `
 .dv-alert-green { background: var(--dv-green-soft); border-color: rgba(52,211,153,.3); }
 .dv-empty { padding: 36px 20px; text-align: center; color: var(--dv-dim); font-size: 13px; }
 mark.dv-mark { background: rgba(74,158,255,.22); color: inherit; border-radius: 3px; padding: 0 1px; }
+
+/* ── phones and touch ──
+   Fingers need bigger targets than a mouse: 40px for buttons, 36px for the
+   small ones, 46px for primary actions. Inputs use 16px text because iOS
+   zooms the whole page into any field smaller than that, and never zooms
+   back out. */
+@media (pointer: coarse), (max-width: 640px) {
+  .dv-btn { min-height: 40px; }
+  .dv-btn-sm { min-height: 36px; padding: 0 12px; }
+  .dv-btn-lg { min-height: 46px; }
+  .dv-input, .dv-select { height: 42px; font-size: 16px; }
+  .dv-textarea { font-size: 16px; }
+  .dv-switch { width: 44px; height: 26px; }
+  .dv-switch::after { width: 22px; height: 22px; }
+  .dv-switch[aria-checked="true"]::after { transform: translateX(18px); }
+  .dv-seg button { height: 36px; }
+}
+@media (max-width: 640px) {
+  .dv-h1 { font-size: 23px; }
+  .dv-sub { font-size: 14px; }
+  .dv-card-head { padding: 16px 16px 0; }
+  .dv-card-body { padding: 14px 16px 16px; }
+  .dv-card-foot { padding: 12px 16px; flex-wrap: wrap; }
+  .dv-table th, .dv-table td { padding: 10px 8px; }
+  .dv-code pre { font-size: 12px; padding: 12px; }
+  .dv-toast { left: 16px; right: 16px; transform: none; text-align: center; }
+}
 `

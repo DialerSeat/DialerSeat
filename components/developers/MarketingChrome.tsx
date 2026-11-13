@@ -23,14 +23,14 @@ export function DevTopNav() {
     <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(7,7,13,.82)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--dv-border-soft)' }}>
       <div style={{ background: 'var(--dv-bg-2)', borderBottom: '1px solid var(--dv-border-soft)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', height: 34, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
-          <a href={main} className="dv-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <a href={main} className="dv-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, paddingRight: 8 }}>
             <ArrowLeft size={13} /> Go back to dialerseat.com
           </a>
           <a href={`mailto:${SALES_EMAIL}`} className="dv-dim dv-hide-sm">{SALES_EMAIL}</a>
         </div>
       </div>
-      <nav style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', height: 64, display: 'flex', alignItems: 'center', gap: 28 }}>
-        <DevLink href="/" aria-label="DialerSeat for Developers home"><DevLogo /></DevLink>
+      <nav className="dv-topnav" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', height: 64, display: 'flex', alignItems: 'center', gap: 28 }}>
+        <DevLink href="/" aria-label="DialerSeat for Developers home" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}><DevLogo /></DevLink>
         <div className="dv-nav-links" style={{ display: 'flex', gap: 22, fontSize: 13.5 }}>
           {LINKS.map(l => <DevLink key={l.href} href={l.href} className="dv-muted dv-nav-a">{l.label}</DevLink>)}
         </div>
@@ -48,7 +48,7 @@ export function DevTopNav() {
       </nav>
       {open && (
         <div className="dv-show-sm" style={{ padding: '6px 20px 16px', display: 'grid', gap: 4 }}>
-          {LINKS.map(l => <DevLink key={l.href} href={l.href} onClick={() => setOpen(false)} style={{ padding: '10px 0', fontSize: 15 }}>{l.label}</DevLink>)}
+          {LINKS.map(l => <DevLink key={l.href} href={l.href} onClick={() => setOpen(false)} style={{ padding: '12px 0', fontSize: 16 }}>{l.label}</DevLink>)}
           {isSignedIn
             ? <DevLink href="/console" style={{ padding: '10px 0', fontSize: 15, color: 'var(--dv-accent)' }}>Open console</DevLink>
             : <>
@@ -66,7 +66,8 @@ export function DevTopNav() {
           div.dv-show-sm { display: grid !important; }
           .dv-hide-sm { display: none !important; }
         }
-        @media (max-width: 480px) { .dv-hide-xs { display: none !important; } }
+        @media (max-width: 480px) { .dv-hide-xs { display: none !important; } .dv-topnav { gap: 10px !important; padding: 0 12px 0 16px !important; } }
+        @media (max-width: 360px) { .dv-logo-suffix { display: none; } }
       `}</style>
     </header>
   )
@@ -93,7 +94,7 @@ export function DevFooter() {
         {cols.map(c => (
           <div key={c.title}>
             <div className="dv-dim" style={{ fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 12 }}>{c.title}</div>
-            <div style={{ display: 'grid', gap: 9, fontSize: 13.5 }}>
+            <div className="dv-foot-links" style={{ display: 'grid', gap: 9, fontSize: 13.5 }}>
               {c.links.map(([href, label]) => /^(https?:|mailto:)/.test(href) || href === '/' || href === '/privacy' || href === '/terms'
                 ? <a key={label} href={href} className="dv-muted dv-nav-a">{label}</a>
                 : <DevLink key={label} href={href} className="dv-muted dv-nav-a">{label}</DevLink>)}
@@ -105,7 +106,7 @@ export function DevFooter() {
         <span>© {year} DialerSeat™ · All rights reserved</span>
         <span>Rates are negotiated and subject to change · {SALES_EMAIL}</span>
       </div>
-      <style>{`@media (max-width: 760px) { .dv-foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } .dv-foot-grid > div:first-child { grid-column: 1 / -1; } }`}</style>
+      <style>{`@media (max-width: 760px) { .dv-foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } .dv-foot-grid > div:first-child { grid-column: 1 / -1; } .dv-foot-links { gap: 0 !important; } .dv-foot-links a { padding: 8px 0; } }`}</style>
     </footer>
   )
 }
