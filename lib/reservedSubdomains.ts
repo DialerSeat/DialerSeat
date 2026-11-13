@@ -45,7 +45,7 @@ const VENDORS = [
 
 /** Our own name, our plans, and the words the dashboard uses for a role. */
 const PRODUCT = [
-  'dialerseat', 'whitelabel', 'white-label', 'wl',
+  'dialerseat', 'whitelabel', 'white-label', 'wl', 'developers', 'developer',
   'manager', 'managers', 'pro', 'team', 'teams', 'seat', 'seats',
 ]
 

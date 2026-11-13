@@ -168,6 +168,29 @@ export default function SiteFooter() {
         ))}
       </div>
 
+      {/* DialerSeat for Developers. Its own product on its own subdomain, so a
+          plain anchor rather than LocaleLink, which would prefix a language
+          path onto another host. Every page with a footer carries it. */}
+      <div style={{ marginBottom: 18 }}>
+        <a
+          href={process.env.NEXT_PUBLIC_DEV_SITE_URL || 'https://dev.dialerseat.com'}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 10,
+            letterSpacing: 3,
+            color: '#4a9eff',
+            textDecoration: 'none',
+            padding: '7px 14px',
+            border: '1px solid rgba(74,158,255,0.45)',
+            borderRadius: 4,
+          }}
+        >
+          {t("DIALERSEAT FOR DEVELOPERS")} →
+        </a>
+      </div>
+
       {/* Copyright row */}
       <p
         style={{

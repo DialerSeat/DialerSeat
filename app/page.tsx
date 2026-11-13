@@ -472,6 +472,9 @@ export default async function Home({ searchParams }: PageProps) {
               <Link href="#features" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{t("FEATURES")}</Link>
               <Link href="#pricing" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{t("PRICING")}</Link>
               <Link href="#compare" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{t("COMPARE")}</Link>
+              {/* DialerSeat for Developers lives on its own subdomain, so a plain
+                  anchor: LocaleLink would prefix a language path onto another host. */}
+              <a href={process.env.NEXT_PUBLIC_DEV_SITE_URL || 'https://dev.dialerseat.com'} className="ds-nav-link" title="DialerSeat for Developers" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{t("DEVELOPERS")}</a>
               <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)', textDecoration: 'none', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap' }}>{t("SIGN IN")}</Link>
               {/* Phones only. GET STARTED is hidden below 768px, so a visitor on
                   a phone (95% of Instagram traffic) had only SIGN IN, for an

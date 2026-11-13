@@ -1,9 +1,10 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { clerkMiddleware, createRouteMatcher, type ClerkMiddlewareAuth } from '@clerk/nextjs/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ENTITLED_STATUSES, pausedAccessRunning } from '@/lib/entitlement'
 import { isOwnerFunded } from '@/lib/seatFunding'
 import { isReservedSubdomain } from '@/lib/reservedSubdomains'
+import { localTestUser } from '@/lib/developers/localAuth'
 import {
   LOCALE_COOKIE, LOCALE_HEADER, LOCALE_PATH_HEADER, PROMPT_COOKIE, isLocalizablePath, splitLocalePrefix,
 } from '@/lib/i18n/locales'
@@ -429,6 +430,86 @@ const PREVIEW_BEFORE_PAYMENT = process.env.NEXT_PUBLIC_PREVIEW_ONBOARDING !== '0
 // The reads the demo answers instead of the database.
 const DEMO_READS = /^\/api\/(analytics\/(summary|timeseries|dispositions|campaigns)|campaigns\/list|campaigns\/script-links\/list|scripts\/list|leads\/list|recordings\/list|teams\/.+)$/
 
+// ── DEVELOPER SITE ROUTING ──────────────────────────────────────────
+// On dev.dialerseat.com (and dev.localhost) the address bar shows /console,
+// /docs, /welcome; the pages live under app/developers. On any other host the
+// same pages answer at /developers/* — on localhost so they can be worked on,
+// and on dialerseat.com only to redirect to the subdomain.
+const DEV_HOSTS = new Set(['dev.dialerseat.com', 'dev.localhost'])
+const DEV_PREFIX = '/developers'
+/** Paths a visitor can read without signing in, relative to the dev site root. */
+const DEV_PUBLIC = /^\/($|docs(\/.*)?$|sign-in(\/.*)?$|sign-up(\/.*)?$|robots\.txt$|sitemap\.xml$|llms\.txt$)/
+
+type ClerkAuth = ClerkMiddlewareAuth
+type ClerkRequest = NextRequest
+
+async function routeDeveloperSite(
+  auth: ClerkAuth,
+  request: ClerkRequest,
+  hostname: string,
+): Promise<NextResponse | null> {
+  const host = hostname.split(':')[0].toLowerCase()
+  const url = request.nextUrl
+
+  // api.dialerseat.com/v1/... is the public API's address; the routes live at
+  // /api/v1. Nothing else answers on that host.
+  if (host === 'api.dialerseat.com' || host === 'api.localhost') {
+    if (url.pathname === '/v1' || url.pathname.startsWith('/v1/')) {
+      const target = url.clone()
+      target.pathname = '/api' + url.pathname
+      return NextResponse.rewrite(target)
+    }
+    return NextResponse.json(
+      { error: { type: 'not_found', message: 'DialerSeat API requests go to /v1/... — see https://dev.dialerseat.com/docs/api' } },
+      { status: 404 },
+    )
+  }
+
+  // The console's own API, and the public /v1 API, belong to the developer
+  // product. They skip the main site's subscription gates (a developer with
+  // no dialerseat.com plan is not read-only here) and check who is calling
+  // themselves: a Clerk session for /api/developers, a secret key for /v1.
+  if (url.pathname.startsWith('/api/developers/') || url.pathname.startsWith('/api/v1/')) {
+    return NextResponse.next()
+  }
+
+  const onDevHost = DEV_HOSTS.has(host)
+  const underPrefix = url.pathname === DEV_PREFIX || url.pathname.startsWith(DEV_PREFIX + '/')
+
+  if (!onDevHost && !underPrefix) return null
+  // API routes go through the normal rules below, exactly as on the apex:
+  // returning early here would skip every protection the main handler applies
+  // to /api. 'dev' is a reserved subdomain, so it is never read as a tenant.
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/')) return null
+
+  // On the apex, the subdomain is the only address for these pages.
+  if (!onDevHost && (host === 'dialerseat.com' || host === 'www.dialerseat.com')) {
+    const rest = url.pathname.slice(DEV_PREFIX.length) || '/'
+    return NextResponse.redirect(new URL(rest + url.search, 'https://dev.dialerseat.com'), 308)
+  }
+  // On the subdomain, a /developers address is the same page with a longer name.
+  if (onDevHost && underPrefix) {
+    const rest = url.pathname.slice(DEV_PREFIX.length) || '/'
+    return NextResponse.redirect(new URL(rest + url.search, request.url), 308)
+  }
+
+  const base = onDevHost ? '' : DEV_PREFIX
+  const sitePath = onDevHost ? url.pathname : (url.pathname.slice(DEV_PREFIX.length) || '/')
+
+  if (!DEV_PUBLIC.test(sitePath) && !localTestUser()) {
+    const signIn = new URL(base + '/sign-in', request.url)
+    signIn.searchParams.set('redirect_url', base + sitePath + url.search)
+    await auth.protect({ unauthenticatedUrl: signIn.toString() })
+  }
+
+  const headers = new Headers(request.headers)
+  headers.set('x-dev-base', base)
+  if (!onDevHost) return NextResponse.next({ request: { headers } })
+  const target = url.clone()
+  target.pathname = DEV_PREFIX + (sitePath === '/' ? '' : sitePath)
+  return NextResponse.rewrite(target, { request: { headers } })
+}
+
 export default clerkMiddleware(async (auth, request) => {
   const hostname = request.headers.get('host') || ''
   const tenantSlug = extractTenantSlug(hostname)
@@ -438,6 +519,16 @@ export default clerkMiddleware(async (auth, request) => {
     if (tenantSlug) res.headers.set('x-tenant-slug', tenantSlug)
     return res
   }
+
+  // ── DEV.DIALERSEAT.COM — A SEPARATE PRODUCT ON THE SAME LOGIN ───────
+  // Handled here, before anything else, and returned from here, so none of
+  // the main site's gates (demo before payment, paused access, white-label
+  // onboarding, the signed-in homepage redirect) ever see a developer page,
+  // and nothing on the developer side can change what dialerseat.com does.
+  // Developer status lives only in dev_* tables; this block never reads
+  // subscriptions, and the main site never reads dev_*.
+  const devRoute = await routeDeveloperSite(auth, request, hostname)
+  if (devRoute) return devRoute
 
   // ── LANGUAGE ADDRESSES ──────────────────────────────────────────────
   // /es/faq is /faq rendered in Spanish, served at its own URL so a search in

@@ -205,11 +205,16 @@ const pageDatesSource = readFileSync(join(process.cwd(), 'scripts', 'gen-page-da
 function publicTopLevelRoutes(): string[] {
   // Signed-in destinations, not marketing pages.
   const PRIVATE = new Set(['billing', 'dashboard', 'welcome'])
+  // Another site's pages, not dialerseat.com's. app/developers is
+  // dev.dialerseat.com: proxy.ts routes it in routeDeveloperSite (its own
+  // public/private split, its own sitemap) and redirects /developers on the
+  // apex to the subdomain, so none of the apex registrations apply.
+  const OTHER_SITE = new Set(['developers'])
   return readdirSync(APP, { withFileTypes: true })
     .filter(d => d.isDirectory())
     .map(d => d.name)
     .filter(name => !name.startsWith('[') && !name.startsWith('_'))
-    .filter(name => !PRIVATE.has(name))
+    .filter(name => !PRIVATE.has(name) && !OTHER_SITE.has(name))
     .filter(name => existsSync(join(APP, name, 'page.tsx')))
     .sort()
 }
