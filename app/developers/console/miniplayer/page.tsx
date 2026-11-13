@@ -3,7 +3,7 @@ import { PageHead } from '@/components/developers/ConsoleShell'
 import { CodeBlock } from '@/components/developers/ui'
 import { OriginsEditor } from '@/components/developers/console/OriginsEditor'
 import { TryMiniplayer } from '@/components/developers/console/TryMiniplayer'
-import { consoleContext } from '@/lib/developers/server'
+import { consoleContext, devBase } from '@/lib/developers/server'
 import { devStore } from '@/lib/developers/store'
 import { EMBED_SRC } from '@/lib/developers/catalog'
 
@@ -12,9 +12,10 @@ export const dynamic = 'force-dynamic'
 
 export default async function MiniplayerPage() {
   const { platform } = await consoleContext()
+  const base = await devBase()
   const keys = await devStore().listKeys(platform.id)
   const pk = keys.find(k => k.kind === 'publishable' && k.env === 'test' && !k.revoked_at)
-  const snippet = `<script src="${EMBED_SRC}" data-key="${pk?.token || 'pk_test_…'}"></script>
+  const snippet = `<script src="${EMBED_SRC}" data-key="${pk?.token || 'dpk_test_…'}"></script>
 <div id="dialer" style="width:380px;height:640px"></div>
 <script>
   // SESSION_TOKEN comes from POST /v1/seats/{id}/sessions on your server
@@ -33,6 +34,7 @@ export default async function MiniplayerPage() {
       <PageHead title="Miniplayer" sub="The portable DialerSeat dialer: the lead queue, call controls and your disposition picker in one panel on your page. Paste the snippet, allow your origins, and sign each user in with a session." />
       <div className="dv-stack">
         <TryMiniplayer />
+        <p className="dv-help" style={{ marginTop: -4 }}>Want to see every API request too? Open the <a className="dv-link" href={base + '/playground'}>playground</a>.</p>
 
           <div className="dv-card" id="snippet">
             <div className="dv-card-head"><h2 className="dv-card-title">Embed snippet</h2><p className="dv-card-desc">Your test publishable key is already filled in. Swap in the live one when you go live.</p></div>

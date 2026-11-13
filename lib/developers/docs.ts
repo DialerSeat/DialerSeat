@@ -36,10 +36,10 @@ export const DOCS: DocPage[] = [
       { t: 'p', text: 'Sign in at dev.dialerseat.com with any DialerSeat login and choose Activate developer account. It is free. You get test keys straight away and every part of the console and API. Nothing places a real call until you activate live dialing.' },
       { t: 'h', id: 'seat', text: '2. Create a seat for a user' },
       { t: 'p', text: 'A seat is one of your users who dials. Create it from your server with your secret key, keyed on your own user id. Calling it again with the same id updates the seat instead of making a second one.' },
-      { t: 'code', lang: 'bash', code: `curl ${API_BASE}/seats \\\n  -H "Authorization: Bearer sk_test_..." \\\n  -H "Content-Type: application/json" \\\n  -d '{"external_user_id":"usr_829","email":"ana@acme.com","name":"Ana Ruiz"}'` },
+      { t: 'code', lang: 'bash', code: `curl ${API_BASE}/seats \\\n  -H "Authorization: Bearer dsk_test_..." \\\n  -H "Content-Type: application/json" \\\n  -d '{"external_user_id":"usr_829","email":"ana@acme.com","name":"Ana Ruiz"}'` },
       { t: 'h', id: 'session', text: '3. Create a session' },
       { t: 'p', text: 'Sessions sign a seat into the miniplayer with no second login. A session token lasts 15 minutes and is used once. Create one each time the user opens the dialer.' },
-      { t: 'code', lang: 'bash', code: `curl -X POST ${API_BASE}/seats/seat_123/sessions \\\n  -H "Authorization: Bearer sk_test_..."` },
+      { t: 'code', lang: 'bash', code: `curl -X POST ${API_BASE}/seats/seat_123/sessions \\\n  -H "Authorization: Bearer dsk_test_..."` },
       { t: 'h', id: 'embed', text: '4. Drop in the miniplayer' },
       { t: 'code', lang: 'html', code: `<script src="${EMBED_SRC}"></script>\n<div id="dialer"></div>\n<script>\n  DialerSeat.mount('#dialer', { session: SESSION_TOKEN, campaign: 'your_campaign_id' })\n</script>` },
       { t: 'h', id: 'webhooks', text: '5. Receive results' },
@@ -71,15 +71,19 @@ export const DOCS: DocPage[] = [
     title: 'Authentication and API keys',
     group: 'Start here',
     summary: 'Secret keys for your server, publishable keys for the browser, and test against live.',
-    keywords: ['api key', 'secret key', 'publishable key', 'bearer', 'token', 'rotate', 'revoke', 'leaked', 'credentials', 'sk_test', 'sk_live', 'pk_test', 'pk_live', 'authorization header'],
+    keywords: ['api key', 'secret key', 'publishable key', 'bearer', 'token', 'rotate', 'revoke', 'leaked', 'credentials', 'dsk_test', 'dsk_live', 'dpk_test', 'dpk_live', 'authorization header'],
     blocks: [
       { t: 'p', text: 'Every API request carries a secret key in the Authorization header as a bearer token.' },
-      { t: 'code', lang: 'http', code: 'Authorization: Bearer sk_live_...' },
+      { t: 'code', lang: 'http', code: 'Authorization: Bearer dsk_live_...' },
       { t: 'h', id: 'kinds', text: 'Two kinds of key' },
       { t: 'list', items: [
-        'Secret keys (sk_test_, sk_live_) can do anything the API can. Keep them on your server. They are shown once, when you create them; after that the console shows only the last four characters.',
-        'Publishable keys (pk_test_, pk_live_) are safe in a browser. They only identify your platform to the miniplayer loader, and only from origins you allow.',
+        'Secret keys (dsk_test_, dsk_live_) can do anything the API can. Keep them on your server. They are shown once, when you create them; after that the console shows only the last four characters.',
+        'Publishable keys (dpk_test_, dpk_live_) are safe in a browser. They only identify your platform to the miniplayer loader, and only from origins you allow.',
       ] },
+      { t: 'h', id: 'format', text: 'What a key looks like' },
+      { t: 'p', text: 'DialerSeat keys start with dsk_ (secret) or dpk_ (publishable), then test_ or live_. The last six characters are a checksum, so a key with a typo or a missing character is rejected with a message that says so, before anything else happens. Webhook signing secrets start with dswh_.' },
+      { t: 'h', id: 'browsers', text: 'Keys in a browser' },
+      { t: 'p', text: 'Test secret keys work from a web page, so you can try the API from a test page or the playground. Live secret keys are refused from any browser: if a request carries an Origin header, a live key gets 403 and nothing runs. Keep live keys on your server.' },
       { t: 'h', id: 'environments', text: 'Test and live' },
       { t: 'p', text: 'Test keys see only test data and never dial. Live keys see only live data and dial once live dialing is active. A seat, campaign or lead made with a test key does not exist for a live key.' },
       { t: 'h', id: 'rotate', text: 'Rotating a key' },
@@ -147,7 +151,7 @@ export const DOCS: DocPage[] = [
     title: 'Webhooks',
     group: 'Build',
     summary: 'Events, payloads, signatures and retries.',
-    keywords: ['webhook', 'events', 'callback url', 'notification', 'signature', 'hmac', 'verify', 'retry', 'endpoint', 'whsec'],
+    keywords: ['webhook', 'events', 'callback url', 'notification', 'signature', 'hmac', 'verify', 'retry', 'endpoint', 'dswh'],
     blocks: [
       { t: 'p', text: 'Add an endpoint in the console and choose its events. Each delivery is a POST with a JSON body and a DialerSeat-Signature header.' },
       { t: 'h', id: 'events', text: 'Events' },
@@ -167,7 +171,7 @@ export const DOCS: DocPage[] = [
     keywords: ['embed', 'widget', 'iframe', 'script tag', 'portable dialer', 'mount', 'sdk', 'javascript', 'allowed origins', 'cors', 'frame', 'theme', 'events', 'postmessage', 'setLeads', 'test numbers', 'simulated'],
     blocks: [
       { t: 'p', text: 'The miniplayer is the DialerSeat dialer in a compact panel: the lead queue, the call controls and your disposition picker. It runs in a frame on your page, signed in with a session your server creates, so your users never see a DialerSeat login.' },
-      { t: 'code', lang: 'html', code: `<script src="${EMBED_SRC}" data-key="pk_test_..."></script>
+      { t: 'code', lang: 'html', code: `<script src="${EMBED_SRC}" data-key="dpk_test_..."></script>
 <div id="dialer" style="width:380px;height:640px"></div>
 <script>
   const dialer = DialerSeat.mount('#dialer', {

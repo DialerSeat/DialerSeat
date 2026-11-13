@@ -11,7 +11,7 @@
 
 import 'server-only'
 import { NextResponse, type NextRequest } from 'next/server'
-import { hashKey, parseKey } from './keys'
+import { checkKey, hashKey } from './keys'
 import { devStore, type ApiKey, type DevStore, type Env, type Platform } from './store'
 
 export interface V1Context {
@@ -52,14 +52,42 @@ function allow(keyId: string): number | null {
   return null
 }
 
+// ── BROWSERS: TEST KEYS YES, LIVE KEYS NEVER ─────────────────────────────
+// A web page may call /v1 with a TEST key, so a developer can try the API from
+// their own test page or the playground. A LIVE secret key arriving from a
+// browser (any request carrying an Origin header) is refused outright: a live
+// key in a web page is already a leak, and the request must not run.
+// The preflight (OPTIONS) is answered in proxy.ts.
+function withCors(res: NextResponse, origin: string | null): NextResponse {
+  if (!origin) return res
+  res.headers.set('Access-Control-Allow-Origin', origin)
+  res.headers.set('Access-Control-Expose-Headers', 'DialerSeat-Environment, Retry-After')
+  res.headers.append('Vary', 'Origin')
+  return res
+}
+
 export async function withV1(req: NextRequest, handler: (ctx: V1Context) => Promise<NextResponse>): Promise<NextResponse> {
+  const origin = req.headers.get('origin')
+  return withCors(await runV1(req, origin, handler), origin)
+}
+
+async function runV1(req: NextRequest, origin: string | null, handler: (ctx: V1Context) => Promise<NextResponse>): Promise<NextResponse> {
   const started = Date.now()
   const header = req.headers.get('authorization') || ''
   const presented = header.replace(/^Bearer\s+/i, '').trim()
-  if (!presented) return v1Error('unauthorized', 'No API key. Send it as: Authorization: Bearer sk_test_...')
-  const parsed = parseKey(presented)
-  if (!parsed) return v1Error('unauthorized', 'That is not a DialerSeat API key. Keys start with sk_test_ or sk_live_.')
-  if (parsed.kind !== 'secret') return v1Error('unauthorized', 'Publishable keys (pk_) only work in the miniplayer loader. Use a secret key (sk_) from your server.')
+  if (!presented) return v1Error('unauthorized', 'No API key. Send it as: Authorization: Bearer dsk_test_...')
+  const checked = checkKey(presented)
+  if (!checked.ok) {
+    // The checksum lets us say what is wrong without a database lookup.
+    const why = {
+      not_a_key: 'That is not a DialerSeat API key. Secret keys start with dsk_test_ or dsk_live_.',
+      wrong_length: 'That key is incomplete. Copy all of it again from where you saved it.',
+      bad_checksum: 'That key has a typo: its checksum does not match. Copy it again from where you saved it.',
+    }[checked.reason]
+    return v1Error('unauthorized', why)
+  }
+  const parsed = checked.key
+  if (parsed.kind !== 'secret') return v1Error('unauthorized', 'Publishable keys (dpk_) only work in the miniplayer loader. Use a secret key (dsk_) from your server.')
 
   const store = devStore()
   const key = await store.findKeyByHash(hashKey(presented))
@@ -67,6 +95,10 @@ export async function withV1(req: NextRequest, handler: (ctx: V1Context) => Prom
   if (key.revoked_at) return v1Error('unauthorized', `This API key was revoked on ${key.revoked_at.slice(0, 10)}.`)
   const platform = await store.getPlatform(key.platform_id)
   if (!platform) return v1Error('unauthorized', 'This API key belongs to a platform that no longer exists.')
+
+  if (origin && key.env === 'live') {
+    return v1Error('forbidden', 'Live secret keys only work from your server. This request came from a web page, so it was refused. Use a test key in the browser.')
+  }
 
   const wait = allow(key.id)
   if (wait) return v1Error('rate_limited', `Too many requests. Try again in ${wait} second(s).`, undefined, { 'Retry-After': String(wait) })

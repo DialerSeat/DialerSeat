@@ -102,7 +102,7 @@ export function WebhooksManager({ endpoints, deliveries }: { endpoints: WebhookE
               <div style={{ marginTop: 12 }}>
                 <div className="dv-label">Signing secret</div>
                 <div className="dv-row" style={{ gap: 6, flexWrap: 'wrap' }}>
-                  <code className="dv-inline-code" style={{ fontSize: 12.5, overflowWrap: 'anywhere', minWidth: 0 }}>{shown[ep.id] ? ep.signing_secret : 'whsec_' + '•'.repeat(18)}</code>
+                  <code className="dv-inline-code" style={{ fontSize: 12.5, overflowWrap: 'anywhere', minWidth: 0 }}>{shown[ep.id] ? ep.signing_secret : 'dswh_' + '•'.repeat(18)}</code>
                   <button type="button" className="dv-btn dv-btn-ghost dv-btn-sm" onClick={() => setShown(s => ({ ...s, [ep.id]: !s[ep.id] }))} aria-label={shown[ep.id] ? 'Hide secret' : 'Reveal secret'}>{shown[ep.id] ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                   <CopyButton text={ep.signing_secret} />
                 </div>

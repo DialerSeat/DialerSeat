@@ -29,7 +29,7 @@ export default async function SeatsPage({ searchParams }: { searchParams: Promis
           {seats.length === 0 ? (
             <div style={{ padding: '8px 4px' }}>
               <div className="dv-empty" style={{ paddingTop: 12 }}>No {env} seats yet. Create one from your server:</div>
-              <CodeBlock lang="bash" title="terminal" code={`curl ${API_BASE}/seats \\\n  -H "Authorization: Bearer sk_${env}_..." \\\n  -H "Content-Type: application/json" \\\n  -d '{"external_user_id":"usr_829","email":"agent@yourcrm.com","name":"Agent Name"}'`} />
+              <CodeBlock lang="bash" title="terminal" code={`curl ${API_BASE}/seats \\\n  -H "Authorization: Bearer dsk_${env}_..." \\\n  -H "Content-Type: application/json" \\\n  -d '{"external_user_id":"usr_829","email":"agent@yourcrm.com","name":"Agent Name"}'`} />
             </div>
           ) : (
             <div className="dv-table-wrap"><table className="dv-table">

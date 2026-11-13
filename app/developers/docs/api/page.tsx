@@ -24,7 +24,7 @@ const BODIES: Record<string, string> = {
 function example(e: ApiEndpoint): string {
   const path = e.path.replace('{id}', e.group === 'Campaigns' || e.group === 'Leads' ? 'crm_campaign_77' : 'seat_123').replace('{external_id}', 'c_5501')
   const body = BODIES[`${e.method} ${e.path}`]
-  const lines = [`curl${e.method === 'GET' ? '' : ` -X ${e.method}`} ${API_BASE}${path} \\`, '  -H "Authorization: Bearer sk_test_..."']
+  const lines = [`curl${e.method === 'GET' ? '' : ` -X ${e.method}`} ${API_BASE}${path} \\`, '  -H "Authorization: Bearer dsk_test_..."']
   if (body) { lines[lines.length - 1] += ' \\'; lines.push('  -H "Content-Type: application/json" \\', `  -d '${body.replace(/\n\s*/g, ' ')}'`) }
   return lines.join('\n')
 }

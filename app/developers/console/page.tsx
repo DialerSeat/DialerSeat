@@ -84,7 +84,7 @@ export default async function Overview() {
           <div className="dv-card">
             <div className="dv-card-head"><h2 className="dv-card-title">Check your key</h2><p className="dv-card-desc">Run this with your test secret key. A 200 means you&apos;re connected.</p></div>
             <div className="dv-card-body">
-              <CodeBlock lang="bash" title="terminal" code={`curl ${API_BASE}/me \\\n  -H "Authorization: Bearer ${testSecret ? `${testSecret.prefix}…${testSecret.last4}` : 'sk_test_…'}"`} />
+              <CodeBlock lang="bash" title="terminal" code={`curl ${API_BASE}/me \\\n  -H "Authorization: Bearer ${testSecret ? `${testSecret.prefix}…${testSecret.last4}` : 'dsk_test_…'}"`} />
               <p className="dv-help">Replace the key with your full test secret key. It was shown once when it was created. If you didn&apos;t save it, <DevLink href="/console/api-keys" className="dv-link">make a new one</DevLink>.</p>
             </div>
           </div>

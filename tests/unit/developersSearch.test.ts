@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { prepare, search, stem, editDistance } from '@/lib/developers/search'
 import { buildSearchEntries } from '@/lib/developers/searchIndex'
-import { generateKey, parseKey, keyMatchesHash, hashKey, maskKey, generateWebhookSecret } from '@/lib/developers/keys'
+import { generateKey, parseKey, checkKey, crc32, keyMatchesHash, hashKey, maskKey, generateWebhookSecret } from '@/lib/developers/keys'
 
 const index = prepare(buildSearchEntries())
 const top = (q: string, n = 3) => search(index, q, n).map(r => r.entry.href)
@@ -29,7 +29,7 @@ describe('console search lands obscure queries', () => {
     ['rotate credentials', /authentication#rotate|api-keys/],
     ['webhok', /webhooks/],
     ['hmac verify', /webhooks#verify|webhooks#endpoints/],
-    ['whsec', /webhooks/],
+    ['dswh', /webhooks/],
     ['dispostion', /dispositions/],
     ['wrap up codes', /dispositions/],
     ['predictve', /dial-modes|predictive/],
@@ -44,7 +44,7 @@ describe('console search lands obscure queries', () => {
     ['import contacts', /campaigns-and-leads|leads/],
     ['bulk upload phone numbers', /leads/],
     ['POST /seats/{id}/sessions', /post-seats-id-sessions/],
-    ['sk_live', /authentication|api-keys/],
+    ['dsk_live', /authentication|api-keys/],
     ['402', /errors/],
     ['429 too many requests', /errors/],
     ['answering machine', /amd|campaign|answered|dial-modes/],
@@ -79,12 +79,13 @@ describe('console search lands obscure queries', () => {
 })
 
 describe('API keys', () => {
-  it('generates keys of the right shape', () => {
+  it('generates DialerSeat-format keys with a valid checksum', () => {
     const sk = generateKey('secret', 'live')
-    expect(sk.key).toMatch(/^sk_live_[0-9A-Za-z]{32}$/)
+    expect(sk.key).toMatch(/^dsk_live_[0-9A-Za-z]{34}$/)
     expect(parseKey(sk.key)).toEqual({ kind: 'secret', env: 'live' })
     const pk = generateKey('publishable', 'test')
-    expect(pk.key).toMatch(/^pk_test_[0-9A-Za-z]{24}$/)
+    expect(pk.key).toMatch(/^dpk_test_[0-9A-Za-z]{28}$/)
+    expect(parseKey(pk.key)).toEqual({ kind: 'publishable', env: 'test' })
     expect(sk.last4).toBe(sk.key.slice(-4))
   })
   it('never makes the same key twice', () => {
@@ -97,12 +98,22 @@ describe('API keys', () => {
     expect(keyMatchesHash(k.key, k.hash)).toBe(true)
     expect(keyMatchesHash(k.key + 'x', k.hash)).toBe(false)
   })
-  it('rejects malformed keys', () => {
-    expect(parseKey('sk_prod_abc')).toBeNull()
+  it('catches a typo, a short paste and a foreign key from the text alone', () => {
+    const k = generateKey('secret', 'live').key
+    const i = 15
+    const typo = k.slice(0, i) + (k[i] === 'a' ? 'b' : 'a') + k.slice(i + 1)
+    expect(checkKey(typo)).toEqual({ ok: false, reason: 'bad_checksum' })
+    expect(checkKey(k.slice(0, -1))).toEqual({ ok: false, reason: 'wrong_length' })
+    expect(checkKey('sk_live_' + 'a'.repeat(32))).toEqual({ ok: false, reason: 'not_a_key' })
+    expect(parseKey('dsk_prod_abc')).toBeNull()
     expect(parseKey('hello')).toBeNull()
+    expect(checkKey('  ' + k + '\n')).toEqual({ ok: true, key: { kind: 'secret', env: 'live' } })
+  })
+  it('the checksum is standard CRC32', () => {
+    expect(crc32('123456789')).toBe(0xcbf43926)
   })
   it('masks and makes webhook secrets', () => {
-    expect(maskKey('sk_test_', 'Ab12')).toBe('sk_test_••••Ab12')
-    expect(generateWebhookSecret()).toMatch(/^whsec_[0-9A-Za-z]{32}$/)
+    expect(maskKey('dsk_test_', 'Ab12')).toBe('dsk_test_••••Ab12')
+    expect(generateWebhookSecret()).toMatch(/^dswh_[0-9A-Za-z]{32}$/)
   })
 })

@@ -68,7 +68,7 @@ beforeAll(async () => {
   platformId = p.id
   await s.updatePlatform(p.id, { live_status: 'active' })
   seat = await s.upsertSeat({ platform_id: p.id, env: 'live', external_user_id: 'u1', email: null, name: 'Agent', billed_to: 'platform', status: 'active' })
-  await s.insertWebhook({ platform_id: p.id, env: 'live', url: 'https://hooks.example/dialerseat', description: null, events: ['*'], signing_secret: 'whsec_x' })
+  await s.insertWebhook({ platform_id: p.id, env: 'live', url: 'https://hooks.example/dialerseat', description: null, events: ['*'], signing_secret: 'dswh_x' })
   // A caller-ID number in the shared developer pool, same area code as the leads.
   const d = JSON.parse(readFileSync('.dev-platform-store.json', 'utf8'))
   d.numbers.push({ id: 'num_1', phone: '+15125550000', platform_id: null, area_code: '512', active: true, last_used_at: null })

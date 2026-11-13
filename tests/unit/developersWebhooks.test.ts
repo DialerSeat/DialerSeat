@@ -15,7 +15,7 @@ function docsVerifier(): (raw: string, header: string, secret: string) => boolea
 
 describe('webhook signatures', () => {
   const verify = docsVerifier()
-  const secret = 'whsec_testsecretvalue0123456789abcd'
+  const secret = 'dswh_testsecretvalue0123456789abcd'
 
   it('a delivery verifies with the code in the docs', () => {
     const body = JSON.stringify(sampleEvent('call.dispositioned', 'p1'))

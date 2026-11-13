@@ -14,6 +14,7 @@ const LINKS = [
   { href: '/#pricing', label: 'Pricing' },
   { href: '/docs/quickstart', label: 'Docs' },
   { href: '/docs/api', label: 'API reference' },
+  { href: '/playground', label: 'Playground' },
 ]
 
 export function DevTopNav({ themeToggle = false }: { themeToggle?: boolean }) {

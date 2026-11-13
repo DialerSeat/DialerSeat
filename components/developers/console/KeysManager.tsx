@@ -64,8 +64,8 @@ export function KeysManager({ keys, liveActive, initialEnv = 'test' }: { keys: K
 
   const envFile = [
     `DIALERSEAT_API_URL=${API_BASE}`,
-    `DIALERSEAT_PUBLISHABLE_KEY=${pk?.token || `pk_${env}_…`}`,
-    `# DIALERSEAT_SECRET_KEY=${sk ? `${sk.prefix}••••${sk.last4}` : `sk_${env}_…`}`,
+    `DIALERSEAT_PUBLISHABLE_KEY=${pk?.token || `dpk_${env}_…`}`,
+    `# DIALERSEAT_SECRET_KEY=${sk ? `${sk.prefix}••••${sk.last4}` : `dsk_${env}_…`}`,
   ].join('\n')
 
   return (
@@ -167,7 +167,7 @@ export function KeysManager({ keys, liveActive, initialEnv = 'test' }: { keys: K
       <aside className="dv-stack" style={{ fontSize: 13 }}>
         {[
           ['API base URL', API_BASE],
-          ['Auth header', 'Authorization: Bearer sk_…'],
+          ['Auth header', 'Authorization: Bearer dsk_…'],
           ['Webhook signature header', 'DialerSeat-Signature'],
         ].map(([label, value]) => (
           <div key={label} style={{ paddingBottom: 14, borderBottom: '1px solid var(--dv-border-soft)' }}>

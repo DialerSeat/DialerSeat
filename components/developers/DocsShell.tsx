@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, Code2, LayoutDashboard } from 'lucide-react'
+import { ChevronDown, Code2, LayoutDashboard, Play } from 'lucide-react'
 import { DOCS } from '@/lib/developers/docs'
 import { DevLink, useDevBase, withBase } from './base'
 import { DevFooter, DevTopNav } from './MarketingChrome'
@@ -33,6 +33,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
       ))}
       <div className="dv-dim" style={{ fontSize: 11.5, letterSpacing: .5, padding: '0 10px 6px', textTransform: 'uppercase' }}>Reference</div>
       {link('/docs/api', 'API reference', <Code2 size={15} />)}
+      {link('/playground', 'Playground', <Play size={15} />)}
       {link('/console', 'Open the console', <LayoutDashboard size={15} />)}
     </>
   )

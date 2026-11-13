@@ -9,7 +9,7 @@
 //   - synonyms:  "contacts"          → leads; "widget" → miniplayer
 //   - typos:     "webhok", "dispostion", "predictve"
 //   - prefixes:  "sig"               → signature, signing secret
-//   - paths:     "POST /seats/{id}/sessions", "sk_live", "402"
+//   - paths:     "POST /seats/{id}/sessions", "dsk_live", "402"
 //   - coverage:  an entry matching every word beats one matching a single
 //                word very well
 // Field weights put a title match above a keyword match above body text.
@@ -64,7 +64,7 @@ const SYNONYM_GROUPS: string[][] = [
   ['amd', 'machine', 'answering', 'voicemail', 'detection', 'beep'],
   ['dnc', 'donotcall', 'suppression', 'optout', 'unsubscribe', 'blocklist'],
   ['origin', 'domain', 'cors', 'whitelist', 'allowlist', 'host'],
-  ['signature', 'signing', 'hmac', 'verify', 'whsec', 'authenticity'],
+  ['signature', 'signing', 'hmac', 'verify', 'dswh', 'authenticity'],
   ['test', 'sandbox', 'staging', 'development', 'dev', 'simulated', 'fake'],
   ['live', 'production', 'prod', 'real'],
   ['activate', 'enable', 'turn', 'start', 'launch', 'golive'],

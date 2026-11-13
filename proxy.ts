@@ -439,10 +439,24 @@ const DEMO_READS = /^\/api\/(analytics\/(summary|timeseries|dispositions|campaig
 const DEV_HOSTS = new Set(['dev.dialerseat.com', 'dev.localhost'])
 const DEV_PREFIX = '/developers'
 /** Paths a visitor can read without signing in, relative to the dev site root. */
-const DEV_PUBLIC = /^\/($|docs(\/.*)?$|sign-in(\/.*)?$|sign-up(\/.*)?$|embed(\/.*)?$|robots\.txt$|sitemap\.xml$|llms\.txt$)/
+const DEV_PUBLIC = /^\/($|docs(\/.*)?$|sign-in(\/.*)?$|sign-up(\/.*)?$|embed(\/.*)?$|playground$|robots\.txt$|sitemap\.xml$|llms\.txt$)/
 
 type ClerkAuth = ClerkMiddlewareAuth
 type ClerkRequest = NextRequest
+
+function v1Preflight(request: NextRequest): NextResponse {
+  const origin = request.headers.get('origin')
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Authorization, Content-Type, Idempotency-Key',
+      'Access-Control-Max-Age': '600',
+      Vary: 'Origin',
+    },
+  })
+}
 
 async function routeDeveloperSite(
   auth: ClerkAuth,
@@ -456,6 +470,7 @@ async function routeDeveloperSite(
   // /api/v1. Nothing else answers on that host.
   if (host === 'api.dialerseat.com' || host === 'api.localhost') {
     if (url.pathname === '/v1' || url.pathname.startsWith('/v1/')) {
+      if (request.method === 'OPTIONS') return v1Preflight(request)
       const target = url.clone()
       target.pathname = '/api' + url.pathname
       return NextResponse.rewrite(target)
@@ -471,6 +486,12 @@ async function routeDeveloperSite(
   // no dialerseat.com plan is not read-only here) and check who is calling
   // themselves: a Clerk session for /api/developers, a secret key for /v1.
   if (url.pathname.startsWith('/api/developers/') || url.pathname.startsWith('/api/v1/')) {
+    // Browser preflight for /v1: allowed from any origin, because test keys
+    // may be used from a web page. lib/developers/v1.ts refuses live keys
+    // from browsers on the real request.
+    if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/v1/') && !url.pathname.startsWith('/api/v1/embed/')) {
+      return v1Preflight(request)
+    }
     return NextResponse.next()
   }
 

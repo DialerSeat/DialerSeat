@@ -16,7 +16,7 @@ import { createClient } from '@supabase/supabase-js'
 
 /** The platform's allowed origins for a publishable key, or null if the key is unknown or revoked. */
 export async function allowedOriginsForKey(pk: string | null): Promise<string[] | null> {
-  if (!pk || !/^pk_(test|live)_[0-9A-Za-z]{16,64}$/.test(pk)) return null
+  if (!pk || !/^dpk_(test|live)_[0-9A-Za-z]{16,64}$/.test(pk)) return null
   try {
     if (process.env.DEV_PLATFORM_STORE === 'local' && process.env.NODE_ENV !== 'production') {
       const d = JSON.parse(await fs.readFile(path.join(process.cwd(), '.dev-platform-store.json'), 'utf8'))
