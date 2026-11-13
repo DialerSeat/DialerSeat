@@ -34,7 +34,7 @@
 --
 -- WHAT RESUMES. The other twelve ephemeral tables go back to their declared
 -- windows on the next run of /api/cron/data-retention. Overdue on 12 Nov:
--- about 540 stripe_events past 30 days and up to 397 agent_online
+-- 540 stripe_events past 30 days and 212 agent_online
 -- admin_notifications past 45 days. Nothing else had anything overdue.
 --
 -- NOT DONE HERE. predictive_batch itself is still unclassified, along with
