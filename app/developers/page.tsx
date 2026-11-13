@@ -53,7 +53,8 @@ const COMPARE = [
 
 export default function DevelopersHome() {
   return (
-    <>
+    // Always dark, whatever the inside is set to: the landing page's own scope.
+    <div className="dv-landing" data-theme="dark" style={{ background: 'var(--dv-bg)', color: 'var(--dv-text)', minHeight: '100vh' }}>
       <DevTopNav />
       <main>
         {/* ── hero ── */}
@@ -263,7 +264,7 @@ export default function DevelopersHome() {
           section .dv-card[style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
         }
       `}</style>
-    </>
+    </div>
   )
 }
 

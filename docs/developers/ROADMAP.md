@@ -155,10 +155,27 @@ What was checked (13 Nov 2026), with sources at the end:
 - **Telnyx / Twilio** are the "build it yourself" option. The platform builds pacing,
   AMD handling, compliance, recording and number health itself. That is months
   of work, and it is the work we sell as already done.
-- **"CloudVoice"**: no embedded-dialer product by that name turned up. The search
-  found Cloud Voice & Data (a UK PBX with CRM connectors) and Enfonica Cloud Voice (a
-  raw programmable voice API). **Ask the insider for the URL** before it goes on
-  any page.
+- **CloudTalk** (the competitor Joshua's insider named, 13 Nov 2026; checked on its own
+  pages):
+  - **API:** a REST API with HTTP Basic auth across four hosts. It covers calls ("Make a
+    call"), contacts, and AI Sales Dialer campaigns with scripts, surveys and
+    **disposition buttons**.
+  - **Webhooks:** from the Essential plan up, signed with the Svix scheme. Rate limits
+    return 429 but no numbers are published.
+  - **No embed:** its API overview documents **no embeddable dialer, widget or SDK**,
+    only REST endpoints.
+  - **Pricing:** Starter €34, Essential €39, Expert €69 per user per month, or €25, €29
+    and €49 billed annually. Expert has a 3-licence minimum. API and webhooks are listed
+    on Essential. Power mode is +€15/user/month on Starter and Essential (included on
+    Expert); Parallel mode is +€39/user/month on any plan.
+  - **Gap:** CloudTalk sells an API to its own phone system. It does not offer a dialer
+    other platforms embed under their own campaigns and dispositions with a
+    platform-level billing model.
+  - **Price pressure:** on seat price alone, CloudTalk's cheapest API-plus-dialer
+    combination (Essential + Power, €54/user/month) is lower than a $35-a-week Launch
+    seat. Whether its minutes are billed on top was not checked. Decision 7 below has to
+    be made against this.
+  - Sources: https://www.cloudtalk.io/pricing , https://help.cloudtalk.io/api-reference/overview
 
 ### Where DialerSeat wins
 1. **Self-serve.** Keys in a minute, test mode, one script tag. WAVV's SDK is not
@@ -372,7 +389,7 @@ needs `NODE_ENV` other than production, no `VERCEL_ENV`, and the local store.
 2. Revenue-share % on the Launch tier.
 3. The negotiation floor: seat-week, included dials, and per-dial overage.
 4. Sandbox limits (if any).
-5. Which company "CloudVoice" is.
+5. ~~Which company "CloudVoice" is.~~ It is CloudTalk (section 6).
 6. When to apply the fourteen `dev_` tables. Applying them before launch is invisible to
    users. The migration classifies them in `retention_policy`, so the daily check
    stays quiet.

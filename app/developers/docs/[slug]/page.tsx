@@ -24,8 +24,8 @@ function Prose({ text }: { text: string }) {
 function Render({ b }: { b: Block }) {
   switch (b.t) {
     case 'h': return <h2 id={b.id} style={{ fontSize: 21, fontWeight: 600, margin: '38px 0 12px', scrollMarginTop: 110 }}>{b.text}</h2>
-    case 'p': return <p style={{ fontSize: 15.5, lineHeight: 1.75, color: '#c8c8dc', margin: '0 0 16px' }}><Prose text={b.text} /></p>
-    case 'list': return <ul style={{ fontSize: 15, lineHeight: 1.75, color: '#c8c8dc', margin: '0 0 16px', paddingLeft: 20 }}>{b.items.map(i => <li key={i} style={{ marginBottom: 6 }}><Prose text={i} /></li>)}</ul>
+    case 'p': return <p style={{ fontSize: 15.5, lineHeight: 1.75, color: 'var(--dv-prose)', margin: '0 0 16px' }}><Prose text={b.text} /></p>
+    case 'list': return <ul style={{ fontSize: 15, lineHeight: 1.75, color: 'var(--dv-prose)', margin: '0 0 16px', paddingLeft: 20 }}>{b.items.map(i => <li key={i} style={{ marginBottom: 6 }}><Prose text={i} /></li>)}</ul>
     case 'code': return <div style={{ margin: '0 0 18px' }}><CodeBlock code={b.code} lang={b.lang} title={b.title} /></div>
     case 'note': return <div className="dv-alert dv-alert-blue" style={{ margin: '0 0 16px' }}><Info size={16} color="var(--dv-accent)" style={{ flexShrink: 0, marginTop: 2 }} /><span><Prose text={b.text} /></span></div>
   }

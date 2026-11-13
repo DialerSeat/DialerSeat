@@ -20,7 +20,7 @@ export function DevLogo({ size = 28 }: { size?: number }) {
       <span style={{ width: size, height: size, borderRadius: 7, background: 'linear-gradient(135deg, #4a9eff, #2a6eff)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <span style={{ color: '#fff', fontWeight: 700, fontSize: size * 0.45 }}>D</span>
       </span>
-      <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8 }}>
+      <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, fontFamily: 'var(--dv-sans)' }}>
         <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: 4, color: 'var(--dv-text)' }}>DIALERSEAT</span>
         <span className="dv-logo-suffix" style={{ fontSize: 12, letterSpacing: 1.5, color: 'var(--dv-accent)', fontWeight: 500 }}>developers</span>
       </span>
@@ -87,7 +87,7 @@ function highlight(code: string, lang: string): string {
 
 export function CodeBlock({ code, lang = 'text', title }: { code: string; lang?: string; title?: string }) {
   return (
-    <div className="dv-code">
+    <div className="dv-code" data-theme="dark">
       <div className="dv-code-head">
         <span>{title || lang}</span>
         <CopyButton text={code} />

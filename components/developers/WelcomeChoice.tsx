@@ -6,6 +6,7 @@ import { useClerk } from '@clerk/nextjs'
 import { ArrowLeft, ArrowRight, Check, Code2, KeyRound, TriangleAlert } from 'lucide-react'
 import { DevLink, useDevHref, useMainSiteUrl } from './base'
 import { CopyButton, DevLogo, api } from './ui'
+import { ThemeToggle } from './theme'
 
 export function WelcomeChoice({ email }: { email: string | null }) {
   const router = useRouter()
@@ -33,11 +34,11 @@ export function WelcomeChoice({ email }: { email: string | null }) {
   }
 
   return (
-    <main style={{ minHeight: '100vh', padding: '40px 16px 64px', background: 'radial-gradient(900px 400px at 50% -10%, rgba(74,158,255,.15), transparent 70%), var(--dv-bg)' }}>
+    <main className="dv-app" style={{ minHeight: '100vh', padding: '40px 16px 64px', background: 'radial-gradient(900px 400px at 50% -10%, rgba(74,158,255,.15), transparent 70%), var(--dv-bg)' }}>
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 56 }}>
           <DevLink href="/"><DevLogo /></DevLink>
-          <button type="button" className="dv-btn dv-btn-ghost dv-btn-sm" onClick={() => signOut({ redirectUrl: href('/') })}>Sign out</button>
+          <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}><ThemeToggle /><button type="button" className="dv-btn dv-btn-ghost dv-btn-sm" onClick={() => signOut({ redirectUrl: href('/') })}>Sign out</button></span>
         </div>
 
         {!keys ? (

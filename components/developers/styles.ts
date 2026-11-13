@@ -1,9 +1,14 @@
-// The developer site's look: DialerSeat's own blue and Futura on a dark
-// ground, laid out like the consoles developers already use. Scoped under
-// .dv so nothing here reaches a dialerseat.com page.
+// The developer site's look: DialerSeat's own blue and Futura, laid out like
+// the consoles developers already use. Scoped under .dv so nothing here
+// reaches a dialerseat.com page.
+//
+// TWO THEMES. data-theme="light" (the default inside: console, docs, sign-in)
+// or data-theme="dark" (the landing page, always, and anyone who switches).
+// Any element can carry its own data-theme to scope a section: the landing
+// page wraps itself in dark, and code blocks are dark in both themes.
 
 export const DEV_CSS = `
-.dv {
+.dv, .dv [data-theme="dark"], .dv[data-theme="dark"] {
   --dv-bg: #07070d;
   --dv-bg-2: #0b0b14;
   --dv-panel: #0f0f1a;
@@ -23,15 +28,56 @@ export const DEV_CSS = `
   --dv-amber-soft: rgba(251,191,36,0.12);
   --dv-red: #f87171;
   --dv-red-soft: rgba(248,113,113,0.12);
+  --dv-hover-border: #2e2e4c;
+  --dv-header-bg: rgba(7,7,13,.85);
+  --dv-prose: #c8c8dc;
+  --dv-inline-code: #cfd8ff;
+  --dv-card-shadow: none;
+  --dv-get: #34d399; --dv-get-bg: rgba(52,211,153,.1);
+  --dv-post: #4a9eff; --dv-post-bg: rgba(74,158,255,.12);
+  --dv-patch: #fbbf24; --dv-patch-bg: rgba(251,191,36,.1);
+  --dv-delete: #f87171; --dv-delete-bg: rgba(248,113,113,.1);
+  color-scheme: dark;
+}
+.dv[data-theme="light"], .dv [data-theme="light"] {
+  --dv-bg: #ffffff;
+  --dv-bg-2: #fafafa;
+  --dv-panel: #ffffff;
+  --dv-panel-2: #f4f4f5;
+  --dv-raise: #ededef;
+  --dv-border: #e2e2e5;
+  --dv-border-soft: #ececee;
+  --dv-text: #131316;
+  --dv-muted: #5e5f6b;
+  --dv-dim: #8b8c96;
+  --dv-accent: #2a6eff;
+  --dv-accent-2: #1f5ee6;
+  --dv-accent-soft: rgba(42,110,255,0.08);
+  --dv-green: #047857;
+  --dv-green-soft: rgba(16,185,129,0.10);
+  --dv-amber: #a35200;
+  --dv-amber-soft: rgba(245,158,11,0.12);
+  --dv-red: #c62828;
+  --dv-red-soft: rgba(220,38,38,0.08);
+  --dv-hover-border: #cfcfd4;
+  --dv-header-bg: rgba(255,255,255,.9);
+  --dv-prose: #3a3b45;
+  --dv-inline-code: #1f4fc4;
+  --dv-card-shadow: 0 1px 2px rgba(0,0,0,.04);
+  --dv-get: #047857; --dv-get-bg: rgba(16,185,129,.10);
+  --dv-post: #1f5ee6; --dv-post-bg: rgba(42,110,255,.08);
+  --dv-patch: #a35200; --dv-patch-bg: rgba(245,158,11,.12);
+  --dv-delete: #c62828; --dv-delete-bg: rgba(220,38,38,.08);
+  color-scheme: light;
+}
+.dv, .dv [data-theme] {
   --dv-mono: ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, monospace;
   --dv-sans: 'Futura PT', Futura, 'Trebuchet MS', sans-serif;
-  background: var(--dv-bg);
-  color: var(--dv-text);
-  font-family: var(--dv-sans);
-  min-height: 100vh;
-  color-scheme: dark;
+  --dv-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+.dv { background: var(--dv-bg); color: var(--dv-text); font-family: var(--dv-sans); min-height: 100vh; }
+.dv [data-theme] { color: var(--dv-text); }
 .dv *, .dv *::before, .dv *::after { box-sizing: border-box; }
 .dv a { color: inherit; text-decoration: none; }
 .dv ::selection { background: rgba(74,158,255,0.35); }
@@ -40,7 +86,7 @@ export const DEV_CSS = `
 
 /* ── buttons ── */
 .dv-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 8px; font: 500 13px/1 var(--dv-sans); letter-spacing: .3px; cursor: pointer; border: 1px solid var(--dv-border); background: var(--dv-panel-2); color: var(--dv-text); transition: background .15s, border-color .15s, opacity .15s; white-space: nowrap; }
-.dv-btn:hover { background: var(--dv-raise); border-color: #2e2e4c; }
+.dv-btn:hover { background: var(--dv-raise); border-color: var(--dv-hover-border); }
 .dv-btn:disabled { opacity: .5; cursor: not-allowed; }
 .dv-btn-primary { background: linear-gradient(135deg, var(--dv-accent), var(--dv-accent-2)); border-color: transparent; color: #fff; }
 .dv-btn-primary:hover { background: linear-gradient(135deg, #5aa8ff, #3a7bff); border-color: transparent; }
@@ -59,7 +105,7 @@ export const DEV_CSS = `
 .dv-help { font-size: 12px; color: var(--dv-dim); margin-top: 6px; line-height: 1.5; }
 
 /* ── cards ── */
-.dv-card { background: var(--dv-panel); border: 1px solid var(--dv-border-soft); border-radius: 14px; }
+.dv-card { background: var(--dv-panel); border: 1px solid var(--dv-border-soft); border-radius: 14px; box-shadow: var(--dv-card-shadow); }
 .dv-card-head { padding: 20px 22px 0; }
 .dv-card-title { font-size: 16px; font-weight: 600; margin: 0; }
 .dv-card-desc { font-size: 13px; color: var(--dv-muted); margin: 6px 0 0; line-height: 1.55; max-width: 640px; }
@@ -69,10 +115,10 @@ export const DEV_CSS = `
 
 /* ── badges ── */
 .dv-badge { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 11px; letter-spacing: .4px; border: 1px solid var(--dv-border); color: var(--dv-muted); background: var(--dv-panel-2); white-space: nowrap; }
-.dv-badge-green { color: var(--dv-green); background: var(--dv-green-soft); border-color: rgba(52,211,153,.3); }
-.dv-badge-amber { color: var(--dv-amber); background: var(--dv-amber-soft); border-color: rgba(251,191,36,.3); }
-.dv-badge-red { color: var(--dv-red); background: var(--dv-red-soft); border-color: rgba(248,113,113,.3); }
-.dv-badge-blue { color: var(--dv-accent); background: var(--dv-accent-soft); border-color: rgba(74,158,255,.3); }
+.dv-badge-green { color: var(--dv-green); background: var(--dv-green-soft); border-color: color-mix(in srgb, var(--dv-green) 30%, transparent); }
+.dv-badge-amber { color: var(--dv-amber); background: var(--dv-amber-soft); border-color: color-mix(in srgb, var(--dv-amber) 30%, transparent); }
+.dv-badge-red { color: var(--dv-red); background: var(--dv-red-soft); border-color: color-mix(in srgb, var(--dv-red) 30%, transparent); }
+.dv-badge-blue { color: var(--dv-accent); background: var(--dv-accent-soft); border-color: color-mix(in srgb, var(--dv-accent) 30%, transparent); }
 .dv-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 /* ── tables ── */
@@ -82,19 +128,19 @@ export const DEV_CSS = `
 .dv-table tr:last-child td { border-bottom: none; }
 .dv-table-wrap { overflow-x: auto; }
 
-/* ── code ── */
+/* ── code: dark in both themes (CodeBlock carries data-theme="dark") ── */
 .dv-code { position: relative; background: #05050a; border: 1px solid var(--dv-border-soft); border-radius: 12px; overflow: hidden; }
 .dv-code-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--dv-border-soft); font: 12px var(--dv-mono); color: var(--dv-muted); }
 .dv-code pre { margin: 0; padding: 14px 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.65; color: #d6d6ea; }
-.dv-inline-code { font-family: var(--dv-mono); font-size: .88em; background: var(--dv-panel-2); border: 1px solid var(--dv-border-soft); padding: 1px 6px; border-radius: 5px; color: #cfd8ff; }
+.dv-inline-code { font-family: var(--dv-mono); font-size: .88em; background: var(--dv-panel-2); border: 1px solid var(--dv-border-soft); padding: 1px 6px; border-radius: 5px; color: var(--dv-inline-code); }
 .tok-k { color: #c792ea; } .tok-s { color: #a5e3a1; } .tok-n { color: #f7c87a; } .tok-c { color: #5e6a8a; } .tok-p { color: #7fb6ff; }
 
 /* ── method pills ── */
 .dv-method { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 20px; padding: 0 6px; border-radius: 5px; font: 600 10.5px var(--dv-mono); letter-spacing: .5px; }
-.dv-method-GET { color: #34d399; background: rgba(52,211,153,.1); }
-.dv-method-POST { color: #4a9eff; background: rgba(74,158,255,.12); }
-.dv-method-PATCH { color: #fbbf24; background: rgba(251,191,36,.1); }
-.dv-method-DELETE { color: #f87171; background: rgba(248,113,113,.1); }
+.dv-method-GET { color: var(--dv-get); background: var(--dv-get-bg); }
+.dv-method-POST { color: var(--dv-post); background: var(--dv-post-bg); }
+.dv-method-PATCH { color: var(--dv-patch); background: var(--dv-patch-bg); }
+.dv-method-DELETE { color: var(--dv-delete); background: var(--dv-delete-bg); }
 
 /* ── switches and segmented controls ── */
 .dv-switch { position: relative; width: 36px; height: 20px; border-radius: 999px; background: var(--dv-border); border: none; cursor: pointer; transition: background .15s; flex-shrink: 0; }
@@ -122,11 +168,46 @@ export const DEV_CSS = `
 .dv-link:hover { text-decoration: underline; }
 .dv-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100; padding: 10px 16px; border-radius: 10px; background: var(--dv-raise); border: 1px solid var(--dv-border); font-size: 13px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
 .dv-alert { display: flex; gap: 12px; padding: 14px 16px; border-radius: 12px; font-size: 13px; line-height: 1.55; border: 1px solid; }
-.dv-alert-blue { background: var(--dv-accent-soft); border-color: rgba(74,158,255,.3); }
-.dv-alert-amber { background: var(--dv-amber-soft); border-color: rgba(251,191,36,.3); }
-.dv-alert-green { background: var(--dv-green-soft); border-color: rgba(52,211,153,.3); }
+.dv-alert-blue { background: var(--dv-accent-soft); border-color: color-mix(in srgb, var(--dv-accent) 30%, transparent); }
+.dv-alert-amber { background: var(--dv-amber-soft); border-color: color-mix(in srgb, var(--dv-amber) 30%, transparent); }
+.dv-alert-green { background: var(--dv-green-soft); border-color: color-mix(in srgb, var(--dv-green) 30%, transparent); }
 .dv-empty { padding: 36px 20px; text-align: center; color: var(--dv-dim); font-size: 13px; }
 mark.dv-mark { background: rgba(74,158,255,.22); color: inherit; border-radius: 3px; padding: 0 1px; }
+
+/* ── the inside: the type and density of a developer dashboard ──
+   Everything past the landing page (console, docs, welcome, sign-in) is
+   .dv-app: the system UI font developer sites use, 14px base, tighter
+   radii. The DialerSeat wordmark keeps Futura wherever it appears. */
+.dv-app { font-family: var(--dv-ui); font-size: 14px; letter-spacing: 0; }
+.dv-app .dv-btn { font-family: var(--dv-ui); font-weight: 500; letter-spacing: 0; border-radius: 8px; }
+.dv-app .dv-input, .dv-app .dv-select, .dv-app .dv-seg button { font-family: var(--dv-ui); }
+.dv-app .dv-card { border-radius: 12px; }
+.dv-app .dv-h1 { font-size: 24px; font-weight: 600; letter-spacing: -.2px; }
+.dv-app .dv-card-title { font-size: 15px; }
+.dv-app .dv-badge { letter-spacing: 0; font-weight: 500; }
+.dv-app[data-theme="light"] .dv-btn:not(.dv-btn-primary):not(.dv-btn-ghost),
+.dv[data-theme="light"] .dv-app .dv-btn:not(.dv-btn-primary):not(.dv-btn-ghost) { background: #fff; box-shadow: 0 1px 1px rgba(0,0,0,.04); }
+
+/* Top bar, tab row and sidebar (the Clerk-style console shell). */
+.dv-top { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 20px; background: var(--dv-bg); border-bottom: 1px solid var(--dv-border-soft); }
+.dv-crumb-sep { color: var(--dv-border); font-size: 20px; font-weight: 300; margin: 0 2px; }
+.dv-switcher { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--dv-text); font: 500 14px var(--dv-ui); cursor: pointer; white-space: nowrap; }
+.dv-switcher:hover { background: var(--dv-panel-2); }
+.dv-tabs { display: flex; gap: 4px; padding: 0 20px; border-bottom: 1px solid var(--dv-border-soft); background: var(--dv-bg); overflow-x: auto; scrollbar-width: none; }
+.dv-tabs::-webkit-scrollbar { display: none; }
+.dv-tab { position: relative; display: inline-flex; align-items: center; height: 44px; padding: 0 12px; font-size: 14px; color: var(--dv-muted); white-space: nowrap; }
+.dv-tab:hover { color: var(--dv-text); }
+.dv-tab[aria-current="page"] { color: var(--dv-text); font-weight: 500; }
+.dv-tab[aria-current="page"]::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--dv-text); }
+.dv-side { padding: 20px 12px; }
+.dv-side-group { font-size: 12px; color: var(--dv-dim); padding: 14px 10px 6px; font-weight: 500; }
+.dv-side-item { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; font-size: 14px; color: var(--dv-muted); }
+.dv-side-item:hover { background: var(--dv-panel-2); color: var(--dv-text); }
+.dv-side-item[aria-current="page"] { background: var(--dv-raise); color: var(--dv-text); font-weight: 500; }
+.dv-menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 240px; z-index: 60; background: var(--dv-panel); border: 1px solid var(--dv-border); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.14); padding: 6px; }
+.dv-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border-radius: 8px; border: none; background: transparent; color: var(--dv-text); font: 14px var(--dv-ui); text-align: left; cursor: pointer; }
+.dv-menu-item:hover { background: var(--dv-panel-2); }
+
 
 /* ── phones and touch ──
    Fingers need bigger targets than a mouse: 40px for buttons, 36px for the

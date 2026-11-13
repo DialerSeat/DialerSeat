@@ -5,12 +5,13 @@ import { useSearchParams } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { DevLink, useDevBase, useMainSiteUrl } from './base'
 import { DevLogo } from './ui'
+import { ThemeToggle, useDevTheme, type DevTheme } from './theme'
 
 // The same DialerSeat login as dialerseat.com, dressed for the developer
 // site. After signing in or up, everyone lands on /welcome, which sends an
 // activated developer to the console and asks everyone else what they came for.
 
-const appearance = {
+const darkAppearance = {
   variables: {
     colorPrimary: '#4a9eff',
     colorBackground: '#0f0f1a',
@@ -37,6 +38,28 @@ const appearance = {
   },
 }
 
+const lightAppearance = {
+  variables: {
+    ...darkAppearance.variables,
+    colorBackground: '#ffffff',
+    colorText: '#131316',
+    colorTextSecondary: '#5e5f6b',
+    colorNeutral: '#000000',
+    colorInputBackground: '#ffffff',
+    colorInputText: '#131316',
+    colorPrimary: '#2a6eff',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif",
+  },
+  elements: {
+    ...darkAppearance.elements,
+    card: { background: '#ffffff', border: '1px solid #e2e2e5', boxShadow: '0 1px 3px rgba(0,0,0,.06), 0 12px 32px rgba(0,0,0,.06)' },
+    socialButtonsBlockButton: { background: '#ffffff', border: '1px solid #e2e2e5', color: '#131316' },
+    footer: { background: 'transparent' },
+  },
+}
+
+const appearanceFor = (t: DevTheme) => (t === 'dark' ? darkAppearance : lightAppearance)
+
 /** Only a path on this site may be a return address; anything else goes to /welcome. */
 function useReturnTo(): string {
   const base = useDevBase()
@@ -49,10 +72,10 @@ function useReturnTo(): string {
 function Frame({ children, mode }: { children: React.ReactNode; mode: 'in' | 'up' }) {
   const main = useMainSiteUrl()
   return (
-    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 16px 64px', background: 'radial-gradient(800px 360px at 50% -10%, rgba(74,158,255,.14), transparent 70%), var(--dv-bg)' }}>
+    <main className="dv-app" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 16px 64px', background: 'radial-gradient(800px 360px at 50% -10%, rgba(74,158,255,.14), transparent 70%), var(--dv-bg)' }}>
       <div style={{ width: '100%', maxWidth: 1100, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 'clamp(24px, 6vw, 48px)' }}>
         <DevLink href="/" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, minWidth: 0 }}><DevLogo /></DevLink>
-        <a href={main} className="dv-btn dv-btn-ghost dv-btn-sm" style={{ flexShrink: 0 }} aria-label="Back to dialerseat.com"><ArrowLeft size={14} /><span className="dv-auth-back"> dialerseat.com</span></a>
+        <span style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}><ThemeToggle /><a href={main} className="dv-btn dv-btn-ghost dv-btn-sm" style={{ flexShrink: 0 }} aria-label="Back to dialerseat.com"><ArrowLeft size={14} /><span className="dv-auth-back"> dialerseat.com</span></a></span>
         <style>{`@media (max-width: 420px) { .dv-auth-back { display: none; } }`}</style>
       </div>
       <div style={{ textAlign: 'center', marginBottom: 22, maxWidth: 440 }}>
@@ -70,6 +93,7 @@ function Frame({ children, mode }: { children: React.ReactNode; mode: 'in' | 'up
 
 export function DevSignIn() {
   const base = useDevBase()
+  const appearance = appearanceFor(useDevTheme())
   const returnTo = useReturnTo()
   return (
     <Frame mode="in">
@@ -80,6 +104,7 @@ export function DevSignIn() {
 
 export function DevSignUp() {
   const base = useDevBase()
+  const appearance = appearanceFor(useDevTheme())
   return (
     <Frame mode="up">
       <SignUp routing="path" path={`${base}/sign-up`} signInUrl={`${base}/sign-in`} forceRedirectUrl={`${base}/welcome`} signInForceRedirectUrl={`${base}/welcome`} appearance={appearance} />

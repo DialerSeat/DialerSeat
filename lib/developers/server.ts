@@ -2,7 +2,7 @@
 
 import 'server-only'
 import { auth, currentUser } from '@clerk/nextjs/server'
-import { headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { devStore, type Platform } from './store'
 import { localTestUser } from './localAuth'
@@ -39,6 +39,11 @@ export async function consoleContext(): Promise<DevContext & { platform: Platfor
     redirect(`${await devBase()}/welcome`)
   }
   return ctx as DevContext & { platform: Platform }
+}
+
+/** The console's Test / Live switch (a cookie set by the top bar). Test unless chosen. */
+export async function consoleEnv(): Promise<'test' | 'live'> {
+  return (await cookies()).get('dv-env')?.value === 'live' ? 'live' : 'test'
 }
 
 export async function signedInEmail(): Promise<string | null> {

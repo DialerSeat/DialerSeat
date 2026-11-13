@@ -28,11 +28,23 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://dev.dialerseat.com' },
 }
 
+// The page behind .dv (overscroll, the strip under a short page) follows the
+// theme; the landing page is always dark.
+const PAGE_BG = `
+html, body { background: #ffffff; }
+html:has(.dv[data-theme="dark"]), html:has(.dv[data-theme="dark"]) body,
+html:has(.dv-landing), html:has(.dv-landing) body { background: #07070d; }
+`
+
 export default async function DevelopersLayout({ children }: { children: React.ReactNode }) {
   const base = await devBase()
   return (
-    <div className="dv">
-      <style>{DEV_CSS + 'html, body { background: #07070d; }'}</style>
+    // Light inside by default. The saved choice (components/developers/theme.tsx)
+    // is applied by the script below before first paint; suppressHydrationWarning
+    // covers that one attribute differing from the server's "light".
+    <div className="dv" data-theme="light" suppressHydrationWarning>
+      <script dangerouslySetInnerHTML={{ __html: "try{var t=localStorage.getItem('dv-theme');if(t==='dark'||t==='light')document.currentScript.parentElement.setAttribute('data-theme',t)}catch(e){}" }} />
+      <style>{DEV_CSS + PAGE_BG}</style>
       <DevBaseProvider base={base}>{children}</DevBaseProvider>
     </div>
   )

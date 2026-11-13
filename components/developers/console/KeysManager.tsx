@@ -22,10 +22,10 @@ export interface KeyView {
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : null)
 
-export function KeysManager({ keys, liveActive }: { keys: KeyView[]; liveActive: boolean }) {
+export function KeysManager({ keys, liveActive, initialEnv = 'test' }: { keys: KeyView[]; liveActive: boolean; initialEnv?: 'test' | 'live' }) {
   const router = useRouter()
   const { toast, toastNode } = useToast()
-  const [env, setEnv] = useState<'test' | 'live'>('test')
+  const [env, setEnv] = useState<'test' | 'live'>(initialEnv)
   const [creating, setCreating] = useState<null | 'secret' | 'publishable'>(null)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
@@ -84,7 +84,7 @@ export function KeysManager({ keys, liveActive }: { keys: KeyView[]; liveActive:
         )}
 
         {/* Quick copy, after the Clerk layout */}
-        <div className="dv-card" style={{ background: '#05050a' }}>
+        <div className="dv-card" data-theme="dark" style={{ background: '#05050a' }}>
           <div className="dv-card-head" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
             <div>
               <h2 className="dv-card-title">Quick copy</h2>

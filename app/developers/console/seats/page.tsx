@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { PageHead } from '@/components/developers/ConsoleShell'
 import { CodeBlock } from '@/components/developers/ui'
-import { consoleContext } from '@/lib/developers/server'
+import { consoleContext, consoleEnv } from '@/lib/developers/server'
 import { devStore } from '@/lib/developers/store'
 import { API_BASE } from '@/lib/developers/catalog'
 
@@ -12,7 +12,8 @@ const STATUS: Record<string, string> = { active: 'dv-badge dv-badge-green', pend
 
 export default async function SeatsPage({ searchParams }: { searchParams: Promise<{ env?: string }> }) {
   const { platform } = await consoleContext()
-  const env = (await searchParams).env === 'live' ? 'live' : 'test'
+  const q = (await searchParams).env
+  const env = q === 'live' || q === 'test' ? q : await consoleEnv()
   const all = await devStore().listSeats(platform.id)
   const seats = all.filter(s => s.env === env)
   const exceptions = (await devStore().listExceptions(platform.id)).filter(e => e.scope === 'seat')

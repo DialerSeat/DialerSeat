@@ -429,7 +429,7 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
 
   // ── screens ──
   const shell = (body: React.ReactNode, footer?: React.ReactNode) => (
-    <div style={{ ...vars, height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--dv-bg)', color: 'var(--dv-text)', overflow: 'hidden' }}>
+    <div data-theme={theme} className="dv-app" style={{ ...vars, height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--dv-bg)', color: 'var(--dv-text)', overflow: 'hidden' }}>
       <header style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderBottom: '1px solid var(--dv-border-soft)' }}>
         <span style={{ width: 22, height: 22, borderRadius: 6, background: 'linear-gradient(135deg,#4a9eff,#2a6eff)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 700 }}>D</span>
         <span className="mp-word" style={{ fontSize: 11, letterSpacing: 3, fontWeight: 700 }}>DIALERSEAT</span>

@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import { ArrowLeft, Menu, X } from 'lucide-react'
 import { DevLink, useMainSiteUrl } from './base'
 import { DevLogo } from './ui'
+import { ThemeToggle } from './theme'
 import { SALES_EMAIL } from '@/lib/developers/catalog'
 
 const LINKS = [
@@ -15,12 +16,12 @@ const LINKS = [
   { href: '/docs/api', label: 'API reference' },
 ]
 
-export function DevTopNav() {
+export function DevTopNav({ themeToggle = false }: { themeToggle?: boolean }) {
   const { isSignedIn, isLoaded } = useAuth()
   const main = useMainSiteUrl()
   const [open, setOpen] = useState(false)
   return (
-    <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(7,7,13,.82)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--dv-border-soft)' }}>
+    <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'var(--dv-header-bg)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--dv-border-soft)' }}>
       <div style={{ background: 'var(--dv-bg-2)', borderBottom: '1px solid var(--dv-border-soft)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', height: 34, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
           <a href={main} className="dv-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, paddingRight: 8 }}>
@@ -35,6 +36,7 @@ export function DevTopNav() {
           {LINKS.map(l => <DevLink key={l.href} href={l.href} className="dv-muted dv-nav-a">{l.label}</DevLink>)}
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          {themeToggle && <ThemeToggle />}
           {isLoaded && isSignedIn ? (
             <DevLink href="/console" className="dv-btn dv-btn-primary dv-hide-xs">Open console</DevLink>
           ) : (

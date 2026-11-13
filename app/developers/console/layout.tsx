@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { ConsoleShell } from '@/components/developers/ConsoleShell'
-import { devBase, getDevContext } from '@/lib/developers/server'
+import { consoleEnv, devBase, getDevContext } from '@/lib/developers/server'
 
 export const metadata: Metadata = { title: { default: 'Console', template: '%s · Console · DialerSeat for Developers' }, robots: { index: false, follow: false } }
 export const dynamic = 'force-dynamic'
@@ -13,5 +13,5 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   if (!ctx) redirect(`${base}/sign-in?redirect_url=${encodeURIComponent(base + '/console')}`)
   if (!ctx.platform) redirect(`${base}/welcome`)
   const p = ctx.platform
-  return <ConsoleShell platform={{ name: p.name, live_status: p.live_status, tier: p.tier }}>{children}</ConsoleShell>
+  return <ConsoleShell platform={{ name: p.name, live_status: p.live_status, tier: p.tier }} env={await consoleEnv()}>{children}</ConsoleShell>
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Play, RotateCcw } from 'lucide-react'
 import { useDevBase } from '../base'
 import { api } from '../ui'
+import { useDevTheme } from '../theme'
 
 // Sample leads covering every test outcome (see TEST_NUMBERS): placeholders,
 // not people. 555-01xx numbers are reserved for fiction.
@@ -20,6 +21,7 @@ declare global { interface Window { DialerSeat?: { mount(el: Element, opts: Reco
 
 export function TryMiniplayer() {
   const base = useDevBase()
+  const theme = useDevTheme()
   const host = useRef<HTMLDivElement>(null)
   const mounted = useRef<Mounted | null>(null)
   const [busy, setBusy] = useState(false)
@@ -45,7 +47,7 @@ export function TryMiniplayer() {
       mounted.current = null
       const { session, publishable_key } = await api<{ session: string; publishable_key: string | null }>('/api/developers/test-session', { method: 'POST' })
       await loadLoader()
-      const d = window.DialerSeat!.mount(host.current!, { session, publishableKey: publishable_key, leads: SAMPLE_LEADS, campaign: 'console_try_it' })
+      const d = window.DialerSeat!.mount(host.current!, { session, publishableKey: publishable_key, leads: SAMPLE_LEADS, campaign: 'console_try_it', theme })
       d.on('*', (payload, type) => setLog(l => [{ t: new Date().toLocaleTimeString(), type, payload: JSON.stringify(payload) }, ...l].slice(0, 40)))
       mounted.current = d
       setOpen(true)

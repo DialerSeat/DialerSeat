@@ -38,8 +38,8 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <>
-      <DevTopNav />
+    <div className="dv-app">
+      <DevTopNav themeToggle />
       {/* Phones: search and one collapsible menu, instead of the whole sidebar stacked above every article. */}
       <div className="dv-docs-mobile" style={{ padding: '14px 16px 0', display: 'none' }}>
         <SearchTrigger shortcuts={false} />
@@ -67,6 +67,6 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           .dv-docs-content { padding-top: 24px !important; }
         }
       `}</style>
-    </>
+    </div>
   )
 }

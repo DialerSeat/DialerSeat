@@ -320,7 +320,18 @@ function withLocal<T>(fn: (d: LocalData) => T | Promise<T>, write = false): Prom
     if (write) {
       const tmp = `${LOCAL_FILE}.${process.pid}.tmp`
       await fs.writeFile(tmp, JSON.stringify(d, null, 2))
-      await fs.rename(tmp, LOCAL_FILE)
+      // Windows refuses a rename over a file another request has open
+      // (EPERM / EBUSY). Retry briefly; as a last resort write in place,
+      // which is safe here because the queue above serialises every write.
+      for (let attempt = 0; ; attempt++) {
+        try { await fs.rename(tmp, LOCAL_FILE); break } catch (e) {
+          const code = (e as NodeJS.ErrnoException).code
+          if ((code === 'EPERM' || code === 'EBUSY' || code === 'EACCES') && attempt < 5) { await new Promise(r => setTimeout(r, 25 * (attempt + 1))); continue }
+          await fs.writeFile(LOCAL_FILE, await fs.readFile(tmp, 'utf8'))
+          await fs.rm(tmp, { force: true })
+          break
+        }
+      }
     }
     return out
   })
