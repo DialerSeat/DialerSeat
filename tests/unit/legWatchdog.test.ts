@@ -414,3 +414,54 @@ describe('sessionLinks — the browser leg belongs to its call', () => {
     expect(v.action).toBe('leave')
   })
 })
+
+// =============================================================================
+// AN AGENT ON THE LINE WITH A CLIENT IS NEVER CUT
+// =============================================================================
+// Agents set the disposition before hanging up on about a third of human
+// calls. A disposition alone is the agent's screen, not the line ending.
+describe('a dispositioned call with the agent still on it', () => {
+  const dispositioned = { createdAt: ago(900), duration: null, disposition: 'APPOINTMENT' }
+
+  it('is left while the agent legs are live on the same call', () => {
+    const v = classifyLeg({
+      callControlId: 'lead', row: dispositioned,
+      sighting: { firstSeenAt: ago(890), timesSeen: 15 }, sessionPartnerLive: true,
+    }, T, NOW)
+    expect(v.action).toBe('leave')
+  })
+
+  it('is left while a live agent session is assigned the call (predictive)', () => {
+    const v = classifyLeg({
+      callControlId: 'lead', row: dispositioned,
+      sighting: { firstSeenAt: ago(890), timesSeen: 15 }, agentOnCall: true,
+    }, T, NOW)
+    expect(v.action).toBe('leave')
+  })
+
+  it('is never ended by age either', () => {
+    const v = classifyLeg({
+      callControlId: 'lead', row: { ...dispositioned, createdAt: ago(10800) },
+      sighting: { firstSeenAt: ago(10800), timesSeen: 180 }, agentOnCall: true,
+    }, T, NOW)
+    expect(v.action).toBe('leave')
+  })
+
+  it('is still ended when nobody on our side is left (the stranded prospect)', () => {
+    const v = classifyLeg({
+      callControlId: 'lead', row: dispositioned,
+      sighting: { firstSeenAt: ago(890), timesSeen: 15 },
+      sessionPartnerLive: false, agentOnCall: false,
+    }, T, NOW)
+    expect(v.action).toBe('end')
+    expect(v.rule).toBe('row_finished')
+  })
+
+  it('a leftover leg after the carrier ended the call is still cleaned up', () => {
+    const v = classifyLeg({
+      callControlId: 'browser', row: { createdAt: ago(900), duration: 880, disposition: 'APPOINTMENT' },
+      sighting: { firstSeenAt: ago(890), timesSeen: 15 }, sessionPartnerLive: true,
+    }, T, NOW)
+    expect(v.action).toBe('end')
+  })
+})

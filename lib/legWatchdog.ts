@@ -109,6 +109,9 @@ export interface WatchdogInput {
   /** True when another leg in the same Telnyx call session is live right now.
    *  A leg with a live partner is half of a call in progress, never a stray. */
   sessionPartnerLive?: boolean
+  /** True when a live agent session (fresh heartbeat) is assigned this call.
+   *  Reliable for predictive, where the server assigns it. */
+  agentOnCall?: boolean
 }
 
 export interface WatchdogVerdict {
@@ -218,7 +221,7 @@ export function classifyLeg(
   // never ended by age. The only ceiling left is Telnyx's own four hours per
   // leg, which no setting can lift.
   const rowOpen = !!row && !((row.duration ?? 0) > 0 || row.disposition !== null)
-  const partOfLiveCall = rowOpen || !!input.sessionPartnerLive
+  const partOfLiveCall = rowOpen || !!input.sessionPartnerLive || !!input.agentOnCall
   if (!partOfLiveCall && ageSeconds >= thresholds.runawaySeconds) {
     return end('runaway', `up ${ageSeconds}s, past the ${thresholds.runawaySeconds}s ceiling`)
   }
@@ -226,6 +229,16 @@ export function classifyLeg(
   // ── 2. ROW SAYS THE CALL IS OVER ───────────────────────────────────────
   if (row) {
     const finished = (row.duration ?? 0) > 0 || row.disposition !== null
+    // ── A DISPOSITION IS NOT A HANGUP WHILE THE AGENT IS ON THE LINE ─────
+    // Agents set the disposition before hanging up on about a third of human
+    // calls (113 of 355, Oct-Nov 2026). Duration is the carrier saying the
+    // lead's line ended; a disposition alone is only the agent's screen. With
+    // the agent's legs still live on the same call, or the agent's session
+    // still assigned it, somebody is talking: never end it. A disposition with
+    // nobody on our side is still the stranded-prospect case below.
+    if (finished && !((row.duration ?? 0) > 0) && (input.sessionPartnerLive || input.agentOnCall)) {
+      return leave(`dispositioned ${row.disposition}, but the agent is still on the line`)
+    }
     if (finished) {
       if (ageSeconds < thresholds.finishedSeconds) {
         return leave(

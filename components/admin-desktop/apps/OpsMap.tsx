@@ -227,6 +227,8 @@ type FeedRow = {
   /** preview, power, progressive, predictive or manual. Null on calls placed
    *  before 19 Sept, when the mode was not yet recorded against the call. */
   dialerMode: string | null
+  /** A hangup is recorded: the call is over, however long it ran. */
+  ended?: boolean
 }
 type PulseBucket = { at: string; calls: number; answered: number; connected: number }
 type PlacePerson = {
@@ -427,16 +429,23 @@ const dayMarker = (at: string | number, prevAt: string | number | null, nowMs: n
 // either way, and counting it clutters the one thing this column is for:
 // seeing who is actually talking to somebody right now.
 //
-// So: answered, no disposition written, nothing in duration, and recent enough
-// that it cannot be an orphan. The age bound matters — calls that ended
-// without ever being dispositioned do exist in this table, and without it one
-// of those would show a clock counting up forever.
-const LIVE_MAX_AGE_MS = 10 * 60_000
+// So: answered, no disposition written, nothing in duration, and no hangup
+// recorded. The hangup is what says a call is over: the webhook writes it, and
+// the leg watchdog writes orphaned_no_hangup_event for a row whose legs are
+// gone from Telnyx, so an undispositioned call that ended does not show a
+// clock forever.
+//
+// This used to be a 10-minute age bound instead, which dropped every longer
+// conversation off ACTIVE at minute 10 (a 51-minute call on 13 Nov 2026 read
+// as over for 41 minutes of it). There is never a capped call time, so the
+// bound is now Telnyx's own four-hour leg maximum plus margin: no real call
+// can outlive it.
+const LIVE_MAX_AGE_MS = (4 * 60 + 10) * 60_000
 const liveSeconds = (
-  f: { at: string; duration: number; disposition: string | null; answered: boolean },
+  f: { at: string; duration: number; disposition: string | null; answered: boolean; ended?: boolean },
   nowMs: number,
 ): number | null => {
-  if (!f.answered || f.disposition || f.duration > 0) return null
+  if (!f.answered || f.ended || f.disposition || f.duration > 0) return null
   const started = Date.parse(f.at)
   if (!Number.isFinite(started)) return null
   const elapsed = nowMs - started

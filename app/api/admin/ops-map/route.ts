@@ -59,6 +59,8 @@ type FeedRowRaw = {
   answered: boolean; disposition: string | null
   amd_result: string | null; amd_requested: boolean
   dial_source: string | null; campaign: string | null; recording_status: string | null
+  /** The carrier's hang-up cause. Set once the call is over. */
+  hangup_cause?: string | null
   /** preview, power, progressive, predictive or manual; null before 19 Sept. */
   dialer_mode: string | null
 }
@@ -528,9 +530,27 @@ export async function GET(req: NextRequest) {
         dialerMode: r.dialer_mode || null,
         campaign: r.campaign || null,
         recording: r.recording_status || null,
+        // A recorded hangup means the call is over, however long it ran. The
+        // map's ACTIVE filter reads this instead of guessing from age.
+        ended: !!r.hangup_cause,
       }
     }
-    const feed = ((feedRes.data || []) as FeedRowRaw[]).map(toFeedRow)
+    // ── EVERY CONVERSATION STILL GOING, HOWEVER OLD ──────────────────────
+    // The feed is the newest N dials. A long call falls past N while the rest
+    // of the floor keeps dialing, and ACTIVE (a filter over the feed) lost it
+    // even though the agent was still talking. Open answered calls are read on
+    // their own and merged in, so ACTIVE shows everyone on a call. Best
+    // effort: a failure here leaves the ordinary feed.
+    const openRes = await supabase.rpc('ops_map_feed', { p_limit: 200, p_open_only: true })
+    if (openRes.error) console.error('[ops-map] open calls read failed:', openRes.error.message)
+    const recent = ((feedRes.data || []) as FeedRowRaw[]).map(toFeedRow)
+    const seenIds = new Set(recent.map(f => f.id))
+    const olderOpen = ((openRes.data || []) as FeedRowRaw[])
+      .filter(r => !seenIds.has(r.call_id))
+      .map(toFeedRow)
+    const feed = olderOpen.length === 0
+      ? recent
+      : [...recent, ...olderOpen].sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
     const closedFeed = closedRes ? ((closedRes.data || []) as FeedRowRaw[]).map(toFeedRow) : undefined
 
     // ── BREAKDOWN ────────────────────────────────────────────────────────

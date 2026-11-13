@@ -62,6 +62,8 @@ const CORRELATION_WINDOW_HOURS = 12
 const SIGHTING_RETENTION_HOURS = 48
 
 interface CorrelatedRow {
+  /** calls.id, matched against the call a live agent session is assigned. */
+  id: string
   createdAt: string
   duration: number | null
   disposition: string | null
@@ -85,6 +87,7 @@ async function correlationRows(db: ReturnType<typeof getServiceClient>) {
   // fell off the page had live legs this cron would read as untracked and end
   // two minutes in: a real conversation hung up for being on page two.
   const data = await readAll<{
+    id: string
     call_control_id: string | null; agent_call_control_id: string | null
     created_at: string; phone_number: string | null; user_id: string | null
     duration: number | null; disposition: string | null
@@ -103,7 +106,7 @@ async function correlationRows(db: ReturnType<typeof getServiceClient>) {
   const map = new Map<string, CorrelatedRow>()
   for (const r of data) {
     const v: CorrelatedRow = {
-      createdAt: r.created_at, duration: r.duration, disposition: r.disposition,
+      id: r.id, createdAt: r.created_at, duration: r.duration, disposition: r.disposition,
       phone: r.phone_number, userId: r.user_id,
     }
     if (r.call_control_id) map.set(r.call_control_id, v)
@@ -292,6 +295,20 @@ export async function GET(req: Request) {
 
     if (seatReadError) throw seatReadError
 
+    // ── WHICH CALLS AN AGENT IS ON RIGHT NOW ─────────────────────────────
+    // A live agent session (fresh heartbeat) assigned a call is on that call,
+    // and nothing here may end it. Server-assigned in predictive; read failure
+    // throws rather than treating everyone as off a call.
+    const { data: onCall, error: onCallErr } = await db
+      .from('agent_sessions')
+      .select('current_call_id')
+      .not('current_call_id', 'is', null)
+      .gte('last_heartbeat', new Date(now - 180_000).toISOString())
+    if (onCallErr) throw onCallErr
+    const agentCallIds = new Set(
+      ((onCall || []) as Array<{ current_call_id: string }>).map(r => r.current_call_id)
+    )
+
     // Verdicts are computed against the sighting as it stood BEFORE this pass
     // incremented it, plus this pass — which is what times_seen now holds.
     const verdicts: WatchdogVerdict[] = legs.map(l => {
@@ -301,6 +318,7 @@ export async function GET(req: Request) {
         callControlId: l.callControlId,
         seat: seats.has(l.callControlId) ? { heartbeatAgeSeconds: seats.get(l.callControlId) ?? null } : null,
         sessionPartnerLive: links.partnered.has(l.callControlId),
+        agentOnCall: !!row && agentCallIds.has(row.id),
         row: row
           ? { createdAt: row.createdAt, duration: row.duration, disposition: row.disposition }
           : null,
