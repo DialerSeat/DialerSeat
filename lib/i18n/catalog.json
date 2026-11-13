@@ -7873,7 +7873,7 @@
   "components/teams/SeatLinksPanel.tsx",
   "components/teams/TeamOverview.tsx"
  ],
- "Credit where due: Orum&apos;s AI-driven parallel dialing, up to 5: 10 lines at once, is a real, effective way to increase raw call volume for teams that can afford it. But it comes at a reported $250 to $800 per user per month, annual billing only, a 3-seat minimum, and pricing you can only get by requesting a demo. Reviewers also consistently flag a 1-2 second connection lag when a parallel-dialed call bridges to a rep, and numbers getting flagged &ldquo;Spam Likely&rdquo; over time. DialerSeat™ is self-serve, published pricing, one seat minimum, and every dialer mode included from day one.": [
+ "Credit where due: Orum&apos;s AI-driven parallel dialing, up to 5: 10 lines at once, is a real, effective way to increase raw call volume for teams that can afford it. But it comes at a reported $250 to $800 per user per month, a nine-seat minimum, and pricing you can only get by requesting a demo. Reviewers also consistently flag a 1-2 second connection lag when a parallel-dialed call bridges to a rep, and numbers getting flagged &ldquo;Spam Likely&rdquo; over time. DialerSeat™ is self-serve, published pricing, one seat minimum, and every dialer mode included from day one.": [
   "lib/competitorFeatures.ts"
  ],
  "Critical retention invariant violated. Nothing was deleted.": [
@@ -8752,7 +8752,7 @@
  "DialerSeat is the modern alternative to ReadyMode. Multi-line predictive dialing, per-campaign mode, multiple scripts per campaign, server-side TCPA, at flat $35/week per seat. Billed weekly, no setup fee, works on every device.": [
   "app/vs/readymode/page.tsx"
  ],
- "DialerSeat is the transparent, self-serve alternative to Orum. Orum starts around $250/user/month billed annually with a 3-seat minimum and no public pricing. DialerSeat is $35 per seat per week, cancel anytime, one seat minimum, sign up in minutes.": [
+ "DialerSeat is the transparent, self-serve alternative to Orum. Orum publishes no price, states a nine-seat minimum and is reported at around $250/user/month. DialerSeat is $35 per seat per week, cancel anytime, one seat minimum, sign up in minutes.": [
   "app/vs/orum/page.tsx"
  ],
  "DialerSeat maintains a live pool of numbers sized to actual account volume, not a fixed number per seat. No number places more than 60 calls a day, and past 40 it drops to the back of the queue, so load spreads across the pool before any single number runs hot. A number answering far below its peers is slowed to 15 calls a day rather than pulled, then restored automatically once it recovers.": [
@@ -15098,7 +15098,7 @@
  "No data for this range": [
   "app/dashboard/teams/page.tsx"
  ],
- "No demo required, no annual contract, no 3-seat minimum. $35/week per seat vs Orum's widely-reported $250+/user/month starting price.": [
+ "No demo required, no contract, no nine-seat minimum. $35/week per seat vs Orum's widely-reported $250+/user/month starting price.": [
   "app/vs/orum/page.tsx"
  ],
  "No dialable leads right now.": [
@@ -15408,7 +15408,7 @@
  "No. A robocall plays a recorded message. An auto dialer used for sales connects a live agent to the person who answers. The rules differ: prerecorded calls need prior consent, while live agent calls to numbers not on the Do Not Call Registry generally do not.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
- "No. A team of two is a supported configuration. Several alternatives have minimums: Orum requires three seats, Aircall three licences, JustCall two.": [
+ "No. A team of two is a supported configuration. Several alternatives have minimums: Orum requires nine seats, Aircall three licences, JustCall two.": [
   "app/vs/teams/page.tsx"
  ],
  "No. Auto dialers are legal in the US. What the law regulates is how they are used: prerecorded or artificial-voice calls need the person’s consent, predictive dialers must keep abandoned calls under 3% of answered calls per campaign per 30 days, calls must respect calling hours and the Do Not Call Registry, and caller ID must be shown. Some states add their own rules.": [
@@ -16608,7 +16608,7 @@
  "Organization": [
   "app/components/StructuredData.tsx"
  ],
- "Orum Alternative: $35 a Week vs $250+ a Month, Annual | DialerSeat": [
+ "Orum Alternative: $35 a Week vs $250+ a Month, Nine-Seat Minimum | DialerSeat": [
   "app/vs/orum/page.tsx"
  ],
  "Other {name} alternatives": [

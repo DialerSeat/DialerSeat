@@ -280,7 +280,7 @@ export const COMPETITOR_FEATURES: Record<string, CompetitorFeatures> = {
     ],
   },
   "orum": {
-    lede: "Credit where due: Orum&apos;s AI-driven parallel dialing, up to 5: 10 lines at once, is a real, effective way to increase raw call volume for teams that can afford it. But it comes at a reported $250 to $800 per user per month, annual billing only, a 3-seat minimum, and pricing you can only get by requesting a demo. Reviewers also consistently flag a 1-2 second connection lag when a parallel-dialed call bridges to a rep, and numbers getting flagged &ldquo;Spam Likely&rdquo; over time. DialerSeat\u2122 is self-serve, published pricing, one seat minimum, and every dialer mode included from day one.",
+    lede: "Credit where due: Orum&apos;s AI-driven parallel dialing, up to 5: 10 lines at once, is a real, effective way to increase raw call volume for teams that can afford it. But it comes at a reported $250 to $800 per user per month, a nine-seat minimum, and pricing you can only get by requesting a demo. Reviewers also consistently flag a 1-2 second connection lag when a parallel-dialed call bridges to a rep, and numbers getting flagged &ldquo;Spam Likely&rdquo; over time. DialerSeat\u2122 is self-serve, published pricing, one seat minimum, and every dialer mode included from day one.",
     rows: [
   { feature: 'Public per-seat pricing', dialerseat: true, competitor: 'Request-a-quote only' },
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: false },

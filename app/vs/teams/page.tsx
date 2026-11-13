@@ -89,7 +89,7 @@ const FAQS = [
   {
     question: msg("Is there a seat minimum?"),
     answer:
-      msg("No. A team of two is a supported configuration. Several alternatives have minimums: Orum requires three seats, Aircall three licences, JustCall two."),
+      msg("No. A team of two is a supported configuration. Several alternatives have minimums: Orum requires nine seats, Aircall three licences, JustCall two."),
   },
   {
     question: msg("Who pays for each agent’s seat?"),
