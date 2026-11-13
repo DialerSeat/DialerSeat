@@ -201,6 +201,10 @@ export interface DevStore {
   updateSeat(platformId: string, id: string, patch: Partial<Pick<Seat, 'name' | 'email' | 'billed_to' | 'status'>>): Promise<Seat | null>
 
   insertSession(row: Omit<SeatSession, 'id' | 'created_at' | 'used_at'>): Promise<SeatSession>
+  findSessionByHash(hash: string): Promise<SeatSession | null>
+  /** Marks a session used; false if it was already used (so a token works once even under a race). */
+  claimSession(id: string): Promise<boolean>
+  getSeatById(id: string): Promise<Seat | null>
 
   listCampaignLinks(platformId: string, env: Env): Promise<CampaignLink[]>
   getCampaignLink(platformId: string, env: Env, idOrExternalId: string): Promise<CampaignLink | null>
@@ -353,6 +357,13 @@ const localStore: DevStore = {
   }, true),
 
   insertSession: (row) => withLocal(d => { const s = { ...row, id: randomUUID(), used_at: null, created_at: now() }; d.sessions.push(s); return s }, true),
+  findSessionByHash: (h) => withLocal(d => d.sessions.find(x => x.token_hash === h) || null),
+  claimSession: (id) => withLocal(d => {
+    const x = d.sessions.find(y => y.id === id)
+    if (!x || x.used_at) return false
+    x.used_at = now(); return true
+  }, true),
+  getSeatById: (id) => withLocal(d => d.seats.find(x => x.id === id) || null),
 
   listCampaignLinks: (pid, env) => withLocal(d => (d.campaigns || []).filter(c => c.platform_id === pid && c.env === env).sort((a, b) => b.created_at.localeCompare(a.created_at))),
   getCampaignLink: (pid, env, key) => withLocal(d => (d.campaigns || []).find(c => c.platform_id === pid && c.env === env && (c.id === key || c.external_id === key)) || null),
@@ -482,6 +493,18 @@ function supabaseStore(): DevStore {
 
     async insertSession(row) {
       return must(await db.from('dev_seat_sessions').insert(row).select('*').single(), 'session') as SeatSession
+    },
+
+    async findSessionByHash(h) {
+      return must(await db.from('dev_seat_sessions').select('*').eq('token_hash', h).maybeSingle(), 'session') as SeatSession | null
+    },
+    async claimSession(id) {
+      // Conditional update: only the first caller sees a row come back.
+      const r = await db.from('dev_seat_sessions').update({ used_at: now() }).eq('id', id).is('used_at', null).select('id').maybeSingle()
+      return !!must(r, 'claim session')
+    },
+    async getSeatById(id) {
+      return must(await db.from('dev_seats').select('*').eq('id', id).maybeSingle(), 'seat') as Seat | null
     },
 
     async listCampaignLinks(pid, env) {

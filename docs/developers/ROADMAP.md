@@ -242,8 +242,34 @@ Built and checked end to end on `localhost:3200/developers`:
   `retention_policy`) was dry-run against production inside `begin … rollback`. It created
   10 tables with 0 unclassified, and the rollback left 0 behind. **Not applied.**
 
+- **The miniplayer** (built 13 Nov 2026, same branch):
+  - `/embed/v1.js` loader: plain ES5, defines `DialerSeat.mount(el, { session, leads, campaign, theme })`
+    and returns `on`/`off`/`setLeads`/`destroy`. The session token travels in the URL
+    fragment; messages are checked by source and origin both ways.
+  - `/embed/dialer` frame: trades the one-use session for a 12-hour frame token (stored
+    hashed). It refuses parents outside the platform's allowed origins, and proxy.ts sends
+    a per-platform `frame-ancestors` header so the browser blocks the frame elsewhere.
+  - The dialer: lead queue from the host page, dial mode from the policy and exceptions
+    (with a picker when seats may choose), call screen (mute, hold, hang up), voicemail
+    detection, auto-advance with a pausable countdown, the platform's own dispositions plus
+    notes, and screens for seats that cannot dial yet.
+  - Test mode plays every call out by the number's last digit (0–6 person, 7 voicemail,
+    8 no answer, 9 busy). Each step sends the real signed webhooks (`call.started`,
+    `call.answered`, `call.ended`, `call.dispositioned`) and the browser events (`ready`,
+    `call`, `disposition`, `queue_empty`, `error`).
+  - Call ids are signed to the frame, so nothing else can report on them.
+  - Console → Miniplayer → **Try it** mounts the real loader and frame with five sample
+    leads and shows the events live.
+  - Checked from a separate origin acting as a CRM: blocked before its origin was allowed,
+    working after. The receiver verified every webhook signature.
+
 Not built yet, and exactly what the docs promise for launch:
-- The miniplayer itself (`/embed/v1.js` plus the frame), which is Phase 3.
+- Live calls from the miniplayer. Everything around the call is built. What remains is
+  connecting a live seat to the real DialerSeat dialer: the browser agent leg and
+  `placeOutboundCall`, with the seat tied to its `users` row. This touches the call path,
+  so it ships in the evening. Until then a live session returns `501` on start.
+- The root layout still mounts ClerkProvider inside the frame. Nothing breaks, but it is
+  weight the frame does not need. Give `/embed/dialer` a lighter root before launch.
 - Live lead insertion into `campaigns`/`leads`, and live DNC entries. Both return
   `501 not_available` on live keys today; test keys validate exactly as live will.
 - `GET /calls` with real rows. This needs seats tied to `users` on their first live dial.
@@ -267,10 +293,10 @@ needs `NODE_ENV` other than production, no `VERCEL_ENV`, and the local store.
 - Fill `dev_webhook_deliveries` from call-end and disposition events. Add a retry
   cron with backoff for 72 h. Signing and the delivery log already exist.
 
-**Phase 3 — miniplayer** *(touches the dialer UI: evening deploys only)*
-- `/embed/v1.js` loader, then the `/embed/dialer` frame, then session-token sign-in
-  (no Clerk prompt inside the CRM), then postMessage events (`ready`, `call`,
-  `disposition`). `frame-ancestors` comes from each platform's allowed origins.
+**Phase 3 — miniplayer live calls** *(touches the call path: evening deploys only)*
+- The loader, frame, session sign-in, origin enforcement, test-mode calls and events are
+  built (above). What remains is wiring a live seat's call button to the real dialer: the
+  WebRTC agent leg, `placeOutboundCall`, and the existing claim path for campaign leads.
 
 **Phase 4 — billing**
 - User-billed: Stripe checkout inside the miniplayer, at the weekly price, plus a

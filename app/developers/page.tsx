@@ -21,7 +21,7 @@ const STEPS = [
 
 const CAPS = [
   { icon: SlidersHorizontal, title: 'Every dial mode', body: `${DIAL_MODES.map(m => m.name).join(', ')}. Set one for your whole platform, then make exceptions per seat or campaign.` },
-  { icon: PanelsTopLeft, title: 'The miniplayer', body: 'The portable DialerSeat dialer: queue, call controls, script and disposition picker in one compact panel on your page.' },
+  { icon: PanelsTopLeft, title: 'The miniplayer', body: 'The portable DialerSeat dialer: lead queue, call controls and your disposition picker in one compact panel on your page.' },
   { icon: ListChecks, title: 'Your dispositions', body: 'Agents pick from your outcomes, not ours. Each maps to an outcome class so redials and do-not-call still work.' },
   { icon: Webhook, title: 'Signed webhooks', body: 'call.answered, call.ended, call.dispositioned, recording.ready and more, signed with HMAC-SHA256 and retried for 72 hours.' },
   { icon: Voicemail, title: 'AMD and voicemail drop', body: 'Answering-machine detection per campaign, with the result on every answered call and a voicemail drop after the beep.' },

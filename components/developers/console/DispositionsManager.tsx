@@ -3,22 +3,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Wand2 } from 'lucide-react'
-import { OUTCOME_CLASSES } from '@/lib/developers/catalog'
+import { DEFAULT_DISPOSITIONS, OUTCOME_CLASSES } from '@/lib/developers/catalog'
 import { api, useToast } from '../ui'
 
 interface Row { id: string; code: string; label: string; outcome: string; sort: number }
 
 // Offered as a starting point the developer chooses to add, then edits. Never
-// added on their behalf.
-const STARTER: Omit<Row, 'id' | 'sort'>[] = [
-  { code: 'APPT_SET', label: 'Appointment set', outcome: 'conversion' },
-  { code: 'CALLBACK', label: 'Call back', outcome: 'callback' },
-  { code: 'NOT_INTERESTED', label: 'Not interested', outcome: 'not_interested' },
-  { code: 'LEFT_VM', label: 'Left voicemail', outcome: 'voicemail' },
-  { code: 'NO_ANSWER', label: 'No answer', outcome: 'no_answer' },
-  { code: 'WRONG_NUMBER', label: 'Wrong number', outcome: 'bad_number' },
-  { code: 'DNC', label: 'Do not call', outcome: 'dnc' },
-]
+// added on their behalf. The same list agents see until a platform adds its own.
+const STARTER = DEFAULT_DISPOSITIONS
 
 const outcomeLabel = (id: string) => OUTCOME_CLASSES.find(o => o.id === id)?.label || id
 

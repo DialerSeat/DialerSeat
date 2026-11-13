@@ -5,6 +5,7 @@ import { ENTITLED_STATUSES, pausedAccessRunning } from '@/lib/entitlement'
 import { isOwnerFunded } from '@/lib/seatFunding'
 import { isReservedSubdomain } from '@/lib/reservedSubdomains'
 import { localTestUser } from '@/lib/developers/localAuth'
+import { allowedOriginsForKey, frameAncestorsHeader } from '@/lib/developers/frameAncestors'
 import {
   LOCALE_COOKIE, LOCALE_HEADER, LOCALE_PATH_HEADER, PROMPT_COOKIE, isLocalizablePath, splitLocalePrefix,
 } from '@/lib/i18n/locales'
@@ -438,7 +439,7 @@ const DEMO_READS = /^\/api\/(analytics\/(summary|timeseries|dispositions|campaig
 const DEV_HOSTS = new Set(['dev.dialerseat.com', 'dev.localhost'])
 const DEV_PREFIX = '/developers'
 /** Paths a visitor can read without signing in, relative to the dev site root. */
-const DEV_PUBLIC = /^\/($|docs(\/.*)?$|sign-in(\/.*)?$|sign-up(\/.*)?$|robots\.txt$|sitemap\.xml$|llms\.txt$)/
+const DEV_PUBLIC = /^\/($|docs(\/.*)?$|sign-in(\/.*)?$|sign-up(\/.*)?$|embed(\/.*)?$|robots\.txt$|sitemap\.xml$|llms\.txt$)/
 
 type ClerkAuth = ClerkMiddlewareAuth
 type ClerkRequest = NextRequest
@@ -504,10 +505,21 @@ async function routeDeveloperSite(
 
   const headers = new Headers(request.headers)
   headers.set('x-dev-base', base)
-  if (!onDevHost) return NextResponse.next({ request: { headers } })
   const target = url.clone()
   target.pathname = DEV_PREFIX + (sitePath === '/' ? '' : sitePath)
-  return NextResponse.rewrite(target, { request: { headers } })
+  const res = onDevHost
+    ? NextResponse.rewrite(target, { request: { headers } })
+    : NextResponse.next({ request: { headers } })
+
+  // The miniplayer frame may only sit inside the pages its platform listed
+  // under Allowed origins (plus our own console). The browser enforces this
+  // header; frame-ancestors overrides the site-wide X-Frame-Options.
+  if (sitePath === '/embed/dialer') {
+    const origins = await allowedOriginsForKey(url.searchParams.get('k'))
+    res.headers.set('Content-Security-Policy', frameAncestorsHeader(origins))
+    res.headers.set('Cache-Control', 'no-store')
+  }
+  return res
 }
 
 export default clerkMiddleware(async (auth, request) => {
@@ -1090,5 +1102,8 @@ export const config = {
   matcher: [
     '/((?!_next|[^?]*\\.(?:html?|css|jsx?|json|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docb?x?|xlsx?|zip|webmanifest)).*)',
     '/(api|trpc)(.*)',
+    // The miniplayer loader has a .js extension, which the pattern above
+    // skips; on dev.dialerseat.com it has to be rewritten to app/developers.
+    '/embed/v1.js',
   ],
 }

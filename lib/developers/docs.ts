@@ -5,7 +5,7 @@
 // the console search. Write a fact here once and both carry it.
 // =============================================================================
 
-import { API_BASE, EMBED_SRC, SALES_EMAIL, WEBHOOK_EVENTS, DIAL_MODES } from './catalog'
+import { API_BASE, EMBED_SRC, SALES_EMAIL, WEBHOOK_EVENTS, DIAL_MODES, TEST_NUMBERS } from './catalog'
 
 export type Block =
   | { t: 'p'; text: string }
@@ -164,14 +164,51 @@ export const DOCS: DocPage[] = [
     title: 'The miniplayer',
     group: 'Build',
     summary: 'The portable DialerSeat dialer, embedded in your page with one script tag.',
-    keywords: ['embed', 'widget', 'iframe', 'script tag', 'portable dialer', 'mount', 'sdk', 'javascript', 'allowed origins', 'cors', 'frame', 'theme', 'events', 'postmessage'],
+    keywords: ['embed', 'widget', 'iframe', 'script tag', 'portable dialer', 'mount', 'sdk', 'javascript', 'allowed origins', 'cors', 'frame', 'theme', 'events', 'postmessage', 'setLeads', 'test numbers', 'simulated'],
     blocks: [
-      { t: 'p', text: 'The miniplayer is the DialerSeat dialer in a compact panel: the queue, the call controls, the script and the disposition picker. It runs in a frame on your page.' },
-      { t: 'code', lang: 'html', code: `<script src="${EMBED_SRC}"></script>\n<div id="dialer" style="width:380px;height:640px"></div>\n<script>\n  const dialer = DialerSeat.mount('#dialer', {\n    session: SESSION_TOKEN,\n    campaign: 'crm_campaign_77',\n    theme: 'dark',\n  })\n  dialer.on('disposition', (e) => console.log(e.code, e.lead.external_id))\n</script>` },
-      { t: 'h', id: 'origins', text: 'Allowed origins' },
-      { t: 'p', text: 'The miniplayer only loads inside origins listed under Miniplayer in the console. Add every domain your app runs on, including staging.' },
+      { t: 'p', text: 'The miniplayer is the DialerSeat dialer in a compact panel: the lead queue, the call controls and your disposition picker. It runs in a frame on your page, signed in with a session your server creates, so your users never see a DialerSeat login.' },
+      { t: 'code', lang: 'html', code: `<script src="${EMBED_SRC}" data-key="pk_test_..."></script>
+<div id="dialer" style="width:380px;height:640px"></div>
+<script>
+  const dialer = DialerSeat.mount('#dialer', {
+    session: SESSION_TOKEN,          // from POST /v1/seats/{id}/sessions
+    campaign: 'crm_campaign_77',     // your own campaign id (optional)
+    leads: [
+      { external_id: 'c_5501', first_name: 'Dana', phone: '+15125550142', city: 'Austin' },
+    ],
+    theme: 'dark',                   // or 'light'
+  })
+  dialer.on('disposition', (e) => saveToCrm(e.lead.external_id, e.code, e.notes))
+</script>` },
+      { t: 'h', id: 'options', text: 'Mount options' },
+      { t: 'list', items: [
+        'session (required): the one-use token from POST /v1/seats/{id}/sessions. It is passed in the URL fragment, which never reaches a server log.',
+        'leads: the queue to dial, in order. Each lead needs a phone; external_id comes back in every event so you can match it to your record. Any other plain fields are shown to the agent.',
+        'campaign: your campaign id. Campaign dial-mode exceptions apply, and it is in every webhook.',
+        'theme: dark (default) or light.',
+        'publishableKey: only if you did not put data-key on the script tag.',
+      ] },
+      { t: 'h', id: 'methods', text: 'Methods' },
+      { t: 'list', items: [
+        'dialer.on(type, fn) and dialer.off(type, fn). Use "*" for every event.',
+        'dialer.setLeads(leads) replaces the queue, for example when the user picks another list in your app.',
+        'dialer.destroy() removes the frame and its listeners.',
+      ] },
       { t: 'h', id: 'events', text: 'Browser events' },
-      { t: 'list', items: ['ready: the dialer is signed in and loaded', 'call: a call started, connected or ended', 'disposition: the agent picked an outcome', 'error: the session expired or a payment is needed'] },
+      { t: 'list', items: [
+        'ready: the dialer is signed in. Carries the seat, the environment and the dial mode.',
+        'call: a call changed state: ringing, connected, voicemail or ended.',
+        'disposition: the agent saved an outcome. Carries your code, label, outcome class, notes and the lead.',
+        'queue_empty: every lead has been called.',
+        'error: the dialer could not open, for example because the session expired or this page is not an allowed origin.',
+      ] },
+      { t: 'p', text: 'Browser events are for your interface. Write results to your database from webhooks, which are signed and retried: a browser tab can close before it tells you anything.' },
+      { t: 'h', id: 'origins', text: 'Allowed origins' },
+      { t: 'p', text: 'The miniplayer only loads inside origins listed under Miniplayer in the console. The browser enforces this with a frame-ancestors header, and the dialer refuses to sign in anywhere else. Add every domain your app runs on, including staging.' },
+      { t: 'h', id: 'test-numbers', text: 'Test numbers' },
+      { t: 'p', text: 'With a test session nothing is dialled. The call plays out by the last digit of the number, and every step sends the same signed webhooks a real call does:' },
+      { t: 'list', items: TEST_NUMBERS.map(t => `Ending in ${t.ending}: ${t.label}`) },
+      { t: 'p', text: 'Open the console and press Try it under Miniplayer to watch a test dialer send your webhooks and browser events.' },
     ],
   },
   {

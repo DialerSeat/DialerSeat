@@ -79,6 +79,38 @@ export const OUTCOME_CLASSES = [
   { id: 'other', label: 'Other' },
 ] as const
 
+/**
+ * What agents see before a platform adds its own dispositions, and the set the
+ * console offers as a starting point. Codes are stable: they come back in
+ * webhooks.
+ */
+export const DEFAULT_DISPOSITIONS: { code: string; label: string; outcome: string }[] = [
+  { code: 'APPT_SET', label: 'Appointment set', outcome: 'conversion' },
+  { code: 'CALLBACK', label: 'Call back', outcome: 'callback' },
+  { code: 'NOT_INTERESTED', label: 'Not interested', outcome: 'not_interested' },
+  { code: 'LEFT_VM', label: 'Left voicemail', outcome: 'voicemail' },
+  { code: 'NO_ANSWER', label: 'No answer', outcome: 'no_answer' },
+  { code: 'WRONG_NUMBER', label: 'Wrong number', outcome: 'bad_number' },
+  { code: 'DNC', label: 'Do not call', outcome: 'dnc' },
+]
+
+/**
+ * Test-mode call outcomes, decided by the last digit of the number, so a
+ * developer can make every path happen on purpose, the way test card numbers
+ * work at a payment provider.
+ */
+export const TEST_NUMBERS: { ending: string; outcome: 'human' | 'machine' | 'no_answer' | 'busy'; label: string }[] = [
+  { ending: '0–6', outcome: 'human', label: 'A person answers' },
+  { ending: '7', outcome: 'machine', label: 'Voicemail answers (AMD: machine)' },
+  { ending: '8', outcome: 'no_answer', label: 'Rings out, no answer' },
+  { ending: '9', outcome: 'busy', label: 'Busy' },
+]
+
+export function testOutcomeFor(phone: string): 'human' | 'machine' | 'no_answer' | 'busy' {
+  const last = phone.replace(/\D/g, '').slice(-1)
+  return last === '7' ? 'machine' : last === '8' ? 'no_answer' : last === '9' ? 'busy' : 'human'
+}
+
 export interface Tier {
   id: 'sandbox' | 'launch' | 'scale' | 'partner'
   name: string

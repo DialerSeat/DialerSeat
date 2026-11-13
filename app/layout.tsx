@@ -176,6 +176,11 @@ export default async function RootLayout({
   const tenantSlug = h.get('x-tenant-slug');
 
   const isLandingView = h.get('x-landing-view') === '1';
+  // dev.dialerseat.com is its own product (proxy.ts sets x-dev-base on every
+  // developer page). dialerseat.com's own sitewide pieces stay off it: its
+  // page-view log would count the developer site's "/" as the homepage, and a
+  // language prompt has no place inside the miniplayer framed on a CRM.
+  const isDeveloperSite = h.get('x-dev-base') !== null;
 
   let branding = null;
   if (!isLandingView) {
@@ -240,21 +245,21 @@ export default async function RootLayout({
           )}
         </head>
         <body>
-          {!branding && <StructuredData />}
+          {!branding && !isDeveloperSite && <StructuredData />}
 
           <LocaleProvider initialLocale={locale}>
             <ThemeProvider initialBranding={branding}>
               {children}
             </ThemeProvider>
             <LocaleAccountSync />
-            <LanguagePrompt suggested={suggestedLocale} />
+            {!isDeveloperSite && <LanguagePrompt suggested={suggestedLocale} />}
           </LocaleProvider>
           {/* Sitewide, mounted once. Renders nothing — it exists to record that
               a page was looked at, on marketing pages and inside the dashboard
               alike, without each new route having to remember to opt in. */}
-          <PageViewTracker />
-          <PresenceBeacon />
-          <DemoPhoneMask />
+          {!isDeveloperSite && <PageViewTracker />}
+          {!isDeveloperSite && <PresenceBeacon />}
+          {!isDeveloperSite && <DemoPhoneMask />}
           {/*
              ========================================================================
              DIALERSEAT MASTER REGULATORY ENGINE
