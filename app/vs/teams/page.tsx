@@ -77,8 +77,8 @@ const FAQS = [
     question: msg("What does a 5-agent dialer team cost?"),
     answer:
       'On DialerSeat, $175 per week in seats ($35 each) plus $75 per week for the Manager+ owner, with all four dialer modes included and no contract. ' +
-      'Most alternatives price per seat per month with a minimum: Orum is around $1,250/month for five, billed annually with a three-seat minimum; ' +
-      'Aircall is $250/month on the tier that includes the Power Dialer, with a three-licence minimum; Five9 does not publish pricing and quotes commonly land at $175+ per seat per month.',
+      'Most alternatives price per seat per month with a minimum: Orum does not publish a price and states a nine-seat minimum; ' +
+      'Aircall is $250/month on the tier that includes the Power Dialer, with a three-licence minimum; Five9 publishes $159 per seat per month on Core, with a 50-seat minimum.',
   },
   {
     question: msg("Can two agents on the same campaign call the same lead?"),

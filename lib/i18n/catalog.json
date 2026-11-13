@@ -668,6 +668,9 @@
  "{length} OWNED · {length2} MEMBER{totalPending}": [
   "components/teams/TeamsManager.tsx"
  ],
+ "{longerThanMonth} sell nothing shorter than three months or a year.": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "{memberCount} MEMBER{value} · {codeCount} CODE{value2} · {campaignCount} CAMPAIGN{value3}": [
   "components/teams/TeamsManager.tsx"
  ],
@@ -751,6 +754,9 @@
  "{onCall} on a call": [
   "components/teams/CampaignsAccessPanel.tsx"
  ],
+ "{oneTimeFee} states a required one-time onboarding fee on its pricing page.": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "{pct} of dials that rang": [
   "app/dashboard/teams/page.tsx"
  ],
@@ -768,6 +774,9 @@
  ],
  "{price}/wk": [
   "components/teams/TeamFloor.tsx"
+ ],
+ "{quote} of {total} show no price: you fill in a form or book a demo first.": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "{rate}% of {calls} calls": [
   "app/dashboard/teams/page.tsx"
@@ -792,6 +801,9 @@
  ],
  "{s} seconds per call: {a} talking, {b} on hold, {c} wrapping up. At ${r} an hour that is {cost} of agent time per call.": [
   "components/tools/MathTools.tsx"
+ ],
+ "{seatMinimum} will not sell a single seat; the largest minimum is {largestMinimum}.": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "{seatsAway} more {value} you pay for reaches": [
   "components/teams/TeamDetail.tsx"
@@ -866,8 +878,14 @@
  "{w} words, about {s} seconds": [
   "components/tools/ScriptTools.tsx"
  ],
+ "{weekly} of {total} bill weekly. The shortest commitment any of them sells is a month.": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "{weeks} week{value} on a monthly plan bills {months} month{value2}; annual plans bill at least 12 months; seat minimums are applied. Competitor figures are the lowest published price that includes multi-line or predictive dialing, before add-ons, setup fees and usage. Figures as published September 2026.": [
   "components/tools/DialerCostCalculator.tsx"
+ ],
+ "{yearForLowest} of the {published} with a public price charge less if you pay for a year.": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "* Florida's statute ends telemarketing at 8 p.m. Every other row shows the federal window, which is the floor everywhere: some states set narrower hours, weekend or holiday limits, so check your state's own law before relying on the federal window. The time zone comes from the state's main zone. Not legal advice.": [
   "components/tools/CallingHoursChecker.tsx"
@@ -1051,9 +1069,6 @@
  "× CANCEL": [
   "app/onboarding/whitelabel/page.tsx"
  ],
- "~$1,250/month, billed annually": [
-  "lib/competitors.ts"
- ],
  "~$195/month for Sell, on top of Connect": [
   "lib/competitors.ts"
  ],
@@ -1234,6 +1249,9 @@
  "▸ DATA · CALLING RULES": [
   "app/data/calling-rules-by-country/page.tsx",
   "app/data/calling-rules-by-state/page.tsx"
+ ],
+ "▸ DATA · CONTRACT TERMS": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "▸ DATA · DIALER PRICING INDEX": [
   "app/data/dialer-pricing/page.tsx"
@@ -1462,6 +1480,9 @@
  ],
  "▸ NUMBERS": [
   "app/faq/local-presence-dialing/page.tsx"
+ ],
+ "▸ ON THIS PAGE": [
+  "components/GutsShellV2.tsx"
  ],
  "▸ ONE WEEK. $35. THAT&apos;S IT.": [
   "app/faq/why-dialerseat/view.tsx"
@@ -2021,6 +2042,9 @@
  "$1,195 a month on Starter billed monthly, or $1,495 on iQ": [
   "lib/competitors.ts"
  ],
+ "$1,500 onboarding on Professional, $3,500 on Enterprise": [
+  "lib/dialerTerms.ts"
+ ],
  "$1/mo per number": [
   "lib/competitorFeatures.ts"
  ],
@@ -2065,6 +2089,9 @@
  ],
  "$150+/mo": [
   "app/page.tsx"
+ ],
+ "$159/mo, 50-seat min.": [
+  "app/vs/everyone/view.tsx"
  ],
  "$165 per user per month billed monthly on Standard; $140 needs annual billing": [
   "lib/weeklyBilling.ts"
@@ -2157,6 +2184,9 @@
  "$35 per seat per week, billed weekly, with every mode, local presence and recording included. No contract and no data add-ons. Mojo Dialer bills monthly, $139 for Triple Line plus a $10 Agent Access licence, so a slow month still pays the full month.": [
   "app/faq/dialer-for-real-estate/page.tsx"
  ],
+ "$35 per seat per week, billed weekly, with no contract; cancel any week.": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "$35 per seat, per week": [
   "app/faq/dialer-for-insurance-agents/page.tsx",
   "app/pricing/page.tsx",
@@ -2188,7 +2218,8 @@
   "app/faq/why-we-charge/page.tsx"
  ],
  "$35/WEEK · NO CONTRACTS · CANCEL ANYTIME": [
-  "app/page.tsx"
+  "app/page.tsx",
+  "components/GutsShellV2.tsx"
  ],
  "$35/week per active seat.": [
   "app/faq/managers/view.tsx"
@@ -2740,6 +2771,9 @@
  "5% PICK UP": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
+ "50 seats": [
+  "lib/competitors.ts"
+ ],
  "50-seat minimum on every plan": [
   "app/vs/everyone/view.tsx"
  ],
@@ -2840,6 +2874,9 @@
   "app/faq/cheapest-power-dialer/page.tsx"
  ],
  "A 30-day money-back guarantee": [
+  "lib/competitors.ts"
+ ],
+ "A 50-seat minimum": [
   "lib/competitors.ts"
  ],
  "A bare “error 400” tells a sender nothing about whether the field names were wrong, the numbers were unusable or the campaign was paused. So every response spells it out:": [
@@ -3119,11 +3156,17 @@
  "A low entry price is real. So is which tier the outbound features sit in.": [
   "app/vs/aloware/page.tsx"
  ],
+ "A lower price for a year means paying annually buys a lower rate than paying monthly. A seat minimum is the smallest number of seats the cheapest published plan allows. A one-time fee counts only when the pricing page says it is required.": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "A marketing call to a mobile needs the person’s consent, given to you or recorded in the NDD. An automated marketing call to an individual needs their consent on any line. Anyone who has told you they do not want marketing calls may not be called (S.I. 336 of 2011, regulation 13).": [
   "lib/countryRules.ts"
  ],
  "A Medicare pitch and a final expense pitch are different conversations, and an agent switching between them mid-day should not be switching campaigns to find the right words. Campaigns carry multiple scripts, reorderable, switchable mid-call, and notes and dispositions stay with the lead across sessions and across seats.": [
   "app/faq/dialer-for-insurance-agents/page.tsx"
+ ],
+ "A month": [
+  "lib/dialerTerms.ts"
  ],
  "A monthly plan costs the same whether you dial for one week or four. DialerSeat costs $35 for each week you use it. The shorter the job, the further ahead weekly billing gets.": [
   "app/faq/cheapest-power-dialer/page.tsx"
@@ -3133,6 +3176,9 @@
  ],
  "A new agency or floor": [
   "components/teams/TeamsSidebar.tsx"
+ ],
+ "A nine-seat minimum": [
+  "lib/competitors.ts"
  ],
  "A number already in a request cannot be resubmitted, and one inside a cooldown window comes back ineligible. Repeat filings cost you the wait, not less of it.": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
@@ -3413,6 +3459,9 @@
  "A twelve-month commitment on both published plans": [
   "lib/competitors.ts"
  ],
+ "A two-week campaign on a dialer that sells a month at a time costs a month. On one with a year’s commitment it costs a year, and a seat minimum multiplies either. The prices themselves are side by side in the dialer pricing index.": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "A UK address and ID or business details. Mobile and toll-free numbers accept an address anywhere.": [
   "lib/countryRules.ts"
  ],
@@ -3430,6 +3479,9 @@
  ],
  "A webhook step.": [
   "app/faq/send-leads-from-your-crm/page.tsx"
+ ],
+ "A week": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "A week and more of rest didn’t just fail to heal those numbers. It left them behind a number with no history whatsoever.": [
   "app/faq/why-we-dont-rest-flagged-numbers/page.tsx"
@@ -3457,6 +3509,9 @@
  ],
  "A wrong address and a revoked one get exactly the same response, so nobody can probe for a URL that used to work.": [
   "app/faq/send-leads-from-your-crm/page.tsx"
+ ],
+ "A year": [
+  "lib/dialerTerms.ts"
  ],
  "A-attestation": [
   "app/faq/dialer-glossary/page.tsx"
@@ -3535,6 +3590,9 @@
   "components/site-footer.tsx"
  ],
  "About $245 to $345 a month on Business, committed for a year": [
+  "lib/competitors.ts"
+ ],
+ "About $300 a month on uPro + AI, whose minimum is five users": [
   "lib/competitors.ts"
  ],
  "About $500 a month on Professional billed monthly, plus the one-time $1,500 onboarding fee": [
@@ -4361,9 +4419,6 @@
  "amd_result": [
   "app/faq/compliance-export/view.tsx"
  ],
- "Amend the annual contract": [
-  "lib/competitors.ts"
- ],
  "Among equal matches, numbers registered with the": [
   "app/faq/local-presence-dialing/page.tsx"
  ],
@@ -4573,9 +4628,6 @@
  "Annual billing is materially cheaper than monthly. Contract terms apply.": [
   "lib/competitors.ts"
  ],
- "Annual billing with a three-seat minimum": [
-  "lib/competitors.ts"
- ],
  "ANNUAL CONTRACT LOCK-IN": [
   "app/vs/everyone/view.tsx"
  ],
@@ -4586,13 +4638,13 @@
  "Annual contracts and seat minimums are where the cost hides.": [
   "app/faq/what-is-an-auto-dialer/page.tsx"
  ],
+ "annual discount": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "Annual fee paid to the agent: amount not confirmed, ask the agent": [
   "components/tools/StateDncTable.tsx"
  ],
  "Annual licensing.": [
-  "lib/competitors.ts"
- ],
- "Annual, with a three-seat minimum.": [
   "lib/competitors.ts"
  ],
  "Annually": [
@@ -4917,12 +4969,6 @@
  "Argentina": [
   "lib/countryNames.ts"
  ],
- "Around $250 per user per month billed annually, with a three-seat minimum": [
-  "lib/weeklyBilling.ts"
- ],
- "Around $250 per user per month billed annually; pricing is not published.": [
-  "lib/competitors.ts"
- ],
  "arrive.": [
   "app/faq/send-leads-from-your-crm/page.tsx"
  ],
@@ -4994,6 +5040,9 @@
  ],
  "At least the outcome, a note on what was said, and when to follow up. Those three are what turn a day of dialing into next week’s appointments.": [
   "app/tools/cold-calling-tracker/page.tsx"
+ ],
+ "At least two licences; Team is $39 a user billed monthly, $29 billed annually.": [
+  "lib/dialerTerms.ts"
  ],
  "At least what you paid for the leads. Adding the dialer and agent time shows the full cost of working them.": [
   "app/tools/cost-per-lead-calculator/page.tsx"
@@ -5503,6 +5552,9 @@
  ],
  "Both live in your account settings, ready whenever you need them.": [
   "app/faq/data-and-recordings/view.tsx"
+ ],
+ "Both published plans carry a 12-month commitment and a three-user minimum.": [
+  "lib/dialerTerms.ts"
  ],
  "Bought online by card, then downloaded. Section 501.059, Florida Statutes.": [
   "components/tools/StateDncTable.tsx"
@@ -6635,6 +6687,9 @@
   "app/resources/page.tsx",
   "lib/relatedLinks.ts"
  ],
+ "CHEAPEST POWER DIALER": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "Cheapest Power Dialer: It Depends How Long You Dial": [
   "app/faq/cheapest-power-dialer/page.tsx"
  ],
@@ -6810,7 +6865,8 @@
   "app/vs/close/page.tsx"
  ],
  "CLOSE FASTER.": [
-  "app/page.tsx"
+  "app/page.tsx",
+  "components/GutsShellV2.tsx"
  ],
  "Close fullscreen dialer": [
   "app/dashboard/dialer/page.tsx"
@@ -7379,8 +7435,8 @@
  "contract terms": [
   "app/data/dialer-pricing/page.tsx"
  ],
- "Contract terms are negotiated; a seat minimum applies.": [
-  "lib/competitors.ts"
+ "CONTRACT TERMS": [
+  "app/data/dialer-pricing/page.tsx"
  ],
  "CONV": [
   "app/dashboard/teams/[id]/analytics/page.tsx"
@@ -7426,6 +7482,9 @@
  "Convoso is a strong predictive dialer built for 20+ seat operations with custom, usage-billed quotes. DialerSeat matches predictive, power, progressive, and preview dialing at $35/seat/week, billed weekly, no seat minimum, no demo required.": [
   "app/vs/convoso/page.tsx"
  ],
+ "Convoso, Orum and most enterprise dialers hide their real pricing behind a sales call. You spend a week scheduling and sitting through demos before anyone gives you a number. We publish $35/week on the homepage.": [
+  "app/vs/everyone/view.tsx"
+ ],
  "Cookies and tracking": [
   "app/privacy/page.tsx"
  ],
@@ -7469,6 +7528,15 @@
  ],
  "Copy, modify, or create derivative works of DialerSeat": [
   "app/terms/page.tsx"
+ ],
+ "Core is $159 and Digital, which has no voice, $119 per concurrent seat per month, with a 50-seat minimum. Higher tiers are by quote.": [
+  "lib/competitors.ts"
+ ],
+ "Core is $159 per concurrent seat per month with a 50-seat minimum; the term is not stated": [
+  "lib/weeklyBilling.ts"
+ ],
+ "Core is $159 per concurrent seat per month, with a minimum of 50 seats.": [
+  "lib/dialerTerms.ts"
  ],
  "Core is $23 per user per month, or $15 billed annually; Engage is $50, or $25 annually; Scale is $75 annually. None of them include outbound dialing. Contact center starts at $75 per agent per month for Essential, and the Professional tier that carries progressive and predictive dialing is quoted by sales.": [
   "lib/competitors.ts"
@@ -7862,11 +7930,11 @@
  "Custom quote": [
   "app/vs/everyone/view.tsx"
  ],
- "Custom quote with a seat minimum": [
-  "lib/weeklyBilling.ts"
- ],
  "Custom quote, usage-billed": [
   "lib/competitors.ts"
+ ],
+ "Custom quote; it says it primarily sells annual plans": [
+  "lib/weeklyBilling.ts"
  ],
  "Custom quotes, usage-billed.": [
   "lib/competitors.ts"
@@ -7951,6 +8019,7 @@
  "Dataset": [
   "app/data/calling-rules-by-country/page.tsx",
   "app/data/calling-rules-by-state/page.tsx",
+  "app/data/dialer-contract-terms/page.tsx",
   "app/data/dialer-pricing/page.tsx"
  ],
  "Date": [
@@ -8205,7 +8274,8 @@
   "app/dashboard/dialer/page.tsx"
  ],
  "DIAL SMARTER.": [
-  "app/page.tsx"
+  "app/page.tsx",
+  "components/GutsShellV2.tsx"
  ],
  "Dial Smarter. Close Faster.": [
   "lib/canonicalFacts.ts"
@@ -8253,12 +8323,27 @@
  ],
  "DIALER": [
   "app/dashboard/layout.tsx",
+  "app/data/dialer-contract-terms/page.tsx",
   "app/data/dialer-pricing/page.tsx",
   "app/pricing/page.tsx",
   "app/welcome/Showcase.tsx",
   "components/DialerShowcase.tsx",
   "components/WhitelabelLivePreview.tsx",
   "components/onboarding/PreviewOnboarding.tsx"
+ ],
+ "Dialer contract terms": [
+  "app/data/dialer-contract-terms/page.tsx",
+  "app/resources/page.tsx",
+  "lib/gutsRail.ts"
+ ],
+ "Dialer contract terms, compared": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
+ "Dialer contract terms, DialerSeat": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
+ "Dialer Contract Terms: {total} Dialers Compared (2026)": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "dialer cost calculator": [
   "app/faq/cheapest-power-dialer/page.tsx"
@@ -8469,6 +8554,7 @@
   "lib/canonicalFacts.ts"
  ],
  "DIALER PRICING INDEX": [
+  "app/data/dialer-contract-terms/page.tsx",
   "components/site-footer.tsx"
  ],
  "Dialer pricing index, calling rules by country, connect-rate data and free calculators.": [
@@ -9616,6 +9702,9 @@
  "Each row is the same record the matching comparison page renders from, so the index, the comparison pages and the machine-readable copies always agree. Prices are the vendor’s own published figures where they exist, before setup fees, add-ons and usage. Vendors that sell only by quote are shown that way.": [
   "app/data/dialer-pricing/page.tsx"
  ],
+ "Each row was read from the vendor’s own pricing page or FAQ on {cHECKED}, and nowhere else. Where the page does not say, the cell says not stated: nothing is filled in from review sites, resellers or memory.": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "Each seat link is either owner-pays or agent-pays, and one team can use both.": [
   "app/faq/manager-plus/view.tsx"
  ],
@@ -9839,9 +9928,6 @@
  "Enterprise-focused": [
   "lib/competitorFeatures.ts"
  ],
- "Enterprise-scale": [
-  "lib/competitors.ts"
- ],
  "ERLANG C CALCULATOR": [
   "app/tools/average-handle-time-calculator/page.tsx"
  ],
@@ -9865,6 +9951,9 @@
  ],
  "Errors and crash reports (via Sentry)": [
   "app/privacy/page.tsx"
+ ],
+ "Essentials and Professional need at least three users; paying annually saves 25%.": [
+  "lib/dialerTerms.ts"
  ],
  "ESTABLISHED CAMPAIGNS": [
   "app/dialing-modes/predictive/page.tsx",
@@ -10002,6 +10091,9 @@
  ],
  "Every dialer term,": [
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "Every dialer, as its pricing page states it": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "EVERY DIALER’S PRICING": [
   "app/faq/what-is-an-auto-dialer/page.tsx",
@@ -10638,6 +10730,9 @@
  "Five per-seat monthly licences": [
   "lib/competitors.ts"
  ],
+ "Five users on uPro and xPro, ten on iPro": [
+  "lib/competitors.ts"
+ ],
  "five-agent cost": [
   "app/data/dialer-pricing/page.tsx"
  ],
@@ -10654,8 +10749,8 @@
  "Five9 is a market leader in enterprise contact-center-as-a-service. They serve large call centers with hundreds or thousands of seats, complex IVR routing, multi-channel engagement, and deep workforce management. That's a real product for a real audience. But for solo agents and small-to-mid sales teams that just need outbound dialing, it's overbuilt, and overpriced. DialerSeat™ is the outbound dialer without the enterprise tax.": [
   "lib/competitorFeatures.ts"
  ],
- "Five9, Convoso, and most enterprise dialers hide their real pricing behind a sales call. You spend a week scheduling and sitting through demos before anyone gives you a number. We publish $35/week on the homepage.": [
-  "app/vs/everyone/view.tsx"
+ "Five9 sells at least 50 seats, so its smallest purchase is 50 seats for a month. Figures are before setup fees, add-ons and usage, as each vendor publishes them; where a vendor sells by quote only, that is said rather than guessed. Every figure, and where it is published, is on the": [
+  "app/pricing/page.tsx"
  ],
  "Fix a lead sheet in your browser: wrong headers, p:+1 phones, states typed every way, full names, ALL CAPS, duplicates. Download a clean CSV. Free.": [
   "app/tools/lead-list-cleaner/page.tsx"
@@ -11042,6 +11137,9 @@
  "Free, no account · Updated {uPDATED}": [
   "components/tools/ToolPage.tsx"
  ],
+ "Free, open-source software. VICIhost, its official host, publishes no price on its site.": [
+  "lib/dialerTerms.ts"
+ ],
  "Frequently a paid add-on, or left to the customer to handle themselves": [
   "app/faq/numbers/view.tsx"
  ],
@@ -11093,9 +11191,6 @@
  "from real calls, and a compliance export for every campaign. Every": [
   "app/faq/view.tsx"
  ],
- "From roughly $150/month at the entry tier, more once outbound features are needed": [
-  "lib/competitors.ts"
- ],
  "From roughly $325/month on RingCX at the published starting rate, before usage": [
   "lib/competitors.ts"
  ],
@@ -11115,6 +11210,9 @@
  ],
  "From the state column on the lead if there is one, and from the area code if there is not. If neither can establish a location, the lead is not dialed, the check fails closed rather than guessing. That is why a lead with an unrecognised area code and no state sits in the queue: it is not a bug, it is the calling-window check refusing to approve a call it cannot verify.": [
   "app/faq/calling-hours/page.tsx"
+ ],
+ "from their own pricing pages.": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "FROM ZERO TO DIALING IN UNDER 2 MINUTES.": [
   "app/page.tsx"
@@ -11294,6 +11392,7 @@
   "app/vs/manual-dialing/page.tsx",
   "app/vs/view.tsx",
   "app/welcome/Showcase.tsx",
+  "components/GutsShellV2.tsx",
   "components/VerticalView.tsx",
   "components/vs-competitor-view.tsx"
  ],
@@ -11599,6 +11698,7 @@
   "app/data/calling-rules-by-state/[code]/page.tsx",
   "app/data/calling-rules-by-state/page.tsx",
   "app/data/connect-rates/page.tsx",
+  "app/data/dialer-contract-terms/page.tsx",
   "app/data/dialer-pricing/page.tsx",
   "app/dialing-modes/page.tsx",
   "app/dialing-modes/power/page.tsx",
@@ -11752,6 +11852,12 @@
  "HOUSTON, TX · {mm}:{ss}": [
   "app/welcome/Showcase.tsx",
   "components/DialerShowcase.tsx"
+ ],
+ "How {count} dialers make you commit: hidden prices, annual discounts, seat minimums and one-time fees, from their own pricing pages.": [
+  "app/resources/page.tsx"
+ ],
+ "How {total} dialers make you commit,": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "How a caller ID gets picked for every single call": [
   "app/faq/view.tsx"
@@ -12210,6 +12316,9 @@
  "How was your experience with DialerSeat? Your feedback goes straight to the team, it genuinely helps us improve.": [
   "app/dashboard/settings/page.tsx"
  ],
+ "How we counted": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "HOW WE DO IT": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
  ],
@@ -12525,9 +12634,6 @@
  ],
  "Implementation / onboarding fee": [
   "lib/competitorFeatures.ts"
- ],
- "Implementation fees on top of seat cost": [
-  "lib/competitors.ts"
  ],
  "IMPORTED, BUT WILL NOT DIAL AS-IS": [
   "app/dashboard/campaigns/page.tsx"
@@ -12980,11 +13086,32 @@
  "Italy": [
   "lib/countryNames.ts"
  ],
+ "Its annual prices require a paid term of 12 months or longer.": [
+  "lib/dialerTerms.ts"
+ ],
+ "Its FAQ requires an initial three-month commitment, then month to month.": [
+  "lib/dialerTerms.ts"
+ ],
  "Its leads and history come with it. Adding it to a team does not move it, it stays on your Campaigns page.": [
   "components/teams/TeamModals.tsx"
  ],
  "Its own announcement of the power dialer does not say whether it dials more than one line": [
   "lib/competitors.ts"
+ ],
+ "Its plan cards state minimums of 10 users on iPro and 5 on uPro and xPro.": [
+  "lib/dialerTerms.ts"
+ ],
+ "Its pricing FAQ says it primarily sells annual plans, currently 20% off.": [
+  "lib/dialerTerms.ts"
+ ],
+ "Its pricing links lead to booking a demo.": [
+  "lib/dialerTerms.ts"
+ ],
+ "Its pricing page is a form; a specialist then sends a quote.": [
+  "lib/dialerTerms.ts"
+ ],
+ "Its pricing page states a nine-seat minimum and asks you to request a price.": [
+  "lib/dialerTerms.ts"
  ],
  "Its public system requirements page is close to one sentence on the subject: what an agent needs is a computer, a USB headset and a high-speed internet connection.": [
   "app/faq/mobile/view.tsx"
@@ -13494,6 +13621,9 @@
  "Leaving…": [
   "components/teams/TeamsSidebar.tsx"
  ],
+ "Left out, and why:": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "Legacy dialers are bloated, dated, and overpriced.": [
   "app/vs/everyone/view.tsx"
  ],
@@ -13898,6 +14028,9 @@
   "app/dialing-modes/preview/page.tsx",
   "app/faq/what-is-a-preview-dialer/page.tsx"
  ],
+ "LOWER PRICE FOR A YEAR": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "machine": [
   "app/faq/compliance-export/view.tsx"
  ],
@@ -13910,7 +14043,8 @@
  ],
  "MAIN MENU": [
   "app/vs/everyone/view.tsx",
-  "components/GutsShell.tsx",
+  "components/GutsShellClassic.tsx",
+  "components/GutsShellV2.tsx",
   "lib/gutsRail.ts"
  ],
  "Maintaining and respecting your own internal DNC list": [
@@ -14294,6 +14428,9 @@
  "Month to month with no long-term contract, and a 14-day trial": [
   "lib/competitors.ts"
  ],
+ "Month to month with no long-term contract; Starter is $97 a month or $970 a year.": [
+  "lib/dialerTerms.ts"
+ ],
  "Month to month.": [
   "lib/competitors.ts"
  ],
@@ -14331,11 +14468,14 @@
  "Monthly or annual, with annual cheaper. A 14-day free trial with no card, and a 30-day money-back guarantee.": [
   "lib/competitors.ts"
  ],
- "Monthly or annual, with annual cheaper. Professional and Enterprise carry one-time onboarding fees of $1,500 and $3,500.": [
-  "lib/competitors.ts"
- ],
  "Monthly or annual; annual bundles are $1,990, $2,980 and $3,480 a year. Setup fees, contract terms and trial terms are not stated on its pricing page.": [
   "lib/competitors.ts"
+ ],
+ "Monthly or annual; its contact-center Premium plan is sold annually only.": [
+  "lib/dialerTerms.ts"
+ ],
+ "Monthly or annual; the annual bundles cost less per month.": [
+  "lib/dialerTerms.ts"
  ],
  "Monthly or annual.": [
   "lib/competitors.ts"
@@ -14503,9 +14643,6 @@
  "MULTI-SHIFT OPERATIONS": [
   "app/dialing-modes/predictive/page.tsx",
   "app/faq/what-is-a-predictive-dialer/page.tsx"
- ],
- "Multi-year commitments and implementation fees are typical.": [
-  "lib/competitors.ts"
  ],
  "Multiple agents log in and select that campaign in their dialer.": [
   "app/faq/dialerseat-teams/view.tsx"
@@ -14771,6 +14908,12 @@
  "Nickname": [
   "components/teams/TeamModals.tsx"
  ],
+ "Nine seats": [
+  "lib/competitors.ts"
+ ],
+ "No": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "NO ACCESS": [
   "components/teams/RosterPanel.tsx"
  ],
@@ -14924,6 +15067,9 @@
  ],
  "NO CONTRACT": [
   "app/faq/manager-plus/view.tsx"
+ ],
+ "No contract; paying annually saves up to 50%.": [
+  "lib/dialerTerms.ts"
  ],
  "No contract.": [
   "app/faq/why-we-charge/page.tsx"
@@ -15114,10 +15260,10 @@
  "No predictive dialing": [
   "lib/competitors.ts"
  ],
- "No public pricing": [
-  "lib/competitors.ts"
+ "No price on its plans page; it offers a 7-day free trial.": [
+  "lib/dialerTerms.ts"
  ],
- "No public pricing; a demo cycle of one to four weeks before a number": [
+ "No public pricing": [
   "lib/competitors.ts"
  ],
  "No published price, so the real number takes a demo": [
@@ -15229,6 +15375,9 @@
  "No vendor can raise your price, deprecate your setup, or lock your data in": [
   "lib/competitors.ts"
  ],
+ "No vendor site we could find; the address that carries its name is an unrelated newsletter.": [
+  "lib/dialerTerms.ts"
+ ],
  "No wizard, no required setup flow, no fields you're forced to fill in before you can dial. Create one, it's active immediately, and every setting below has a sane default so you can start dialing before you've touched a single toggle.": [
   "app/faq/campaigns/view.tsx"
  ],
@@ -15337,8 +15486,14 @@
  "Non-exempt telemarketers must also register, pay a fee and post a bond under the Commercial Telephone Solicitation Act.": [
   "components/tools/StateDncTable.tsx"
  ],
+ "None": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "None for the software itself. Hosting and SIP trunking are separate contracts with separate vendors.": [
   "lib/competitors.ts"
+ ],
+ "None of {total} dialers bills weekly. {quote} hide their price; {yearForLowest} of {published} charge less only for a year. From each vendor’s own pricing page.": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "None of it touches a voice call. A number can carry perfectly registered 10DLC messaging traffic and still be labelled Spam Likely on outbound calls, because the two systems do not talk to each other.": [
   "app/faq/10dlc-and-outbound-calling/page.tsx"
@@ -15346,11 +15501,17 @@
  "None of that is visible when it works, which is rather the point. It is also most of the reason the usual answer to mobile in this category is a support article explaining why you should use a laptop.": [
   "app/faq/mobile/view.tsx"
  ],
+ "None of the {total} dialers we checked bills by the week. {quote} do not publish a price at all. Of the {published} that do, {yearForLowest} charge less only if you pay for a year. Every row below links the vendor page it was read from.": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "None of this is DialerSeat-specific, it's true of every outbound calling platform on the market. The difference is in what a platform actually does about it at the infrastructure level, versus just telling you to “dial responsibly.”": [
   "app/faq/numbers/view.tsx"
  ],
  "None of this is required to dial a lead. But if a consent dispute ever comes up, having the record attached to the lead itself, rather than buried in a separate spreadsheet somewhere, is the difference between answering the question in thirty seconds and not being able to answer it at all. See": [
   "app/faq/leads/view.tsx"
+ ],
+ "None stated": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "none yet, save your current look below": [
   "app/onboarding/whitelabel/page.tsx"
@@ -15513,10 +15674,10 @@
  "Not published; its plan page asks for a quote": [
   "lib/weeklyBilling.ts"
  ],
- "Not published; quotes commonly land at $175+ per seat per month": [
+ "Not published; its pricing page asks you to request a price. Third-party reports put it around $250 per user per month.": [
   "lib/competitors.ts"
  ],
- "Not published; quotes commonly land at $175+ per seat per month on multi-year terms": [
+ "Not published; its pricing page states a nine-seat minimum": [
   "lib/weeklyBilling.ts"
  ],
  "Not published. A five-seat number arrives after a sales call": [
@@ -15534,20 +15695,31 @@
  "Not published. Its pricing page takes your team size and call volume, then a specialist gives you a quote.": [
   "lib/competitors.ts"
  ],
- "Not published. Quotes commonly land at $175+ per seat per month.": [
-  "lib/competitors.ts"
- ],
  "Not responding, or credentials rejected": [
   "app/status/page.tsx"
  ],
  "Not signed in": [
   "app/api/teams/members/nickname/route.ts"
  ],
+ "Not sold: the minimum is 50 seats": [
+  "lib/competitors.ts"
+ ],
+ "Not sold: the minimum is nine seats": [
+  "lib/competitors.ts"
+ ],
  "Not specified": [
   "lib/competitorFeatures.ts"
  ],
  "Not stated": [
+  "app/data/dialer-contract-terms/page.tsx",
+  "app/vs/everyone/view.tsx",
   "components/tools/StateDncTable.tsx",
+  "lib/competitors.ts"
+ ],
+ "Not stated on its pricing page. A 50-seat minimum applies, and usage-based charges may be added.": [
+  "lib/competitors.ts"
+ ],
+ "Not stated on its pricing page. A nine-seat minimum applies.": [
   "lib/competitors.ts"
  ],
  "Not stated on the pricing page. Talkdesk Express, for businesses under 50 employees, is described as having no commitment.": [
@@ -15557,6 +15729,9 @@
   "lib/competitors.ts"
  ],
  "Not stated, except Talkdesk Express for businesses under 50 employees": [
+  "lib/competitors.ts"
+ ],
+ "Not stated; priced by quote": [
   "lib/competitors.ts"
  ],
  "Not stated. Joining or subscribing to the DMA list is not required, but you may not call numbers on it": [
@@ -15882,7 +16057,7 @@
  "On DialerSeat you can add a number for every area code you call, rotate them automatically, and burn one the instant it gets flagged. The same goes for inbound, multiple ring-in lines per seat let you track which lead source, campaign, or market actually rings, all in one analytics view.": [
   "app/faq/why-we-charge/page.tsx"
  ],
- "On DialerSeat, $175 per week in seats ($35 each) plus $75 per week for the Manager+ owner, with all four dialer modes included and no contract. Most alternatives price per seat per month with a minimum: Orum is around $1,250/month for five, billed annually with a three-seat minimum; Aircall is $250/month on the tier that includes the Power Dialer, with a three-licence minimum; Five9 does not publish pricing and quotes commonly land at $175+ per seat per month.": [
+ "On DialerSeat, $175 per week in seats ($35 each) plus $75 per week for the Manager+ owner, with all four dialer modes included and no contract. Most alternatives price per seat per month with a minimum: Orum does not publish a price and states a nine-seat minimum; Aircall is $250/month on the tier that includes the Power Dialer, with a three-licence minimum; Five9 publishes $159 per seat per month on Core, with a 50-seat minimum.": [
   "app/vs/teams/page.tsx"
  ],
  "On DialerSeat, AMD runs through Telnyx's native call detection, tuned for speed so the analysis window stays short. That's short enough that most humans wait, but it's never going to be zero. It's a trade-off.": [
@@ -15983,6 +16158,9 @@
  ],
  "One field is required: a value with at least 10 digits once everything except numbers is stripped out. That's it. Any row without something matching that gets skipped on upload rather than silently corrupting your campaign, you'll get a count of exactly how many rows made it in.": [
   "app/faq/leads/view.tsx"
+ ],
+ "One flat annual licence for the whole system, priced by simultaneous calls.": [
+  "lib/dialerTerms.ts"
  ],
  "One honest limitation,": [
   "app/faq/white-label-mobile/view.tsx"
@@ -16166,6 +16344,12 @@
  ],
  "One with power and progressive dialing for candidate lists, notes that persist across recruiters, and seats you can add and pause as volume changes. DialerSeat is $35 per seat per week with every mode included.": [
   "lib/verticals.ts"
+ ],
+ "one-time fee": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
+ "ONE-TIME FEE": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "online · {onCall} on call": [
   "components/teams/TeamFloor.tsx"
@@ -16427,9 +16611,6 @@
  "Orum Alternative: $35 a Week vs $250+ a Month, Annual | DialerSeat": [
   "app/vs/orum/page.tsx"
  ],
- "Orum is billed annually with a three-seat minimum, so its smallest purchase is a year for three seats. Figures are before setup fees, add-ons and usage, as each vendor publishes them; where a vendor sells by quote only, that is said rather than guessed. Every figure, and where it is published, is on the": [
-  "app/pricing/page.tsx"
- ],
  "Other {name} alternatives": [
   "components/vs-competitor-view.tsx"
  ],
@@ -16683,7 +16864,7 @@
  "Parallel dialers built for large SDR teams dial more lines per rep and sell them as a premium tier.": [
   "app/faq/what-is-a-parallel-dialer/page.tsx"
  ],
- "Parallel dialers built for SDR teams sync deeply with Salesforce and HubSpot. DialerSeat takes leads by CSV upload or an inbound webhook per campaign rather than a native CRM sync. If your reps live inside a CRM sequence, weigh that; if you want multi-line dialing without an annual contract and a three-seat minimum, it is a fit.": [
+ "Parallel dialers built for SDR teams sync deeply with Salesforce and HubSpot. DialerSeat takes leads by CSV upload or an inbound webhook per campaign rather than a native CRM sync. If your reps live inside a CRM sequence, weigh that; if you want multi-line dialing without a nine-seat minimum and a sales quote, it is a fit.": [
   "lib/verticals.ts"
  ],
  "Parallel dialing with AI-assisted navigation.": [
@@ -16814,6 +16995,9 @@
  "Pay-per-result.": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
+ "Paying annually saves up to 33%; RingCX, where the dialer is, starts at $65 a user.": [
+  "lib/dialerTerms.ts"
+ ],
  "Paying for guaranteed removal.": [
   "app/faq/how-to-remove-spam-likely/page.tsx"
  ],
@@ -16917,7 +17101,8 @@
   "lib/competitors.ts"
  ],
  "PER WEEK": [
-  "app/page.tsx"
+  "app/page.tsx",
+  "components/GutsShellV2.tsx"
  ],
  "Per-agent lines override. If you want to run 1.5 while the rest of the team runs 2.0, you can.": [
   "app/dialing-modes/predictive/page.tsx",
@@ -17628,6 +17813,9 @@
  "Premium leads, agency floors, shared pools.": [
   "app/faq/dialerseat-teams/view.tsx"
  ],
+ "Prepaid monthly, with no long-term contract, setup fee or cancellation penalty.": [
+  "lib/dialerTerms.ts"
+ ],
  "Preparing secure checkout": [
   "app/billing/page.tsx"
  ],
@@ -17779,8 +17967,20 @@
  "Price not confirmed, ask the list administrator": [
   "components/tools/StateDncTable.tsx"
  ],
+ "PRICE ON ITS SITE": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "PRICE OVERRIDE (OPTIONAL)": [
   "components/teams/SeatLinksPanel.tsx"
+ ],
+ "Price visibility, shortest commitment, annual discounts, seat minimums and one-time fees for {total} outbound dialers, from each vendor’s own pricing page.": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
+ "Prices are per concurrent seat, and usage-based charges may apply": [
+  "lib/competitors.ts"
+ ],
+ "Prices are published; terms are not, except Talkdesk Express, which needs no commitment.": [
+  "lib/dialerTerms.ts"
  ],
  "Prices shown do not include sales tax. We may collect applicable sales tax on top of the base subscription price depending on your billing address.": [
   "app/terms/page.tsx"
@@ -17836,6 +18036,9 @@
  ],
  "Pricing: One Week Costs $35, Not a Month": [
   "lib/canonicalFacts.ts"
+ ],
+ "Primarily annual": [
+  "app/vs/everyone/view.tsx"
  ],
  "Primary": [
   "app/onboarding/whitelabel/page.tsx"
@@ -18078,6 +18281,9 @@
  "Published by DialerSeat": [
   "components/PageStamp.tsx"
  ],
+ "published price": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "Published price, no setup fee, and no sales conversation required to start dialing.": [
   "app/vs/calltools/page.tsx"
  ],
@@ -18194,6 +18400,9 @@
  "Quote": [
   "app/pricing/page.tsx",
   "components/tools/DialerCostCalculator.tsx"
+ ],
+ "Quote only": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "Quoted per deployment": [
   "lib/competitors.ts"
@@ -18870,6 +19079,7 @@
  "Resources": [
   "app/data/calling-rules-by-country/page.tsx",
   "app/data/calling-rules-by-state/page.tsx",
+  "app/data/dialer-contract-terms/page.tsx",
   "app/data/dialer-pricing/page.tsx",
   "app/resources/page.tsx",
   "app/tools/abandon-rate-calculator/page.tsx",
@@ -19564,11 +19774,14 @@
  "SEAT LINKS ({codeCount})": [
   "components/teams/TeamsManager.tsx"
  ],
+ "seat minimum": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "Seat minimum": [
   "lib/competitorFeatures.ts"
  ],
- "Seat minimum applies": [
-  "lib/competitors.ts"
+ "SEAT MINIMUM": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "Seat minimums, contract terms, and what it really takes to add one more agent, compared across every major outbound dialer. Plus how leads are distributed across a floor without two agents calling the same person.": [
   "app/vs/teams/page.tsx"
@@ -19663,7 +19876,8 @@
   "app/faq/how-we-measure-answer-rate/page.tsx"
  ],
  "SEE HOW WE COMPARE": [
-  "app/page.tsx"
+  "app/page.tsx",
+  "components/GutsShellV2.tsx"
  ],
  "SEE THE DIALER MODES": [
   "app/vs/manual-dialing/page.tsx"
@@ -19677,6 +19891,9 @@
  ],
  "See what five agents cost on every tool →": [
   "app/vs/view.tsx"
+ ],
+ "Seen a term that has changed? Email": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "Select": [
   "components/teams/TeamsSidebar.tsx"
@@ -19871,6 +20088,9 @@
  "Set how many weeks you need and how many agents. Seat minimums and annual terms are applied.": [
   "app/pricing/page.tsx"
  ],
+ "Set in the quote": [
+  "lib/dialerTerms.ts"
+ ],
  "Set nickname": [
   "components/teams/TeamsSidebar.tsx"
  ],
@@ -19953,6 +20173,9 @@
  ],
  "Setup Fee": [
   "app/page.tsx"
+ ],
+ "Setup fee waived. Annual plans are paid up front for 12 months and renew automatically.": [
+  "lib/dialerTerms.ts"
  ],
  "SETUP FEES": [
   "app/page.tsx"
@@ -20050,6 +20273,12 @@
  ],
  "Short calls and hang-ups.": [
   "app/faq/why-calls-show-spam-likely/page.tsx"
+ ],
+ "shortest commitment": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
+ "SHORTEST COMMITMENT": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "SHORTLISTED CANDIDATES": [
   "lib/verticals.ts"
@@ -20232,11 +20461,11 @@
  "SKIP →": [
   "app/welcome/Showcase.tsx"
  ],
+ "Skip the 50-seat minimum and the sales cycle. Same compliance posture, public $35/week pricing, one seat at a time.": [
+  "app/vs/five9/page.tsx"
+ ],
  "Skip the comparison. Just try it.": [
   "app/vs/view.tsx"
- ],
- "Skip the demo cycle, the annual contract, and the $175+/seat pricing. Same compliance posture, public $35/week pricing, self-serve signup.": [
-  "app/vs/five9/page.tsx"
  ],
  "Skip the file and build leads by hand, like a blank spreadsheet.": [
   "app/dashboard/campaigns/page.tsx"
@@ -20361,6 +20590,9 @@
  "Sold and priced for organisations with a procurement process": [
   "lib/competitors.ts"
  ],
+ "Sold monthly, quarterly or annually, with discounts from five seats.": [
+  "lib/dialerTerms.ts"
+ ],
  "Soliciting a listing is a marketing call, and many of these numbers are on the National Do Not Call Registry.": [
   "app/faq/dialer-for-real-estate/page.tsx"
  ],
@@ -20445,6 +20677,9 @@
  "SORT": [
   "app/dashboard/leads/page.tsx"
  ],
+ "Source": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "SOURCED CANDIDATE LISTS": [
   "lib/verticals.ts"
  ],
@@ -20511,6 +20746,9 @@
  "Standard $29 and Unlimited $99 per seat per month billed monthly, or $24 and $83 billed yearly. smrtDialer is an add-on on top: $50 single-line, $90 multi-line or $150 Business per seat per month billed monthly. Call time on the first two is deducted from account credit at $0.03/minute.": [
   "lib/competitors.ts"
  ],
+ "Standard is $165 a user billed monthly, or $140 a month billed annually.": [
+  "lib/dialerTerms.ts"
+ ],
  "Standard plus smrtDialer Single Line": [
   "app/faq/cheapest-power-dialer/page.tsx"
  ],
@@ -20570,8 +20808,20 @@
  "Starter $97 a month, Unlimited $297, Agency Pro $497. Calling runs through its LC Phone system, billed per minute from a prepaid wallet: US outbound calls about $0.018 a minute, local numbers $1.15 a month.": [
   "lib/competitors.ts"
  ],
+ "Starter and Essential can be bought one seat at a time; Expert needs at least three licences.": [
+  "lib/dialerTerms.ts"
+ ],
  "Starter at $97 a month": [
   "lib/competitors.ts"
+ ],
+ "Starter commits monthly; Professional is billed monthly but commits you to a year.": [
+  "lib/dialerTerms.ts"
+ ],
+ "Starter commits monthly. Professional can be paid monthly but commits you to a year, and Professional and Enterprise carry one-time onboarding fees of $1,500 and $3,500.": [
+  "lib/competitors.ts"
+ ],
+ "Starter is $119 a month per agent, or $95 a month when the year is paid up front.": [
+  "lib/dialerTerms.ts"
  ],
  "Starter plus the Power Dialer add-on, whose $15 is listed as billed annually": [
   "app/faq/cheapest-power-dialer/page.tsx"
@@ -21412,6 +21662,12 @@
  "TERMS": [
   "components/site-footer.tsx"
  ],
+ "Terms checked {cHECKED} · page updated {uPDATED}": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
+ "Terms come with the quote; its pricing page says it primarily sells annual plans.": [
+  "lib/competitors.ts"
+ ],
  "Terms of Service": [
   "app/privacy/page.tsx",
   "app/terms/page.tsx"
@@ -22164,6 +22420,9 @@
  ],
  "The number shown on the phone you are calling. On an outbound floor it is chosen per call, from a pool.": [
   "app/faq/dialer-glossary/page.tsx"
+ ],
+ "The numbers": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "The numbers on your dashboard": [
   "app/faq/dialer-glossary/page.tsx"
@@ -23100,6 +23359,9 @@
  "Three licences": [
   "lib/competitors.ts"
  ],
+ "Three months": [
+  "lib/dialerTerms.ts"
+ ],
  "Three months, at a rate quoted per team": [
   "lib/competitors.ts"
  ],
@@ -23115,9 +23377,6 @@
  "Three scenarios.": [
   "app/faq/how-we-keep-compliance/page.tsx"
  ],
- "Three seats": [
-  "lib/competitors.ts"
- ],
  "Three separate charges stack: subscription, dialer seat, then per-minute credits": [
   "lib/competitors.ts"
  ],
@@ -23131,6 +23390,9 @@
   "app/faq/mobile/view.tsx"
  ],
  "Three-licence minimum": [
+  "lib/competitors.ts"
+ ],
+ "Through its sales team": [
   "lib/competitors.ts"
  ],
  "Through the 1980s and into the 1990s, as PC-based call-center software matured, the workflow stayed:": [
@@ -23557,9 +23819,6 @@
  ],
  "Type an area code or a full phone number to see the state it belongs to, its time zone, the local time there right now, and whether it is inside the federal telemarketing window of 8 a.m. to 9 p.m. Below it, every US area code is listed by state with the current local time.": [
   "app/tools/area-code-lookup/page.tsx"
- ],
- "Typical": [
-  "app/vs/everyone/view.tsx"
  ],
  "TYPICAL APPROACH": [
   "app/faq/white-label-mobile/view.tsx"
@@ -24934,6 +25193,9 @@
  "What it is genuinely good at is the rest of the day. A floor manager checking the numbers between meetings, an agent working a callback list from a car park, a closer running a drip list in the evening without opening a laptop, somebody covering an hour of a shift from somewhere they did not plan to be. That is work that otherwise does not happen at all.": [
   "app/faq/mobile/view.tsx"
  ],
+ "What it means for a short campaign": [
+  "app/data/dialer-contract-terms/page.tsx"
+ ],
  "WHAT IT SHOWS": [
   "app/faq/compliance-export/view.tsx"
  ],
@@ -24974,6 +25236,7 @@
   "components/tools/MathTools.tsx"
  ],
  "WHAT ONE WEEK COSTS": [
+  "app/data/dialer-contract-terms/page.tsx",
   "app/data/dialer-pricing/page.tsx"
  ],
  "What one week costs, dialer by dialer": [
@@ -25026,6 +25289,9 @@
  ],
  "WHAT THE OWNER SEES": [
   "app/vs/teams/page.tsx"
+ ],
+ "WHAT THE PAGE SAYS": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "What the software enforces, and what stays on you": [
   "app/faq/view.tsx"
@@ -25299,7 +25565,7 @@
  "Where it is priced publicly, multi-line and predictive dialing runs from about $49 to $250 per seat per month, and several vendors sell only by quote with setup fees and annual contracts. DialerSeat is $35 per seat per week, billed weekly, with predictive included.": [
   "app/data/dialer-pricing/page.tsx"
  ],
- "Where multi-line and predictive dialing is priced publicly, it runs from about $49 per seat per month (JustCall Pro, two-seat minimum) to about $250 as reported for Orum, billed annually. The largest contact-center vendors sell by quote.": [
+ "Where multi-line and predictive dialing is priced publicly, it runs from about $49 per seat per month (JustCall Pro, two-seat minimum) to about $250 as reported for Orum. The largest contact-center vendors sell by quote.": [
   "app/data/dialer-pricing/page.tsx"
  ],
  "Where multi-line and predictive dialing is priced publicly, it runs from about $49 to $250 per seat per month, usually billed monthly or annually, and several vendors sell only by quote. DialerSeat is $35 per seat per week with all four modes, billed weekly with no contract.": [
@@ -25841,6 +26107,7 @@
   "app/faq/how-we-keep-compliance/page.tsx"
  ],
  "with the vendor’s page and the row is corrected and re-dated.": [
+  "app/data/dialer-contract-terms/page.tsx",
   "app/data/dialer-pricing/page.tsx"
  ],
  "with your name, account email, and a clear statement that you opt out, within 30 days of the date you first agreed to these Terms (or, for existing users, within 30 days of the date this arbitration provision was added or updated). If you opt out, disputes between you and DialerSeat will be resolved in the courts described above rather than through arbitration, and the rest of these Terms remain in effect.": [
@@ -25982,6 +26249,12 @@
  ],
  "Year-one total (10 seats)": [
   "app/faq/white-label/view.tsx"
+ ],
+ "Yearly billing gives two months free; the dialer is an add-on.": [
+  "lib/dialerTerms.ts"
+ ],
+ "Yes": [
+  "app/data/dialer-contract-terms/page.tsx"
  ],
  "Yes, any campaign owner can pull a downloadable CSV for any date range: AMD result, abandon flag, disposition, and duration, one row per call, with the lead's phone number masked by default. It's the actual receipt behind the compliance claims, not just a dashboard summary.": [
   "app/faq/view.tsx"

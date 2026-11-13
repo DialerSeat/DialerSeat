@@ -96,20 +96,20 @@ export const BILLED_DIALERS: BilledDialer[] = [
   {
     slug: 'orum',
     name: 'Orum',
-    perSeatMonth: 250,
+    perSeatMonth: null,
     from: false,
-    commitment: 'year',
-    minimumSeats: 3,
-    basis: 'Around $250 per user per month billed annually, with a three-seat minimum',
+    commitment: 'quote',
+    minimumSeats: 9,
+    basis: 'Not published; its pricing page states a nine-seat minimum',
   },
   {
     slug: 'five9',
     name: 'Five9',
-    perSeatMonth: 175,
-    from: true,
-    commitment: 'quote',
-    minimumSeats: 1,
-    basis: 'Not published; quotes commonly land at $175+ per seat per month on multi-year terms',
+    perSeatMonth: 159,
+    from: false,
+    commitment: 'month',
+    minimumSeats: 50,
+    basis: 'Core is $159 per concurrent seat per month with a 50-seat minimum; the term is not stated',
   },
   {
     slug: 'convoso',
@@ -118,7 +118,7 @@ export const BILLED_DIALERS: BilledDialer[] = [
     from: false,
     commitment: 'quote',
     minimumSeats: 1,
-    basis: 'Custom quote with a seat minimum',
+    basis: 'Custom quote; it says it primarily sells annual plans',
   },
 ]
 

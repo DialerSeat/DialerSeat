@@ -153,7 +153,7 @@ export default async function DialerPricingIndex() {
             <li>
               {t("Only one dialer here bills weekly: DialerSeat, at $35 per seat per week. None of the others sells less than a month, and several sell a year at a time.")}</li>
             <li>
-              {t("Where multi-line and predictive dialing is priced publicly, it runs from about $49 per seat per month (JustCall Pro, two-seat minimum) to about $250 as reported for Orum, billed annually. The largest contact-center vendors sell by quote.")}</li>
+              {t("Where multi-line and predictive dialing is priced publicly, it runs from about $49 per seat per month (JustCall Pro, two-seat minimum) to about $250 as reported for Orum. The largest contact-center vendors sell by quote.")}</li>
             <li>
               {t("Phone systems where the dialer is a plan tier or an add-on (CloudTalk, Aircall, Dialpad) can cost less per month. Check which tier actually includes the dialing mode you need.")}</li>
           </ul>
@@ -227,6 +227,7 @@ export default async function DialerPricingIndex() {
           <div className="guts-btns">
             <Link href="/pricing" className="guts-btn secondary">{t("WHAT ONE WEEK COSTS")}</Link>
             <Link href="/tools/dialer-cost-calculator" className="guts-btn secondary">{t("COST CALCULATOR")}</Link>
+            <Link href="/data/dialer-contract-terms" className="guts-btn secondary">{t("CONTRACT TERMS")}</Link>
           </div>
           <CiteThis title={t("Dialer Pricing Index")} path={ROUTE} />
         </GutsSection>

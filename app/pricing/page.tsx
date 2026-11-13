@@ -205,7 +205,7 @@ export default async function PricingPage() {
             </table>
           </div>
           <p className="guts-note">
-            {t("Orum is billed annually with a three-seat minimum, so its smallest purchase is a year for three seats. Figures are before setup fees, add-ons and usage, as each vendor publishes them; where a vendor sells by quote only, that is said rather than guessed. Every figure, and where it is published, is on the")}{' '}
+            {t("Five9 sells at least 50 seats, so its smallest purchase is 50 seats for a month. Figures are before setup fees, add-ons and usage, as each vendor publishes them; where a vendor sells by quote only, that is said rather than guessed. Every figure, and where it is published, is on the")}{' '}
             <Link href="/data/dialer-pricing">{t("dialer pricing index")}</Link>.
           </p>
         </GutsSection>

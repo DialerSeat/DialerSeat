@@ -10,6 +10,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import { COMPETITORS } from '@/lib/competitors'
 import { COUNTRY_RULES } from '@/lib/countryRules'
 import { STATE_RULES } from '@/lib/stateRules'
+import { DIALER_TERMS } from '@/lib/dialerTerms'
 import { VERTICALS } from '@/lib/verticals'
 import { pageDate } from '@/lib/pageDates'
 import { localizeMetadata } from '@/lib/i18n/metadata'
@@ -63,6 +64,13 @@ const DATA = [
     title: msg("Dialer pricing index"),
     body: msg("Published pricing, contract terms and seat minimums for {count} dialers, side by side."),
     count: COMPETITORS.length + 1,
+  },
+  {
+    href: '/data/dialer-contract-terms',
+    role: msg("DATA"),
+    title: msg("Dialer contract terms"),
+    body: msg("How {count} dialers make you commit: hidden prices, annual discounts, seat minimums and one-time fees, from their own pricing pages."),
+    count: DIALER_TERMS.length,
   },
   {
     href: '/data/calling-rules-by-country',

@@ -34,15 +34,24 @@ describe('weekly against monthly billing', () => {
     expect(billedCost(bySlug('readymode'), 4, 1)).toBe(239)
   })
 
-  it('applies seat minimums and annual terms', () => {
-    // Orum: annual, three-seat minimum. One agent for one week is a year for three.
-    expect(billedCost(bySlug('orum'), 1, 1)).toBe(250 * 3 * 12)
-    expect(billedCost(bySlug('orum'), 1, 5)).toBe(250 * 5 * 12)
+  it('applies seat minimums', () => {
+    // Five9 Core: $159 per seat per month, 50-seat minimum (its pricing page, 13 Nov 2026).
+    // One agent for one week is a month for fifty.
+    expect(billedCost(bySlug('five9'), 1, 1)).toBe(159 * 50)
+    expect(billedCost(bySlug('five9'), 1, 60)).toBe(159 * 60)
+  })
+
+  it('bills an annual term as at least twelve months', () => {
+    // No dialer in the list sells only by the year today, so the rule is checked on a
+    // constructed one: a three-seat annual plan, one agent for one week.
+    const annual = { ...bySlug('five9'), commitment: 'year' as const, minimumSeats: 3, perSeatMonth: 100 }
+    expect(billedCost(annual, 1, 1)).toBe(100 * 3 * 12)
+    expect(billedCost(annual, 60, 1)).toBe(100 * 3 * 14)
   })
 
   it('never estimates a quoted-only price', () => {
     expect(billedCost(bySlug('convoso'), 4, 1)).toBeNull()
-    expect(billedCost(bySlug('five9'), 4, 1)).toBeNull()
+    expect(billedCost(bySlug('orum'), 4, 1)).toBeNull()
   })
 
   it('every figure says where it is published', () => {

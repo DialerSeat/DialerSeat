@@ -198,8 +198,8 @@ export const COMPETITORS: Competitor[] = [
     slug: 'five9',
     name: 'Five9',
     summary: 'Enterprise contact-center software sold through a sales cycle, aimed at large floors.',
-    pricing: 'Not published. Quotes commonly land at $175+ per seat per month.',
-    contract: 'Multi-year commitments and implementation fees are typical.',
+    pricing: 'Core is $159 and Digital, which has no voice, $119 per concurrent seat per month, with a 50-seat minimum. Higher tiers are by quote.',
+    contract: 'Not stated on its pricing page. A 50-seat minimum applies, and usage-based charges may be added.',
     dialing: 'Full predictive and blended contact-center dialing.',
     wins: [
       'Genuine enterprise depth: WFM, QA, omnichannel, reporting',
@@ -207,15 +207,15 @@ export const COMPETITORS: Competitor[] = [
       'Support and implementation resources a large floor needs',
     ],
     friction: [
-      'No public pricing; a demo cycle of one to four weeks before a number',
-      'Implementation fees on top of seat cost',
+      'A 50-seat minimum',
+      'Prices are per concurrent seat, and usage-based charges may apply',
       'Overbuilt for teams under roughly fifty seats',
     ],
     bestFor: 'Buyers with a procurement process who want an enterprise sales cycle.',
     team: {
-      minimum: 'Enterprise-scale',
+      minimum: '50 seats',
       addingASeat: 'A sales conversation and a revised contract',
-      fiveSeats: 'Not published; quotes commonly land at $175+ per seat per month',
+      fiveSeats: 'Not sold: the minimum is 50 seats',
     },
     crossShopped: true,
     segment: 'call_center',
@@ -225,7 +225,7 @@ export const COMPETITORS: Competitor[] = [
     name: 'Convoso',
     summary: 'A strong predictive dialer built for larger outbound operations, quoted per deployment.',
     pricing: 'Custom quotes, usage-billed.',
-    contract: 'Contract terms are negotiated; a seat minimum applies.',
+    contract: 'Terms come with the quote; its pricing page says it primarily sells annual plans.',
     dialing: 'Predictive dialing with sophisticated pacing.',
     wins: [
       'Genuinely strong predictive pacing and lead management',
@@ -239,7 +239,7 @@ export const COMPETITORS: Competitor[] = [
     ],
     bestFor: 'Buyers willing to negotiate a contract before they can dial.',
     team: {
-      minimum: 'Seat minimum applies',
+      minimum: 'Not stated; priced by quote',
       addingASeat: 'Renegotiate the quote; usage billing changes with volume',
       fiveSeats: 'Custom quote, usage-billed',
     },
@@ -327,8 +327,8 @@ export const COMPETITORS: Competitor[] = [
     slug: 'orum',
     name: 'Orum',
     summary: 'A premium parallel dialer aimed at funded SDR organisations.',
-    pricing: 'Around $250 per user per month billed annually; pricing is not published.',
-    contract: 'Annual, with a three-seat minimum.',
+    pricing: 'Not published; its pricing page asks you to request a price. Third-party reports put it around $250 per user per month.',
+    contract: 'Not stated on its pricing page. A nine-seat minimum applies.',
     dialing: 'Parallel dialing with AI-assisted navigation.',
     wins: [
       'Very fast parallel dialing and smooth connect experience',
@@ -337,14 +337,14 @@ export const COMPETITORS: Competitor[] = [
     ],
     friction: [
       'Among the most expensive options per seat',
-      'Annual billing with a three-seat minimum',
+      'A nine-seat minimum',
       'No public pricing',
     ],
     bestFor: 'Funded SDR teams where a rep’s hour is worth far more than the seat.',
     team: {
-      minimum: 'Three seats',
-      addingASeat: 'Amend the annual contract',
-      fiveSeats: '~$1,250/month, billed annually',
+      minimum: 'Nine seats',
+      addingASeat: 'Through its sales team',
+      fiveSeats: 'Not sold: the minimum is nine seats',
     },
     crossShopped: true,
     segment: 'sales_crm',
@@ -593,9 +593,9 @@ export const COMPETITORS: Competitor[] = [
     ],
     bestFor: 'Sales teams living inside HubSpot or Pipedrive who want calling and texting attached to it.',
     team: {
-      minimum: 'One user',
+      minimum: 'Five users on uPro and xPro, ten on iPro',
       addingASeat: 'Add a user at your tier',
-      fiveSeats: 'From roughly $150/month at the entry tier, more once outbound features are needed',
+      fiveSeats: 'About $300 a month on uPro + AI, whose minimum is five users',
     },
     crossShopped: true,
     segment: 'sales_crm',
@@ -781,7 +781,7 @@ export const COMPETITORS: Competitor[] = [
     pricing:
       'Sales Hub per seat per month: Starter $20 ($7 billed annually), Professional $100 ($90 annually), Enterprise $150. Professional adds a one-time $1,500 onboarding fee and Enterprise $3,500. Free for up to two users.',
     contract:
-      'Monthly or annual, with annual cheaper. Professional and Enterprise carry one-time onboarding fees of $1,500 and $3,500.',
+      'Starter commits monthly. Professional can be paid monthly but commits you to a year, and Professional and Enterprise carry one-time onboarding fees of $1,500 and $3,500.',
     dialing:
       'Calling from inside the CRM, with minutes capped by plan: 500 on Starter, 3,000 on Professional, 12,000 on Enterprise. A power dialer is in beta; which plans include it is not stated.',
     wins: [

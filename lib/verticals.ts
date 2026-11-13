@@ -362,7 +362,7 @@ export const VERTICALS: Vertical[] = [
         icon: 'team',
         title: 'The honest fit',
         body:
-          'Parallel dialers built for SDR teams sync deeply with Salesforce and HubSpot. DialerSeat takes leads by CSV upload or an inbound webhook per campaign rather than a native CRM sync. If your reps live inside a CRM sequence, weigh that; if you want multi-line dialing without an annual contract and a three-seat minimum, it is a fit.',
+          'Parallel dialers built for SDR teams sync deeply with Salesforce and HubSpot. DialerSeat takes leads by CSV upload or an inbound webhook per campaign rather than a native CRM sync. If your reps live inside a CRM sequence, weigh that; if you want multi-line dialing without a nine-seat minimum and a sales quote, it is a fit.',
         links: [{ href: '/vs/orum', label: 'vs Orum' }, { href: '/faq/send-leads-from-your-crm', label: 'Lead drip' }],
       },
       {
