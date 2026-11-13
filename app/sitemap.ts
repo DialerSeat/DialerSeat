@@ -6,6 +6,7 @@ import { ALL_SHOTS } from '@/lib/screenshots'
 import { VERTICALS } from '@/lib/verticals'
 import { COUNTRY_RULES } from '@/lib/countryRules'
 import { STATE_RULES } from '@/lib/stateRules'
+import { CANCEL_GUIDES } from '@/lib/cancelGuides'
 import { ENABLED_LOCALES, isLocalizablePath, localizedPath } from '@/lib/i18n/locales'
 import { TOOLS, toolPath } from '@/lib/tools/registry'
 
@@ -161,6 +162,8 @@ function apexSitemap(): MetadataRoute.Sitemap {
     e('/faq/10dlc-and-outbound-calling', 0.75, 'monthly'),
     e('/faq/how-many-numbers-do-i-need', 0.75, 'monthly'),
     e('/faq/cheapest-power-dialer', 0.75, 'monthly'),
+    e('/faq/how-to-cancel', 0.7, 'monthly'),
+    ...CANCEL_GUIDES.map(g => e(`/faq/how-to-cancel/${g.slug}`, 0.65, 'monthly')),
     // Spam-free numbers. The Spam Likely page is weighted highest of the three
     // because it answers the question people actually search; the other two
     // explain what we do about it once they are here.

@@ -36,6 +36,7 @@ const SHARED = {
   '/faq/dialer-for-': ['components/VerticalView.tsx', 'lib/verticals.ts'],
   '/data/dialer-pricing': ['lib/competitors.ts'],
   '/data/dialer-contract-terms': ['lib/dialerTerms.ts'],
+  '/faq/how-to-cancel': ['lib/cancelGuides.ts'],
   '/pricing': ['lib/competitors.ts', 'lib/weeklyBilling.ts'],
   '/data/calling-rules-by-country': ['lib/countryRules.ts'],
   '/data/calling-rules-by-state': ['lib/stateRules.ts', 'components/tools/StateDncTable.tsx'],

@@ -81,7 +81,7 @@ for (const file of files) {
 // lib/verticals.ts (industry pages), lib/countryRules.ts (calling rules) and
 // lib/weeklyBilling.ts (the pricing table's published-price notes) joined on
 // 2026-10-05, when their pages were wrapped for translation.
-const DATA_FILES = ['lib/competitors.ts', 'lib/competitorFeatures.ts', 'lib/canonicalFacts.ts', 'lib/verticals.ts', 'lib/countryRules.ts', 'lib/weeklyBilling.ts', 'lib/stateRules.ts', 'lib/dialerTerms.ts']
+const DATA_FILES = ['lib/competitors.ts', 'lib/competitorFeatures.ts', 'lib/canonicalFacts.ts', 'lib/verticals.ts', 'lib/countryRules.ts', 'lib/weeklyBilling.ts', 'lib/stateRules.ts', 'lib/dialerTerms.ts', 'lib/cancelGuides.ts']
 const isPublicPage = (f) => /^app\/.*\.tsx$/.test(f) &&
   !/^app\/(dashboard|api|admin|sign-in|sign-up|onboarding|billing|welcome|join|invite|embed)\b/.test(f) &&
   !/admin-desktop|\/manager\/desktop/.test(f)

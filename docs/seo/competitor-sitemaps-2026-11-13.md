@@ -26,4 +26,4 @@ Read on 13 Nov 2026 from each site's own sitemap: ReadyMode (320 addresses), Moj
 
 Google autocomplete (13 Nov) finishes "how to cancel …" for 13 of the dialers we compare: ReadyMode, Mojo, BatchDialer, Kixie, WAVV, JustCall, Aircall, Dialpad, RingCentral, GoHighLevel, Ringover, Nextiva and REDX, often as "… subscription" or "… contract". Not for PhoneBurner, Convoso, CloudTalk, Close, smrtPhone or Aloware.
 
-None of the six sitemaps has a cancellation page. These are people leaving a dialer, which makes them the best possible prospects for one with no contract. Each page would have to state the vendor's own cancellation terms from its own help pages or terms of service, and nothing else. Not built yet: it needs Joshua's yes.
+None of the six sitemaps has a cancellation page. These are people leaving a dialer, which makes them the best possible prospects for one with no contract. Each page would have to state the vendor's own cancellation terms from its own help pages or terms of service, and nothing else. Built on 13 Nov 2026 at /faq/how-to-cancel, one page per dialer, from each vendor's own pages.

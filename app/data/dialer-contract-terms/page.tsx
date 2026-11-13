@@ -180,6 +180,7 @@ export default async function DialerContractTerms() {
             <Link href="/data/dialer-pricing" className="guts-btn secondary">{t("DIALER PRICING INDEX")}</Link>
             <Link href="/faq/cheapest-power-dialer" className="guts-btn secondary">{t("CHEAPEST POWER DIALER")}</Link>
             <Link href="/pricing" className="guts-btn secondary">{t("WHAT ONE WEEK COSTS")}</Link>
+            <Link href="/faq/how-to-cancel" className="guts-btn secondary">{t("HOW TO CANCEL A DIALER")}</Link>
           </div>
           <CiteThis title={t("Dialer contract terms")} path={ROUTE} />
         </GutsSection>

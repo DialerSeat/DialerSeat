@@ -167,6 +167,13 @@ const ANSWERS: HubItem[] = [
     keywords: 'spam flagged numbers cooldown rotate throttle reputation hiya',
   },
   {
+    href: '/faq/how-to-cancel',
+    label: msg("How to cancel a dialer"),
+    note: msg("Notice, refunds and your numbers, for 13 dialers"),
+    added: '2026-11-13',
+    keywords: 'cancel cancellation subscription contract notice refund readymode mojo batchdialer kixie wavv justcall aircall dialpad ringcentral gohighlevel ringover nextiva redx',
+  },
+  {
     href: '/faq/how-to-remove-spam-likely',
     label: msg("How to remove “Spam Likely”"),
     note: msg("Register, re-evaluate, then fix what caused it"),
