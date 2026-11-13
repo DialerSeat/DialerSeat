@@ -238,9 +238,9 @@ Built and checked end to end on `localhost:3200/developers`:
   tenant subdomain.
 - **Storage**: `lib/developers/store.ts` has two backends. Supabase uses the migration; a
   local JSON file is for building and is refused in production. The migration
-  (`db/migrations/2026-11-13-developer-platform.sql`, 10 tables, all classified in
+  (`db/migrations/2026-11-13-developer-platform.sql`, 14 tables, all classified in
   `retention_policy`) was dry-run against production inside `begin … rollback`. It created
-  10 tables with 0 unclassified, and the rollback left 0 behind. **Not applied.**
+  14 tables with 0 unclassified, and the rollback left 0 behind. **Not applied.**
 
 - **The miniplayer** (built 13 Nov 2026, same branch):
   - `/embed/v1.js` loader: plain ES5, defines `DialerSeat.mount(el, { session, leads, campaign, theme })`
@@ -263,11 +263,67 @@ Built and checked end to end on `localhost:3200/developers`:
   - Checked from a separate origin acting as a CRM: blocked before its origin was allowed,
     working after. The receiver verified every webhook signature.
 
-Not built yet, and exactly what the docs promise for launch:
-- Live calls from the miniplayer. Everything around the call is built. What remains is
-  connecting a live seat to the real DialerSeat dialer: the browser agent leg and
-  `placeOutboundCall`, with the seat tied to its `users` row. This touches the call path,
-  so it ships in the evening. Until then a live session returns `501` on start.
+- **Live calls: a separate platform** (built 13 Nov 2026, same branch). Joshua's
+  brief was that it should work the same as the regular dialer, each seat as just
+  another user with its own leg, on a different platform, without touching DialerSeat.
+  So:
+  - `lib/developers/live/engine.ts` runs the regular dialer's sequence:
+    1. Ring the seat's own SIP credential.
+    2. Dial the lead with `link_to` + `bridge_on_answer` + `park_after_unbridge: self`.
+    3. Run standard `detect` AMD on every mode except preview. A machine verdict
+       inside the window releases the agent at once and holds the lead leg to the
+       compliance floor.
+    4. A lead leg that fails fast keeps the agent leg to the 7-second floor.
+
+    Ring length follows the mode (60 / 30–43 / 20). `time_limit_secs` is 14400, on the
+    lead leg only. Every tunable value is read, never written, from DialerSeat's
+    `platform_config`, so a retune there applies here too. The calling window
+    (`isCallableNow`) and the platform's DNC list are checked before every dial.
+  - It runs on its own Telnyx connection (`DEV_TELNYX_*`), its own webhook endpoint
+    (`/api/v1/embed/live/telnyx`, ed25519-verified), its own per-seat telephony
+    credentials (`dev_seat_credentials`), its own caller-ID pool (`dev_numbers`) and its
+    own call records (`dev_calls`).
+  - DialerSeat's watchdog and concurrency count scan only `TELNYX_CONNECTION_ID`, so
+    they never see these legs. Nothing writes to a DialerSeat table, and no DialerSeat
+    file was changed for it.
+  - The miniplayer registers the seat's line with sip.js (the regular dialer's
+    configuration and reconnect handling), auto-answers only the agent leg it is
+    expecting, asks for the microphone on the first Call, and follows the call from
+    the carrier's side by polling. `call.started`, `call.answered` and `call.ended` come
+    from the carrier's webhooks, exactly once each.
+  - `GET /v1/calls` now returns real call records (test and live), and `POST /v1/dnc`
+    stores numbers. A disposition with outcome `dnc` adds the number automatically.
+  - Checked: `tests/unit/developersLiveEngine.test.ts` drives the engine against a fake
+    Telnyx. It covers the exact request bodies, answered → lead hangs up, agent hangs up,
+    a machine verdict (agent released before the lead), busy, agent unreachable, a
+    duplicate hangup (`call.ended` once), webhooks that are not ours, DNC and calling hours.
+  - **Not checked: a real call.** No Telnyx account or numbers exist for the developer
+    platform yet, and a real test call rings a real phone. The first live call should
+    be made deliberately, to a number of Joshua's, after the setup below.
+
+**Switching live calls on (one time, on Telnyx):**
+1. Best: a separate Telnyx account (a managed sub-account), so the developer
+   platform has its own balance, its own calls-per-second, and its own short-call ratio.
+   Telnyx flagged DialerSeat's ratio at 18.86% on 16 Sept; platforms' traffic must not
+   move it. The same account works, but shares all three.
+2. Create a Call Control application with webhook URL
+   `https://dev.dialerseat.com/api/v1/embed/live/telnyx`. Its id is `DEV_TELNYX_CONNECTION_ID`.
+3. Create a credential SIP connection for seat credentials, with **SIP URI calling
+   enabled** (Telnyx disables it by default, and every agent leg then fails with 10016).
+   Its id is `DEV_TELNYX_CREDENTIAL_CONNECTION_ID`.
+4. Buy caller-ID numbers onto the Call Control application and add them to `dev_numbers`
+   (platform_id null for the shared pool, or a platform's id for its own).
+5. Set `DEV_TELNYX_API_KEY` and `DEV_TELNYX_PUBLIC_KEY` (that account's webhook signing
+   key) in Vercel.
+
+Not built yet:
+- Live leads stored per campaign. The miniplayer dials the leads the CRM hands it,
+  so the CRM stays the system of record. `POST /v1/campaigns/{id}/leads` validates but
+  does not store live leads yet.
+- Recording on live calls, and voicemail drop.
+- The admin view: developer calls are in `dev_calls`, not DialerSeat's `calls`, so the
+  admin desktop does not show them yet. A "Platforms" app reading `dev_calls` is the
+  plan. Joshua to correct if he wants them in `calls` instead.
 - The root layout still mounts ClerkProvider inside the frame. Nothing breaks, but it is
   weight the frame does not need. Give `/embed/dialer` a lighter root before launch.
 - Live lead insertion into `campaigns`/`leads`, and live DNC entries. Both return
@@ -293,10 +349,9 @@ needs `NODE_ENV` other than production, no `VERCEL_ENV`, and the local store.
 - Fill `dev_webhook_deliveries` from call-end and disposition events. Add a retry
   cron with backoff for 72 h. Signing and the delivery log already exist.
 
-**Phase 3 — miniplayer live calls** *(touches the call path: evening deploys only)*
-- The loader, frame, session sign-in, origin enforcement, test-mode calls and events are
-  built (above). What remains is wiring a live seat's call button to the real dialer: the
-  WebRTC agent leg, `placeOutboundCall`, and the existing claim path for campaign leads.
+**Phase 3 — live calls**
+- Built on the separate platform (above). What remains is the Telnyx setup, a first
+  real call to one of Joshua's own numbers, then recording and voicemail drop.
 
 **Phase 4 — billing**
 - User-billed: Stripe checkout inside the miniplayer, at the weekly price, plus a
@@ -318,7 +373,7 @@ needs `NODE_ENV` other than production, no `VERCEL_ENV`, and the local store.
 3. The negotiation floor: seat-week, included dials, and per-dial overage.
 4. Sandbox limits (if any).
 5. Which company "CloudVoice" is.
-6. When to apply the ten `dev_` tables. Applying them before launch is invisible to
+6. When to apply the fourteen `dev_` tables. Applying them before launch is invisible to
    users. The migration classifies them in `retention_policy`, so the daily check
    stays quiet.
 7. The Launch tier shows $35 per seat per week, the standard dialerseat.com

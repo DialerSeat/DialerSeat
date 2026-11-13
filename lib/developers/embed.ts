@@ -18,6 +18,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { hashKey, randomBase62 } from './keys'
 import { devStore, type Platform, type Seat, type SeatSession } from './store'
 import { DEFAULT_DISPOSITIONS, type DialMode } from './catalog'
+import { liveConfig } from './live/telnyx'
 
 const FRAME_TTL_MS = 12 * 60 * 60 * 1000
 
@@ -96,7 +97,7 @@ export async function frameConfig(ctx: FrameContext, campaignExternalId: string 
 
   const canDial = env === 'test' ? 'simulated' as const
     : platform.live_status !== 'active' ? 'live_inactive' as const
-    : seat.status === 'active' ? 'live' as const
+    : seat.status === 'active' ? (liveConfig().ok ? 'live' as const : 'live_unavailable' as const)
     : seat.billed_to === 'user' ? 'needs_payment' as const
     : 'waiting_for_platform' as const
 

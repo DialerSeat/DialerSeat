@@ -190,6 +190,80 @@ create table if not exists public.dev_request_log (
 );
 create index if not exists dev_request_log_platform_idx on public.dev_request_log(platform_id, created_at desc);
 
+-- ── LIVE CALLING: A SEPARATE PLATFORM ────────────────────────────────
+-- Developer calls run on their own Telnyx connection (DEV_TELNYX_*), with
+-- their own caller-ID numbers, their own per-seat SIP credentials and their
+-- own call records. DialerSeat's calls, number pool, agent credentials,
+-- watchdog and concurrency count never see them, and nothing here writes to
+-- a DialerSeat table.
+
+-- One row per call, test or live. Test rows are simulated calls.
+create table if not exists public.dev_calls (
+  id                   text primary key,          -- call_{env}_…, signed to its frame
+  platform_id          uuid not null references public.dev_platforms(id) on delete cascade,
+  seat_id              uuid not null references public.dev_seats(id) on delete cascade,
+  env                  text not null check (env in ('test','live')),
+  campaign_external_id text,
+  lead_external_id     text,
+  phone                text not null,             -- E.164
+  from_number          text,
+  dial_mode            text,
+  status               text not null default 'dialing'
+                         check (status in ('dialing','ringing','connected','ended','failed')),
+  amd_enabled          boolean not null default false,
+  amd_result           text,
+  agent_call_control_id text,
+  lead_call_control_id  text,
+  agent_answered_at    timestamptz,
+  answered_at          timestamptz,
+  ended_at             timestamptz,
+  hangup_source        text,
+  hangup_cause         text,
+  talk_seconds         integer,
+  disposition_code     text,
+  disposition_outcome  text,
+  notes                text,
+  created_at           timestamptz not null default now()
+);
+create index if not exists dev_calls_platform_idx on public.dev_calls(platform_id, created_at desc);
+create index if not exists dev_calls_lead_ccid_idx on public.dev_calls(lead_call_control_id);
+create index if not exists dev_calls_agent_ccid_idx on public.dev_calls(agent_call_control_id);
+
+-- A platform's own do-not-call list. Checked before every live dial.
+create table if not exists public.dev_dnc (
+  platform_id  uuid not null references public.dev_platforms(id) on delete cascade,
+  env          text not null check (env in ('test','live')),
+  phone        text not null,                     -- E.164
+  source       text,
+  created_at   timestamptz not null default now(),
+  primary key (platform_id, env, phone)
+);
+
+-- Caller-ID numbers on the developer Telnyx connection. platform_id null is
+-- the shared developer pool; a platform's own numbers are used first.
+create table if not exists public.dev_numbers (
+  id            uuid primary key default gen_random_uuid(),
+  phone         text not null unique,             -- E.164
+  platform_id   uuid references public.dev_platforms(id) on delete set null,
+  area_code     text not null,
+  active        boolean not null default true,
+  last_used_at  timestamptz,
+  created_at    timestamptz not null default now()
+);
+
+-- One Telnyx telephony credential per seat, the same shape DialerSeat gives
+-- each agent. The SIP password is never stored; Telnyx returns it on demand.
+create table if not exists public.dev_seat_credentials (
+  seat_id                uuid primary key references public.dev_seats(id) on delete cascade,
+  telnyx_credential_id   text not null unique,
+  sip_username           text not null,
+  created_at             timestamptz not null default now()
+);
+
+alter table public.dev_calls                enable row level security;
+alter table public.dev_dnc                  enable row level security;
+alter table public.dev_numbers              enable row level security;
+alter table public.dev_seat_credentials     enable row level security;
 alter table public.dev_seat_sessions        enable row level security;
 alter table public.dev_campaign_links       enable row level security;
 alter table public.dev_webhook_deliveries   enable row level security;
@@ -222,5 +296,13 @@ values
   ('dev_webhook_deliveries', 'ephemeral', 30, 'created_at',
    'Webhook delivery attempts. Retries stop at 72 hours; a month covers any investigation.'),
   ('dev_request_log', 'ephemeral', 30, 'created_at',
-   'API request log shown in the console. A developer debugging looks at this week.')
+   'API request log shown in the console. A developer debugging looks at this week.'),
+  ('dev_calls', 'evidence', null, 'created_at',
+   'Developer-platform call records, test and live. What a platform is billed on.'),
+  ('dev_dnc', 'evidence', null, 'created_at',
+   'Platform do-not-call lists. Compliance.'),
+  ('dev_numbers', 'evidence', null, 'created_at',
+   'Caller-ID numbers on the developer Telnyx connection.'),
+  ('dev_seat_credentials', 'evidence', null, 'created_at',
+   'Which Telnyx telephony credential belongs to which seat. No secrets.')
 on conflict (table_name) do nothing;

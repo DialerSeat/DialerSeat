@@ -209,6 +209,15 @@ export const DOCS: DocPage[] = [
       { t: 'p', text: 'With a test session nothing is dialled. The call plays out by the last digit of the number, and every step sends the same signed webhooks a real call does:' },
       { t: 'list', items: TEST_NUMBERS.map(t => `Ending in ${t.ending}: ${t.label}`) },
       { t: 'p', text: 'Open the console and press Try it under Miniplayer to watch a test dialer send your webhooks and browser events.' },
+      { t: 'h', id: 'live', text: 'Live calls' },
+      { t: 'p', text: 'A live seat dials the way any DialerSeat agent dials. The miniplayer registers the seat\'s own phone line in the browser. When the agent presses Call, DialerSeat rings that line first, then the lead, and connects the two the moment the lead picks up, with no dead air.' },
+      { t: 'list', items: [
+        'The browser asks for the microphone the first time the agent presses Call. The line shows Line ready once it is registered.',
+        'Answering-machine detection runs on every mode except preview. On a machine, the agent is released straight away and the next lead comes up.',
+        'Calling hours are checked in the lead\'s own time zone before every dial, and numbers on your do-not-call list are never dialled. Pass state with a lead when you have it.',
+        'Ring time follows the mode: 60 seconds for preview and power, 30 to 43 for progressive, 20 for predictive.',
+        'Webhooks come from the carrier, not the browser: call.ended arrives even if the agent closes the tab.',
+      ] },
     ],
   },
   {
@@ -244,6 +253,7 @@ export const DOCS: DocPage[] = [
         '403 forbidden: the key\'s scope does not allow this, or the dial mode is not allowed by your policy.',
         '404 not_found: no such object in this environment (test and live are separate).',
         '409 conflict: an object with that external id already exists.',
+        '422 outside_calling_hours or do_not_call: a live dial was refused before anything rang.',
         '429 rate_limited: slow down; Retry-After says for how long.',
       ] },
       { t: 'h', id: 'idempotency', text: 'Idempotency' },

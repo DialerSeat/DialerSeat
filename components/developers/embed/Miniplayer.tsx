@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Mic, MicOff, Pause, Phone, PhoneOff, Play, SkipForward, TriangleAlert, Voicemail, CircleCheck, Lock } from 'lucide-react'
+import type { Invitation, Registerer, UserAgent } from 'sip.js'
 import { TEST_NUMBERS } from '@/lib/developers/catalog'
 
 type Outcome = 'human' | 'machine' | 'no_answer' | 'busy'
@@ -24,15 +25,16 @@ interface Config {
   campaign: { id: string | null; external_id: string; name: string | null } | null
   dial_modes: { allowed: Mode[]; default: Mode; may_choose: boolean; exception: string | null }
   dispositions: { code: string; label: string; outcome: string }[]
-  can_dial: 'simulated' | 'live' | 'live_inactive' | 'needs_payment' | 'waiting_for_platform'
+  can_dial: 'simulated' | 'live' | 'live_inactive' | 'live_unavailable' | 'needs_payment' | 'waiting_for_platform'
   allowed_origins: string[]
 }
 
-interface Lead { external_id: string | null; phone: string; name: string | null; fields: [string, string][]; valid: boolean }
+interface Lead { external_id: string | null; phone: string; name: string | null; state: string | null; fields: [string, string][]; valid: boolean }
 
 interface Call {
   id: string
-  outcome: Outcome
+  /** 'live' for a real call: the carrier decides what happens, the frame follows it. */
+  outcome: Outcome | 'live'
   status: 'ringing' | 'connected' | 'voicemail' | 'ended'
   startedAt: number
   answeredAt: number | null
@@ -49,7 +51,8 @@ function toLead(raw: unknown): Lead {
   const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || (typeof r.name === 'string' ? r.name : '') || null
   const skip = new Set(['phone', 'phone_number', 'mobile', 'first_name', 'last_name', 'name', 'external_id'])
   const fields = Object.entries(r).filter(([k, v]) => !skip.has(k) && v !== null && v !== '' && typeof v !== 'object').slice(0, 6).map(([k, v]) => [k.replace(/_/g, ' '), String(v)] as [string, string])
-  return { external_id: r.external_id != null ? String(r.external_id) : null, phone: digits, name, fields, valid: digits.length === 10 }
+  const state = typeof r.state === 'string' && r.state.trim() ? r.state.trim() : null
+  return { external_id: r.external_id != null ? String(r.external_id) : null, phone: digits, name, state, fields, valid: digits.length === 10 }
 }
 
 const fmtPhone = (d: string) => (d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : d || 'no number')
@@ -102,7 +105,117 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
     return data as T
   }, [])
 
-  // The frame's API (app/api/v1/embed) is on the frame's own origin.
+  const apiGet = useCallback(async <T,>(path: string): Promise<T> => {
+    const res = await fetch(path, { headers: { Authorization: `Frame ${frameToken.current}` }, cache: 'no-store' })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((data as { error?: { message?: string } })?.error?.message || `Request failed (${res.status})`)
+    return data as T
+  }, [])
+
+  // ── THE BROWSER PHONE (live seats only) ─────────────────────────────────
+  // The seat's own SIP line, set up the way the regular dialer sets up an
+  // agent's (app/dashboard/dialer): register with the seat's credential,
+  // auto-answer the agent leg the call engine rings, attach its audio, and
+  // re-register after any reconnect. Only an agent leg the frame is expecting
+  // is answered; anything else is refused.
+  const [line, setLine] = useState<'off' | 'connecting' | 'ready' | 'error'>('off')
+  const uaRef = useRef<UserAgent | null>(null)
+  const regRef = useRef<Registerer | null>(null)
+  const sessionRef = useRef<Invitation | null>(null)
+  const expectingRef = useRef(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  const peer = (inv: Invitation | null): RTCPeerConnection | null =>
+    ((inv?.sessionDescriptionHandler as unknown as { peerConnection?: RTCPeerConnection } | undefined)?.peerConnection) || null
+
+  const attachAudio = useCallback((inv: Invitation) => {
+    const pc = peer(inv)
+    const el = audioRef.current
+    if (!pc || !el) return
+    const stream = new MediaStream()
+    pc.getReceivers().forEach(r => { if (r.track && r.track.kind === 'audio') stream.addTrack(r.track) })
+    el.srcObject = stream
+    el.muted = false
+    void el.play().catch(() => {})
+  }, [])
+
+  const setSending = useCallback((on: boolean) => {
+    peer(sessionRef.current)?.getSenders().forEach(snd => { if (snd.track) snd.track.enabled = on })
+  }, [])
+
+  useEffect(() => {
+    if (config?.can_dial !== 'live') return
+    let cancelled = false
+    let reconnectTimer: number | null = null
+    let attempt = 0
+    ;(async () => {
+      setLine('connecting')
+      try {
+        const reg = await api<{ sipUsername: string; sipPassword: string; sipDomain: string; sipWssUrl: string; iceServers: RTCIceServer[] }>('/api/v1/embed/live/credentials', {})
+        if (cancelled) return
+        const { UserAgent, Registerer, SessionState } = await import('sip.js')
+        const uri = UserAgent.makeURI(`sip:${reg.sipUsername}@${reg.sipDomain}`)
+        if (!uri) throw new Error('bad SIP address')
+        let rtcpMuxPolicy: string | undefined
+        try { new RTCPeerConnection({ rtcpMuxPolicy: 'negotiate' } as unknown as RTCConfiguration).close(); rtcpMuxPolicy = 'negotiate' } catch { /* not supported */ }
+        const ua = new UserAgent({
+          uri,
+          authorizationUsername: reg.sipUsername,
+          authorizationPassword: reg.sipPassword,
+          transportOptions: { server: reg.sipWssUrl, keepAliveInterval: 30 },
+          sessionDescriptionHandlerFactoryOptions: {
+            iceGatheringTimeout: 500,
+            peerConnectionConfiguration: { iceServers: reg.iceServers, iceCandidatePoolSize: 1, ...((rtcpMuxPolicy ? { rtcpMuxPolicy } : {}) as unknown as RTCConfiguration) },
+            constraints: { audio: true, video: false },
+          },
+        })
+        const reregister = async () => { try { await regRef.current?.register() } catch { /* the next reconnect retries */ } }
+        ua.delegate = {
+          onConnect: () => { attempt = 0; if (reconnectTimer) window.clearTimeout(reconnectTimer); void reregister() },
+          onDisconnect: () => {
+            if (cancelled) return
+            setLine('connecting')
+            attempt += 1
+            const delay = Math.min(30000, 1000 * Math.pow(2, attempt - 1))
+            reconnectTimer = window.setTimeout(() => { void ua.reconnect().catch(() => {}) }, delay)
+          },
+          onInvite: async (inv: Invitation) => {
+            if (!expectingRef.current || sessionRef.current) { void inv.reject().catch(() => {}); return }
+            expectingRef.current = false
+            sessionRef.current = inv
+            inv.stateChange.addListener(state => {
+              if (state === SessionState.Established) attachAudio(inv)
+              if (state === SessionState.Terminated && sessionRef.current === inv) sessionRef.current = null
+            })
+            try {
+              await inv.accept({ sessionDescriptionHandlerOptions: { constraints: { audio: true, video: false } } })
+              attachAudio(inv)
+            } catch (err) {
+              const blocked = err instanceof Error && ['NotAllowedError', 'NotFoundError', 'NotReadableError', 'SecurityError'].includes(err.name)
+              setNotice(blocked ? 'Microphone blocked. Allow the microphone for this page, then reload.' : 'Your line could not take this call.')
+            }
+          },
+        }
+        uaRef.current = ua
+        await ua.start()
+        if (cancelled) { void ua.stop(); return }
+        const registerer = new Registerer(ua)
+        regRef.current = registerer
+        registerer.stateChange.addListener(st => { if (!cancelled) setLine(st === 'Registered' ? 'ready' : 'connecting') })
+        await registerer.register()
+      } catch (e) {
+        if (!cancelled) { setLine('error'); setNotice(e instanceof Error ? e.message : 'Your line could not connect.') }
+      }
+    })()
+    return () => {
+      cancelled = true
+      if (reconnectTimer) window.clearTimeout(reconnectTimer)
+      void regRef.current?.unregister().catch(() => {})
+      void uaRef.current?.stop().catch(() => {})
+      uaRef.current = null; regRef.current = null
+    }
+  }, [config?.can_dial, api, attachAudio])
+
 
   // ── sign in from the fragment, once ──
   useEffect(() => {
@@ -159,6 +272,12 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
 
   useEffect(() => () => { timers.current.forEach(t => window.clearTimeout(t)) }, [])
 
+  // Mute stops sending; hold stops sending and silences the far end, locally.
+  useEffect(() => {
+    setSending(!muted && !held)
+    if (audioRef.current) audioRef.current.muted = held
+  }, [muted, held, setSending])
+
   const lead = leads[index] as Lead | undefined
   const remaining = leads.slice(index).filter(l => l.valid).length
 
@@ -180,10 +299,60 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
     setPicked(pre); setNotes(''); setWrap({ preselect: pre })
   }, [config, post, putCall, report])
 
+  const liveFinish = useCallback((c: Call, l: Lead, hangup: string) => {
+    putCall({ ...c, status: 'ended', endedAt: Date.now(), hangup })
+    expectingRef.current = false
+    void sessionRef.current?.bye().catch(() => {})
+    post('call', { state: 'ended', call_id: c.id, lead: { external_id: l.external_id, phone: '+1' + l.phone }, hangup_source: hangup })
+    if (hangup === 'agent_unreachable') setNotice('Your browser phone did not pick up its line. Check the microphone permission and that this tab stayed open.')
+    const preOutcome = hangup === 'amd' ? 'voicemail' : hangup === 'no_answer' || hangup === 'busy' ? 'no_answer' : null
+    const pre = preOutcome && config ? config.dispositions.find(d => d.outcome === preOutcome)?.code ?? null : null
+    setPicked(pre); setNotes(''); setWrap({ preselect: pre })
+  }, [config, post, putCall])
+
+  // While a live call is up, follow it from the carrier's side once a second.
+  useEffect(() => {
+    if (!call || call.outcome !== 'live' || call.status === 'ended' || !lead) return
+    const c = call, l = lead
+    const t = window.setInterval(async () => {
+      try {
+        const s = await apiGet<{ status: string; answered_at: string | null; amd_result: string | null; hangup_source: string | null }>(`/api/v1/embed/calls/${c.id}`)
+        const cur = callRef.current
+        if (!cur || cur.id !== c.id || cur.status === 'ended') return
+        if (s.status === 'ended' || s.status === 'failed') { liveFinish(cur, l, s.hangup_source || 'failed'); return }
+        if (s.status === 'connected') {
+          const next: Call['status'] = s.amd_result === 'machine' ? 'voicemail' : 'connected'
+          if (cur.status !== next) {
+            putCall({ ...cur, status: next, answeredAt: s.answered_at ? Date.parse(s.answered_at) : Date.now() })
+            post('call', { state: next, call_id: c.id, amd_result: s.amd_result })
+          }
+        }
+      } catch { /* the next tick tries again */ }
+    }, 1000)
+    return () => window.clearInterval(t)
+  }, [call, lead, apiGet, liveFinish, post, putCall])
+
   const dial = useCallback(async () => {
     if (!lead || !config) return
     if (!lead.valid) { setIndex(i => i + 1); return }
     setCountdown(null); setMuted(false); setHeld(false); setNotice(null)
+    if (config.can_dial === 'live') {
+      if (line !== 'ready') { setNotice('Your line is still connecting. Try again in a moment.'); return }
+      // Ask for the microphone on the agent's click, before the call exists,
+      // so the permission prompt never lands on a ringing lead.
+      try { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach(tr => tr.stop()) }
+      catch { setNotice('Allow the microphone to make calls.'); return }
+      expectingRef.current = true
+      try {
+        const r = await api<{ call_id: string }>('/api/v1/embed/calls', { lead: { external_id: lead.external_id, phone: lead.phone, state: lead.state }, campaign, mode })
+        putCall({ id: r.call_id, outcome: 'live', status: 'ringing', startedAt: Date.now(), answeredAt: null, endedAt: null, hangup: null }); setNow(Date.now())
+        post('call', { state: 'ringing', call_id: r.call_id, lead: { external_id: lead.external_id, phone: '+1' + lead.phone } })
+      } catch (e) {
+        expectingRef.current = false
+        setNotice(e instanceof Error ? e.message : 'The call could not start.')
+      }
+      return
+    }
     try {
       const r = await api<{ call_id: string; outcome: Outcome }>('/api/v1/embed/calls', { lead: { external_id: lead.external_id, phone: lead.phone }, campaign, mode })
       const c: Call = { id: r.call_id, outcome: r.outcome, status: 'ringing', startedAt: Date.now(), answeredAt: null, endedAt: null, hangup: null }
@@ -214,9 +383,19 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
     } catch (e) {
       setNotice(e instanceof Error ? e.message : 'The call could not start.')
     }
-  }, [api, campaign, config, finish, lead, mode, post, putCall, report])
+  }, [api, campaign, config, finish, lead, line, mode, post, putCall, report])
 
-  const hangUp = () => { const c = callRef.current; if (c && lead && c.status !== 'ended') finish(c, lead, 'agent', c.status === 'ringing' ? 'no_answer' : null) }
+  const hangUp = () => {
+    const c = callRef.current
+    if (!c || !lead || c.status === 'ended') return
+    if (c.outcome === 'live') {
+      // The engine ends both legs; the poll sees it and opens the wrap-up.
+      void api(`/api/v1/embed/calls/${c.id}`, { event: 'hangup' }).catch(() => {})
+      void sessionRef.current?.bye().catch(() => {})
+      return
+    }
+    finish(c, lead, 'agent', c.status === 'ringing' ? 'no_answer' : null)
+  }
 
   const saveDisposition = async () => {
     if (!call || !lead || !picked || !config) return
@@ -256,13 +435,19 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
         <span style={{ fontSize: 11, letterSpacing: 3, fontWeight: 700 }}>DIALERSEAT</span>
         <span style={{ flex: 1 }} />
         {config?.env === 'test' && <span className="dv-badge dv-badge-amber" title="Calls are simulated. Nothing is dialled.">TEST</span>}
-        {config && phase === 'ready' && (config.dial_modes.may_choose && !call ? (
+        {config?.can_dial === 'live' && (
+          <span className={line === 'ready' ? 'dv-badge dv-badge-green' : line === 'error' ? 'dv-badge dv-badge-red' : 'dv-badge'} title="Your browser phone line">
+            <span className="dv-dot" />{line === 'ready' ? 'Line ready' : line === 'error' ? 'Line down' : 'Connecting'}
+          </span>
+        )}
+        {config && phase === 'ready' && (config.can_dial === 'simulated' || config.can_dial === 'live') && (config.dial_modes.may_choose && !call ? (
           <select aria-label="Dial mode" value={mode} onChange={e => { setMode(e.target.value as Mode); setCountdown(null) }} className="dv-select" style={{ width: 'auto', height: 26, fontSize: 12, padding: '0 6px' }}>
             {config.dial_modes.allowed.map(m => <option key={m} value={m}>{MODE_LABEL[m]}</option>)}
           </select>
         ) : <span className="dv-badge dv-badge-blue">{MODE_LABEL[mode]}</span>)}
       </header>
       <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>{body}</div>
+      <audio ref={audioRef} autoPlay playsInline style={{ display: 'none' }} />
       {footer}
     </div>
   )
@@ -279,6 +464,7 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
   if (config.can_dial !== 'simulated' && config.can_dial !== 'live') {
     const copy = {
       live_inactive: ['Live dialing is not on yet', `${config.platform.name} has not switched on live dialing with DialerSeat. Test sessions work in the meantime.`],
+      live_unavailable: ['Live calling is being set up', 'DialerSeat is finishing the phone lines for live calls. Test sessions work in the meantime.'],
       needs_payment: ['Start your dialer seat', 'Your seat is billed weekly. Checkout opens here when DialerSeat for Developers launches.'],
       waiting_for_platform: ['Waiting for your team', `${config.platform.name} has not activated this seat yet.`],
     }[config.can_dial]
@@ -382,7 +568,7 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
           {countdown !== null ? (
             <button type="button" className="dv-btn" style={{ flex: 1 }} onClick={() => { setPaused(true); setCountdown(null) }}><Pause size={15} /> Dialing in {countdown}… pause</button>
           ) : (
-            <button type="button" className="dv-btn dv-btn-primary" style={{ flex: 1 }} onClick={() => { setPaused(false); void dial() }}><Phone size={15} /> {paused && mode !== 'preview' ? 'Resume dialing' : 'Call'}</button>
+            <button type="button" className="dv-btn dv-btn-primary" style={{ flex: 1 }} disabled={config.can_dial === 'live' && line !== 'ready'} onClick={() => { setPaused(false); void dial() }}><Phone size={15} /> {paused && mode !== 'preview' ? 'Resume dialing' : 'Call'}</button>
           )}
           <button type="button" className="dv-btn" aria-label="Skip lead" onClick={skip}><SkipForward size={15} /></button>
         </div>

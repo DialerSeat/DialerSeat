@@ -146,6 +146,39 @@ export interface CampaignLink {
   created_at: string
 }
 
+export interface DevCall {
+  id: string
+  platform_id: string
+  seat_id: string
+  env: Env
+  campaign_external_id: string | null
+  lead_external_id: string | null
+  phone: string
+  from_number: string | null
+  dial_mode: string | null
+  status: 'dialing' | 'ringing' | 'connected' | 'ended' | 'failed'
+  amd_enabled: boolean
+  amd_result: string | null
+  agent_call_control_id: string | null
+  lead_call_control_id: string | null
+  agent_answered_at: string | null
+  answered_at: string | null
+  ended_at: string | null
+  hangup_source: string | null
+  hangup_cause: string | null
+  talk_seconds: number | null
+  disposition_code: string | null
+  disposition_outcome: string | null
+  notes: string | null
+  created_at: string
+}
+
+export type DevCallPatch = Partial<Omit<DevCall, 'id' | 'platform_id' | 'seat_id' | 'env' | 'created_at'>>
+
+export interface DevNumber { id: string; phone: string; platform_id: string | null; area_code: string; active: boolean; last_used_at: string | null }
+
+export interface SeatCredential { seat_id: string; telnyx_credential_id: string; sip_username: string }
+
 export interface RequestLogRow {
   id: number
   platform_id: string
@@ -210,6 +243,26 @@ export interface DevStore {
   getCampaignLink(platformId: string, env: Env, idOrExternalId: string): Promise<CampaignLink | null>
   upsertCampaignLink(row: Omit<CampaignLink, 'id' | 'created_at' | 'campaign_id'>): Promise<CampaignLink>
 
+  insertCall(row: Omit<DevCall, 'created_at'>): Promise<DevCall>
+  getCall(id: string): Promise<DevCall | null>
+  findCallByControlId(ccid: string): Promise<{ call: DevCall; leg: 'agent' | 'lead' } | null>
+  /**
+   * Apply a patch. With `onlyIfNotEnded`, nothing changes once ended_at is set,
+   * and the return is null: that is how a duplicate hangup webhook is told
+   * apart from the first one, so call.ended is sent once.
+   */
+  updateCall(id: string, patch: DevCallPatch, opts?: { onlyIfNotEnded?: boolean }): Promise<DevCall | null>
+  listCalls(platformId: string, env: Env, since: string | null, limit: number): Promise<DevCall[]>
+
+  addDnc(platformId: string, env: Env, phone: string, source: string | null): Promise<void>
+  isDnc(platformId: string, env: Env, phone: string): Promise<boolean>
+
+  listCallerIds(platformId: string): Promise<DevNumber[]>
+  markCallerIdUsed(id: string): Promise<void>
+
+  getSeatCredential(seatId: string): Promise<SeatCredential | null>
+  insertSeatCredential(row: SeatCredential): Promise<boolean>
+
   logRequest(row: Omit<RequestLogRow, 'id' | 'created_at'>): Promise<void>
   listRequests(platformId: string, limit: number): Promise<RequestLogRow[]>
 }
@@ -229,6 +282,10 @@ interface LocalData {
   seats: Seat[]
   sessions: SeatSession[]
   campaigns: CampaignLink[]
+  calls: DevCall[]
+  dnc: { platform_id: string; env: Env; phone: string; source: string | null; created_at: string }[]
+  numbers: DevNumber[]
+  credentials: SeatCredential[]
   requests: RequestLogRow[]
 }
 
@@ -240,7 +297,7 @@ const LOCAL_FILE = path.join(process.cwd(), '.dev-platform-store.json')
 const g = globalThis as unknown as { __devStoreQueue?: Promise<unknown> }
 g.__devStoreQueue ??= Promise.resolve()
 
-const EMPTY = (): LocalData => ({ users: {}, platforms: [], keys: [], webhooks: [], deliveries: [], exceptions: [], dispositions: [], seats: [], sessions: [], campaigns: [], requests: [] })
+const EMPTY = (): LocalData => ({ users: {}, platforms: [], keys: [], webhooks: [], deliveries: [], exceptions: [], dispositions: [], seats: [], sessions: [], campaigns: [], calls: [], dnc: [], numbers: [], credentials: [], requests: [] })
 
 async function readLocal(): Promise<LocalData> {
   let text: string
@@ -372,6 +429,37 @@ const localStore: DevStore = {
     const ex = d.campaigns.find(c => c.platform_id === row.platform_id && c.env === row.env && c.external_id === row.external_id)
     if (ex) { Object.assign(ex, row); return ex }
     const n: CampaignLink = { ...row, id: randomUUID(), campaign_id: null, created_at: now() }; d.campaigns.push(n); return n
+  }, true),
+
+  insertCall: (row) => withLocal(d => { const c: DevCall = { ...row, created_at: now() }; d.calls.push(c); if (d.calls.length > 5000) d.calls = d.calls.slice(-5000); return c }, true),
+  getCall: (id) => withLocal(d => d.calls.find(c => c.id === id) || null),
+  findCallByControlId: (ccid) => withLocal(d => {
+    const c = d.calls.find(x => x.lead_call_control_id === ccid || x.agent_call_control_id === ccid)
+    if (!c) return null
+    const leg: 'agent' | 'lead' = c.agent_call_control_id === ccid ? 'agent' : 'lead'
+    return { call: c, leg }
+  }),
+  updateCall: (id, patch, opts) => withLocal(d => {
+    const c = d.calls.find(x => x.id === id); if (!c) return null
+    if (opts?.onlyIfNotEnded && c.ended_at) return null
+    Object.assign(c, patch); return c
+  }, true),
+  listCalls: (pid, env, since, limit) => withLocal(d => d.calls
+    .filter(c => c.platform_id === pid && c.env === env && (!since || c.created_at >= since))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit)),
+
+  addDnc: (pid, env, phone, source) => withLocal(d => {
+    if (!d.dnc.some(x => x.platform_id === pid && x.env === env && x.phone === phone)) d.dnc.push({ platform_id: pid, env, phone, source, created_at: now() })
+  }, true),
+  isDnc: (pid, env, phone) => withLocal(d => d.dnc.some(x => x.platform_id === pid && x.env === env && x.phone === phone)),
+
+  listCallerIds: (pid) => withLocal(d => d.numbers.filter(n => n.active && (n.platform_id === pid || n.platform_id === null))),
+  markCallerIdUsed: (id) => withLocal(d => { const n = d.numbers.find(x => x.id === id); if (n) n.last_used_at = now() }, true),
+
+  getSeatCredential: (seatId) => withLocal(d => d.credentials.find(c => c.seat_id === seatId) || null),
+  insertSeatCredential: (row) => withLocal(d => {
+    if (d.credentials.some(c => c.seat_id === row.seat_id)) return false
+    d.credentials.push(row); return true
   }, true),
 
   logRequest: (row) => withLocal(d => {
@@ -518,6 +606,53 @@ function supabaseStore(): DevStore {
     },
     async upsertCampaignLink(row) {
       return must(await db.from('dev_campaign_links').upsert(row, { onConflict: 'platform_id,env,external_id' }).select('*').single(), 'campaign') as CampaignLink
+    },
+
+    async insertCall(row) {
+      return must(await db.from('dev_calls').insert(row).select('*').single(), 'insert call') as DevCall
+    },
+    async getCall(id) {
+      return must(await db.from('dev_calls').select('*').eq('id', id).maybeSingle(), 'call') as DevCall | null
+    },
+    async findCallByControlId(ccid) {
+      const safe = ccid.replace(/[,()]/g, '')
+      const r = await db.from('dev_calls').select('*').or(`lead_call_control_id.eq.${safe},agent_call_control_id.eq.${safe}`).limit(1).maybeSingle()
+      const c = must(r, 'call by control id') as DevCall | null
+      if (!c) return null
+      const leg: 'agent' | 'lead' = c.agent_call_control_id === ccid ? 'agent' : 'lead'
+      return { call: c, leg }
+    },
+    async updateCall(id, patch, opts) {
+      let q = db.from('dev_calls').update(patch).eq('id', id)
+      if (opts?.onlyIfNotEnded) q = q.is('ended_at', null)
+      return must(await q.select('*').maybeSingle(), 'update call') as DevCall | null
+    },
+    async listCalls(pid, env, since, limit) {
+      let q = db.from('dev_calls').select('*').eq('platform_id', pid).eq('env', env)
+      if (since) q = q.gte('created_at', since)
+      return must(await q.order('created_at', { ascending: false }).limit(limit), 'calls') as DevCall[]
+    },
+
+    async addDnc(pid, env, phone, source) {
+      must(await db.from('dev_dnc').upsert({ platform_id: pid, env, phone, source }, { onConflict: 'platform_id,env,phone', ignoreDuplicates: true }), 'dnc')
+    },
+    async isDnc(pid, env, phone) {
+      return !!must(await db.from('dev_dnc').select('phone').eq('platform_id', pid).eq('env', env).eq('phone', phone).maybeSingle(), 'dnc check')
+    },
+
+    async listCallerIds(pid) {
+      return must(await db.from('dev_numbers').select('*').eq('active', true).or(`platform_id.eq.${pid},platform_id.is.null`), 'numbers') as DevNumber[]
+    },
+    async markCallerIdUsed(id) {
+      await db.from('dev_numbers').update({ last_used_at: now() }).eq('id', id)
+    },
+
+    async getSeatCredential(seatId) {
+      return must(await db.from('dev_seat_credentials').select('seat_id, telnyx_credential_id, sip_username').eq('seat_id', seatId).maybeSingle(), 'credential') as SeatCredential | null
+    },
+    async insertSeatCredential(row) {
+      const { error } = await db.from('dev_seat_credentials').insert(row)
+      return !error
     },
 
     async logRequest(row) {
