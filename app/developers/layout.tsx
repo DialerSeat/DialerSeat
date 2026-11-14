@@ -25,6 +25,13 @@ export const metadata: Metadata = {
     siteName: 'DialerSeat for Developers',
     type: 'website',
   },
+  // Its own share card: without this, dialerseat.com's (with its seat price)
+  // shows through on every developer page.
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat for Developers',
+    description: 'The dialer API for CRMs and platforms. Embed the DialerSeat dialer, keep your own campaigns and dispositions, get every result by webhook.',
+  },
   alternates: { canonical: 'https://dev.dialerseat.com' },
 }
 
