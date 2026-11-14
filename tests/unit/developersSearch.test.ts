@@ -57,6 +57,12 @@ describe('console search lands obscure queries', () => {
     ['single sign on', /session/],
     ['recording audio', /calls|recording/],
     ['opt out', /dnc/],
+    ['user signed up trigger', /subscriptions|billing/],
+    ['forward stripe webhook', /billing/],
+    ['how much do we owe', /billing|balance/],
+    ['react component', /integration-approaches|setup/],
+    ['popup window dialer', /integration-approaches/],
+    ['getting started', /setup|quickstart/],
   ]
   for (const [q, want] of cases) {
     it(`"${q}"`, () => {

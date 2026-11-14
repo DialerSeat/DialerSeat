@@ -387,16 +387,19 @@ needs `NODE_ENV` other than production, no `VERCEL_ENV`, and the local store.
 
 ## 9. Decisions waiting on Joshua
 
-1. Default billing model for a new platform: user-billed or platform-billed.
-2. Revenue-share % on the Launch tier.
-3. The negotiation floor: seat-week, included dials, and per-dial overage.
+1. ~~Default billing model.~~ Platform-billed (Joshua, 13 Nov): the platform's users pay the
+   platform; the platform reports each signup and DialerSeat bills the owner its cut.
+2. The cut: flat per seat-week or a share of what each user pays (both are built; a project
+   has `cut_model`). Until a rate is set on a project, payments are recorded with no fee and
+   nothing is charged.
+3. The negotiation floor per dial mode. Joshua: Launch "should be like $15-$35, some users may
+   only use power". Not disclosed anywhere until the numbers are crunched: the site says
+   "Talk to us" and "priced by the dial modes your users need".
 4. Sandbox limits (if any).
 5. ~~Which company "CloudVoice" is.~~ It is CloudTalk (section 6).
-6. ~~When to apply the fourteen `dev_` tables.~~ Applied 13 Nov 2026, classified in
-   `retention_policy`. Failed webhooks retry every five minutes for 72 hours
-   (/api/cron/dev-webhook-retry).
-7. The Launch tier shows $35 per seat per week, the standard dialerseat.com
-   price, billed to the user. Confirm that, or set a different developer price.
+6. ~~When to apply the `dev_` tables.~~ Applied 13 and 14 Nov 2026 (17 tables), classified in
+   `retention_policy`. Failed webhooks retry every five minutes for 72 hours.
+7. ~~The Launch tier at $35.~~ Removed 14 Nov; see 3.
 
 ---
 
@@ -482,3 +485,61 @@ above.
 - Allo embed: https://www.withallo.com/blog/set-an-ai-phone-system-inside-your-own-crm
 - Cloud Voice & Data CRM integrations: https://cloudvoicedata.co.uk/services/voice/crm-integrations/
 - Enfonica Cloud Voice: https://enfonica.com/products/cloud-voice
+
+---
+
+## 12. Launch checklist (Joshua's order, 13 Nov 2026)
+
+Joshua: "once we get it all setup, we need to do a test demo, once we do a test demo and add the
+tweaks and improve on the system, we will use the seo tab to create all kinds of backlinks and
+content on this new program and payment option, we also need steps on stripe setup as a new
+product essentially."
+
+1. **Test demo.** Sign in at dev.dialerseat.com with a real login, activate, run the project
+   survey, follow Setup to a test call, press Simulate a signup on Billing, add a webhook
+   endpoint and watch call.dispositioned and subscription.recorded arrive. Try a hosted link and
+   the playground. Note every tweak.
+2. **Tweaks.** Fold the demo notes in.
+3. **Stripe setup for the new product** (DialerSeat's own Stripe account; the steps below):
+   - Product catalog: create a product "DialerSeat for Developers" (no price needed: the
+     balance checkout sends the exact amount owed). Use it for reporting.
+   - Settings, then Public details: the statement descriptor developers will see on their card.
+   - Settings, then Emails: turn on successful-payment receipts so owners get a receipt.
+   - Tax: decide whether developer balances are taxable where you sell; Stripe Tax can be added
+     to the balance checkout later.
+   - Webhook (recommended next build): a `checkout.session.completed` listener for sessions
+     with metadata `product=developers`, so a payment is recorded even if the owner closes the
+     tab before returning to the console. Today it is recorded on return (verified with Stripe).
+     dialerseat.com's webhook already ignores developer payments (`product=developers`).
+   - Later, to take the cut automatically out of each user's payment: Stripe Connect, with
+     platforms as connected accounts and DialerSeat's cut as an application fee. Bigger build;
+     needs Connect turned on in the dashboard first.
+4. **Live calling.** A separate Telnyx connection and numbers for developer calls:
+   DEV_TELNYX_API_KEY, DEV_TELNYX_CONNECTION_ID, DEV_TELNYX_CREDENTIAL_CONNECTION_ID,
+   DEV_TELNYX_PUBLIC_KEY, plus numbers in `dev_numbers`. Then set a rate on a project and switch
+   its live_status to active.
+5. **SEO and backlinks.** Use the SEO plan (docs/seo) to write content for the developer
+   product and the platform-billed payment model: the dialer API, embed a dialer in a CRM,
+   CloudTalk comparisons, "add calling to your CRM", the Stripe hookup. IndexNow the new pages.
+6. **dialerseat.com homepage.** A product section about DialerSeat for Developers beside the
+   existing footer link (Joshua, 13 Nov). The homepage is in 12 languages; Joshua directs that
+   copy, so it is drafted with him rather than written alone.
+7. **Admin view.** A Platforms page in DialerSeat's admin: every project, its survey answers,
+   ledger and rates, with the rate fields sales sets.
+
+## 13. What was built on 13–14 Nov 2026
+
+- Projects: an account owns many; each is created through a survey (what it is, who dials,
+  goals, dial modes, how users pay, size, integration approach) before any code is shown, then
+  lands on Setup. Answers are stored in `dev_platforms.profile`.
+- Console: a left sidebar on every page (project switcher, Find, Test/Live, main pages,
+  collapsible Configure and Resources), no links back to dialerseat.com inside; a drawer on phones.
+- Setup page: keys shown once, the five integration approaches with their code, origins,
+  webhooks, billing and a test call, each ticked from real data.
+- Billing: POST /v1/subscriptions, POST /v1/subscriptions/cancel, GET /v1/balance, Stripe
+  forwarding at /v1/billing/stripe/{token}, the ledger, Simulate a signup, and pay-balance via
+  Stripe Checkout. Seats dial through their paid days only.
+- Sessions can carry leads and a campaign, so hosted links and plain iframes need no script.
+- Miniplayer in DialerSeat's palette, Skip always the last disposition (code SKIP).
+- Landing: "Start building", no glow, a live CRM + miniplayer + webhook-log demo; sign-in and
+  sign-up dark by default.

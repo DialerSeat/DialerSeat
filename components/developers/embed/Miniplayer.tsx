@@ -8,12 +8,17 @@
 // by the number's last digit, and every step is reported to the server so the
 // platform receives exactly the signed webhooks a real call sends, and to the
 // host page through postMessage (dialer.on('call' | 'disposition' | ...)).
+//
+// THE LOOK is DialerSeat's own (app/globals.css): the #1a1a2e header with the
+// blue top rule, #4a9eff for the call button, 4px corners, Futura, and the
+// app's green / amber / red for call states. Dark by default; theme=light uses
+// the app's light page (#f0f1f4) and card (#e2e4ea) colours.
 // =============================================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Mic, MicOff, Pause, Phone, PhoneOff, Play, SkipForward, TriangleAlert, Voicemail, CircleCheck, Lock } from 'lucide-react'
 import type { Invitation, Registerer, UserAgent } from 'sip.js'
-import { TEST_NUMBERS } from '@/lib/developers/catalog'
+import { SKIP_DISPOSITION, TEST_NUMBERS } from '@/lib/developers/catalog'
 
 type Outcome = 'human' | 'machine' | 'no_answer' | 'busy'
 type Mode = 'preview' | 'progressive' | 'power' | 'predictive'
@@ -234,6 +239,11 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
         if (!res.ok) throw new Error(data?.error?.message || 'The dialer could not sign in.')
         frameToken.current = data.frame_token
         const c = data.config as Config
+        // A hosted link or a plain iframe gets its list from the session itself.
+        if (Array.isArray(data.leads) && data.leads.length) {
+          const fromSession = (data.leads as unknown[]).slice(0, 1000).map(toLead)
+          setLeads(fromSession); setIndex(0)
+        }
         setConfig(c)
         setMode(c.dial_modes.default)
         setPhase('ready')
@@ -397,9 +407,10 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
     finish(c, lead, 'agent', c.status === 'ringing' ? 'no_answer' : null)
   }
 
-  const saveDisposition = async () => {
-    if (!call || !lead || !picked || !config) return
-    const d = config.dispositions.find(x => x.code === picked)!
+  const saveDisposition = async (code: string | null = picked) => {
+    if (!call || !lead || !code || !config) return
+    const d = config.dispositions.find(x => x.code === code)
+    if (!d) return
     await report(call.id, lead, { event: 'dispositioned', disposition: { code: d.code, notes } })
     post('disposition', { call_id: call.id, code: d.code, label: d.label, outcome: d.outcome, notes, lead: { external_id: lead.external_id, phone: '+1' + lead.phone } })
     setDone(list => [{ lead, label: d.label }, ...list].slice(0, 50))
@@ -422,43 +433,49 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
 
   const skip = () => { setCountdown(null); setIndex(i => i + 1) }
 
+  // DialerSeat's palette, from app/globals.css (--brand-*).
   const vars = useMemo(() => (theme === 'light' ? {
-    '--dv-bg': '#f6f7fb', '--dv-bg-2': '#ffffff', '--dv-panel': '#ffffff', '--dv-panel-2': '#f1f3f9', '--dv-raise': '#e8ecf6',
-    '--dv-border': '#d9deea', '--dv-border-soft': '#e6e9f2', '--dv-text': '#14141f', '--dv-muted': '#5d6178', '--dv-dim': '#8a8fa6',
-  } : {}) as React.CSSProperties, [theme])
+    '--dv-bg': '#f0f1f4', '--dv-bg-2': '#ffffff', '--dv-panel': '#e2e4ea', '--dv-panel-2': '#ffffff', '--dv-raise': '#d0d4d8',
+    '--dv-border': '#c4c8d0', '--dv-border-soft': '#d0d4d8', '--dv-text': '#1a1c24', '--dv-muted': '#5a5e6a', '--dv-dim': '#5a5e6a',
+    '--mp-card': '#e2e4ea', '--mp-row': '#f0f1f4', '--mp-ok': '#16a34a', '--mp-warn': '#d97706', '--mp-bad': '#dc2626',
+  } : {
+    '--dv-bg': '#0a0a0f', '--dv-bg-2': '#111118', '--dv-panel': '#111118', '--dv-panel-2': '#1a1c24', '--dv-raise': '#1c1c2c',
+    '--dv-border': '#2a2a3e', '--dv-border-soft': '#1c1c2c', '--dv-text': '#f0f0f5', '--dv-muted': '#949ba4', '--dv-dim': '#8888aa',
+    '--mp-card': '#111118', '--mp-row': '#1a1c24', '--mp-ok': '#32ff7e', '--mp-warn': '#ffaa3e', '--mp-bad': '#ff6464',
+  }) as React.CSSProperties, [theme])
 
   // ── screens ──
   const shell = (body: React.ReactNode, footer?: React.ReactNode) => (
-    <div data-theme={theme} className="dv-app" style={{ ...vars, height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--dv-bg)', color: 'var(--dv-text)', overflow: 'hidden' }}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderBottom: '1px solid var(--dv-border-soft)' }}>
-        <span style={{ width: 22, height: 22, borderRadius: 6, background: 'linear-gradient(135deg,#4a9eff,#2a6eff)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 700 }}>D</span>
-        <span className="mp-word" style={{ fontSize: 11, letterSpacing: 3, fontWeight: 700 }}>DIALERSEAT</span>
+    <div data-theme={theme} className="mp" style={{ ...vars, height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--dv-bg)', color: 'var(--dv-text)', overflow: 'hidden' }}>
+      <header className="mp-head">
+        <span className="mp-mark">D</span>
+        <span className="mp-word">DIALERSEAT</span>
         <span style={{ flex: 1 }} />
-        {config?.env === 'test' && <span className="dv-badge dv-badge-amber" title="Calls are simulated. Nothing is dialled.">TEST</span>}
+        {config?.env === 'test' && <span className="mp-tag mp-tag-warn" title="Calls are simulated. Nothing is dialled.">TEST</span>}
         {config?.can_dial === 'live' && (
-          <span className={line === 'ready' ? 'dv-badge dv-badge-green' : line === 'error' ? 'dv-badge dv-badge-red' : 'dv-badge'} title="Your browser phone line">
-            <span className="dv-dot" />{line === 'ready' ? 'Line ready' : line === 'error' ? 'Line down' : 'Connecting'}
+          <span className={`mp-tag ${line === 'ready' ? 'mp-tag-ok' : line === 'error' ? 'mp-tag-bad' : ''}`} title="Your browser phone line">
+            <span className="mp-dot" />{line === 'ready' ? 'LINE READY' : line === 'error' ? 'LINE DOWN' : 'CONNECTING'}
           </span>
         )}
         {config && phase === 'ready' && (config.can_dial === 'simulated' || config.can_dial === 'live') && (config.dial_modes.may_choose && !call ? (
-          <select aria-label="Dial mode" value={mode} onChange={e => { setMode(e.target.value as Mode); setCountdown(null) }} className="dv-select" style={{ width: 'auto', height: 26, fontSize: 12, padding: '0 6px' }}>
+          <select aria-label="Dial mode" value={mode} onChange={e => { setMode(e.target.value as Mode); setCountdown(null) }} className="mp-select">
             {config.dial_modes.allowed.map(m => <option key={m} value={m}>{MODE_LABEL[m]}</option>)}
           </select>
-        ) : <span className="dv-badge dv-badge-blue">{MODE_LABEL[mode]}</span>)}
+        ) : <span className="mp-tag mp-tag-blue">{MODE_LABEL[mode].toUpperCase()}</span>)}
       </header>
       <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>{body}</div>
       <audio ref={audioRef} autoPlay playsInline style={{ display: 'none' }} />
-      <style>{`@media (max-width: 360px) { .mp-word { display: none; } }`}</style>
+      <style>{MP_CSS}</style>
       {footer}
     </div>
   )
 
-  if (phase === 'loading') return shell(<div className="dv-empty">Signing in…</div>)
+  if (phase === 'loading') return shell(<div className="mp-empty">Signing in…</div>)
   if (phase === 'error' || !config) return shell(
     <div style={{ textAlign: 'center', padding: '40px 10px' }}>
-      <TriangleAlert size={26} color="var(--dv-amber)" />
+      <TriangleAlert size={26} color="var(--mp-warn)" />
       <div style={{ fontWeight: 600, margin: '12px 0 6px' }}>The dialer could not open</div>
-      <div className="dv-muted" style={{ fontSize: 13, lineHeight: 1.6 }}>{error}</div>
+      <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--dv-muted)' }}>{error}</div>
     </div>,
   )
 
@@ -466,14 +483,14 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
     const copy = {
       live_inactive: ['Live dialing is not on yet', `${config.platform.name} has not switched on live dialing with DialerSeat. Test sessions work in the meantime.`],
       live_unavailable: ['Live calling is being set up', 'DialerSeat is finishing the phone lines for live calls. Test sessions work in the meantime.'],
-      needs_payment: ['Start your dialer seat', 'Your seat is billed weekly. Checkout opens here when DialerSeat for Developers launches.'],
+      needs_payment: ['Your seat is not active', `Your access through ${config.platform.name} has ended or has not started. Renew it with ${config.platform.name} to dial again.`],
       waiting_for_platform: ['Waiting for your team', `${config.platform.name} has not activated this seat yet.`],
     }[config.can_dial]
     return shell(
       <div style={{ textAlign: 'center', padding: '40px 10px' }}>
         <Lock size={26} color="var(--dv-muted)" />
         <div style={{ fontWeight: 600, margin: '12px 0 6px' }}>{copy[0]}</div>
-        <div className="dv-muted" style={{ fontSize: 13, lineHeight: 1.6 }}>{copy[1]}</div>
+        <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--dv-muted)' }}>{copy[1]}</div>
       </div>,
     )
   }
@@ -487,18 +504,18 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
 
   const body = (
     <>
-      {notice && <div className="dv-alert dv-alert-amber" style={{ fontSize: 12, padding: '8px 10px', marginBottom: 10 }}>{notice}</div>}
+      {notice && <div className="mp-note mp-note-warn" style={{ marginTop: 0, marginBottom: 10 }}>{notice}</div>}
 
       {!lead ? (
-        <div className="dv-empty" style={{ padding: '30px 6px' }}>
+        <div className="mp-empty">
           {leads.length === 0 ? (
             <>
               <div style={{ color: 'var(--dv-text)', fontWeight: 600, marginBottom: 6 }}>No leads yet</div>
-              Your app passes them in: <code className="dv-inline-code">DialerSeat.mount(el, {'{'} session, leads {'}'})</code> or <code className="dv-inline-code">dialer.setLeads([...])</code>.
+              Your app sends them with the session, or from the page: <code>DialerSeat.mount(el, {'{'} session, leads {'}'})</code>.
             </>
           ) : (
             <>
-              <CircleCheck size={24} color="var(--dv-green)" />
+              <CircleCheck size={24} color="var(--mp-ok)" />
               <div style={{ color: 'var(--dv-text)', fontWeight: 600, margin: '8px 0 4px' }}>Queue finished</div>
               {done.length} called in this session.
             </>
@@ -506,30 +523,34 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
         </div>
       ) : (
         <div>
-          <div className="dv-dim" style={{ fontSize: 11, letterSpacing: .5 }}>
-            {call ? statusLine : `NEXT · ${remaining} in queue`}
-          </div>
-          <div style={{ fontSize: 21, fontWeight: 600, marginTop: 4 }}>{lead.name || 'Unnamed lead'}</div>
-          <div className="dv-mono dv-muted" style={{ fontSize: 13, marginTop: 2 }}>{fmtPhone(lead.phone)}{!lead.valid && ' · will be skipped'}</div>
-          {lead.fields.length > 0 && (
-            <div className="dv-inset" style={{ marginTop: 12, padding: '8px 10px', display: 'grid', gap: 4, fontSize: 12.5 }}>
-              {lead.fields.map(([k, v]) => <div key={k} style={{ display: 'flex', gap: 8 }}><span className="dv-dim" style={{ minWidth: 80, textTransform: 'capitalize' }}>{k}</span><span>{v}</span></div>)}
+          <div className="mp-card">
+            <div className={`mp-label ${call ? (call.status === 'connected' ? 'mp-ok' : call.status === 'ringing' ? 'mp-warn' : call.status === 'voicemail' ? 'mp-blue' : '') : ''}`}>
+              {call ? statusLine?.toUpperCase() : `NEXT LEAD · ${remaining} IN QUEUE`}
             </div>
-          )}
-          {call?.status === 'voicemail' && <div className="dv-alert dv-alert-blue" style={{ marginTop: 12, fontSize: 12.5 }}><Voicemail size={15} /> Answering machine detected. The call ends on its own.</div>}
+            <div className="mp-name">{lead.name || 'Unnamed lead'}</div>
+            <div className="mp-phone">{fmtPhone(lead.phone)}{!lead.valid && ' · will be skipped'}</div>
+            {lead.fields.length > 0 && (
+              <div className="mp-fields">
+                {lead.fields.map(([k, v]) => <div key={k} className="mp-field"><span>{k}</span><span>{v}</span></div>)}
+              </div>
+            )}
+          </div>
+          {call?.status === 'voicemail' && <div className="mp-note mp-note-blue"><Voicemail size={15} /> Answering machine detected. The call ends on its own.</div>}
 
           {wrap && config && (
-            <div style={{ marginTop: 16 }}>
-              <div className="dv-dim" style={{ fontSize: 11, letterSpacing: .5, marginBottom: 8 }}>HOW DID IT GO?</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                {config.dispositions.map(d => (
-                  <button key={d.code} type="button" onClick={() => setPicked(d.code)} className="dv-btn dv-btn-sm"
-                    style={{ justifyContent: 'flex-start', height: 34, whiteSpace: 'normal', textAlign: 'left', lineHeight: 1.2, background: picked === d.code ? 'var(--dv-accent-soft)' : undefined, borderColor: picked === d.code ? 'rgba(74,158,255,.6)' : undefined }}>
+            <div style={{ marginTop: 14 }}>
+              <div className="mp-label" style={{ marginBottom: 8 }}>DISPOSITION</div>
+              <div className="mp-dispos">
+                {config.dispositions.filter(d => d.code !== SKIP_DISPOSITION.code).map(d => (
+                  <button key={d.code} type="button" onClick={() => setPicked(d.code)} className="mp-dispo" aria-pressed={picked === d.code}>
                     {d.label}
                   </button>
                 ))}
+                <button type="button" className="mp-dispo mp-dispo-skip" onClick={() => void saveDisposition(SKIP_DISPOSITION.code)} title="Move on without an outcome">
+                  <SkipForward size={14} /> {SKIP_DISPOSITION.label}
+                </button>
               </div>
-              <textarea className="dv-textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optional)" style={{ marginTop: 8, minHeight: 56, fontFamily: 'var(--dv-sans)' }} maxLength={2000} />
+              <textarea className="mp-notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optional)" maxLength={2000} />
             </div>
           )}
         </div>
@@ -537,10 +558,10 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
 
       {done.length > 0 && (
         <div style={{ marginTop: 18 }}>
-          <div className="dv-dim" style={{ fontSize: 11, letterSpacing: .5, marginBottom: 6 }}>THIS SESSION</div>
+          <div className="mp-label" style={{ marginBottom: 6 }}>THIS SESSION · {done.length}</div>
           {done.slice(0, 5).map((d, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '5px 0', borderBottom: '1px solid var(--dv-border-soft)' }}>
-              <span>{d.lead.name || fmtPhone(d.lead.phone)}</span><span className="dv-muted">{d.label}</span>
+            <div key={i} className="mp-done">
+              <span>{d.lead.name || fmtPhone(d.lead.phone)}</span><span>{d.label}</span>
             </div>
           ))}
         </div>
@@ -548,10 +569,10 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
     </>
   )
 
-  const round = (on: boolean, danger = false): React.CSSProperties => ({ width: 46, height: 46, borderRadius: '50%', border: danger ? 'none' : '1px solid var(--dv-border)', background: danger ? '#ef4444' : on ? 'var(--dv-accent-soft)' : 'var(--dv-panel-2)', color: danger ? '#fff' : 'var(--dv-text)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' })
+  const round = (on: boolean, danger = false): React.CSSProperties => ({ width: 48, height: 48, borderRadius: '50%', border: danger ? 'none' : '1px solid var(--dv-border)', background: danger ? '#dc2626' : on ? 'rgba(74,158,255,.18)' : 'var(--mp-row)', color: danger ? '#fff' : on ? '#4a9eff' : 'var(--dv-text)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' })
 
   const footer = (
-    <footer style={{ borderTop: '1px solid var(--dv-border-soft)', padding: 12 }}>
+    <footer className="mp-foot">
       {lead && call && call.status !== 'ended' && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
           <button type="button" aria-label={muted ? 'Unmute' : 'Mute'} aria-pressed={muted} onClick={() => setMuted(m => !m)} style={round(muted)} disabled={call.status !== 'connected'}>{muted ? <MicOff size={18} /> : <Mic size={18} />}</button>
@@ -560,22 +581,22 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
         </div>
       )}
       {lead && wrap && (
-        <button type="button" className="dv-btn dv-btn-primary" style={{ width: '100%' }} disabled={!picked} onClick={saveDisposition}>
+        <button type="button" className="mp-btn mp-btn-primary" style={{ width: '100%' }} disabled={!picked} onClick={() => void saveDisposition()}>
           {mode === 'preview' || paused ? 'Save' : 'Save and dial next'}
         </button>
       )}
       {lead && !call && !wrap && (
         <div style={{ display: 'flex', gap: 8 }}>
           {countdown !== null ? (
-            <button type="button" className="dv-btn" style={{ flex: 1 }} onClick={() => { setPaused(true); setCountdown(null) }}><Pause size={15} /> Dialing in {countdown}… pause</button>
+            <button type="button" className="mp-btn" style={{ flex: 1 }} onClick={() => { setPaused(true); setCountdown(null) }}><Pause size={15} /> Dialing in {countdown}… pause</button>
           ) : (
-            <button type="button" className="dv-btn dv-btn-primary" style={{ flex: 1 }} disabled={config.can_dial === 'live' && line !== 'ready'} onClick={() => { setPaused(false); void dial() }}><Phone size={15} /> {paused && mode !== 'preview' ? 'Resume dialing' : 'Call'}</button>
+            <button type="button" className="mp-btn mp-btn-call" style={{ flex: 1 }} disabled={config.can_dial === 'live' && line !== 'ready'} onClick={() => { setPaused(false); void dial() }}><Phone size={16} /> {paused && mode !== 'preview' ? 'RESUME DIALING' : 'CALL'}</button>
           )}
-          <button type="button" className="dv-btn" aria-label="Skip lead" onClick={skip}><SkipForward size={15} /></button>
+          <button type="button" className="mp-btn" aria-label="Skip lead" title="Skip this lead" onClick={skip}><SkipForward size={15} /></button>
         </div>
       )}
       {config.env === 'test' && (
-        <details style={{ marginTop: 8, fontSize: 11 }} className="dv-dim">
+        <details style={{ marginTop: 8, fontSize: 11, color: 'var(--dv-dim)' }}>
           <summary style={{ cursor: 'pointer' }}>Test mode · calls are simulated{webhooks ? ` · ${webhooks} webhook${webhooks > 1 ? 's' : ''} delivered` : ''}</summary>
           <div style={{ display: 'grid', gap: 2, marginTop: 6 }}>
             {TEST_NUMBERS.map(t => <span key={t.ending}>Ends in {t.ending}: {t.label}</span>)}
@@ -587,3 +608,47 @@ export function Miniplayer({ theme, campaign }: { theme: 'dark' | 'light'; campa
 
   return shell(body, footer)
 }
+
+// DialerSeat's dialer look, scoped to the frame.
+const MP_CSS = `
+.mp { font-family: 'Futura PT', Futura, 'Trebuchet MS', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+.mp *, .mp *::before, .mp *::after { box-sizing: border-box; }
+.mp-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: #1a1a2e; color: #fff; border-top: 2px solid #4a9eff; }
+.mp-mark { width: 22px; height: 22px; border-radius: 4px; background: #4a9eff; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 700; }
+.mp-word { font-size: 11px; letter-spacing: 3px; font-weight: 700; color: #fff; }
+.mp-tag { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 7px; border-radius: 3px; font-size: 10px; letter-spacing: 1px; font-weight: 600; color: rgba(255,255,255,.75); background: rgba(255,255,255,.08); }
+.mp-tag-warn { color: #ffaa3e; background: rgba(255,170,62,.14); }
+.mp-tag-ok { color: #32ff7e; background: rgba(50,255,126,.12); }
+.mp-tag-bad { color: #ff6464; background: rgba(255,100,100,.14); }
+.mp-tag-blue { color: #4a9eff; background: rgba(74,158,255,.16); }
+.mp-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.mp .mp-select { -webkit-appearance: none; appearance: none; height: 20px; line-height: 18px; border-radius: 3px; border: 1px solid rgba(74,158,255,.4); background: rgba(74,158,255,.16); color: #4a9eff; font-family: 'Futura PT', Futura, sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; padding: 0 6px; cursor: pointer; }
+.mp-card { background: var(--mp-card); border: 1px solid var(--dv-border); border-radius: 4px; padding: 12px 14px; }
+.mp-label { font-size: 10.5px; letter-spacing: 1.2px; font-weight: 600; color: var(--dv-dim); }
+.mp-ok { color: var(--mp-ok); } .mp-warn { color: var(--mp-warn); } .mp-blue { color: #4a9eff; }
+.mp-name { font-size: 21px; font-weight: 600; margin-top: 6px; }
+.mp-phone { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; color: var(--dv-muted); margin-top: 2px; }
+.mp-fields { margin-top: 10px; display: grid; gap: 3px; font-size: 12.5px; }
+.mp-field { display: flex; gap: 8px; padding: 4px 8px; background: var(--mp-row); border-radius: 3px; }
+.mp-field span:first-child { min-width: 84px; color: var(--dv-dim); text-transform: capitalize; }
+.mp-note { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; padding: 8px 10px; border-radius: 4px; font-size: 12.5px; line-height: 1.5; border-left: 3px solid; }
+.mp-note-blue { background: rgba(74,158,255,.10); border-color: #4a9eff; }
+.mp-note-warn { background: rgba(255,170,62,.10); border-color: var(--mp-warn); }
+.mp-dispos { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mp-dispo { min-height: 36px; padding: 6px 10px; border-radius: 4px; border: 1px solid var(--dv-border); background: var(--mp-row); color: var(--dv-text); font: 500 13px 'Futura PT', Futura, sans-serif; text-align: left; line-height: 1.2; cursor: pointer; }
+.mp-dispo:hover { border-color: #4a9eff; }
+.mp-dispo[aria-pressed="true"] { border-color: #4a9eff; background: rgba(74,158,255,.16); color: var(--dv-text); }
+.mp-dispo-skip { grid-column: 1 / -1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: transparent; border-style: dashed; color: var(--dv-muted); text-align: center; }
+.mp-notes { width: 100%; margin-top: 8px; min-height: 56px; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--dv-border); background: var(--dv-bg-2); color: var(--dv-text); font: 13px 'Futura PT', Futura, sans-serif; resize: vertical; outline: none; }
+.mp-notes:focus { border-color: #4a9eff; }
+.mp-done { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--dv-border-soft); }
+.mp-done span:last-child { color: var(--dv-muted); }
+.mp-foot { border-top: 1px solid var(--dv-border); padding: 12px; background: var(--mp-card); }
+.mp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 42px; padding: 0 14px; border-radius: 4px; border: 1px solid var(--dv-border); background: var(--mp-row); color: var(--dv-text); font: 600 13px 'Futura PT', Futura, sans-serif; letter-spacing: .6px; cursor: pointer; }
+.mp-btn:disabled { opacity: .5; cursor: not-allowed; }
+.mp-btn-primary, .mp-btn-call { background: #4a9eff; border-color: #4a9eff; color: #fff; }
+.mp-btn-primary:hover:not(:disabled), .mp-btn-call:hover:not(:disabled) { background: #2a6eff; border-color: #2a6eff; }
+.mp-empty { padding: 30px 6px; text-align: center; color: var(--dv-muted); font-size: 13px; line-height: 1.6; }
+.mp-empty code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; background: var(--mp-row); padding: 1px 5px; border-radius: 3px; }
+@media (max-width: 360px) { .mp-word { display: none; } }
+`

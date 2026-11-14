@@ -26,7 +26,7 @@ export interface ApiEndpoint {
   path: string
   title: string
   summary: string
-  group: 'Account' | 'Seats' | 'Sessions' | 'Campaigns' | 'Leads' | 'Calls' | 'Dispositions' | 'Compliance' | 'Usage'
+  group: 'Account' | 'Seats' | 'Sessions' | 'Campaigns' | 'Leads' | 'Calls' | 'Dispositions' | 'Compliance' | 'Billing' | 'Usage'
   /** Words a developer might search for that do not appear in the title. */
   keywords?: string[]
 }
@@ -49,14 +49,18 @@ export const ENDPOINTS: ApiEndpoint[] = [
   { method: 'GET', path: '/dispositions', group: 'Dispositions', title: 'List dispositions', summary: 'Your disposition codes and the outcome each one maps to.', keywords: ['outcomes', 'results', 'status codes', 'wrap up'] },
   { method: 'POST', path: '/dispositions', group: 'Dispositions', title: 'Create a disposition', summary: 'Add one of your CRM\'s outcomes so agents pick it in the miniplayer.', keywords: ['outcome', 'wrap up', 'custom'] },
   { method: 'POST', path: '/dnc', group: 'Compliance', title: 'Add to do-not-call', summary: 'Suppress a number across every campaign on the platform.', keywords: ['suppression', 'dnc', 'opt out', 'compliance', 'tcpa'] },
+  { method: 'POST', path: '/subscriptions', group: 'Billing', title: 'Report a signup or renewal', summary: 'Call this when one of your users pays you. The seat is created or renewed and dials through the period paid for; DialerSeat\'s cut goes on your balance.', keywords: ['signup', 'subscribe', 'paid', 'renewal', 'billing', 'trigger', 'activate seat', 'payment', 'stripe', 'fee', 'cut'] },
+  { method: 'POST', path: '/subscriptions/cancel', group: 'Billing', title: 'Report a cancellation', summary: 'One of your users cancelled. The seat keeps its paid days, then stops. Pass end_now to stop it at once.', keywords: ['cancel', 'churn', 'unsubscribe', 'refund', 'end'] },
+  { method: 'GET', path: '/balance', group: 'Billing', title: 'Retrieve your balance', summary: 'What you owe DialerSeat, and the signups, renewals and payments behind it.', keywords: ['owed', 'invoice', 'ledger', 'statement', 'amount due'] },
   { method: 'GET', path: '/usage', group: 'Usage', title: 'Retrieve usage', summary: 'Seat-weeks and dials for a period, per seat and in total.', keywords: ['billing', 'invoice', 'metering', 'dials'] },
 ]
 
 export interface WebhookEvent { type: string; summary: string; keywords?: string[] }
 
 export const WEBHOOK_EVENTS: WebhookEvent[] = [
-  { type: 'seat.activated', summary: 'A seat can dial: payment went through, or the platform covers it.', keywords: ['paid', 'subscription'] },
-  { type: 'seat.payment_failed', summary: 'A user-billed seat\'s weekly charge failed. Dialing stops at the end of the paid days.', keywords: ['billing', 'declined', 'card'] },
+  { type: 'seat.activated', summary: 'A seat can dial: one of your users signed up or renewed, or you activated the seat.', keywords: ['paid', 'subscription', 'signup'] },
+  { type: 'subscription.recorded', summary: 'A signup or renewal you reported was recorded: the seat is paid through the period, and DialerSeat\'s cut is on your balance.', keywords: ['signup', 'renewal', 'billing', 'ledger', 'stripe', 'fee', 'cut'] },
+  { type: 'subscription.canceled', summary: 'A subscription you reported as cancelled. The seat keeps dialing until the end of the period already paid.', keywords: ['cancel', 'churn', 'ended', 'paid days'] },
   { type: 'seat.disabled', summary: 'A seat stopped: cancelled, or disabled through the API.', keywords: ['cancelled'] },
   { type: 'call.started', summary: 'A line started ringing.', keywords: ['dialing', 'ringing'] },
   { type: 'call.answered', summary: 'The lead answered and is connected to the agent. amd_result is pending while answering-machine detection is still listening, or not_run when it is off.', keywords: ['amd', 'machine', 'human', 'connected'] },
@@ -95,6 +99,13 @@ export const DEFAULT_DISPOSITIONS: { code: string; label: string; outcome: strin
 ]
 
 /**
+ * Always the last disposition in the miniplayer, after the platform's own:
+ * the agent moves on without an outcome. Sent like any other disposition
+ * (code SKIP, outcome skipped), so the platform still hears about the call.
+ */
+export const SKIP_DISPOSITION = { code: 'SKIP', label: 'Skip', outcome: 'skipped' } as const
+
+/**
  * Test-mode call outcomes, decided by the last digit of the number, so a
  * developer can make every path happen on purpose, the way test card numbers
  * work at a payment provider.
@@ -129,10 +140,10 @@ export const TIERS: Tier[] = [
     cta: 'start',
   },
   {
-    id: 'launch', name: 'Launch', price: '$35', priceNote: 'per seat, per week, billed to the user',
-    who: 'Platforms going live with user-paid seats.',
-    features: ['Live keys', 'Each user pays inside the miniplayer', 'Preview, progressive, power and predictive', 'Revenue share to the platform', 'Weekly billing, cancel any week'],
-    cta: 'start',
+    id: 'launch', name: 'Launch', price: 'Talk to us', priceNote: 'priced by the dial modes your users need',
+    who: 'Platforms going live with their first users.',
+    features: ['Live keys', 'Your users pay you; DialerSeat bills you its cut', 'Signups activate seats on their own (API or Stripe)', 'Preview, progressive, power and predictive', 'Weekly billing, stop any week'],
+    cta: 'sales',
   },
   {
     id: 'scale', name: 'Scale', price: 'Negotiated', priceNote: 'volume and leverage based',

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const parent = typeof b.parent_origin === 'string' && b.parent_origin ? b.parent_origin.toLowerCase() : null
   const r = await exchangeSession(String(b.token || ''), parent, selfOrigin(req))
   if (!r.ok) return embedError(r.status, r.code, r.message)
-  const campaign = typeof b.campaign === 'string' && b.campaign.trim() ? b.campaign.trim().slice(0, 120) : null
+  const campaign = typeof b.campaign === 'string' && b.campaign.trim() ? b.campaign.trim().slice(0, 120) : r.campaign
   const config = await frameConfig(r.ctx, campaign)
-  return NextResponse.json({ frame_token: r.frameToken, config }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ frame_token: r.frameToken, config, leads: r.leads, campaign }, { headers: { 'Cache-Control': 'no-store' } })
 }

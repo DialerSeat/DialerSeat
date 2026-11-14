@@ -4,7 +4,7 @@
 
 export type NavIcon =
   | 'overview' | 'keys' | 'webhooks' | 'miniplayer' | 'modes' | 'dispositions'
-  | 'seats' | 'usage' | 'billing' | 'settings' | 'docs' | 'api'
+  | 'seats' | 'usage' | 'billing' | 'settings' | 'docs' | 'api' | 'setup' | 'playground'
 
 export interface NavItem {
   href: string
@@ -19,6 +19,9 @@ export const CONSOLE_NAV: NavItem[] = [
   { href: '/console', label: 'Overview', group: 'Platform', icon: 'overview',
     description: 'Where your integration stands: account, keys, webhooks, seats and live dialing, with the next step to take.',
     keywords: ['home', 'dashboard', 'status', 'checklist', 'progress'] },
+  { href: '/console/setup', label: 'Setup', group: 'Platform', icon: 'setup',
+    description: 'The guided setup for this project: keys, the code for your integration, origins, webhooks, billing and a test call.',
+    keywords: ['getting started', 'onboarding', 'install', 'integrate', 'wizard', 'first steps', 'how to start'] },
   { href: '/console/api-keys', label: 'API keys', group: 'Platform', icon: 'keys',
     description: 'Create, copy and revoke secret and publishable keys for test and live.',
     keywords: ['secret key', 'publishable key', 'token', 'credentials', 'dsk_test', 'dsk_live', 'dpk_test', 'dpk_live', 'rotate', 'revoke'] },
@@ -37,12 +40,12 @@ export const CONSOLE_NAV: NavItem[] = [
   { href: '/console/seats', label: 'Seats', group: 'Configure', icon: 'seats',
     description: 'Every user on your platform who dials, who pays for them, and their status.',
     keywords: ['users', 'agents', 'members', 'reps', 'licenses'] },
-  { href: '/console/usage', label: 'Usage', group: 'Account', icon: 'usage',
-    description: 'Seat-weeks and dials by week. Real numbers only; empty until you dial.',
+  { href: '/console/usage', label: 'Calls and logs', group: 'Account', icon: 'usage',
+    description: 'Calls, API requests and seat activity. Real numbers only; empty until you dial.',
     keywords: ['dials', 'metering', 'consumption', 'stats', 'volume'] },
   { href: '/console/billing', label: 'Billing', group: 'Account', icon: 'billing',
-    description: 'Live dialing, who pays for seats, your tier, and your negotiated rates.',
-    keywords: ['pricing', 'invoice', 'payment', 'plan', 'tier', 'rates', 'activate', 'live dialing', 'revenue share', 'sales'] },
+    description: 'Signups your users paid you for, DialerSeat\'s cut, your balance, the Stripe hookup, live dialing and rates.',
+    keywords: ['pricing', 'invoice', 'payment', 'plan', 'tier', 'rates', 'activate', 'live dialing', 'revenue share', 'sales', 'balance', 'ledger', 'cut', 'fee', 'stripe', 'subscription', 'signup event', 'pay balance'] },
   { href: '/console/settings', label: 'Settings', group: 'Account', icon: 'settings',
     description: 'Your platform\'s name and website, and how your developer account relates to dialerseat.com.',
     keywords: ['platform name', 'company', 'website', 'profile', 'account'] },
@@ -52,6 +55,9 @@ export const CONSOLE_NAV: NavItem[] = [
   { href: '/docs/api', label: 'API reference', group: 'Docs', icon: 'api',
     description: 'Every endpoint, with method, path and what it does.',
     keywords: ['endpoints', 'rest', 'reference', 'routes'] },
+  { href: '/playground', label: 'Playground', group: 'Docs', icon: 'playground',
+    description: 'Try the API and the embedded dialer in your browser with a test key.',
+    keywords: ['try', 'sandbox', 'test page', 'demo', 'html dialer'] },
 ]
 
 export interface SettingItem { href: string; page: string; label: string; description: string; keywords: string[] }
@@ -71,7 +77,7 @@ export const CONSOLE_SETTINGS: SettingItem[] = [
   { page: 'Dial modes', href: '/console/dial-modes#exceptions', label: 'Dial-mode exceptions', description: 'Override the policy for one seat or one campaign.', keywords: ['upgrade', 'override', 'special case', 'per seat', 'per campaign'] },
   { page: 'Dispositions', href: '/console/dispositions#add', label: 'Add a disposition', description: 'Add one of your outcomes with its code, label and outcome class.', keywords: ['new outcome', 'custom'] },
   { page: 'Billing', href: '/console/billing#live', label: 'Activate live dialing', description: 'Turn on real calls for live keys. Until then, everything works in test mode.', keywords: ['go live', 'production', 'pay', 'enable dialing', 'paid'] },
-  { page: 'Billing', href: '/console/billing#model', label: 'Who pays for seats', description: 'User-billed, platform-billed, or mixed.', keywords: ['billing model', 'user pays', 'platform pays', 'resell'] },
+  { page: 'Billing', href: '/console/billing#model', label: 'Who pays for seats', description: 'Platform-billed by default: your users pay you, DialerSeat bills you its cut. Mixed and user-billed by agreement.', keywords: ['billing model', 'user pays', 'platform pays', 'resell'] },
   { page: 'Billing', href: '/console/billing#rates', label: 'Negotiated rates', description: 'Your seat-week price, included dials and per-dial overage once sales sets them.', keywords: ['price', 'volume', 'discount', 'contract'] },
   { page: 'Billing', href: '/console/billing#tiers', label: 'Tiers', description: 'Sandbox, Launch, Scale and Partner.', keywords: ['plans', 'upgrade plan'] },
   { page: 'Settings', href: '/console/settings#platform', label: 'Platform name and website', description: 'How your platform appears in the console and on invoices.', keywords: ['rename', 'company name', 'url'] },

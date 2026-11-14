@@ -17,7 +17,7 @@ export async function POST() {
   const store = devStore()
   const seat = await store.upsertSeat({
     platform_id: platform.id, env: 'test', external_user_id: 'console_test_user',
-    email: null, name: 'Console test seat', billed_to: 'user', status: 'active',
+    email: null, name: 'Console test seat', billed_to: 'platform', status: 'active',
   })
   const token = 'dss_test_' + randomBase62(40)
   await store.insertSession({ seat_id: seat.id, token_hash: hashKey(token), expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString() })

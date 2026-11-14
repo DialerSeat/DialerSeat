@@ -29,7 +29,7 @@ function example(e: ApiEndpoint): string {
   return lines.join('\n')
 }
 
-const GROUP_ORDER: ApiEndpoint['group'][] = ['Account', 'Seats', 'Sessions', 'Campaigns', 'Leads', 'Dispositions', 'Calls', 'Compliance', 'Usage']
+const GROUP_ORDER: ApiEndpoint['group'][] = ['Account', 'Seats', 'Sessions', 'Campaigns', 'Leads', 'Dispositions', 'Calls', 'Compliance', 'Billing', 'Usage']
 
 export default function ApiReference() {
   return (

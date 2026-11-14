@@ -64,7 +64,7 @@ export function DialModePolicy({ policy, exceptions }: { policy: Policy; excepti
               const on = p.allowed_dial_modes.includes(m.id)
               const isDefault = p.default_dial_mode === m.id
               return (
-                <div key={m.id} className="dv-inset" style={{ padding: 14, borderColor: isDefault ? 'rgba(74,158,255,.5)' : undefined, opacity: on ? 1 : .55 }}>
+                <div key={m.id} className="dv-inset" style={{ padding: 14, borderColor: isDefault ? 'var(--dv-accent)' : undefined, opacity: on ? 1 : .55 }}>
                   <div className="dv-row" style={{ justifyContent: 'space-between' }}>
                     <span style={{ fontWeight: 600 }}>{m.name}</span>
                     <button type="button" className="dv-switch" role="switch" aria-checked={on} aria-label={`Allow ${m.name}`} onClick={() => toggleAllowed(m.id)} />

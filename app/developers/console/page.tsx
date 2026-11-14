@@ -64,7 +64,7 @@ export default async function Overview() {
             <span className="dv-badge">{doneCount} of {steps.length}</span>
           </div>
           <div style={{ margin: '14px 22px 0', height: 6, borderRadius: 999, background: 'var(--dv-panel-2)', overflow: 'hidden' }}>
-            <div style={{ width: `${(doneCount / steps.length) * 100}%`, height: '100%', background: 'linear-gradient(90deg, var(--dv-accent), var(--dv-accent-2))' }} />
+            <div style={{ width: `${(doneCount / steps.length) * 100}%`, height: '100%', background: 'var(--dv-accent)' }} />
           </div>
           <div className="dv-card-body" style={{ display: 'grid', gap: 4 }}>
             {steps.map(s => (

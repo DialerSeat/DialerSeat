@@ -1,23 +1,20 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import {
-  BarChart3, BookOpen, Check, Code2, Copy, CreditCard, KeyRound, LayoutDashboard, ListChecks,
-  PanelsTopLeft, Settings, SlidersHorizontal, Users, Webhook,
-} from 'lucide-react'
+import { BarChart3, BookOpen, Check, Code2, Copy, CreditCard, KeyRound, LayoutDashboard, ListChecks, PanelsTopLeft, Settings, SlidersHorizontal, Users, Webhook, Rocket, Play } from 'lucide-react'
 import type { NavIcon } from '@/lib/developers/consoleNav'
 
 export const NAV_ICONS: Record<NavIcon, typeof KeyRound> = {
   overview: LayoutDashboard, keys: KeyRound, webhooks: Webhook, miniplayer: PanelsTopLeft,
   modes: SlidersHorizontal, dispositions: ListChecks, seats: Users, usage: BarChart3,
-  billing: CreditCard, settings: Settings, docs: BookOpen, api: Code2,
+  billing: CreditCard, settings: Settings, docs: BookOpen, api: Code2, setup: Rocket, playground: Play,
 }
 
 /** The DialerSeat mark with the developer suffix. */
 export function DevLogo({ size = 28 }: { size?: number }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-      <span style={{ width: size, height: size, borderRadius: 7, background: 'linear-gradient(135deg, #4a9eff, #2a6eff)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <span style={{ width: size, height: size, borderRadius: 7, background: '#2a6eff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <span style={{ color: '#fff', fontWeight: 700, fontSize: size * 0.45 }}>D</span>
       </span>
       <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, fontFamily: 'var(--dv-sans)' }}>

@@ -16,8 +16,8 @@ import 'server-only'
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { NextResponse, type NextRequest } from 'next/server'
 import { hashKey, randomBase62 } from './keys'
-import { devStore, type Platform, type Seat, type SeatSession } from './store'
-import { DEFAULT_DISPOSITIONS, type DialMode } from './catalog'
+import { devStore, type Platform, type Seat, type SeatSession, type SessionLead } from './store'
+import { DEFAULT_DISPOSITIONS, SKIP_DISPOSITION, type DialMode } from './catalog'
 import { liveConfig } from './live/telnyx'
 
 const FRAME_TTL_MS = 12 * 60 * 60 * 1000
@@ -41,7 +41,7 @@ export function originAllowed(platform: Platform, parentOrigin: string | null, s
 }
 
 export async function exchangeSession(token: string, parentOrigin: string | null, selfOrigin: string):
-  Promise<{ ok: true; frameToken: string; ctx: FrameContext } | { ok: false; status: number; code: string; message: string }> {
+  Promise<{ ok: true; frameToken: string; ctx: FrameContext; leads: SessionLead[] | null; campaign: string | null } | { ok: false; status: number; code: string; message: string }> {
   const m = /^dss_(test|live)_[0-9A-Za-z]{40}$/.exec(token || '')
   if (!m) return { ok: false, status: 401, code: 'bad_session', message: 'This dialer was opened without a valid session. Your app should create one with POST /v1/seats/{id}/sessions each time it opens the dialer.' }
   const store = devStore()
@@ -61,7 +61,7 @@ export async function exchangeSession(token: string, parentOrigin: string | null
   const frameToken = `dsf_${seat.env}_` + randomBase62(40)
   const frameHash = hashKey(frameToken)
   await store.insertSession({ seat_id: seat.id, token_hash: frameHash, expires_at: new Date(Date.now() + FRAME_TTL_MS).toISOString() })
-  return { ok: true, frameToken, ctx: { platform, seat, env: seat.env, frameHash } }
+  return { ok: true, frameToken, ctx: { platform, seat, env: seat.env, frameHash }, leads: session.leads ?? null, campaign: session.campaign ?? null }
 }
 
 export async function authFrame(req: NextRequest): Promise<{ ctx: FrameContext } | { res: NextResponse }> {
@@ -95,10 +95,12 @@ export async function frameConfig(ctx: FrameContext, campaignExternalId: string 
   const preferred = (ex?.dial_mode || campaign?.dial_mode || platform.default_dial_mode) as DialMode
   const defaultMode = allowed.includes(preferred) ? preferred : allowed[0]
 
-  const canDial = env === 'test' ? 'simulated' as const
+  // A seat billed through a reported subscription dials until its paid days run out.
+  const lapsed = !!seat.paid_through && Date.parse(seat.paid_through) <= Date.now()
+  const canDial = env === 'test' ? (lapsed ? 'needs_payment' as const : 'simulated' as const)
     : platform.live_status !== 'active' ? 'live_inactive' as const
-    : seat.status === 'active' ? (liveConfig().ok ? 'live' as const : 'live_unavailable' as const)
-    : seat.billed_to === 'user' ? 'needs_payment' as const
+    : seat.status === 'active' && !lapsed ? (liveConfig().ok ? 'live' as const : 'live_unavailable' as const)
+    : seat.billed_to === 'user' || lapsed ? 'needs_payment' as const
     : 'waiting_for_platform' as const
 
   return {
@@ -107,7 +109,11 @@ export async function frameConfig(ctx: FrameContext, campaignExternalId: string 
     seat: { id: seat.id, external_user_id: seat.external_user_id, name: seat.name, status: seat.status, billed_to: seat.billed_to },
     campaign: campaign ? { id: campaign.id, external_id: campaign.external_id, name: campaign.name } : campaignExternalId ? { id: null, external_id: campaignExternalId, name: null } : null,
     dial_modes: { allowed, default: defaultMode, may_choose: platform.seats_may_choose_mode && allowed.length > 1, exception: ex ? ex.scope : null },
-    dispositions: (dispositions.length ? dispositions : DEFAULT_DISPOSITIONS).map(d => ({ code: d.code, label: d.label, outcome: d.outcome })),
+    // The platform's list (or the defaults), then Skip, always last.
+    dispositions: [
+      ...(dispositions.length ? dispositions : DEFAULT_DISPOSITIONS).filter(d => d.code !== SKIP_DISPOSITION.code).map(d => ({ code: d.code, label: d.label, outcome: d.outcome })),
+      SKIP_DISPOSITION,
+    ],
     can_dial: canDial,
     allowed_origins: platform.allowed_origins,
   }

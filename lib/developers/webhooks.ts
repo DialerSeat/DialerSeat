@@ -31,8 +31,9 @@ export function sampleEvent(type: string, platformId: string) {
   }
   const data: Record<string, unknown> = (() => {
     switch (type) {
-      case 'seat.activated': return { seat: { id: 'seat_test_1', external_user_id: 'usr_829', billed_to: 'user', status: 'active' } }
-      case 'seat.payment_failed': return { seat: { id: 'seat_test_1', external_user_id: 'usr_829', status: 'past_due' }, access_until: at }
+      case 'seat.activated': return { seat: { id: 'seat_test_1', external_user_id: 'usr_829', billed_to: 'platform', status: 'active' } }
+      case 'subscription.recorded': return { seat: { id: 'seat_test_1', external_user_id: 'usr_829', status: 'active', paid_through: at }, subscription: { external_id: 'sub_829', kind: 'signup', amount: 4900, currency: 'usd', period_start: at, period_end: at }, fee: { amount: null, status: 'rate_not_set' } }
+      case 'subscription.canceled': return { seat: { id: 'seat_test_1', external_user_id: 'usr_829', status: 'active', paid_through: at }, subscription: { external_id: 'sub_829' }, access_until: at }
       case 'seat.disabled': return { seat: { id: 'seat_test_1', external_user_id: 'usr_829', status: 'disabled' } }
       case 'call.started': return { call: { ...call, started_at: at } }
       case 'call.answered': return { call: { ...call, answered_at: at, amd_result: 'human' } }

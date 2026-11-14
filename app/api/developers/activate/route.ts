@@ -1,38 +1,19 @@
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 import { devStore } from '@/lib/developers/store'
-import { generateKey } from '@/lib/developers/keys'
-import { getDevContext, jsonError, slugify } from '@/lib/developers/server'
+import { getDevContext, jsonError } from '@/lib/developers/server'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * "Activate developer account". Free. Creates the platform and its first two
- * test keys, and returns the secret key once — the only time it is ever shown.
+ * "Activate developer account". Free, one click. It makes the account and
+ * nothing else: the first project, its survey and its keys come next, on /new.
  * Touches nothing on dialerseat.com: no subscription, no demo, no team.
  */
-export async function POST(req: NextRequest) {
+export async function POST() {
   const ctx = await getDevContext()
   if (!ctx) return jsonError(401, 'unauthorized', 'Sign in first.')
   if (!ctx.userId) return jsonError(409, 'account_not_ready', 'Your account is still being set up. Try again in a few seconds.')
-  if (ctx.platform) return jsonError(409, 'already_active', 'Your developer account is already active.')
-
-  let body: { name?: unknown; website?: unknown } = {}
-  try { body = await req.json() } catch { /* empty body is fine */ }
-  const name = typeof body.name === 'string' ? body.name.trim().slice(0, 80) : ''
-  if (!name) return jsonError(400, 'name_required', 'Give your platform a name. You can change it later.')
-  const website = typeof body.website === 'string' && body.website.trim() ? body.website.trim().slice(0, 200) : null
-
-  const store = devStore()
-  const base = slugify(name)
-  let slug = base
-  for (let i = 2; await store.slugTaken(slug); i++) slug = `${base}-${i}`
-
-  const platform = await store.createPlatform({ owner_user_id: ctx.userId, name, slug, website })
-  const sk = generateKey('secret', 'test')
-  const pk = generateKey('publishable', 'test')
-  await store.insertKey({ platform_id: platform.id, kind: 'secret', env: 'test', name: 'Default test key', key_hash: sk.hash, token: null, prefix: sk.prefix, last4: sk.last4, scopes: ['*'], created_by: ctx.userId })
-  await store.insertKey({ platform_id: platform.id, kind: 'publishable', env: 'test', name: 'Default publishable key', key_hash: null, token: pk.key, prefix: pk.prefix, last4: pk.last4, scopes: ['embed'], created_by: ctx.userId })
-
-  return NextResponse.json({ platform: { id: platform.id, name: platform.name }, secret_key: sk.key, publishable_key: pk.key })
+  await devStore().createAccount(ctx.userId)
+  return NextResponse.json({ activated: true, next: ctx.projects.length ? '/console' : '/new' })
 }

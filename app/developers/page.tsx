@@ -5,6 +5,7 @@ import {
 import { DevLink } from '@/components/developers/base'
 import { DevFooter, DevTopNav } from '@/components/developers/MarketingChrome'
 import { HeroCode } from '@/components/developers/HeroCode'
+import { LiveShowcase } from '@/components/developers/LiveShowcase'
 import { DIAL_MODES, SALES_EMAIL, TIERS } from '@/lib/developers/catalog'
 
 // The landing page for dev.dialerseat.com. Every claim here is something the
@@ -12,10 +13,10 @@ import { DIAL_MODES, SALES_EMAIL, TIERS } from '@/lib/developers/catalog'
 // that have not been measured.
 
 const STEPS = [
-  { n: '01', title: 'Activate a developer account', body: 'Sign in with any DialerSeat login and activate. Free. Test keys straight away.' },
-  { n: '02', title: 'Create seats', body: 'One API call per user, keyed on your own user id. Call it again and it updates.' },
-  { n: '03', title: 'Mint a session', body: 'A 15-minute, single-use token signs the user into the dialer. No second login.' },
-  { n: '04', title: 'Drop in the miniplayer', body: 'One script tag and a mount call. The DialerSeat dialer appears on your page.' },
+  { n: '01', title: 'Create a project', body: 'Sign in with any DialerSeat login, answer a few questions about your product, and get test keys. Free.' },
+  { n: '02', title: 'Seats and sessions', body: 'One call per user, keyed on your own id, and a one-use token each time the dialer opens. No second login.' },
+  { n: '03', title: 'Drop in the dialer', body: 'A script tag, a React component, a plain iframe or a hosted link. Pick what fits your app.' },
+  { n: '04', title: 'Report signups', body: 'When your user pays you, one API call (or your Stripe webhook) activates their seat for the days paid.' },
   { n: '05', title: 'Take the results', body: 'Webhooks bring back every call and disposition under your own codes and ids.' },
 ]
 
@@ -36,8 +37,8 @@ const FAQ = [
   { q: 'Do I need a dialerseat.com subscription?', a: 'No. dev.dialerseat.com uses the same login as dialerseat.com, but the two accounts are independent. Your developer account does not need a dialerseat.com plan, and a dialerseat.com plan does not switch on live dialing for your platform.' },
   { q: 'Can I still use DialerSeat myself?', a: 'Yes. A developer can subscribe to their own dialer on dialerseat.com and own their own teams, exactly as anyone else does. If you are already subscribed, nothing about your dialer changes.' },
   { q: 'Which CRMs does it work with?', a: 'Any. There is no per-CRM connector to wait for. If your app can make an HTTPS request and render a script tag, it can embed DialerSeat.' },
-  { q: 'Who pays for a seat?', a: 'You choose. User-billed seats pay DialerSeat by the week inside the miniplayer. Platform-billed seats go on your weekly invoice at your negotiated rate. Mixed lets you choose per seat.' },
-  { q: 'How are platform rates set?', a: `By volume and leverage: a price per seat per week, dials included, and a price per dial beyond them. Rates are agreed with ${SALES_EMAIL} and are subject to change.` },
+  { q: 'Who pays for a seat?', a: 'Your users pay you, in your own checkout, at your own price. When one signs up or renews, you tell DialerSeat with one API call or by forwarding your Stripe webhook. Their seat dials for the period they paid for, and DialerSeat bills you its cut. Your users never see a DialerSeat bill.' },
+  { q: 'How are platform rates set?', a: `By the dial modes your users need, your volume and leverage. Rates are agreed with ${SALES_EMAIL} and are subject to change.` },
   { q: 'Which numbers can it dial?', a: 'US numbers today: 10 digits, or 11 starting with 1. Every lead you send is checked and the response tells you exactly which were accepted and why any were not.' },
   { q: 'Can the dialer carry our brand?', a: 'A white-label miniplayer is part of the Partner tier. Talk to sales.' },
 ]
@@ -59,19 +60,18 @@ export default function DevelopersHome() {
       <main>
         {/* ── hero ── */}
         <section style={{ position: 'relative', overflow: 'hidden', borderBottom: '1px solid var(--dv-border-soft)' }}>
-          <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(900px 420px at 20% -10%, rgba(74,158,255,.16), transparent 60%), radial-gradient(700px 380px at 95% 10%, rgba(42,110,255,.12), transparent 60%)' }} />
-          <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px)', backgroundSize: '44px 44px', maskImage: 'linear-gradient(to bottom, #000 30%, transparent)' }} />
+                    <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px)', backgroundSize: '44px 44px', maskImage: 'linear-gradient(to bottom, #000 30%, transparent)' }} />
           <div className="dv-hero" style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '84px 20px 80px', display: 'grid', gridTemplateColumns: 'minmax(0, 1.05fr) minmax(0, 1fr)', gap: 56, alignItems: 'center' }}>
             <div>
               <span className="dv-badge dv-badge-blue" style={{ marginBottom: 22 }}><span className="dv-dot" /> DialerSeat for Developers</span>
               <h1 style={{ fontSize: 'clamp(34px, 5vw, 54px)', lineHeight: 1.06, margin: 0, fontWeight: 600, letterSpacing: '-.8px' }}>
-                The dialer API for <span style={{ background: 'linear-gradient(135deg, #7cbcff, #4a9eff 40%, #2a6eff)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>CRMs and platforms.</span>
+                The dialer API for <span style={{ color: 'var(--dv-accent)' }}>CRMs and platforms.</span>
               </h1>
               <p style={{ fontSize: 18, lineHeight: 1.6, color: 'var(--dv-muted)', margin: '22px 0 32px', maxWidth: 560 }}>
                 Put DialerSeat&apos;s dialer inside your product with one script tag and a REST API. Your users dial from your pages. Every outcome comes back to you under your own campaigns and your own dispositions.
               </p>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <DevLink href="/sign-up" className="dv-btn dv-btn-primary dv-btn-lg">Start building free <ArrowRight size={16} /></DevLink>
+                <DevLink href="/sign-up" className="dv-btn dv-btn-primary dv-btn-lg">Start building <ArrowRight size={16} /></DevLink>
                 <DevLink href="/docs/quickstart" className="dv-btn dv-btn-lg">Read the quickstart</DevLink>
               </div>
               <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', marginTop: 30, fontSize: 13 }} className="dv-muted">
@@ -84,9 +84,24 @@ export default function DevelopersHome() {
           </div>
         </section>
 
+        {/* ── watch it work: the moving demo ── */}
+        <section style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 20px 24px' }}>
+          <div className="dv-watch" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, .8fr) minmax(0, 1.2fr)', gap: 48, alignItems: 'center' }}>
+            <div>
+              <SectionHead eyebrow="Watch it work" title="Your CRM, with DialerSeat inside it." sub="Your agents stay on your contact list. The dialer works the queue beside it, and every result lands back on your record and on your server, signed." />
+              <ul style={{ listStyle: 'none', padding: 0, margin: '24px 0 0', display: 'grid', gap: 10, fontSize: 14 }} className="dv-muted">
+                {['Your contacts, your campaign ids', 'Your dispositions, with Skip always last', 'call.started to call.dispositioned, by webhook', 'Seats activate when your users pay you'].map(t => (
+                  <li key={t} style={{ display: 'flex', gap: 8 }}><Check size={15} color="var(--dv-green)" style={{ marginTop: 2, flexShrink: 0 }} />{t}</li>
+                ))}
+              </ul>
+            </div>
+            <LiveShowcase />
+          </div>
+        </section>
+
         {/* ── how ── */}
         <section id="how" style={{ maxWidth: 1200, margin: '0 auto', padding: '88px 20px 40px', scrollMarginTop: 100 }}>
-          <SectionHead eyebrow="How it works" title="Five steps from keys to a dialer on your page." sub="Quick to set up, and easy to keep running. Everything below works in test mode before you pay for a single call." />
+          <SectionHead eyebrow="How it works" title="Five steps from a project to a dialer on your page." sub="Quick to set up, and easy to keep running. Everything below works in test mode before you pay for a single call." />
           <div className="dv-steps" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 14, marginTop: 40 }}>
             {STEPS.map(s => (
               <div key={s.n} className="dv-card" style={{ padding: 20 }}>
@@ -172,7 +187,7 @@ export default function DevelopersHome() {
             {TIERS.map(t => {
               const featured = t.id === 'scale'
               return (
-                <div key={t.id} className="dv-card" style={{ padding: 24, display: 'flex', flexDirection: 'column', borderColor: featured ? 'rgba(74,158,255,.45)' : undefined, boxShadow: featured ? '0 0 0 1px rgba(74,158,255,.2), 0 20px 60px rgba(42,110,255,.12)' : undefined }}>
+                <div key={t.id} className="dv-card" style={{ padding: 24, display: 'flex', flexDirection: 'column', borderColor: featured ? 'var(--dv-accent)' : undefined, boxShadow: 'none' }}>
                   <div className="dv-row" style={{ justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 15, fontWeight: 600 }}>{t.name}</span>
                     {featured && <span className="dv-badge dv-badge-blue">Volume pricing</span>}
@@ -236,12 +251,12 @@ export default function DevelopersHome() {
 
         {/* ── cta ── */}
         <section style={{ maxWidth: 1200, margin: '0 auto', padding: '56px 20px 40px' }}>
-          <div className="dv-card" style={{ padding: '48px 32px', textAlign: 'center', background: 'radial-gradient(600px 240px at 50% 0%, rgba(74,158,255,.14), transparent 70%), var(--dv-panel)' }}>
+          <div className="dv-card" style={{ padding: '48px 32px', textAlign: 'center', background: 'var(--dv-panel)' }}>
             <Layers size={26} color="var(--dv-accent)" />
             <h2 style={{ fontSize: 30, margin: '14px 0 10px', fontWeight: 600 }}>Put DialerSeat in your platform.</h2>
             <p className="dv-muted" style={{ fontSize: 15, margin: '0 auto 26px', maxWidth: 560, lineHeight: 1.6 }}>Activate a free developer account and have a test dialer on your page today. Talk to sales when you are ready for live volume.</p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <DevLink href="/sign-up" className="dv-btn dv-btn-primary dv-btn-lg">Start building free <ArrowRight size={16} /></DevLink>
+              <DevLink href="/sign-up" className="dv-btn dv-btn-primary dv-btn-lg">Start building <ArrowRight size={16} /></DevLink>
               <a href={`mailto:${SALES_EMAIL}?subject=${encodeURIComponent('DialerSeat for Developers')}`} className="dv-btn dv-btn-lg"><Repeat size={15} /> Talk to sales</a>
             </div>
           </div>
@@ -252,8 +267,13 @@ export default function DevelopersHome() {
         .dv-faq summary::-webkit-details-marker { display: none; }
         .dv-faq[open] .dv-faq-plus { transform: rotate(45deg); }
         .dv-faq-plus { transition: transform .15s; font-size: 18px; }
+        .dv-steps > .dv-card { animation: dv-rise .55s ease-out both; }
+        .dv-steps > .dv-card:nth-child(2) { animation-delay: .08s; } .dv-steps > .dv-card:nth-child(3) { animation-delay: .16s; }
+        .dv-steps > .dv-card:nth-child(4) { animation-delay: .24s; } .dv-steps > .dv-card:nth-child(5) { animation-delay: .32s; }
+        @keyframes dv-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+        @media (prefers-reduced-motion: reduce) { .dv-steps > .dv-card { animation: none; } }
         @media (max-width: 1000px) {
-          .dv-hero { grid-template-columns: minmax(0, 1fr) !important; padding-top: 56px !important; gap: 36px !important; }
+          .dv-hero, .dv-watch { grid-template-columns: minmax(0, 1fr) !important; padding-top: 56px !important; gap: 36px !important; }
           .dv-steps { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
           .dv-tiers { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
         }

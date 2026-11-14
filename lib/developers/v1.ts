@@ -145,6 +145,10 @@ export function str(v: unknown, max = 200): string | null {
 }
 
 /** Public shape of a seat: our ids, never a Telnyx or internal user id. */
-export function seatOut(s: { id: string; env: string; external_user_id: string; email: string | null; name: string | null; status: string; billed_to: string; created_at: string; updated_at: string }) {
-  return { object: 'seat', id: s.id, livemode: s.env === 'live', external_user_id: s.external_user_id, email: s.email, name: s.name, status: s.status, billed_to: s.billed_to, created_at: s.created_at, updated_at: s.updated_at }
+export function seatOut(s: { id: string; env: string; external_user_id: string; email: string | null; name: string | null; status: string; billed_to: string; created_at: string; updated_at: string; paid_through?: string | null; canceled_at?: string | null; external_subscription_id?: string | null }) {
+  return {
+    object: 'seat', id: s.id, livemode: s.env === 'live', external_user_id: s.external_user_id, email: s.email, name: s.name,
+    status: s.status, billed_to: s.billed_to, paid_through: s.paid_through ?? null, canceled_at: s.canceled_at ?? null,
+    external_subscription_id: s.external_subscription_id ?? null, created_at: s.created_at, updated_at: s.updated_at,
+  }
 }

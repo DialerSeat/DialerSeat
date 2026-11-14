@@ -44,8 +44,67 @@ export interface Platform {
   rate_per_dial: number | null
   revenue_share_pct: number | null
   notes: string | null
+  /** The signup survey: what the project is and what it is for. */
+  profile: ProjectProfile
+  integration_approach: Approach | null
+  setup_completed_at: string | null
+  /** How DialerSeat's cut is worked out once sales sets a rate. */
+  cut_model: 'seat_week' | 'revenue_share'
   created_at: string
   updated_at: string
+}
+
+export type Approach = 'script' | 'iframe' | 'react' | 'headless' | 'hosted'
+
+export interface ProjectProfile {
+  kind?: string
+  audience?: string[]
+  goals?: string[]
+  modes?: string[]
+  billing?: string
+  size?: string
+  stack?: string[]
+}
+
+export interface DevAccount {
+  user_id: string
+  activated_at: string
+  current_platform_id: string | null
+}
+
+export type LedgerKind = 'signup' | 'renewal' | 'refund' | 'owner_payment' | 'adjustment'
+
+export interface LedgerRow {
+  id: string
+  platform_id: string
+  env: Env
+  kind: LedgerKind
+  seat_id: string | null
+  external_user_id: string | null
+  external_subscription_id: string | null
+  /** What the platform's user paid the platform. Negative for a refund. */
+  customer_amount_cents: number | null
+  /** DialerSeat's cut, owed by the owner. Negative for a payment or credit. Null: no rate set yet. */
+  fee_cents: number | null
+  currency: string
+  period_start: string | null
+  period_end: string | null
+  source: 'api' | 'stripe' | 'checkout' | 'console'
+  idempotency_key: string | null
+  note: string | null
+  created_at: string
+}
+
+export interface BillingSource {
+  id: string
+  platform_id: string
+  env: Env
+  kind: 'stripe'
+  token: string
+  signing_secret: string | null
+  created_at: string
+  last_event_at: string | null
+  disabled_at: string | null
 }
 
 export interface ApiKey {
@@ -122,9 +181,15 @@ export interface Seat {
   name: string | null
   status: 'pending' | 'active' | 'past_due' | 'disabled'
   billed_to: 'user' | 'platform'
+  /** The end of the period the platform's user has paid for. Null: not billed through us. */
+  paid_through: string | null
+  external_subscription_id: string | null
+  canceled_at: string | null
   created_at: string
   updated_at: string
 }
+
+type SeatBilling = 'status' | 'paid_through' | 'external_subscription_id' | 'canceled_at'
 
 export interface SeatSession {
   id: string
@@ -132,8 +197,13 @@ export interface SeatSession {
   token_hash: string
   expires_at: string
   used_at: string | null
+  /** Leads the platform's server sent with the session (hosted link and plain iframe). */
+  leads?: SessionLead[] | null
+  campaign?: string | null
   created_at: string
 }
+
+export interface SessionLead { external_id?: string; first_name?: string; last_name?: string; phone: string; state?: string; company?: string; note?: string }
 
 export interface CampaignLink {
   id: string
@@ -193,16 +263,23 @@ export interface RequestLogRow {
 
 export type PlatformPatch = Partial<Pick<Platform,
   'name' | 'website' | 'billing_model' | 'default_dial_mode' | 'allowed_dial_modes' |
-  'seats_may_choose_mode' | 'allowed_origins' | 'live_status' | 'live_requested_at'>>
+  'seats_may_choose_mode' | 'allowed_origins' | 'live_status' | 'live_requested_at' |
+  'profile' | 'integration_approach' | 'setup_completed_at'>>
+
+export type NewPlatform = { owner_user_id: string; name: string; slug: string; website: string | null; profile?: ProjectProfile; integration_approach?: Approach | null }
 
 export interface DevStore {
   readonly backend: 'supabase' | 'local'
   /** The DialerSeat users.id for a Clerk user, or null if the users row does not exist yet. */
   resolveUserId(clerkUserId: string): Promise<string | null>
 
-  getPlatformByOwner(userId: string): Promise<Platform | null>
+  getAccount(userId: string): Promise<DevAccount | null>
+  createAccount(userId: string): Promise<DevAccount>
+  setCurrentPlatform(userId: string, platformId: string): Promise<void>
+  /** Every project the user owns, oldest first. */
+  listPlatformsByOwner(userId: string): Promise<Platform[]>
   getPlatform(id: string): Promise<Platform | null>
-  createPlatform(input: { owner_user_id: string; name: string; slug: string; website: string | null }): Promise<Platform>
+  createPlatform(input: NewPlatform): Promise<Platform>
   updatePlatform(id: string, patch: PlatformPatch): Promise<Platform>
   slugTaken(slug: string): Promise<boolean>
 
@@ -233,8 +310,9 @@ export interface DevStore {
 
   listSeats(platformId: string, env?: Env): Promise<Seat[]>
   getSeat(platformId: string, id: string): Promise<Seat | null>
-  upsertSeat(row: Omit<Seat, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'status'> & { status?: Seat['status'] }): Promise<Seat>
-  updateSeat(platformId: string, id: string, patch: Partial<Pick<Seat, 'name' | 'email' | 'billed_to' | 'status'>>): Promise<Seat | null>
+  upsertSeat(row: Omit<Seat, 'id' | 'created_at' | 'updated_at' | 'user_id' | SeatBilling> & Partial<Pick<Seat, SeatBilling>>): Promise<Seat>
+  updateSeat(platformId: string, id: string, patch: Partial<Pick<Seat, 'name' | 'email' | 'billed_to' | SeatBilling>>): Promise<Seat | null>
+  findSeatBySubscription(platformId: string, env: Env, subscriptionId: string): Promise<Seat | null>
 
   insertSession(row: Omit<SeatSession, 'id' | 'created_at' | 'used_at'>): Promise<SeatSession>
   findSessionByHash(hash: string): Promise<SeatSession | null>
@@ -266,6 +344,16 @@ export interface DevStore {
   getSeatCredential(seatId: string): Promise<SeatCredential | null>
   insertSeatCredential(row: SeatCredential): Promise<boolean>
 
+  /** Records a ledger row once per idempotency key; a repeat returns the first row with duplicate true. */
+  insertLedger(row: Omit<LedgerRow, 'id' | 'created_at'>): Promise<{ row: LedgerRow; duplicate: boolean }>
+  listLedger(platformId: string, env: Env, limit: number): Promise<LedgerRow[]>
+  hasLedgerForSubscription(platformId: string, env: Env, subscriptionId: string): Promise<boolean>
+
+  getBillingSource(platformId: string, env: Env): Promise<BillingSource | null>
+  upsertBillingSource(row: Pick<BillingSource, 'platform_id' | 'env' | 'kind' | 'token' | 'signing_secret'>): Promise<BillingSource>
+  findBillingSourceByToken(token: string): Promise<BillingSource | null>
+  touchBillingSource(id: string): Promise<void>
+
   logRequest(row: Omit<RequestLogRow, 'id' | 'created_at'>): Promise<void>
   listRequests(platformId: string, limit: number): Promise<RequestLogRow[]>
 }
@@ -290,6 +378,9 @@ interface LocalData {
   numbers: DevNumber[]
   credentials: SeatCredential[]
   requests: RequestLogRow[]
+  accounts: DevAccount[]
+  ledger: LedgerRow[]
+  sources: BillingSource[]
 }
 
 const LOCAL_FILE = path.join(process.cwd(), '.dev-platform-store.json')
@@ -300,7 +391,7 @@ const LOCAL_FILE = path.join(process.cwd(), '.dev-platform-store.json')
 const g = globalThis as unknown as { __devStoreQueue?: Promise<unknown> }
 g.__devStoreQueue ??= Promise.resolve()
 
-const EMPTY = (): LocalData => ({ users: {}, platforms: [], keys: [], webhooks: [], deliveries: [], exceptions: [], dispositions: [], seats: [], sessions: [], campaigns: [], calls: [], dnc: [], numbers: [], credentials: [], requests: [] })
+const EMPTY = (): LocalData => ({ users: {}, platforms: [], keys: [], webhooks: [], deliveries: [], exceptions: [], dispositions: [], seats: [], sessions: [], campaigns: [], calls: [], dnc: [], numbers: [], credentials: [], requests: [], accounts: [], ledger: [], sources: [] })
 
 async function readLocal(): Promise<LocalData> {
   let text: string
@@ -342,11 +433,12 @@ function withLocal<T>(fn: (d: LocalData) => T | Promise<T>, write = false): Prom
   return run
 }
 
-function platformDefaults(input: { owner_user_id: string; name: string; slug: string; website: string | null }): Platform {
+function platformDefaults(input: NewPlatform): Platform {
   const t = now()
   return {
-    id: randomUUID(), ...input, activated_at: t, live_status: 'not_activated', live_requested_at: null,
-    live_activated_at: null, tier: 'sandbox', billing_model: 'user', default_dial_mode: 'power',
+    id: randomUUID(), ...input, profile: input.profile || {}, integration_approach: input.integration_approach ?? null,
+    setup_completed_at: null, cut_model: 'seat_week', activated_at: t, live_status: 'not_activated', live_requested_at: null,
+    live_activated_at: null, tier: 'sandbox', billing_model: 'platform', default_dial_mode: 'power',
     allowed_dial_modes: ['preview', 'progressive', 'power', 'predictive'], seats_may_choose_mode: true,
     allowed_origins: [], rate_seat_week: null, rate_included_dials: null, rate_per_dial: null,
     revenue_share_pct: null, notes: null, created_at: t, updated_at: t,
@@ -359,12 +451,26 @@ const localStore: DevStore = {
     if (!d.users[clerkId]) d.users[clerkId] = randomUUID()
     return d.users[clerkId]
   }, true),
-  getPlatformByOwner: (uid) => withLocal(d => d.platforms.find(p => p.owner_user_id === uid) || null),
-  getPlatform: (id) => withLocal(d => d.platforms.find(p => p.id === id) || null),
-  createPlatform: (input) => withLocal(d => {
-    if (d.platforms.some(p => p.owner_user_id === input.owner_user_id)) throw new Error('platform_exists')
-    const p = platformDefaults(input); d.platforms.push(p); return p
+  getAccount: (uid) => withLocal(d => {
+    const a = d.accounts.find(x => x.user_id === uid)
+    if (a) return a
+    // Files written before accounts existed: an owner of a project is activated.
+    const first = d.platforms.find(p => p.owner_user_id === uid)
+    return first ? { user_id: uid, activated_at: first.activated_at, current_platform_id: first.id } : null
+  }),
+  createAccount: (uid) => withLocal(d => {
+    const ex = d.accounts.find(x => x.user_id === uid); if (ex) return ex
+    const a = { user_id: uid, activated_at: now(), current_platform_id: d.platforms.find(p => p.owner_user_id === uid)?.id ?? null }
+    d.accounts.push(a); return a
   }, true),
+  setCurrentPlatform: (uid, pid) => withLocal(d => {
+    let a = d.accounts.find(x => x.user_id === uid)
+    if (!a) { a = { user_id: uid, activated_at: now(), current_platform_id: null }; d.accounts.push(a) }
+    a.current_platform_id = pid
+  }, true),
+  listPlatformsByOwner: (uid) => withLocal(d => d.platforms.filter(p => p.owner_user_id === uid).map(p => ({ ...platformDefaults(p), ...p })).sort((a, b) => a.created_at.localeCompare(b.created_at))),
+  getPlatform: (id) => withLocal(d => { const p = d.platforms.find(x => x.id === id); return p ? { ...platformDefaults(p), ...p } : null }),
+  createPlatform: (input) => withLocal(d => { const p = platformDefaults(input); d.platforms.push(p); return p }, true),
   updatePlatform: (id, patch) => withLocal(d => {
     const p = d.platforms.find(x => x.id === id); if (!p) throw new Error('not_found')
     Object.assign(p, patch, { updated_at: now() }); return p
@@ -426,9 +532,13 @@ const localStore: DevStore = {
   getSeat: (pid, id) => withLocal(d => d.seats.find(s => s.platform_id === pid && s.id === id) || null),
   upsertSeat: (row) => withLocal(d => {
     const ex = d.seats.find(s => s.platform_id === row.platform_id && s.env === row.env && s.external_user_id === row.external_user_id)
-    if (ex) { Object.assign(ex, { email: row.email ?? ex.email, name: row.name ?? ex.name, billed_to: row.billed_to, updated_at: now() }); return ex }
+    if (ex) {
+      Object.assign(ex, { email: row.email ?? ex.email, name: row.name ?? ex.name, billed_to: row.billed_to, updated_at: now() })
+      for (const k of ['status', 'paid_through', 'external_subscription_id', 'canceled_at'] as const) if (row[k] !== undefined) Object.assign(ex, { [k]: row[k] })
+      return ex
+    }
     const t = now()
-    const s: Seat = { ...row, status: row.status || 'pending', id: randomUUID(), user_id: null, created_at: t, updated_at: t }
+    const s: Seat = { paid_through: null, external_subscription_id: null, canceled_at: null, ...row, status: row.status || 'pending', id: randomUUID(), user_id: null, created_at: t, updated_at: t }
     d.seats.push(s); return s
   }, true),
   updateSeat: (pid, id, patch) => withLocal(d => {
@@ -444,6 +554,7 @@ const localStore: DevStore = {
     x.used_at = now(); return true
   }, true),
   getSeatById: (id) => withLocal(d => d.seats.find(x => x.id === id) || null),
+  findSeatBySubscription: (pid, env, sub) => withLocal(d => d.seats.find(x => x.platform_id === pid && x.env === env && x.external_subscription_id === sub) || null),
 
   listCampaignLinks: (pid, env) => withLocal(d => (d.campaigns || []).filter(c => c.platform_id === pid && c.env === env).sort((a, b) => b.created_at.localeCompare(a.created_at))),
   getCampaignLink: (pid, env, key) => withLocal(d => (d.campaigns || []).find(c => c.platform_id === pid && c.env === env && (c.id === key || c.external_id === key)) || null),
@@ -485,6 +596,21 @@ const localStore: DevStore = {
     d.credentials.push(row); return true
   }, true),
 
+  insertLedger: (row) => withLocal(d => {
+    const ex = row.idempotency_key ? d.ledger.find(x => x.platform_id === row.platform_id && x.env === row.env && x.idempotency_key === row.idempotency_key) : null
+    if (ex) return { row: ex, duplicate: true }
+    const x = { ...row, id: randomUUID(), created_at: now() }; d.ledger.push(x); return { row: x, duplicate: false }
+  }, true),
+  listLedger: (pid, env, limit) => withLocal(d => d.ledger.filter(x => x.platform_id === pid && x.env === env).sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit)),
+  hasLedgerForSubscription: (pid, env, sub) => withLocal(d => d.ledger.some(x => x.platform_id === pid && x.env === env && x.external_subscription_id === sub)),
+  getBillingSource: (pid, env) => withLocal(d => d.sources.find(x => x.platform_id === pid && x.env === env && !x.disabled_at) || null),
+  upsertBillingSource: (row) => withLocal(d => {
+    const ex = d.sources.find(x => x.platform_id === row.platform_id && x.env === row.env && x.kind === row.kind)
+    if (ex) { Object.assign(ex, row, { disabled_at: null }); return ex }
+    const x: BillingSource = { ...row, id: randomUUID(), created_at: now(), last_event_at: null, disabled_at: null }; d.sources.push(x); return x
+  }, true),
+  findBillingSourceByToken: (t) => withLocal(d => d.sources.find(x => x.token === t && !x.disabled_at) || null),
+  touchBillingSource: (id) => withLocal(d => { const x = d.sources.find(y => y.id === id); if (x) x.last_event_at = now() }, true),
   logRequest: (row) => withLocal(d => {
     d.requests.push({ ...row, id: (d.requests.at(-1)?.id || 0) + 1, created_at: now() })
     if (d.requests.length > 2000) d.requests = d.requests.slice(-2000)
@@ -507,8 +633,18 @@ function supabaseStore(): DevStore {
       const r = await db.from('users').select('id').eq('clerk_id', clerkId).maybeSingle()
       return (must(r, 'users') as { id: string } | null)?.id ?? null
     },
-    async getPlatformByOwner(uid) {
-      return must(await db.from('dev_platforms').select('*').eq('owner_user_id', uid).maybeSingle(), 'platform') as Platform | null
+    async getAccount(uid) {
+      return must(await db.from('dev_accounts').select('*').eq('user_id', uid).maybeSingle(), 'account') as DevAccount | null
+    },
+    async createAccount(uid) {
+      must(await db.from('dev_accounts').upsert({ user_id: uid }, { onConflict: 'user_id', ignoreDuplicates: true }), 'create account')
+      return must(await db.from('dev_accounts').select('*').eq('user_id', uid).single(), 'account') as DevAccount
+    },
+    async setCurrentPlatform(uid, pid) {
+      must(await db.from('dev_accounts').upsert({ user_id: uid, current_platform_id: pid }, { onConflict: 'user_id' }), 'current project')
+    },
+    async listPlatformsByOwner(uid) {
+      return must(await db.from('dev_platforms').select('*').eq('owner_user_id', uid).order('created_at'), 'projects') as Platform[]
     },
     async getPlatform(id) {
       return must(await db.from('dev_platforms').select('*').eq('id', id).maybeSingle(), 'platform') as Platform | null
@@ -616,6 +752,10 @@ function supabaseStore(): DevStore {
       return must(await db.from('dev_seat_sessions').insert(row).select('*').single(), 'session') as SeatSession
     },
 
+    async findSeatBySubscription(pid, env, sub) {
+      return must(await db.from('dev_seats').select('*').eq('platform_id', pid).eq('env', env).eq('external_subscription_id', sub).limit(1).maybeSingle(), 'seat') as Seat | null
+    },
+
     async findSessionByHash(h) {
       return must(await db.from('dev_seat_sessions').select('*').eq('token_hash', h).maybeSingle(), 'session') as SeatSession | null
     },
@@ -686,6 +826,34 @@ function supabaseStore(): DevStore {
     async insertSeatCredential(row) {
       const { error } = await db.from('dev_seat_credentials').insert(row)
       return !error
+    },
+
+    async insertLedger(row) {
+      const r = await db.from('dev_ledger').insert(row).select('*').single()
+      if (r.error && r.error.code === '23505' && row.idempotency_key) {
+        const ex = must(await db.from('dev_ledger').select('*').eq('platform_id', row.platform_id).eq('env', row.env).eq('idempotency_key', row.idempotency_key).single(), 'ledger') as unknown as LedgerRow
+        return { row: ex, duplicate: true }
+      }
+      return { row: must(r, 'ledger') as LedgerRow, duplicate: false }
+    },
+    async listLedger(pid, env, limit) {
+      return must(await db.from('dev_ledger').select('*').eq('platform_id', pid).eq('env', env).order('created_at', { ascending: false }).limit(limit), 'ledger') as LedgerRow[]
+    },
+    async hasLedgerForSubscription(pid, env, sub) {
+      const r = must(await db.from('dev_ledger').select('id').eq('platform_id', pid).eq('env', env).eq('external_subscription_id', sub).limit(1), 'ledger') as { id: string }[]
+      return r.length > 0
+    },
+    async getBillingSource(pid, env) {
+      return must(await db.from('dev_billing_sources').select('*').eq('platform_id', pid).eq('env', env).is('disabled_at', null).maybeSingle(), 'billing source') as BillingSource | null
+    },
+    async upsertBillingSource(row) {
+      return must(await db.from('dev_billing_sources').upsert({ ...row, disabled_at: null }, { onConflict: 'platform_id,env,kind' }).select('*').single(), 'billing source') as BillingSource
+    },
+    async findBillingSourceByToken(t) {
+      return must(await db.from('dev_billing_sources').select('*').eq('token', t).is('disabled_at', null).maybeSingle(), 'billing source') as BillingSource | null
+    },
+    async touchBillingSource(id) {
+      await db.from('dev_billing_sources').update({ last_event_at: now() }).eq('id', id)
     },
 
     async logRequest(row) {

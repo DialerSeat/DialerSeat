@@ -43,7 +43,7 @@ export function DevTopNav({ themeToggle = false }: { themeToggle?: boolean }) {
           ) : (
             <>
               <DevLink href="/sign-in" className="dv-btn dv-btn-ghost dv-hide-sm">Sign in</DevLink>
-              <DevLink href="/sign-up" className="dv-btn dv-btn-primary dv-hide-xs"><span className="dv-hide-sm">Start building free</span><span className="dv-show-sm">Start free</span></DevLink>
+              <DevLink href="/sign-up" className="dv-btn dv-btn-primary dv-hide-xs">Start building</DevLink>
             </>
           )}
           <button type="button" className="dv-btn dv-btn-ghost dv-show-sm" aria-label="Menu" onClick={() => setOpen(o => !o)}>{open ? <X size={18} /> : <Menu size={18} />}</button>
@@ -56,7 +56,7 @@ export function DevTopNav({ themeToggle = false }: { themeToggle?: boolean }) {
             ? <DevLink href="/console" style={{ padding: '10px 0', fontSize: 15, color: 'var(--dv-accent)' }}>Open console</DevLink>
             : <>
                 <DevLink href="/sign-in" style={{ padding: '10px 0', fontSize: 15 }}>Sign in</DevLink>
-                <DevLink href="/sign-up" style={{ padding: '10px 0', fontSize: 15, color: 'var(--dv-accent)' }}>Start building free</DevLink>
+                <DevLink href="/sign-up" style={{ padding: '10px 0', fontSize: 15, color: 'var(--dv-accent)' }}>Start building</DevLink>
               </>}
         </div>
       )}

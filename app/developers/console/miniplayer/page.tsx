@@ -48,8 +48,8 @@ export default async function MiniplayerPage() {
                 <li>Signing the seat in from the session token. No DialerSeat login prompt inside your app.</li>
                 <li>The lead queue your page passes in, with the dial mode your policy allows for this seat and campaign.</li>
                 <li>Call controls (mute, hold, hang up), answering-machine detection, and auto-advance with a pause.</li>
-                <li>Your disposition list and agent notes, sent back to you by webhook and to your page as an event.</li>
-                <li>The right screen when a seat cannot dial yet: unpaid, waiting for you, or live dialing off. Weekly checkout for user-billed seats opens there at launch.</li>
+                <li>Your disposition list, with Skip always last, and agent notes, sent back to you by webhook and to your page as an event.</li>
+                <li>The right screen when a seat cannot dial yet: its paid days ended, it is waiting for you, or live dialing is off.</li>
               </ul>
             </div>
           </div>

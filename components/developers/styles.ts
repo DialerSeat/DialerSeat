@@ -88,8 +88,8 @@ export const DEV_CSS = `
 .dv-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 8px; font: 500 13px/1 var(--dv-sans); letter-spacing: .3px; cursor: pointer; border: 1px solid var(--dv-border); background: var(--dv-panel-2); color: var(--dv-text); transition: background .15s, border-color .15s, opacity .15s; white-space: nowrap; }
 .dv-btn:hover { background: var(--dv-raise); border-color: var(--dv-hover-border); }
 .dv-btn:disabled { opacity: .5; cursor: not-allowed; }
-.dv-btn-primary { background: linear-gradient(135deg, var(--dv-accent), var(--dv-accent-2)); border-color: transparent; color: #fff; }
-.dv-btn-primary:hover { background: linear-gradient(135deg, #5aa8ff, #3a7bff); border-color: transparent; }
+.dv-btn-primary { background: var(--dv-accent-2); border-color: transparent; color: #fff; }
+.dv-btn-primary:hover { background: var(--dv-accent); border-color: transparent; }
 .dv-btn-ghost { background: transparent; border-color: transparent; color: var(--dv-muted); }
 .dv-btn-ghost:hover { background: var(--dv-panel-2); color: var(--dv-text); border-color: transparent; }
 .dv-btn-danger { color: var(--dv-red); }
@@ -100,7 +100,7 @@ export const DEV_CSS = `
 /* ── inputs ── */
 .dv-input, .dv-select, .dv-textarea { width: 100%; height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--dv-border); background: var(--dv-bg-2); color: var(--dv-text); font: 14px var(--dv-sans); outline: none; transition: border-color .15s, box-shadow .15s; }
 .dv-textarea { height: auto; min-height: 90px; padding: 10px 12px; font-family: var(--dv-mono); font-size: 13px; resize: vertical; }
-.dv-input:focus, .dv-select:focus, .dv-textarea:focus { border-color: var(--dv-accent); box-shadow: 0 0 0 3px var(--dv-accent-soft); }
+.dv-input:focus, .dv-select:focus, .dv-textarea:focus { border-color: var(--dv-accent); }
 .dv-label { display: block; font-size: 12px; color: var(--dv-muted); margin-bottom: 6px; letter-spacing: .3px; }
 .dv-help { font-size: 12px; color: var(--dv-dim); margin-top: 6px; line-height: 1.5; }
 

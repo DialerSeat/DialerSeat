@@ -324,6 +324,9 @@ export async function POST(req: Request) {
       // record of its cause anywhere.
       case 'payment_intent.payment_failed': {
         const intent = event.data.object as Stripe.PaymentIntent
+        // A dev.dialerseat.com project paying its balance is not a dialerseat.com
+        // checkout: it must never land in checkout_failed or the stall alerts.
+        if (intent.metadata?.product === 'developers') break
 
         // The charge holds `outcome`, which is the half worth having. A
         // payment blocked before reaching the network has no charge at all,

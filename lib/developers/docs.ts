@@ -99,9 +99,10 @@ export const DOCS: DocPage[] = [
     blocks: [
       { t: 'p', text: 'A seat is a user on your platform who dials. Behind it is a normal DialerSeat user, so every call they make is recorded and reported exactly as any other DialerSeat call.' },
       { t: 'h', id: 'billing', text: 'Who pays for a seat' },
-      { t: 'p', text: 'billed_to is user or platform. A user-billed seat sees DialerSeat checkout the first time it opens the miniplayer and becomes active when the payment goes through. A platform-billed seat is active at once and counts toward your weekly invoice.' },
+      { t: 'p', text: 'Seats are platform-billed by default: your user pays you, you report it with POST /v1/subscriptions (or by forwarding your Stripe webhook), and the seat dials through the period they paid for. See Billing.' },
       { t: 'h', id: 'sessions', text: 'Sessions' },
       { t: 'p', text: 'POST /seats/{id}/sessions returns a token that lasts 15 minutes and works once. Pass it to DialerSeat.mount. The user is never asked to sign in to DialerSeat.' },
+      { t: 'p', text: 'The body may carry { campaign, leads } (up to 500 leads). The dialer opens with that list already loaded, which is how a hosted dialer link or a plain iframe works with no script on your page.' },
     ],
   },
   {
@@ -202,7 +203,7 @@ export const DOCS: DocPage[] = [
       { t: 'list', items: [
         'ready: the dialer is signed in. Carries the seat, the environment and the dial mode.',
         'call: a call changed state: ringing, connected, voicemail or ended.',
-        'disposition: the agent saved an outcome. Carries your code, label, outcome class, notes and the lead.',
+        'disposition: the agent saved an outcome. Carries your code, label, outcome class, notes and the lead. Skip is always the last choice: it sends code SKIP with outcome skipped, so you still hear about the call.',
         'queue_empty: every lead has been called.',
         'error: the dialer could not open, for example because the session expired or this page is not an allowed origin.',
       ] },
@@ -226,20 +227,84 @@ export const DOCS: DocPage[] = [
   },
   {
     slug: 'billing',
-    title: 'Billing and live dialing',
+    title: 'Billing and signups',
     group: 'Operate',
-    summary: 'Free to build. Pay for live dialing, by the user or by the platform.',
-    keywords: ['billing', 'pricing', 'price', 'invoice', 'payment', 'pay', 'cost', 'rates', 'negotiate', 'volume', 'revenue share', 'activate', 'live dialing', 'sales', 'weekly', 'tier', 'plan'],
+    summary: 'Your users pay you. You tell DialerSeat when they do, their seat dials for the period they paid for, and DialerSeat bills you its cut.',
+    keywords: ['billing', 'pricing', 'price', 'invoice', 'payment', 'pay', 'cost', 'rates', 'negotiate', 'volume', 'revenue share', 'activate', 'live dialing', 'sales', 'weekly', 'tier', 'plan', 'signup', 'subscription', 'renewal', 'cancel', 'stripe', 'webhook', 'ledger', 'balance', 'cut', 'fee', 'trigger', 'platform billed'],
     blocks: [
-      { t: 'p', text: 'Building is free. You pay when calls are real.' },
-      { t: 'h', id: 'models', text: 'Who pays' },
+      { t: 'p', text: 'Building is free. Seats are platform-billed by default: you charge your users whatever you like, in your own checkout, and DialerSeat bills you, the owner, its cut. Your users never see a DialerSeat bill.' },
+      { t: 'h', id: 'flow', text: 'How it works' },
       { t: 'list', items: [
-        'User-billed: each user pays DialerSeat inside the miniplayer, by the week. Your platform pays nothing and can earn a revenue share.',
-        'Platform-billed: you pay one weekly invoice for every active seat and the dials they make, at your negotiated rate, and charge your users whatever you like.',
-        'Mixed: you choose per seat.',
+        'One of your users signs up or renews and pays you.',
+        'You tell DialerSeat: POST /v1/subscriptions from your code, or forward your Stripe webhook with no code at all.',
+        'Their seat is created or renewed and dials through the period they paid for.',
+        'DialerSeat\'s cut for that period goes on your project\'s balance. You pay it from the console.',
       ] },
-      { t: 'h', id: 'rates', text: 'Rates' },
-      { t: 'p', text: `Platform rates are negotiated on volume and leverage: a price per seat per week, dials included, and a price per dial beyond them. Rates are set with sales at ${SALES_EMAIL} and are subject to change.` },
+      { t: 'h', id: 'api', text: 'Report a payment from your code' },
+      { t: 'p', text: 'Call it wherever your billing confirms a payment. amount is what the user paid you, in cents. Send interval (week, month or year) or the exact period_start and period_end. The same Idempotency-Key never records twice, so retries are safe.' },
+      { t: 'code', lang: 'bash', title: 'A signup or renewal', code: `curl ${API_BASE}/subscriptions \\
+  -H "Authorization: Bearer $DIALERSEAT_SECRET_KEY" \\
+  -H "Idempotency-Key: invoice_8841" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "external_user_id": "usr_829", "email": "dana@acme.com", "external_subscription_id": "sub_829", "amount": 4900, "currency": "usd", "interval": "month" }'` },
+      { t: 'p', text: 'The response has the seat (status active, paid_through), the period, and fee: the cut for this payment, or status rate_not_set until your rate is agreed. The same facts arrive by webhook as subscription.recorded.' },
+      { t: 'h', id: 'cancel', text: 'Cancellations' },
+      { t: 'p', text: 'POST /v1/subscriptions/cancel with external_user_id or external_subscription_id. The seat keeps dialing until the end of the period already paid for, then stops. Pass end_now: true to stop it at once, for example after a refund.' },
+      { t: 'h', id: 'stripe', text: 'Forward your Stripe instead' },
+      { t: 'p', text: 'If you bill on Stripe, no code is needed. In the console under Billing, make your endpoint URL. In Stripe, open Workbench, then Webhooks, then Create an event destination: choose Your account, payload Snapshot, the events invoice.paid and customer.subscription.deleted, and paste the URL. Paste the endpoint\'s whsec_ signing secret back into the console.' },
+      { t: 'list', items: [
+        'Each paid subscription invoice activates or renews that user\'s seat for the invoice\'s period. The same invoice is never counted twice.',
+        'A deleted subscription is a cancellation: the seat keeps its paid days.',
+        'Put dialerseat_user_id in the subscription\'s metadata to use your own user id. Without it, the Stripe customer id is the seat\'s id.',
+        'Test-mode Stripe events go to your test endpoint and live to your live one.',
+      ] },
+      { t: 'h', id: 'cut', text: 'DialerSeat\'s cut' },
+      { t: 'p', text: `Your rate follows the dial modes your users need and your volume, and is agreed with sales at ${SALES_EMAIL}: a flat amount per seat per week, or a share of what each user pays you. Until it is agreed, payments are recorded with no fee and nothing is charged. Rates are subject to change.` },
+      { t: 'h', id: 'balance', text: 'Your balance' },
+      { t: 'p', text: 'The console shows every signup, renewal and payment, what your users paid you, DialerSeat\'s cut and what is due. Pay it by card from the Billing page. GET /v1/balance returns the same figures.' },
+      { t: 'h', id: 'live', text: 'Live dialing' },
+      { t: 'p', text: 'Everything above works in test mode, with a Simulate a signup button in the console. Live keys place real calls once live dialing is switched on for your project, which happens when your rate is agreed.' },
+    ],
+  },
+  {
+    slug: 'integration-approaches',
+    title: 'Ways to put the dialer in',
+    group: 'Start here',
+    summary: 'Script tag, React component, plain iframe, hosted link or headless: what each needs, and which to pick.',
+    keywords: ['integration', 'approach', 'embed', 'script tag', 'react', 'iframe', 'hosted', 'popup', 'window', 'headless', 'no code', 'csp', 'which one', 'compare', 'wire up', 'html', 'architecture'],
+    blocks: [
+      { t: 'p', text: 'Every approach uses the same two server calls: a seat for each user who dials, and a one-use session each time the dialer opens. They differ only in how the dialer reaches the screen.' },
+      { t: 'code', lang: 'js', title: 'On your server, for every approach', code: `const DS = '${API_BASE}'
+const headers = { Authorization: \`Bearer \${process.env.DIALERSEAT_SECRET_KEY}\`, 'Content-Type': 'application/json' }
+
+const seat = await fetch(\`\${DS}/seats\`, { method: 'POST', headers,
+  body: JSON.stringify({ external_user_id: user.id, email: user.email, name: user.name }) }).then(r => r.json())
+
+const { token } = await fetch(\`\${DS}/seats/\${seat.id}/sessions\`, { method: 'POST', headers,
+  body: JSON.stringify({ campaign: 'crm_campaign_77', leads }) }).then(r => r.json())` },
+      { t: 'h', id: 'script', text: 'Script tag (most apps)' },
+      { t: 'p', text: 'One script and a div. The dialer mounts itself, takes leads from the page, and sends browser events back to your page. Allow your domains under Miniplayer. About ten minutes.' },
+      { t: 'h', id: 'react', text: 'React component' },
+      { t: 'p', text: 'The same script, wrapped in a small component that loads it once and mounts with a fresh session. The console\'s Setup page has the component ready to copy.' },
+      { t: 'h', id: 'iframe', text: 'Plain iframe' },
+      { t: 'p', text: `For pages that cannot load third-party scripts (strict CSP, page builders, older apps). Point an iframe at ${'https://dev.dialerseat.com'}/embed/dialer?k=YOUR_PUBLISHABLE_KEY#s=SESSION_TOKEN with allow="microphone; autoplay". Send the leads with the session. To hear events in the page, listen for message events from https://dev.dialerseat.com.` },
+      { t: 'h', id: 'hosted', text: 'Hosted dialer link' },
+      { t: 'p', text: 'The fastest start: a button that opens the dialer in its own window. Nothing to embed and no origin to allow. Leads travel with the session; results reach you by webhook.' },
+      { t: 'h', id: 'headless', text: 'Headless (early access)' },
+      { t: 'p', text: 'Your own screens for leads and results, driven by the API and webhooks. Agents still place calls in the dialer, opened as a hosted window. Full call control from your own interface is on the roadmap; talk to sales if you need it.' },
+      { t: 'h', id: 'which', text: 'Which to pick' },
+      { t: 'list', items: [
+        'A web app you control: script tag, or the React component if you use React.',
+        'A page that blocks third-party scripts: plain iframe.',
+        'No front-end time this week: hosted link.',
+        'You are building your own dialer screen: headless, with the hosted window for calls today.',
+      ] },
+      { t: 'h', id: 'always', text: 'In every approach' },
+      { t: 'list', items: [
+        'Write results to your database from webhooks, which are signed and retried. Browser events are for your interface only.',
+        'Report each signup and renewal (POST /v1/subscriptions or Stripe forwarding) so seats stay active for the days paid for.',
+        'Skip is always the last disposition; it arrives as code SKIP.',
+      ] },
     ],
   },
   {

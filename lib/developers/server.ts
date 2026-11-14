@@ -4,24 +4,31 @@ import 'server-only'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { cookies, headers } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { devStore, type Platform } from './store'
+import { devStore, type DevAccount, type Platform } from './store'
 import { localTestUser } from './localAuth'
 
 export interface DevContext {
   clerkUserId: string
   /** users.id, or null if the account's users row has not been written yet. */
   userId: string | null
+  /** The free developer account. Null until "Activate developer account". */
+  account: DevAccount | null
+  /** Every project this person owns, oldest first. */
+  projects: Platform[]
+  /** The project the console is showing: the one last chosen, else the first. */
   platform: Platform | null
 }
 
-/** Who is signed in and whether they have activated a developer account. Null if signed out. */
+/** Who is signed in, whether they activated, and which project they are in. Null if signed out. */
 export async function getDevContext(): Promise<DevContext | null> {
   const clerkUserId = localTestUser() || (await auth()).userId
   if (!clerkUserId) return null
   const store = devStore()
   const userId = await store.resolveUserId(clerkUserId)
-  const platform = userId ? await store.getPlatformByOwner(userId) : null
-  return { clerkUserId, userId, platform }
+  if (!userId) return { clerkUserId, userId, account: null, projects: [], platform: null }
+  const [account, projects] = await Promise.all([store.getAccount(userId), store.listPlatformsByOwner(userId)])
+  const platform = projects.find(p => p.id === account?.current_platform_id) || projects[0] || null
+  return { clerkUserId, userId, account, projects, platform }
 }
 
 /** '' on dev.dialerseat.com, '/developers' anywhere else. Set by proxy.ts. */
@@ -36,7 +43,7 @@ export async function consoleContext(): Promise<DevContext & { platform: Platfor
   const ctx = await getDevContext()
   if (!ctx?.platform) {
     const { redirect } = await import('next/navigation')
-    redirect(`${await devBase()}/welcome`)
+    redirect(`${await devBase()}${ctx?.account ? '/new' : '/welcome'}`)
   }
   return ctx as DevContext & { platform: Platform }
 }
@@ -60,7 +67,8 @@ export function jsonError(status: number, code: string, message: string) {
 export async function requirePlatform(): Promise<{ ctx: DevContext & { platform: Platform } } | { res: NextResponse }> {
   const ctx = await getDevContext()
   if (!ctx) return { res: jsonError(401, 'unauthorized', 'Sign in to use the console.') }
-  if (!ctx.platform) return { res: jsonError(403, 'not_activated', 'Activate your developer account first.') }
+  if (!ctx.account) return { res: jsonError(403, 'not_activated', 'Activate your developer account first.') }
+  if (!ctx.platform) return { res: jsonError(403, 'no_project', 'Create a project first.') }
   return { ctx: ctx as DevContext & { platform: Platform } }
 }
 

@@ -55,6 +55,11 @@ export async function PATCH(req: NextRequest) {
     patch.allowed_origins = out
   }
 
+  if ('integration_approach' in b) {
+    if (!['script', 'iframe', 'react', 'headless', 'hosted'].includes(String(b.integration_approach))) return jsonError(400, 'invalid', 'Unknown integration approach.')
+    patch.integration_approach = b.integration_approach as PlatformPatch['integration_approach']
+  }
+  if ('setup_completed' in b) patch.setup_completed_at = b.setup_completed === true ? new Date().toISOString() : null
   const updated = await devStore().updatePlatform(platform.id, patch)
   return NextResponse.json({ platform: updated })
 }
