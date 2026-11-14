@@ -1,6 +1,8 @@
 # DialerSeat for Developers — roadmap
 
-Status: **workshop**. Built on the local `developers` branch. Nothing here is live.
+Status: **live** at https://dev.dialerseat.com and https://api.dialerseat.com/v1 since 13 Nov 2026
+(Joshua: "you can publish it live"). Data in the Supabase dev_* tables. Test mode works end to end;
+live dialing waits on the DEV_TELNYX_* setup and Stripe (section 8).
 Owner: Joshua. Drafted 13 Nov 2026.
 
 ---
@@ -390,9 +392,9 @@ needs `NODE_ENV` other than production, no `VERCEL_ENV`, and the local store.
 3. The negotiation floor: seat-week, included dials, and per-dial overage.
 4. Sandbox limits (if any).
 5. ~~Which company "CloudVoice" is.~~ It is CloudTalk (section 6).
-6. When to apply the fourteen `dev_` tables. Applying them before launch is invisible to
-   users. The migration classifies them in `retention_policy`, so the daily check
-   stays quiet.
+6. ~~When to apply the fourteen `dev_` tables.~~ Applied 13 Nov 2026, classified in
+   `retention_policy`. Failed webhooks retry every five minutes for 72 hours
+   (/api/cron/dev-webhook-retry).
 7. The Launch tier shows $35 per seat per week, the standard dialerseat.com
    price, billed to the user. Confirm that, or set a different developer price.
 
