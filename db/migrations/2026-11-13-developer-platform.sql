@@ -1,9 +1,8 @@
 -- =============================================================================
 -- DialerSeat for Developers — the platform tables
 -- =============================================================================
--- NOT APPLIED. Written on the local `developers` branch, 13 Nov 2026. Apply it
--- when Joshua says the developer product is ready to go live (docs/developers/
--- ROADMAP.md, section 9). Nothing reads these tables on dialerseat.com.
+-- Applied 13 Nov 2026, when Joshua said to publish dev.dialerseat.com.
+-- Nothing reads these tables on dialerseat.com.
 --
 -- INDEPENDENCE. Developer status lives here and only here. A users row is the
 -- shared login and nothing more: the main site's subscription, demo and team
@@ -69,7 +68,7 @@ create table if not exists public.dev_api_keys (
   -- Secret: sha256 of the full key. Publishable: null (the key is in `token`).
   key_hash      text unique,
   token         text unique,
-  prefix        text not null,      -- e.g. sk_test_
+  prefix        text not null,      -- e.g. dsk_test_
   last4         text not null,
   scopes        text[] not null default array['*'],
   created_by    uuid references public.users(id),

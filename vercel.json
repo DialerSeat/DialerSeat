@@ -50,6 +50,10 @@
       "schedule": "0 7 * * *"
     },
     {
+      "path": "/api/cron/dev-webhook-retry",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/low-balance",
       "schedule": "*/5 * * * *"
     },

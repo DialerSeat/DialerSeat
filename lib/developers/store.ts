@@ -219,6 +219,9 @@ export interface DevStore {
   deleteWebhook(platformId: string, id: string): Promise<void>
   insertDelivery(row: Omit<WebhookDelivery, 'id' | 'created_at'>): Promise<WebhookDelivery>
   listDeliveries(endpointIds: string[], limit: number): Promise<WebhookDelivery[]>
+  /** Pending deliveries whose next attempt is due, oldest first, with their endpoint. */
+  dueDeliveries(limit: number): Promise<{ delivery: WebhookDelivery; endpoint: WebhookEndpoint }[]>
+  updateDelivery(id: string, patch: Partial<Omit<WebhookDelivery, 'id' | 'endpoint_id' | 'created_at'>>): Promise<void>
 
   listExceptions(platformId: string): Promise<DialModeException[]>
   upsertException(row: Omit<DialModeException, 'id' | 'created_at'>): Promise<DialModeException>
@@ -393,6 +396,15 @@ const localStore: DevStore = {
   }, true),
   insertDelivery: (row) => withLocal(d => { const x = { ...row, id: randomUUID(), created_at: now() }; d.deliveries.push(x); return x }, true),
   listDeliveries: (ids, limit) => withLocal(d => d.deliveries.filter(x => ids.includes(x.endpoint_id)).sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit)),
+  dueDeliveries: (limit) => withLocal(d => {
+    const t = now()
+    return d.deliveries
+      .filter(x => x.status === 'pending' && x.next_attempt_at && x.next_attempt_at <= t)
+      .sort((a, b) => (a.next_attempt_at || '').localeCompare(b.next_attempt_at || ''))
+      .slice(0, limit)
+      .flatMap(x => { const endpoint = d.webhooks.find(w => w.id === x.endpoint_id); return endpoint ? [{ delivery: x, endpoint }] : [] })
+  }),
+  updateDelivery: (id, patch) => withLocal(d => { const x = d.deliveries.find(r => r.id === id); if (x) Object.assign(x, patch) }, true),
 
   listExceptions: (pid) => withLocal(d => d.exceptions.filter(x => x.platform_id === pid)),
   upsertException: (row) => withLocal(d => {
@@ -550,6 +562,16 @@ function supabaseStore(): DevStore {
     async listDeliveries(ids, limit) {
       if (!ids.length) return []
       return must(await db.from('dev_webhook_deliveries').select('*').in('endpoint_id', ids).order('created_at', { ascending: false }).limit(limit), 'deliveries') as WebhookDelivery[]
+    },
+    async dueDeliveries(limit) {
+      const rows = must(await db.from('dev_webhook_deliveries')
+        .select('*, endpoint:dev_webhook_endpoints(*)')
+        .eq('status', 'pending').lte('next_attempt_at', now())
+        .order('next_attempt_at').limit(limit), 'due deliveries') as (WebhookDelivery & { endpoint: WebhookEndpoint | null })[]
+      return rows.flatMap(({ endpoint, ...delivery }) => endpoint ? [{ delivery, endpoint }] : [])
+    },
+    async updateDelivery(id, patch) {
+      must(await db.from('dev_webhook_deliveries').update(patch).eq('id', id), 'update delivery')
     },
 
     async listExceptions(pid) {

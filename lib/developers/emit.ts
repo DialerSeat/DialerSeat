@@ -4,7 +4,8 @@
 // Every endpoint on the platform that listens in this environment and to this
 // event gets one signed POST, in parallel, and every attempt is written to
 // dev_webhook_deliveries so the console shows it. A failed delivery is kept
-// with next_attempt_at set for the retry job (roadmap Phase 2); nothing here
+// with next_attempt_at set, and /api/cron/dev-webhook-retry resends it on the
+// schedule in retry.ts for up to 72 hours. Nothing here
 // blocks the caller for longer than one 10-second delivery.
 // =============================================================================
 

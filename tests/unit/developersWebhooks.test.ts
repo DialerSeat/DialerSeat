@@ -48,3 +48,18 @@ describe('webhook URLs', () => {
     expect('error' in validateWebhookUrl('not a url')).toBe(true)
   })
 })
+
+describe('webhook retry schedule', async () => {
+  const { retryDelayMs, nextAttemptAt, RETRY_WINDOW_MS } = await import('@/lib/developers/retry')
+  it('backs off from a minute to a day', () => {
+    expect(retryDelayMs(1)).toBe(60_000)
+    expect(retryDelayMs(2)).toBe(5 * 60_000)
+    expect(retryDelayMs(7)).toBe(24 * 3600_000)
+    expect(retryDelayMs(40)).toBe(24 * 3600_000)
+  })
+  it('stops after 72 hours from the first attempt', () => {
+    const created = new Date('2026-11-13T00:00:00Z')
+    expect(nextAttemptAt(created, 1, new Date(created.getTime() + 60_000))).not.toBeNull()
+    expect(nextAttemptAt(created, 9, new Date(created.getTime() + RETRY_WINDOW_MS - 3600_000))).toBeNull()
+  })
+})
